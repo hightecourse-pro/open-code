@@ -1,0 +1,42 @@
+name: CI
+
+# Quality gate — runs on every push to main and on every PR.
+# Vercel handles deployment separately (auto-deploy on push via its Git integration).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Lint · Typecheck · Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+        env:
+          # Dummy values — the build doesn't hit these services (all data routes
+          # are dynamic/server-rendered), they just need to be defined so module
+          # init doesn't fail. Real values live in Vercel's env settings.
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-dummy-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: ci-dummy-service-role-key
+          AI_KEY_SECRET: ci-dummy-encryption-secret
+          NEXT_PUBLIC_SITE_URL: https://example.com
