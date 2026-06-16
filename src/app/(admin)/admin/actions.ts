@@ -1,0 +1,125 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { requireRole } from "@/lib/auth";
+import type { ProfileStatus, UserRole } from "@/types/database";
+
+/** Approve / reject / pause a member. Admin-gated (action + RLS + role check). */
+export async function setMemberStatus(profileId: string, status: ProfileStatus) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ status }).eq("id", profileId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/admin/members");
+  return {};
+}
+
+/** Change a member's role (e.g. promote to mentor). */
+export async function setMemberRole(profileId: string, role: UserRole) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update({ role }).eq("id", profileId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/members");
+  return {};
+}
+
+/** Show / hide a profile question (the dynamic configuration screen). */
+export async function toggleQuestionActive(id: string, active: boolean) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const { error } = await supabase.from("config_questions").update({ active }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/config");
+  return {};
+}
+
+export type PricingState = { error?: string; ok?: boolean };
+
+/** Set community membership pricing (monthly fee ₪, annual discount %, min term). */
+export async function updatePricing(
+  _prev: PricingState,
+  formData: FormData
+): Promise<PricingState> {
+  await requireRole("admin");
+
+  const monthlyShekels = Number(formData.get("monthly"));
+  const annualDiscountPct = Number(formData.get("discount"));
+  const minTermMonths = Number(formData.get("minTerm"));
+
+  if (!Number.isFinite(monthlyShekels) || monthlyShekels <= 0) {
+    return { error: "מחיר חודשי לא תקין." };
+  }
+  if (!Number.isFinite(annualDiscountPct) || annualDiscountPct < 0 || annualDiscountPct > 100) {
+    return { error: "אחוז הנחה צריך להיות בין 0 ל-100." };
+  }
+  if (!Number.isFinite(minTermMonths) || minTermMonths < 1) {
+    return { error: "מינימום חודשים לא תקין." };
+  }
+
+  const value = {
+    monthlyAgorot: Math.round(monthlyShekels * 100),
+    annualDiscountPct: Math.round(annualDiscountPct),
+    minTermMonths: Math.round(minTermMonths),
+  };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({ key: "pricing", value }, { onConflict: "key" });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/config");
+  revalidatePath("/join");
+  return { ok: true };
+}
+
+export type FormState = { ok?: boolean; error?: string };
+
+/** Post a new job to the board. */
+export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+  const company = String(formData.get("company") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  if (!company || !title) return { error: "חברה ותפקיד הם שדות חובה." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("jobs").insert({
+    company,
+    title,
+    source: String(formData.get("source") ?? "open") === "ours" ? "ours" : "open",
+    location: String(formData.get("location") ?? "") || null,
+    description: String(formData.get("description") ?? ""),
+    tech_tags: String(formData.get("tech") ?? "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean),
+    external_url: String(formData.get("external_url") ?? "") || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
+  return { ok: true };
+}
+
+/** Schedule a new community session. */
+export async function createSession(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+  const title = String(formData.get("title") ?? "").trim();
+  const scheduledAt = String(formData.get("scheduled_at") ?? "");
+  if (!title || !scheduledAt) return { error: "כותרת ומועד הם שדות חובה." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("sessions").insert({
+    title,
+    topic: String(formData.get("topic") ?? "") || null,
+    scheduled_at: new Date(scheduledAt).toISOString(),
+    zoom_url: String(formData.get("zoom_url") ?? "") || null,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/admin/sessions");
+  revalidatePath("/events");
+  return { ok: true };
+}

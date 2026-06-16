@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# קוד פתוח (Open Code) — Web App
 
-## Getting Started
+אפליקציית ה-production של קהילת קוד פתוח — קהילה חמה ותומכת לג'וניוריות בהייטק.
+עברית, RTL, לשון נקבה, קול "אחות גדולה".
 
-First, run the development server:
+> מבוסס על מערכת העיצוב ב-`../Open Code Community Design System (1)`.
+> תוכנית היישום המלאה: `~/.claude/plans/golden-kindling-hopcroft.md`.
+
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Tailwind CSS v4** (CSS-first `@theme`, ללא `tailwind.config.ts`)
+- **Supabase** (Postgres, Auth, Storage, Realtime, RLS)
+- אייקונים: **lucide-react** · וריאנטים: **cva** + **tailwind-merge**
+
+> ⚠️ Next 16: "Middleware" שונה ל-**Proxy** (`src/proxy.ts`, export בשם `proxy`).
+> לפני עבודה על תכונות Next, קראי את הדוקים המקומיים ב-`node_modules/next/dist/docs/`.
+
+## הרצה
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # מלאי מפתחות Supabase / Anthropic / נדרים פלוס
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- `/` — דף נחיתה (placeholder)
+- `/dev/components` — **גלריית ספריית הרכיבים** (אימות ויזואלי מול מערכת העיצוב)
+- `/feed` — מעטפת אפליקציית הקהילה (sidebar ימני)
+- `/admin` — מעטפת אדמין (sidebar כהה)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## מבנה
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├─ app/
+│  ├─ (app)/        # אזור מחובר — AppShell (sidebar ימני)
+│  ├─ (admin)/      # אדמין — AdminShell (sidebar כהה)
+│  ├─ dev/components/  # גלריית רכיבים
+│  ├─ globals.css   # tokens (:root) + @theme + type classes
+│  └─ layout.tsx    # root RTL + פונטים (Noto Sans Hebrew, JetBrains Mono)
+├─ components/
+│  ├─ ui/           # primitives: Button, Card, Avatar, Badge, Alert, Progress, form, Switch
+│  └─ layout/       # AppShell, Sidebar, TopNav, AdminShell, AdminSidebar
+├─ lib/
+│  ├─ supabase/     # client / server / admin / proxy (session refresh)
+│  ├─ i18n.ts       # t() — single-locale Hebrew lookup
+│  └─ utils.ts      # cn()
+├─ messages/he.json # כל הקופי בעברית
+└─ proxy.ts         # Next 16 Proxy → רענון session
+```
 
-## Learn More
+## עקרונות
 
-To learn more about Next.js, take a look at the following resources:
+- **Tokens כמקור אמת:** ערכי העיצוב מ-`colors_and_type.css` הועברו verbatim ל-`globals.css`
+  (`:root`), וממופים ל-utilities של Tailwind דרך `@theme inline`. כך markup שמודבק
+  ממערכת העיצוב (עם `var(--brand-pink)` וכו') עובד ללא שינוי, וגם `bg-brand-pink` / `rounded-lg` זמינים.
+- **קופי מרוכז:** אין טקסט hardcoded ב-JSX — הכל ב-`messages/he.json` דרך `t()`.
+- **RTL לוגי:** שימוש ב-`ms-/me-/ps-/pe-/start-/end-` (לא `left/right`).
+- **אבטחה:** מפתח service-role ו-Anthropic — server-only בלבד.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## שלב נוכחי
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**Phase 0 הושלם** — תשתית + ספריית רכיבים + מעטפות + scaffolding ל-Supabase/i18n.
+הבא: **Phase 1** — auth + תשלום (נדרים פלוס) + subscription gate + פיד/פורום + פרופילים + אדמין.
