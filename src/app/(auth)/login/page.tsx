@@ -30,6 +30,11 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
         </Field>
+        <div className="-mt-1 text-left">
+          <Link href="/forgot-password" className="t-body-sm text-brand-purple font-semibold">
+            שכחת סיסמה?
+          </Link>
+        </div>
         <Button type="submit" disabled={pending} className="w-full">
           {pending ? "רגע אחת…" : "כניסה"}
         </Button>

@@ -51,3 +51,39 @@ export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
   redirect("/login");
 }
+
+/** Step 1: send the reset link to the member's email. */
+export async function requestPasswordReset(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const email = String(formData.get("email") ?? "").trim();
+  if (!email) return { error: "כתבי כתובת אימייל." };
+
+  const supabase = await createClient();
+  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${site}/auth/callback?next=/reset-password`,
+  });
+
+  // Don't reveal whether the address exists.
+  return { message: "אם הכתובת רשומה אצלנו, שלחנו אליה קישור לאיפוס סיסמה 💌" };
+}
+
+/** Step 2: set the new password (runs inside the recovery session from the link). */
+export async function updatePassword(
+  _prev: AuthState,
+  formData: FormData
+): Promise<AuthState> {
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+  if (password.length < 8) return { error: "הסיסמה צריכה להיות לפחות 8 תווים." };
+  if (password !== confirm) return { error: "הסיסמאות לא תואמות." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+  if (error) {
+    return { error: 'הקישור פג תוקף או לא תקין. בקשי קישור חדש מ"שכחתי סיסמה".' };
+  }
+  redirect("/feed");
+}
