@@ -8,22 +8,33 @@ All of this is configured in the **Supabase dashboard** (+ Google Cloud for OAut
 
 By default Supabase sends from its own address with "Supabase" as the name. Two steps to brand it:
 
-### 1a. Custom SMTP (sets the From name & address)
-Supabase → **Authentication → Settings → SMTP Settings** → enable **Custom SMTP**.
+### 1a. Custom SMTP — Google Workspace (opencode.org.il)
 
-Recommended provider: **Resend** (you already have a `RESEND_API_KEY` slot).
-1. Create a Resend account, verify your sending domain (or use their test domain to start).
-2. In Resend → API Keys → create a key.
-3. Back in Supabase SMTP settings, fill:
-   - **Host:** `smtp.resend.com`
-   - **Port:** `465`
-   - **Username:** `resend`
-   - **Password:** your Resend API key
-   - **Sender email:** e.g. `noreply@your-domain.com` (must be a verified domain in Resend)
-   - **Sender name:** `קוד פתוח`   ← this is the friendly display name
-4. Save.
+Sending through the existing Google Workspace is **free** (included), ~2,000 emails/day,
+and branded from the domain (good inbox deliverability). No extra provider needed for
+system emails.
 
-> Until you set custom SMTP, Supabase's built-in mailer works but shows "Supabase" and is rate-limited (~a few emails/hour) — fine for testing, not for production.
+**Step 1 — App Password** (the Workspace account needs 2-Step Verification on):
+myaccount.google.com → Security → 2-Step Verification → **App passwords** → create one for
+"Mail" → copy the 16-char code.
+
+**Step 2 — Supabase → Authentication → Settings → SMTP** → enable Custom SMTP:
+- **Host:** `smtp.gmail.com`
+- **Port:** `465`
+- **Username:** `office@opencode.org.il`
+- **Password:** the App Password (16 chars)
+- **Sender email:** `office@opencode.org.il` (or a `noreply@opencode.org.il` alias once added in Gmail → Settings → "Send mail as")
+- **Sender name:** `קוד פתוח`
+
+**Step 3 — DKIM (deliverability)** — admin.google.com → Apps → Google Workspace → Gmail →
+**Authenticate email** → Generate record for `opencode.org.il` → add the TXT record in DNS →
+Start authentication.
+
+> Limits: ~2,000/day on `smtp.gmail.com`. If you ever need more, switch to Workspace
+> **SMTP relay** (`smtp-relay.gmail.com`, admin-configured, up to ~10,000/day).
+>
+> Marketing newsletters (bulk to all members) are a separate, paid concern — use Rav Masser /
+> Brevo for those, not the system-email SMTP above.
 
 ### 1b. Branded Hebrew templates
 Supabase → **Authentication → Email Templates**. For each template, paste the matching file:
