@@ -38,7 +38,9 @@ async function handle(req: Request) {
   if (!cfg) {
     return NextResponse.json({ error: "payments not configured" }, { status: 503 });
   }
-  if (params.Mosad && params.Mosad !== cfg.mosadId) {
+  // Nedarim's callback identifies the institution via "MosadNumber".
+  const mosad = params.MosadNumber ?? params.Mosad;
+  if (mosad && mosad !== cfg.mosadId) {
     return NextResponse.json({ error: "unrecognized mosad" }, { status: 401 });
   }
 

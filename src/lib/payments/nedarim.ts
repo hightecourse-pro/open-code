@@ -81,7 +81,8 @@ export function parseNedarimCallback(params: Record<string, string>): ParsedCall
     ok: status === "ok" || status === "success" || params.Status === "1",
     profileId: params.Param1 ?? null,
     plan,
-    transactionId: params.TransactionId ?? params.transactionId ?? null,
+    // Nedarim's iframe callback uses "ID" for the transaction id.
+    transactionId: params.TransactionId ?? params.transactionId ?? params.ID ?? null,
     amountAgorot: Number.isFinite(amount) ? amount : null,
   };
 }
