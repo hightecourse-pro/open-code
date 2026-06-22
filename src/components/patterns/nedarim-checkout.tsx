@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { NEDARIM_IFRAME_URL } from "@/lib/payments/nedarim";
+import { checkMembershipActive } from "@/app/join/actions";
 import { Alert, Button } from "@/components/ui";
 
 type Status = "idle" | "processing" | "success" | "error";
@@ -16,6 +17,32 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   const [height, setHeight] = useState(420);
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [activationTimedOut, setActivationTimedOut] = useState(false);
+
+  // After a successful charge, wait for the Nedarim CallBack to activate the
+  // member (it's asynchronous), then continue — avoids bouncing back to /join.
+  useEffect(() => {
+    if (status !== "success") return;
+    let cancelled = false;
+    let tries = 0;
+    async function poll() {
+      if (cancelled) return;
+      tries += 1;
+      if (await checkMembershipActive()) {
+        window.location.href = "/feed";
+        return;
+      }
+      if (tries >= 20) {
+        setActivationTimedOut(true);
+        return;
+      }
+      setTimeout(poll, 2000);
+    }
+    poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
 
   useEffect(() => {
     function onMessage(e: MessageEvent) {
@@ -69,10 +96,17 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   if (status === "success") {
     return (
       <Alert variant="success" title="התשלום התקבל! 💜">
-        תודה רבה. אנחנו מפעילות את החשבון שלך ברגעים אלה.
-        <a href="/feed" className="block mt-2 font-semibold text-brand-purple underline">
-          להמשך לקהילה ←
-        </a>
+        {activationTimedOut ? (
+          <>
+            תודה רבה! ההפעלה אורכת רגע. רענני את העמוד בעוד דקה —
+            <a href="/feed" className="font-semibold text-brand-purple underline">
+              {" "}או נסי להמשיך לקהילה
+            </a>
+            . אם זה לא נפתח, נעדכן אותך במייל.
+          </>
+        ) : (
+          "תודה רבה. מפעילות את החשבון שלך — עוד רגע נעביר אותך לקהילה…"
+        )}
       </Alert>
     );
   }
