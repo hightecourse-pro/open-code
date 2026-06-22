@@ -1,24 +1,33 @@
 import { NextResponse } from "next/server";
 import { getNedarimConfig, parseNedarimCallback } from "@/lib/payments/nedarim";
 import { activateSubscription } from "@/lib/payments/subscription";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json } from "@/types/database";
+
+/** Best-effort diagnostic: record the last webhook call so we can inspect it. */
+async function logEvent(value: Record<string, unknown>) {
+  try {
+    const admin = createAdminClient();
+    await admin
+      .from("app_settings")
+      .upsert({ key: "last_webhook", value: value as unknown as Json }, { onConflict: "key" });
+  } catch (e) {
+    console.log("[webhook/payments] diagnostic write failed", String(e));
+  }
+}
 
 /**
- * Nedarim Plus server-to-server CallBack — the source of truth that activates
- * the member's subscription (service role, RLS-bypassing). Accepts POST/GET and
- * query/body params, and logs the payload so we can confirm Nedarim's format in
- * the Vercel runtime logs.
+ * Nedarim Plus server-to-server CallBack — activates the member's subscription
+ * via the service role. Logs to console + app_settings.last_webhook for diagnosis.
  */
 async function handle(req: Request) {
   const cfg = getNedarimConfig();
   const url = new URL(req.url);
   const params: Record<string, string> = {};
-
-  // Query-string params (some callbacks use GET).
   url.searchParams.forEach((value, key) => {
     params[key] = value;
   });
 
-  // Body params (form-encoded, or JSON).
   const contentType = req.headers.get("content-type") ?? "";
   if (req.method === "POST") {
     try {
@@ -29,38 +38,57 @@ async function handle(req: Request) {
         for (const [k, v] of form.entries()) params[k] = String(v);
       }
     } catch {
-      // no/unsupported body — fall through with whatever query params we have
+      // no/unsupported body
     }
   }
 
-  console.log("[webhook/payments] received", { method: req.method, contentType, params });
+  const record: Record<string, unknown> = {
+    at: new Date().toISOString(),
+    method: req.method,
+    contentType,
+    params,
+  };
+  console.log("[webhook/payments] received", record);
 
   if (!cfg) {
+    record.outcome = "not_configured";
+    await logEvent(record);
     return NextResponse.json({ error: "payments not configured" }, { status: 503 });
   }
-  // Nedarim's callback identifies the institution via "MosadNumber".
+
   const mosad = params.MosadNumber ?? params.Mosad;
   if (mosad && mosad !== cfg.mosadId) {
+    record.outcome = "unrecognized_mosad";
+    await logEvent(record);
     return NextResponse.json({ error: "unrecognized mosad" }, { status: 401 });
   }
 
   const cb = parseNedarimCallback(params);
-  console.log("[webhook/payments] parsed", cb);
+  record.parsed = cb as unknown as Record<string, unknown>;
 
   if (!cb.ok || !cb.profileId || !cb.plan) {
+    record.outcome = "ignored_incomplete";
+    await logEvent(record);
     return NextResponse.json({ ok: false, handled: false });
   }
 
-  await activateSubscription({
-    profileId: cb.profileId,
-    plan: cb.plan,
-    providerPaymentId: cb.transactionId,
-    amountAgorot: cb.amountAgorot ?? undefined,
-    raw: params,
-  });
-  console.log("[webhook/payments] activated member", cb.profileId);
+  try {
+    await activateSubscription({
+      profileId: cb.profileId,
+      plan: cb.plan,
+      providerPaymentId: cb.transactionId,
+      amountAgorot: cb.amountAgorot ?? undefined,
+      raw: params,
+    });
+    record.outcome = "activated";
+    console.log("[webhook/payments] activated member", cb.profileId);
+  } catch (e) {
+    record.outcome = `activate_error: ${String(e)}`;
+    console.log("[webhook/payments] activation error", String(e));
+  }
 
-  return NextResponse.json({ ok: true });
+  await logEvent(record);
+  return NextResponse.json({ ok: record.outcome === "activated" });
 }
 
 export async function POST(req: Request) {
