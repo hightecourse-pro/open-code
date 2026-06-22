@@ -30,6 +30,10 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
       if (!raw || typeof raw !== "object") return;
       const data = raw as Record<string, unknown>;
 
+      // Ignore browser-extension / React-DevTools chatter (and don't let
+      // arbitrary postMessages drive the payment UI).
+      if (typeof data.source === "string") return;
+
       // Diagnostic — shows exactly what Nedarim posts back (check the console).
       console.log("[nedarim]", data);
 
