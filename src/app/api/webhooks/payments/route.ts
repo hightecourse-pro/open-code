@@ -3,35 +3,48 @@ import { getNedarimConfig, parseNedarimCallback } from "@/lib/payments/nedarim";
 import { activateSubscription } from "@/lib/payments/subscription";
 
 /**
- * Nedarim Plus server-to-server CallBack. This is the source of truth for a
- * successful payment — it activates the member's subscription via the service
- * role (RLS-bypassing), regardless of what the browser did.
+ * Nedarim Plus server-to-server CallBack — the source of truth that activates
+ * the member's subscription (service role, RLS-bypassing). Accepts POST/GET and
+ * query/body params, and logs the payload so we can confirm Nedarim's format in
+ * the Vercel runtime logs.
  */
-export async function POST(req: Request) {
+async function handle(req: Request) {
   const cfg = getNedarimConfig();
+  const url = new URL(req.url);
+  const params: Record<string, string> = {};
+
+  // Query-string params (some callbacks use GET).
+  url.searchParams.forEach((value, key) => {
+    params[key] = value;
+  });
+
+  // Body params (form-encoded, or JSON).
+  const contentType = req.headers.get("content-type") ?? "";
+  if (req.method === "POST") {
+    try {
+      if (contentType.includes("application/json")) {
+        Object.assign(params, await req.json());
+      } else {
+        const form = await req.formData();
+        for (const [k, v] of form.entries()) params[k] = String(v);
+      }
+    } catch {
+      // no/unsupported body — fall through with whatever query params we have
+    }
+  }
+
+  console.log("[webhook/payments] received", { method: req.method, contentType, params });
+
   if (!cfg) {
     return NextResponse.json({ error: "payments not configured" }, { status: 503 });
   }
-
-  // Nedarim posts form-encoded data (accept JSON too, just in case).
-  const params: Record<string, string> = {};
-  const contentType = req.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
-    Object.assign(params, await req.json());
-  } else {
-    const form = await req.formData();
-    for (const [k, v] of form.entries()) params[k] = String(v);
-  }
-
-  // Minimal authenticity check: the callback must carry our Mosad id.
-  // TODO: add full signature/hash verification per the Nedarim account docs.
   if (params.Mosad && params.Mosad !== cfg.mosadId) {
     return NextResponse.json({ error: "unrecognized mosad" }, { status: 401 });
   }
 
   const cb = parseNedarimCallback(params);
+  console.log("[webhook/payments] parsed", cb);
 
-  // Acknowledge non-success callbacks so Nedarim stops retrying, but do nothing.
   if (!cb.ok || !cb.profileId || !cb.plan) {
     return NextResponse.json({ ok: false, handled: false });
   }
@@ -43,6 +56,15 @@ export async function POST(req: Request) {
     amountAgorot: cb.amountAgorot ?? undefined,
     raw: params,
   });
+  console.log("[webhook/payments] activated member", cb.profileId);
 
   return NextResponse.json({ ok: true });
+}
+
+export async function POST(req: Request) {
+  return handle(req);
+}
+
+export async function GET(req: Request) {
+  return handle(req);
 }
