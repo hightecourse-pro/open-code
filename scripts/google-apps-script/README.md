@@ -7,6 +7,7 @@ one-time authorization — **no App Password, no 2-Step Verification needed**.
 - Sends from your Workspace address (`office@opencode.org.il`), display name **קוד פתוח**.
 - Quota (Workspace): **~1,500 recipients/day**.
 - Supports a single recipient or a **group with `{{name}}` mail-merge**.
+- **Logs every send** to a `Log` tab in the bound Sheet (timestamp, email, name, subject, status, error) — created automatically on first send.
 
 ---
 
