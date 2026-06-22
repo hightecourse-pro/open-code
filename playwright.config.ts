@@ -17,7 +17,15 @@ export default defineConfig({
     locale: "he-IL",
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "setup", testMatch: /auth\.setup\.ts/ },
+    {
+      name: "chromium",
+      use: { ...devices["Desktop Chrome"] },
+      dependencies: ["setup"],
+      testIgnore: /auth\.setup\.ts/,
+    },
+  ],
   // Reuse the running dev server locally; start one if needed.
   webServer: isLocal
     ? {

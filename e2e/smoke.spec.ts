@@ -11,6 +11,12 @@ test.describe("public pages + gating", () => {
     await expect(page.getByText(/הקריירה שלך/)).toBeVisible();
   });
 
+  test("landing CTA links to signup", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("link", { name: "הצטרפות לקהילה" }).click();
+    await expect(page).toHaveURL(/\/signup/);
+  });
+
   test("login page renders", async ({ page }) => {
     await page.goto("/login");
     await expect(page.getByRole("button", { name: "כניסה" })).toBeVisible();

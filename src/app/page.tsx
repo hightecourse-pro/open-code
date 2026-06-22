@@ -14,9 +14,11 @@ export default function Home() {
           קהילה חמה ותומכת לג&apos;וניוריות בתחום הפיתוח. אנחנו ביחד — מהצעד הראשון ועד המשרה הראשונה.
         </p>
         <div className="flex flex-wrap gap-3 justify-center">
-          <Button bracketed>הצטרפות לקהילה</Button>
+          <Button bracketed asChild>
+            <Link href="/signup">הצטרפות לקהילה</Link>
+          </Button>
           <Button variant="secondary" asChild>
-            <Link href="/dev/components">ספריית הרכיבים</Link>
+            <Link href="/login">כבר רשומה? לכניסה</Link>
           </Button>
         </div>
       </div>
