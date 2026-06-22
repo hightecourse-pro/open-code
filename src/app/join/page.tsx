@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { getProfile } from "@/lib/auth";
 import { signOut } from "../(auth)/actions";
 import { Alert, Button, Logo } from "@/components/ui";
@@ -71,7 +72,13 @@ export default async function JoinPage() {
   const configured = isNedarimConfigured();
   let fieldsByPlan: Record<SubscriptionPlan, Record<string, string>> | undefined;
   if (configured) {
-    const callbackUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/api/webhooks/payments`;
+    // Prefer an explicit site URL; otherwise derive an absolute origin from the
+    // request so Nedarim always gets a valid (non-relative) CallBack URL.
+    const h = await headers();
+    const host = h.get("host");
+    const proto = h.get("x-forwarded-proto") ?? "https";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || (host ? `${proto}://${host}` : "");
+    const callbackUrl = `${origin}/api/webhooks/payments`;
     const party = { profileId: profile.id, fullName: profile.full_name, email: "" };
     fieldsByPlan = {
       monthly: buildTransactionFields(plansRec.monthly, party, callbackUrl),
