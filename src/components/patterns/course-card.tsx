@@ -68,7 +68,7 @@ export function CourseCard({ course, locked }: CourseCardProps) {
             disabled={pending}
             className="mt-3 w-full font-display font-semibold text-[13px] py-2 rounded-md bg-brand-gradient text-white disabled:opacity-60"
           >
-            {pending ? "פותחת…" : "התחילי קורס"}
+            {pending ? "פותח…" : "התחילי קורס"}
           </button>
         )}
       </div>

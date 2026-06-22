@@ -20,7 +20,7 @@ type AdminNavItem = { href: string; label: string; icon: LucideIcon; badge?: num
 
 const ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "דשבורד", icon: LayoutDashboard },
-  { href: "/admin/members", label: "חברות", icon: Users, badge: 8 },
+  { href: "/admin/members", label: "חברות", icon: Users },
   { href: "/admin/mentors", label: "מנטוריות", icon: Crown },
   { href: "/admin/jobs", label: "משרות", icon: Briefcase },
   { href: "/admin/sessions", label: "סשנים", icon: Calendar },

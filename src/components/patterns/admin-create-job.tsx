@@ -38,7 +38,7 @@ export function AdminCreateJob() {
         <Textarea id="j-desc" name="description" />
       </Field>
       <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? "מוסיפה…" : "הוספת משרה"}
+        {pending ? "מוסיף…" : "הוספת משרה"}
       </Button>
     </form>
   );

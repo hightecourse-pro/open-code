@@ -24,7 +24,7 @@ export default function ForgotPasswordPage() {
             <Input id="email" name="email" type="email" required dir="ltr" autoComplete="email" />
           </Field>
           <Button type="submit" disabled={pending} className="w-full">
-            {pending ? "שולחות…" : "שליחת קישור לאיפוס"}
+            {pending ? "שולח…" : "שליחת קישור לאיפוס"}
           </Button>
         </form>
       )}

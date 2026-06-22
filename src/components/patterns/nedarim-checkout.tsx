@@ -105,7 +105,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
             . אם זה לא נפתח, נעדכן אותך במייל.
           </>
         ) : (
-          "תודה רבה. מפעילות את החשבון שלך — עוד רגע נעביר אותך לקהילה…"
+          "תודה רבה. מפעיל את החשבון שלך — עוד רגע נעביר אותך לקהילה…"
         )}
       </Alert>
     );
@@ -115,7 +115,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
     <div className="flex flex-col gap-3">
       {error && <Alert variant="danger">{error}</Alert>}
       {status === "processing" && (
-        <Alert variant="info">מעבדות את התשלום… אל תסגרי את החלון.</Alert>
+        <Alert variant="info">מעבד את התשלום… אל תסגרי את החלון.</Alert>
       )}
       <iframe
         ref={ref}
@@ -135,7 +135,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
         disabled={status === "processing"}
         className="w-full"
       >
-        {status === "processing" ? "מעבדות…" : "לתשלום מאובטח"}
+        {status === "processing" ? "מעבד…" : "לתשלום מאובטח"}
       </Button>
     </div>
   );

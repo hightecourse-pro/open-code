@@ -191,7 +191,7 @@ export function InterviewControls({
 
       <form action={finishAction}>
         <Button type="submit" variant="secondary" size="sm" disabled={finishPending}>
-          {finishPending ? "מסכמות את המשוב…" : "סיום וקבלת משוב"}
+          {finishPending ? "מסכם את המשוב…" : "סיום וקבלת משוב"}
         </Button>
       </form>
     </div>

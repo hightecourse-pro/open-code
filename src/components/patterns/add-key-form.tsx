@@ -23,7 +23,7 @@ export function AddKeyForm() {
         <Input id="key" name="key" dir="ltr" placeholder="AIza…" autoComplete="off" />
       </Field>
       <Button type="submit" disabled={pending} className="w-fit" bracketed>
-        {pending ? "מאמתות מול Google…" : "הוספת מפתח"}
+        {pending ? "מאמת מול Google…" : "הוספת מפתח"}
       </Button>
     </form>
   );

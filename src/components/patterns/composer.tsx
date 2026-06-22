@@ -68,7 +68,7 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
 
         <div className="flex items-center mt-3 pt-3 border-t border-ink-100">
           <Button type="submit" size="sm" disabled={pending} className="ms-auto">
-            {pending ? "שולחת…" : "שיתוף"}
+            {pending ? "שולח…" : "שיתוף"}
           </Button>
         </div>
       </form>

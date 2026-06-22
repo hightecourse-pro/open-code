@@ -3,7 +3,40 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import type { ProfileStatus, UserRole } from "@/types/database";
+import type { ProfileStatus, ReportStatus, UserRole } from "@/types/database";
+
+/** Promote/demote a member's role (void wrapper for direct form actions). */
+export async function setMemberRoleAction(id: string, role: UserRole): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("profiles").update({ role }).eq("id", id);
+  revalidatePath("/admin/mentors");
+  revalidatePath("/admin/members");
+}
+
+/** Resolve or dismiss a report. */
+export async function updateReportStatus(id: string, status: ReportStatus) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("reports").update({ status }).eq("id", id);
+  revalidatePath("/admin/moderation");
+}
+
+/** Toggle a member's VIP flag. */
+export async function toggleVip(id: string, isVip: boolean) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("profiles").update({ is_vip: isVip }).eq("id", id);
+  revalidatePath("/admin/members");
+}
+
+/** Save internal notes on a member (admin-only, for screening). */
+export async function saveInternalNotes(id: string, notes: string) {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("profiles").update({ internal_notes: notes }).eq("id", id);
+  revalidatePath("/admin/members");
+}
 
 /** Approve / reject / pause a member. Admin-gated (action + RLS + role check). */
 export async function setMemberStatus(profileId: string, status: ProfileStatus) {

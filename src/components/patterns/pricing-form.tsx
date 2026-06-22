@@ -51,7 +51,7 @@ export function PricingForm({ pricing }: { pricing: Pricing }) {
       </div>
 
       <Button type="submit" size="sm" disabled={pending} className="w-fit">
-        {pending ? "שומרת…" : "שמירת מחיר"}
+        {pending ? "שומר…" : "שמירת מחיר"}
       </Button>
     </form>
   );

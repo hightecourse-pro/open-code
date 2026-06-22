@@ -51,7 +51,7 @@ export default function CvCheckerPage() {
           <Textarea id="job" name="job" rows={4} placeholder="הדביקי תיאור משרה כדי לבדוק כמה את מתאימה…" />
         </Field>
         <Button type="submit" disabled={pending} className="w-fit" bracketed>
-          {pending ? "בודקות את קורות החיים שלך…" : "בדיקת קורות חיים"}
+          {pending ? "בודק את קורות החיים שלך…" : "בדיקת קורות חיים"}
         </Button>
       </form>
 

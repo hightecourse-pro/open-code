@@ -40,6 +40,11 @@ export type InterviewAgent = "hr" | "tech" | "friendly";
 export type InterviewDifficulty = "basic" | "standard" | "hard";
 export type InterviewStatus = "live" | "done";
 export type TurnRole = "agent" | "candidate";
+// Phase 4
+export type CvLanguage = "he" | "en" | "job";
+export type ContentOwner = "course" | "session";
+export type LinkKind = "video" | "materials";
+export type ShareStatus = "pending" | "shared" | "revoked";
 
 type Timestamps = { created_at: string; updated_at: string };
 
@@ -59,6 +64,9 @@ export interface Database {
           member_tier: MemberTier;
           status: ProfileStatus;
           is_experienced: boolean;
+          is_vip: boolean;
+          internal_notes: string | null;
+          profile_completed: boolean;
         } & Timestamps;
         Insert: {
           id: string;
@@ -72,6 +80,9 @@ export interface Database {
           member_tier?: MemberTier;
           status?: ProfileStatus;
           is_experienced?: boolean;
+          is_vip?: boolean;
+          internal_notes?: string | null;
+          profile_completed?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -394,6 +405,9 @@ export interface Database {
           last_switch_month: string | null;
           started_at: string;
           switched_at: string | null;
+          studied: boolean;
+          rating: number | null;
+          feedback: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -405,6 +419,9 @@ export interface Database {
           last_switch_month?: string | null;
           started_at?: string;
           switched_at?: string | null;
+          studied?: boolean;
+          rating?: number | null;
+          feedback?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["enrollments"]["Insert"]>;
         Relationships: [];
@@ -603,6 +620,82 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["user_ai_keys"]["Insert"]>;
         Relationships: [];
       };
+      cv_documents: {
+        Row: {
+          id: string;
+          profile_id: string;
+          label: string;
+          language: CvLanguage;
+          file_path: string;
+          file_name: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          label: string;
+          language?: CvLanguage;
+          file_path: string;
+          file_name?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["cv_documents"]["Insert"]>;
+        Relationships: [];
+      };
+      content_links: {
+        Row: {
+          id: string;
+          owner_type: ContentOwner;
+          owner_id: string;
+          kind: LinkKind;
+          title: string;
+          url: string;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          owner_type: ContentOwner;
+          owner_id: string;
+          kind?: LinkKind;
+          title: string;
+          url: string;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["content_links"]["Insert"]>;
+        Relationships: [];
+      };
+      content_shares: {
+        Row: {
+          id: string;
+          owner_type: ContentOwner;
+          owner_id: string;
+          profile_id: string;
+          status: ShareStatus;
+          created_at: string;
+          shared_at: string | null;
+          revoked_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          owner_type: ContentOwner;
+          owner_id: string;
+          profile_id: string;
+          status?: ShareStatus;
+          created_at?: string;
+          shared_at?: string | null;
+          revoked_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["content_shares"]["Insert"]>;
+        Relationships: [];
+      };
+      content_views: {
+        Row: { id: string; link_id: string; profile_id: string; created_at: string };
+        Insert: { id?: string; link_id: string; profile_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["content_views"]["Insert"]>;
+        Relationships: [];
+      };
       reports: {
         Row: {
           id: string;
@@ -682,3 +775,6 @@ export type Recording = Database["public"]["Tables"]["recordings"]["Row"];
 export type Session = Database["public"]["Tables"]["sessions"]["Row"];
 export type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
+export type CvDocument = Database["public"]["Tables"]["cv_documents"]["Row"];
+export type ContentLink = Database["public"]["Tables"]["content_links"]["Row"];
+export type ContentShare = Database["public"]["Tables"]["content_shares"]["Row"];

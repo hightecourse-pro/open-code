@@ -31,7 +31,7 @@ export default function ResetPasswordPage() {
           <Input id="confirm" name="confirm" type="password" required autoComplete="new-password" />
         </Field>
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "שומרות…" : "שמירת הסיסמה והמשך"}
+          {pending ? "שומר…" : "שמירת הסיסמה והמשך"}
         </Button>
       </form>
     </div>

@@ -95,7 +95,7 @@ export function ProfileForm({ fullName, questions, answers }: ProfileFormProps) 
       })}
 
       <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? "שומרת…" : "שמירת הפרופיל"}
+        {pending ? "שומר…" : "שמירת הפרופיל"}
       </Button>
     </form>
   );

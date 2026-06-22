@@ -26,7 +26,7 @@ export function AdminCreateSession() {
         </Field>
       </div>
       <Button type="submit" disabled={pending} className="w-fit">
-        {pending ? "מוסיפה…" : "הוספת סשן"}
+        {pending ? "מוסיף…" : "הוספת סשן"}
       </Button>
     </form>
   );

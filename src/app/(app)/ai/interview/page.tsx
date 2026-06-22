@@ -93,7 +93,7 @@ export default function InterviewSetupPage() {
         </div>
 
         <Button type="submit" disabled={pending} className="w-fit" bracketed>
-          {pending ? "מתחילות…" : "התחלת ראיון"}
+          {pending ? "פותח ראיון…" : "התחלת ראיון"}
         </Button>
       </form>
     </div>
