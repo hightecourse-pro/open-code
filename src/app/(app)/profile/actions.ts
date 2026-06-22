@@ -17,9 +17,21 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   const fullName = String(formData.get("full_name") ?? "").trim();
   if (fullName.length < 2) return { error: "נשמח לדעת איך קוראים לך 🙂" };
 
+  // Was this the first-login mandatory completion?
+  const { data: before } = await supabase
+    .from("profiles")
+    .select("profile_completed")
+    .eq("id", user.id)
+    .single();
+  const firstCompletion = !before?.profile_completed;
+
   await supabase
     .from("profiles")
-    .update({ full_name: fullName, avatar_initials: fullName.slice(0, 1) })
+    .update({
+      full_name: fullName,
+      avatar_initials: fullName.slice(0, 1),
+      profile_completed: true,
+    })
     .eq("id", user.id);
 
   const { data: questions } = await supabase
@@ -47,5 +59,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   }
 
   revalidatePath("/profile");
+  // On first completion, drop the onboarding gate and land in the community.
+  if (firstCompletion) redirect("/feed");
   return { ok: true };
 }

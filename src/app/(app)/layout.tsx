@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout";
+import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { requireActiveAccess } from "@/lib/auth";
 
 export default async function AuthenticatedLayout({
@@ -8,6 +9,12 @@ export default async function AuthenticatedLayout({
 }) {
   // Gate: signed in + active. Redirects to /login or /join otherwise.
   const profile = await requireActiveAccess();
+
+  // First-login gate: members must complete their profile before entering.
+  // (Admins/staff skip — they manage, they don't onboard.)
+  if (!profile.profile_completed && profile.role !== "admin") {
+    return <ProfileOnboarding profile={profile} />;
+  }
 
   const meta = [profile.specialization, profile.region].filter(Boolean).join(" · ");
 

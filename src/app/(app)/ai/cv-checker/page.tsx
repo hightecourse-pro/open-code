@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { Check, Info, Lightbulb, TriangleAlert, X } from "lucide-react";
+import { Check, Info, Lightbulb, TriangleAlert, X, Upload } from "lucide-react";
+import Link from "next/link";
 import { Alert, Button, Field, ProgressRing, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { runCvCheck, type CvState } from "./actions";
@@ -23,7 +24,7 @@ export default function CvCheckerPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;בודקת קו&quot;ח/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">בודקת קורות חיים</h1>
         <p className="t-body-sm text-ink-700">
-          תדביקי את קורות החיים שלך — ונעבור עליהן יחד. אפשר גם להוסיף תיאור משרה לבדיקת התאמה.
+          העלי את קובץ ה-PDF של קורות החיים שלך — ונעבור עליהן יחד. אפשר גם להוסיף תיאור משרה לבדיקת התאמה.
         </p>
       </div>
 
@@ -38,15 +39,23 @@ export default function CvCheckerPage() {
             )}
           </Alert>
         )}
-        <Field label="קורות החיים שלך" htmlFor="cv">
-          <Textarea
-            id="cv"
-            name="cv"
-            rows={10}
-            placeholder="הדביקי כאן את הטקסט של קורות החיים…"
-            defaultValue=""
-          />
+        <Field label="קובץ קורות החיים (PDF)" htmlFor="cv_file">
+          <label
+            htmlFor="cv_file"
+            className="flex items-center gap-3 border-2 border-dashed border-ink-300 rounded-md px-4 py-5 cursor-pointer hover:border-brand-purple transition-colors"
+          >
+            <Upload size={20} className="text-brand-purple shrink-0" />
+            <span className="text-sm text-ink-700">בחרי קובץ PDF להעלאה (עד 10MB)</span>
+          </label>
+          <input id="cv_file" name="cv_file" type="file" accept="application/pdf" required className="sr-only" />
         </Field>
+        <p className="text-[12px] text-ink-500 -mt-2">
+          רוצה לשמור גרסאות של קורות החיים? נהלי אותן ב
+          <Link href="/cv" className="text-brand-purple font-semibold">
+            {" "}ניהול קורות החיים
+          </Link>
+          .
+        </p>
         <Field label="תיאור המשרה (אופציונלי — לבדיקת התאמה)" htmlFor="job">
           <Textarea id="job" name="job" rows={4} placeholder="הדביקי תיאור משרה כדי לבדוק כמה את מתאימה…" />
         </Field>

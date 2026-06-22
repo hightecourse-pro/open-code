@@ -67,3 +67,24 @@ export async function analyzeCv(
     maxOutputTokens: 2048,
   });
 }
+
+/** Analyze a CV uploaded as a PDF file (base64), instead of pasted text. */
+export async function analyzeCvPdf(
+  apiKey: string,
+  pdfBase64: string,
+  jobDescription?: string
+): Promise<CvAnalysis> {
+  const user = jobDescription
+    ? `קורות החיים מצורפים כקובץ PDF. נתחי אותם.\n\n---\nתיאור המשרה (לבדיקת התאמה):\n${jobDescription}`
+    : `קורות החיים מצורפים כקובץ PDF. נתחי אותם.`;
+
+  return geminiJson<CvAnalysis>({
+    apiKey,
+    system: SYSTEM,
+    contents: [
+      { role: "user", text: user, inlineData: { mimeType: "application/pdf", data: pdfBase64 } },
+    ],
+    jsonSchema: SCHEMA,
+    maxOutputTokens: 2048,
+  });
+}

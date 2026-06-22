@@ -67,6 +67,14 @@ export function ProfileForm({ fullName, questions, answers }: ProfileFormProps) 
           );
         }
 
+        if (q.field_type === "bool") {
+          return (
+            <Field key={q.id} label={q.label_he}>
+              <Checkbox name={key} defaultChecked={current === true} label="כן" />
+            </Field>
+          );
+        }
+
         if (q.field_type === "number") {
           return (
             <Field key={q.id} label={q.label_he} htmlFor={key}>

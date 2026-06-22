@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui";
 import { QuestionToggle } from "@/components/patterns/question-toggle";
+import { TaxonomyManager } from "@/components/patterns/taxonomy-manager";
 import { PricingForm } from "@/components/patterns/pricing-form";
 import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans, shekels } from "@/lib/payments/plans";
@@ -118,20 +119,16 @@ export default async function AdminConfigPage() {
           טכנולוגיות, אזורים, תחומים וקטגוריות הזמינים בכל המוצר.
         </p>
         <div className="flex flex-col gap-4">
-          {[...byKind.entries()].map(([kind, items]) => (
-            <div key={kind}>
-              <div className="text-[11px] text-ink-500 tracking-[0.04em] uppercase font-semibold mb-2">
-                {KIND_LABEL[kind]}
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {(items ?? []).map((t) => (
-                  <Badge key={t.id} variant={kind === "tech" ? "tech" : "purple"}>
-                    {t.label_he}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          ))}
+          {(["tech", "specialization", "region", "project_category", "list"] as TaxonomyKind[]).map(
+            (kind) => (
+              <TaxonomyManager
+                key={kind}
+                kind={kind}
+                label={KIND_LABEL[kind]}
+                items={byKind.get(kind) ?? []}
+              />
+            )
+          )}
         </div>
       </div>
     </div>

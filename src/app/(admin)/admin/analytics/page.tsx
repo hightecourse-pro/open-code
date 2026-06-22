@@ -9,7 +9,7 @@ export default async function AdminAnalyticsPage() {
   const [{ data: courses }, { data: enrollments }, { data: links }, { data: views }] =
     await Promise.all([
       supabase.from("courses").select("id, title").order("title"),
-      supabase.from("enrollments").select("course_id, rating, studied"),
+      supabase.from("enrollments").select("course_id, rating, studied, feedback"),
       supabase.from("content_links").select("id, owner_id").eq("owner_type", "course").eq("kind", "video"),
       supabase.from("content_views").select("link_id"),
     ]);
@@ -72,6 +72,30 @@ export default async function AdminAnalyticsPage() {
           <p className="text-ink-500 text-sm py-4">אין עדיין קורסים. הוסיפי קורסים בניהול הקורסים.</p>
         )}
       </div>
+
+      {(() => {
+        const titleOf = new Map((courses ?? []).map((c) => [c.id, c.title]));
+        const comments = (enrollments ?? [])
+          .filter((e) => e.feedback && e.feedback.trim())
+          .map((e) => ({ course: titleOf.get(e.course_id) ?? "—", rating: e.rating, text: e.feedback as string }));
+        if (comments.length === 0) return null;
+        return (
+          <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+            <h3 className="font-display text-base font-bold mb-3">משובים מהחברות</h3>
+            <div className="flex flex-col gap-3">
+              {comments.map((c, i) => (
+                <div key={i} className="border-b border-ink-100 last:border-b-0 pb-3 last:pb-0">
+                  <div className="flex items-center gap-2 text-xs text-ink-500 mb-0.5">
+                    <span className="font-medium text-ink-700">{c.course}</span>
+                    {c.rating != null && <span>{"⭐".repeat(c.rating)}</span>}
+                  </div>
+                  <p className="text-sm text-ink-900">{c.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

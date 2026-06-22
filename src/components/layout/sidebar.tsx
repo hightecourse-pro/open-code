@@ -8,6 +8,7 @@ import {
   Calendar,
   Crown,
   FileCheck2,
+  FileText,
   GraduationCap,
   Home,
   KeyRound,
@@ -31,7 +32,7 @@ const SECTIONS: NavSection[] = [
   {
     items: [
       { href: "/feed", label: "פיד הקהילה", icon: Home },
-      { href: "/forum", label: "פורום", icon: MessageSquare, badge: 12 },
+      { href: "/forum", label: "פורום", icon: MessageSquare },
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
       { href: "/events", label: "אירועים ומיטאפים", icon: Calendar },
       { href: "/jobs", label: "משרות", icon: Briefcase },
@@ -51,8 +52,9 @@ const SECTIONS: NavSection[] = [
     label: "אישי",
     items: [
       { href: "/profile", label: "הפרופיל שלי", icon: User },
+      { href: "/cv", label: "ניהול קורות חיים", icon: FileText },
       { href: "/mentor", label: "המנטורית שלי", icon: Crown },
-      { href: "/chat", label: "צ'אטים", icon: MessageCircle, badge: 3 },
+      { href: "/chat", label: "צ'אטים", icon: MessageCircle },
     ],
   },
 ];

@@ -12,7 +12,9 @@ const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 export type GeminiRole = "user" | "model";
 export interface GeminiTurn {
   role: GeminiRole;
-  text: string;
+  text?: string;
+  /** Optional inline file (e.g. a CV PDF) sent alongside the text. */
+  inlineData?: { mimeType: string; data: string };
 }
 
 interface GenerateOptions {
@@ -26,7 +28,15 @@ interface GenerateOptions {
 
 async function generate(opts: GenerateOptions): Promise<string> {
   const body: Record<string, unknown> = {
-    contents: opts.contents.map((c) => ({ role: c.role, parts: [{ text: c.text }] })),
+    contents: opts.contents.map((c) => ({
+      role: c.role,
+      parts: [
+        ...(c.inlineData
+          ? [{ inline_data: { mime_type: c.inlineData.mimeType, data: c.inlineData.data } }]
+          : []),
+        ...(c.text ? [{ text: c.text }] : []),
+      ],
+    })),
     generationConfig: {
       maxOutputTokens: opts.maxOutputTokens ?? 2048,
       ...(opts.jsonSchema

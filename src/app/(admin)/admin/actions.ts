@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import type { ProfileStatus, ReportStatus, UserRole } from "@/types/database";
+import type { ProfileStatus, ReportStatus, TaxonomyKind, UserRole } from "@/types/database";
 
 /** Promote/demote a member's role (void wrapper for direct form actions). */
 export async function setMemberRoleAction(id: string, role: UserRole): Promise<void> {
@@ -57,6 +57,27 @@ export async function setMemberRole(profileId: string, role: UserRole) {
   if (error) return { error: error.message };
   revalidatePath("/admin/members");
   return {};
+}
+
+/** Add a tag/value to a taxonomy list (technologies, regions, specializations…). */
+export async function addTaxonomy(kind: TaxonomyKind, labelHe: string): Promise<void> {
+  await requireRole("admin");
+  const label = labelHe.trim();
+  if (!label) return;
+  // Derive a stable machine value; Hebrew labels fall back to a random slug.
+  const ascii = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const value = ascii || `v${Math.random().toString(36).slice(2, 8)}`;
+  const supabase = await createClient();
+  await supabase.from("config_taxonomies").insert({ kind, value, label_he: label });
+  revalidatePath("/admin/config");
+}
+
+/** Remove a tag/value from a taxonomy list. */
+export async function removeTaxonomy(id: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("config_taxonomies").delete().eq("id", id);
+  revalidatePath("/admin/config");
 }
 
 /** Show / hide a profile question (the dynamic configuration screen). */

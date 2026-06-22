@@ -114,7 +114,13 @@ create policy "cvs_owner_delete" on storage.objects for delete to authenticated
   using (bucket_id = 'cvs' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
 -- ---- clear demo course/session content (keep the tables) ----
-delete from public.enrollments;
-delete from public.recordings;
-delete from public.sessions;
-delete from public.courses;
+-- Only on first run: once real content links exist, this never fires again.
+do $$
+begin
+  if not exists (select 1 from public.content_links) then
+    delete from public.enrollments;
+    delete from public.recordings;
+    delete from public.sessions;
+    delete from public.courses;
+  end if;
+end $$;

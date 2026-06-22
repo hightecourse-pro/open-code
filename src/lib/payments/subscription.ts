@@ -77,6 +77,21 @@ export async function activateSubscription(input: ActivateInput) {
   // Activate the member.
   await admin.from("profiles").update({ status: "active" }).eq("id", input.profileId);
 
+  // Queue personal Drive shares for every past session — each new member gets
+  // all session recordings shared to her individually (admin actions the queue).
+  const { data: sessions } = await admin.from("sessions").select("id");
+  if (sessions?.length) {
+    await admin.from("content_shares").upsert(
+      sessions.map((s) => ({
+        owner_type: "session" as const,
+        owner_id: s.id,
+        profile_id: input.profileId,
+        status: "pending" as const,
+      })),
+      { onConflict: "owner_type,owner_id,profile_id", ignoreDuplicates: true }
+    );
+  }
+
   return { subscriptionId };
 }
 

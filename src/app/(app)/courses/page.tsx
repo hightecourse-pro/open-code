@@ -3,7 +3,9 @@ import { Info, Play } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { CourseCard } from "@/components/patterns/course-card";
+import { CourseContent } from "@/components/patterns/course-content";
 import { returnCourse } from "./actions";
+import type { ContentLink } from "@/types/database";
 
 export const metadata: Metadata = { title: "ספריית הקורסים" };
 
@@ -16,7 +18,7 @@ export default async function CoursesPage() {
     user
       ? supabase
           .from("enrollments")
-          .select("id, course_id, progress_pct, last_switch_month")
+          .select("id, course_id, progress_pct, last_switch_month, studied, rating, feedback")
           .eq("profile_id", user.id)
           .eq("status", "active")
           .maybeSingle()
@@ -24,6 +26,18 @@ export default async function CoursesPage() {
   ]);
 
   const activeCourse = active ? (courses ?? []).find((c) => c.id === active.course_id) : null;
+
+  // Load the active course's Drive links (videos + materials folders).
+  let activeLinks: ContentLink[] = [];
+  if (activeCourse) {
+    const { data } = await supabase
+      .from("content_links")
+      .select("*")
+      .eq("owner_type", "course")
+      .eq("owner_id", activeCourse.id)
+      .order("sort_order", { ascending: true });
+    activeLinks = data ?? [];
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -64,6 +78,16 @@ export default async function CoursesPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {activeCourse && (
+        <CourseContent
+          courseId={activeCourse.id}
+          links={activeLinks}
+          studied={active?.studied ?? false}
+          rating={active?.rating ?? null}
+          feedback={active?.feedback ?? null}
+        />
       )}
 
       <div className="flex gap-2.5 items-start bg-tint-purple border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-700">

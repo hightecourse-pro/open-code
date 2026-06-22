@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { withUserKey, type AiReason } from "@/lib/ai/keys";
-import { analyzeCv, type CvAnalysis } from "@/lib/ai/cv";
+import { analyzeCvPdf, type CvAnalysis } from "@/lib/ai/cv";
 import type { Json } from "@/types/database";
 
 export type CvState = { error?: string; reason?: AiReason; analysis?: CvAnalysis };
@@ -15,12 +15,20 @@ const REASON_MSG: Record<AiReason, string> = {
   error: "משהו השתבש בניתוח. בואי ננסה שוב עוד רגע.",
 };
 
+const MAX_BYTES = 10 * 1024 * 1024; // 10MB
+
 export async function runCvCheck(_prev: CvState, formData: FormData): Promise<CvState> {
-  const cvText = String(formData.get("cv") ?? "").trim();
+  const file = formData.get("cv_file");
   const jobDescription = String(formData.get("job") ?? "").trim();
 
-  if (cvText.length < 80) {
-    return { error: "הדביקי טקסט מלא של קורות החיים (לפחות כמה שורות) ונבדוק אותו יחד." };
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "צריך להעלות קובץ PDF של קורות החיים." };
+  }
+  if (file.type !== "application/pdf") {
+    return { error: "הקובץ צריך להיות בפורמט PDF." };
+  }
+  if (file.size > MAX_BYTES) {
+    return { error: "הקובץ גדול מדי — עד 10MB." };
   }
 
   const supabase = await createClient();
@@ -29,7 +37,11 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const result = await withUserKey((apiKey) => analyzeCv(apiKey, cvText, jobDescription || undefined));
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+
+  const result = await withUserKey((apiKey) =>
+    analyzeCvPdf(apiKey, base64, jobDescription || undefined)
+  );
   if (!result.ok) {
     return { reason: result.reason, error: REASON_MSG[result.reason] };
   }
@@ -42,7 +54,7 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
     summary: analysis.summary,
     insights: analysis.insights as unknown as Json,
     job_fit: (analysis.job_fit ?? null) as unknown as Json,
-    cv_text: cvText.slice(0, 8000),
+    cv_text: null,
   });
 
   return { analysis };
