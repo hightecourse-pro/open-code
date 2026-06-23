@@ -15,7 +15,7 @@ export interface ProfileFormProps {
   taxonomyOptions?: Partial<Record<TaxonomyKind, Option[]>>;
 }
 
-const LONG_TEXT = new Set(["bio", "ai_project_links", "notes_for_us"]);
+const LONG_TEXT = new Set(["bio", "ai_project_links", "notes_for_us", "work_description"]);
 const isOtherVal = (v: string) => v === "other";
 
 export function ProfileForm({ fullName, questions, answers, taxonomyOptions = {} }: ProfileFormProps) {
@@ -56,6 +56,15 @@ export function ProfileForm({ fullName, questions, answers, taxonomyOptions = {}
   const [selOther, setSelOther] = useState(initSelOther);
   const [multiOther, setMultiOther] = useState(initMultiOther);
 
+  // Experienced (≥1yr) members answer a different set than juniors. The gate is
+  // the bool question keyed "has_experience".
+  const hasExperience = bools["has_experience"] ?? false;
+  function trackHidden(q: ConfigQuestion): boolean {
+    if (q.intake_track === "junior" && hasExperience) return true;
+    if (q.intake_track === "experienced" && !hasExperience) return true;
+    return false;
+  }
+
   return (
     <form action={action} className="flex flex-col gap-4">
       {state.error && <Alert variant="danger">{state.error}</Alert>}
@@ -66,7 +75,8 @@ export function ProfileForm({ fullName, questions, answers, taxonomyOptions = {}
       </Field>
 
       {questions.map((q) => {
-        // Conditional: "אם כן" follow-ups only show when their bool parent is on.
+        // Branch by experience track, then by "אם כן" follow-up dependencies.
+        if (trackHidden(q)) return null;
         if (q.depends_on && !bools[q.depends_on]) return null;
 
         const key = `q_${q.id}`;

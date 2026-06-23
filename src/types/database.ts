@@ -190,6 +190,7 @@ export interface Database {
           options: Json;
           taxonomy_kind: TaxonomyKind | null;
           depends_on: string | null;
+          intake_track: string; // 'both' | 'junior' | 'experienced'
         } & Timestamps;
         Insert: {
           id?: string;
@@ -203,6 +204,7 @@ export interface Database {
           options?: Json;
           taxonomy_kind?: TaxonomyKind | null;
           depends_on?: string | null;
+          intake_track?: string;
         };
         Update: Partial<Database["public"]["Tables"]["config_questions"]["Insert"]>;
         Relationships: [];

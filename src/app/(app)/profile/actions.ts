@@ -27,7 +27,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
 
   const { data: questions } = await supabase
     .from("config_questions")
-    .select("id, key, label_he, field_type, required, depends_on, active")
+    .select("id, key, label_he, field_type, required, depends_on, intake_track, active")
     .eq("active", true);
 
   // Resolve each answer (handling "אחר" free-text), and validate required ones.
@@ -39,9 +39,13 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       boolByKey.set(q.key, formData.get(`q_${q.id}`) === "on");
     }
   }
+  const hasExperience = boolByKey.get("has_experience") ?? false;
 
   for (const q of questions ?? []) {
     const key = `q_${q.id}`;
+    // Skip questions hidden by the experience track — don't require/store them.
+    if (q.intake_track === "junior" && hasExperience) continue;
+    if (q.intake_track === "experienced" && !hasExperience) continue;
     // Skip conditional follow-ups whose parent bool is off — don't require them.
     if (q.depends_on && !boolByKey.get(q.depends_on)) continue;
 
