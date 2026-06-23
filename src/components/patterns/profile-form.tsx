@@ -10,7 +10,8 @@ import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 type Option = { value: string; label: string };
 
 export interface ProfileFormProps {
-  fullName: string;
+  firstName: string;
+  lastName: string;
   questions: ConfigQuestion[];
   answers: Record<string, unknown>; // question_id -> value
   taxonomyOptions?: Partial<Record<TaxonomyKind, Option[]>>;
@@ -54,7 +55,7 @@ const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
   },
 ];
 
-export function ProfileForm({ fullName, questions, answers, taxonomyOptions = {} }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {} }: ProfileFormProps) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -154,8 +155,10 @@ export function ProfileForm({ fullName, questions, answers, taxonomyOptions = {}
 
   function next() {
     if (cur === 0) {
-      const name = String(new FormData(formRef.current!).get("full_name") ?? "").trim();
-      if (name.length < 2) {
+      const fd = new FormData(formRef.current!);
+      const first = String(fd.get("first_name") ?? "").trim();
+      const last = String(fd.get("last_name") ?? "").trim();
+      if (first.length < 1 || last.length < 1) {
         setNameError(true);
         return;
       }
@@ -300,14 +303,24 @@ export function ProfileForm({ fullName, questions, answers, taxonomyOptions = {}
 
       {/* Step 0: name + experience gate */}
       <div className={cn("flex flex-col gap-4", cur === 0 ? "" : "hidden")}>
-        <Field label="שם מלא" htmlFor="full_name" error={nameError ? "נשמח לדעת איך קוראים לך 🙂" : undefined}>
-          <Input
-            id="full_name"
-            name="full_name"
-            defaultValue={fullName}
-            onChange={() => nameError && setNameError(false)}
-          />
-        </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="שם פרטי" htmlFor="first_name" error={nameError ? "נשמח לדעת איך קוראים לך 🙂" : undefined}>
+            <Input
+              id="first_name"
+              name="first_name"
+              defaultValue={firstName}
+              onChange={() => nameError && setNameError(false)}
+            />
+          </Field>
+          <Field label="שם משפחה" htmlFor="last_name">
+            <Input
+              id="last_name"
+              name="last_name"
+              defaultValue={lastName}
+              onChange={() => nameError && setNameError(false)}
+            />
+          </Field>
+        </div>
 
         {gate && (
           <div className="flex flex-col gap-2">

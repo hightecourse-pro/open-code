@@ -14,8 +14,12 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const fullName = String(formData.get("full_name") ?? "").trim();
-  if (fullName.length < 2) return { error: "נשמח לדעת איך קוראים לך 🙂" };
+  const firstName = String(formData.get("first_name") ?? "").trim();
+  const lastName = String(formData.get("last_name") ?? "").trim();
+  if (firstName.length < 1 || lastName.length < 1) {
+    return { error: "נשמח לדעת איך קוראים לך 🙂 (שם פרטי ושם משפחה)" };
+  }
+  const fullName = `${firstName} ${lastName}`.trim();
 
   // Was this the first-login mandatory completion?
   const { data: before } = await supabase
@@ -93,8 +97,11 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   await supabase
     .from("profiles")
     .update({
+      first_name: firstName,
+      last_name: lastName,
       full_name: fullName,
-      avatar_initials: fullName.slice(0, 1),
+      avatar_initials: firstName.slice(0, 1),
+      is_experienced: hasExperience,
       profile_completed: true,
     })
     .eq("id", user.id);

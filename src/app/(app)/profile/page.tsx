@@ -56,7 +56,8 @@ export default async function ProfilePage() {
         <h2 className="font-display text-lg font-bold text-ink-1000 mb-1">פרטי הפרופיל</h2>
         <p className="t-body-sm text-ink-500 mb-4">המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות.</p>
         <ProfileForm
-          fullName={profile.full_name}
+          firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}
+          lastName={profile.last_name ?? profile.full_name?.split(" ").slice(1).join(" ") ?? ""}
           questions={questions ?? []}
           answers={answerMap}
           taxonomyOptions={taxonomyOptions}

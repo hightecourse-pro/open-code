@@ -55,6 +55,8 @@ export interface Database {
         Row: {
           id: string;
           full_name: string;
+          first_name: string | null;
+          last_name: string | null;
           avatar_initials: string | null;
           region: string | null;
           specialization: string | null;
@@ -71,6 +73,8 @@ export interface Database {
         Insert: {
           id: string;
           full_name?: string;
+          first_name?: string | null;
+          last_name?: string | null;
           avatar_initials?: string | null;
           region?: string | null;
           specialization?: string | null;

@@ -46,7 +46,8 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           אפשר יהיה לעדכן הכול בכל רגע מעמוד הפרופיל.
         </p>
         <ProfileForm
-          fullName={profile.full_name}
+          firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}
+          lastName={profile.last_name ?? profile.full_name?.split(" ").slice(1).join(" ") ?? ""}
           questions={questions ?? []}
           answers={answerMap}
           taxonomyOptions={taxonomyOptions}
