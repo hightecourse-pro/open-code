@@ -46,22 +46,16 @@ test.describe("user flow — community features", () => {
     await expect(page.getByRole("heading", { name: /הפורום/ })).toBeVisible();
   });
 
-  test("profile form loads with the experience gate + enforces required fields", async ({ page }) => {
+  test("profile wizard: gate hides everything until a track is chosen, then advances", async ({ page }) => {
     await open(page, "/profile");
     await expect(page.locator('input[name="full_name"]')).toBeVisible();
-    // The experience gate question is present (drives the junior/experienced branch).
-    await expect(page.getByText(/ניסיון אמיתי בתעשייה/)).toBeVisible();
-    await page.getByRole("button", { name: /שמירת הפרופיל/ }).click();
-    // One of: first-completion redirect to /feed, success alert, or the
-    // required-fields validation message (empty required fields).
-    await expect
-      .poll(
-        async () =>
-          new URL(page.url()).pathname === "/feed" ||
-          (await page.getByText(/נשמר|שדות חובה/).isVisible()),
-        { timeout: 15_000 }
-      )
-      .toBe(true);
+    // Step 1 shows the experience gate; nothing from later steps is visible yet.
+    await expect(page.getByText("יש לך ניסיון אמיתי בתעשייה (מעל שנה)?")).toBeVisible();
+    await expect(page.getByText("התמחות ספציפית במגמה")).toHaveCount(0);
+    // Choose the junior track and advance to step 2.
+    await page.getByRole("button", { name: /אני בתחילת הדרך/ }).click();
+    await page.getByRole("button", { name: /הבא/ }).click();
+    await expect(page.getByText(/שלב 2 מתוך/)).toBeVisible();
   });
 
   test("CV management page renders with upload form", async ({ page }) => {

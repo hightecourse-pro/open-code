@@ -112,7 +112,10 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(functi
         <span
           className={cn(
             "w-[18px] h-[18px] rounded-[5px] border-[1.5px] border-ink-400 inline-flex items-center justify-center text-white",
-            "transition-colors peer-checked:bg-brand-gradient peer-checked:border-transparent",
+            // brand-gradient is a component-layer class that the peer-checked
+            // variant can't attach to (the box went transparent → "disappeared").
+            // Use a real color token so the checked state is always visible.
+            "transition-colors peer-checked:bg-brand-pink-deep peer-checked:border-brand-pink-deep",
             // The check is nested in the box, so drive its visibility from the
             // box's peer-checked state (a direct sibling of the input).
             "[&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100",
