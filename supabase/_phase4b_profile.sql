@@ -96,9 +96,9 @@ update public.config_questions
       options = '[{"value":"salesforce","label":"Salesforce"},{"value":"qa","label":"בדיקות / QA"},{"value":"automation_dev","label":"פיתוח אוטומציה"},{"value":"biz_automation","label":"אוטומציה עסקית"},{"value":"n8n","label":"n8n"},{"value":"agents","label":"פיתוח אייג''נטים"}]'::jsonb
   where key = 'unique_courses';
 
--- graduation year (Hebrew picker)
+-- graduation year (Hebrew picker, required for juniors)
 update public.config_questions
-  set field_type = 'select', label_he = 'שנת סיום לימודים',
+  set field_type = 'select', label_he = 'שנת סיום לימודים', required = true,
       options = '[{"value":"5786","label":"תשפ\"ו"},{"value":"5785","label":"תשפ\"ה"},{"value":"5784","label":"תשפ\"ד"},{"value":"5783","label":"תשפ\"ג"},{"value":"other","label":"אחר"}]'::jsonb
   where key = 'graduation_year';
 
