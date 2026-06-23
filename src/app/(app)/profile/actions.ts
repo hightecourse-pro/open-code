@@ -25,6 +25,67 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     .single();
   const firstCompletion = !before?.profile_completed;
 
+  const { data: questions } = await supabase
+    .from("config_questions")
+    .select("id, key, label_he, field_type, required, depends_on, active")
+    .eq("active", true);
+
+  // Resolve each answer (handling "אחר" free-text), and validate required ones.
+  const answered: { question_id: string; value: Json }[] = [];
+  const missing: string[] = [];
+  const boolByKey = new Map<string, boolean>();
+  for (const q of questions ?? []) {
+    if (q.field_type === "bool") {
+      boolByKey.set(q.key, formData.get(`q_${q.id}`) === "on");
+    }
+  }
+
+  for (const q of questions ?? []) {
+    const key = `q_${q.id}`;
+    // Skip conditional follow-ups whose parent bool is off — don't require them.
+    if (q.depends_on && !boolByKey.get(q.depends_on)) continue;
+
+    let value: Json;
+    let empty = false;
+
+    if (q.field_type === "multiselect" || q.field_type === "tags") {
+      let values = formData.getAll(key).map(String);
+      if (values.includes("other")) {
+        const other = String(formData.get(`${key}__other`) ?? "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        values = values.filter((v) => v !== "other").concat(other);
+      }
+      value = values;
+      empty = values.length === 0;
+    } else if (q.field_type === "number") {
+      const raw = formData.get(key);
+      const n = Number(raw);
+      value = raw === null || raw === "" || !Number.isFinite(n) ? null : n;
+      empty = value === null;
+    } else if (q.field_type === "bool") {
+      value = boolByKey.get(q.key) ?? false;
+      empty = false; // a "no" is a valid answer
+    } else if (q.field_type === "select") {
+      let v = String(formData.get(key) ?? "");
+      if (v === "other") v = String(formData.get(`${key}__other`) ?? "").trim();
+      value = v;
+      empty = v === "";
+    } else {
+      const v = String(formData.get(key) ?? "").trim();
+      value = v;
+      empty = v === "";
+    }
+
+    if (q.required && empty) missing.push(q.label_he);
+    answered.push({ question_id: q.id, value });
+  }
+
+  if (missing.length > 0) {
+    return { error: `נשארו עוד שדות חובה למלא: ${missing.slice(0, 6).join(", ")}` };
+  }
+
   await supabase
     .from("profiles")
     .update({
@@ -34,28 +95,13 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     })
     .eq("id", user.id);
 
-  const { data: questions } = await supabase
-    .from("config_questions")
-    .select("id, field_type")
-    .eq("active", true);
-
-  for (const q of questions ?? []) {
-    const key = `q_${q.id}`;
-    let value: Json;
-    if (q.field_type === "multiselect" || q.field_type === "tags") {
-      value = formData.getAll(key).map(String);
-    } else if (q.field_type === "number") {
-      const n = Number(formData.get(key));
-      value = Number.isFinite(n) ? n : null;
-    } else if (q.field_type === "bool") {
-      value = formData.get(key) === "on";
-    } else {
-      value = String(formData.get(key) ?? "");
-    }
-
+  for (const a of answered) {
     await supabase
       .from("profile_answers")
-      .upsert({ profile_id: user.id, question_id: q.id, value }, { onConflict: "profile_id,question_id" });
+      .upsert(
+        { profile_id: user.id, question_id: a.question_id, value: a.value },
+        { onConflict: "profile_id,question_id" }
+      );
   }
 
   revalidatePath("/profile");

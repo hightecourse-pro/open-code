@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { ProfileForm } from "@/components/patterns/profile-form";
+import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { QuestionScope } from "@/types/database";
 
 export const metadata: Metadata = { title: "הפרופיל שלי" };
@@ -14,7 +15,7 @@ export default async function ProfilePage() {
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
 
-  const [{ data: questions }, { data: answers }] = await Promise.all([
+  const [{ data: questions }, { data: answers }, taxonomyOptions] = await Promise.all([
     supabase
       .from("config_questions")
       .select("*")
@@ -22,6 +23,7 @@ export default async function ProfilePage() {
       .in("scope", scope)
       .order("sort_order", { ascending: true }),
     supabase.from("profile_answers").select("question_id, value").eq("profile_id", profile.id),
+    getTaxonomyOptions(),
   ]);
 
   const answerMap: Record<string, unknown> = {};
@@ -53,7 +55,12 @@ export default async function ProfilePage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm">
         <h2 className="font-display text-lg font-bold text-ink-1000 mb-1">פרטי הפרופיל</h2>
         <p className="t-body-sm text-ink-500 mb-4">המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות.</p>
-        <ProfileForm fullName={profile.full_name} questions={questions ?? []} answers={answerMap} />
+        <ProfileForm
+          fullName={profile.full_name}
+          questions={questions ?? []}
+          answers={answerMap}
+          taxonomyOptions={taxonomyOptions}
+        />
       </div>
     </div>
   );

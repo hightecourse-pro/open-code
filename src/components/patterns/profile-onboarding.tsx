@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/ui";
 import { ProfileForm } from "./profile-form";
+import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { Profile, QuestionScope } from "@/types/database";
 
 /**
@@ -14,7 +15,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
 
-  const [{ data: questions }, { data: answers }] = await Promise.all([
+  const [{ data: questions }, { data: answers }, taxonomyOptions] = await Promise.all([
     supabase
       .from("config_questions")
       .select("*")
@@ -22,6 +23,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
       .in("scope", scope)
       .order("sort_order", { ascending: true }),
     supabase.from("profile_answers").select("question_id, value").eq("profile_id", profile.id),
+    getTaxonomyOptions(),
   ]);
 
   const answerMap: Record<string, unknown> = {};
@@ -43,7 +45,12 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות — וגם לסנן הזדמנויות במיוחד בשבילך.
           אפשר יהיה לעדכן הכול בכל רגע מעמוד הפרופיל.
         </p>
-        <ProfileForm fullName={profile.full_name} questions={questions ?? []} answers={answerMap} />
+        <ProfileForm
+          fullName={profile.full_name}
+          questions={questions ?? []}
+          answers={answerMap}
+          taxonomyOptions={taxonomyOptions}
+        />
       </div>
     </div>
   );

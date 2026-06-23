@@ -188,6 +188,8 @@ export interface Database {
           active: boolean;
           scope: QuestionScope;
           options: Json;
+          taxonomy_kind: TaxonomyKind | null;
+          depends_on: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -199,6 +201,8 @@ export interface Database {
           active?: boolean;
           scope?: QuestionScope;
           options?: Json;
+          taxonomy_kind?: TaxonomyKind | null;
+          depends_on?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["config_questions"]["Insert"]>;
         Relationships: [];

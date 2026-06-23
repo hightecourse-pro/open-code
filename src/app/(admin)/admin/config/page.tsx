@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui";
 import { QuestionToggle } from "@/components/patterns/question-toggle";
 import { TaxonomyManager } from "@/components/patterns/taxonomy-manager";
+import { QuestionOptionsEditor } from "@/components/patterns/question-options-editor";
 import { PricingForm } from "@/components/patterns/pricing-form";
 import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans, shekels } from "@/lib/payments/plans";
@@ -90,25 +91,33 @@ export default async function AdminConfigPage() {
           השאלות שחברות ממלאות בפרופיל. כבי כדי להסתיר מבלי למחוק.
         </p>
         <div className="flex flex-col">
-          {(questions ?? []).map((q) => (
-            <div
-              key={q.id}
-              className="flex items-center gap-3 py-3 border-b border-ink-100 last:border-b-0"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-ink-900">{q.label_he}</div>
-                <div className="text-xs text-ink-500 flex items-center gap-2 mt-0.5">
-                  <span className="font-mono">{q.key}</span>
-                  <Badge variant="purple">{FIELD_LABEL[q.field_type]}</Badge>
-                  {q.required && <Badge variant="pink">חובה</Badge>}
-                  {q.scope !== "all" && (
-                    <Badge variant="indigo">{q.scope === "mentor" ? "מנטוריות" : "ג'וניוריות"}</Badge>
-                  )}
+          {(questions ?? []).map((q) => {
+            const editable =
+              (q.field_type === "select" || q.field_type === "multiselect") && !q.taxonomy_kind;
+            const qOptions = Array.isArray(q.options)
+              ? (q.options as unknown as { value: string; label: string }[])
+              : [];
+            return (
+              <div key={q.id} className="flex flex-col py-3 border-b border-ink-100 last:border-b-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-ink-900">{q.label_he}</div>
+                    <div className="text-xs text-ink-500 flex items-center gap-2 mt-0.5">
+                      <span className="font-mono">{q.key}</span>
+                      <Badge variant="purple">{FIELD_LABEL[q.field_type]}</Badge>
+                      {q.required && <Badge variant="pink">חובה</Badge>}
+                      {q.taxonomy_kind && <Badge variant="tech">רשימה: {KIND_LABEL[q.taxonomy_kind]}</Badge>}
+                      {q.scope !== "all" && (
+                        <Badge variant="indigo">{q.scope === "mentor" ? "מנטוריות" : "ג'וניוריות"}</Badge>
+                      )}
+                    </div>
+                  </div>
+                  <QuestionToggle id={q.id} active={q.active} />
                 </div>
+                {editable && <QuestionOptionsEditor questionId={q.id} options={qOptions} />}
               </div>
-              <QuestionToggle id={q.id} active={q.active} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

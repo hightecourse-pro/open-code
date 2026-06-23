@@ -113,10 +113,13 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(functi
           className={cn(
             "w-[18px] h-[18px] rounded-[5px] border-[1.5px] border-ink-400 inline-flex items-center justify-center text-white",
             "transition-colors peer-checked:bg-brand-gradient peer-checked:border-transparent",
+            // The check is nested in the box, so drive its visibility from the
+            // box's peer-checked state (a direct sibling of the input).
+            "[&>svg]:opacity-0 peer-checked:[&>svg]:opacity-100",
             "peer-focus-visible:shadow-[0_0_0_3px_rgba(224,65,141,0.15)]"
           )}
         >
-          <Check size={12} strokeWidth={3} className="opacity-0 peer-checked:opacity-100" />
+          <Check size={12} strokeWidth={3} />
         </span>
       </span>
       {label}

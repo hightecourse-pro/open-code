@@ -80,6 +80,43 @@ export async function removeTaxonomy(id: string): Promise<void> {
   revalidatePath("/admin/config");
 }
 
+type QOption = { value: string; label: string };
+
+/** Add an option to a select/multiselect profile question's list. */
+export async function addQuestionOption(questionId: string, labelHe: string): Promise<void> {
+  await requireRole("admin");
+  const label = labelHe.trim();
+  if (!label) return;
+  const supabase = await createClient();
+  const { data: q } = await supabase
+    .from("config_questions")
+    .select("options")
+    .eq("id", questionId)
+    .single();
+  const current: QOption[] = Array.isArray(q?.options) ? (q!.options as unknown as QOption[]) : [];
+  const ascii = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  const value = ascii || `v${Math.random().toString(36).slice(2, 8)}`;
+  if (current.some((o) => o.value === value || o.label === label)) return;
+  const next = [...current, { value, label }];
+  await supabase.from("config_questions").update({ options: next as never }).eq("id", questionId);
+  revalidatePath("/admin/config");
+}
+
+/** Remove an option (by value) from a profile question's list. */
+export async function removeQuestionOption(questionId: string, value: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const { data: q } = await supabase
+    .from("config_questions")
+    .select("options")
+    .eq("id", questionId)
+    .single();
+  const current: QOption[] = Array.isArray(q?.options) ? (q!.options as unknown as QOption[]) : [];
+  const next = current.filter((o) => o.value !== value);
+  await supabase.from("config_questions").update({ options: next as never }).eq("id", questionId);
+  revalidatePath("/admin/config");
+}
+
 /** Show / hide a profile question (the dynamic configuration screen). */
 export async function toggleQuestionActive(id: string, active: boolean) {
   await requireRole("admin");
