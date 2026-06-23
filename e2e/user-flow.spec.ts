@@ -46,16 +46,19 @@ test.describe("user flow — community features", () => {
     await expect(page.getByRole("heading", { name: /הפורום/ })).toBeVisible();
   });
 
-  test("profile form loads and saves", async ({ page }) => {
+  test("profile form loads with the experience gate + enforces required fields", async ({ page }) => {
     await open(page, "/profile");
     await expect(page.locator('input[name="full_name"]')).toBeVisible();
+    // The experience gate question is present (drives the junior/experienced branch).
+    await expect(page.getByText(/ניסיון אמיתי בתעשייה/)).toBeVisible();
     await page.getByRole("button", { name: /שמירת הפרופיל/ }).click();
-    // First completion redirects into /feed; later saves show the success alert.
+    // One of: first-completion redirect to /feed, success alert, or the
+    // required-fields validation message (empty required fields).
     await expect
       .poll(
         async () =>
           new URL(page.url()).pathname === "/feed" ||
-          (await page.getByText(/נשמר/).isVisible()),
+          (await page.getByText(/נשמר|שדות חובה/).isVisible()),
         { timeout: 15_000 }
       )
       .toBe(true);
