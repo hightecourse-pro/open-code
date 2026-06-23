@@ -14,9 +14,36 @@ test.describe("admin flow", () => {
     await expect(page.getByRole("link", { name: /קונפיגורציה|חברות/ }).first()).toBeVisible();
   });
 
-  test("members management loads", async ({ page }) => {
+  test("members management loads with search + VIP filter", async ({ page }) => {
     await open(page, "/admin/members");
     await expect(page).toHaveURL(/members/);
+    await expect(page.locator('input[name="q"]')).toBeVisible();
+    await expect(page.locator('select[name="status"]')).toBeVisible();
+    // Search submits as a GET form (query params in the URL).
+    await page.fill('input[name="q"]', "test");
+    await page.getByRole("button", { name: "חיפוש", exact: true }).click();
+    await expect(page).toHaveURL(/q=test/);
+  });
+
+  test("content management: create a course; link editor present", async ({ page }) => {
+    await open(page, "/admin/content");
+    await expect(page.getByRole("heading", { name: /ניהול תכנים/ })).toBeVisible();
+    const title = `קורס E2E ${Date.now()}`;
+    await page.locator('form input[name="title"]').first().fill(title);
+    await page.getByRole("button", { name: /הוספת קורס/ }).click();
+    await expect(page.getByText(title)).toBeVisible({ timeout: 15_000 });
+    // The new course renders a Drive-link editor (video/materials tagging).
+    await expect(page.locator('select[name="kind"]').first()).toBeVisible();
+  });
+
+  test("shares queue loads", async ({ page }) => {
+    await open(page, "/admin/shares");
+    await expect(page.getByRole("heading", { name: /תור שיתופים/ })).toBeVisible();
+  });
+
+  test("analytics loads", async ({ page }) => {
+    await open(page, "/admin/analytics");
+    await expect(page.getByRole("heading", { name: /אנליטיקת למידה/ })).toBeVisible();
   });
 
   test("config: membership pricing form loads", async ({ page }) => {

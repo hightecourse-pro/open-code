@@ -50,7 +50,22 @@ test.describe("user flow — community features", () => {
     await open(page, "/profile");
     await expect(page.locator('input[name="full_name"]')).toBeVisible();
     await page.getByRole("button", { name: /שמירת הפרופיל/ }).click();
-    await expect(page.getByText(/נשמר/)).toBeVisible({ timeout: 15_000 });
+    // First completion redirects into /feed; later saves show the success alert.
+    await expect
+      .poll(
+        async () =>
+          new URL(page.url()).pathname === "/feed" ||
+          (await page.getByText(/נשמר/).isVisible()),
+        { timeout: 15_000 }
+      )
+      .toBe(true);
+  });
+
+  test("CV management page renders with upload form", async ({ page }) => {
+    await open(page, "/cv");
+    await expect(page.getByRole("heading", { name: /ניהול קורות חיים/ })).toBeVisible();
+    await expect(page.locator('input[name="file"]')).toBeAttached();
+    await expect(page.locator('select[name="language"]')).toBeVisible();
   });
 
   test("mentor directory renders", async ({ page }) => {
@@ -70,9 +85,11 @@ test.describe("user flow — community features", () => {
 
   test("CV checker prompts to add a key when none is configured", async ({ page }) => {
     await open(page, "/ai/cv-checker");
+    // The checker now takes a PDF upload (sent to Gemini), not pasted text.
+    const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n", "utf8");
     await page
-      .locator('textarea[name="cv"]')
-      .fill("ניסיון בפיתוח React ו-Node.js, עבודת צוות אג'ילית, ".repeat(6));
+      .locator('input[name="cv_file"]')
+      .setInputFiles({ name: "cv.pdf", mimeType: "application/pdf", buffer: pdf });
     await page.getByRole("button", { name: /בדיקת קורות חיים/ }).click();
     await expect(page.getByText(/מפתח Google|מפתחות ה-AI/)).toBeVisible({ timeout: 20_000 });
   });
