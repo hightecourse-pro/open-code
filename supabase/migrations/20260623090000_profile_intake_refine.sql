@@ -138,9 +138,13 @@ insert into public.config_questions (key, label_he, field_type, required, sort_o
   ('exp_role', 'באיזה תפקיד יש לך ניסיון?', 'multiselect', true, 71, 'junior', 'experienced', null,
     '[{"value":"dev","label":"מפתחת"},{"value":"qa","label":"בודקת / QA"},{"value":"analyst","label":"מאפיינת / אנליסטית"},{"value":"automation","label":"אוטומציה"},{"value":"devops","label":"DevOps"},{"value":"support","label":"תמיכה / יישום"},{"value":"other","label":"אחר"}]'::jsonb),
   ('exp_tech', 'באילו טכנולוגיות יש לך ניסיון אמיתי מעבודה?', 'multiselect', true, 72, 'junior', 'experienced', 'tech', '[]'::jsonb),
-  ('exp_languages', 'באילו שפות יש לך ניסיון אמיתי?', 'multiselect', false, 73, 'junior', 'experienced', 'tech', '[]'::jsonb),
+  ('exp_languages', 'באילו שפות יש לך ניסיון אמיתי?', 'multiselect', true, 73, 'junior', 'experienced', 'tech', '[]'::jsonb),
   ('currently_working', 'האם את עובדת כרגע?', 'bool', false, 74, 'junior', 'experienced', null, '[]'::jsonb),
-  ('current_workplace', 'מקום עבודה נוכחי / אחרון', 'text', false, 75, 'junior', 'experienced', null, '[]'::jsonb),
-  ('work_description', 'פרטי מה בדיוק עשית בעבודה', 'text', false, 76, 'junior', 'experienced', null, '[]'::jsonb),
+  ('current_workplace', 'מקום עבודה נוכחי / אחרון', 'text', true, 75, 'junior', 'experienced', null, '[]'::jsonb),
+  ('work_description', 'פרטי מה בדיוק עשית בעבודה', 'text', true, 76, 'junior', 'experienced', null, '[]'::jsonb),
   ('specific_job', 'רוצה לגשת למשרה ספציפית שפרסמנו? אם כן — איזו?', 'text', false, 77, 'junior', 'experienced', null, '[]'::jsonb)
 on conflict (key) do nothing;
+
+-- (idempotent) ensure these stay required even if the rows already exist
+update public.config_questions set required = true
+  where key in ('exp_languages', 'current_workplace', 'work_description');
