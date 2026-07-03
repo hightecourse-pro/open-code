@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Sparkles, Rocket } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
+import { FIELD_VALIDATORS } from "@/lib/validators";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 
 type Option = { value: string; label: string };
@@ -26,7 +27,7 @@ const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
   {
     title: "קצת עלייך",
     hint: "פרטי קשר בסיסיים — כדי שנכיר ונדע איך לחזור אלייך.",
-    keys: ["id_number", "phone", "region", "city", "marital_status", "prev_surname"],
+    keys: ["id_number", "phone", "region", "city", "street", "house_number", "marital_status", "prev_surname"],
   },
   {
     title: "הרקע הלימודי",
@@ -148,7 +149,17 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   function validateStep(qs: ConfigQuestion[]): boolean {
     const fd = new FormData(formRef.current!);
     const errs: Record<string, string> = {};
-    for (const q of qs) if (q.required && missing(q, fd)) errs[q.id] = "שדה חובה";
+    for (const q of qs) {
+      if (q.required && missing(q, fd)) {
+        errs[q.id] = "שדה חובה";
+        continue;
+      }
+      const check = FIELD_VALIDATORS[q.key];
+      if (check) {
+        const msg = check(String(fd.get(`q_${q.id}`) ?? ""));
+        if (msg) errs[q.id] = msg;
+      }
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -264,12 +275,24 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
 
     const isLong = LONG_TEXT.has(q.key);
+    const extra =
+      q.key === "id_number"
+        ? { inputMode: "numeric" as const, dir: "ltr" as const, maxLength: 9 }
+        : q.key === "phone"
+          ? { type: "tel", inputMode: "tel" as const, dir: "ltr" as const, placeholder: "05X-XXXXXXX" }
+          : {};
     return (
       <Field key={q.id} label={q.label_he} htmlFor={key} error={err}>
         {isLong ? (
           <Textarea id={key} name={key} defaultValue={typeof current === "string" ? current : ""} />
         ) : (
-          <Input id={key} name={key} defaultValue={typeof current === "string" ? current : ""} />
+          <Input
+            id={key}
+            name={key}
+            error={!!err}
+            defaultValue={typeof current === "string" ? current : ""}
+            {...extra}
+          />
         )}
       </Field>
     );

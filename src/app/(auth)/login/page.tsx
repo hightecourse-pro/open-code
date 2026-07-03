@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signIn, type AuthState } from "../actions";
-import { Alert, Button, Field, Input } from "@/components/ui";
+import { Alert, Button, Field, Input, PasswordInput } from "@/components/ui";
 
 export default function LoginPage() {
   const [state, action, pending] = useActionState<AuthState, FormData>(signIn, {});
@@ -22,13 +22,7 @@ export default function LoginPage() {
           <Input id="email" name="email" type="email" required dir="ltr" autoComplete="email" />
         </Field>
         <Field label="סיסמה" htmlFor="password">
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-          />
+          <PasswordInput id="password" name="password" required autoComplete="current-password" />
         </Field>
         <div className="-mt-1 text-left">
           <Link href="/forgot-password" className="t-body-sm text-brand-purple font-semibold">

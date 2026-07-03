@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { signUp, type AuthState } from "../actions";
-import { Alert, Button, Field, Input } from "@/components/ui";
+import { Alert, Button, Field, Input, PasswordInput } from "@/components/ui";
 
 export default function SignupPage() {
   const [state, action, pending] = useActionState<AuthState, FormData>(signUp, {});
@@ -27,14 +27,7 @@ export default function SignupPage() {
             <Input id="email" name="email" type="email" required dir="ltr" autoComplete="email" />
           </Field>
           <Field label="סיסמה" htmlFor="password">
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              required
-              autoComplete="new-password"
-              minLength={8}
-            />
+            <PasswordInput id="password" name="password" required autoComplete="new-password" minLength={8} />
           </Field>
           <Button type="submit" disabled={pending} className="w-full" bracketed>
             {pending ? "רגע אחת…" : "הצטרפות"}

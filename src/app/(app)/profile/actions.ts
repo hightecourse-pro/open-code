@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { FIELD_VALIDATORS } from "@/lib/validators";
 import type { Json } from "@/types/database";
 
 export type ProfileState = { ok?: boolean; error?: string };
@@ -37,6 +38,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   // Resolve each answer (handling "אחר" free-text), and validate required ones.
   const answered: { question_id: string; value: Json }[] = [];
   const missing: string[] = [];
+  const invalid: string[] = [];
   const boolByKey = new Map<string, boolean>();
   for (const q of questions ?? []) {
     if (q.field_type === "bool") {
@@ -87,9 +89,17 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     }
 
     if (q.required && empty) missing.push(q.label_he);
+    const check = FIELD_VALIDATORS[q.key];
+    if (check && typeof value === "string") {
+      const msg = check(value);
+      if (msg) invalid.push(msg);
+    }
     answered.push({ question_id: q.id, value });
   }
 
+  if (invalid.length > 0) {
+    return { error: invalid.join(" · ") };
+  }
   if (missing.length > 0) {
     return { error: `נשארו עוד שדות חובה למלא: ${missing.slice(0, 6).join(", ")}` };
   }

@@ -5,5 +5,6 @@ export { Badge, badgeVariants, type BadgeProps } from "./badge";
 export { Alert, type AlertProps } from "./alert";
 export { ProgressBar, ProgressRing } from "./progress";
 export { Field, Input, Textarea, Select, Checkbox } from "./form";
+export { PasswordInput } from "./password-input";
 export { Switch } from "./switch";
 export { Logo, type LogoProps } from "./logo";
