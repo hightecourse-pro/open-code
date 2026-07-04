@@ -34,7 +34,34 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   });
 
   if (error) {
-    return { error: "לא הצלחנו להירשם עם הפרטים האלה. אולי כבר יש לך חשבון?" };
+    // Surface the real reason (server logs) — the message shown to the member
+    // is friendly, but we keep the cause for diagnosis.
+    console.error("[signup] failed", { code: error.code, status: error.status, message: error.message });
+    const code = error.code ?? "";
+    const msg = (error.message ?? "").toLowerCase();
+
+    if (code === "user_already_exists") {
+      return { error: "כבר קיים חשבון עם האימייל הזה. אפשר להיכנס או לאפס סיסמה." };
+    }
+    if (code === "weak_password") {
+      return { error: "הסיסמה חלשה מדי — נסי סיסמה ארוכה יותר עם אותיות ומספרים." };
+    }
+    if (code === "email_address_invalid") {
+      return { error: "כתובת האימייל לא נראית תקינה. בדקי אותה שוב 🙂" };
+    }
+    if (error.status === 429 || code === "over_email_send_rate_limit") {
+      return { error: "יותר מדי ניסיונות בזמן קצר. נסי שוב בעוד כמה דקות." };
+    }
+    if (msg.includes("confirmation email") || msg.includes("sending") || error.status === 500) {
+      return { error: "יש תקלה זמנית בשליחת מייל האימות מהצד שלנו. כבר מטפלים — נסי שוב עוד רגע 🙏" };
+    }
+    return { error: "לא הצלחנו להשלים את ההרשמה כרגע. נסי שוב עוד רגע." };
+  }
+
+  // Anti-enumeration: Supabase returns a fake success for an already-registered
+  // email, with an empty identities array. Treat that as "you already have one".
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return { error: "כבר קיים חשבון עם האימייל הזה. אפשר להיכנס או לאפס סיסמה." };
   }
 
   // Email confirmation off → we have a session; on → ask her to confirm.
