@@ -6,6 +6,7 @@ import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/compo
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import { FIELD_VALIDATORS } from "@/lib/validators";
+import { CITIES } from "@/data/cities";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 
 type Option = { value: string; label: string };
@@ -201,6 +202,23 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     const list = opts(q);
     const err = errors[q.id];
 
+    // City: searchable input backed by the official settlements list.
+    if (q.key === "city") {
+      return (
+        <Field key={q.id} label={q.label_he} htmlFor={key} error={err}>
+          <Input
+            id={key}
+            name={key}
+            list="oc-cities"
+            autoComplete="off"
+            placeholder="התחילי להקליד עיר…"
+            error={!!err}
+            defaultValue={typeof current === "string" ? current : ""}
+          />
+        </Field>
+      );
+    }
+
     if (q.field_type === "select") {
       const isOther = selOther[q.id];
       return (
@@ -300,6 +318,11 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
 
   return (
     <form ref={formRef} action={action} className="flex flex-col gap-5">
+      <datalist id="oc-cities">
+        {CITIES.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
       {state.error && <Alert variant="danger">{state.error}</Alert>}
       {state.ok && <Alert variant="success">הפרופיל נשמר ✓</Alert>}
 

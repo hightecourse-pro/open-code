@@ -93,7 +93,9 @@ export default async function AdminConfigPage() {
         <div className="flex flex-col">
           {(questions ?? []).map((q) => {
             const editable =
-              (q.field_type === "select" || q.field_type === "multiselect") && !q.taxonomy_kind;
+              (q.field_type === "select" || q.field_type === "multiselect") &&
+              !q.taxonomy_kind &&
+              q.key !== "city";
             const qOptions = Array.isArray(q.options)
               ? (q.options as unknown as { value: string; label: string }[])
               : [];
@@ -107,6 +109,7 @@ export default async function AdminConfigPage() {
                       <Badge variant="purple">{FIELD_LABEL[q.field_type]}</Badge>
                       {q.required && <Badge variant="pink">חובה</Badge>}
                       {q.taxonomy_kind && <Badge variant="tech">רשימה: {KIND_LABEL[q.taxonomy_kind]}</Badge>}
+                      {q.key === "city" && <Badge variant="mint">רשימת ערים מ-gov.il</Badge>}
                       {q.scope !== "all" && (
                         <Badge variant="indigo">{q.scope === "mentor" ? "מנטוריות" : "ג'וניוריות"}</Badge>
                       )}
