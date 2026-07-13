@@ -41,7 +41,10 @@ export default async function AdminAnalyticsPage() {
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;אנליטיקה/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">אנליטיקת למידה</h1>
-        <p className="t-body-sm text-ink-700">דירוגים, צפיות והשלמות לפי קורס.</p>
+        <p className="t-body-sm text-ink-700">
+          דירוגים, צפיות והשלמות לפי קורס. הדירוגים והמשובים מתמלאים כשחברה מסמנת שלמדה קורס
+          ומשאירה משוב במסך הקורס.
+        </p>
       </div>
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm overflow-x-auto">

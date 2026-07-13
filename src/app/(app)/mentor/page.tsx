@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar, Badge } from "@/components/ui";
 import { startConversation } from "../chat/actions";
 
-export const metadata: Metadata = { title: "המנטוריות שלי" };
+export const metadata: Metadata = { title: "המנטוריות שלנו" };
 
 export default async function MentorPage() {
   const supabase = await createClient();

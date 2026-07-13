@@ -46,6 +46,21 @@ export async function sendMessage(conversationId: string, formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // A junior may only message an active mentor — block once a mentor is removed.
+  const { data: conv } = await supabase
+    .from("conversations")
+    .select("a_id, b_id")
+    .eq("id", conversationId)
+    .maybeSingle();
+  if (!conv) return;
+  const otherId = conv.a_id === user.id ? conv.b_id : conv.a_id;
+  const [{ data: me }, { data: other }] = await Promise.all([
+    supabase.from("profiles").select("role").eq("id", user.id).single(),
+    supabase.from("profiles").select("role, status").eq("id", otherId).single(),
+  ]);
+  const otherIsActiveMentor = other?.role === "mentor" && other?.status === "active";
+  if (me?.role === "junior" && !otherIsActiveMentor) return;
+
   await supabase.from("messages").insert({
     conversation_id: conversationId,
     sender_id: user.id,

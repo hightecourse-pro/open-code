@@ -25,12 +25,18 @@ export default async function ChatPage({
   // Resolve the "other" participant for each conversation.
   const otherIds = [...new Set((conversations ?? []).map((c) => (c.a_id === me.id ? c.b_id : c.a_id)))];
   const { data: others } = otherIds.length
-    ? await supabase.from("profiles").select("id, full_name, avatar_initials, role").in("id", otherIds)
+    ? await supabase.from("profiles").select("id, full_name, avatar_initials, role, status").in("id", otherIds)
     : { data: [] };
   const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
 
   const active = (conversations ?? []).find((c) => c.id === activeId) ?? null;
   const activeOther = active ? otherMap.get(active.a_id === me.id ? active.b_id : active.a_id) : null;
+
+  // A junior may only message an active mentor. Once a mentor is removed, the
+  // thread stays readable but new messages are blocked. Mentors/staff can reply.
+  const canSend =
+    me.role !== "junior" ||
+    (!!activeOther && activeOther.role === "mentor" && activeOther.status === "active");
 
   const { data: messages } = active
     ? await supabase
@@ -93,20 +99,22 @@ export default async function ChatPage({
                 <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
               </div>
 
-              <div className="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
+              <div className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40">
                 {(messages ?? []).map((m) => {
                   const mine = m.sender_id === me.id;
                   return (
-                    <div
-                      key={m.id}
-                      className={cn(
-                        "max-w-[75%] px-3.5 py-2 rounded-2xl text-sm",
-                        mine
-                          ? "self-start bg-brand-gradient text-white"
-                          : "self-end bg-ink-100 text-ink-900"
-                      )}
-                    >
-                      {m.body}
+                    <div key={m.id} className={cn("flex flex-col max-w-[78%]", mine ? "self-end items-end" : "self-start items-start")}>
+                      <div
+                        className={cn(
+                          "px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap",
+                          mine
+                            ? "bg-brand-gradient text-white rounded-2xl rounded-br-md"
+                            : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
+                        )}
+                      >
+                        {m.body}
+                      </div>
+                      <span className="text-[10.5px] text-ink-400 mt-0.5 px-1">{timeAgo(m.created_at)}</span>
                     </div>
                   );
                 })}
@@ -117,20 +125,26 @@ export default async function ChatPage({
                 )}
               </div>
 
-              <form
-                action={sendMessage.bind(null, active.id)}
-                className="flex gap-2 p-3 border-t border-ink-100"
-              >
-                <input
-                  name="body"
-                  autoComplete="off"
-                  placeholder="כתבי הודעה…"
-                  className="flex-1 px-3.5 py-2.5 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple"
-                />
-                <Button type="submit" size="sm">
-                  שליחה
-                </Button>
-              </form>
+              {canSend ? (
+                <form
+                  action={sendMessage.bind(null, active.id)}
+                  className="flex gap-2 p-3 border-t border-ink-100"
+                >
+                  <input
+                    name="body"
+                    autoComplete="off"
+                    placeholder="כתבי הודעה…"
+                    className="flex-1 px-3.5 py-2.5 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple"
+                  />
+                  <Button type="submit" size="sm">
+                    שליחה
+                  </Button>
+                </form>
+              ) : (
+                <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
+                  המנטורית כבר לא זמינה לשיחות חדשות. אפשר לפנות למנטורית אחרת מעמוד המנטוריות 💜
+                </div>
+              )}
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-ink-500 text-sm">
