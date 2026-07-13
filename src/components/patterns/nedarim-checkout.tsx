@@ -29,7 +29,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
       if (cancelled) return;
       tries += 1;
       if (await checkMembershipActive()) {
-        window.location.href = "/feed";
+        window.location.href = "/forum";
         return;
       }
       if (tries >= 20) {
@@ -99,7 +99,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
         {activationTimedOut ? (
           <>
             תודה רבה! ההפעלה אורכת רגע. רענני את העמוד בעוד דקה —
-            <a href="/feed" className="font-semibold text-brand-purple underline">
+            <a href="/forum" className="font-semibold text-brand-purple underline">
               {" "}או נסי להמשיך לקהילה
             </a>
             . אם זה לא נפתח, נעדכן אותך במייל.

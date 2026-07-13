@@ -47,8 +47,11 @@ export type AddKeyResult = { ok: true } | { ok: false; error: string };
 
 export async function addUserKey(rawKey: string, label?: string): Promise<AddKeyResult> {
   const key = rawKey.trim();
-  if (!key.startsWith("AIza") || key.length < 30) {
-    return { ok: false, error: "זה לא נראה כמו מפתח Google תקין (מתחיל ב-AIza)." };
+  // Google keys are typically ~39 chars (often "AIza…"), but the format can
+  // vary — so we just sanity-check the length and let Google's API be the
+  // real validator via verifyGeminiKey below.
+  if (key.length < 20 || /\s/.test(key)) {
+    return { ok: false, error: "המפתח נראה קצר מדי או מכיל רווחים. העתיקי אותו שוב מ-Google AI Studio." };
   }
 
   const valid = await verifyGeminiKey(key);

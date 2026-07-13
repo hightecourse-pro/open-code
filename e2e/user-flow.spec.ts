@@ -11,7 +11,7 @@ async function open(page: Page, url: string) {
 
 test.describe("user flow — community features", () => {
   test("feed: publish a post and see it appear", async ({ page }) => {
-    await open(page, "/feed");
+    await open(page, "/forum");
     const body = page.getByPlaceholder("מה את רוצה לשתף עם הקהילה?");
     await expect(body).toBeVisible();
     const text = `בדיקת E2E ${Date.now()}`;

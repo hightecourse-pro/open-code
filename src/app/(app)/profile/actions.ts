@@ -127,6 +127,6 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
 
   revalidatePath("/profile");
   // On first completion, drop the onboarding gate and land in the community.
-  if (firstCompletion) redirect("/feed");
+  if (firstCompletion) redirect("/forum");
   return { ok: true };
 }

@@ -12,6 +12,6 @@ setup("authenticate as admin", async ({ page }) => {
   await page.fill('input[name="email"]', ADMIN_EMAIL);
   await page.fill('input[name="password"]', ADMIN_PASSWORD);
   await page.getByRole("button", { name: "כניסה" }).click();
-  await expect(page).toHaveURL(/\/feed/, { timeout: 15_000 });
+  await expect(page).toHaveURL(/\/forum/, { timeout: 15_000 });
   await page.context().storageState({ path: ADMIN_STATE });
 });

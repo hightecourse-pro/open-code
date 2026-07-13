@@ -29,7 +29,7 @@ test.describe("public pages + gating", () => {
   });
 
   test("protected route redirects to login when logged out", async ({ page }) => {
-    await page.goto("/feed");
+    await page.goto("/forum");
     await expect(page).toHaveURL(/\/login/);
   });
 
@@ -48,7 +48,7 @@ test.describe("admin auth", () => {
     await page.fill('input[name="password"]', ADMIN_PASSWORD);
     await page.getByRole("button", { name: "כניסה" }).click();
 
-    await expect(page).toHaveURL(/\/feed/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/forum/, { timeout: 15_000 });
     // The admin-only sidebar entry is visible to admins.
     await expect(page.getByRole("link", { name: /ניהול הקהילה/ })).toBeVisible();
 

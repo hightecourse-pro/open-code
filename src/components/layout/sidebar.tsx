@@ -10,7 +10,6 @@ import {
   FileCheck2,
   FileText,
   GraduationCap,
-  Home,
   KeyRound,
   LogOut,
   MessageCircle,
@@ -31,8 +30,7 @@ type NavSection = { label?: string; items: NavItem[] };
 const SECTIONS: NavSection[] = [
   {
     items: [
-      { href: "/feed", label: "פיד הקהילה", icon: Home },
-      { href: "/forum", label: "פורום", icon: MessageSquare },
+      { href: "/forum", label: "פורום הקהילה", icon: MessageSquare },
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
       { href: "/events", label: "אירועים ומיטאפים", icon: Calendar },
       { href: "/jobs", label: "משרות", icon: Briefcase },
@@ -53,7 +51,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/profile", label: "הפרופיל שלי", icon: User },
       { href: "/cv", label: "ניהול קורות חיים", icon: FileText },
-      { href: "/mentor", label: "המנטורית שלי", icon: Crown },
+      { href: "/mentor", label: "המנטוריות שלנו", icon: Crown },
       { href: "/chat", label: "צ'אטים", icon: MessageCircle },
     ],
   },
@@ -78,7 +76,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
 
   return (
     <nav className="bg-white border-e border-ink-200 p-[18px] pt-[22px] flex flex-col gap-1.5 sticky top-0 h-screen overflow-y-auto">
-      <Link href="/feed" className="px-2 mb-2.5 block w-fit" aria-label="קוד פתוח">
+      <Link href="/forum" className="px-2 mb-2.5 block w-fit" aria-label="קוד פתוח">
         <Logo width={140} />
       </Link>
 

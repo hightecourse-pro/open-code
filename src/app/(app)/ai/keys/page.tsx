@@ -14,10 +14,10 @@ const STATUS: Record<string, { label: string; variant: "mint" | "warm" | "tech" 
 };
 
 const STEPS = [
-  "היכנסי ל-Google AI Studio בכתובת aistudio.google.com/apikey והתחברי עם חשבון Google שלך.",
+  "היכנסי ל-Google AI Studio (הכפתור למעלה) והתחברי עם חשבון Google שלך.",
   'לחצי על "Create API key" (צור מפתח API).',
   "בחרי פרויקט קיים או צרי פרויקט חדש ב-Google Cloud.",
-  "העתיקי את המפתח שנוצר — הוא מתחיל ב-AIza.",
+  "העתיקי את המפתח שנוצר (כפתור ההעתקה).",
   "הדביקי אותו בטופס למטה ושמרי. זהו! 💜",
 ];
 
@@ -45,7 +45,15 @@ export default async function AiKeysPage() {
       {/* instructions */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm">
         <h2 className="font-display text-lg font-bold text-ink-1000 mb-1">איך משיגים מפתח מ-Google?</h2>
-        <p className="t-body-sm text-ink-500 mb-4">חינמי, לוקח דקה. הנה שלב-אחר-שלב:</p>
+        <p className="t-body-sm text-ink-500 mb-4">חינמי, לוקח דקה. קודם פתחי את AI Studio, ואז עקבי אחרי השלבים:</p>
+        <a
+          href="https://aistudio.google.com/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 mb-4 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white hover:opacity-90 transition-opacity"
+        >
+          פתיחת Google AI Studio <ExternalLink size={14} />
+        </a>
         <ol className="flex flex-col gap-2.5">
           {STEPS.map((s, i) => (
             <li key={i} className="flex gap-3 text-[14px] text-ink-800">
@@ -56,14 +64,6 @@ export default async function AiKeysPage() {
             </li>
           ))}
         </ol>
-        <a
-          href="https://aistudio.google.com/apikey"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 mt-4 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors"
-        >
-          פתיחת Google AI Studio <ExternalLink size={14} />
-        </a>
       </div>
 
       {/* add key */}
@@ -90,7 +90,7 @@ export default async function AiKeysPage() {
                     <div className="font-medium text-ink-900 truncate">
                       {k.label || "מפתח Google"}{" "}
                       <span className="font-mono text-xs text-ink-400" dir="ltr">
-                        AIza…{k.key_last4}
+                        …{k.key_last4}
                       </span>
                     </div>
                     <div className="text-[11px] text-ink-500">

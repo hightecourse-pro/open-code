@@ -15,7 +15,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   if (error) {
     return { error: "האימייל או הסיסמה לא נכונים. בואי ננסה שוב." };
   }
-  redirect("/feed");
+  redirect("/forum");
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -112,5 +112,5 @@ export async function updatePassword(
   if (error) {
     return { error: 'הקישור פג תוקף או לא תקין. בקשי קישור חדש מ"שכחתי סיסמה".' };
   }
-  redirect("/feed");
+  redirect("/forum");
 }

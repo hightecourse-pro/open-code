@@ -46,6 +46,6 @@ export async function requireActiveAccess(): Promise<Profile> {
 /** Require a specific role; non-matching users are sent back to the feed. */
 export async function requireRole(role: UserRole): Promise<Profile> {
   const profile = await requireProfile();
-  if (profile.role !== role) redirect("/feed");
+  if (profile.role !== role) redirect("/forum");
   return profile;
 }

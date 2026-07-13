@@ -20,7 +20,7 @@ export function AddKeyForm() {
         <Input id="label" name="label" placeholder="לדוגמה: המפתח של גוגל הראשי" />
       </Field>
       <Field label="מפתח Google API" htmlFor="key">
-        <Input id="key" name="key" dir="ltr" placeholder="AIza…" autoComplete="off" />
+        <Input id="key" name="key" dir="ltr" placeholder="הדביקי כאן את המפתח מ-AI Studio" autoComplete="off" />
       </Field>
       <Button type="submit" disabled={pending} className="w-fit" bracketed>
         {pending ? "מאמת מול Google…" : "הוספת מפתח"}

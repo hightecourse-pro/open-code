@@ -14,15 +14,14 @@ test.describe("admin flow", () => {
     await expect(page.getByRole("link", { name: /קונפיגורציה|חברות/ }).first()).toBeVisible();
   });
 
-  test("members management loads with search + VIP filter", async ({ page }) => {
+  test("members management loads with instant search + VIP filter", async ({ page }) => {
     await open(page, "/admin/members");
     await expect(page).toHaveURL(/members/);
-    await expect(page.locator('input[name="q"]')).toBeVisible();
-    await expect(page.locator('select[name="status"]')).toBeVisible();
-    // Search submits as a GET form (query params in the URL).
-    await page.fill('input[name="q"]', "test");
-    await page.getByRole("button", { name: "חיפוש", exact: true }).click();
-    await expect(page).toHaveURL(/q=test/);
+    // Instant client-side search (no form submit / URL change).
+    const search = page.getByPlaceholder(/חיפוש לפי שם/);
+    await expect(search).toBeVisible();
+    await search.fill("zzz-no-such-member");
+    await expect(page.getByText("לא נמצאו חברות בסינון הזה.")).toBeVisible();
   });
 
   test("content management: create a course; link editor present", async ({ page }) => {

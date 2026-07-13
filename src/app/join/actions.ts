@@ -35,5 +35,5 @@ export async function simulatePayment(plan: SubscriptionPlan): Promise<{ error?:
   if (!user) redirect("/login");
 
   await activateSubscription({ profileId: user.id, plan });
-  redirect("/feed");
+  redirect("/forum");
 }

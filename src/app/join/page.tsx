@@ -39,7 +39,7 @@ function Shell({ children }: { children: React.ReactNode }) {
 export default async function JoinPage() {
   const profile = await getProfile();
   if (!profile) redirect("/login");
-  if (profile.status === "active") redirect("/feed");
+  if (profile.status === "active") redirect("/forum");
 
   const isMentorTier = profile.member_tier === "free";
 
