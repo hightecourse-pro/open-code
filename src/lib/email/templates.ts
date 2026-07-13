@@ -115,6 +115,71 @@ export function magicLinkEmail(actionUrl: string, name?: string): BuiltEmail {
   };
 }
 
+export interface DigestData {
+  name?: string;
+  unreadCount: number;
+  unreadFrom: string[];
+  newForumPosts: number;
+  newJobs: number;
+  upcomingSessions: { title: string; when: string }[];
+}
+
+/** The daily digest: a warm roundup of what's waiting for a member. */
+export function dailyDigestEmail(data: DigestData): BuiltEmail {
+  const row = (emoji: string, text: string, href: string, cta: string) =>
+    `<div style="display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid ${C.border};">
+      <div style="font-size:20px;">${emoji}</div>
+      <div style="flex:1; font-size:14px; color:${C.body};">${text}</div>
+      <a href="${SITE}${href}" style="font-size:13px; font-weight:700; color:${C.pink}; text-decoration:none; white-space:nowrap;">${cta} ←</a>
+    </div>`;
+
+  const rows: string[] = [];
+  if (data.unreadCount > 0) {
+    const who = data.unreadFrom.slice(0, 3).join(", ");
+    rows.push(
+      row(
+        "💬",
+        `<b>${data.unreadCount} הודעות חדשות</b> בצ'אט${who ? ` — מ${who}` : ""}`,
+        "/chat",
+        "לצ'אט"
+      )
+    );
+  }
+  if (data.newForumPosts > 0) {
+    rows.push(row("📣", `<b>${data.newForumPosts} פוסטים חדשים</b> בפורום`, "/forum", "לפורום"));
+  }
+  if (data.newJobs > 0) {
+    rows.push(row("💼", `<b>${data.newJobs} משרות חדשות</b> שמתאימות לך`, "/jobs", "למשרות"));
+  }
+  if (data.upcomingSessions.length > 0) {
+    const list = data.upcomingSessions
+      .slice(0, 3)
+      .map((s) => `${s.title} (${s.when})`)
+      .join(" · ");
+    rows.push(row("📅", `<b>סשנים קרובים:</b> ${list}`, "/events", "ליומן"));
+  }
+
+  const body = `<div style="font-family: Arial, 'Segoe UI', Helvetica, sans-serif; background:${C.bg}; padding:32px 16px; color:${C.ink};">
+  <div style="max-width:480px; margin:0 auto; background:${C.card}; border-radius:18px; overflow:hidden; border:1px solid ${C.border};">
+    <div style="padding:26px 24px 12px; text-align:center; background:#ffffff;">
+      <img src="${LOGO}" alt="קוד פתוח" width="150" style="display:inline-block; width:150px; height:auto; border:0;" />
+    </div>
+    <div style="height:4px; background:${C.gradient};"></div>
+    <div style="padding:26px 26px;">
+      <h1 style="font-size:20px; margin:0 0 6px; color:${C.ink};">${data.name ? `בוקר טוב ${data.name}! ` : "בוקר טוב! "}☀️</h1>
+      <p style="font-size:14px; line-height:1.6; color:${C.body}; margin:0 0 12px;">הנה מה שמחכה לך היום בקהילה:</p>
+      ${rows.join("")}
+      <a href="${SITE}/forum" style="display:inline-block; background:${C.gradient}; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:12px 28px; border-radius:10px; margin:18px 0 2px;">כניסה לקהילה</a>
+    </div>
+  </div>
+  <div style="text-align:center; color:${C.muted}; font-size:12px; margin-top:18px;">
+    קוד פתוח · ${TAGLINE} 💜
+  </div>
+</div>`;
+
+  return { subject: "מה חדש בקוד פתוח היום 💜", html: body };
+}
+
 /** Fallback for any other auth action (email change, reauth, invite, …). */
 export function genericActionEmail(actionUrl: string): BuiltEmail {
   return {
