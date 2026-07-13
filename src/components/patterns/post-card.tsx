@@ -1,6 +1,6 @@
-import { Heart, MessageCircle, Bookmark } from "lucide-react";
 import { Avatar, Badge } from "@/components/ui";
 import { timeAgo } from "@/lib/utils";
+import { PostInteractions, type PostComment } from "@/components/patterns/post-interactions";
 import type { PostIntent, UserRole } from "@/types/database";
 
 export interface FeedPost {
@@ -17,6 +17,10 @@ export interface FeedPost {
     role: UserRole;
     specialization: string | null;
   } | null;
+  likeCount?: number;
+  liked?: boolean;
+  saved?: boolean;
+  comments?: PostComment[];
 }
 
 const INTENT_LABEL: Record<PostIntent, string> = {
@@ -69,23 +73,13 @@ export function PostCard({ post }: { post: FeedPost }) {
         </div>
       )}
 
-      <footer className="flex gap-4 mt-3 pt-3 border-t border-ink-100">
-        <ActionButton icon={<Heart size={16} />} label="אהבתי" />
-        <ActionButton icon={<MessageCircle size={16} />} label="תגובה" />
-        <ActionButton icon={<Bookmark size={16} />} label="שמירה" />
-      </footer>
+      <PostInteractions
+        postId={post.id}
+        likeCount={post.likeCount ?? 0}
+        liked={post.liked ?? false}
+        saved={post.saved ?? false}
+        comments={post.comments ?? []}
+      />
     </article>
-  );
-}
-
-function ActionButton({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      className="flex items-center gap-1.5 text-[13.5px] text-ink-500 px-2 py-1 rounded-lg hover:bg-ink-100 hover:text-brand-pink-deep transition-colors"
-    >
-      {icon}
-      {label}
-    </button>
   );
 }

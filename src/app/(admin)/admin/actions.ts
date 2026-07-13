@@ -3,7 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
-import type { ProfileStatus, ReportStatus, TaxonomyKind, UserRole } from "@/types/database";
+import type {
+  ApplicationStatus,
+  EmploymentType,
+  JobSource,
+  ProfileStatus,
+  ReportStatus,
+  TaxonomyKind,
+  UserRole,
+} from "@/types/database";
 
 /** Promote/demote a member's role (void wrapper for direct form actions). */
 export async function setMemberRoleAction(id: string, role: UserRole): Promise<void> {
@@ -169,30 +177,92 @@ export async function updatePricing(
 
 export type FormState = { ok?: boolean; error?: string };
 
-/** Post a new job to the board. */
-export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
-  await requireRole("admin");
+const EMPLOYMENT: EmploymentType[] = ["full", "part", "student", "freelance"];
+
+function jobFields(formData: FormData) {
   const company = String(formData.get("company") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
-  if (!company || !title) return { error: "חברה ותפקיד הם שדות חובה." };
-
-  const supabase = await createClient();
-  const { error } = await supabase.from("jobs").insert({
+  const source: JobSource = String(formData.get("source") ?? "open") === "ours" ? "ours" : "open";
+  const empRaw = String(formData.get("employment_type") ?? "full");
+  const employment_type: EmploymentType = EMPLOYMENT.includes(empRaw as EmploymentType)
+    ? (empRaw as EmploymentType)
+    : "full";
+  const external_url = String(formData.get("external_url") ?? "").trim() || null;
+  return {
     company,
     title,
-    source: String(formData.get("source") ?? "open") === "ours" ? "ours" : "open",
-    location: String(formData.get("location") ?? "") || null,
+    source,
+    employment_type,
+    location: String(formData.get("location") ?? "").trim() || null,
     description: String(formData.get("description") ?? ""),
     tech_tags: String(formData.get("tech") ?? "")
       .split(",")
       .map((t) => t.trim())
       .filter(Boolean),
-    external_url: String(formData.get("external_url") ?? "") || null,
-  });
+    external_url,
+  };
+}
+
+function validateJob(f: ReturnType<typeof jobFields>): string | null {
+  if (!f.company || !f.title) return "חברה ותפקיד הם שדות חובה.";
+  // Market ("open") jobs are applied to off-site — a link is required.
+  if (f.source === "open" && !f.external_url) return "למשרה מהשוק חובה קישור להגשה.";
+  return null;
+}
+
+/** Post a new job to the board. */
+export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+  const f = jobFields(formData);
+  const err = validateJob(f);
+  if (err) return { error: err };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("jobs").insert(f);
   if (error) return { error: error.message };
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
   return { ok: true };
+}
+
+/** Edit an existing job. */
+export async function editJob(jobId: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+  const f = jobFields(formData);
+  const err = validateJob(f);
+  if (err) return { error: err };
+  const supabase = await createClient();
+  const { error } = await supabase.from("jobs").update(f).eq("id", jobId);
+  if (error) return { error: error.message };
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
+  return { ok: true };
+}
+
+/** Close (or reopen) a job — closed jobs disappear from the members' board. */
+export async function setJobStatus(jobId: string, open: boolean): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("jobs").update({ status: open ? "open" : "closed" }).eq("id", jobId);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
+}
+
+/** Delete a job permanently. */
+export async function deleteJob(jobId: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("jobs").delete().eq("id", jobId);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
+}
+
+/** Update a candidate application's status (internal-job pipeline). */
+export async function setApplicationStatus(applicationId: string, status: ApplicationStatus): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("applications").update({ status }).eq("id", applicationId);
+  revalidatePath("/admin/jobs");
 }
 
 /** Schedule a new community session. */

@@ -53,6 +53,8 @@ test.describe("admin flow", () => {
   test("jobs management: add a job end-to-end", async ({ page }) => {
     await open(page, "/admin/jobs");
     await expect(page.locator('input[name="company"]')).toBeVisible();
+    // Internal ("ours") job — no external apply link required.
+    await page.selectOption('select[name="source"]', "ours");
     await page.fill('input[name="company"]', "E2E TestCo");
     await page.fill('input[name="title"]', "Junior QA (E2E)");
     await page.getByRole("button", { name: /הוספת משרה/ }).click();

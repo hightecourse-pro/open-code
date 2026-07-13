@@ -1,11 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { createJob, type FormState } from "@/app/(admin)/admin/actions";
 
+const EMPLOYMENT: { value: string; label: string }[] = [
+  { value: "full", label: "משרה מלאה" },
+  { value: "part", label: "משרה חלקית" },
+  { value: "student", label: "משרת סטודנטית" },
+  { value: "freelance", label: "פרילנס" },
+];
+
 export function AdminCreateJob() {
   const [state, action, pending] = useActionState<FormState, FormData>(createJob, {});
+  const [source, setSource] = useState("open");
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -18,10 +26,19 @@ export function AdminCreateJob() {
         <Field label="תפקיד" htmlFor="j-title">
           <Input id="j-title" name="title" required />
         </Field>
-        <Field label="סוג" htmlFor="j-source">
-          <Select id="j-source" name="source" defaultValue="open">
-            <option value="ours">משרה שלנו</option>
-            <option value="open">משרה פתוחה</option>
+        <Field label="סוג משרה" htmlFor="j-source">
+          <Select id="j-source" name="source" value={source} onChange={(e) => setSource(e.target.value)}>
+            <option value="ours">משרה שלנו (הגשה פנימית)</option>
+            <option value="open">משרה מהשוק (הגשה חיצונית)</option>
+          </Select>
+        </Field>
+        <Field label="היקף" htmlFor="j-emp">
+          <Select id="j-emp" name="employment_type" defaultValue="full">
+            {EMPLOYMENT.map((e) => (
+              <option key={e.value} value={e.value}>
+                {e.label}
+              </option>
+            ))}
           </Select>
         </Field>
         <Field label="מיקום" htmlFor="j-location">
@@ -31,8 +48,17 @@ export function AdminCreateJob() {
       <Field label="טכנולוגיות (מופרדות בפסיק)" htmlFor="j-tech">
         <Input id="j-tech" name="tech" placeholder="react, nodejs, sql" dir="ltr" />
       </Field>
-      <Field label="קישור להגשה חיצונית (למשרה פתוחה)" htmlFor="j-url">
-        <Input id="j-url" name="external_url" dir="ltr" placeholder="https://…" />
+      <Field
+        label={source === "open" ? "קישור להגשה (חובה למשרת שוק)" : "קישור להגשה חיצונית (אופציונלי)"}
+        htmlFor="j-url"
+      >
+        <Input
+          id="j-url"
+          name="external_url"
+          dir="ltr"
+          required={source === "open"}
+          placeholder="https://…"
+        />
       </Field>
       <Field label="תיאור" htmlFor="j-desc">
         <Textarea id="j-desc" name="description" />
