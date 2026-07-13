@@ -12,6 +12,10 @@ const C = {
   pink: "#E0418D",
 };
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://open-code-psi.vercel.app";
+const LOGO = `${SITE}/logo-opencode.png`;
+const TAGLINE = "קהילה לחרדיות בהייטק";
+
 export interface EmailContent {
   /** Big heading inside the card. */
   heading: string;
@@ -44,11 +48,11 @@ export function renderEmail(c: EmailContent): string {
 
   return `<div dir="rtl" style="font-family: Arial, 'Segoe UI', Helvetica, sans-serif; background:${C.bg}; padding:32px 16px; color:${C.ink};">
   <div style="max-width:480px; margin:0 auto; background:${C.card}; border-radius:18px; overflow:hidden; border:1px solid ${C.border};">
-    <div style="background:${C.gradient}; padding:30px 24px; text-align:center;">
-      <div style="color:#ffffff; font-size:24px; font-weight:800; letter-spacing:-0.5px;">קוד פתוח</div>
-      <div style="color:rgba(255,255,255,0.85); font-size:13px; margin-top:5px;">קהילת המפתחות</div>
+    <div style="padding:26px 24px 12px; text-align:center; background:#ffffff;">
+      <img src="${LOGO}" alt="קוד פתוח" width="150" style="display:inline-block; width:150px; height:auto; border:0;" />
     </div>
-    <div style="padding:30px 26px;">
+    <div style="height:4px; background:${C.gradient};"></div>
+    <div style="padding:28px 26px;">
       <h1 style="font-size:21px; margin:0 0 16px; color:${C.ink};">${c.heading}</h1>
       ${paragraphs}
       ${cta}
@@ -56,7 +60,7 @@ export function renderEmail(c: EmailContent): string {
     </div>
   </div>
   <div style="text-align:center; color:${C.muted}; font-size:12px; margin-top:18px;">
-    קוד פתוח · קהילה למפתחות ג'וניוריות 💜
+    קוד פתוח · ${TAGLINE} 💜
   </div>
 </div>`;
 }
