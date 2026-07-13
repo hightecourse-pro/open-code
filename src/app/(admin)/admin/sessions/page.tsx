@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import { Check, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui";
 import { AdminCreateSession } from "@/components/patterns/admin-create-session";
+import { deleteSession, markSessionDone } from "../actions";
 
 export const metadata: Metadata = { title: "ניהול סשנים" };
 
@@ -46,6 +48,18 @@ export default async function AdminSessionsPage() {
               <Badge variant={s.status === "done" ? "tech" : "mint"}>
                 {s.status === "done" ? "הסתיים" : s.status === "live" ? "חי" : "מתוכנן"}
               </Badge>
+              {s.status !== "done" && (
+                <form action={markSessionDone.bind(null, s.id)}>
+                  <button type="submit" className="text-ink-400 hover:text-[#1B7A4B] p-1.5" title="סימון כהסתיים">
+                    <Check size={15} />
+                  </button>
+                </form>
+              )}
+              <form action={deleteSession.bind(null, s.id)}>
+                <button type="submit" className="text-ink-400 hover:text-danger p-1.5" title="ביטול / מחיקת סשן">
+                  <Trash2 size={15} />
+                </button>
+              </form>
             </div>
           ))}
           {(sessions ?? []).length === 0 && <p className="text-ink-500 text-sm py-4">אין סשנים עדיין.</p>}

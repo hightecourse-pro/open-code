@@ -10,11 +10,15 @@ export async function createCourse(formData: FormData): Promise<void> {
   await requireRole("admin");
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return;
+  const lessons = Number(formData.get("lessons_count"));
+  const hours = Number(formData.get("duration_hours"));
   const supabase = await createClient();
   await supabase.from("courses").insert({
     title,
     category: String(formData.get("category") ?? "").trim() || null,
     instructor: String(formData.get("instructor") ?? "").trim() || null,
+    lessons_count: Number.isFinite(lessons) && lessons > 0 ? Math.round(lessons) : 0,
+    duration_hours: Number.isFinite(hours) && hours > 0 ? Math.round(hours) : 0,
     is_published: true,
   });
   revalidatePath("/admin/content");

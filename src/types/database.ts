@@ -306,6 +306,30 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["app_settings"]["Insert"]>;
         Relationships: [];
       };
+      articles: {
+        Row: {
+          id: string;
+          title: string;
+          excerpt: string | null;
+          url: string | null;
+          category: string | null;
+          author_name: string | null;
+          is_published: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          excerpt?: string | null;
+          url?: string | null;
+          category?: string | null;
+          author_name?: string | null;
+          is_published?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["articles"]["Insert"]>;
+        Relationships: [];
+      };
       jobs: {
         Row: {
           id: string;
@@ -775,6 +799,7 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type Post = Database["public"]["Tables"]["posts"]["Row"];
 export type ConfigQuestion = Database["public"]["Tables"]["config_questions"]["Row"];
 export type ConfigTaxonomy = Database["public"]["Tables"]["config_taxonomies"]["Row"];
+export type Article = Database["public"]["Tables"]["articles"]["Row"];
 export type ProfileAnswer = Database["public"]["Tables"]["profile_answers"]["Row"];
 export type Subscription = Database["public"]["Tables"]["subscriptions"]["Row"];
 export type Job = Database["public"]["Tables"]["jobs"]["Row"];

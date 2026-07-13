@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
+  BookOpen,
   Briefcase,
   Calendar,
   Crown,
@@ -26,6 +27,7 @@ const ITEMS: AdminNavItem[] = [
   { href: "/admin/mentors", label: "מנטוריות", icon: Crown },
   { href: "/admin/jobs", label: "משרות", icon: Briefcase },
   { href: "/admin/content", label: "ניהול תכנים", icon: Library },
+  { href: "/admin/articles", label: "מאמרים", icon: BookOpen },
   { href: "/admin/shares", label: "תור שיתופים", icon: Share2 },
   { href: "/admin/sessions", label: "סשנים", icon: Calendar },
   { href: "/admin/analytics", label: "אנליטיקת למידה", icon: BarChart3 },

@@ -265,6 +265,25 @@ export async function setApplicationStatus(applicationId: string, status: Applic
   revalidatePath("/admin/jobs");
 }
 
+/** Cancel (remove) a scheduled session. */
+export async function deleteSession(sessionId: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("sessions").delete().eq("id", sessionId);
+  revalidatePath("/admin/sessions");
+  revalidatePath("/admin/content");
+  revalidatePath("/events");
+}
+
+/** Mark a session as finished. */
+export async function markSessionDone(sessionId: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("sessions").update({ status: "done" }).eq("id", sessionId);
+  revalidatePath("/admin/sessions");
+  revalidatePath("/events");
+}
+
 /** Schedule a new community session. */
 export async function createSession(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");

@@ -83,15 +83,13 @@ test.describe("user flow — community features", () => {
     await expect(page.getByRole("heading", { name: /מפתחות ה-AI שלי/ })).toBeVisible();
   });
 
-  test("CV checker prompts to add a key when none is configured", async ({ page }) => {
+  test("CV checker shows a 'not active' prompt when no key is configured", async ({ page }) => {
     await open(page, "/ai/cv-checker");
-    // The checker now takes a PDF upload (sent to Gemini), not pasted text.
-    const pdf = Buffer.from("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n", "utf8");
-    await page
-      .locator('input[name="cv_file"]')
-      .setInputFiles({ name: "cv.pdf", mimeType: "application/pdf", buffer: pdf });
-    await page.getByRole("button", { name: /בדיקת קורות חיים/ }).click();
-    await expect(page.getByText(/מפתח Google|מפתחות ה-AI/)).toBeVisible({ timeout: 20_000 });
+    // With no active Google key, the tool shows a clear "not active" banner.
+    await expect(page.getByText(/לא פעיל/)).toBeVisible();
+    await expect(page.getByRole("link", { name: /הוספת מפתח/ })).toBeVisible();
+    // Upload input is still present for when a key is added.
+    await expect(page.locator('input[name="cv_file"]')).toBeAttached();
   });
 
   test("interview setup renders", async ({ page }) => {
