@@ -69,6 +69,7 @@ export interface Database {
           is_vip: boolean;
           internal_notes: string | null;
           profile_completed: boolean;
+          digest_frequency: string; // 'daily' | 'unread' | 'off'
         } & Timestamps;
         Insert: {
           id: string;
@@ -87,6 +88,7 @@ export interface Database {
           is_vip?: boolean;
           internal_notes?: string | null;
           profile_completed?: boolean;
+          digest_frequency?: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];

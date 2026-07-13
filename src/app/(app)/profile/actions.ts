@@ -8,6 +8,18 @@ import type { Json } from "@/types/database";
 
 export type ProfileState = { ok?: boolean; error?: string };
 
+/** Set the member's daily-digest email preference. */
+export async function setDigestFrequency(freq: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const valid = ["daily", "unread", "off"].includes(freq) ? freq : "daily";
+  await supabase.from("profiles").update({ digest_frequency: valid }).eq("id", user.id);
+  revalidatePath("/profile");
+}
+
 export async function saveProfile(_prev: ProfileState, formData: FormData): Promise<ProfileState> {
   const supabase = await createClient();
   const {

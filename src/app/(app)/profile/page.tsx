@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { ProfileForm } from "@/components/patterns/profile-form";
+import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { QuestionScope } from "@/types/database";
 
@@ -63,6 +64,8 @@ export default async function ProfilePage() {
           taxonomyOptions={taxonomyOptions}
         />
       </div>
+
+      <DigestPreferences current={profile.digest_frequency ?? "daily"} />
     </div>
   );
 }

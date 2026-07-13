@@ -58,7 +58,7 @@ export async function GET(req: Request) {
     admin.from("sessions").select("title, scheduled_at").neq("status", "done").gte("scheduled_at", now).lte("scheduled_at", in7).order("scheduled_at", { ascending: true }),
     admin.from("conversations").select("id, a_id, b_id"),
     admin.from("messages").select("conversation_id, sender_id").is("read_at", null),
-    admin.from("profiles").select("id, first_name, full_name, status"),
+    admin.from("profiles").select("*"),
     admin.auth.admin.listUsers({ perPage: 1000 }),
   ]);
 
@@ -71,7 +71,7 @@ export async function GET(req: Request) {
 
   const nameOf = new Map((profiles.data ?? []).map((p) => [p.id, p.first_name || p.full_name?.split(" ")[0] || ""]));
   const emailOf = new Map((usersList.data?.users ?? []).map((u) => [u.id, u.email ?? ""]));
-  const activeIds = new Set((profiles.data ?? []).filter((p) => p.status === "active").map((p) => p.id));
+  const activeMembers = (profiles.data ?? []).filter((p) => p.status === "active");
 
   // Unread messages grouped by recipient (1:1 conversations).
   const convMap = new Map((convos.data ?? []).map((c) => [c.id, c]));
@@ -86,8 +86,18 @@ export async function GET(req: Request) {
     unreadByRecipient.set(recipient, e);
   }
 
-  // Recipients: active members with unread messages (or everyone active with ?all=1).
-  const recipients = [...activeIds].filter((id) => all || (unreadByRecipient.get(id)?.count ?? 0) > 0);
+  // Recipients honor each member's preference: 'daily' (default) → everyone;
+  // 'unread' → only when there are new messages; 'off' → never. ?all=1 forces
+  // send to everyone who hasn't opted out.
+  const recipients = activeMembers
+    .filter((p) => {
+      const freq = p.digest_frequency || "daily";
+      if (freq === "off") return false;
+      if (all) return true;
+      if (freq === "unread") return (unreadByRecipient.get(p.id)?.count ?? 0) > 0;
+      return true; // daily
+    })
+    .map((p) => p.id);
 
   const results: { email: string; ok: boolean; error?: string }[] = [];
   let sent = 0;
