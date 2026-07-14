@@ -92,6 +92,8 @@ export default async function AdminConfigPage() {
         </p>
         <div className="flex flex-col">
           {(questions ?? []).map((q) => {
+            // Structural questions drive the form's logic — they can't be disabled.
+            const locked = q.key === "has_experience";
             const editable =
               (q.field_type === "select" || q.field_type === "multiselect") &&
               !q.taxonomy_kind &&
@@ -110,12 +112,17 @@ export default async function AdminConfigPage() {
                       {q.required && <Badge variant="pink">חובה</Badge>}
                       {q.taxonomy_kind && <Badge variant="tech">רשימה: {KIND_LABEL[q.taxonomy_kind]}</Badge>}
                       {q.key === "city" && <Badge variant="mint">רשימת ערים מ-gov.il</Badge>}
+                      {locked && <Badge variant="tech">מובנה · חובה</Badge>}
                       {q.scope !== "all" && (
                         <Badge variant="indigo">{q.scope === "mentor" ? "מנטוריות" : "ג'וניוריות"}</Badge>
                       )}
                     </div>
                   </div>
-                  <QuestionToggle id={q.id} active={q.active} />
+                  {locked ? (
+                    <span className="text-[11px] text-ink-400 flex items-center gap-1">🔒 קבוע</span>
+                  ) : (
+                    <QuestionToggle id={q.id} active={q.active} />
+                  )}
                 </div>
                 {editable && <QuestionOptionsEditor questionId={q.id} options={qOptions} />}
               </div>

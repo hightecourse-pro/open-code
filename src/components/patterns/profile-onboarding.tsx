@@ -19,8 +19,9 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
     supabase
       .from("config_questions")
       .select("*")
-      .eq("active", true)
       .in("scope", scope)
+      // Active questions, plus the structural experience gate even if toggled off.
+      .or("active.eq.true,key.eq.has_experience")
       .order("sort_order", { ascending: true }),
     supabase.from("profile_answers").select("question_id, value").eq("profile_id", profile.id),
     getTaxonomyOptions(),

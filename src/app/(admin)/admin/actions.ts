@@ -125,10 +125,20 @@ export async function removeQuestionOption(questionId: string, value: string): P
   revalidatePath("/admin/config");
 }
 
+// Questions that drive the form's structure and must never be disabled.
+const STRUCTURAL_QUESTION_KEYS = ["has_experience"];
+
 /** Show / hide a profile question (the dynamic configuration screen). */
 export async function toggleQuestionActive(id: string, active: boolean) {
   await requireRole("admin");
   const supabase = await createClient();
+  // Never allow disabling a structural question (it breaks the form's branching).
+  if (!active) {
+    const { data: q } = await supabase.from("config_questions").select("key").eq("id", id).maybeSingle();
+    if (q && STRUCTURAL_QUESTION_KEYS.includes(q.key)) {
+      return { error: "לא ניתן לכבות שאלה מובנית." };
+    }
+  }
   const { error } = await supabase.from("config_questions").update({ active }).eq("id", id);
   if (error) return { error: error.message };
   revalidatePath("/admin/config");

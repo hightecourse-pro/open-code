@@ -45,7 +45,8 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   const { data: questions } = await supabase
     .from("config_questions")
     .select("id, key, label_he, field_type, required, depends_on, intake_track, active")
-    .eq("active", true);
+    // Active questions, plus the structural experience gate even if toggled off.
+    .or("active.eq.true,key.eq.has_experience");
 
   // Resolve each answer (handling "אחר" free-text), and validate required ones.
   const answered: { question_id: string; value: Json }[] = [];

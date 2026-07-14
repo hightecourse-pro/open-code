@@ -21,7 +21,8 @@ export default async function AdminSessionsPage() {
   const supabase = await createClient();
   const { data: sessions } = await supabase
     .from("sessions")
-    .select("id, title, topic, scheduled_at, status, canceled_at")
+    // select * so it stays backward-safe before the canceled_at column exists.
+    .select("*")
     .order("scheduled_at", { ascending: false });
 
   return (
