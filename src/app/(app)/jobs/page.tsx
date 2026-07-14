@@ -6,6 +6,8 @@ import { JobCard } from "@/components/patterns/job-card";
 import type { JobSource } from "@/types/database";
 
 export const metadata: Metadata = { title: "משרות" };
+// Always fresh — a newly published job shows immediately.
+export const dynamic = "force-dynamic";
 
 const TABS: { id: JobSource; label: string; desc: string }[] = [
   { id: "ours", label: "משרות שלנו", desc: "חברות שעובדות איתנו" },

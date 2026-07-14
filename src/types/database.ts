@@ -505,6 +505,7 @@ export interface Database {
           status: SessionStatus;
           is_published: boolean;
           recording_id: string | null;
+          canceled_at: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -516,6 +517,7 @@ export interface Database {
           status?: SessionStatus;
           is_published?: boolean;
           recording_id?: string | null;
+          canceled_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sessions"]["Insert"]>;
         Relationships: [];

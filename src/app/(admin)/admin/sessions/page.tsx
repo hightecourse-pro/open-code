@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Check, Trash2 } from "lucide-react";
+import { Check, Trash2, Ban } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui";
 import { AdminCreateSession } from "@/components/patterns/admin-create-session";
-import { deleteSession, markSessionDone } from "../actions";
+import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
+import { cancelSession, deleteSession, markSessionDone } from "../actions";
 
 export const metadata: Metadata = { title: "ניהול סשנים" };
 
@@ -20,7 +21,7 @@ export default async function AdminSessionsPage() {
   const supabase = await createClient();
   const { data: sessions } = await supabase
     .from("sessions")
-    .select("id, title, topic, scheduled_at, status")
+    .select("id, title, topic, scheduled_at, status, canceled_at")
     .order("scheduled_at", { ascending: false });
 
   return (
@@ -45,21 +46,38 @@ export default async function AdminSessionsPage() {
                 <div className="text-xs text-ink-500" dir="ltr">{fmt(s.scheduled_at)}</div>
               </div>
               {s.topic && <Badge variant="purple">{s.topic}</Badge>}
-              <Badge variant={s.status === "done" ? "tech" : "mint"}>
-                {s.status === "done" ? "הסתיים" : s.status === "live" ? "חי" : "מתוכנן"}
-              </Badge>
-              {s.status !== "done" && (
-                <form action={markSessionDone.bind(null, s.id)}>
-                  <button type="submit" className="text-ink-400 hover:text-[#1B7A4B] p-1.5" title="סימון כהסתיים">
-                    <Check size={15} />
-                  </button>
-                </form>
+              {s.canceled_at ? (
+                <Badge variant="pink">בוטל</Badge>
+              ) : (
+                <Badge variant={s.status === "done" ? "tech" : "mint"}>
+                  {s.status === "done" ? "הסתיים" : s.status === "live" ? "חי" : "מתוכנן"}
+                </Badge>
               )}
-              <form action={deleteSession.bind(null, s.id)}>
-                <button type="submit" className="text-ink-400 hover:text-danger p-1.5" title="ביטול / מחיקת סשן">
-                  <Trash2 size={15} />
-                </button>
-              </form>
+              {!s.canceled_at && s.status !== "done" && (
+                <>
+                  <form action={markSessionDone.bind(null, s.id)}>
+                    <button type="submit" className="text-ink-400 hover:text-[#1B7A4B] p-1.5" title="סימון כהסתיים">
+                      <Check size={15} />
+                    </button>
+                  </form>
+                  <ConfirmActionButton
+                    action={cancelSession.bind(null, s.id)}
+                    message="לבטל את הסשן? הוא יסומן כ'בוטל' ויוסתר מהחברות אחרי 24 שעות."
+                    title="ביטול סשן"
+                    className="text-ink-400 hover:text-brand-pink-deep p-1.5"
+                  >
+                    <Ban size={15} />
+                  </ConfirmActionButton>
+                </>
+              )}
+              <ConfirmActionButton
+                action={deleteSession.bind(null, s.id)}
+                message="למחוק את הסשן לצמיתות? (למקרה שנוסף בטעות) — הפעולה לא ניתנת לביטול."
+                title="מחיקה מיידית"
+                className="text-ink-400 hover:text-danger p-1.5"
+              >
+                <Trash2 size={15} />
+              </ConfirmActionButton>
             </div>
           ))}
           {(sessions ?? []).length === 0 && <p className="text-ink-500 text-sm py-4">אין סשנים עדיין.</p>}

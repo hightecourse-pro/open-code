@@ -110,7 +110,12 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                     <span className="font-medium text-ink-900">{m.full_name || "—"}</span>
                     {m.is_vip && <span title="VIP">⭐</span>}
                     {m.internal_notes && m.internal_notes.trim() && (
-                      <StickyNote size={13} className="text-brand-purple" aria-label="יש הערות פנימיות" />
+                      <span
+                        title={m.internal_notes}
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] px-1.5 py-0.5 rounded-full"
+                      >
+                        <StickyNote size={11} /> הערה
+                      </span>
                     )}
                   </div>
                 </td>

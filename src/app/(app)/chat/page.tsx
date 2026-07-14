@@ -61,18 +61,22 @@ export default async function ChatPage({
                   key={c.id}
                   href={`/chat?c=${c.id}`}
                   className={cn(
-                    "flex items-center gap-2.5 p-2.5 rounded-md transition-colors",
-                    c.id === activeId ? "bg-tint-pink" : "hover:bg-ink-100"
+                    "flex items-center gap-2.5 p-2.5 rounded-md transition-colors border",
+                    c.id === activeId
+                      ? "bg-tint-pink border-brand-pink"
+                      : "border-transparent hover:bg-ink-100"
                   )}
                 >
                   <Avatar
                     size="sm"
                     tone={other?.role === "mentor" ? "gold" : "pink"}
+                    crown={other?.role === "mentor"}
                     initials={other?.avatar_initials || other?.full_name?.slice(0, 1) || "ק"}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm text-ink-900 truncate">
+                    <div className="font-medium text-sm text-ink-900 truncate flex items-center gap-1">
                       {other?.full_name ?? "חברה"}
+                      {other?.role === "mentor" && <span className="text-[10px]">👑</span>}
                     </div>
                     <div className="text-[11px] text-ink-500">{timeAgo(c.last_message_at)}</div>
                   </div>
@@ -94,9 +98,13 @@ export default async function ChatPage({
                 <Avatar
                   size="sm"
                   tone={activeOther.role === "mentor" ? "gold" : "pink"}
+                  crown={activeOther.role === "mentor"}
                   initials={activeOther.avatar_initials || activeOther.full_name.slice(0, 1)}
                 />
                 <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
+                {activeOther.role === "mentor" && (
+                  <span className="text-[10.5px] font-bold bg-tint-warm text-[#8C5E0E] px-2 py-0.5 rounded-full">👑 מנטורית</span>
+                )}
               </div>
 
               <div className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40">

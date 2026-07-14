@@ -265,7 +265,16 @@ export async function setApplicationStatus(applicationId: string, status: Applic
   revalidatePath("/admin/jobs");
 }
 
-/** Cancel (remove) a scheduled session. */
+/** Soft-cancel a session: shows "בוטל" and auto-hides from members after 24h. */
+export async function cancelSession(sessionId: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("sessions").update({ canceled_at: new Date().toISOString() }).eq("id", sessionId);
+  revalidatePath("/admin/sessions");
+  revalidatePath("/events");
+}
+
+/** Delete a session immediately (e.g. added by mistake). */
 export async function deleteSession(sessionId: string): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();

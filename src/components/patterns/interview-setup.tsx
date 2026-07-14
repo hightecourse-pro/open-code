@@ -15,7 +15,7 @@ const AGENTS: { id: InterviewAgent; label: string; desc: string; icon: typeof He
 
 const TECHS = ["React", "Node.js", "TypeScript", "Python", "SQL", "CSS", "Java"];
 
-export function InterviewSetup() {
+export function InterviewSetup({ hasKey }: { hasKey: boolean }) {
   const [agent, setAgent] = useState<InterviewAgent>("hr");
   const [state, action, pending] = useActionState<StartState, FormData>(startInterview, {});
 
@@ -92,8 +92,8 @@ export function InterviewSetup() {
           </div>
         </div>
 
-        <Button type="submit" disabled={pending} className="w-fit" bracketed>
-          {pending ? "פותח ראיון…" : "התחלת ראיון"}
+        <Button type="submit" disabled={pending || !hasKey} className="w-fit" bracketed>
+          {pending ? "פותח ראיון…" : hasKey ? "התחלת ראיון" : "הוסיפי מפתח AI כדי להתחיל"}
         </Button>
       </form>
     </>

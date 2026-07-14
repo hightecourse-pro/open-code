@@ -115,6 +115,20 @@ export function magicLinkEmail(actionUrl: string, name?: string): BuiltEmail {
   };
 }
 
+/** Notify a mentor that a member wrote to her in chat. */
+export function newMessageEmail(fromName: string): BuiltEmail {
+  return {
+    subject: `הודעה חדשה מ${fromName} · קוד פתוח`,
+    html: renderEmail({
+      heading: "יש לך הודעה חדשה 💬",
+      lines: [`${fromName} כתבה לך בצ'אט של קוד פתוח.`, "אפשר להיכנס ולהשיב מתי שנוח לך."],
+      ctaText: "לצ'אט",
+      ctaUrl: `${SITE}/chat`,
+      footnote: "מקבלת יותר מדי מיילים? אפשר לכוונן בפרופיל ← העדפות מייל.",
+    }),
+  };
+}
+
 export interface DigestData {
   name?: string;
   unreadCount: number;

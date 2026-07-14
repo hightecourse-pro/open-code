@@ -13,9 +13,11 @@ function fmtTime(iso: string) {
 
 export default async function EventsPage() {
   const supabase = await createClient();
-  const nowIso = new Date().toISOString();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const cutoff = now.getTime() - 24 * 3600 * 1000; // canceled sessions hide after 24h
 
-  const [{ data: upcoming }, { data: past }] = await Promise.all([
+  const [{ data: upcomingRaw }, { data: past }] = await Promise.all([
     supabase
       .from("sessions")
       .select("*")
@@ -31,6 +33,11 @@ export default async function EventsPage() {
       .limit(6),
   ]);
 
+  // A canceled session still shows (as "בוטל") for 24h, then disappears.
+  const upcoming = (upcomingRaw ?? []).filter(
+    (s) => !s.canceled_at || new Date(s.canceled_at).getTime() > cutoff
+  );
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -41,11 +48,14 @@ export default async function EventsPage() {
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-bold text-ink-1000">הקרובים</h2>
-        {upcoming && upcoming.length > 0 ? (
+        {upcoming.length > 0 ? (
           upcoming.map((s) => (
             <div
               key={s.id}
-              className="bg-white border border-ink-200 rounded-[18px] p-[18px] flex gap-4 items-center shadow-sm"
+              className={
+                "bg-white border border-ink-200 rounded-[18px] p-[18px] flex gap-4 items-center shadow-sm" +
+                (s.canceled_at ? " opacity-60" : "")
+              }
             >
               <div className="w-14 h-14 rounded-md bg-brand-gradient-soft flex flex-col items-center justify-center shrink-0">
                 <span className="font-display font-black text-lg text-ink-1000 leading-none">
@@ -61,12 +71,17 @@ export default async function EventsPage() {
                     {s.topic}
                   </span>
                 )}
-                <div className="font-display font-bold text-[15px] text-ink-1000">{s.title}</div>
+                <div className="font-display font-bold text-[15px] text-ink-1000 flex items-center gap-2">
+                  {s.title}
+                  {s.canceled_at && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-danger-bg text-danger">בוטל</span>
+                  )}
+                </div>
                 <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-1.5">
                   <Calendar size={12} /> {fmtDate(s.scheduled_at)} · {fmtTime(s.scheduled_at)}
                 </div>
               </div>
-              {s.zoom_url && (
+              {s.zoom_url && !s.canceled_at && (
                 <a
                   href={s.zoom_url}
                   className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white shrink-0"
