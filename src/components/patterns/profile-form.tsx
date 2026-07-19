@@ -1,12 +1,19 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, Rocket } from "lucide-react";
+import { ChevronLeft, ChevronRight, Sparkles, Rocket, Plus, X } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import { FIELD_VALIDATORS } from "@/lib/validators";
 import { CITIES } from "@/data/cities";
+import {
+  DEFAULT_LANGUAGES,
+  LANGUAGE_SKILLS_KEY,
+  LANG_LEVELS,
+  parseLangSkills,
+  type LangSkill,
+} from "@/lib/language-skills";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 
 type Option = { value: string; label: string };
@@ -28,7 +35,7 @@ const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
   {
     title: "קצת עלייך",
     hint: "פרטי קשר בסיסיים — כדי שנכיר ונדע איך לחזור אלייך.",
-    keys: ["id_number", "phone", "region", "city", "street", "house_number", "marital_status", "prev_surname"],
+    keys: ["id_number", "phone", "region", "city", "street", "house_number", "marital_status", "prev_surname", "language_skills"],
   },
   {
     title: "הרקע הלימודי",
@@ -102,6 +109,29 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   const [bools, setBools] = useState(initBools);
   const [selOther, setSelOther] = useState(initSelOther);
   const [multiOther, setMultiOther] = useState(initMultiOther);
+
+  // Language-skills matrix: saved rows first, then any default language not
+  // answered yet (with an empty level = "not stored").
+  const langQ = rest.find((q) => q.key === LANGUAGE_SKILLS_KEY);
+  const initLangRows: LangSkill[] = (() => {
+    const saved = langQ ? parseLangSkills(answers[langQ.id]) : [];
+    const savedNames = new Set(saved.map((s) => s.lang));
+    return [
+      ...DEFAULT_LANGUAGES.map(
+        (lang) => saved.find((s) => s.lang === lang) ?? { lang, level: "" }
+      ),
+      ...saved.filter((s) => !DEFAULT_LANGUAGES.includes(s.lang) && savedNames.has(s.lang)),
+    ];
+  })();
+  const [langRows, setLangRows] = useState<LangSkill[]>(initLangRows);
+  const [newLang, setNewLang] = useState("");
+
+  function addLanguage() {
+    const name = newLang.trim();
+    if (!name || langRows.some((r) => r.lang === name)) return;
+    setLangRows((rows) => [...rows, { lang: name, level: "" }]);
+    setNewLang("");
+  }
   const [expChoice, setExpChoice] = useState<boolean | null>(
     gate ? (answers[gate.id] === true ? true : answers[gate.id] === false ? false : null) : false
   );
@@ -139,6 +169,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   // --- validation ---
   function missing(q: ConfigQuestion, fd: FormData): boolean {
     const key = `q_${q.id}`;
+    if (q.key === LANGUAGE_SKILLS_KEY) {
+      return !fd.getAll(`${key}__level`).some((v) => String(v).trim());
+    }
     if (q.field_type === "multiselect" || q.field_type === "tags") {
       const vals = fd.getAll(key).map(String);
       const other = String(fd.get(`${key}__other`) ?? "").trim();
@@ -207,6 +240,68 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     const current = answers[q.id];
     const list = opts(q);
     const err = errors[q.id];
+
+    // Language skills: a (language × level) matrix with an "add language" row.
+    if (q.key === LANGUAGE_SKILLS_KEY) {
+      return (
+        <Field key={q.id} label={q.label_he} error={err}>
+          <div className="flex flex-col gap-2">
+            {langRows.map((row, i) => (
+              <div key={row.lang} className="flex items-center gap-2">
+                <input type="hidden" name={`${key}__lang`} value={row.lang} />
+                <span className="w-24 shrink-0 text-sm font-medium text-ink-900">{row.lang}</span>
+                {/* The Select renders inside a wrapper div — stretch that. */}
+                <div className="flex-1">
+                  <Select
+                    name={`${key}__level`}
+                    value={row.level}
+                    onChange={(e) =>
+                      setLangRows((rows) =>
+                        rows.map((r, j) => (j === i ? { ...r, level: e.target.value } : r))
+                      )
+                    }
+                  >
+                    <option value="">לא רלוונטי</option>
+                    {LANG_LEVELS.map((l) => (
+                      <option key={l.value} value={l.value}>
+                        {l.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+                {!DEFAULT_LANGUAGES.includes(row.lang) && (
+                  <button
+                    type="button"
+                    aria-label={`הסרת ${row.lang}`}
+                    onClick={() => setLangRows((rows) => rows.filter((_, j) => j !== i))}
+                    className="text-ink-400 hover:text-danger p-1"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <Input
+                value={newLang}
+                onChange={(e) => setNewLang(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addLanguage();
+                  }
+                }}
+                placeholder="שפה נוספת (למשל: צרפתית, יידיש…)"
+                className="flex-1"
+              />
+              <Button type="button" size="sm" variant="secondary" onClick={addLanguage}>
+                <Plus size={14} /> הוספה
+              </Button>
+            </div>
+          </div>
+        </Field>
+      );
+    }
 
     // City: searchable input backed by the official settlements list.
     if (q.key === "city") {

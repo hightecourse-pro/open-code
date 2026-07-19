@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
+import { LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/language-skills";
 import type { Json, QuestionScope } from "@/types/database";
 
 export type ProfileState = { ok?: boolean; error?: string };
@@ -74,6 +75,27 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
 
     let value: Json;
     let empty = false;
+
+    if (q.key === LANGUAGE_SKILLS_KEY) {
+      // Matrix rows: paired __lang / __level inputs; keep only leveled rows.
+      const langs = formData.getAll(`${key}__lang`).map(String);
+      const levels = formData.getAll(`${key}__level`).map(String);
+      const seenLangs = new Set<string>();
+      const skills = langs
+        .map((lang, i) => ({ lang: lang.trim(), level: (levels[i] ?? "").trim() }))
+        // Only known levels, one entry per language.
+        .filter((s) => {
+          if (!s.lang || !LANG_LEVELS.some((l) => l.value === s.level)) return false;
+          if (seenLangs.has(s.lang)) return false;
+          seenLangs.add(s.lang);
+          return true;
+        });
+      value = skills as unknown as Json;
+      empty = skills.length === 0;
+      if (q.required && empty) missing.push(q.label_he);
+      answered.push({ question_id: q.id, value });
+      continue;
+    }
 
     if (q.field_type === "multiselect" || q.field_type === "tags") {
       let values = formData.getAll(key).map(String);

@@ -66,6 +66,7 @@ export interface Database {
           member_tier: MemberTier;
           status: ProfileStatus;
           is_experienced: boolean;
+          /** Deprecated — CRM data moved to member_crm (admin-only). */
           is_vip: boolean;
           internal_notes: string | null;
           profile_completed: boolean;
@@ -91,6 +92,24 @@ export interface Database {
           digest_frequency?: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
+      };
+      member_crm: {
+        Row: {
+          profile_id: string;
+          is_vip: boolean;
+          vip_reason: string | null;
+          internal_notes: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          is_vip?: boolean;
+          vip_reason?: string | null;
+          internal_notes?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["member_crm"]["Insert"]>;
         Relationships: [];
       };
       mentor_profiles: {

@@ -58,20 +58,37 @@ export async function updateReportStatus(id: string, status: ReportStatus) {
   revalidatePath("/feed");
 }
 
-/** Toggle a member's VIP flag. */
-export async function toggleVip(id: string, isVip: boolean) {
+export type CrmState = { error?: string };
+
+/**
+ * Toggle a member's VIP star, with an optional admin-only reason. Lives in
+ * member_crm (admin-only RLS) — never on profiles, which members can read.
+ */
+export async function toggleVip(id: string, isVip: boolean, reason?: string): Promise<CrmState> {
   await requireRole("admin");
   const supabase = await createClient();
-  await supabase.from("profiles").update({ is_vip: isVip }).eq("id", id);
+  const { error } = await supabase.from("member_crm").upsert(
+    { profile_id: id, is_vip: isVip, vip_reason: isVip ? reason?.trim() || null : null },
+    { onConflict: "profile_id" }
+  );
   revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${id}`);
+  if (error) return { error: "לא נשמר — ודאי שה-SQL האחרון הורץ ב-Supabase." };
+  return {};
 }
 
 /** Save internal notes on a member (admin-only, for screening). */
-export async function saveInternalNotes(id: string, notes: string) {
+export async function saveInternalNotes(id: string, notes: string): Promise<CrmState> {
   await requireRole("admin");
   const supabase = await createClient();
-  await supabase.from("profiles").update({ internal_notes: notes }).eq("id", id);
+  const { error } = await supabase.from("member_crm").upsert(
+    { profile_id: id, internal_notes: notes.trim() || null },
+    { onConflict: "profile_id" }
+  );
   revalidatePath("/admin/members");
+  revalidatePath(`/admin/members/${id}`);
+  if (error) return { error: "לא נשמר — ודאי שה-SQL האחרון הורץ ב-Supabase." };
+  return {};
 }
 
 /** Approve / reject / pause a member. Admin-gated (action + RLS + role check). */

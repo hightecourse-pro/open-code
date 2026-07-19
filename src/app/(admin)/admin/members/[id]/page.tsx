@@ -4,11 +4,13 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Download, FileText, Mail, StickyNote } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
+import { LANGUAGE_SKILLS_KEY, langLevelLabel, parseLangSkills } from "@/lib/language-skills";
 import type { ConfigQuestion } from "@/types/database";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
@@ -30,10 +32,13 @@ export default async function AdminMemberProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  // Defense-in-depth beyond the (admin) layout — this page uses the service
+  // role for the member's email and CV files.
+  await requireRole("admin");
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: profile }, { data: questions }, { data: answers }, taxonomyOptions] =
+  const [{ data: profile }, { data: questions }, { data: answers }, { data: crm }, taxonomyOptions] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
       supabase
@@ -41,10 +46,15 @@ export default async function AdminMemberProfilePage({
         .select("*")
         .order("sort_order", { ascending: true }),
       supabase.from("profile_answers").select("question_id, value").eq("profile_id", id),
+      // VIP + notes live in the admin-only member_crm table (null pre-migration).
+      supabase.from("member_crm").select("*").eq("profile_id", id).maybeSingle(),
       getTaxonomyOptions(),
     ]);
 
   if (!profile) notFound();
+  const isVip = crm?.is_vip ?? profile.is_vip ?? false;
+  const vipReason = crm?.vip_reason ?? null;
+  const internalNotes = crm?.internal_notes ?? profile.internal_notes ?? null;
 
   // Contact email lives in auth, not in profiles.
   const adminClient = createAdminClient();
@@ -83,6 +93,12 @@ export default async function AdminMemberProfilePage({
   function display(q: ConfigQuestion): string {
     const v = answerMap.get(q.id);
     if (v === undefined || v === null || v === "") return "—";
+    if (q.key === LANGUAGE_SKILLS_KEY) {
+      const skills = parseLangSkills(v);
+      return skills.length
+        ? skills.map((s) => `${s.lang} — ${langLevelLabel(s.level)}`).join(" · ")
+        : "—";
+    }
     const labels = labelsFor(q);
     if (Array.isArray(v)) {
       const items = (v as unknown[])
@@ -123,7 +139,14 @@ export default async function AdminMemberProfilePage({
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <RoleTag role={profile.role} />
             <StatusPill status={profile.status} />
-            {profile.is_vip && <span title="VIP">⭐ VIP</span>}
+            {isVip && (
+              <span
+                title={vipReason ? `VIP: ${vipReason}` : "VIP"}
+                className="inline-flex items-center gap-1 text-[12px] font-bold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] px-2 py-0.5 rounded-full"
+              >
+                ⭐ VIP{vipReason ? ` · ${vipReason}` : ""}
+              </span>
+            )}
             {profile.is_experienced && <Badge variant="purple">עם ניסיון</Badge>}
             {profile.specialization && <Badge variant="tech">{profile.specialization}</Badge>}
           </div>
@@ -145,7 +168,7 @@ export default async function AdminMemberProfilePage({
         <h3 className="font-display text-base font-bold mb-3 flex items-center gap-1.5">
           <StickyNote size={16} className="text-brand-purple" /> הערות פנימיות
         </h3>
-        <MemberCrm id={profile.id} isVip={profile.is_vip} notes={profile.internal_notes} />
+        <MemberCrm id={profile.id} isVip={isVip} vipReason={vipReason} notes={internalNotes} />
       </div>
 
       {/* CV files */}
