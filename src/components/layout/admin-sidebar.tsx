@@ -9,6 +9,7 @@ import {
   Briefcase,
   Calendar,
   Crown,
+  FileText,
   LayoutDashboard,
   Library,
   Settings,
@@ -24,6 +25,7 @@ type AdminNavItem = { href: string; label: string; icon: LucideIcon; badge?: num
 const ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "דשבורד", icon: LayoutDashboard },
   { href: "/admin/members", label: "חברות", icon: Users },
+  { href: "/admin/cvs", label: "קורות חיים", icon: FileText },
   { href: "/admin/mentors", label: "מנטוריות", icon: Crown },
   { href: "/admin/jobs", label: "משרות", icon: Briefcase },
   { href: "/admin/content", label: "ניהול תכנים", icon: Library },

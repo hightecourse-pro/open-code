@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Mail, StickyNote } from "lucide-react";
+import { ArrowRight, Download, FileText, Mail, StickyNote } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Avatar, Badge } from "@/components/ui";
@@ -17,6 +17,12 @@ const DIGEST_LABEL: Record<string, string> = {
   daily: "מייל יומי",
   unread: "רק כשיש הודעות שלא נקראו",
   off: "בלי מיילים",
+};
+
+const CV_LANG: Record<string, string> = {
+  he: "עברית",
+  en: "אנגלית",
+  job: "מותאם למשרה",
 };
 
 export default async function AdminMemberProfilePage({
@@ -41,13 +47,27 @@ export default async function AdminMemberProfilePage({
   if (!profile) notFound();
 
   // Contact email lives in auth, not in profiles.
+  const adminClient = createAdminClient();
   let email: string | null = null;
   try {
-    const { data: authUser } = await createAdminClient().auth.admin.getUserById(id);
+    const { data: authUser } = await adminClient.auth.admin.getUserById(id);
     email = authUser?.user?.email ?? null;
   } catch {
     // best-effort
   }
+
+  // Her CV files (owner-only under RLS → service role), with download links.
+  const { data: cvDocs } = await adminClient
+    .from("cv_documents")
+    .select("id, label, language, file_path, file_name, created_at")
+    .eq("profile_id", id)
+    .order("created_at", { ascending: false });
+  const { data: cvSigned } = (cvDocs ?? []).length
+    ? await adminClient.storage
+        .from("cvs")
+        .createSignedUrls((cvDocs ?? []).map((d) => d.file_path), 3600)
+    : { data: [] };
+  const cvUrlOf = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
 
   const answerMap = new Map((answers ?? []).map((a) => [a.question_id, a.value]));
 
@@ -126,6 +146,45 @@ export default async function AdminMemberProfilePage({
           <StickyNote size={16} className="text-brand-purple" /> הערות פנימיות
         </h3>
         <MemberCrm id={profile.id} isVip={profile.is_vip} notes={profile.internal_notes} />
+      </div>
+
+      {/* CV files */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <h3 className="font-display text-base font-bold mb-3 flex items-center gap-1.5">
+          <FileText size={16} className="text-brand-pink-deep" /> קורות חיים ({(cvDocs ?? []).length})
+        </h3>
+        {(cvDocs ?? []).length > 0 ? (
+          <div className="flex flex-col">
+            {(cvDocs ?? []).map((d) => {
+              const url = cvUrlOf.get(d.file_path);
+              return (
+                <div key={d.id} className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0 flex-wrap">
+                  <div className="flex-1 min-w-[160px]">
+                    <div className="font-medium text-ink-900">{d.label}</div>
+                    <div className="text-xs text-ink-500">
+                      {CV_LANG[d.language] ?? d.language} · הועלה{" "}
+                      {new Date(d.created_at).toLocaleDateString("he-IL")}
+                    </div>
+                  </div>
+                  {url ? (
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brand-gradient rounded-md px-3 py-1.5"
+                    >
+                      <Download size={13} /> הורדה
+                    </a>
+                  ) : (
+                    <span className="text-[12px] text-ink-400">לא זמין</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-ink-500 text-sm">היא עדיין לא העלתה קורות חיים.</p>
+        )}
       </div>
 
       {/* The full intake profile */}
