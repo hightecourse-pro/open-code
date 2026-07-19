@@ -40,6 +40,21 @@ export interface ButtonProps
   bracketed?: boolean;
 }
 
+// The `</…>` code motif around a button label. dir="ltr" keeps the bracket
+// glyphs from being bidi-scrambled inside RTL text ("</" was rendering as
+// "/<"), and the margins keep them from crowding the label.
+function bracket(glyph: string, side: "start" | "end") {
+  return (
+    <span
+      aria-hidden
+      dir="ltr"
+      className={cn("font-mono text-[0.8em] opacity-80", side === "start" ? "me-1.5" : "ms-1.5")}
+    >
+      {glyph}
+    </span>
+  );
+}
+
 export function Button({
   className,
   variant,
@@ -50,18 +65,34 @@ export function Button({
   ...props
 }: ButtonProps) {
   const Comp = asChild ? Slot : "button";
+  const classes = cn(buttonVariants({ variant, size }), className);
+
+  // asChild + bracketed: inject the brackets INSIDE the child element (e.g.
+  // the <Link>), so the anchor itself gets the button styles and the whole
+  // button stays clickable — Slot must receive exactly one element child.
+  if (asChild && bracketed && React.isValidElement(children)) {
+    const el = children as React.ReactElement<{ children?: React.ReactNode }>;
+    return (
+      <Comp className={classes} {...props}>
+        {React.cloneElement(
+          el,
+          undefined,
+          bracket("</", "start"),
+          el.props.children,
+          bracket(">", "end")
+        )}
+      </Comp>
+    );
+  }
+
   return (
-    <Comp className={cn(buttonVariants({ variant, size }), className)} {...props}>
+    <Comp className={classes} {...props}>
       {bracketed ? (
-        <span className="inline-flex items-center">
-          <span aria-hidden className="font-mono text-[0.85em] opacity-70">
-            {"</"}
-          </span>
+        <>
+          {bracket("</", "start")}
           {children}
-          <span aria-hidden className="font-mono text-[0.85em] opacity-70">
-            {">"}
-          </span>
-        </span>
+          {bracket(">", "end")}
+        </>
       ) : (
         children
       )}
