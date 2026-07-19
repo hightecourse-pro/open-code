@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Play } from "lucide-react";
+import { Play, Video, ExternalLink, Hourglass } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 
@@ -20,10 +20,37 @@ function minutes(sec: number): string {
 
 export default async function RecordingsPage() {
   const supabase = await createClient();
-  const { data: recordings } = await supabase
-    .from("recordings")
-    .select("*")
-    .order("published_at", { ascending: false });
+  const [{ data: recordings }, { data: doneSessions }] = await Promise.all([
+    supabase.from("recordings").select("*").order("published_at", { ascending: false }),
+    supabase
+      .from("sessions")
+      .select("*")
+      .eq("status", "done")
+      .eq("is_published", true)
+      .order("scheduled_at", { ascending: false }),
+  ]);
+
+  // Finished sessions land here automatically, with their Drive video links
+  // (from ניהול תכנים). Sessions already curated into `recordings` are skipped.
+  const curatedSessionIds = new Set((recordings ?? []).map((r) => r.session_id).filter(Boolean));
+  const sessions = (doneSessions ?? []).filter(
+    (s) => !s.canceled_at && !curatedSessionIds.has(s.id)
+  );
+  const { data: sessionLinks } = sessions.length
+    ? await supabase
+        .from("content_links")
+        .select("*")
+        .eq("owner_type", "session")
+        .eq("kind", "video")
+        .in("owner_id", sessions.map((s) => s.id))
+        .order("sort_order", { ascending: true })
+    : { data: [] };
+  const linksBySession = new Map<string, { title: string; url: string }[]>();
+  for (const l of sessionLinks ?? []) {
+    const arr = linksBySession.get(l.owner_id) ?? [];
+    arr.push({ title: l.title, url: l.url });
+    linksBySession.set(l.owner_id, arr);
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -32,6 +59,51 @@ export default async function RecordingsPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הקלטות סשנים</h1>
         <p className="t-body-sm text-ink-700">כל הסשנים השבועיים, זמינים לצפייה בכל זמן.</p>
       </div>
+
+      {sessions.length > 0 && (
+        <section className="flex flex-col gap-2.5">
+          <h2 className="font-display text-lg font-bold text-ink-1000">סשנים שהסתיימו</h2>
+          {sessions.map((s) => {
+            const links = linksBySession.get(s.id) ?? [];
+            return (
+              <div
+                key={s.id}
+                className="bg-white border border-ink-200 rounded-[16px] p-4 flex items-center gap-3 shadow-sm flex-wrap"
+              >
+                <div className="w-10 h-10 rounded-md bg-brand-gradient-soft flex items-center justify-center shrink-0">
+                  <Video size={17} className="text-brand-pink-deep" />
+                </div>
+                <div className="flex-1 min-w-[160px]">
+                  <div className="font-display font-bold text-[14.5px] text-ink-1000">{s.title}</div>
+                  <div className="text-xs text-ink-500">
+                    {s.topic ? `${s.topic} · ` : ""}
+                    {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "long" })}
+                  </div>
+                </div>
+                {links.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {links.map((l) => (
+                      <a
+                        key={l.url}
+                        href={l.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-2"
+                      >
+                        <Play size={13} fill="currentColor" /> {l.title} <ExternalLink size={11} />
+                      </a>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-500">
+                    <Hourglass size={13} /> ההקלטה תעלה בקרוב
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      )}
 
       {recordings && recordings.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
@@ -68,11 +140,11 @@ export default async function RecordingsPage() {
             );
           })}
         </div>
-      ) : (
+      ) : sessions.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
           עדיין אין הקלטות זמינות.
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

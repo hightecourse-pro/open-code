@@ -1,17 +1,26 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Bookmark, Check, ExternalLink, MapPin, Briefcase } from "lucide-react";
+import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { applyToJob, toggleSaveJob } from "@/app/(app)/jobs/actions";
-import type { EmploymentType, Job } from "@/types/database";
+import type { ApplicationStatus, EmploymentType, Job } from "@/types/database";
 
 const EMPLOYMENT: Record<EmploymentType, string> = {
   full: "משרה מלאה",
   part: "חלקית",
   student: "סטודנטית",
   freelance: "פרילנס",
+};
+
+// What the member sees about her own application, per pipeline status.
+const APP_STATUS: Record<ApplicationStatus, { label: string; cls: string }> = {
+  draft: { label: "טיוטה", cls: "text-ink-500" },
+  submitted: { label: "הגשת — נעדכן אותך 💜", cls: "text-success" },
+  in_review: { label: "המועמדות שלך בבדיקה 👀", cls: "text-brand-indigo" },
+  accepted: { label: "התקבלת! 🎉", cls: "text-success" },
+  rejected: { label: "הפעם זה לא התקדם — ממשיכות הלאה 💪", cls: "text-ink-500" },
 };
 
 const LOGO_GRADIENTS = [
@@ -25,14 +34,27 @@ export interface JobCardProps {
   job: Job;
   saved: boolean;
   applied: boolean;
+  /** The member's application status for this job (null if she hasn't applied). */
+  applicationStatus?: ApplicationStatus | null;
+  /** Member's tech stack, lowercase, for match highlighting. */
   myTech?: string[];
+  /** Number of job tags matching the member's profile. */
+  matches?: number;
 }
 
-export function JobCard({ job, saved, applied, myTech = [] }: JobCardProps) {
+export function JobCard({
+  job,
+  saved,
+  applied,
+  applicationStatus = null,
+  myTech = [],
+  matches = 0,
+}: JobCardProps) {
   const [isSaved, setSaved] = useState(saved);
   const [hasApplied, setApplied] = useState(applied);
   const [, start] = useTransition();
   const logo = LOGO_GRADIENTS[(job.logo_variant - 1) % LOGO_GRADIENTS.length];
+  const techSet = new Set(myTech);
 
   function onSave() {
     const next = !isSaved;
@@ -47,9 +69,17 @@ export function JobCard({ job, saved, applied, myTech = [] }: JobCardProps) {
 
   return (
     <article className="bg-white border border-ink-200 rounded-[18px] p-5 flex flex-col transition-[transform,box-shadow] duration-[220ms] hover:-translate-y-0.5 hover:shadow-md hover:border-brand-pink">
-      <Badge variant={job.source === "ours" ? "pink" : "tech"} className="self-start mb-3">
-        {job.source === "ours" ? "משרה שלנו" : "משרה פתוחה"}
-      </Badge>
+      <div className="flex items-center gap-2 mb-3">
+        <Badge variant={job.source === "ours" ? "pink" : "tech"}>
+          {job.source === "ours" ? "משרה שלנו" : "משרה פתוחה"}
+        </Badge>
+        {matches > 0 && (
+          <Badge variant="mint">
+            <Sparkles size={11} className="inline me-1" />
+            מתאימה לפרופיל שלך
+          </Badge>
+        )}
+      </div>
 
       <div className="flex gap-3 items-start mb-3">
         <div
@@ -98,7 +128,7 @@ export function JobCard({ job, saved, applied, myTech = [] }: JobCardProps) {
       {job.tech_tags.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mb-3">
           {job.tech_tags.map((tag) => (
-            <Badge key={tag} variant={myTech.includes(tag) ? "mint" : "tech"}>
+            <Badge key={tag} variant={techSet.has(tag.trim().toLowerCase()) ? "mint" : "tech"}>
               {tag}
             </Badge>
           ))}
@@ -107,8 +137,13 @@ export function JobCard({ job, saved, applied, myTech = [] }: JobCardProps) {
 
       <div className="flex items-center gap-2.5 pt-3 border-t border-ink-100 mt-auto">
         {hasApplied ? (
-          <span className="inline-flex items-center gap-1.5 text-[13px] text-success font-semibold">
-            <Check size={14} /> הגשת
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 text-[13px] font-semibold",
+              applicationStatus ? APP_STATUS[applicationStatus].cls : "text-success"
+            )}
+          >
+            <Check size={14} /> {applicationStatus ? APP_STATUS[applicationStatus].label : "הגשת"}
           </span>
         ) : job.source === "open" && job.external_url ? (
           <a

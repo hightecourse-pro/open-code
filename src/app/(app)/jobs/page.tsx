@@ -3,6 +3,7 @@ import { Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { JobCard } from "@/components/patterns/job-card";
+import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import type { JobSource } from "@/types/database";
 
 export const metadata: Metadata = { title: "משרות" };
@@ -25,7 +26,7 @@ export default async function JobsPage({
   const supabase = await createClient();
   const user = await getUser();
 
-  const [{ data: jobs }, { data: saved }, { data: applied }, { data: myAnswers }] =
+  const [{ data: jobs }, { data: saved }, { data: applied }, { data: myAnswers }, { data: techTax }] =
     await Promise.all([
       supabase
         .from("jobs")
@@ -34,22 +35,46 @@ export default async function JobsPage({
         .eq("status", "open")
         .order("created_at", { ascending: false }),
       user ? supabase.from("saved_jobs").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
-      user ? supabase.from("applications").select("job_id").eq("applicant_id", user.id) : Promise.resolve({ data: [] }),
+      user
+        ? supabase.from("applications").select("job_id, status").eq("applicant_id", user.id)
+        : Promise.resolve({ data: [] }),
       user
         ? supabase.from("profile_answers").select("value").eq("profile_id", user.id)
         : Promise.resolve({ data: [] }),
+      supabase.from("config_taxonomies").select("value, label_he").eq("kind", "tech"),
     ]);
 
   const savedIds = new Set((saved ?? []).map((s) => s.job_id));
-  const appliedIds = new Set((applied ?? []).map((a) => a.job_id));
+  const appStatusByJob = new Map((applied ?? []).map((a) => [a.job_id, a.status]));
 
-  // Best-effort: pull the member's tech stack from her profile answers to mark matches.
-  const myTech = (myAnswers ?? [])
-    .flatMap((a) => (Array.isArray(a.value) ? (a.value as unknown[]) : []))
-    .filter((v): v is string => typeof v === "string");
+  // The member's tech stack from her profile answers, normalized for matching:
+  // answers store taxonomy values (e.g. "react") while admins type job tags in
+  // free text — so match on both the value and its Hebrew/English label.
+  const labelByValue = new Map((techTax ?? []).map((t) => [t.value, t.label_he]));
+  const myTech = new Set<string>();
+  for (const a of myAnswers ?? []) {
+    if (!Array.isArray(a.value)) continue;
+    for (const v of a.value as unknown[]) {
+      if (typeof v !== "string" || !v) continue;
+      myTech.add(v.trim().toLowerCase());
+      const label = labelByValue.get(v);
+      if (label) myTech.add(label.trim().toLowerCase());
+    }
+  }
+
+  const matchCount = (tags: string[]) =>
+    tags.filter((t) => myTech.has(t.trim().toLowerCase())).length;
+
+  // Profile-based ordering: best-matching jobs first, then newest.
+  const sortedJobs = [...(jobs ?? [])].sort((a, b) => {
+    const diff = matchCount(b.tech_tags) - matchCount(a.tech_tags);
+    if (diff !== 0) return diff;
+    return a.created_at < b.created_at ? 1 : -1;
+  });
 
   return (
     <div className="flex flex-col gap-5">
+      <AutoRefresh />
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;משרות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">משרות שמתאימות לך</h1>
@@ -89,15 +114,17 @@ export default async function JobsPage({
         })}
       </div>
 
-      {jobs && jobs.length > 0 ? (
+      {sortedJobs.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {jobs.map((job) => (
+          {sortedJobs.map((job) => (
             <JobCard
               key={job.id}
               job={job}
               saved={savedIds.has(job.id)}
-              applied={appliedIds.has(job.id)}
-              myTech={myTech}
+              applied={appStatusByJob.has(job.id)}
+              applicationStatus={appStatusByJob.get(job.id) ?? null}
+              myTech={[...myTech]}
+              matches={matchCount(job.tech_tags)}
             />
           ))}
         </div>

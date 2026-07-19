@@ -38,6 +38,24 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
       .from("enrollments")
       .update({ status: "returned", switched_at: new Date().toISOString() })
       .eq("id", active.id);
+  } else {
+    // No active course — but "return then start" must not bypass the monthly
+    // limit. If any enrollment was already taken this month, only THAT course
+    // may be resumed until next month.
+    const { data: latest } = await supabase
+      .from("enrollments")
+      .select("course_id, last_switch_month")
+      .eq("profile_id", user.id)
+      .order("last_switch_month", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (
+      latest?.last_switch_month &&
+      latest.last_switch_month >= thisMonth &&
+      latest.course_id !== courseId
+    ) {
+      return { error: "אפשר לפתוח קורס חדש פעם בחודש 💜 אפשר לחזור לקורס שהיה לך החודש, או לחכות לחודש הבא." };
+    }
   }
 
   const { data: existing } = await supabase

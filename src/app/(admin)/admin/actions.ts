@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
+import { sendResendEmail } from "@/lib/email/resend";
+import { applicationStatusEmail } from "@/lib/email/templates";
 import type {
   ApplicationStatus,
   EmploymentType,
@@ -22,12 +25,37 @@ export async function setMemberRoleAction(id: string, role: UserRole): Promise<v
   revalidatePath("/admin/members");
 }
 
-/** Resolve or dismiss a report. */
+/**
+ * Resolve or dismiss a report. Resolving ("טופל") also removes the reported
+ * content from the community — that's what handling a report means.
+ */
 export async function updateReportStatus(id: string, status: ReportStatus) {
   await requireRole("admin");
   const supabase = await createClient();
+
+  if (status === "reviewed") {
+    const { data: report } = await supabase
+      .from("reports")
+      .select("target_type, target_id")
+      .eq("id", id)
+      .maybeSingle();
+    if (report) {
+      const admin = createAdminClient();
+      if (report.target_type === "post") {
+        // Clear children first in case the FK isn't cascading.
+        await admin.from("reactions").delete().eq("post_id", report.target_id);
+        await admin.from("comments").delete().eq("post_id", report.target_id);
+        await admin.from("posts").delete().eq("id", report.target_id);
+      } else {
+        await admin.from("comments").delete().eq("id", report.target_id);
+      }
+    }
+  }
+
   await supabase.from("reports").update({ status }).eq("id", id);
   revalidatePath("/admin/moderation");
+  revalidatePath("/forum");
+  revalidatePath("/feed");
 }
 
 /** Toggle a member's VIP flag. */
@@ -273,6 +301,36 @@ export async function setApplicationStatus(applicationId: string, status: Applic
   const supabase = await createClient();
   await supabase.from("applications").update({ status }).eq("id", applicationId);
   revalidatePath("/admin/jobs");
+  // The member sees the new status on her jobs page.
+  revalidatePath("/jobs");
+
+  // Best-effort: tell the applicant by email so the status change actually
+  // reaches her (in-review / accepted / rejected only).
+  if (status === "in_review" || status === "accepted" || status === "rejected") {
+    try {
+      const { data: app } = await supabase
+        .from("applications")
+        .select("applicant_id, job_id")
+        .eq("id", applicationId)
+        .single();
+      if (app) {
+        const [{ data: job }, { data: profile }] = await Promise.all([
+          supabase.from("jobs").select("title, company").eq("id", app.job_id).single(),
+          supabase.from("profiles").select("first_name, full_name").eq("id", app.applicant_id).single(),
+        ]);
+        const { data: authUser } = await createAdminClient().auth.admin.getUserById(app.applicant_id);
+        const email = authUser?.user?.email;
+        if (email && job) {
+          const name = profile?.first_name || profile?.full_name?.split(" ")[0] || undefined;
+          const built = applicationStatusEmail(job.title, job.company, status, name);
+          const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+          if (!sent.ok) console.error("[application email] send failed:", sent.error);
+        }
+      }
+    } catch (e) {
+      console.error("[application email] failed:", e);
+    }
+  }
 }
 
 /** Soft-cancel a session: shows "בוטל" and auto-hides from members after 24h. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, Rocket } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -60,6 +60,12 @@ const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
 export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {} }: ProfileFormProps) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
   const formRef = useRef<HTMLFormElement>(null);
+  const alertRef = useRef<HTMLDivElement>(null);
+
+  // A server-side save error must be seen — scroll it into view.
+  useEffect(() => {
+    if (state.error) alertRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [state]);
 
   const gate = questions.find((q) => q.key === "has_experience");
   const rest = questions.filter((q) => q.key !== "has_experience");
@@ -323,8 +329,10 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           <option key={c} value={c} />
         ))}
       </datalist>
-      {state.error && <Alert variant="danger">{state.error}</Alert>}
-      {state.ok && <Alert variant="success">הפרופיל נשמר ✓</Alert>}
+      <div ref={alertRef}>
+        {state.error && <Alert variant="danger">{state.error}</Alert>}
+        {state.ok && <Alert variant="success">הפרופיל נשמר ✓</Alert>}
+      </div>
 
       {/* progress */}
       <div className="flex items-center gap-1.5">

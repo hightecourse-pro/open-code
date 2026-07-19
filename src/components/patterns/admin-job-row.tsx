@@ -29,7 +29,21 @@ const EMP: Record<EmploymentType, string> = {
 export function AdminJobRow({ job }: { job: AdminJob }) {
   const [editing, setEditing] = useState(false);
   const [source, setSource] = useState(job.source);
-  const [state, action, pending] = useActionState<FormState, FormData>(editJob.bind(null, job.id), {});
+  const [state, action, pending] = useActionState<FormState, FormData>(
+    async (prev, formData) => {
+      const result = await editJob(job.id, prev, formData);
+      // A successful save closes the edit form (the list refreshes via revalidate).
+      if (result.ok) setEditing(false);
+      return result;
+    },
+    {}
+  );
+
+  function openEdit() {
+    // Re-sync from the row's current data so the "סוג" select never drifts.
+    setSource(job.source);
+    setEditing(true);
+  }
 
   if (editing) {
     return (
@@ -78,7 +92,7 @@ export function AdminJobRow({ job }: { job: AdminJob }) {
         </div>
       </div>
       <Badge variant={job.status === "open" ? "mint" : "tech"}>{job.status === "open" ? "פתוחה" : "סגורה"}</Badge>
-      <button type="button" onClick={() => setEditing(true)} className="text-ink-400 hover:text-brand-purple p-1.5" title="עריכה">
+      <button type="button" onClick={openEdit} className="text-ink-400 hover:text-brand-purple p-1.5" title="עריכה">
         <Pencil size={15} />
       </button>
       <form action={setJobStatus.bind(null, job.id, job.status !== "open")}>

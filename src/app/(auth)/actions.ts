@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getSiteUrl } from "@/lib/site";
 
 export type AuthState = { error?: string; message?: string };
 
@@ -30,7 +31,12 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { data: { full_name: fullName } },
+    options: {
+      data: { full_name: fullName },
+      // The confirmation link must land back on the app (never localhost) and
+      // go through the code-exchange callback so a session is established.
+      emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/forum`,
+    },
   });
 
   if (error) {
@@ -88,9 +94,8 @@ export async function requestPasswordReset(
   if (!email) return { error: "כתבי כתובת אימייל." };
 
   const supabase = await createClient();
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${site}/auth/callback?next=/reset-password`,
+    redirectTo: `${getSiteUrl()}/auth/callback?next=/reset-password`,
   });
 
   // Don't reveal whether the address exists.

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, X, StickyNote } from "lucide-react";
+import { Search, X, StickyNote, UserRound } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { MemberCrm } from "@/components/patterns/member-crm";
@@ -107,7 +107,14 @@ export function MembersTable({ members }: { members: MemberRow[] }) {
                 <td className="p-2 border-b border-ink-100">
                   <div className="flex items-center gap-2">
                     <Avatar size="xs" tone={m.role === "mentor" ? "gold" : "pink"} initials={m.avatar_initials || m.full_name.slice(0, 1) || "ק"} />
-                    <span className="font-medium text-ink-900">{m.full_name || "—"}</span>
+                    <a
+                      href={`/admin/members/${m.id}`}
+                      title="לפרופיל המלא"
+                      className="font-medium text-ink-900 hover:text-brand-purple hover:underline inline-flex items-center gap-1"
+                    >
+                      {m.full_name || "—"}
+                      <UserRound size={12} className="text-ink-400" />
+                    </a>
                     {m.is_vip && <span title="VIP">⭐</span>}
                     {m.internal_notes && m.internal_notes.trim() && (
                       <span

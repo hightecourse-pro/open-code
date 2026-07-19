@@ -6,7 +6,11 @@
 export class QuotaError extends Error {}
 export class InvalidKeyError extends Error {}
 
-const MODEL = "gemini-2.0-flash";
+// Try newest-first: Google retires old models (gemini-2.0-flash's free quota
+// was zeroed out), so a single hard-coded model starts failing with 429/404
+// for every member. Fall through the chain on quota/not-found and only give
+// up if every model failed.
+const MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"];
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export type GeminiRole = "user" | "model";
@@ -26,7 +30,7 @@ interface GenerateOptions {
   jsonSchema?: unknown;
 }
 
-async function generate(opts: GenerateOptions): Promise<string> {
+async function generateWithModel(model: string, opts: GenerateOptions): Promise<string> {
   const body: Record<string, unknown> = {
     contents: opts.contents.map((c) => ({
       role: c.role,
@@ -47,7 +51,7 @@ async function generate(opts: GenerateOptions): Promise<string> {
   if (opts.system) body.systemInstruction = { parts: [{ text: opts.system }] };
 
   const res = await fetch(
-    `${BASE}/${MODEL}:generateContent?key=${encodeURIComponent(opts.apiKey)}`,
+    `${BASE}/${model}:generateContent?key=${encodeURIComponent(opts.apiKey)}`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -72,6 +76,23 @@ async function generate(opts: GenerateOptions): Promise<string> {
     .map((p) => p.text ?? "")
     .join("")
     .trim();
+}
+
+async function generate(opts: GenerateOptions): Promise<string> {
+  let lastError: unknown;
+  let sawQuota = false;
+  for (const model of MODELS) {
+    try {
+      return await generateWithModel(model, opts);
+    } catch (e) {
+      // An invalid key fails the same way on every model — stop immediately.
+      if (e instanceof InvalidKeyError) throw e;
+      if (e instanceof QuotaError) sawQuota = true;
+      lastError = e;
+    }
+  }
+  if (sawQuota) throw new QuotaError("Gemini quota exhausted on all models");
+  throw lastError instanceof Error ? lastError : new Error("Gemini failed");
 }
 
 /** Free-form text generation. */

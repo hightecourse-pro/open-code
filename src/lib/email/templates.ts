@@ -12,7 +12,9 @@ const C = {
   pink: "#E0418D",
 };
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://open-code-psi.vercel.app";
+import { getSiteUrl } from "@/lib/site";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || getSiteUrl();
 const LOGO = `${SITE}/logo-opencode.png`;
 const TAGLINE = "קהילה לחרדיות בהייטק";
 
@@ -192,6 +194,42 @@ export function dailyDigestEmail(data: DigestData): BuiltEmail {
 </div>`;
 
   return { subject: "מה חדש בקוד פתוח היום 💜", html: body };
+}
+
+/** Notify an applicant that her application status changed. */
+export function applicationStatusEmail(
+  jobTitle: string,
+  company: string,
+  status: "in_review" | "accepted" | "rejected",
+  name?: string
+): BuiltEmail {
+  const per = {
+    in_review: {
+      subject: `המועמדות שלך בבדיקה · ${jobTitle}`,
+      heading: "המועמדות שלך בבדיקה 👀",
+      line: `המועמדות שלך למשרת <b>${jobTitle}</b> ב־${company} נמצאת עכשיו בבדיקה. נעדכן אותך ברגע שיש חדש!`,
+    },
+    accepted: {
+      subject: `חדשות טובות על המועמדות שלך 🎉 · ${jobTitle}`,
+      heading: "מזל טוב! 🎉",
+      line: `המועמדות שלך למשרת <b>${jobTitle}</b> ב־${company} התקבלה! ניצור איתך קשר עם כל הפרטים.`,
+    },
+    rejected: {
+      subject: `עדכון על המועמדות שלך · ${jobTitle}`,
+      heading: "הפעם זה לא התקדם 💜",
+      line: `המועמדות למשרת <b>${jobTitle}</b> ב־${company} לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך. יש עוד משרות שמחכות לך, ואנחנו כאן לעזור.`,
+    },
+  }[status];
+
+  return {
+    subject: per.subject,
+    html: renderEmail({
+      heading: per.heading,
+      lines: [`${name ? `היי ${name}, ` : ""}${per.line}`],
+      ctaText: "לכל המשרות",
+      ctaUrl: `${SITE}/jobs`,
+    }),
+  };
 }
 
 /** Fallback for any other auth action (email change, reauth, invite, …). */

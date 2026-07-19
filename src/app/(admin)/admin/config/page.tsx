@@ -119,7 +119,10 @@ export default async function AdminConfigPage() {
                     </div>
                   </div>
                   {locked ? (
-                    <span className="text-[11px] text-ink-400 flex items-center gap-1">🔒 קבוע</span>
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-tint-mint text-[#1B7A4B]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#28A864]" />
+                      פעילה · 🔒 קבוע
+                    </span>
                   ) : (
                     <QuestionToggle id={q.id} active={q.active} />
                   )}

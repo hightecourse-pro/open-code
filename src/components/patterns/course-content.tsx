@@ -23,6 +23,9 @@ export function CourseContent({ courseId, links, studied, rating, feedback }: Co
   const [stars, setStars] = useState(rating ?? 0);
   const [text, setText] = useState(feedback ?? "");
   const [saved, setSaved] = useState(false);
+  // The form is open until feedback exists; after sending it folds into a
+  // compact thank-you line (with an edit option).
+  const [fbOpen, setFbOpen] = useState(rating == null);
   const [, start] = useTransition();
 
   if (links.length === 0) {
@@ -116,43 +119,67 @@ export function CourseContent({ courseId, links, studied, rating, feedback }: Co
           <Check size={15} /> {done ? "סימנת שלמדת את הקורס" : "סמני שלמדת את הקורס"}
         </button>
 
-        <div className="flex flex-col gap-2 pt-2 border-t border-ink-100">
-          <div className="text-[13px] font-semibold text-ink-700">משוב קצר — עד כמה הקורס תרם לך?</div>
-          <div className="flex items-center gap-1">
-            {[1, 2, 3, 4, 5].map((n) => (
-              <button key={n} type="button" onClick={() => setStars(n)} title={`${n}`}>
+        {fbOpen ? (
+          <div className="flex flex-col gap-2 pt-2 border-t border-ink-100">
+            <div className="text-[13px] font-semibold text-ink-700">משוב קצר — עד כמה הקורס תרם לך?</div>
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button key={n} type="button" onClick={() => setStars(n)} title={`${n}`}>
+                  <Star
+                    size={22}
+                    className={n <= stars ? "text-[#E5A93C]" : "text-ink-300"}
+                    fill={n <= stars ? "currentColor" : "none"}
+                  />
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value);
+                setSaved(false);
+              }}
+              rows={2}
+              placeholder="מה היה שימושי? מה חסר?"
+              className="text-[13px] border border-ink-300 rounded-md p-2 outline-none focus:border-brand-purple"
+            />
+            <button
+              type="button"
+              disabled={!stars}
+              onClick={() =>
+                start(() => {
+                  void saveCourseFeedback(courseId, stars, text);
+                  setSaved(true);
+                  setFbOpen(false);
+                })
+              }
+              className="self-start text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-4 py-2 disabled:opacity-50"
+            >
+              שליחת משוב
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 pt-2 border-t border-ink-100 text-[13px] text-ink-700">
+            <span className="inline-flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5].map((n) => (
                 <Star
-                  size={22}
+                  key={n}
+                  size={15}
                   className={n <= stars ? "text-[#E5A93C]" : "text-ink-300"}
                   fill={n <= stars ? "currentColor" : "none"}
                 />
-              </button>
-            ))}
+              ))}
+            </span>
+            <span>{saved ? "תודה על המשוב! 💜" : "המשוב שלך נשמר"}</span>
+            <button
+              type="button"
+              onClick={() => setFbOpen(true)}
+              className="text-brand-purple font-semibold hover:underline"
+            >
+              עריכה
+            </button>
           </div>
-          <textarea
-            value={text}
-            onChange={(e) => {
-              setText(e.target.value);
-              setSaved(false);
-            }}
-            rows={2}
-            placeholder="מה היה שימושי? מה חסר?"
-            className="text-[13px] border border-ink-300 rounded-md p-2 outline-none focus:border-brand-purple"
-          />
-          <button
-            type="button"
-            disabled={!stars}
-            onClick={() =>
-              start(() => {
-                void saveCourseFeedback(courseId, stars, text);
-                setSaved(true);
-              })
-            }
-            className="self-start text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-4 py-2 disabled:opacity-50"
-          >
-            {saved ? "תודה! נשמר ✓" : "שליחת משוב"}
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );

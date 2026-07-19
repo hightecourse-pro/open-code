@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
-import type { Json } from "@/types/database";
+import type { Json, QuestionScope } from "@/types/database";
 
 export type ProfileState = { ok?: boolean; error?: string };
 
@@ -37,14 +37,18 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   // Was this the first-login mandatory completion?
   const { data: before } = await supabase
     .from("profiles")
-    .select("profile_completed")
+    .select("profile_completed, role")
     .eq("id", user.id)
     .single();
   const firstCompletion = !before?.profile_completed;
 
+  // Validate against the SAME question set the member actually sees (scope by
+  // role) — otherwise hidden questions block saving with "missing" errors.
+  const scope: QuestionScope[] = before?.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
   const { data: questions } = await supabase
     .from("config_questions")
     .select("id, key, label_he, field_type, required, depends_on, intake_track, active")
+    .in("scope", scope)
     // Active questions, plus the structural experience gate even if toggled off.
     .or("active.eq.true,key.eq.has_experience");
 
@@ -113,7 +117,9 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   if (invalid.length > 0) {
     return { error: invalid.join(" · ") };
   }
-  if (missing.length > 0) {
+  // Staff accounts aren't community members — don't hold their save hostage
+  // on member-intake required fields.
+  if (missing.length > 0 && before?.role !== "admin") {
     return { error: `נשארו עוד שדות חובה למלא: ${missing.slice(0, 6).join(", ")}` };
   }
 

@@ -24,10 +24,14 @@ export async function listUserKeys(): Promise<KeyView[]> {
 /** Decrypt and return the first usable key (server only — never sent to client). */
 export async function getUsableKey(): Promise<{ id: string; apiKey: string } | null> {
   const supabase = await createClient();
+  // Google quotas reset daily, so an "exhausted" key is worth retrying —
+  // prefer active keys, but fall back to exhausted ones instead of failing.
+  // ("active" sorts before "exhausted" alphabetically.)
   const { data } = await supabase
     .from("user_ai_keys")
     .select("id, key_cipher")
-    .eq("status", "active")
+    .in("status", ["active", "exhausted"])
+    .order("status", { ascending: true })
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
@@ -102,9 +106,10 @@ export async function withUserKey<T>(run: (apiKey: string) => Promise<T>): Promi
   try {
     const data = await run(key.apiKey);
     const supabase = await createClient();
+    // A successful call also revives a previously-exhausted key.
     await supabase
       .from("user_ai_keys")
-      .update({ last_used_at: new Date().toISOString() })
+      .update({ last_used_at: new Date().toISOString(), status: "active", last_error: null })
       .eq("id", key.id);
     return { ok: true, data };
   } catch (e) {

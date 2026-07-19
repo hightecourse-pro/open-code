@@ -1,0 +1,154 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowRight, Mail, StickyNote } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { Avatar, Badge } from "@/components/ui";
+import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
+import { MemberCrm } from "@/components/patterns/member-crm";
+import { MemberActions } from "@/components/patterns/member-actions";
+import { getTaxonomyOptions } from "@/lib/taxonomies";
+import type { ConfigQuestion } from "@/types/database";
+
+export const metadata: Metadata = { title: "פרופיל חברה" };
+
+const DIGEST_LABEL: Record<string, string> = {
+  daily: "מייל יומי",
+  unread: "רק כשיש הודעות שלא נקראו",
+  off: "בלי מיילים",
+};
+
+export default async function AdminMemberProfilePage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+
+  const [{ data: profile }, { data: questions }, { data: answers }, taxonomyOptions] =
+    await Promise.all([
+      supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+      supabase
+        .from("config_questions")
+        .select("*")
+        .order("sort_order", { ascending: true }),
+      supabase.from("profile_answers").select("question_id, value").eq("profile_id", id),
+      getTaxonomyOptions(),
+    ]);
+
+  if (!profile) notFound();
+
+  // Contact email lives in auth, not in profiles.
+  let email: string | null = null;
+  try {
+    const { data: authUser } = await createAdminClient().auth.admin.getUserById(id);
+    email = authUser?.user?.email ?? null;
+  } catch {
+    // best-effort
+  }
+
+  const answerMap = new Map((answers ?? []).map((a) => [a.question_id, a.value]));
+
+  // Turn stored machine values back into the human labels the member picked.
+  function labelsFor(q: ConfigQuestion): Map<string, string> {
+    const opts = q.taxonomy_kind
+      ? taxonomyOptions[q.taxonomy_kind] ?? []
+      : Array.isArray(q.options)
+        ? (q.options as unknown as { value: string; label: string }[])
+        : [];
+    return new Map(opts.map((o) => [o.value, o.label]));
+  }
+  function display(q: ConfigQuestion): string {
+    const v = answerMap.get(q.id);
+    if (v === undefined || v === null || v === "") return "—";
+    const labels = labelsFor(q);
+    if (Array.isArray(v)) {
+      const items = (v as unknown[])
+        .filter((x): x is string => typeof x === "string")
+        .map((x) => labels.get(x) ?? x);
+      return items.length ? items.join(" · ") : "—";
+    }
+    if (typeof v === "boolean") return v ? "כן" : "לא";
+    if (typeof v === "number") return String(v);
+    if (typeof v === "string") return labels.get(v) ?? v;
+    return "—";
+  }
+
+  const answered = (questions ?? []).filter((q) => {
+    const v = answerMap.get(q.id);
+    return !(v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0));
+  });
+
+  return (
+    <div className="flex flex-col gap-5">
+      <Link
+        href="/admin/members"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline self-start"
+      >
+        <ArrowRight size={15} /> חזרה לניהול חברות
+      </Link>
+
+      {/* Header card */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex items-start gap-4 flex-wrap">
+        <Avatar
+          size="xl"
+          tone={profile.role === "mentor" ? "gold" : "pink"}
+          crown={profile.role === "mentor"}
+          initials={profile.avatar_initials || profile.full_name.slice(0, 1) || "ק"}
+        />
+        <div className="flex-1 min-w-[200px]">
+          <h1 className="font-display text-[24px] font-black text-ink-1000">{profile.full_name}</h1>
+          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <RoleTag role={profile.role} />
+            <StatusPill status={profile.status} />
+            {profile.is_vip && <span title="VIP">⭐ VIP</span>}
+            {profile.is_experienced && <Badge variant="purple">עם ניסיון</Badge>}
+            {profile.specialization && <Badge variant="tech">{profile.specialization}</Badge>}
+          </div>
+          <div className="text-[13px] text-ink-500 mt-2 flex flex-col gap-0.5">
+            {email && (
+              <span className="inline-flex items-center gap-1.5" dir="ltr">
+                <Mail size={13} /> {email}
+              </span>
+            )}
+            <span>הצטרפה: {new Date(profile.created_at).toLocaleDateString("he-IL")}</span>
+            <span>העדפת מייל: {DIGEST_LABEL[profile.digest_frequency] ?? profile.digest_frequency}</span>
+          </div>
+        </div>
+        <MemberActions profileId={profile.id} status={profile.status} />
+      </div>
+
+      {/* Internal notes / CRM */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <h3 className="font-display text-base font-bold mb-3 flex items-center gap-1.5">
+          <StickyNote size={16} className="text-brand-purple" /> הערות פנימיות
+        </h3>
+        <MemberCrm id={profile.id} isVip={profile.is_vip} notes={profile.internal_notes} />
+      </div>
+
+      {/* The full intake profile */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <h3 className="font-display text-base font-bold mb-1">תשובות הפרופיל</h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          כל מה שהיא מילאה בטופס ההצטרפות ובפרופיל ({answered.length} שדות).
+        </p>
+        {answered.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+            {answered.map((q) => (
+              <div key={q.id} className="py-2.5 border-b border-ink-100">
+                <div className="text-[11.5px] text-ink-500">{q.label_he}</div>
+                <div className="text-[14px] text-ink-900 font-medium mt-0.5 break-words">
+                  {display(q)}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-ink-500 text-sm py-2">היא עדיין לא השלימה את הפרופיל.</p>
+        )}
+      </div>
+    </div>
+  );
+}

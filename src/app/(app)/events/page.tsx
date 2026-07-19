@@ -33,9 +33,10 @@ export default async function EventsPage() {
       .limit(6),
   ]);
 
-  // A canceled session still shows (as "בוטל") for 24h, then disappears.
+  // A finished session moves off this screen (it lives in the recordings page);
+  // a canceled one still shows (as "בוטל") for 24h, then disappears.
   const upcoming = (upcomingRaw ?? []).filter(
-    (s) => !s.canceled_at || new Date(s.canceled_at).getTime() > cutoff
+    (s) => s.status !== "done" && (!s.canceled_at || new Date(s.canceled_at).getTime() > cutoff)
   );
 
   return (
@@ -98,11 +99,11 @@ export default async function EventsPage() {
         )}
       </section>
 
-      {past && past.length > 0 && (
+      {(past ?? []).filter((s) => !s.canceled_at).length > 0 && (
         <section className="flex flex-col gap-3">
           <h2 className="font-display text-lg font-bold text-ink-1000">סשנים שעברו</h2>
           <div className="flex flex-col gap-2">
-            {past.map((s) => (
+            {(past ?? []).filter((s) => !s.canceled_at).map((s) => (
               <div
                 key={s.id}
                 className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0"

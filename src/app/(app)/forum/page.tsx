@@ -3,10 +3,13 @@ import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { Composer } from "@/components/patterns/composer";
 import { PostCard, type FeedPost } from "@/components/patterns/post-card";
+import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import type { PostComment } from "@/components/patterns/post-interactions";
 import type { UserRole } from "@/types/database";
 
 export const metadata: Metadata = { title: "פורום" };
+// Always fresh — a new post shows without a manual refresh.
+export const dynamic = "force-dynamic";
 
 type ProfileLite = {
   id: string;
@@ -95,6 +98,7 @@ export default async function ForumPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      <AutoRefresh />
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;פורום/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הפורום</h1>

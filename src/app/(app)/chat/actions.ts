@@ -96,10 +96,16 @@ export async function sendMessage(conversationId: string, formData: FormData) {
       if (email) {
         const fromName = me?.first_name || me?.full_name?.split(" ")[0] || "חברה";
         const built = newMessageEmail(fromName);
-        await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+        const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+        // Surface failures in the server logs (RESEND_API_KEY missing, bounced
+        // address, …) — otherwise "the mentor never got an email" is invisible.
+        if (!sent.ok) console.error("[chat email] send to mentor failed:", sent.error);
+      } else {
+        console.error("[chat email] mentor has no email address:", otherId);
       }
-    } catch {
+    } catch (e) {
       // Email is best-effort — never block sending the message.
+      console.error("[chat email] failed:", e);
     }
   }
 

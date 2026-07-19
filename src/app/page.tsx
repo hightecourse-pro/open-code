@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Briefcase,
   Crown,
@@ -27,7 +28,16 @@ const FEATURES = [
   { icon: Mic, title: "סימולטור ראיונות", body: "תרגול ראיונות (גם קולי!) עם משוב מחזק — כדי שתגיעי בטוחה." },
 ];
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ code?: string }>;
+}) {
+  // Older auth emails land here with `?code=` (Supabase's Site-URL fallback).
+  // Forward them into the callback so the link still works.
+  const { code } = await searchParams;
+  if (code) redirect(`/auth/callback?code=${encodeURIComponent(code)}&next=/forum`);
+
   const pricing = await getPricing();
   const plans = buildPlans(pricing);
 
