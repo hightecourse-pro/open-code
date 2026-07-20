@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { Sparkles } from "lucide-react";
+import Link from "next/link";
+import { Sparkles, Crown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { JobCard } from "@/components/patterns/job-card";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
+import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import type { JobSource } from "@/types/database";
 
 export const metadata: Metadata = { title: "משרות" };
@@ -25,6 +27,8 @@ export default async function JobsPage({
 
   const supabase = await createClient();
   const user = await getUser();
+  const profile = await requireCommunityAccess();
+  const subscriber = isSubscriber(profile);
 
   const [{ data: jobs }, { data: saved }, { data: applied }, { data: myAnswers }, { data: techTax }] =
     await Promise.all([
@@ -91,6 +95,22 @@ export default async function JobsPage({
         </span>
       </div>
 
+      {/* The priority policy is stated plainly — to free members and to all. */}
+      <div className="flex gap-2.5 items-start bg-tint-warm border border-[#F0DCA8] rounded-md p-3 px-4 text-[13.5px] text-[#8C5E0E]">
+        <Crown size={17} className="shrink-0 mt-0.5" />
+        <span className="flex-1">
+          <b className="font-display">עדיפות למנויות הקהילה.</b>{" "}
+          {subscriber
+            ? "המשרות שלנו מוצעות קודם כול לחברות עם מנוי פעיל — כלומר גם לך 💜"
+            : "המשרות שלנו מוצעות קודם כול לחברות עם מנוי פעיל. את מוזמנת להגיש, ומנוי מקפיץ אותך לראש הרשימה."}
+        </span>
+        {!subscriber && (
+          <Link href="/join" className="font-semibold whitespace-nowrap hover:underline">
+            לשדרוג ←
+          </Link>
+        )}
+      </div>
+
       <div className="flex gap-2.5">
         {TABS.map((tab) => {
           const active = tab.id === activeTab;
@@ -125,6 +145,7 @@ export default async function JobsPage({
               applicationStatus={appStatusByJob.get(job.id) ?? null}
               myTech={[...myTech]}
               matches={matchCount(job.tech_tags)}
+              subscriber={subscriber}
             />
           ))}
         </div>

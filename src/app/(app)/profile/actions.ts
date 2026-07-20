@@ -43,10 +43,10 @@ export async function setDriveEmail(
     return { error: "הכתובת לא נראית תקינה. בדקי אותה שוב 🙂" };
   }
 
-  const { error } = await supabase
-    .from("profiles")
-    .update({ drive_email: email || null, drive_email_requested_at: null })
-    .eq("id", user.id);
+  const { error } = await supabase.from("member_private").upsert(
+    { profile_id: user.id, drive_email: email || null, drive_email_requested_at: null },
+    { onConflict: "profile_id" }
+  );
   if (error) return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
 
   // Material already shared with her previous address has to move to the new

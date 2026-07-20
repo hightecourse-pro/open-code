@@ -4,6 +4,8 @@ import { getUser } from "@/lib/auth";
 import { Composer } from "@/components/patterns/composer";
 import { PostCard, type FeedPost } from "@/components/patterns/post-card";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
+import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
+import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import type { PostComment } from "@/components/patterns/post-interactions";
 import type { UserRole } from "@/types/database";
 
@@ -22,6 +24,8 @@ type ProfileLite = {
 export default async function ForumPage() {
   const supabase = await createClient();
   const user = await getUser();
+  const profile = await requireCommunityAccess();
+  const canWrite = isSubscriber(profile);
 
   const { data: posts } = await supabase
     .from("posts")
@@ -105,16 +109,26 @@ export default async function ForumPage() {
         <p className="t-body-sm text-ink-700">שאלות, התייעצויות ושיתופי ידע — אנחנו פה אחת בשביל השנייה.</p>
       </div>
 
-      <Composer kind="forum" />
+      {canWrite ? (
+        <Composer kind="forum" />
+      ) : (
+        <UpgradeCard
+          title="את מוזמנת לקרוא הכול 💜"
+          body="כתיבה בפורום, תגובות והתייעצויות נפתחות עם מנוי — ואנחנו נשמח לשמוע גם אותך."
+          cta="להצטרפות"
+        />
+      )}
 
       {forumPosts.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?
+          {canWrite
+            ? "הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?"
+            : "הפורום שקט עכשיו — בקרוב יהיה כאן מלא."}
         </div>
       ) : (
         <div className="flex flex-col gap-3.5">
           {forumPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} canWrite={canWrite} />
           ))}
         </div>
       )}

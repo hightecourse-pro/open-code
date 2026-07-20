@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles } from "lucide-react";
+import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles, Crown } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { applyToJob, toggleSaveJob } from "@/app/(app)/jobs/actions";
@@ -40,6 +40,8 @@ export interface JobCardProps {
   myTech?: string[];
   /** Number of job tags matching the member's profile. */
   matches?: number;
+  /** Free members may apply, but the board says subscribers come first. */
+  subscriber?: boolean;
 }
 
 export function JobCard({
@@ -49,6 +51,7 @@ export function JobCard({
   applicationStatus = null,
   myTech = [],
   matches = 0,
+  subscriber = true,
 }: JobCardProps) {
   const [isSaved, setSaved] = useState(saved);
   const [hasApplied, setApplied] = useState(applied);
@@ -132,6 +135,13 @@ export function JobCard({
               {tag}
             </Badge>
           ))}
+        </div>
+      )}
+
+      {!subscriber && job.source === "ours" && (
+        <div className="flex items-center gap-1.5 text-[12px] text-[#8C5E0E] bg-tint-warm border border-[#F0DCA8] rounded-md px-2.5 py-1.5 mb-3">
+          <Crown size={12} className="shrink-0" />
+          עדיפות למנויות הקהילה
         </div>
       )}
 

@@ -26,7 +26,9 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
     supabase.from("profiles").select("status").eq("id", user.id).single(),
     supabase.from("courses").select("id, is_published").eq("id", courseId).maybeSingle(),
   ]);
-  if (me?.status !== "active") return { error: "המנוי שלך לא פעיל כרגע." };
+  if (me?.status !== "active") {
+    return { error: "פתיחת קורס נפתחת עם מנוי לקהילה 💜" };
+  }
   if (!course?.is_published) return { error: "הקורס הזה לא זמין כרגע." };
 
   const { data: active } = await supabase

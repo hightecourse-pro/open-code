@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { requireProfile } from "@/lib/auth";
+import { isSubscriber, requireProfile } from "@/lib/auth";
 import { Avatar, Button } from "@/components/ui";
 import { cn, timeAgo } from "@/lib/utils";
 import { sendMessage } from "./actions";
@@ -34,9 +34,13 @@ export default async function ChatPage({
 
   // A junior may only message an active mentor. Once a mentor is removed, the
   // thread stays readable but new messages are blocked. Mentors/staff can reply.
+  // Writing at all is part of the paid membership — a free member reads her
+  // history but doesn't send.
+  const subscriber = isSubscriber(me);
   const canSend =
-    me.role !== "junior" ||
-    (!!activeOther && activeOther.role === "mentor" && activeOther.status === "active");
+    subscriber &&
+    (me.role !== "junior" ||
+      (!!activeOther && activeOther.role === "mentor" && activeOther.status === "active"));
 
   const { data: messages } = active
     ? await supabase
@@ -148,6 +152,13 @@ export default async function ChatPage({
                     שליחה
                   </Button>
                 </form>
+              ) : !subscriber ? (
+                <Link
+                  href="/join"
+                  className="p-3.5 border-t border-ink-100 text-[13px] text-ink-700 text-center bg-tint-purple hover:text-brand-purple transition-colors"
+                >
+                  ההתכתבות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜
+                </Link>
               ) : (
                 <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
                   המנטורית כבר לא זמינה לשיחות חדשות. אפשר לפנות למנטורית אחרת מעמוד המנטוריות 💜

@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
-import { Calendar, Video } from "lucide-react";
+import { Calendar, Video, Lock } from "lucide-react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { UpgradeNote } from "@/components/patterns/upgrade-prompt";
 
 export const metadata: Metadata = { title: "אירועים וסשנים" };
+
+/** The join link only exists on the subscriber read — free rows simply lack it. */
+function joinUrl(session: object): string | null {
+  return (session as { zoom_url?: string | null }).zoom_url ?? null;
+}
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" });
@@ -13,19 +21,25 @@ function fmtTime(iso: string) {
 
 export default async function EventsPage() {
   const supabase = await createClient();
+  const profile = await requireCommunityAccess();
+  const subscriber = isSubscriber(profile);
   const now = new Date();
   const nowIso = now.toISOString();
   const cutoff = now.getTime() - 24 * 3600 * 1000; // canceled sessions hide after 24h
 
+  // Free members read the sanitized view — it simply has no join link in it,
+  // so there's nothing to leak even straight from the API.
+  const table = subscriber ? "sessions" : "sessions_public";
+
   const [{ data: upcomingRaw }, { data: past }] = await Promise.all([
     supabase
-      .from("sessions")
+      .from(table)
       .select("*")
       .eq("is_published", true)
       .gte("scheduled_at", nowIso)
       .order("scheduled_at", { ascending: true }),
     supabase
-      .from("sessions")
+      .from(table)
       .select("*")
       .eq("is_published", true)
       .lt("scheduled_at", nowIso)
@@ -46,6 +60,12 @@ export default async function EventsPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">אירועים וסשנים</h1>
         <p className="t-body-sm text-ink-700">סשנים שבועיים, מיטאפים וסדנאות. נשמח לראות אותך 💜</p>
       </div>
+
+      {!subscriber && (
+        <UpgradeNote>
+          את רואה מה מתוכנן — קישורי ההצטרפות והתזכורות נפתחים עם מנוי.
+        </UpgradeNote>
+      )}
 
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-lg font-bold text-ink-1000">הקרובים</h2>
@@ -82,14 +102,25 @@ export default async function EventsPage() {
                   <Calendar size={12} /> {fmtDate(s.scheduled_at)} · {fmtTime(s.scheduled_at)}
                 </div>
               </div>
-              {s.zoom_url && !s.canceled_at && (
-                <a
-                  href={s.zoom_url}
-                  className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white shrink-0"
-                >
-                  <Video size={14} /> הצטרפות
-                </a>
-              )}
+              {!s.canceled_at &&
+                (subscriber ? (
+                  joinUrl(s) && (
+                    <a
+                      href={joinUrl(s)!}
+                      className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white shrink-0"
+                    >
+                      <Video size={14} /> הצטרפות
+                    </a>
+                  )
+                ) : (
+                  <Link
+                    href="/join"
+                    title="ההצטרפות לסשנים נפתחת עם מנוי"
+                    className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple shrink-0 hover:bg-tint-purple transition-colors"
+                  >
+                    <Lock size={13} /> נפתח עם מנוי
+                  </Link>
+                ))}
             </div>
           ))
         ) : (
@@ -111,7 +142,7 @@ export default async function EventsPage() {
                 <div className="text-ink-400 text-xs font-mono w-20 shrink-0">{fmtDate(s.scheduled_at)}</div>
                 <div className="font-medium text-ink-900 flex-1">{s.title}</div>
                 <a href="/recordings" className="text-brand-purple text-sm font-semibold">
-                  להקלטה
+                  {subscriber ? "להקלטה" : "להקלטות"}
                 </a>
               </div>
             ))}

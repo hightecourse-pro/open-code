@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getProfile, isSubscriber } from "@/lib/auth";
 import { withUserKey, type AiReason } from "@/lib/ai/keys";
 import {
   interviewReply,
@@ -31,6 +32,11 @@ export async function startInterview(_prev: StartState, formData: FormData): Pro
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  const me = await getProfile();
+  if (!me || !isSubscriber(me)) {
+    return { error: "סימולטור הראיונות נפתח עם מנוי לקהילה 💜" };
+  }
 
   const agentRaw = String(formData.get("agent") ?? "hr");
   const diffRaw = String(formData.get("difficulty") ?? "standard");
@@ -85,6 +91,13 @@ export async function sendAnswer(
   const answer = String(formData.get("answer") ?? "").trim();
   if (!answer) return {};
 
+  // Gate every turn, not just the first — otherwise a session started while
+  // subscribed keeps running the paid tool after the membership lapses.
+  const me = await getProfile();
+  if (!me || !isSubscriber(me)) {
+    return { error: "סימולטור הראיונות נפתח עם מנוי לקהילה 💜" };
+  }
+
   const { supabase, session, turns } = await loadSession(sessionId);
   if (!session || session.status !== "live") return {};
 
@@ -115,6 +128,11 @@ export async function finishInterview(
   _prev: TurnState,
   _formData: FormData
 ): Promise<TurnState> {
+  const me = await getProfile();
+  if (!me || !isSubscriber(me)) {
+    return { error: "סימולטור הראיונות נפתח עם מנוי לקהילה 💜" };
+  }
+
   const { supabase, session, turns } = await loadSession(sessionId);
   if (!session) return {};
 

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getProfile, isSubscriber } from "@/lib/auth";
 import { withUserKey, type AiReason } from "@/lib/ai/keys";
 import { analyzeCvPdf, type CvAnalysis } from "@/lib/ai/cv";
 import type { Json } from "@/types/database";
@@ -18,6 +19,11 @@ const REASON_MSG: Record<AiReason, string> = {
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 export async function runCvCheck(_prev: CvState, formData: FormData): Promise<CvState> {
+  const me = await getProfile();
+  if (!me || !isSubscriber(me)) {
+    return { error: "כלי ה-AI נפתחים עם מנוי לקהילה 💜" };
+  }
+
   const file = formData.get("cv_file");
   const jobDescription = String(formData.get("job") ?? "").trim();
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Heart, MessageCircle, Bookmark, Flag, Send } from "lucide-react";
+import Link from "next/link";
+import { Heart, MessageCircle, Bookmark, Flag, Send, Lock } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
 import { toggleReaction, addComment, reportContent } from "@/app/(app)/feed/actions";
@@ -20,9 +21,18 @@ export interface PostInteractionsProps {
   liked: boolean;
   saved: boolean;
   comments: PostComment[];
+  /** Free members read the thread but don't take part in it. */
+  canWrite?: boolean;
 }
 
-export function PostInteractions({ postId, likeCount, liked, saved, comments }: PostInteractionsProps) {
+export function PostInteractions({
+  postId,
+  likeCount,
+  liked,
+  saved,
+  comments,
+  canWrite = true,
+}: PostInteractionsProps) {
   const [like, setLike] = useState({ on: liked, count: likeCount });
   const [isSaved, setIsSaved] = useState(saved);
   const [openComments, setOpenComments] = useState(false);
@@ -44,10 +54,12 @@ export function PostInteractions({ postId, likeCount, liked, saved, comments }: 
       <div className="flex gap-4 items-center">
         <button
           type="button"
-          onClick={onLike}
+          onClick={canWrite ? onLike : undefined}
+          disabled={!canWrite}
           className={cn(
             "flex items-center gap-1.5 text-[13.5px] px-2 py-1 rounded-lg transition-colors",
-            like.on ? "text-brand-pink-deep" : "text-ink-500 hover:bg-ink-100 hover:text-brand-pink-deep"
+            like.on ? "text-brand-pink-deep" : "text-ink-500",
+            canWrite ? "hover:bg-ink-100 hover:text-brand-pink-deep" : "cursor-default"
           )}
         >
           <Heart size={16} fill={like.on ? "currentColor" : "none"} />
@@ -65,10 +77,12 @@ export function PostInteractions({ postId, likeCount, liked, saved, comments }: 
 
         <button
           type="button"
-          onClick={onSave}
+          onClick={canWrite ? onSave : undefined}
+          disabled={!canWrite}
           className={cn(
             "flex items-center gap-1.5 text-[13.5px] px-2 py-1 rounded-lg transition-colors",
-            isSaved ? "text-brand-purple" : "text-ink-500 hover:bg-ink-100 hover:text-brand-purple"
+            isSaved ? "text-brand-purple" : "text-ink-500",
+            canWrite ? "hover:bg-ink-100 hover:text-brand-purple" : "cursor-default"
           )}
         >
           <Bookmark size={16} fill={isSaved ? "currentColor" : "none"} />
@@ -119,22 +133,33 @@ export function PostInteractions({ postId, likeCount, liked, saved, comments }: 
             </div>
           ))}
 
-          <form action={addComment.bind(null, postId)} className="flex gap-2 items-end">
-            <textarea
-              name="body"
-              rows={1}
-              required
-              placeholder="הוסיפי תגובה…"
-              className="flex-1 text-[13.5px] border border-ink-300 rounded-md px-3 py-2 outline-none focus:border-brand-purple resize-none"
-            />
-            <button
-              type="submit"
-              aria-label="שליחת תגובה"
-              className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0"
+          {canWrite ? (
+            <form action={addComment.bind(null, postId)} className="flex gap-2 items-end">
+              <textarea
+                name="body"
+                rows={1}
+                required
+                placeholder="הוסיפי תגובה…"
+                className="flex-1 text-[13.5px] border border-ink-300 rounded-md px-3 py-2 outline-none focus:border-brand-purple resize-none"
+              />
+              <button
+                type="submit"
+                aria-label="שליחת תגובה"
+                className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0"
+              >
+                <Send size={16} />
+              </button>
+            </form>
+          ) : (
+            <Link
+              href="/join"
+              className="flex items-center gap-2 text-[13px] text-ink-700 bg-tint-purple border border-[#DDC9EC] rounded-md px-3 py-2 hover:border-brand-purple transition-colors"
             >
-              <Send size={16} />
-            </button>
-          </form>
+              <Lock size={14} className="text-brand-purple shrink-0" />
+              <span className="flex-1">כתיבת תגובות נפתחת עם מנוי — נשמח שתצטרפי לשיחה 💜</span>
+              <span className="font-semibold text-brand-purple">לשדרוג ←</span>
+            </Link>
+          )}
         </div>
       )}
     </div>

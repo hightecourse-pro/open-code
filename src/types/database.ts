@@ -71,9 +71,6 @@ export interface Database {
           internal_notes: string | null;
           profile_completed: boolean;
           digest_frequency: string; // 'daily' | 'unread' | 'off'
-          /** Google account to share Drive material with (falls back to login email). */
-          drive_email: string | null;
-          drive_email_requested_at: string | null;
         } & Timestamps;
         Insert: {
           id: string;
@@ -93,8 +90,6 @@ export interface Database {
           internal_notes?: string | null;
           profile_completed?: boolean;
           digest_frequency?: string;
-          drive_email?: string | null;
-          drive_email_requested_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -119,6 +114,23 @@ export interface Database {
           handled_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["mentor_requests"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Owner-only: the Google address we share Drive material with. */
+      member_private: {
+        Row: {
+          profile_id: string;
+          drive_email: string | null;
+          drive_email_requested_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          drive_email?: string | null;
+          drive_email_requested_at?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["member_private"]["Insert"]>;
         Relationships: [];
       };
       member_crm: {
@@ -775,6 +787,23 @@ export interface Database {
           granted_email?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["content_shares"]["Insert"]>;
+        Relationships: [];
+      };
+      /**
+       * Free-tier reads. Same rows as `sessions`/`recordings` minus the paid
+       * goods (zoom_url / video_url), so a member without a subscription has
+       * nothing to leak even straight from the API.
+       */
+      sessions_public: {
+        Row: Omit<Database["public"]["Tables"]["sessions"]["Row"], "zoom_url" | "leader_id">;
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      recordings_public: {
+        Row: Omit<Database["public"]["Tables"]["recordings"]["Row"], "video_url">;
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       content_views: {

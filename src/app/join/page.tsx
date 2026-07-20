@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getProfile } from "@/lib/auth";
@@ -36,7 +37,19 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function JoinPage() {
+const LOCKED_COPY: Record<string, string> = {
+  chat: "התכתבות עם מנטורית נפתחת עם מנוי.",
+  courses: "פתיחת קורס נפתחת עם מנוי.",
+  ai: "כלי ה-AI נפתחים עם מנוי.",
+  recordings: "צפייה בהקלטות נפתחת עם מנוי.",
+};
+
+export default async function JoinPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ locked?: string; status?: string }>;
+}) {
+  const { locked } = await searchParams;
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.status === "active") redirect("/forum");
@@ -94,11 +107,27 @@ export default async function JoinPage() {
         <h1 className="t-h2">{renewing ? "טוב שחזרת 💜" : "כמעט שם!"}</h1>
         <p className="t-body-sm text-ink-500 mt-1">
           {renewing
-            ? "המנוי שלך מושהה — אפשר לחדש ולחזור לקהילה."
+            ? "המנוי שלך מושהה — אפשר לחדש ולחזור לקהילה. בינתיים את עדיין יכולה להסתובב ולקרוא."
             : "בחרי מסלול והצטרפי לקהילה. אנחנו ביחד מהצעד הראשון."}
         </p>
       </div>
+
+      {locked && (
+        <Alert variant="info">
+          {LOCKED_COPY[locked] ?? "החלק הזה נפתח עם מנוי."} עד אז את מוזמנת להמשיך לקרוא ולהכיר 💜
+        </Alert>
+      )}
+
       <CheckoutPanel plans={plans} configured={configured} fieldsByPlan={fieldsByPlan} />
+
+      {/* A free member is welcome inside — paying is what unlocks taking part. */}
+      <Link
+        href="/forum"
+        className="text-center text-[13.5px] font-semibold text-brand-purple hover:underline"
+      >
+        {renewing ? "חזרה לקהילה" : "רוצה קודם להסתכל מסביב? להיכנס לקהילה ←"}
+      </Link>
+
       <form action={signOut}>
         <Button type="submit" variant="ghost" size="sm" className="w-full">
           יציאה

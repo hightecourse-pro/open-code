@@ -3,11 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getProfile, isSubscriber } from "@/lib/auth";
 import type { PostIntent, PostKind, ReactionKind, ReportTarget } from "@/types/database";
 
 const INTENTS: PostIntent[] = ["consult", "knowledge", "success"];
 
 export type ComposerState = { error?: string };
+
+const UPGRADE_MSG = "כתיבה בפורום נפתחת עם מנוי 💜 נשמח שתצטרפי לשיחה.";
+
+/** Writing in the community is for subscribers (RLS enforces it too). */
+async function canWrite(): Promise<boolean> {
+  const profile = await getProfile();
+  return !!profile && isSubscriber(profile);
+}
 
 /** Toggle a like/save reaction on a post for the current member. */
 export async function toggleReaction(postId: string, kind: ReactionKind): Promise<void> {
@@ -15,7 +24,7 @@ export async function toggleReaction(postId: string, kind: ReactionKind): Promis
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user || !(await canWrite())) return;
 
   const { data: existing } = await supabase
     .from("reactions")
@@ -41,7 +50,7 @@ export async function addComment(postId: string, formData: FormData): Promise<vo
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user || !(await canWrite())) return;
   await supabase.from("comments").insert({ post_id: postId, author_id: user.id, body });
   revalidatePath("/forum");
 }
@@ -83,6 +92,7 @@ export async function createPost(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  if (!(await canWrite())) return { error: UPGRADE_MSG };
 
   const { error } = await supabase.from("posts").insert({ author_id: user.id, body, intent, kind });
 

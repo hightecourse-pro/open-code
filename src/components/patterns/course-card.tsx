@@ -1,7 +1,8 @@
 "use client";
 
 import { useTransition } from "react";
-import { Lock } from "lucide-react";
+import Link from "next/link";
+import { Lock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { startCourse } from "@/app/(app)/courses/actions";
 import type { Course } from "@/types/database";
@@ -19,10 +20,12 @@ export interface CourseCardProps {
   course: Course;
   /** True when the member already has a different active course (locked). */
   locked: boolean;
+  /** True for a free member — the catalogue is visible, opening isn't. */
+  needsSubscription?: boolean;
   onStartError?: (msg: string) => void;
 }
 
-export function CourseCard({ course, locked }: CourseCardProps) {
+export function CourseCard({ course, locked, needsSubscription = false }: CourseCardProps) {
   const [pending, start] = useTransition();
   const cover = COVERS[(course.cover_variant - 1) % COVERS.length];
 
@@ -61,15 +64,24 @@ export function CourseCard({ course, locked }: CourseCardProps) {
           <span>·</span>
           <span>{course.duration_hours} שעות</span>
         </div>
-        {!locked && (
-          <button
-            type="button"
-            onClick={onStart}
-            disabled={pending}
-            className="mt-3 w-full font-display font-semibold text-[13px] py-2 rounded-md bg-brand-gradient text-white disabled:opacity-60"
+        {needsSubscription ? (
+          <Link
+            href="/join"
+            className="mt-3 w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors"
           >
-            {pending ? "פותח…" : "התחילי קורס"}
-          </button>
+            <Sparkles size={13} /> נפתח עם מנוי
+          </Link>
+        ) : (
+          !locked && (
+            <button
+              type="button"
+              onClick={onStart}
+              disabled={pending}
+              className="mt-3 w-full font-display font-semibold text-[13px] py-2 rounded-md bg-brand-gradient text-white disabled:opacity-60"
+            >
+              {pending ? "פותח…" : "התחילי קורס"}
+            </button>
+          )
         )}
       </div>
     </div>

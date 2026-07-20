@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getProfile, isSubscriber } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
 import { newMessageEmail } from "@/lib/email/templates";
 
@@ -15,6 +16,10 @@ export async function startConversation(otherId: string) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   if (otherId === user.id) redirect("/chat");
+
+  // Talking to a mentor is part of the paid membership.
+  const me = await getProfile();
+  if (!me || !isSubscriber(me)) redirect("/join?locked=chat");
 
   // Normalize the pair so (a,b) is stable regardless of who initiates.
   const [a_id, b_id] = [user.id, otherId].sort();
@@ -58,11 +63,13 @@ export async function sendMessage(conversationId: string, formData: FormData) {
   if (!conv) return;
   const otherId = conv.a_id === user.id ? conv.b_id : conv.a_id;
   const [{ data: me }, { data: other }] = await Promise.all([
-    supabase.from("profiles").select("role, first_name, full_name").eq("id", user.id).single(),
+    supabase.from("profiles").select("role, status, first_name, full_name").eq("id", user.id).single(),
     supabase.from("profiles").select("role, status").eq("id", otherId).single(),
   ]);
   const otherIsActiveMentor = other?.role === "mentor" && other?.status === "active";
   if (me?.role === "junior" && !otherIsActiveMentor) return;
+  // Free members read their history but don't send.
+  if (!me || !(me.status === "active" || me.role === "admin")) return;
 
   // Notify the mentor by email — but only on the first new (unread) message from
   // this member, so a burst of messages doesn't send a burst of emails.

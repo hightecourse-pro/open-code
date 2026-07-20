@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ExternalLink, KeyRound, Trash2 } from "lucide-react";
 import { listUserKeys } from "@/lib/ai/keys";
+import { requireSubscription } from "@/lib/auth";
 import { Badge } from "@/components/ui";
 import { AddKeyForm } from "@/components/patterns/add-key-form";
 import { removeKey } from "./actions";
@@ -22,6 +23,8 @@ const STEPS = [
 ];
 
 export default async function AiKeysPage() {
+  // A key is only useful with the AI tools, which are part of the membership.
+  await requireSubscription("ai");
   const keys = await listUserKeys();
   const hasActive = keys.some((k) => k.status === "active");
 

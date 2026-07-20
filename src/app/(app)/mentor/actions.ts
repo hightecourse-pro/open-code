@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getProfile, isSubscriber } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
 import { mentorRequestEmail } from "@/lib/email/templates";
 import { MENTOR_REQUEST_REASONS, mentorReasonLabel } from "@/lib/mentor-requests";
@@ -23,6 +24,12 @@ export async function requestMentor(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "תצטרכי להתחבר מחדש." };
+
+  // Mentoring is part of the paid membership.
+  const me = await getProfile();
+  if (!me || !isSubscriber(me)) {
+    return { error: "ליווי אישי של מנטורית נפתח עם מנוי לקהילה 💜" };
+  }
 
   const reason = String(formData.get("reason") ?? "");
   if (!MENTOR_REQUEST_REASONS.some((r) => r.value === reason)) {

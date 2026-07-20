@@ -222,12 +222,12 @@ export interface SyncResult {
 async function emailOf(profileId: string): Promise<string | null> {
   const admin = createAdminClient();
   try {
-    // Backward-safe: before the drive_email migration this errors and we fall
+    // Backward-safe: before the migration the table is missing, and we fall
     // straight through to the login address.
     const { data } = await admin
-      .from("profiles")
+      .from("member_private")
       .select("drive_email")
-      .eq("id", profileId)
+      .eq("profile_id", profileId)
       .maybeSingle();
     const preferred = data?.drive_email?.trim();
     if (preferred) return preferred;
@@ -248,14 +248,17 @@ async function emailOf(profileId: string): Promise<string | null> {
  */
 async function requestGmail(profileId: string): Promise<boolean> {
   const admin = createAdminClient();
-  const { data: profile, error } = await admin
-    .from("profiles")
-    .select("full_name, first_name, drive_email_requested_at")
-    .eq("id", profileId)
-    .maybeSingle();
+  const [{ data: profile }, { data: priv, error: privErr }] = await Promise.all([
+    admin.from("profiles").select("full_name, first_name").eq("id", profileId).maybeSingle(),
+    admin
+      .from("member_private")
+      .select("drive_email_requested_at")
+      .eq("profile_id", profileId)
+      .maybeSingle(),
+  ]);
   // Without the migration we can't throttle, so don't risk emailing on a loop.
-  if (error || !profile) return false;
-  if (profile.drive_email_requested_at) return false;
+  if (privErr || !profile) return false;
+  if (priv?.drive_email_requested_at) return false;
 
   const { data: authUser } = await admin.auth.admin.getUserById(profileId);
   const to = authUser?.user?.email;
@@ -269,10 +272,10 @@ async function requestGmail(profileId: string): Promise<boolean> {
   // Record the attempt either way. If the send failed we still must not retry
   // the whole Drive+Resend round trip every 15 minutes forever — the admin
   // sees the row waiting in the share queue.
-  await admin
-    .from("profiles")
-    .update({ drive_email_requested_at: new Date().toISOString() })
-    .eq("id", profileId);
+  await admin.from("member_private").upsert(
+    { profile_id: profileId, drive_email_requested_at: new Date().toISOString() },
+    { onConflict: "profile_id" }
+  );
 
   if (!sent.ok) {
     console.error("[drive] gmail request email failed:", sent.error);
@@ -320,11 +323,11 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
   // else's, run after run. Saving an address clears the flag, which puts her
   // straight back in.
   const { data: waiting } = await admin
-    .from("profiles")
-    .select("id")
+    .from("member_private")
+    .select("profile_id")
     .not("drive_email_requested_at", "is", null)
     .limit(500);
-  const blocked = (waiting ?? []).map((p) => p.id);
+  const blocked = (waiting ?? []).map((p) => p.profile_id);
 
   const COLS = "id, owner_type, owner_id, profile_id, status, granted_email, created_at";
 

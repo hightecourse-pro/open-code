@@ -71,6 +71,8 @@ export async function GET(req: Request) {
 
   const nameOf = new Map((profiles.data ?? []).map((p) => [p.id, p.first_name || p.full_name?.split(" ")[0] || ""]));
   const emailOf = new Map((usersList.data?.users ?? []).map((u) => [u.id, u.email ?? ""]));
+  // Subscribers only. Free members browse the community but deliberately get
+  // no daily mail — and therefore no session reminders, which are a paid perk.
   const activeMembers = (profiles.data ?? []).filter((p) => p.status === "active");
 
   // Unread messages grouped by recipient (1:1 conversations).

@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { CourseCard } from "@/components/patterns/course-card";
 import { CourseContent } from "@/components/patterns/course-content";
+import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
+import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { returnCourse } from "./actions";
 import type { ContentLink } from "@/types/database";
 
@@ -12,10 +14,12 @@ export const metadata: Metadata = { title: "ספריית הקורסים" };
 export default async function CoursesPage() {
   const supabase = await createClient();
   const user = await getUser();
+  const profile = await requireCommunityAccess();
+  const subscriber = isSubscriber(profile);
 
   const [{ data: courses }, { data: active }] = await Promise.all([
     supabase.from("courses").select("*").eq("is_published", true).order("created_at", { ascending: true }),
-    user
+    user && subscriber
       ? supabase
           .from("enrollments")
           .select("id, course_id, progress_pct, last_switch_month, studied, rating, feedback")
@@ -46,6 +50,13 @@ export default async function CoursesPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ספריית הקורסים</h1>
         <p className="t-body-sm text-ink-700">קורס פעיל אחד בכל פעם — כמו ספרייה. אפשר להחליף פעם בחודש.</p>
       </div>
+
+      {!subscriber && (
+        <UpgradeCard
+          title="ספריית הקורסים נפתחת עם מנוי"
+          body="את מוזמנת לראות מה יש בספרייה. עם מנוי תוכלי לפתוח קורס וללמוד בקצב שלך, ולהחליף אותו פעם בחודש."
+        />
+      )}
 
       {activeCourse && (
         <div className="relative overflow-hidden bg-brand-gradient rounded-[22px] p-6 text-white shadow-glow-pink flex flex-col sm:flex-row gap-5 items-start sm:items-center">
@@ -105,6 +116,7 @@ export default async function CoursesPage() {
             key={course.id}
             course={course}
             locked={!!activeCourse && activeCourse.id !== course.id}
+            needsSubscription={!subscriber}
           />
         ))}
       </div>

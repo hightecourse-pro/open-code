@@ -31,14 +31,35 @@ export async function requireProfile(): Promise<Profile> {
 }
 
 /**
- * Gate community content: must be signed in AND approved/active.
- * Pending/paused/rejected members get the warm upsell on /join.
+ * True for a paying member — the tier that can take part rather than just
+ * look around (join links, recordings, posting, courses, AI, mentor chat).
+ */
+export function isSubscriber(profile: Pick<Profile, "status" | "role">): boolean {
+  return profile.status === "active" || profile.role === "admin";
+}
+
+/**
+ * Gate the community: anyone signed in may come in and look around. Paying
+ * is what unlocks taking part — enforced per feature, not at the door.
+ * Only a rejected member is turned away.
  * (RLS is the real enforcement — this is the UX layer.)
  */
-export async function requireActiveAccess(): Promise<Profile> {
+export async function requireCommunityAccess(): Promise<Profile> {
   const profile = await requireProfile();
-  if (profile.status !== "active") {
+  if (profile.status === "rejected") {
     redirect(`/join?status=${profile.status}`);
+  }
+  return profile;
+}
+
+/**
+ * Gate a paid feature by redirecting. Most screens instead render an upgrade
+ * card in place, which reads better than bouncing her out of the community.
+ */
+export async function requireSubscription(feature: string): Promise<Profile> {
+  const profile = await requireCommunityAccess();
+  if (!isSubscriber(profile)) {
+    redirect(`/join?locked=${encodeURIComponent(feature)}`);
   }
   return profile;
 }

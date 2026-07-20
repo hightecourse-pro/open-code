@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { Play, Video, ExternalLink, Hourglass } from "lucide-react";
+import Link from "next/link";
+import { Play, Video, ExternalLink, Hourglass, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "הקלטות סשנים" };
@@ -18,12 +21,24 @@ function minutes(sec: number): string {
   return `${Math.round(sec / 60)} דק'`;
 }
 
+/** Present only on the subscriber read — the free view omits the column. */
+function videoUrl(rec: object): string | null {
+  return (rec as { video_url?: string | null }).video_url ?? null;
+}
+
 export default async function RecordingsPage() {
   const supabase = await createClient();
+  const profile = await requireCommunityAccess();
+  const subscriber = isSubscriber(profile);
+
+  // Free members read the sanitized views — no video URLs in them at all.
   const [{ data: recordings }, { data: doneSessions }] = await Promise.all([
-    supabase.from("recordings").select("*").order("published_at", { ascending: false }),
     supabase
-      .from("sessions")
+      .from(subscriber ? "recordings" : "recordings_public")
+      .select("*")
+      .order("published_at", { ascending: false }),
+    supabase
+      .from(subscriber ? "sessions" : "sessions_public")
       .select("*")
       .eq("status", "done")
       .eq("is_published", true)
@@ -36,7 +51,8 @@ export default async function RecordingsPage() {
   const sessions = (doneSessions ?? []).filter(
     (s) => !s.canceled_at && !curatedSessionIds.has(s.id)
   );
-  const { data: sessionLinks } = sessions.length
+  // Drive links are paid material — never fetched for a free member.
+  const { data: sessionLinks } = subscriber && sessions.length
     ? await supabase
         .from("content_links")
         .select("*")
@@ -60,6 +76,13 @@ export default async function RecordingsPage() {
         <p className="t-body-sm text-ink-700">כל הסשנים השבועיים — זמינים לצפייה מתי שנוח לך.</p>
       </div>
 
+      {!subscriber && (
+        <UpgradeCard
+          title="הצפייה בהקלטות נפתחת עם מנוי"
+          body="כאן את רואה מה כבר נלמד בקהילה. עם מנוי כל ההקלטות נפתחות לצפייה מתי שנוח לך."
+        />
+      )}
+
       {sessions.length > 0 && (
         <section className="flex flex-col gap-2.5">
           <h2 className="font-display text-lg font-bold text-ink-1000">סשנים שהסתיימו</h2>
@@ -80,7 +103,14 @@ export default async function RecordingsPage() {
                     {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "long" })}
                   </div>
                 </div>
-                {links.length > 0 ? (
+                {!subscriber ? (
+                  <Link
+                    href="/join"
+                    className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple bg-white border-[1.5px] border-brand-purple rounded-md px-3.5 py-2 hover:bg-tint-purple transition-colors"
+                  >
+                    <Lock size={13} /> נפתח עם מנוי
+                  </Link>
+                ) : links.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {links.map((l) => (
                       <a
@@ -112,12 +142,17 @@ export default async function RecordingsPage() {
             return (
               <a
                 key={rec.id}
-                href={rec.video_url ?? "#"}
+                href={subscriber ? videoUrl(rec) ?? "#" : "/join"}
+                title={subscriber ? undefined : "הצפייה נפתחת עם מנוי"}
                 className="bg-white border border-ink-200 rounded-2xl overflow-hidden transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md"
               >
                 <div className={cn("h-24 relative flex items-center justify-center", cover)}>
                   <div className="w-[42px] h-[42px] rounded-full bg-white/90 flex items-center justify-center text-brand-pink-deep shadow-md">
-                    <Play size={18} fill="currentColor" className="ms-0.5" />
+                    {subscriber ? (
+                      <Play size={18} fill="currentColor" className="ms-0.5" />
+                    ) : (
+                      <Lock size={17} />
+                    )}
                   </div>
                   <span className="absolute bottom-2 left-2 bg-ink-1000/80 text-white text-[10.5px] font-mono px-1.5 py-0.5 rounded">
                     {minutes(rec.duration_sec)}

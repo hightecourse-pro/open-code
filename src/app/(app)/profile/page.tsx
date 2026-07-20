@@ -20,7 +20,7 @@ export default async function ProfilePage() {
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
 
-  const [{ data: questions }, { data: answers }, taxonomyOptions] = await Promise.all([
+  const [{ data: questions }, { data: answers }, { data: priv }, taxonomyOptions] = await Promise.all([
     supabase
       .from("config_questions")
       .select("*")
@@ -29,6 +29,12 @@ export default async function ProfilePage() {
       .or("active.eq.true,key.eq.has_experience")
       .order("sort_order", { ascending: true }),
     supabase.from("profile_answers").select("question_id, value").eq("profile_id", profile.id),
+    // Owner-only row — her Drive address isn't on the shared profiles table.
+    supabase
+      .from("member_private")
+      .select("drive_email, drive_email_requested_at")
+      .eq("profile_id", profile.id)
+      .maybeSingle(),
     getTaxonomyOptions(),
   ]);
 
@@ -71,9 +77,9 @@ export default async function ProfilePage() {
       </div>
 
       <DriveEmailForm
-        current={profile.drive_email ?? null}
+        current={priv?.drive_email ?? null}
         loginEmail={user?.email ?? null}
-        wasRequested={!!profile.drive_email_requested_at}
+        wasRequested={!!priv?.drive_email_requested_at}
       />
 
       <DigestPreferences current={profile.digest_frequency ?? "daily"} />

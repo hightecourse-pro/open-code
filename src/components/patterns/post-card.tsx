@@ -29,7 +29,7 @@ const INTENT_LABEL: Record<PostIntent, string> = {
   success: "הצלחה 🎉",
 };
 
-export function PostCard({ post }: { post: FeedPost }) {
+export function PostCard({ post, canWrite = true }: { post: FeedPost; canWrite?: boolean }) {
   const author = post.author;
   const isMentor = author?.role === "mentor";
   const isStaff = author?.role === "admin";
@@ -79,6 +79,7 @@ export function PostCard({ post }: { post: FeedPost }) {
         liked={post.liked ?? false}
         saved={post.saved ?? false}
         comments={post.comments ?? []}
+        canWrite={canWrite}
       />
     </article>
   );

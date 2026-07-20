@@ -11,12 +11,14 @@ import {
   FileText,
   GraduationCap,
   KeyRound,
+  Lock,
   LogOut,
   MessageCircle,
   MessageSquare,
   Mic,
   Play,
   Shield,
+  Sparkles,
   User,
   type LucideIcon,
 } from "lucide-react";
@@ -24,7 +26,8 @@ import { cn } from "@/lib/utils";
 import { Logo } from "@/components/ui";
 import { signOut } from "@/app/(auth)/actions";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number };
+/** `paid: true` marks a destination that needs a subscription. */
+type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number; paid?: boolean };
 type NavSection = { label?: string; items: NavItem[] };
 
 const SECTIONS: NavSection[] = [
@@ -34,16 +37,16 @@ const SECTIONS: NavSection[] = [
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
       { href: "/events", label: "אירועים ומיטאפים", icon: Calendar },
       { href: "/jobs", label: "משרות", icon: Briefcase },
-      { href: "/courses", label: "ספריית קורסים", icon: GraduationCap },
-      { href: "/recordings", label: "הקלטות סשנים", icon: Play },
+      { href: "/courses", label: "ספריית קורסים", icon: GraduationCap, paid: true },
+      { href: "/recordings", label: "הקלטות סשנים", icon: Play, paid: true },
     ],
   },
   {
     label: "כלי AI",
     items: [
-      { href: "/ai/cv-checker", label: "בודקת קורות חיים", icon: FileCheck2 },
-      { href: "/ai/interview", label: "סימולטור ראיונות", icon: Mic },
-      { href: "/ai/keys", label: "מפתחות API שלי", icon: KeyRound },
+      { href: "/ai/cv-checker", label: "בודקת קורות חיים", icon: FileCheck2, paid: true },
+      { href: "/ai/interview", label: "סימולטור ראיונות", icon: Mic, paid: true },
+      { href: "/ai/keys", label: "מפתחות API שלי", icon: KeyRound, paid: true },
     ],
   },
   {
@@ -52,7 +55,7 @@ const SECTIONS: NavSection[] = [
       { href: "/profile", label: "הפרופיל שלי", icon: User },
       { href: "/cv", label: "קורות החיים שלי", icon: FileText },
       { href: "/mentor", label: "המנטוריות שלנו", icon: Crown },
-      { href: "/chat", label: "צ'אטים", icon: MessageCircle },
+      { href: "/chat", label: "צ'אטים", icon: MessageCircle, paid: true },
     ],
   },
 ];
@@ -62,6 +65,8 @@ export interface SidebarUser {
   meta: string;
   initials: string;
   isAdmin?: boolean;
+  /** Free members see paid destinations marked with a lock. */
+  isSubscriber?: boolean;
 }
 
 const DEFAULT_USER: SidebarUser = {
@@ -69,6 +74,7 @@ const DEFAULT_USER: SidebarUser = {
   meta: "פרונטאנד · מרכז",
   initials: "מ",
   isAdmin: false,
+  isSubscriber: true,
 };
 
 export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
@@ -90,20 +96,27 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
           {section.items.map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
+            const locked = item.paid && user.isSubscriber === false;
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
+                title={locked ? "נפתח עם מנוי" : undefined}
                 className={cn(
                   "flex items-center gap-2.5 px-3 py-[9px] rounded-xl text-[14.5px] font-medium transition-colors",
                   active
                     ? "bg-brand-gradient text-white shadow-glow-pink"
-                    : "text-ink-700 hover:bg-ink-100 hover:text-ink-900"
+                    : locked
+                      ? "text-ink-500 hover:bg-ink-100 hover:text-ink-900"
+                      : "text-ink-700 hover:bg-ink-100 hover:text-ink-900"
                 )}
               >
                 <Icon size={18} className="shrink-0" />
                 <span>{item.label}</span>
+                {locked && (
+                  <Lock size={13} className={cn("ms-auto shrink-0", active ? "text-white/80" : "text-ink-400")} />
+                )}
                 {item.badge != null && (
                   <span
                     className={cn(
@@ -119,6 +132,16 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
           })}
         </div>
       ))}
+
+      {user.isSubscriber === false && (
+        <Link
+          href="/join"
+          className="mt-auto flex items-center gap-2.5 px-3 py-[9px] rounded-xl text-[14px] font-semibold bg-brand-gradient-soft border border-[#DDC9EC] text-ink-900 hover:border-brand-purple transition-colors"
+        >
+          <Sparkles size={17} className="shrink-0 text-brand-pink-deep" />
+          <span>שדרוג למנוי מלא</span>
+        </Link>
+      )}
 
       {user.isAdmin && (
         <Link
@@ -139,7 +162,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
       <div
         className={cn(
           "bg-ink-50 border border-ink-200 rounded-md p-3 flex items-center gap-2.5",
-          !user.isAdmin && "mt-auto"
+          !user.isAdmin && user.isSubscriber !== false && "mt-auto"
         )}
       >
         <div className="w-9 h-9 rounded-full bg-brand-gradient text-white font-bold flex items-center justify-center shrink-0">

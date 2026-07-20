@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { MessageCircle } from "lucide-react";
+import Link from "next/link";
+import { MessageCircle, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getUser } from "@/lib/auth";
+import { getUser, isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { MentorRequestForm } from "@/components/patterns/mentor-request-form";
+import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { startConversation } from "../chat/actions";
 
 export const metadata: Metadata = { title: "המנטוריות שלנו" };
@@ -11,6 +13,8 @@ export const metadata: Metadata = { title: "המנטוריות שלנו" };
 export default async function MentorPage() {
   const supabase = await createClient();
   const user = await getUser();
+  const profile = await requireCommunityAccess();
+  const subscriber = isSubscriber(profile);
 
   const [{ data: mentors }, { data: mentorship }, { data: openRequest }] = await Promise.all([
     supabase
@@ -50,7 +54,15 @@ export default async function MentorPage() {
       </div>
 
       {/* No mentor matched yet → she can ask us to connect her with one. */}
-      {!hasMentor && <MentorRequestForm pendingRequest={!!openRequest} />}
+      {!hasMentor &&
+        (subscriber ? (
+          <MentorRequestForm pendingRequest={!!openRequest} />
+        ) : (
+          <UpgradeCard
+            title="ליווי אישי של מנטורית נפתח עם מנוי"
+            body="את מוזמנת להכיר את המנטוריות שלנו. עם מנוי נחבר אותך לאחת מהן אישית, ותוכלי להתכתב איתה ישירות."
+          />
+        ))}
 
       {mentors && mentors.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -64,14 +76,23 @@ export default async function MentorPage() {
                 </div>
               </div>
               {m.bio && <p className="text-[13.5px] text-ink-700 leading-relaxed line-clamp-3">{m.bio}</p>}
-              <form action={startConversation.bind(null, m.id)} className="mt-auto">
-                <button
-                  type="submit"
-                  className="w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2.5 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors"
+              {subscriber ? (
+                <form action={startConversation.bind(null, m.id)} className="mt-auto">
+                  <button
+                    type="submit"
+                    className="w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2.5 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors"
+                  >
+                    <MessageCircle size={15} /> שלחי הודעה
+                  </button>
+                </form>
+              ) : (
+                <Link
+                  href="/join"
+                  className="mt-auto w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2.5 rounded-md bg-ink-50 text-ink-500 border border-ink-200 hover:border-brand-purple hover:text-brand-purple transition-colors"
                 >
-                  <MessageCircle size={15} /> שלחי הודעה
-                </button>
-              </form>
+                  <Lock size={14} /> התכתבות נפתחת עם מנוי
+                </Link>
+              )}
             </div>
           ))}
         </div>
