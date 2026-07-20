@@ -22,6 +22,17 @@ export async function setDigestFrequency(freq: string): Promise<void> {
   revalidatePath("/profile");
 }
 
+/** Show or hide her profile in the employer portal. */
+export async function setPortalListed(listed: boolean): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase.from("profiles").update({ portal_listed: listed }).eq("id", user.id);
+  revalidatePath("/profile");
+}
+
 export type DriveEmailState = { ok?: boolean; error?: string };
 
 /**

@@ -1,0 +1,165 @@
+// Candidate data for the employer portal.
+//
+// PRIVACY CONTRACT — everything in this file obeys it:
+//   * Only profiles that are active, completed and portal_listed appear.
+//   * Only answers to questions flagged employer_visible are ever returned.
+//     Anything not opted in (ID number, phone, address…) never leaves the DB.
+//   * member_crm (VIP flag, VIP reason, internal notes) is never read here.
+
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getTaxonomyOptions } from "@/lib/taxonomies";
+import { LANGUAGE_SKILLS_KEY, langLevelLabel, parseLangSkills } from "@/lib/language-skills";
+import type { ConfigQuestion } from "@/types/database";
+import type { CandidateDetail, CandidateField } from "./types";
+
+// Shapes and the pure filter live in their own modules so the client filter UI
+// can use them without pulling this server-only file into the browser bundle.
+export type { CandidateDetail, CandidateField, CandidateSummary } from "./types";
+export { applyFilters, searchableText } from "./filters";
+
+/** Free-text URLs in an answer become clickable project/repo links. */
+const LINK_KEYS = new Set(["github", "ai_project_links", "portfolio", "links"]);
+
+function extractUrls(text: string): string[] {
+  return text.match(/https?:\/\/[^\s,]+/g) ?? [];
+}
+
+async function employerQuestions(): Promise<ConfigQuestion[]> {
+  const { data } = await createAdminClient()
+    .from("config_questions")
+    .select("*")
+    .eq("employer_visible", true)
+    .order("sort_order", { ascending: true });
+  return data ?? [];
+}
+
+/** Machine value → the label a human picked, for select/multiselect answers. */
+async function labelResolver() {
+  const [taxonomies] = await Promise.all([getTaxonomyOptions()]);
+  return function labelsFor(q: ConfigQuestion): Map<string, string> {
+    const opts = q.taxonomy_kind
+      ? taxonomies[q.taxonomy_kind] ?? []
+      : Array.isArray(q.options)
+        ? (q.options as unknown as { value: string; label: string }[])
+        : [];
+    return new Map(opts.map((o) => [o.value, o.label]));
+  };
+}
+
+function toDisplay(
+  q: ConfigQuestion,
+  raw: unknown,
+  labels: Map<string, string>
+): { values: string[]; kind: CandidateField["kind"] } {
+  if (q.key === LANGUAGE_SKILLS_KEY) {
+    return {
+      values: parseLangSkills(raw).map((s) => `${s.lang} — ${langLevelLabel(s.level)}`),
+      kind: "chips",
+    };
+  }
+  if (Array.isArray(raw)) {
+    const items = raw
+      .filter((v): v is string => typeof v === "string")
+      .map((v) => labels.get(v) ?? v);
+    return { values: items, kind: "chips" };
+  }
+  if (typeof raw === "boolean") return { values: [raw ? "כן" : "לא"], kind: "text" };
+  if (typeof raw === "number") return { values: [String(raw)], kind: "text" };
+  if (typeof raw === "string" && raw.trim()) {
+    if (LINK_KEYS.has(q.key)) {
+      const urls = extractUrls(raw);
+      if (urls.length) return { values: urls, kind: "links" };
+    }
+    return { values: [labels.get(raw) ?? raw], kind: q.field_type === "select" ? "chips" : "text" };
+  }
+  return { values: [], kind: "text" };
+}
+
+/** Every listed candidate, with only employer-visible answers attached. */
+export async function loadCandidates(): Promise<{
+  candidates: CandidateDetail[];
+  questions: ConfigQuestion[];
+}> {
+  const admin = createAdminClient();
+  const questions = await employerQuestions();
+  const visibleIds = new Set(questions.map((q) => q.id));
+  // The profiles row carries denormalized copies of a few answers. Honor the
+  // employer_visible flag for these too — hiding the question hides the column.
+  const visibleKeys = new Set(questions.map((q) => q.key));
+  const showBio = visibleKeys.has("bio");
+  const showSpecialization = visibleKeys.has("specialization");
+  const showRegion = visibleKeys.has("region");
+  const labelsFor = await labelResolver();
+
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, status, profile_completed")
+    .eq("status", "active")
+    .eq("profile_completed", true)
+    // Only job-seeking members — never admins or mentors.
+    .eq("role", "junior")
+    .order("full_name", { ascending: true });
+
+  const listed = (profiles ?? []).filter((p) => p.portal_listed !== false);
+  if (listed.length === 0) return { candidates: [], questions };
+
+  // Answers are fetched for the listed members only, then filtered down to the
+  // employer-visible questions before anything is returned.
+  const answers: { profile_id: string; question_id: string; value: unknown }[] = [];
+  const PAGE = 1000;
+  for (let from = 0; ; from += PAGE) {
+    const { data } = await admin
+      .from("profile_answers")
+      .select("profile_id, question_id, value")
+      .in("profile_id", listed.map((p) => p.id))
+      .range(from, from + PAGE - 1);
+    answers.push(...((data ?? []) as typeof answers));
+    if (!data || data.length < PAGE) break;
+  }
+
+  const byMember = new Map<string, Map<string, unknown>>();
+  for (const a of answers) {
+    if (!visibleIds.has(a.question_id)) continue; // the privacy gate
+    const m = byMember.get(a.profile_id) ?? new Map();
+    m.set(a.question_id, a.value);
+    byMember.set(a.profile_id, m);
+  }
+
+  const candidates: CandidateDetail[] = listed.map((p) => {
+    const mine = byMember.get(p.id) ?? new Map();
+    const fields: CandidateField[] = [];
+    const links: { label: string; url: string }[] = [];
+
+    for (const q of questions) {
+      if (!mine.has(q.id)) continue;
+      const { values, kind } = toDisplay(q, mine.get(q.id), labelsFor(q));
+      if (values.length === 0) continue;
+      if (kind === "links") {
+        for (const url of values) links.push({ label: q.label_he, url });
+        continue;
+      }
+      fields.push({ key: q.key, label: q.label_he, values, kind });
+    }
+
+    const headline = fields
+      .filter((f) => ["dev_tech", "tech_stack", "exp_tech"].includes(f.key))
+      .flatMap((f) => f.values)
+      .slice(0, 6);
+
+    return {
+      id: p.id,
+      name: p.full_name || "מועמדת",
+      initials: p.avatar_initials || p.full_name?.slice(0, 1) || "ק",
+      specialization: showSpecialization ? p.specialization : null,
+      region: showRegion ? p.region : null,
+      bio: showBio ? p.bio : null,
+      isExperienced: !!p.is_experienced,
+      headline,
+      fields,
+      links,
+    };
+  });
+
+  return { candidates, questions };
+}
+

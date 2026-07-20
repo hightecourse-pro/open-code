@@ -71,6 +71,8 @@ export interface Database {
           internal_notes: string | null;
           profile_completed: boolean;
           digest_frequency: string; // 'daily' | 'unread' | 'off'
+          /** Opt-out from the employer portal listing. */
+          portal_listed: boolean;
         } & Timestamps;
         Insert: {
           id: string;
@@ -90,6 +92,7 @@ export interface Database {
           internal_notes?: string | null;
           profile_completed?: boolean;
           digest_frequency?: string;
+          portal_listed?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -114,6 +117,68 @@ export interface Database {
           handled_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["mentor_requests"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Employer-portal clients — companies, not community members. */
+      portal_clients: {
+        Row: {
+          id: string;
+          company_name: string;
+          username: string;
+          password_hash: string;
+          password_salt: string;
+          contact_name: string | null;
+          contact_email: string | null;
+          is_active: boolean;
+          notes: string | null;
+          created_at: string;
+          last_login_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          company_name: string;
+          username: string;
+          password_hash: string;
+          password_salt: string;
+          contact_name?: string | null;
+          contact_email?: string | null;
+          is_active?: boolean;
+          notes?: string | null;
+          created_at?: string;
+          last_login_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["portal_clients"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Shared Google API keys used by the portal's smart search. */
+      system_ai_keys: {
+        Row: {
+          id: string;
+          label: string | null;
+          key_cipher: string;
+          key_last4: string | null;
+          status: string;
+          last_error: string | null;
+          created_at: string;
+          last_used_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          label?: string | null;
+          key_cipher: string;
+          key_last4?: string | null;
+          status?: string;
+          last_error?: string | null;
+          created_at?: string;
+          last_used_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["system_ai_keys"]["Insert"]>;
+        Relationships: [];
+      };
+      system_ai_key_usage: {
+        Row: { key_id: string; day: string; calls: number; errors: number };
+        Insert: { key_id: string; day?: string; calls?: number; errors?: number };
+        Update: Partial<Database["public"]["Tables"]["system_ai_key_usage"]["Insert"]>;
         Relationships: [];
       };
       /** Owner-only: the Google address we share Drive material with. */
@@ -255,6 +320,8 @@ export interface Database {
           taxonomy_kind: TaxonomyKind | null;
           depends_on: string | null;
           intake_track: string; // 'both' | 'junior' | 'experienced'
+          /** May an employer-portal client see the answer to this question? */
+          employer_visible: boolean;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -269,6 +336,7 @@ export interface Database {
           taxonomy_kind?: TaxonomyKind | null;
           depends_on?: string | null;
           intake_track?: string;
+          employer_visible?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["config_questions"]["Insert"]>;
         Relationships: [];
@@ -407,6 +475,8 @@ export interface Database {
           is_visible: boolean;
           status: JobStatus;
           posted_by: string | null;
+          /** The portal client this job belongs to, if any. */
+          client_id: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -420,6 +490,7 @@ export interface Database {
           tech_tags?: string[];
           external_url?: string | null;
           target_criteria?: Json;
+          client_id?: string | null;
           logo_variant?: number;
           is_visible?: boolean;
           status?: JobStatus;
@@ -436,6 +507,8 @@ export interface Database {
           status: ApplicationStatus;
           note: string | null;
           submitted_at: string;
+          /** The CV she attached for this job — what the client downloads. */
+          cv_document_id: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -444,6 +517,7 @@ export interface Database {
           status?: ApplicationStatus;
           note?: string | null;
           submitted_at?: string;
+          cv_document_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
         Relationships: [];
@@ -839,7 +913,9 @@ export interface Database {
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_mentor: { Args: Record<string, never>; Returns: boolean };
+      is_member: { Args: Record<string, never>; Returns: boolean };
       has_active_sub: { Args: Record<string, never>; Returns: boolean };
+      bump_ai_key_usage: { Args: { p_key: string; p_error?: boolean }; Returns: undefined };
       in_conversation: { Args: { conv: string }; Returns: boolean };
       owns_interview: { Args: { sess: string }; Returns: boolean };
     };

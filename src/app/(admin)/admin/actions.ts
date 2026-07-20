@@ -263,6 +263,11 @@ export type FormState = { ok?: boolean; error?: string };
 const EMPLOYMENT: EmploymentType[] = ["full", "part", "student", "freelance"];
 
 function jobFields(formData: FormData) {
+  // Linking a job to a portal client is what routes the right CV to the right
+  // employer: a candidate's application to this job is what that client
+  // downloads from the portal.
+  const clientRaw = String(formData.get("client_id") ?? "").trim();
+  const client_id = clientRaw || null;
   const company = String(formData.get("company") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const source: JobSource = String(formData.get("source") ?? "open") === "ours" ? "ours" : "open";
@@ -275,6 +280,7 @@ function jobFields(formData: FormData) {
     company,
     title,
     source,
+    client_id,
     employment_type,
     location: String(formData.get("location") ?? "").trim() || null,
     description: String(formData.get("description") ?? ""),
@@ -293,6 +299,19 @@ function validateJob(f: ReturnType<typeof jobFields>): string | null {
   return null;
 }
 
+/** Everything except the portal link — used to retry before that migration. */
+function withoutClient(f: ReturnType<typeof jobFields>) {
+  const { client_id: _drop, ...rest } = f;
+  void _drop;
+  return rest;
+}
+
+/** Postgres/PostgREST "column does not exist" — the pre-migration case only. */
+function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "42703" || /client_id|cv_document_id|column/i.test(error.message ?? "");
+}
+
 /** Post a new job to the board. */
 export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
@@ -302,7 +321,13 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
 
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").insert(f);
-  if (error) return { error: error.message };
+  if (error) {
+    // Backward-safe: retry without the portal link ONLY when that column is
+    // what's missing — a real error must still surface.
+    if (!isMissingColumn(error)) return { error: error.message };
+    const { error: retry } = await supabase.from("jobs").insert(withoutClient(f));
+    if (retry) return { error: retry.message };
+  }
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
   return { ok: true };
@@ -316,7 +341,11 @@ export async function editJob(jobId: string, _prev: FormState, formData: FormDat
   if (err) return { error: err };
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").update(f).eq("id", jobId);
-  if (error) return { error: error.message };
+  if (error) {
+    if (!isMissingColumn(error)) return { error: error.message };
+    const { error: retry } = await supabase.from("jobs").update(withoutClient(f)).eq("id", jobId);
+    if (retry) return { error: retry.message };
+  }
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
   return { ok: true };

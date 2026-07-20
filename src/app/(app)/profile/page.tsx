@@ -5,6 +5,7 @@ import { Avatar, Badge } from "@/components/ui";
 import { ProfileForm } from "@/components/patterns/profile-form";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
+import { PortalVisibility } from "@/components/patterns/portal-visibility";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { QuestionScope } from "@/types/database";
 
@@ -75,6 +76,8 @@ export default async function ProfilePage() {
           taxonomyOptions={taxonomyOptions}
         />
       </div>
+
+      <PortalVisibility listed={profile.portal_listed !== false} />
 
       <DriveEmailForm
         current={priv?.drive_email ?? null}
