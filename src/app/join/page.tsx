@@ -49,8 +49,8 @@ export default async function JoinPage() {
     return (
       <Shell>
         <div>
-          <h1 className="t-h2">היי {profile.full_name || "וברוכה הבאה"} 👋</h1>
-          <p className="t-body-sm text-ink-500 mt-1">הנה איפה הדברים עומדים:</p>
+          <h1 className="t-h2">היי{profile.full_name ? ` ${profile.full_name}` : ", ברוכה הבאה"} 👋</h1>
+          <p className="t-body-sm text-ink-500 mt-1">הנה מצב הדברים כרגע:</p>
         </div>
         <Alert variant={copy.variant} title={copy.title}>
           {copy.body}

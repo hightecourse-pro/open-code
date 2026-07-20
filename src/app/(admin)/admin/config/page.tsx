@@ -63,7 +63,7 @@ export default async function AdminConfigPage() {
 
       {/* Membership pricing */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">דמי חבר</h3>
+        <h3 className="font-display text-base font-bold mb-1">דמי מנוי</h3>
         <p className="text-[12.5px] text-ink-500 mb-4">
           המחיר שחברות חדשות רואות במסך ההצטרפות. המסלול השנתי מחושב אוטומטית לפי ההנחה.
         </p>

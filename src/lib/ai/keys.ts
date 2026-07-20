@@ -67,7 +67,7 @@ export async function addUserKey(rawKey: string, label?: string): Promise<AddKey
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "צריך להתחבר מחדש." };
+  if (!user) return { ok: false, error: "תצטרכי להתחבר מחדש." };
 
   const { error } = await supabase.from("user_ai_keys").insert({
     profile_id: user.id,

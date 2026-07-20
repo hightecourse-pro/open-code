@@ -16,7 +16,7 @@ export function AdminCreateSession() {
           <Input id="s-title" name="title" required />
         </Field>
         <Field label="נושא" htmlFor="s-topic">
-          <Input id="s-topic" name="topic" placeholder="AI / קריירה / DevOps" />
+          <Input id="s-topic" name="topic" placeholder="AI / DevOps / הכנה לראיונות" />
         </Field>
         <Field label="מועד" htmlFor="s-date">
           <Input id="s-date" name="scheduled_at" type="datetime-local" required dir="ltr" />

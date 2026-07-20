@@ -7,7 +7,7 @@ import { CvUploadForm } from "@/components/patterns/cv-upload-form";
 import { deleteCv } from "./actions";
 import type { CvLanguage } from "@/types/database";
 
-export const metadata: Metadata = { title: "ניהול קורות חיים" };
+export const metadata: Metadata = { title: "קורות החיים שלך" };
 
 const LANG: Record<CvLanguage, { label: string; variant: "pink" | "purple" | "indigo" }> = {
   he: { label: "עברית", variant: "pink" },
@@ -37,7 +37,7 @@ export default async function CvPage() {
     <div className="flex flex-col gap-5">
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;קורות חיים/&gt;</span>
-        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול קורות חיים</h1>
+        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">קורות החיים שלך</h1>
         <p className="t-body-sm text-ink-700">
           שמרי כאן את הגרסאות שלך — עברית, אנגלית, או מותאמות למשרה ספציפית. הקבצים פרטיים ונגישים רק לך ולצוות.
         </p>

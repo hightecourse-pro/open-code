@@ -95,7 +95,7 @@ export function PostInteractions({ postId, likeCount, liked, saved, comments }: 
         >
           <input
             name="reason"
-            placeholder="מה הבעיה בפוסט? (אופציונלי)"
+            placeholder="מה הבעיה בפוסט? (לא חובה)"
             className="flex-1 text-[13px] border border-ink-300 rounded-md px-2.5 py-1.5 outline-none focus:border-danger"
           />
           <button type="submit" className="text-[13px] font-semibold text-danger px-3">

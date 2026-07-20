@@ -30,7 +30,7 @@ export default function SignupPage() {
             <PasswordInput id="password" name="password" required autoComplete="new-password" minLength={8} />
           </Field>
           <Button type="submit" disabled={pending} className="w-full" bracketed>
-            {pending ? "רגע אחת…" : "הצטרפות"}
+            {pending ? "רגע אחד…" : "הצטרפות"}
           </Button>
         </form>
       )}

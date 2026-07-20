@@ -70,7 +70,7 @@ export function CheckoutPanel({ plans, configured, fieldsByPlan }: CheckoutPanel
             נדרים פלוס עדיין לא מחובר. הכפתור מדמה תשלום מוצלח כדי לבדוק את הזרימה.
           </Alert>
           <Button type="button" onClick={pay} disabled={pending} className="w-full" bracketed>
-            {pending ? "רגע אחת…" : "הצטרפות וקבלת גישה"}
+            {pending ? "רגע אחד…" : "הצטרפות וקבלת גישה"}
           </Button>
         </>
       )}

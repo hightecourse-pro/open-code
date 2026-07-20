@@ -39,12 +39,12 @@ const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
   },
   {
     title: "הרקע הלימודי",
-    hint: "איפה למדת ומה התמחית — זה עוזר לנו להתאים קורסים ומשרות.",
+    hint: "איפה למדת ובמה התמחית — זה עוזר לנו להתאים לך קורסים ומשרות.",
     keys: ["study_place", "coordinator_name", "certificate", "track_specialization", "unique_courses", "graduation_year"],
   },
   {
     title: "הניסיון המקצועי שלך",
-    hint: "ספרי לנו על הניסיון — ככה נדע לאיזה משרות לכוון בשבילך.",
+    hint: "ספרי לנו על הניסיון — ככה נדע לאילו משרות לכוון בשבילך.",
     keys: ["years_experience", "exp_role", "exp_tech", "exp_languages", "currently_working", "current_workplace", "work_description", "specific_job"],
   },
   {
@@ -231,7 +231,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   const stepTitle = cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;
   const stepHint =
     cur === 0
-      ? "נתחיל בלספר לנו מאיפה את מגיעה — ונתאים לך את השאלות."
+      ? "ספרי לנו מאיפה את מגיעה — ואנחנו נתאים לך את השאלות."
       : sectionSteps[cur - 1].hint;
 
   // ---- a single question field ----
@@ -490,7 +490,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
               >
                 <Rocket size={18} className="text-brand-pink-deep mb-1.5" />
                 <div className="font-display font-bold text-ink-1000">אני בתחילת הדרך</div>
-                <div className="text-[12.5px] text-ink-500 mt-0.5">בוגרת לימודים/בוטקאמפ, עדיין בלי ניסיון תעשייתי מעל שנה</div>
+                <div className="text-[12.5px] text-ink-500 mt-0.5">בוגרת לימודים/בוטקאמפ, עדיין בלי שנה של ניסיון בתעשייה</div>
               </button>
               <button
                 type="button"

@@ -31,7 +31,7 @@ export function CourseContent({ courseId, links, studied, rating, feedback }: Co
   if (links.length === 0) {
     return (
       <div className="bg-white border border-ink-200 rounded-[16px] p-5 text-sm text-ink-500">
-        החומרים של הקורס ישותפו אלייך אישית בקרוב 💜
+        נשתף איתך את חומרי הקורס אישית בקרוב 💜
       </div>
     );
   }
@@ -68,7 +68,7 @@ export function CourseContent({ courseId, links, studied, rating, feedback }: Co
                   />
                 ) : (
                   <div className="p-4 text-sm text-ink-500">
-                    לא ניתן להטמיע את הסרטון —{" "}
+                    אי אפשר להציג את הסרטון כאן —{" "}
                     <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-brand-purple underline">
                       צפייה בדרייב
                     </a>

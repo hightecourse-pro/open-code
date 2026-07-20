@@ -142,7 +142,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   // Staff accounts aren't community members — don't hold their save hostage
   // on member-intake required fields.
   if (missing.length > 0 && before?.role !== "admin") {
-    return { error: `נשארו עוד שדות חובה למלא: ${missing.slice(0, 6).join(", ")}` };
+    return { error: `כמעט סיימנו 🙂 נשארו כמה שדות חובה: ${missing.slice(0, 6).join(", ")}` };
   }
 
   await supabase

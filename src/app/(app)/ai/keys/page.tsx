@@ -15,7 +15,7 @@ const STATUS: Record<string, { label: string; variant: "mint" | "warm" | "tech" 
 
 const STEPS = [
   "היכנסי ל-Google AI Studio (הכפתור למעלה) והתחברי עם חשבון Google שלך.",
-  'לחצי על "Create API key" (צור מפתח API).',
+  'לחצי על "Create API key" (יצירת מפתח API).',
   "בחרי פרויקט קיים או צרי פרויקט חדש ב-Google Cloud.",
   "העתיקי את המפתח שנוצר (כפתור ההעתקה).",
   "הדביקי אותו בטופס למטה ושמרי. זהו! 💜",
@@ -44,7 +44,7 @@ export default async function AiKeysPage() {
 
       {/* instructions */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-ink-1000 mb-1">איך משיגים מפתח מ-Google?</h2>
+        <h2 className="font-display text-lg font-bold text-ink-1000 mb-1">איך משיגות מפתח מ-Google?</h2>
         <p className="t-body-sm text-ink-500 mb-4">חינמי, לוקח דקה. קודם פתחי את AI Studio, ואז עקבי אחרי השלבים:</p>
         <a
           href="https://aistudio.google.com/apikey"

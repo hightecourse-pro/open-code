@@ -94,6 +94,28 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
       };
+      mentor_requests: {
+        Row: {
+          id: string;
+          profile_id: string;
+          reason: string;
+          note: string | null;
+          status: string; // 'open' | 'handled'
+          created_at: string;
+          handled_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          reason: string;
+          note?: string | null;
+          status?: string;
+          created_at?: string;
+          handled_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["mentor_requests"]["Insert"]>;
+        Relationships: [];
+      };
       member_crm: {
         Row: {
           profile_id: string;

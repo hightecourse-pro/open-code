@@ -43,8 +43,8 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           </div>
         </div>
         <p className="t-body-sm text-ink-500 mb-5">
-          המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות — וגם לסנן הזדמנויות במיוחד בשבילך.
-          אפשר יהיה לעדכן הכול בכל רגע מעמוד הפרופיל.
+          המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות — ולבחור הזדמנויות במיוחד בשבילך.
+          תמיד תוכלי לעדכן הכול מעמוד הפרופיל.
         </p>
         <ProfileForm
           firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}

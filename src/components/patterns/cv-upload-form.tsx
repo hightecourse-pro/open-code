@@ -93,7 +93,7 @@ export function CvUploadForm() {
       </Field>
 
       <Button type="submit" disabled={pending || !file} className="w-fit">
-        {pending ? "שומר…" : file ? "שמירת הקובץ" : "בחרי קובץ תחילה"}
+        {pending ? "שומר…" : file ? "שמירת הקובץ" : "קודם בחרי קובץ"}
       </Button>
     </form>
   );

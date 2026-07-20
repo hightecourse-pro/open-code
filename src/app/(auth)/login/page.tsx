@@ -30,7 +30,7 @@ export default function LoginPage() {
           </Link>
         </div>
         <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "רגע אחת…" : "כניסה"}
+          {pending ? "רגע אחד…" : "כניסה"}
         </Button>
       </form>
 

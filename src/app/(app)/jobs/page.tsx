@@ -130,7 +130,7 @@ export default async function JobsPage({
         </div>
       ) : (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          אין כרגע משרות בקטגוריה הזו. בקרוב נוסיף עוד 💜
+          אין כאן משרות כרגע — בקרוב נוסיף עוד 💜
         </div>
       )}
     </div>

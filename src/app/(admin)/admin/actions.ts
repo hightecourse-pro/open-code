@@ -58,6 +58,18 @@ export async function updateReportStatus(id: string, status: ReportStatus) {
   revalidatePath("/feed");
 }
 
+/** Resolve (or reopen) a member's request to be matched with a mentor. */
+export async function setMentorRequestStatus(id: string, status: "open" | "handled"): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("mentor_requests")
+    .update({ status, handled_at: status === "handled" ? new Date().toISOString() : null })
+    .eq("id", id);
+  revalidatePath("/admin/mentor-requests");
+  revalidatePath("/mentor");
+}
+
 export type CrmState = { error?: string };
 
 /**

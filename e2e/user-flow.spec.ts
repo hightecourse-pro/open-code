@@ -62,7 +62,7 @@ test.describe("user flow — community features", () => {
 
   test("CV management page renders with upload form", async ({ page }) => {
     await open(page, "/cv");
-    await expect(page.getByRole("heading", { name: /ניהול קורות חיים/ })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /קורות החיים שלך/ })).toBeVisible();
     await expect(page.locator('input[name="file"]')).toBeAttached();
     await expect(page.locator('select[name="language"]')).toBeVisible();
   });

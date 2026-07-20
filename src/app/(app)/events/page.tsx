@@ -94,7 +94,7 @@ export default async function EventsPage() {
           ))
         ) : (
           <div className="bg-white border border-ink-200 rounded-lg p-6 text-ink-700">
-            אין סשנים מתוכננים כרגע — בקרוב נעדכן.
+            אין סשנים מתוכננים כרגע — נעדכן אותך ברגע שנקבע משהו חדש.
           </div>
         )}
       </section>

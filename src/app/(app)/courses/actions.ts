@@ -54,7 +54,7 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
       latest.last_switch_month >= thisMonth &&
       latest.course_id !== courseId
     ) {
-      return { error: "אפשר לפתוח קורס חדש פעם בחודש 💜 אפשר לחזור לקורס שהיה לך החודש, או לחכות לחודש הבא." };
+      return { error: "אפשר לפתוח קורס חדש פעם בחודש 💜 תוכלי לחזור לקורס שהיה לך החודש, או לחכות לחודש הבא." };
     }
   }
 

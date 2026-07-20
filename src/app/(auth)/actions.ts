@@ -59,7 +59,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
       return { error: "יותר מדי ניסיונות בזמן קצר. נסי שוב בעוד כמה דקות." };
     }
     if (msg.includes("confirmation email") || msg.includes("sending") || error.status === 500) {
-      return { error: "יש תקלה זמנית בשליחת מייל האימות מהצד שלנו. כבר מטפלים — נסי שוב עוד רגע 🙏" };
+      return { error: "יש תקלה זמנית בשליחת מייל האימות מהצד שלנו. אנחנו כבר מטפלות — נסי שוב עוד רגע 🙏" };
     }
     return { error: "לא הצלחנו להשלים את ההרשמה כרגע. נסי שוב עוד רגע." };
   }
@@ -91,7 +91,7 @@ export async function requestPasswordReset(
   formData: FormData
 ): Promise<AuthState> {
   const email = String(formData.get("email") ?? "").trim();
-  if (!email) return { error: "כתבי כתובת אימייל." };
+  if (!email) return { error: "כתבי את כתובת האימייל שלך ונשלח קישור." };
 
   const supabase = await createClient();
   await supabase.auth.resetPasswordForEmail(email, {
@@ -115,7 +115,7 @@ export async function updatePassword(
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    return { error: 'הקישור פג תוקף או לא תקין. בקשי קישור חדש מ"שכחתי סיסמה".' };
+    return { error: 'הקישור פג תוקף או לא תקין. בקשי קישור חדש דרך "שכחת סיסמה?".' };
   }
   redirect("/forum");
 }

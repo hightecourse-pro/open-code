@@ -75,7 +75,7 @@ export default async function InterviewSessionPage({
 
       {done && !feedback && (
         <Alert variant="warn">
-          לא הצלחנו להפיק משוב לראיון הזה — ייתכן שהמפתח נגמר.
+          לא הצלחנו להפיק משוב לראיון הזה — ייתכן שנגמרה מכסת המפתח.
           <a href="/ai/keys" className="block mt-1 font-semibold text-brand-purple underline">
             לניהול מפתחות ה-AI ←
           </a>

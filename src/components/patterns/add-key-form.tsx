@@ -17,7 +17,7 @@ export function AddKeyForm() {
       {state.error && <Alert variant="danger">{state.error}</Alert>}
       {state.ok && <Alert variant="success">המפתח נוסף ואומת מול Google ✓</Alert>}
       <Field label="שם לזיהוי (אופציונלי)" htmlFor="label">
-        <Input id="label" name="label" placeholder="לדוגמה: המפתח של גוגל הראשי" />
+        <Input id="label" name="label" placeholder="לדוגמה: המפתח הראשי שלי" />
       </Field>
       <Field label="מפתח Google API" htmlFor="key">
         <Input id="key" name="key" dir="ltr" placeholder="הדביקי כאן את המפתח מ-AI Studio" autoComplete="off" />

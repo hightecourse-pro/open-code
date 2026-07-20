@@ -50,7 +50,7 @@ const SECTIONS: NavSection[] = [
     label: "אישי",
     items: [
       { href: "/profile", label: "הפרופיל שלי", icon: User },
-      { href: "/cv", label: "ניהול קורות חיים", icon: FileText },
+      { href: "/cv", label: "קורות החיים שלי", icon: FileText },
       { href: "/mentor", label: "המנטוריות שלנו", icon: Crown },
       { href: "/chat", label: "צ'אטים", icon: MessageCircle },
     ],

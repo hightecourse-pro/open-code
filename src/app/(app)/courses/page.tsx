@@ -62,11 +62,11 @@ export default async function CoursesPage() {
             <div className="h-1.5 bg-white/20 rounded-full overflow-hidden max-w-[300px]">
               <div className="h-full bg-white rounded-full" style={{ width: `${active?.progress_pct ?? 0}%` }} />
             </div>
-            <div className="text-xs opacity-85 mt-1.5">{active?.progress_pct ?? 0}% הושלמו</div>
+            <div className="text-xs opacity-85 mt-1.5">השלמת {active?.progress_pct ?? 0}% מהקורס</div>
           </div>
           <div className="flex flex-col gap-2 sm:ms-auto">
             <button className="font-display font-semibold text-[13.5px] px-[18px] py-2.5 rounded-md bg-white text-brand-pink-deep">
-              המשך לקורס
+              המשיכי לקורס
             </button>
             <form action={returnCourse}>
               <button
@@ -94,7 +94,7 @@ export default async function CoursesPage() {
         <Info size={18} className="text-brand-purple shrink-0 mt-0.5" />
         <span>
           <b className="font-display text-brand-purple">איך זה עובד:</b> את בוחרת קורס אחד ולומדת בקצב שלך.
-          בכל חודש אפשר להחליף לקורס אחר — הקורס הקודם ייסגר ויפתח החדש.
+          בכל חודש אפשר להחליף לקורס אחר — הקורס הקודם ייסגר והחדש ייפתח.
         </span>
       </div>
 

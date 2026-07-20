@@ -29,7 +29,7 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
     <div className="bg-white border border-ink-200 rounded-[18px] p-4 px-[18px] shadow-sm">
       <div className="font-display font-bold text-[15px] text-ink-1000 mb-2.5 flex items-center gap-1.5">
         <MessageSquare size={17} className="text-brand-pink-deep" />
-        פתחי פוסט להתייעצות או שיתוף ידע
+        פתחי פוסט להתייעצות או לשיתוף ידע
       </div>
 
       {state.error && (

@@ -45,7 +45,7 @@ export function CourseCard({ course, locked }: CourseCardProps) {
         {locked && (
           <div className="absolute inset-0 bg-ink-1000/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5 text-white text-[13px] font-display font-semibold">
             <Lock size={22} />
-            קורס פעיל אחר
+            יש לך קורס פעיל אחר
           </div>
         )}
       </div>

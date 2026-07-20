@@ -16,7 +16,7 @@ const AGENTS: InterviewAgent[] = ["hr", "tech", "friendly"];
 const DIFFS: InterviewDifficulty[] = ["basic", "standard", "hard"];
 
 export const REASON_MSG: Record<AiReason, string> = {
-  no_key: "כדי לתרגל ראיון צריך מפתח Google. אפשר להוסיף אותו בעמוד מפתחות ה-AI.",
+  no_key: "כדי לתרגל ראיון תצטרכי מפתח Google — תוכלי להוסיף אותו בעמוד מפתחות ה-AI.",
   exhausted: "המפתח הגיע למכסת השימוש. הוסיפי מפתח נוסף ונמשיך 💜",
   invalid: "המפתח לא תקין יותר. בדקי אותו או הוסיפי חדש.",
   error: "משהו השתבש. בואי ננסה שוב.",

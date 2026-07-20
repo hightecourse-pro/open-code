@@ -8,7 +8,7 @@ test.describe("public pages + gating", () => {
   test("home is a public landing page that renders", async ({ page }) => {
     await page.goto("/");
     await expect(page).not.toHaveURL(/\/login/);
-    await expect(page.getByText(/הקריירה שלך/)).toBeVisible();
+    await expect(page.getByText(/הדרך שלך להייטק/)).toBeVisible();
   });
 
   test("landing CTA links to signup", async ({ page }) => {

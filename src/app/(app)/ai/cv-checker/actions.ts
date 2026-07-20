@@ -9,7 +9,7 @@ import type { Json } from "@/types/database";
 export type CvState = { error?: string; reason?: AiReason; analysis?: CvAnalysis };
 
 const REASON_MSG: Record<AiReason, string> = {
-  no_key: "כדי להשתמש בכלי ה-AI צריך מפתח Google. אפשר להוסיף אותו בעמוד מפתחות ה-AI.",
+  no_key: "כדי להשתמש בכלי ה-AI תצטרכי מפתח Google — תוכלי להוסיף אותו בעמוד מפתחות ה-AI.",
   exhausted: "המפתח הנוכחי הגיע למכסת השימוש. הוסיפי מפתח נוסף ונמשיך 💜",
   invalid: "המפתח לא תקין יותר. בדקי אותו או הוסיפי מפתח חדש.",
   error: "משהו השתבש בניתוח. בואי ננסה שוב עוד רגע.",
@@ -22,7 +22,7 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
   const jobDescription = String(formData.get("job") ?? "").trim();
 
   if (!(file instanceof File) || file.size === 0) {
-    return { error: "צריך להעלות קובץ PDF של קורות החיים." };
+    return { error: "כדי שנתחיל, העלי קובץ PDF של קורות החיים." };
   }
   if (file.type !== "application/pdf") {
     return { error: "הקובץ צריך להיות בפורמט PDF." };

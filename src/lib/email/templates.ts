@@ -126,7 +126,7 @@ export function newMessageEmail(fromName: string): BuiltEmail {
       lines: [`${fromName} כתבה לך בצ'אט של קוד פתוח.`, "אפשר להיכנס ולהשיב מתי שנוח לך."],
       ctaText: "לצ'אט",
       ctaUrl: `${SITE}/chat`,
-      footnote: "מקבלת יותר מדי מיילים? אפשר לכוונן בפרופיל ← העדפות מייל.",
+      footnote: "מקבלת יותר מדי מיילים? תוכלי לשנות את זה בפרופיל ← העדפות מייל.",
     }),
   };
 }
@@ -217,7 +217,7 @@ export function applicationStatusEmail(
     rejected: {
       subject: `עדכון על המועמדות שלך · ${jobTitle}`,
       heading: "הפעם זה לא התקדם 💜",
-      line: `המועמדות למשרת <b>${jobTitle}</b> ב־${company} לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך. יש עוד משרות שמחכות לך, ואנחנו כאן לעזור.`,
+      line: `המועמדות למשרת <b>${jobTitle}</b> ב־${company} לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך. יש עוד משרות שמחכות לך, ואנחנו כאן בשבילך.`,
     },
   }[status];
 
@@ -228,6 +228,28 @@ export function applicationStatusEmail(
       lines: [`${name ? `היי ${name}, ` : ""}${per.line}`],
       ctaText: "לכל המשרות",
       ctaUrl: `${SITE}/jobs`,
+    }),
+  };
+}
+
+/** Tell the team a member asked to be matched with a mentor. */
+export function mentorRequestEmail(
+  memberName: string,
+  reasonLabel: string,
+  note?: string | null
+): BuiltEmail {
+  return {
+    subject: `בקשה למנטורית מ${memberName} · קוד פתוח`,
+    html: renderEmail({
+      heading: "בקשה חדשה למנטורית 👑",
+      lines: [
+        `<b>${memberName}</b> ביקשה שנחבר אותה למנטורית.`,
+        `<b>הסיבה:</b> ${reasonLabel}`,
+        ...(note ? [`<b>מה שהיא כתבה:</b> ${note}`] : []),
+      ],
+      ctaText: "לבקשות המנטוריות",
+      ctaUrl: `${SITE}/admin/mentor-requests`,
+      footnote: "אפשר לסמן את הבקשה כטופלה במסך הניהול.",
     }),
   };
 }

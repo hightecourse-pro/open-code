@@ -85,7 +85,7 @@ export default async function ChatPage({
             })
           ) : (
             <p className="text-sm text-ink-500 p-4 text-center">
-              אין עדיין שיחות. אפשר להתחיל שיחה מעמוד המנטוריות 💬
+              אין עדיין שיחות — אפשר להתחיל אחת מעמוד המנטוריות 💬
             </p>
           )}
         </div>
@@ -128,7 +128,7 @@ export default async function ChatPage({
                 })}
                 {(messages ?? []).length === 0 && (
                   <p className="text-sm text-ink-500 text-center my-auto">
-                    התחילי את השיחה — תכתבי הודעה ראשונה 💜
+                    התחילי את השיחה — כתבי לה הודעה ראשונה 💜
                   </p>
                 )}
               </div>

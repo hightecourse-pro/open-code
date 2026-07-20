@@ -50,7 +50,7 @@ export default async function ArticlesPage() {
           <div className="w-14 h-14 rounded-full bg-tint-purple flex items-center justify-center text-brand-purple">
             <BookOpen size={26} />
           </div>
-          <p className="t-body text-ink-700 max-w-sm">ספריית המאמרים בדרך — בקרוב תוכן מקצועי נבחר כאן 💜</p>
+          <p className="t-body text-ink-700 max-w-sm">ספריית המאמרים בדרך — בקרוב יחכה לך כאן תוכן מקצועי נבחר 💜</p>
         </div>
       )}
     </div>

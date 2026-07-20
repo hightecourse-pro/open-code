@@ -109,7 +109,7 @@ export default async function ForumPage() {
 
       {forumPosts.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          הפורום שקט עכשיו — מה אם תפתחי את השיחה הראשונה היום?
+          הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?
         </div>
       ) : (
         <div className="flex flex-col gap-3.5">

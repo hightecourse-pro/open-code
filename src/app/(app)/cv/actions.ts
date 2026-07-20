@@ -42,7 +42,7 @@ export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<C
     file_path: path,
     file_name: file.name,
   });
-  if (error) return { error: "הקובץ הועלה אך לא נשמר. נסי שוב." };
+  if (error) return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
 
   revalidatePath("/cv");
   return { ok: true };

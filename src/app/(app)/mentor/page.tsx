@@ -1,19 +1,45 @@
 import type { Metadata } from "next";
 import { MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getUser } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
+import { MentorRequestForm } from "@/components/patterns/mentor-request-form";
 import { startConversation } from "../chat/actions";
 
 export const metadata: Metadata = { title: "המנטוריות שלנו" };
 
 export default async function MentorPage() {
   const supabase = await createClient();
-  const { data: mentors } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_initials, specialization, bio")
-    .eq("role", "mentor")
-    .eq("status", "active")
-    .order("full_name", { ascending: true });
+  const user = await getUser();
+
+  const [{ data: mentors }, { data: mentorship }, { data: openRequest }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_initials, specialization, bio")
+      .eq("role", "mentor")
+      .eq("status", "active")
+      .order("full_name", { ascending: true }),
+    user
+      ? supabase
+          .from("mentorships")
+          .select("id")
+          .eq("mentee_id", user.id)
+          .eq("status", "active")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    // Backward-safe: before the mentor_requests migration runs this just
+    // returns null and the form still renders.
+    user
+      ? supabase
+          .from("mentor_requests")
+          .select("id")
+          .eq("profile_id", user.id)
+          .eq("status", "open")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
+  const hasMentor = !!mentorship;
 
   return (
     <div className="flex flex-col gap-5">
@@ -22,6 +48,9 @@ export default async function MentorPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המנטוריות שלנו 👑</h1>
         <p className="t-body-sm text-ink-700">נשים מנוסות שהצטרפו כדי לעזור. אפשר לכתוב להן ישירות.</p>
       </div>
+
+      {/* No mentor matched yet → she can ask us to connect her with one. */}
+      {!hasMentor && <MentorRequestForm pendingRequest={!!openRequest} />}
 
       {mentors && mentors.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -48,7 +77,7 @@ export default async function MentorPage() {
         </div>
       ) : (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          עדיין לא הצטרפו מנטוריות. בקרוב 💜
+          המנטוריות הראשונות כבר בדרך אלינו 💜
         </div>
       )}
     </div>

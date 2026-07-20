@@ -14,7 +14,7 @@ import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans, shekels } from "@/lib/payments/plans";
 
 export const metadata = {
-  title: "קוד פתוח — הקריירה שלך מתחילה כאן",
+  title: "קוד פתוח — הדרך שלך להייטק מתחילה כאן",
   description: "קהילה חמה ותומכת לג'וניוריות בפיתוח — קורסים, סשנים שבועיים, משרות, מנטוריות וכלי AI.",
 };
 
@@ -49,7 +49,7 @@ export default async function Home({
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-6">
           <Logo width={240} priority />
           <h1 className="t-display">
-            הקריירה שלך <span className="t-gradient">מתחילה כאן</span>
+            הדרך שלך להייטק <span className="t-gradient">מתחילה כאן</span>
           </h1>
           <p className="t-body-lg text-ink-700 max-w-md">
             קהילה חמה ותומכת לג&apos;וניוריות בפיתוח. אנחנו ביחד — מהצעד הראשון ועד המשרה הראשונה.
@@ -71,7 +71,7 @@ export default async function Home({
           <div className="text-center mb-10">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;מה מקבלים/&gt;</span>
             <h2 className="font-display text-[28px] font-black text-ink-1000 mt-1">הכול במנוי אחד</h2>
-            <p className="t-body text-ink-700 mt-1">כל מה שצריך כדי לפרוץ לעולם הפיתוח — במקום אחד.</p>
+            <p className="t-body text-ink-700 mt-1">כל מה שאת צריכה כדי לפרוץ לעולם הפיתוח — במקום אחד.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {FEATURES.map((f) => {
@@ -95,8 +95,8 @@ export default async function Home({
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-8">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;מנוי/&gt;</span>
-            <h2 className="font-display text-[28px] font-black text-ink-1000 mt-1">דמי חבר</h2>
-            <p className="t-body text-ink-700 mt-1">מחיר אחד, כל הערך. אפשר לבטל בכל עת (מינימום {pricing.minTermMonths} חודשים).</p>
+            <h2 className="font-display text-[28px] font-black text-ink-1000 mt-1">דמי מנוי</h2>
+            <p className="t-body text-ink-700 mt-1">מחיר אחד, כל הערך. אפשר לבטל בכל עת אחרי {pricing.minTermMonths} החודשים הראשונים.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="bg-white border-[1.5px] border-brand-purple rounded-[20px] p-6 shadow-glow-purple text-center">

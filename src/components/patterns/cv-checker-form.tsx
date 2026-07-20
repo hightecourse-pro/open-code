@@ -57,7 +57,7 @@ export function CvCheckerForm() {
           .
         </p>
         <Field label="תיאור המשרה (אופציונלי — לבדיקת התאמה)" htmlFor="job">
-          <Textarea id="job" name="job" rows={4} placeholder="הדביקי תיאור משרה כדי לבדוק כמה את מתאימה…" />
+          <Textarea id="job" name="job" rows={4} placeholder="הדביקי תיאור משרה ונבדוק יחד עד כמה את מתאימה…" />
         </Field>
         <Button type="submit" disabled={pending} className="w-fit" bracketed>
           {pending ? "בודק את קורות החיים שלך…" : "בדיקת קורות חיים"}

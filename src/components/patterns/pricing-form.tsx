@@ -14,7 +14,7 @@ export function PricingForm({ pricing }: { pricing: Pricing }) {
       {state.ok && <Alert variant="success">המחיר עודכן ✓ החברות יראו אותו מיד.</Alert>}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="דמי חבר חודשיים (₪)" htmlFor="p-monthly">
+        <Field label="דמי מנוי חודשיים (₪)" htmlFor="p-monthly">
           <Input
             id="p-monthly"
             name="monthly"
