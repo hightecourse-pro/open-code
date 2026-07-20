@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
 import { LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/language-skills";
+import { repointSharesToNewEmail } from "@/lib/drive-shares";
 import type { Json, QuestionScope } from "@/types/database";
 
 export type ProfileState = { ok?: boolean; error?: string };
@@ -19,6 +20,42 @@ export async function setDigestFrequency(freq: string): Promise<void> {
   const valid = ["daily", "unread", "off"].includes(freq) ? freq : "daily";
   await supabase.from("profiles").update({ digest_frequency: valid }).eq("id", user.id);
   revalidatePath("/profile");
+}
+
+export type DriveEmailState = { ok?: boolean; error?: string };
+
+/**
+ * The Google address we share the community's Drive material with. Saving one
+ * clears the "we asked you" flag so the sync worker picks her up again.
+ */
+export async function setDriveEmail(
+  _prev: DriveEmailState,
+  formData: FormData
+): Promise<DriveEmailState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "תצטרכי להתחבר מחדש." };
+
+  const email = String(formData.get("drive_email") ?? "").trim();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { error: "הכתובת לא נראית תקינה. בדקי אותה שוב 🙂" };
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ drive_email: email || null, drive_email_requested_at: null })
+    .eq("id", user.id);
+  if (error) return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
+
+  // Material already shared with her previous address has to move to the new
+  // one: reopening the rows makes the sync worker un-share the old address
+  // and grant the new one.
+  await repointSharesToNewEmail(user.id);
+
+  revalidatePath("/profile");
+  return { ok: true };
 }
 
 export async function saveProfile(_prev: ProfileState, formData: FormData): Promise<ProfileState> {

@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { allSessionIds, queueRevokeAll, queueShares } from "@/lib/drive-shares";
+import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
 import { buildPlans } from "./plans";
 import { getPricingAdmin } from "./pricing";
 import type { SubscriptionPlan } from "@/types/database";
@@ -78,11 +78,12 @@ export async function activateSubscription(input: ActivateInput) {
   // Activate the member.
   await admin.from("profiles").update({ status: "active" }).eq("id", input.profileId);
 
-  // Queue every session recording for her. Deliberately DB-only: this runs
-  // inside the payment webhook, and a slow Google call here could time it out
-  // and get the payment retried. The sync worker grants the access.
+  // Queue everything she's entitled to — all session recordings plus the
+  // course she had open, so a renewal restores her course too. Deliberately
+  // DB-only: this runs inside the payment webhook, and a slow Google call
+  // could time it out and get the payment retried.
   try {
-    await queueShares(input.profileId, "session", await allSessionIds());
+    await queueEverythingFor(input.profileId);
   } catch (e) {
     console.error("[drive] activation queue failed:", e);
   }
@@ -93,11 +94,25 @@ export async function activateSubscription(input: ActivateInput) {
 /** Marks a subscription canceled/expired and pauses the member's access. */
 export async function deactivateSubscription(profileId: string) {
   const admin = createAdminClient();
-  await admin
+  // Scoped to live subscriptions so a row that's already canceled (or a
+  // freshly renewed one) is never touched by a retry.
+  const { error: subErr } = await admin
     .from("subscriptions")
     .update({ status: "canceled", canceled_at: new Date().toISOString() })
-    .eq("profile_id", profileId);
-  await admin.from("profiles").update({ status: "paused" }).eq("id", profileId);
+    .eq("profile_id", profileId)
+    .in("status", ["active", "trialing", "past_due"]);
+  if (subErr) {
+    // Don't strip her access on a half-failed update — let the next run retry.
+    console.error("[subscriptions] cancel failed, skipping revoke:", subErr.message);
+    return;
+  }
+  // Only an active member gets paused — never overwrite a deliberate
+  // 'rejected' (or a pending) state set by an admin.
+  await admin
+    .from("profiles")
+    .update({ status: "paused" })
+    .eq("id", profileId)
+    .eq("status", "active");
 
   // Leaving the community also ends access to the Drive material.
   try {

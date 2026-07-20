@@ -231,6 +231,27 @@ export function applicationStatusEmail(
   };
 }
 
+/**
+ * Ask a member for a Google address, because Drive can't share the community
+ * material with the address she signed up with.
+ */
+export function driveEmailRequestEmail(name?: string): BuiltEmail {
+  return {
+    subject: "רגע אחד לפני שנשתף איתך את החומרים 💜",
+    html: renderEmail({
+      heading: "צריכות ממך כתובת Gmail 📩",
+      lines: [
+        `${name ? `היי ${name}, ` : ""}רצינו לשתף איתך את הקלטות הסשנים וחומרי הקורסים ב-Google Drive,`,
+        "אבל הכתובת שאיתה נרשמת אינה חשבון Google — ודרייב יודע לשתף רק עם חשבון Google.",
+        "אם יש לך כתובת Gmail (או כל כתובת שמחוברת לחשבון Google), הוסיפי אותה בפרופיל ואנחנו נשתף איתך הכול אוטומטית תוך דקות.",
+      ],
+      ctaText: "הוספת כתובת Gmail",
+      ctaUrl: `${SITE}/profile`,
+      footnote: "אין לך חשבון Google? אפשר לפתוח אחד בחינם ב-accounts.google.com, ואז להוסיף אותו כאן.",
+    }),
+  };
+}
+
 /** Tell the team a member asked to be matched with a mentor. */
 export function mentorRequestEmail(
   memberName: string,

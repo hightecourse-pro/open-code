@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { ProfileForm } from "@/components/patterns/profile-form";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
+import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { QuestionScope } from "@/types/database";
 
@@ -12,6 +13,9 @@ export const metadata: Metadata = { title: "הפרופיל שלי" };
 export default async function ProfilePage() {
   const profile = await requireProfile();
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
@@ -65,6 +69,12 @@ export default async function ProfilePage() {
           taxonomyOptions={taxonomyOptions}
         />
       </div>
+
+      <DriveEmailForm
+        current={profile.drive_email ?? null}
+        loginEmail={user?.email ?? null}
+        wasRequested={!!profile.drive_email_requested_at}
+      />
 
       <DigestPreferences current={profile.digest_frequency ?? "daily"} />
     </div>

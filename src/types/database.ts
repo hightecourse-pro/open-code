@@ -71,6 +71,9 @@ export interface Database {
           internal_notes: string | null;
           profile_completed: boolean;
           digest_frequency: string; // 'daily' | 'unread' | 'off'
+          /** Google account to share Drive material with (falls back to login email). */
+          drive_email: string | null;
+          drive_email_requested_at: string | null;
         } & Timestamps;
         Insert: {
           id: string;
@@ -90,6 +93,8 @@ export interface Database {
           internal_notes?: string | null;
           profile_completed?: boolean;
           digest_frequency?: string;
+          drive_email?: string | null;
+          drive_email_requested_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -747,6 +752,8 @@ export interface Database {
       };
       content_shares: {
         Row: {
+          /** The address this share was granted to (may differ from the current one). */
+          granted_email?: string | null;
           id: string;
           owner_type: ContentOwner;
           owner_id: string;
@@ -765,6 +772,7 @@ export interface Database {
           created_at?: string;
           shared_at?: string | null;
           revoked_at?: string | null;
+          granted_email?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["content_shares"]["Insert"]>;
         Relationships: [];

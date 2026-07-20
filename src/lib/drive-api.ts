@@ -19,6 +19,9 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE = "https://www.googleapis.com/drive/v3";
 const SCOPE = "https://www.googleapis.com/auth/drive";
 
+/** Drive refused the address because it isn't a usable Google account. */
+export class NotAGoogleAccountError extends Error {}
+
 export function isDriveAutomationConfigured(): boolean {
   return !!(process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_PRIVATE_KEY);
 }
@@ -116,7 +119,15 @@ export async function grantReadAccess(fileId: string, email: string): Promise<vo
         { method: "POST", body }
       );
       if (res.ok) return;
-      throw new Error(`drive_share_failed: ${(await res.text()).slice(0, 200)}`);
+      const retryText = await res.text();
+      // Only treat it as "she needs a Google address" when Google says so
+      // about the ACCOUNT. A generic invalidSharingRequest can equally mean a
+      // domain sharing policy blocked us — that's our problem, not hers, and
+      // must not trigger an email asking her to fix something.
+      if (/not.*a?.*Google account|no.*Google account|invalid.*email|badRequest.*emailAddress/i.test(retryText)) {
+        throw new NotAGoogleAccountError(email);
+      }
+      throw new Error(`drive_share_failed: ${retryText.slice(0, 200)}`);
     }
     throw new Error(`drive_share_failed: ${text.slice(0, 200)}`);
   }

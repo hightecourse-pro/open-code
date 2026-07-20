@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
 import { applicationStatusEmail } from "@/lib/email/templates";
-import { allSessionIds, queueRevokeAll, queueShares } from "@/lib/drive-shares";
+import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
 import type {
   ApplicationStatus,
   EmploymentType,
@@ -116,7 +116,7 @@ export async function setMemberStatus(profileId: string, status: ProfileStatus) 
   // the sync worker does the Drive work.
   try {
     if (status === "active") {
-      await queueShares(profileId, "session", await allSessionIds());
+      await queueEverythingFor(profileId);
     } else if (status === "paused" || status === "rejected") {
       await queueRevokeAll(profileId);
     }
