@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
 import { applicationStatusEmail } from "@/lib/email/templates";
+import { allSessionIds, queueRevokeAll, queueShares } from "@/lib/drive-shares";
 import type {
   ApplicationStatus,
   EmploymentType,
@@ -109,8 +110,23 @@ export async function setMemberStatus(profileId: string, status: ProfileStatus) 
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update({ status }).eq("id", profileId);
   if (error) return { error: error.message };
+
+  // Drive access follows membership: approving grants the session material,
+  // pausing/rejecting takes it back. Queue-only so the button stays instant —
+  // the sync worker does the Drive work.
+  try {
+    if (status === "active") {
+      await queueShares(profileId, "session", await allSessionIds());
+    } else if (status === "paused" || status === "rejected") {
+      await queueRevokeAll(profileId);
+    }
+  } catch (e) {
+    console.error("[drive] member status queue failed:", e);
+  }
+
   revalidatePath("/admin");
   revalidatePath("/admin/members");
+  revalidatePath("/admin/shares");
   return {};
 }
 

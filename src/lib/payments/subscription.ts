@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { allSessionIds, queueRevokeAll, queueShares } from "@/lib/drive-shares";
 import { buildPlans } from "./plans";
 import { getPricingAdmin } from "./pricing";
 import type { SubscriptionPlan } from "@/types/database";
@@ -77,19 +78,13 @@ export async function activateSubscription(input: ActivateInput) {
   // Activate the member.
   await admin.from("profiles").update({ status: "active" }).eq("id", input.profileId);
 
-  // Queue personal Drive shares for every past session — each new member gets
-  // all session recordings shared to her individually (admin actions the queue).
-  const { data: sessions } = await admin.from("sessions").select("id");
-  if (sessions?.length) {
-    await admin.from("content_shares").upsert(
-      sessions.map((s) => ({
-        owner_type: "session" as const,
-        owner_id: s.id,
-        profile_id: input.profileId,
-        status: "pending" as const,
-      })),
-      { onConflict: "owner_type,owner_id,profile_id", ignoreDuplicates: true }
-    );
+  // Queue every session recording for her. Deliberately DB-only: this runs
+  // inside the payment webhook, and a slow Google call here could time it out
+  // and get the payment retried. The sync worker grants the access.
+  try {
+    await queueShares(input.profileId, "session", await allSessionIds());
+  } catch (e) {
+    console.error("[drive] activation queue failed:", e);
   }
 
   return { subscriptionId };
@@ -103,4 +98,11 @@ export async function deactivateSubscription(profileId: string) {
     .update({ status: "canceled", canceled_at: new Date().toISOString() })
     .eq("profile_id", profileId);
   await admin.from("profiles").update({ status: "paused" }).eq("id", profileId);
+
+  // Leaving the community also ends access to the Drive material.
+  try {
+    await queueRevokeAll(profileId);
+  } catch (e) {
+    console.error("[drive] deactivation queue failed:", e);
+  }
 }

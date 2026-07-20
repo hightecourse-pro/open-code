@@ -17,3 +17,32 @@ export function driveEmbedUrl(url: string): string | null {
 export function isDriveFolder(url: string): boolean {
   return /\/folders\//.test(url);
 }
+
+/**
+ * The Drive object id inside any Drive/Docs URL — files, folders, Docs,
+ * Sheets and Slides. Needed to grant/revoke per-member permissions.
+ */
+export function driveFileId(url: string): string | null {
+  // Only Google-hosted links carry a Drive object id — never guess from an
+  // arbitrary URL that happens to have an ?id= parameter.
+  let host: string;
+  try {
+    host = new URL(url).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+  if (!/(^|\.)(drive|docs)\.google\.com$/.test(host)) return null;
+
+  const patterns = [
+    /\/file\/d\/([^/?#]+)/,
+    /\/folders\/([^/?#]+)/,
+    // /d/e/… is a *published* doc id, which is not a shareable file id.
+    /\/(?:document|spreadsheets|presentation)\/d\/(?!e\/)([^/?#]+)/,
+    /[?&]id=([^&#]+)/,
+  ];
+  for (const re of patterns) {
+    const m = url.match(re);
+    if (m?.[1]) return m[1];
+  }
+  return null;
+}

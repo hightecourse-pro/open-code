@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { queueRevokes, queueShares } from "@/lib/drive-shares";
 
 function monthStart(): string {
   return new Date().toISOString().slice(0, 7) + "-01"; // YYYY-MM-01
@@ -19,6 +19,15 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // Opening a course now grants real Drive access, so verify membership here
+  // and not only in the page layout — a server action is directly callable.
+  const [{ data: me }, { data: course }] = await Promise.all([
+    supabase.from("profiles").select("status").eq("id", user.id).single(),
+    supabase.from("courses").select("id, is_published").eq("id", courseId).maybeSingle(),
+  ]);
+  if (me?.status !== "active") return { error: "המנוי שלך לא פעיל כרגע." };
+  if (!course?.is_published) return { error: "הקורס הזה לא זמין כרגע." };
 
   const { data: active } = await supabase
     .from("enrollments")
@@ -38,6 +47,8 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
       .from("enrollments")
       .update({ status: "returned", switched_at: new Date().toISOString() })
       .eq("id", active.id);
+    // Switching away also ends access to the old course's material.
+    await queueRevokes(user.id, "course", [active.course_id]);
   } else {
     // No active course — but "return then start" must not bypass the monthly
     // limit. If any enrollment was already taken this month, only THAT course
@@ -79,14 +90,12 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
     });
   }
 
-  // Queue a personal Drive share for this course (admin actions it in the queue).
-  // Share rows are admin-managed under RLS, so write via the service role.
-  await createAdminClient()
-    .from("content_shares")
-    .upsert(
-      { owner_type: "course", owner_id: courseId, profile_id: user.id, status: "pending" },
-      { onConflict: "owner_type,owner_id,profile_id", ignoreDuplicates: true }
-    );
+  // Queue this course's Drive material for her (the sync worker grants it).
+  try {
+    await queueShares(user.id, "course", [courseId]);
+  } catch (e) {
+    console.error("[drive] course queue failed:", e);
+  }
 
   revalidatePath("/courses");
   return { ok: true };
@@ -157,25 +166,12 @@ export async function returnCourse(): Promise<void> {
     .eq("profile_id", user.id)
     .eq("status", "active");
 
-  // Flag the personal Drive share for revocation (admin unshares in the queue).
-  // If it was never actually shared, drop the row instead. Service role: the
-  // share table is admin-managed under RLS.
+  // Returning a course also ends her access to its Drive material.
   if (active) {
-    const admin = createAdminClient();
-    const { data: share } = await admin
-      .from("content_shares")
-      .select("id, status")
-      .eq("owner_type", "course")
-      .eq("owner_id", active.course_id)
-      .eq("profile_id", user.id)
-      .maybeSingle();
-    if (share?.status === "shared") {
-      await admin
-        .from("content_shares")
-        .update({ status: "revoked", revoked_at: new Date().toISOString() })
-        .eq("id", share.id);
-    } else if (share) {
-      await admin.from("content_shares").delete().eq("id", share.id);
+    try {
+      await queueRevokes(user.id, "course", [active.course_id]);
+    } catch (e) {
+      console.error("[drive] course revoke queue failed:", e);
     }
   }
 

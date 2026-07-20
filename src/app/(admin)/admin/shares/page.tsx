@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
-import { Share2, UserCheck } from "lucide-react";
+import { Share2, UserCheck, Zap, ZapOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Button } from "@/components/ui";
-import { markShareStatus, dismissShare } from "../content/actions";
+import { isDriveAutomationConfigured } from "@/lib/drive-api";
+import { markShareStatus, dismissShare, syncDriveNow } from "../content/actions";
 
 export const metadata: Metadata = { title: "תור שיתופים" };
 
 export default async function AdminSharesPage() {
   const supabase = await createClient();
+  // Cheap env check — no live Google call on every page render.
+  const driveOn = isDriveAutomationConfigured();
 
   // Action-needed shares: pending (share it) or revoked (un-share it).
   const { data: shares } = await supabase
@@ -48,6 +51,33 @@ export default async function AdminSharesPage() {
           כאן רואים למי צריך לשתף (או לבטל) קישורי Google Drive באופן אישי. השיתוף עצמו מתבצע בדרייב — כאן מסמנים שבוצע.
         </p>
       </div>
+
+      {/* Automation status — when it's on, this queue should stay near-empty. */}
+      {driveOn ? (
+        <div className="flex items-start gap-2.5 bg-tint-mint border border-[#A7E3C6] rounded-md p-3.5 px-4 text-[13.5px] text-[#1B7A4B]">
+          <Zap size={18} className="shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <b className="font-display">שיתוף אוטומטי פעיל.</b> חברה שמצטרפת מקבלת את החומרים לבד,
+            ומי שעוזבת מאבדת גישה אוטומטית. הסנכרון רץ כל רבע שעה — מה שנשאר כאן זה מה שלא הצליח
+            אוטומטית וצריך טיפול ידני.
+          </div>
+          <form action={syncDriveNow}>
+            <Button type="submit" size="sm" variant="ghost">סנכרון עכשיו</Button>
+          </form>
+        </div>
+      ) : (
+        <div className="flex items-start gap-2.5 bg-tint-warm border border-[#F0DCA8] rounded-md p-3.5 px-4 text-[13.5px] text-[#8C5E0E]">
+          <ZapOff size={18} className="shrink-0 mt-0.5" />
+          <span>
+            <b className="font-display">שיתוף אוטומטי כבוי</b> — כרגע משתפים ידנית בדרייב ומסמנים כאן.
+            כדי להפעיל אותו צריך להגדיר חשבון שירות של Google (ההוראות המלאות ב-
+            <span className="font-mono text-[12px]" dir="ltr">docs/drive-automation.md</span>)
+            ולהוסיף ב-Vercel את{" "}
+            <span className="font-mono text-[12px]" dir="ltr">GOOGLE_SERVICE_ACCOUNT_EMAIL</span> ו-
+            <span className="font-mono text-[12px]" dir="ltr">GOOGLE_PRIVATE_KEY</span>.
+          </span>
+        </div>
+      )}
 
       <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-3 flex items-center gap-2">

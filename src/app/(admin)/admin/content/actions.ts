@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
+import {
+  processShareQueue,
+  queueSessionForAllMembers,
+  requeueOwnerForSharedMembers,
+} from "@/lib/drive-shares";
 import type { ContentOwner, LinkKind, ShareStatus } from "@/types/database";
 
 /** Create a course (published immediately; links added separately). */
@@ -31,13 +36,28 @@ export async function createSessionContent(formData: FormData): Promise<void> {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return;
   const supabase = await createClient();
-  await supabase.from("sessions").insert({
-    title,
-    topic: String(formData.get("topic") ?? "").trim() || null,
-    scheduled_at: new Date().toISOString(),
-    is_published: true,
-  });
+  const { data: created } = await supabase
+    .from("sessions")
+    .insert({
+      title,
+      topic: String(formData.get("topic") ?? "").trim() || null,
+      scheduled_at: new Date().toISOString(),
+      is_published: true,
+    })
+    .select("id")
+    .single();
+
+  // Every existing member gets the new session too — not just future joiners.
+  if (created) {
+    try {
+      await queueSessionForAllMembers(created.id);
+    } catch (e) {
+      console.error("[drive] new session queue failed:", e);
+    }
+  }
+
   revalidatePath("/admin/content");
+  revalidatePath("/admin/shares");
   revalidatePath("/events");
 }
 
@@ -85,7 +105,17 @@ export async function addContentLink(
     url,
     sort_order: (max?.sort_order ?? 0) + 1,
   });
+
+  // Material added after the fact still reaches everyone it belongs to: the
+  // already-shared rows go back to pending so the worker grants the new link.
+  try {
+    await requeueOwnerForSharedMembers(ownerType, ownerId);
+  } catch (e) {
+    console.error("[drive] link requeue failed:", e);
+  }
+
   revalidatePath("/admin/content");
+  revalidatePath("/admin/shares");
   revalidatePath("/courses");
 }
 
@@ -106,6 +136,18 @@ export async function markShareStatus(id: string, status: Exclude<ShareStatus, "
       ? { status, shared_at: new Date().toISOString() }
       : { status, revoked_at: new Date().toISOString() };
   await supabase.from("content_shares").update(patch).eq("id", id);
+  revalidatePath("/admin/shares");
+}
+
+/** Run the Drive sync now instead of waiting for the scheduled run. */
+export async function syncDriveNow(): Promise<void> {
+  await requireRole("admin");
+  try {
+    const result = await processShareQueue(60);
+    console.log("[drive] manual sync:", result);
+  } catch (e) {
+    console.error("[drive] manual sync failed:", e);
+  }
   revalidatePath("/admin/shares");
 }
 
