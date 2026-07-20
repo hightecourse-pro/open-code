@@ -37,7 +37,7 @@ export default async function AdminContentPage() {
           <span className="font-mono text-xs text-brand-pink-deep">&lt;תכנים/&gt;</span>
           <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול תכנים</h1>
           <p className="t-body-sm text-ink-500">
-            קורסים וסשנים = רשימת קישורים בגוגל דרייב. סמני כל קישור כסרטון (צפייה בלבד) או תיקיית חומרים.
+            כל קורס וסשן הם רשימת קישורים ב-Google Drive. סמני כל קישור כסרטון (צפייה בלבד) או כתיקיית חומרים.
           </p>
         </div>
         <Link href="/admin/shares" className="text-sm font-semibold text-brand-purple hover:underline">
@@ -65,7 +65,7 @@ export default async function AdminContentPage() {
           </button>
         </form>
 
-        <Collapsible title="הקורסים הקיימים" count={courses?.length ?? 0}>
+        <Collapsible title="כל הקורסים" count={courses?.length ?? 0}>
           {(courses ?? []).map((c) => (
             <div key={c.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
               <div className="flex items-center gap-2 mb-1">

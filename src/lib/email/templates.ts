@@ -120,7 +120,7 @@ export function magicLinkEmail(actionUrl: string, name?: string): BuiltEmail {
 /** Notify a mentor that a member wrote to her in chat. */
 export function newMessageEmail(fromName: string): BuiltEmail {
   return {
-    subject: `הודעה חדשה מ${fromName} · קוד פתוח`,
+    subject: `הודעה חדשה מ־${fromName} · קוד פתוח`,
     html: renderEmail({
       heading: "יש לך הודעה חדשה 💬",
       lines: [`${fromName} כתבה לך בצ'אט של קוד פתוח.`, "אפשר להיכנס ולהשיב מתי שנוח לך."],
@@ -152,20 +152,19 @@ export function dailyDigestEmail(data: DigestData): BuiltEmail {
   const rows: string[] = [];
   if (data.unreadCount > 0) {
     const who = data.unreadFrom.slice(0, 3).join(", ");
-    rows.push(
-      row(
-        "💬",
-        `<b>${data.unreadCount} הודעות חדשות</b> בצ'אט${who ? ` — מ${who}` : ""}`,
-        "/chat",
-        "לצ'אט"
-      )
-    );
+    const count =
+      data.unreadCount === 1 ? "הודעה חדשה אחת" : `${data.unreadCount} הודעות חדשות`;
+    rows.push(row("💬", `<b>${count}</b> בצ'אט${who ? ` — מ־${who}` : ""}`, "/chat", "לצ'אט"));
   }
   if (data.newForumPosts > 0) {
-    rows.push(row("📣", `<b>${data.newForumPosts} פוסטים חדשים</b> בפורום`, "/forum", "לפורום"));
+    const count =
+      data.newForumPosts === 1 ? "פוסט חדש אחד" : `${data.newForumPosts} פוסטים חדשים`;
+    rows.push(row("📣", `<b>${count}</b> בפורום`, "/forum", "לפורום"));
   }
   if (data.newJobs > 0) {
-    rows.push(row("💼", `<b>${data.newJobs} משרות חדשות</b> שמתאימות לך`, "/jobs", "למשרות"));
+    // The digest count is community-wide, so don't promise a personal match.
+    const count = data.newJobs === 1 ? "משרה חדשה אחת" : `${data.newJobs} משרות חדשות`;
+    rows.push(row("💼", `<b>${count}</b> בלוח המשרות`, "/jobs", "למשרות"));
   }
   if (data.upcomingSessions.length > 0) {
     const list = data.upcomingSessions
@@ -247,7 +246,7 @@ export function mentorRequestEmail(
         `<b>הסיבה:</b> ${reasonLabel}`,
         ...(note ? [`<b>מה שהיא כתבה:</b> ${note}`] : []),
       ],
-      ctaText: "לבקשות המנטוריות",
+      ctaText: "לבקשות למנטורית",
       ctaUrl: `${SITE}/admin/mentor-requests`,
       footnote: "אפשר לסמן את הבקשה כטופלה במסך הניהול.",
     }),

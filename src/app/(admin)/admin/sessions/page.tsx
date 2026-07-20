@@ -33,7 +33,7 @@ export default async function AdminSessionsPage() {
       </div>
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-3">סשן חדש</h3>
+        <h3 className="font-display text-base font-bold mb-3">הוספת סשן</h3>
         <AdminCreateSession />
       </div>
 
@@ -51,13 +51,13 @@ export default async function AdminSessionsPage() {
                 <Badge variant="pink">בוטל</Badge>
               ) : (
                 <Badge variant={s.status === "done" ? "tech" : "mint"}>
-                  {s.status === "done" ? "הסתיים" : s.status === "live" ? "חי" : "מתוכנן"}
+                  {s.status === "done" ? "הסתיים" : s.status === "live" ? "מתקיים" : "מתוכנן"}
                 </Badge>
               )}
               {!s.canceled_at && s.status !== "done" && (
                 <>
                   <form action={markSessionDone.bind(null, s.id)}>
-                    <button type="submit" className="text-ink-400 hover:text-[#1B7A4B] p-1.5" title="סימון כהסתיים">
+                    <button type="submit" className="text-ink-400 hover:text-[#1B7A4B] p-1.5" title="סימון כ'הסתיים'">
                       <Check size={15} />
                     </button>
                   </form>
@@ -73,8 +73,8 @@ export default async function AdminSessionsPage() {
               )}
               <ConfirmActionButton
                 action={deleteSession.bind(null, s.id)}
-                message="למחוק את הסשן לצמיתות? (למקרה שנוסף בטעות) — הפעולה לא ניתנת לביטול."
-                title="מחיקה מיידית"
+                message="למחוק את הסשן לצמיתות? הפעולה אינה ניתנת לביטול."
+                title="מחיקת סשן"
                 className="text-ink-400 hover:text-danger p-1.5"
               >
                 <Trash2 size={15} />

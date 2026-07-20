@@ -41,13 +41,13 @@ export default async function AdminMentorsPage() {
                   {m.specialization && <Badge variant="purple">{m.specialization}</Badge>}
                 </div>
                 <form action={setMemberRoleAction.bind(null, m.id, "junior")}>
-                  <Button type="submit" variant="ghost" size="sm">הסרה ממנטורית</Button>
+                  <Button type="submit" variant="ghost" size="sm">ביטול המינוי</Button>
                 </form>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-ink-500 text-sm">עדיין אין מנטוריות. מנּי חברה פעילה מהרשימה למטה.</p>
+          <p className="text-ink-500 text-sm">עדיין אין מנטוריות. בחרי חברה פעילה מהרשימה למטה.</p>
         )}
       </div>
 

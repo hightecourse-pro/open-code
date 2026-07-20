@@ -49,7 +49,7 @@ export function AdminCreateJob() {
         <Input id="j-tech" name="tech" placeholder="react, nodejs, sql" dir="ltr" />
       </Field>
       <Field
-        label={source === "open" ? "קישור להגשה (חובה למשרת שוק)" : "קישור להגשה חיצונית (אופציונלי)"}
+        label={source === "open" ? "קישור להגשה (חובה)" : "קישור להגשה חיצונית (לא חובה)"}
         htmlFor="j-url"
       >
         <Input

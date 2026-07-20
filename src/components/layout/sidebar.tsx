@@ -43,7 +43,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/ai/cv-checker", label: "בודקת קורות חיים", icon: FileCheck2 },
       { href: "/ai/interview", label: "סימולטור ראיונות", icon: Mic },
-      { href: "/ai/keys", label: "מפתחות ה-AI שלי", icon: KeyRound },
+      { href: "/ai/keys", label: "מפתחות API שלי", icon: KeyRound },
     ],
   },
   {

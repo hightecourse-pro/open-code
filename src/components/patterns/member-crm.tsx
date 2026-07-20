@@ -82,7 +82,7 @@ export function MemberCrm({
             onClick={() => setVipOpen((o) => !o)}
             className="text-[11px] font-semibold text-[#8C5E0E] hover:underline"
           >
-            {reason ? "סיבה ✓" : "סיבה?"}
+            {reason ? "עריכת סיבה" : "הוספת סיבה"}
           </button>
         )}
         <button
@@ -95,7 +95,7 @@ export function MemberCrm({
       </div>
 
       {vipMsg === "error" && !vipOpen && (
-        <span className="text-[11px] text-danger">לא נשמר — ודאי שה-SQL האחרון הורץ.</span>
+        <span className="text-[11px] text-danger">השמירה נכשלה. רענני את הדף ונסי שוב.</span>
       )}
 
       {vip && vipOpen && (
@@ -107,7 +107,7 @@ export function MemberCrm({
               setVipMsg("idle");
             }}
             rows={2}
-            placeholder="למה VIP? (למשל: מועמדת מצטיינת, ממליצה חזקה…)"
+            placeholder="למה VIP? (למשל: מועמדת מצטיינת, הגיעה עם המלצה חזקה…)"
             className="w-full text-[12px] border border-[#F8D98C] bg-tint-warm/40 rounded-md p-2 outline-none focus:border-brand-purple"
           />
           <div className="flex items-center justify-between">

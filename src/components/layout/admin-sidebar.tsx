@@ -35,7 +35,7 @@ const ITEMS: AdminNavItem[] = [
   { href: "/admin/shares", label: "תור שיתופים", icon: Share2 },
   { href: "/admin/sessions", label: "סשנים", icon: Calendar },
   { href: "/admin/analytics", label: "אנליטיקת למידה", icon: BarChart3 },
-  { href: "/admin/config", label: "קונפיגורציה", icon: Settings },
+  { href: "/admin/config", label: "הגדרות", icon: Settings },
   { href: "/admin/moderation", label: "מודרציה", icon: Shield },
 ];
 

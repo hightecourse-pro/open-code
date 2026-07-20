@@ -21,7 +21,7 @@ export interface TopNavProps {
 }
 
 /** Horizontal app nav — 64px bar, gradient-text logo, active underline. */
-export function TopNav({ items, initials = "מ", ctaLabel = "+ פוסט", ctaHref = "#" }: TopNavProps) {
+export function TopNav({ items, initials = "מ", ctaLabel = "פוסט חדש", ctaHref = "#" }: TopNavProps) {
   const pathname = usePathname();
 
   return (

@@ -85,7 +85,7 @@ export async function toggleVip(id: string, isVip: boolean, reason?: string): Pr
   );
   revalidatePath("/admin/members");
   revalidatePath(`/admin/members/${id}`);
-  if (error) return { error: "לא נשמר — ודאי שה-SQL האחרון הורץ ב-Supabase." };
+  if (error) return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
   return {};
 }
 
@@ -99,7 +99,7 @@ export async function saveInternalNotes(id: string, notes: string): Promise<CrmS
   );
   revalidatePath("/admin/members");
   revalidatePath(`/admin/members/${id}`);
-  if (error) return { error: "לא נשמר — ודאי שה-SQL האחרון הורץ ב-Supabase." };
+  if (error) return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
   return {};
 }
 

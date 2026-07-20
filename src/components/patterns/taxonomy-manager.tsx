@@ -71,7 +71,7 @@ export function TaxonomyManager({
                 add();
               }
             }}
-            placeholder="תגית חדשה…"
+            placeholder="ערך חדש…"
             className="w-28 text-[12px] border border-ink-300 rounded-md px-2 py-1 outline-none focus:border-brand-purple"
           />
           <button

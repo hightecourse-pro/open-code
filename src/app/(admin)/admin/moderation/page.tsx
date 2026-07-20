@@ -104,7 +104,7 @@ export default async function AdminModerationPage() {
                           טופל · הסרת התוכן
                         </ConfirmActionButton>
                         <form action={updateReportStatus.bind(null, r.id, "dismissed")}>
-                          <Button type="submit" variant="ghost" size="sm">דחייה</Button>
+                          <Button type="submit" variant="ghost" size="sm">דחיית הדיווח</Button>
                         </form>
                       </div>
                     )}
@@ -127,7 +127,7 @@ export default async function AdminModerationPage() {
             })}
           </div>
         ) : (
-          <p className="text-ink-500 text-sm py-4">אין דיווחים פתוחים — הקהילה נקייה 💜</p>
+          <p className="text-ink-500 text-sm py-4">עדיין אין דיווחים — הקהילה נקייה 💜</p>
         )}
       </div>
     </div>

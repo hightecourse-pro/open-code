@@ -67,9 +67,9 @@ export function AdminJobRow({ job }: { job: AdminJob }) {
             </Select>
           </Field>
           <Field label="מיקום"><Input name="location" defaultValue={job.location ?? ""} /></Field>
-          <Field label="טכנולוגיות (פסיק)"><Input name="tech" dir="ltr" defaultValue={job.tech_tags.join(", ")} /></Field>
+          <Field label="טכנולוגיות (מופרדות בפסיק)"><Input name="tech" dir="ltr" defaultValue={job.tech_tags.join(", ")} /></Field>
         </div>
-        <Field label={source === "open" ? "קישור להגשה (חובה)" : "קישור הגשה"}>
+        <Field label={source === "open" ? "קישור להגשה (חובה)" : "קישור להגשה (לא חובה)"}>
           <Input name="external_url" dir="ltr" defaultValue={job.external_url ?? ""} required={source === "open"} />
         </Field>
         <Field label="תיאור"><Textarea name="description" defaultValue={job.description} /></Field>

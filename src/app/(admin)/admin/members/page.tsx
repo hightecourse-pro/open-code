@@ -184,7 +184,7 @@ export default async function AdminMembersPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;חברות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול חברות</h1>
         <p className="t-body-sm text-ink-500">
-          חיפוש וסינון מיידיים, איתור מועמדות לפי כל פרמטר בפרופיל, VIP עם סיבה והערות פנימיות.
+          חיפוש וסינון מיידיים, איתור חברות לפי כל שדה בפרופיל, סימון VIP והערות פנימיות.
         </p>
       </div>
 

@@ -199,7 +199,7 @@ export default async function AdminMemberProfilePage({
                       <Download size={13} /> הורדה
                     </a>
                   ) : (
-                    <span className="text-[12px] text-ink-400">לא זמין</span>
+                    <span className="text-[12px] text-ink-400">הקישור לא זמין</span>
                   )}
                 </div>
               );

@@ -89,7 +89,7 @@ export async function interviewFeedback(
 
   return geminiJson<InterviewFeedback>({
     apiKey,
-    system: `את מלווה מקצועית של "קוד פתוח". נתחי את הראיון ותני משוב מחזק ושימושי בעברית, בלשון נקבה.
+    system: `את יועצת קריירה של "קוד פתוח". נתחי את הראיון ותני משוב מחזק ושימושי בעברית, בלשון נקבה.
 overall_score: 0–100. summary: פסקה מסכמת חמה. strengths: 2–4 חוזקות. improvements: 2–4 נקודות לשיפור מנוסחות בעדינות.`,
     contents: [{ role: "user", text: `תמליל הראיון:\n${transcript}` }],
     jsonSchema: FEEDBACK_SCHEMA,

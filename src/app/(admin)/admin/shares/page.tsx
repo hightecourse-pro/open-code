@@ -64,7 +64,7 @@ export default async function AdminSharesPage() {
                 </Badge>
                 <span className="text-ink-700 text-sm">{titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—"}</span>
                 <form action={markShareStatus.bind(null, s.id, "shared")} className="ms-auto">
-                  <Button type="submit" size="sm">סימון כשותף ✓</Button>
+                  <Button type="submit" size="sm">סימון כבוצע ✓</Button>
                 </form>
               </div>
             ))}

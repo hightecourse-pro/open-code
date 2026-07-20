@@ -61,7 +61,7 @@ export default async function AdminJobsPage() {
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">הגשות מועמדות</h3>
-        <p className="text-[12.5px] text-ink-500 mb-3">מועמדות שהגישו למשרות פנימיות — נהלי את התהליך כאן.</p>
+        <p className="text-[12.5px] text-ink-500 mb-3">מועמדות שהגישו למשרות שלנו — נהלי את התהליך כאן.</p>
         {applications && applications.length > 0 ? (
           <div className="flex flex-col">
             {applications.map((a) => {
@@ -83,7 +83,7 @@ export default async function AdminJobsPage() {
                       <Button type="submit" size="sm">התקבלה</Button>
                     </form>
                     <form action={setApplicationStatus.bind(null, a.id, "rejected")}>
-                      <Button type="submit" size="sm" variant="ghost">דחייה</Button>
+                      <Button type="submit" size="sm" variant="ghost">נדחתה</Button>
                     </form>
                   </div>
                 </div>
@@ -91,7 +91,7 @@ export default async function AdminJobsPage() {
             })}
           </div>
         ) : (
-          <p className="text-ink-500 text-sm py-2">עדיין אין הגשות.</p>
+          <p className="text-ink-500 text-sm py-2">אין הגשות עדיין.</p>
         )}
       </div>
     </div>

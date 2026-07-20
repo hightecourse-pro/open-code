@@ -32,7 +32,7 @@ export default async function AdminMentorRequestsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <span className="font-mono text-xs text-brand-pink-deep">&lt;מנטוריות/&gt;</span>
+        <span className="font-mono text-xs text-brand-pink-deep">&lt;בקשות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">בקשות למנטורית</h1>
         <p className="t-body-sm text-ink-500">
           חברות שביקשו שנחבר אותן למנטורית. אחרי שחיברת — סמני כטופל.

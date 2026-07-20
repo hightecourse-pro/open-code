@@ -11,7 +11,7 @@ export function PricingForm({ pricing }: { pricing: Pricing }) {
   return (
     <form action={action} className="flex flex-col gap-4">
       {state.error && <Alert variant="danger">{state.error}</Alert>}
-      {state.ok && <Alert variant="success">המחיר עודכן ✓ החברות יראו אותו מיד.</Alert>}
+      {state.ok && <Alert variant="success">המחיר עודכן ✓ חברות חדשות יראו אותו במסך ההצטרפות.</Alert>}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field label="דמי מנוי חודשיים (₪)" htmlFor="p-monthly">

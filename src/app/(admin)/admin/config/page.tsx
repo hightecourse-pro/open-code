@@ -9,7 +9,7 @@ import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans, shekels } from "@/lib/payments/plans";
 import type { ConfigTaxonomy, FieldType, TaxonomyKind } from "@/types/database";
 
-export const metadata: Metadata = { title: "קונפיגורציה" };
+export const metadata: Metadata = { title: "הגדרות" };
 
 const FIELD_LABEL: Record<FieldType, string> = {
   text: "טקסט",
@@ -55,9 +55,9 @@ export default async function AdminConfigPage() {
     <div className="flex flex-col gap-6">
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;config/&gt;</span>
-        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">קונפיגורציה</h1>
+        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הגדרות</h1>
         <p className="t-body-sm text-ink-500">
-          כל שינוי כאן משתקף מיד בפרופיל של החברות — בלי לגעת בקוד.
+          כל שינוי כאן משתקף מיד אצל החברות — בלי לגעת בקוד.
         </p>
       </div>
 
@@ -88,7 +88,7 @@ export default async function AdminConfigPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">שאלות הפרופיל</h3>
         <p className="text-[12.5px] text-ink-500 mb-4">
-          השאלות שחברות ממלאות בפרופיל. כבי כדי להסתיר מבלי למחוק.
+          השאלות שחברות ממלאות בפרופיל. כבי שאלה כדי להסתיר אותה בלי למחוק.
         </p>
         <div className="flex flex-col">
           {(questions ?? []).map((q) => {
@@ -112,7 +112,7 @@ export default async function AdminConfigPage() {
                       {q.required && <Badge variant="pink">חובה</Badge>}
                       {q.taxonomy_kind && <Badge variant="tech">רשימה: {KIND_LABEL[q.taxonomy_kind]}</Badge>}
                       {q.key === "city" && <Badge variant="mint">רשימת ערים מ-gov.il</Badge>}
-                      {locked && <Badge variant="tech">מובנה · חובה</Badge>}
+                      {locked && <Badge variant="tech">מובנית · חובה</Badge>}
                       {q.scope !== "all" && (
                         <Badge variant="indigo">{q.scope === "mentor" ? "מנטוריות" : "ג'וניוריות"}</Badge>
                       )}
@@ -121,7 +121,7 @@ export default async function AdminConfigPage() {
                   {locked ? (
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-tint-mint text-[#1B7A4B]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#28A864]" />
-                      פעילה · 🔒 קבוע
+                      פעילה · 🔒 קבועה
                     </span>
                   ) : (
                     <QuestionToggle id={q.id} active={q.active} />
