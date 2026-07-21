@@ -7,14 +7,19 @@
 //   * member_crm (VIP flag, VIP reason, internal notes) is never read here.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getTaxonomyOptions } from "@/lib/taxonomies";
-import { LANGUAGE_SKILLS_KEY, langLevelLabel, parseLangSkills } from "@/lib/language-skills";
-import type { ConfigQuestion } from "@/types/database";
-import type { CandidateDetail, CandidateField } from "./types";
+import { getTaxonomyOptions, type TaxonomyOption } from "@/lib/taxonomies";
+import {
+  DEFAULT_LANGUAGES,
+  LANGUAGE_SKILLS_KEY,
+  langLevelLabel,
+  parseLangSkills,
+} from "@/lib/language-skills";
+import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
+import type { CandidateDetail, CandidateField, CatalogueField } from "./types";
 
 // Shapes and the pure filter live in their own modules so the client filter UI
 // can use them without pulling this server-only file into the browser bundle.
-export type { CandidateDetail, CandidateField, CandidateSummary } from "./types";
+export type { CandidateDetail, CandidateField, CandidateSummary, CatalogueField } from "./types";
 export { applyFilters, searchableText } from "./filters";
 
 /** Free-text URLs in an answer become clickable project/repo links. */
@@ -34,8 +39,7 @@ async function employerQuestions(): Promise<ConfigQuestion[]> {
 }
 
 /** Machine value → the label a human picked, for select/multiselect answers. */
-async function labelResolver() {
-  const [taxonomies] = await Promise.all([getTaxonomyOptions()]);
+function labelResolverFrom(taxonomies: Partial<Record<TaxonomyKind, TaxonomyOption[]>>) {
   return function labelsFor(q: ConfigQuestion): Map<string, string> {
     const opts = q.taxonomy_kind
       ? taxonomies[q.taxonomy_kind] ?? []
@@ -75,13 +79,83 @@ function toDisplay(
   return { values: [], kind: "text" };
 }
 
+/**
+ * The filter palette the recruiter sees. Built from the employer-visible
+ * QUESTIONS (with their defined options / taxonomy values) unioned with any
+ * values that actually occur in the data — so the parameters mirror the
+ * profile structure and show up even before any candidate is listed.
+ */
+function buildCatalogue(
+  questions: ConfigQuestion[],
+  taxonomies: Partial<Record<TaxonomyKind, TaxonomyOption[]>>,
+  candidates: CandidateDetail[]
+): CatalogueField[] {
+  const out: CatalogueField[] = [];
+
+  for (const q of questions) {
+    if (q.key === LANGUAGE_SKILLS_KEY) {
+      const langs = new Set<string>(DEFAULT_LANGUAGES);
+      for (const c of candidates) {
+        for (const v of c.fields.find((f) => f.key === q.key)?.values ?? []) {
+          const lang = v.split(" — ")[0]?.trim();
+          if (lang) langs.add(lang);
+        }
+      }
+      out.push({ key: q.key, label: q.label_he, values: [...langs].sort((a, b) => a.localeCompare(b, "he")) });
+      continue;
+    }
+
+    if (q.field_type === "bool") {
+      out.push({ key: q.key, label: q.label_he, values: ["כן", "לא"] });
+      continue;
+    }
+
+    if (q.field_type === "select" || q.field_type === "multiselect" || q.field_type === "tags") {
+      const defined = q.taxonomy_kind
+        ? (taxonomies[q.taxonomy_kind] ?? []).map((o) => o.label)
+        : Array.isArray(q.options)
+          ? (q.options as unknown as { value: string; label: string }[]).map((o) => o.label)
+          : [];
+      const seen = new Set<string>();
+      for (const c of candidates) {
+        if (q.key === "specialization" && c.specialization) seen.add(c.specialization);
+        else if (q.key === "region" && c.region) seen.add(c.region);
+        else for (const v of c.fields.find((f) => f.key === q.key)?.values ?? []) seen.add(v);
+      }
+      const values = [...new Set([...defined, ...seen])].filter(
+        (v) => v && v !== "other" && v !== "אחר"
+      );
+      if (values.length) out.push({ key: q.key, label: q.label_he, values });
+      continue;
+    }
+
+    if (q.field_type === "number") {
+      const seen = new Set<string>();
+      for (const c of candidates) {
+        for (const v of c.fields.find((f) => f.key === q.key)?.values ?? []) seen.add(v);
+      }
+      if (seen.size) {
+        out.push({
+          key: q.key,
+          label: q.label_he,
+          values: [...seen].sort((a, b) => Number(a) - Number(b)),
+        });
+      }
+    }
+    // Free text fields aren't offered as chips — the free-text search covers them.
+  }
+
+  return out;
+}
+
 /** Every listed candidate, with only employer-visible answers attached. */
 export async function loadCandidates(): Promise<{
   candidates: CandidateDetail[];
   questions: ConfigQuestion[];
+  catalogue: CatalogueField[];
 }> {
   const admin = createAdminClient();
-  const questions = await employerQuestions();
+  const [questions, taxonomies] = await Promise.all([employerQuestions(), getTaxonomyOptions()]);
   const visibleIds = new Set(questions.map((q) => q.id));
   // The profiles row carries denormalized copies of a few answers. Honor the
   // employer_visible flag for these too — hiding the question hides the column.
@@ -89,7 +163,7 @@ export async function loadCandidates(): Promise<{
   const showBio = visibleKeys.has("bio");
   const showSpecialization = visibleKeys.has("specialization");
   const showRegion = visibleKeys.has("region");
-  const labelsFor = await labelResolver();
+  const labelsFor = labelResolverFrom(taxonomies);
 
   const { data: profiles } = await admin
     .from("profiles")
@@ -101,7 +175,11 @@ export async function loadCandidates(): Promise<{
     .order("full_name", { ascending: true });
 
   const listed = (profiles ?? []).filter((p) => p.portal_listed !== false);
-  if (listed.length === 0) return { candidates: [], questions };
+  // No candidates yet — still return the full filter palette from the questions
+  // so the recruiter sees the parameters that mirror the profile.
+  if (listed.length === 0) {
+    return { candidates: [], questions, catalogue: buildCatalogue(questions, taxonomies, []) };
+  }
 
   // Answers are fetched for the listed members only, then filtered down to the
   // employer-visible questions before anything is returned.
@@ -160,6 +238,6 @@ export async function loadCandidates(): Promise<{
     };
   });
 
-  return { candidates, questions };
+  return { candidates, questions, catalogue: buildCatalogue(questions, taxonomies, candidates) };
 }
 

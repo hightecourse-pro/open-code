@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { createJob, type FormState } from "@/app/(admin)/admin/actions";
+import type { PortalClientOption } from "./admin-job-row";
 
 const EMPLOYMENT: { value: string; label: string }[] = [
   { value: "full", label: "משרה מלאה" },
@@ -11,7 +12,7 @@ const EMPLOYMENT: { value: string; label: string }[] = [
   { value: "freelance", label: "פרילנס" },
 ];
 
-export function AdminCreateJob() {
+export function AdminCreateJob({ clients }: { clients: PortalClientOption[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createJob, {});
   const [source, setSource] = useState("open");
 
@@ -43,6 +44,14 @@ export function AdminCreateJob() {
         </Field>
         <Field label="מיקום" htmlFor="j-location">
           <Input id="j-location" name="location" placeholder="תל אביב / מרחוק" />
+        </Field>
+        <Field label="לקוח פורטל (לא חובה)" htmlFor="j-client">
+          <Select id="j-client" name="client_id" defaultValue="">
+            <option value="">— ללא —</option>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>{c.company_name}</option>
+            ))}
+          </Select>
         </Field>
       </div>
       <Field label="טכנולוגיות (מופרדות בפסיק)" htmlFor="j-tech">

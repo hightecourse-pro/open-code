@@ -2,7 +2,7 @@
 
 import { getPortalClient } from "@/lib/portal/auth";
 import { loadCandidates } from "@/lib/portal/candidates";
-import { buildFieldCatalogue, interpretQuery } from "@/lib/portal/smart-search";
+import { interpretQuery } from "@/lib/portal/smart-search";
 
 export type SmartSearchState =
   | { status: "idle" }
@@ -35,8 +35,8 @@ export async function smartSearch(
   // The field catalogue is rebuilt on the server rather than accepted from the
   // request, so a tampered POST can't feed arbitrary text into the model prompt
   // or widen the search beyond employer-visible fields.
-  const { candidates } = await loadCandidates();
-  const result = await interpretQuery(text, buildFieldCatalogue(candidates));
+  const { catalogue } = await loadCandidates();
+  const result = await interpretQuery(text, catalogue);
 
   if (!result.ok) return { status: "error", message: UNAVAILABLE };
 

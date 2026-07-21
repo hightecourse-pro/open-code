@@ -5,8 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
-import { applicationStatusEmail } from "@/lib/email/templates";
+import { applicationStatusEmail, jobCandidatesEmail } from "@/lib/email/templates";
 import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
+import { loadClientJob } from "@/lib/portal/jobs";
+import { getSiteUrl } from "@/lib/site";
 import type {
   ApplicationStatus,
   EmploymentType,
@@ -367,6 +369,82 @@ export async function deleteJob(jobId: string): Promise<void> {
   await supabase.from("jobs").delete().eq("id", jobId);
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
+}
+
+// ------------------------------------------------------- portal job candidates
+
+/** Curate a candidate onto a client's job (shown to the client in the portal). */
+export async function addJobCandidate(jobId: string, profileId: string): Promise<void> {
+  const me = await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("job_candidates")
+    .upsert({ job_id: jobId, profile_id: profileId, created_by: me.id }, { onConflict: "job_id,profile_id" });
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+}
+
+/** Remove a curated candidate from a job. */
+export async function removeJobCandidate(jobId: string, profileId: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("job_candidates").delete().eq("job_id", jobId).eq("profile_id", profileId);
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+}
+
+/**
+ * Email the client the candidates curated for their job, with a link straight
+ * into that job in the portal. The names are resolved through loadClientJob —
+ * the same privacy gate the portal renders behind — so a member who opted out
+ * (or is paused / no longer a listed junior) is never named to the client,
+ * even if she is still a row in job_candidates.
+ */
+export async function sendJobCandidatesToClient(jobId: string): Promise<{ ok?: boolean; error?: string }> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+
+  const { data: job } = await admin
+    .from("jobs")
+    .select("id, title, client_id")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (!job) return { error: "המשרה לא נמצאה." };
+  if (!job.client_id) return { error: "המשרה לא מקושרת ללקוח פורטל. חברי אותה ללקוח בעריכת המשרה." };
+
+  const { data: client } = await admin
+    .from("portal_clients")
+    .select("company_name, contact_email")
+    .eq("id", job.client_id)
+    .maybeSingle();
+  if (!client?.contact_email) {
+    return { error: "ללקוח אין אימייל ליצירת קשר. הוסיפי אותו במסך לקוחות פורטל." };
+  }
+
+  // Resolve names through the portal's single door, never from profiles
+  // directly — this drops any curated candidate the client can't actually see,
+  // so the email and the portal job page always name exactly the same people.
+  const clientJob = await loadClientJob(job.client_id, jobId);
+  const names = (clientJob?.candidates ?? []).map((c) => c.name).filter(Boolean);
+  if (names.length === 0) {
+    return {
+      error:
+        "אין מועמדות שניתן להציג ללקוח למשרה הזו. ודאי שהוספת מועמדות פעילות המפורסמות בפורטל.",
+    };
+  }
+
+  const built = jobCandidatesEmail(
+    client.company_name,
+    job.title,
+    names,
+    `${getSiteUrl()}/portal/job/${jobId}`
+  );
+  const sent = await sendResendEmail({ to: client.contact_email, subject: built.subject, html: built.html });
+  if (!sent.ok) {
+    console.error("[job candidates email] send failed:", sent.error);
+    return { error: "המייל לא נשלח. נסי שוב." };
+  }
+  return { ok: true };
 }
 
 /** Update a candidate application's status (internal-job pipeline). */

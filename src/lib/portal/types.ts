@@ -25,3 +25,10 @@ export interface CandidateDetail extends CandidateSummary {
   fields: CandidateField[];
   links: { label: string; url: string }[];
 }
+
+/** One filterable profile parameter offered in the portal search. */
+export interface CatalogueField {
+  key: string;
+  label: string;
+  values: string[];
+}

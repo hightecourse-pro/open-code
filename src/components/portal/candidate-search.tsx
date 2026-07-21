@@ -1,22 +1,18 @@
 "use client";
 
-import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { Search, Sparkles, X } from "lucide-react";
-import { Alert, Avatar, Badge, Button, Card, Field, Input, Select, Textarea } from "@/components/ui";
+import { Alert, Button, Card, Field, Input, Select, Textarea } from "@/components/ui";
 import { applyFilters } from "@/lib/portal/filters";
+import { CandidateCard } from "@/components/portal/candidate-card";
 import { smartSearch, type SmartSearchState } from "@/app/portal/search-actions";
-import type { CandidateDetail } from "@/lib/portal/types";
-
-export interface CatalogueField {
-  key: string;
-  label: string;
-  values: string[];
-}
+import type { CandidateDetail, CatalogueField } from "@/lib/portal/types";
 
 interface Props {
   candidates: CandidateDetail[];
   catalogue: CatalogueField[];
+  /** profile ids this client already favorited, for the card star state. */
+  favoriteIds: string[];
 }
 
 const INITIAL: SmartSearchState = { status: "idle" };
@@ -42,7 +38,8 @@ function countsFor(
   );
 }
 
-export function CandidateSearch({ candidates, catalogue }: Props) {
+export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
+  const favSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
   // Which parameter's value list is open. Filters accumulate across parameters,
   // so switching this only changes what's on screen, never what's selected.
   const [activeKey, setActiveKey] = useState(catalogue[0]?.key ?? "");
@@ -286,34 +283,7 @@ export function CandidateSearch({ candidates, catalogue }: Props) {
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 list-none p-0 m-0">
           {results.map((c) => (
             <li key={c.id}>
-              <Link href={`/portal/candidate/${c.id}`} className="block h-full no-underline">
-                <Card interactive className="h-full flex flex-col gap-3">
-                  <div className="flex items-center gap-3">
-                    <Avatar initials={c.initials} size="md" />
-                    <div className="min-w-0">
-                      <p className="font-display font-bold text-ink-1000 truncate">{c.name}</p>
-                      {c.specialization && (
-                        <p className="t-caption truncate">{c.specialization}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {c.region && <Badge variant="indigo">{c.region}</Badge>}
-                    {c.isExperienced && <Badge variant="mint">בעלת ניסיון</Badge>}
-                  </div>
-
-                  {c.headline.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-auto pt-1">
-                      {c.headline.map((tech) => (
-                        <Badge key={tech} variant="tech">
-                          {tech}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </Card>
-              </Link>
+              <CandidateCard candidate={c} favorited={favSet.has(c.id)} />
             </li>
           ))}
         </ul>

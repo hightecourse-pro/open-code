@@ -153,6 +153,32 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["portal_clients"]["Insert"]>;
         Relationships: [];
       };
+      /** Candidates an admin curated for a client's job (portal "My Jobs"). */
+      job_candidates: {
+        Row: {
+          id: string;
+          job_id: string;
+          profile_id: string;
+          created_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          job_id: string;
+          profile_id: string;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["job_candidates"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Candidates a portal client marked as favorites. */
+      portal_favorites: {
+        Row: { client_id: string; profile_id: string; created_at: string };
+        Insert: { client_id: string; profile_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["portal_favorites"]["Insert"]>;
+        Relationships: [];
+      };
       /** Shared Google API keys used by the portal's smart search. */
       system_ai_keys: {
         Row: {

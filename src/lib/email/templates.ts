@@ -274,6 +274,45 @@ export function mentorRequestEmail(
   };
 }
 
+/**
+ * Tell a hiring client that candidates were sent for one of their jobs, with a
+ * link straight into that job in the portal. Addressed to a company, so the
+ * copy is neutral/plural — not the members' feminine voice.
+ */
+export function jobCandidatesEmail(
+  companyName: string,
+  jobTitle: string,
+  candidateNames: string[],
+  portalUrl: string
+): BuiltEmail {
+  const names = candidateNames.slice(0, 12);
+  const list = names.length
+    ? `<ul style="margin:6px 0 14px; padding-inline-start:20px; color:${C.body}; font-size:14px;">${names
+        .map((n) => `<li style="margin-bottom:4px;">${n}</li>`)
+        .join("")}</ul>`
+    : "";
+  const more =
+    candidateNames.length > names.length
+      ? `<p style="font-size:13px; color:${C.muted}; margin:0 0 14px;">ועוד ${candidateNames.length - names.length} מועמדות בפורטל.</p>`
+      : "";
+
+  return {
+    subject: `מועמדות למשרת ${jobTitle} · קוד פתוח`,
+    html: renderEmail({
+      heading: "בחרנו לכם מועמדות 👋",
+      lines: [
+        `שלום ${companyName},`,
+        `ריכזנו עבורכם מועמדות רלוונטיות למשרת <b>${jobTitle}</b>. אפשר לצפות בפרופיל המלא של כל אחת — ולהוריד קורות חיים אם תרצו.`,
+        `${list}${more}`,
+        "הכניסה לפורטל עם שם המשתמש והסיסמה שקיבלתם.",
+      ],
+      ctaText: "צפייה במועמדות למשרה",
+      ctaUrl: portalUrl,
+      footnote: "המידע מיועד לשימוש בתהליכי הגיוס שלכם בלבד.",
+    }),
+  };
+}
+
 /** Fallback for any other auth action (email change, reauth, invite, …). */
 export function genericActionEmail(actionUrl: string): BuiltEmail {
   return {

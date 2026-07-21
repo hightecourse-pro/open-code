@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
+import { PortalNav } from "@/components/portal/portal-nav";
 import { portalLogout } from "./actions";
 import { portalClient } from "./session";
 
@@ -31,9 +32,7 @@ export default async function PortalLayout({ children }: { children: React.React
           </Link>
 
           <span aria-hidden className="h-6 w-px bg-white/15" />
-          <span className="hidden text-[13px] font-semibold tracking-wide text-white/60 sm:inline">
-            פורטל מועמדות
-          </span>
+          <PortalNav />
 
           <div className="ms-auto flex items-center gap-4">
             <div className="hidden text-end leading-tight sm:block">

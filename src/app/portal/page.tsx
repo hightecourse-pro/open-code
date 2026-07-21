@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getPortalClient } from "@/lib/portal/auth";
 import { loadCandidates } from "@/lib/portal/candidates";
-import { buildFieldCatalogue } from "@/lib/portal/smart-search";
+import { favoriteIds } from "@/lib/portal/favorites";
 import { CandidateSearch } from "@/components/portal/candidate-search";
 
 export const metadata: Metadata = { title: "חיפוש מועמדות" };
@@ -14,8 +14,8 @@ export default async function PortalSearchPage() {
   // loadCandidates() is the only door to candidate data: it filters to listed
   // profiles and to employer-visible answers, so nothing else needs to be
   // checked here. member_crm (VIP, internal notes) is never touched.
-  const { candidates } = await loadCandidates();
-  const catalogue = buildFieldCatalogue(candidates);
+  const { candidates, catalogue } = await loadCandidates();
+  const favs = await favoriteIds(client.id);
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-8 flex flex-col gap-6">
@@ -28,7 +28,7 @@ export default async function PortalSearchPage() {
         </p>
       </header>
 
-      <CandidateSearch candidates={candidates} catalogue={catalogue} />
+      <CandidateSearch candidates={candidates} catalogue={catalogue} favoriteIds={[...favs]} />
     </div>
   );
 }

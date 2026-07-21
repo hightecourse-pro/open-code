@@ -6,7 +6,7 @@
 
 import { geminiJson } from "@/lib/ai/gemini";
 import { withPoolKey } from "@/lib/ai/system-keys";
-import type { CandidateDetail } from "./types";
+import type { CatalogueField } from "./types";
 
 export interface SmartQuery {
   /** question key → values that must match (OR within, AND across). */
@@ -48,7 +48,7 @@ export type SmartResult =
  */
 export async function interpretQuery(
   text: string,
-  fieldCatalogue: { key: string; label: string; values: string[] }[]
+  fieldCatalogue: CatalogueField[]
 ): Promise<SmartResult> {
   const catalogue = fieldCatalogue
     .map((f) => `- ${f.key} ("${f.label}"): ${f.values.slice(0, 40).join(" | ") || "טקסט חופשי"}`)
@@ -96,23 +96,4 @@ ${catalogue}
       interpretation: result.data.interpretation ?? "",
     },
   };
-}
-
-/** The distinct values that actually exist, so the model filters on reality. */
-export function buildFieldCatalogue(
-  candidates: CandidateDetail[]
-): { key: string; label: string; values: string[] }[] {
-  const byKey = new Map<string, { label: string; values: Set<string> }>();
-  for (const c of candidates) {
-    for (const f of c.fields) {
-      const entry = byKey.get(f.key) ?? { label: f.label, values: new Set<string>() };
-      if (f.kind === "chips") f.values.forEach((v) => entry.values.add(v));
-      byKey.set(f.key, entry);
-    }
-  }
-  return [...byKey.entries()].map(([key, v]) => ({
-    key,
-    label: v.label,
-    values: [...v.values].sort((a, b) => a.localeCompare(b, "he")),
-  }));
 }

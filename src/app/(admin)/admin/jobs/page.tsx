@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import { Badge, Button } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireRole } from "@/lib/auth";
 import { AdminCreateJob } from "@/components/patterns/admin-create-job";
-import { AdminJobRow, type AdminJob } from "@/components/patterns/admin-job-row";
+import { AdminJobRow, type AdminJob, type PortalClientOption } from "@/components/patterns/admin-job-row";
 import { setApplicationStatus } from "../actions";
 import type { ApplicationStatus } from "@/types/database";
 
@@ -17,11 +19,23 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; variant: "warm" | "
 };
 
 export default async function AdminJobsPage() {
+  await requireRole("admin");
   const supabase = await createClient();
   const { data: jobs } = await supabase
     .from("jobs")
-    .select("id, company, title, source, employment_type, location, tech_tags, external_url, description, status, created_at")
+    .select("id, company, title, source, employment_type, location, tech_tags, external_url, description, status, client_id, created_at")
     .order("created_at", { ascending: false });
+
+  // Portal clients a job can be linked to (admin-only table → service role).
+  const { data: clientRows } = await createAdminClient()
+    .from("portal_clients")
+    .select("id, company_name")
+    .eq("is_active", true)
+    .order("company_name", { ascending: true });
+  const clients: PortalClientOption[] = (clientRows ?? []).map((c) => ({
+    id: c.id,
+    company_name: c.company_name,
+  }));
 
   const jobMap = new Map((jobs ?? []).map((j) => [j.id, j]));
 
@@ -46,14 +60,14 @@ export default async function AdminJobsPage() {
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-3">הוספת משרה</h3>
-        <AdminCreateJob />
+        <AdminCreateJob clients={clients} />
       </div>
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-3">כל המשרות ({jobs?.length ?? 0})</h3>
         <div className="flex flex-col">
           {(jobs ?? []).map((j) => (
-            <AdminJobRow key={j.id} job={j as AdminJob} />
+            <AdminJobRow key={j.id} job={j as AdminJob} clients={clients} />
           ))}
           {(jobs ?? []).length === 0 && <p className="text-ink-500 text-sm py-4">אין משרות עדיין.</p>}
         </div>

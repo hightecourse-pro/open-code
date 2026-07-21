@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Pencil, Lock, Unlock, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { Pencil, Lock, Unlock, Trash2, Users } from "lucide-react";
 import { Alert, Badge, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { editJob, setJobStatus, deleteJob, type FormState } from "@/app/(admin)/admin/actions";
 import type { EmploymentType, JobSource, JobStatus } from "@/types/database";
@@ -17,6 +18,12 @@ export interface AdminJob {
   external_url: string | null;
   description: string;
   status: JobStatus;
+  client_id: string | null;
+}
+
+export interface PortalClientOption {
+  id: string;
+  company_name: string;
 }
 
 const EMP: Record<EmploymentType, string> = {
@@ -26,7 +33,7 @@ const EMP: Record<EmploymentType, string> = {
   freelance: "פרילנס",
 };
 
-export function AdminJobRow({ job }: { job: AdminJob }) {
+export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalClientOption[] }) {
   const [editing, setEditing] = useState(false);
   const [source, setSource] = useState(job.source);
   const [state, action, pending] = useActionState<FormState, FormData>(
@@ -68,6 +75,14 @@ export function AdminJobRow({ job }: { job: AdminJob }) {
           </Field>
           <Field label="מיקום"><Input name="location" defaultValue={job.location ?? ""} /></Field>
           <Field label="טכנולוגיות (מופרדות בפסיק)"><Input name="tech" dir="ltr" defaultValue={job.tech_tags.join(", ")} /></Field>
+          <Field label="לקוח פורטל (לא חובה)">
+            <Select name="client_id" defaultValue={job.client_id ?? ""}>
+              <option value="">— ללא —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>{c.company_name}</option>
+              ))}
+            </Select>
+          </Field>
         </div>
         <Field label={source === "open" ? "קישור להגשה (חובה)" : "קישור להגשה (לא חובה)"}>
           <Input name="external_url" dir="ltr" defaultValue={job.external_url ?? ""} required={source === "open"} />
@@ -92,6 +107,13 @@ export function AdminJobRow({ job }: { job: AdminJob }) {
         </div>
       </div>
       <Badge variant={job.status === "open" ? "mint" : "tech"}>{job.status === "open" ? "פתוחה" : "סגורה"}</Badge>
+      <Link
+        href={`/admin/jobs/${job.id}`}
+        className="text-ink-400 hover:text-brand-pink-deep p-1.5"
+        title="ניהול מועמדות למשרה"
+      >
+        <Users size={15} />
+      </Link>
       <button type="button" onClick={openEdit} className="text-ink-400 hover:text-brand-purple p-1.5" title="עריכה">
         <Pencil size={15} />
       </button>

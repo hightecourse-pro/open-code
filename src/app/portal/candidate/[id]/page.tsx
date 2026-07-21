@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { Alert, Avatar, Badge, Button, type BadgeProps } from "@/components/ui";
 import { loadCandidates, type CandidateDetail, type CandidateField } from "@/lib/portal/candidates";
+import { favoriteIds } from "@/lib/portal/favorites";
+import { FavoriteButton } from "@/components/portal/favorite-button";
 import { requirePortalClient } from "@/app/portal/session";
 
 /**
@@ -151,7 +153,7 @@ export default async function CandidateProfilePage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ cv?: string }>;
 }) {
-  await requirePortalClient();
+  const client = await requirePortalClient();
   const [{ id }, { cv }] = await Promise.all([params, searchParams]);
 
   // Not being in loadCandidates() is indistinguishable from not existing — that
@@ -159,6 +161,7 @@ export default async function CandidateProfilePage({
   const candidate = await findCandidate(id);
   if (!candidate) notFound();
 
+  const favs = await favoriteIds(client.id);
   const groups = groupFields(candidate);
   const cvHref = `/portal/candidate/${candidate.id}/cv`;
 
@@ -196,10 +199,17 @@ export default async function CandidateProfilePage({
           />
 
           <div className="min-w-0 flex-1">
-            <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדת/&gt;</span>
-            <h1 className="font-display mt-1 text-[30px] leading-tight font-black text-ink-1000 sm:text-[36px]">
-              {candidate.name}
-            </h1>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדת/&gt;</span>
+                <h1 className="font-display mt-1 text-[30px] leading-tight font-black text-ink-1000 sm:text-[36px]">
+                  {candidate.name}
+                </h1>
+              </div>
+              <div className="shrink-0 print:hidden">
+                <FavoriteButton profileId={candidate.id} initial={favs.has(candidate.id)} />
+              </div>
+            </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
               {candidate.specialization && (
