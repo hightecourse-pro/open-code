@@ -23,8 +23,11 @@ export default async function PortalSearchPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">חיפוש מועמדות</h1>
         <p className="t-body-sm text-ink-500">
-          {client.company_name} — {candidates.length} מועמדות זמינות לחיפוש. אפשר לסנן לפי
-          פרמטרים, או פשוט לתאר במילים שלך את מי שאתן מחפשות.
+          {/* RLM after the dash keeps the count attached to the Hebrew text even
+              when the company name ends in Latin characters. */}
+          {client.company_name} —{"‏"}{" "}
+          {candidates.length === 1 ? "מועמדת אחת זמינה" : `${candidates.length} מועמדות זמינות`}{" "}
+          לחיפוש. אפשר לסנן לפי פרמטרים, או פשוט לתאר במילים חופשיות את מי שאתם מחפשים.
         </p>
       </header>
 

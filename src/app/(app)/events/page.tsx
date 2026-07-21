@@ -12,11 +12,13 @@ function joinUrl(session: object): string | null {
   return (session as { zoom_url?: string | null }).zoom_url ?? null;
 }
 
+// Explicit timezone: Vercel renders in UTC, and a bare toLocale* would show
+// members a session time that's off by 2-3 hours.
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long" });
+  return new Date(iso).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jerusalem" });
 }
 function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 }
 
 export default async function EventsPage() {
@@ -80,10 +82,10 @@ export default async function EventsPage() {
             >
               <div className="w-14 h-14 rounded-md bg-brand-gradient-soft flex flex-col items-center justify-center shrink-0">
                 <span className="font-display font-black text-lg text-ink-1000 leading-none">
-                  {new Date(s.scheduled_at).getDate()}
+                  {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", timeZone: "Asia/Jerusalem" })}
                 </span>
                 <span className="text-[10px] text-ink-500">
-                  {new Date(s.scheduled_at).toLocaleDateString("he-IL", { month: "short" })}
+                  {new Date(s.scheduled_at).toLocaleDateString("he-IL", { month: "short", timeZone: "Asia/Jerusalem" })}
                 </span>
               </div>
               <div className="flex-1 min-w-0">

@@ -110,7 +110,7 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
               </h2>
             </div>
             <p className="t-body-sm text-ink-500 mt-1">
-              בחרי פרמטר וסמני ערך אחד או יותר. אפשר לשלב כמה פרמטרים יחד.
+              בחרו פרמטר וסמנו ערך אחד או יותר. אפשר לשלב כמה פרמטרים יחד.
             </p>
           </div>
 
@@ -190,7 +190,7 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
               <h2 className="font-display font-bold text-[17px] text-ink-1000">חיפוש חופשי</h2>
             </div>
             <p className="t-body-sm text-ink-500 mt-1">
-              כתבי מה את מחפשת במשפט אחד, ואנחנו נתרגם את זה לסינון.
+              כתבו מה אתם מחפשים במשפט אחד, ואנחנו נתרגם את זה לסינון.
             </p>
           </div>
 

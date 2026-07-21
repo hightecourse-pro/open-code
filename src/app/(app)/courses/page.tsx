@@ -76,9 +76,16 @@ export default async function CoursesPage() {
             <div className="text-xs opacity-85 mt-1.5">השלמת {active?.progress_pct ?? 0}% מהקורס</div>
           </div>
           <div className="flex flex-col gap-2 sm:ms-auto">
-            <button className="font-display font-semibold text-[13.5px] px-[18px] py-2.5 rounded-md bg-white text-brand-pink-deep">
-              המשיכי לקורס
-            </button>
+            {activeLinks.length > 0 && (
+              <a
+                href={activeLinks[0].url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-display font-semibold text-[13.5px] px-[18px] py-2.5 rounded-md bg-white text-brand-pink-deep text-center"
+              >
+                המשיכי לקורס
+              </a>
+            )}
             <form action={returnCourse}>
               <button
                 type="submit"

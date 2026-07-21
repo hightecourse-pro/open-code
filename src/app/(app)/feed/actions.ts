@@ -86,6 +86,7 @@ export async function createPost(
   const kind: PostKind = String(formData.get("kind") ?? "feed") === "forum" ? "forum" : "feed";
 
   if (body.length < 2) return { error: "כתבי משהו קצר לפני ששולחים 🙂" };
+  if (body.length > 5000) return { error: "הפוסט ארוך מדי — עד 5,000 תווים. אפשר לפצל לכמה פוסטים 💜" };
 
   const supabase = await createClient();
   const {

@@ -174,7 +174,7 @@ export function dailyDigestEmail(data: DigestData): BuiltEmail {
     rows.push(row("📅", `<b>סשנים קרובים:</b> ${list}`, "/events", "ליומן"));
   }
 
-  const body = `<div style="font-family: Arial, 'Segoe UI', Helvetica, sans-serif; background:${C.bg}; padding:32px 16px; color:${C.ink};">
+  const body = `<div dir="rtl" style="font-family: Arial, 'Segoe UI', Helvetica, sans-serif; background:${C.bg}; padding:32px 16px; color:${C.ink};">
   <div style="max-width:480px; margin:0 auto; background:${C.card}; border-radius:18px; overflow:hidden; border:1px solid ${C.border};">
     <div style="padding:26px 24px 12px; text-align:center; background:#ffffff;">
       <img src="${LOGO}" alt="קוד פתוח" width="150" style="display:inline-block; width:150px; height:auto; border:0;" />
@@ -252,6 +252,15 @@ export function driveEmailRequestEmail(name?: string): BuiltEmail {
   };
 }
 
+/** Member-supplied text goes into email HTML — neutralize markup first. */
+function escapeHtml(text: string): string {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
 /** Tell the team a member asked to be matched with a mentor. */
 export function mentorRequestEmail(
   memberName: string,
@@ -263,9 +272,9 @@ export function mentorRequestEmail(
     html: renderEmail({
       heading: "בקשה חדשה למנטורית 👑",
       lines: [
-        `<b>${memberName}</b> ביקשה שנחבר אותה למנטורית.`,
-        `<b>הסיבה:</b> ${reasonLabel}`,
-        ...(note ? [`<b>מה שהיא כתבה:</b> ${note}`] : []),
+        `<b>${escapeHtml(memberName)}</b> ביקשה שנחבר אותה למנטורית.`,
+        `<b>הסיבה:</b> ${escapeHtml(reasonLabel)}`,
+        ...(note ? [`<b>מה שהיא כתבה:</b> ${escapeHtml(note)}`] : []),
       ],
       ctaText: "לבקשות למנטורית",
       ctaUrl: `${SITE}/admin/mentor-requests`,
@@ -288,7 +297,7 @@ export function jobCandidatesEmail(
   const names = candidateNames.slice(0, 12);
   const list = names.length
     ? `<ul style="margin:6px 0 14px; padding-inline-start:20px; color:${C.body}; font-size:14px;">${names
-        .map((n) => `<li style="margin-bottom:4px;">${n}</li>`)
+        .map((n) => `<li style="margin-bottom:4px;">${escapeHtml(n)}</li>`)
         .join("")}</ul>`
     : "";
   const more =

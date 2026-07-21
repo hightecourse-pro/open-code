@@ -19,5 +19,5 @@ export function timeAgo(iso: string): string {
   if (abs < 86400) return rtf.format(Math.round(diffSec / 3600), "hour");
   if (abs < 604800) return rtf.format(Math.round(diffSec / 86400), "day");
 
-  return new Date(iso).toLocaleDateString("he-IL", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString("he-IL", { day: "numeric", month: "short", timeZone: "Asia/Jerusalem" });
 }

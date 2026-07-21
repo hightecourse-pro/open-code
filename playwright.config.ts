@@ -7,6 +7,8 @@ const isLocal = baseURL.includes("localhost");
 
 export default defineConfig({
   testDir: "./e2e",
+  // Sweep the data the specs create so runs never pollute what members see.
+  globalTeardown: "./e2e/global-teardown.mjs",
   timeout: 30_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,

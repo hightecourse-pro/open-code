@@ -4,6 +4,11 @@ import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypt
 // only; the plaintext key never leaves the server. Set AI_KEY_SECRET to a long
 // random value in production (without it, a clearly-insecure dev fallback runs).
 const SECRET = process.env.AI_KEY_SECRET || "opencode-dev-insecure-secret-change-me";
+// Loud in the logs if production ever runs on the dev fallback — ciphertext
+// would be decryptable by anyone reading this source.
+if (!process.env.AI_KEY_SECRET && process.env.NODE_ENV === "production") {
+  console.error("[crypto] AI_KEY_SECRET is not set in production — using the INSECURE dev fallback.");
+}
 const KEY = scryptSync(SECRET, "opencode-ai-keys-v1", 32);
 
 export function encryptSecret(plain: string): string {

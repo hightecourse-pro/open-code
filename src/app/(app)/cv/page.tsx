@@ -3,6 +3,7 @@ import { Download, FileText, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { Badge } from "@/components/ui";
+import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { CvUploadForm } from "@/components/patterns/cv-upload-form";
 import { deleteCv } from "./actions";
 import type { CvLanguage } from "@/types/database";
@@ -73,11 +74,14 @@ export default async function CvPage() {
                       <Download size={17} />
                     </a>
                   )}
-                  <form action={deleteCv.bind(null, d.id)}>
-                    <button type="submit" className="text-ink-400 hover:text-danger" title="מחיקה">
-                      <Trash2 size={16} />
-                    </button>
-                  </form>
+                  <ConfirmActionButton
+                    action={deleteCv.bind(null, d.id)}
+                    message={`למחוק את "${d.label}"? אי אפשר לשחזר את הקובץ.`}
+                    title="מחיקה"
+                    className="text-ink-400 hover:text-danger"
+                  >
+                    <Trash2 size={16} />
+                  </ConfirmActionButton>
                 </div>
               );
             })}

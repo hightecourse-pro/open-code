@@ -46,7 +46,7 @@ export async function startConversation(otherId: string) {
 
 export async function sendMessage(conversationId: string, formData: FormData) {
   const body = String(formData.get("body") ?? "").trim();
-  if (!body) return;
+  if (!body || body.length > 2000) return;
 
   const supabase = await createClient();
   const {
@@ -90,7 +90,9 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     sender_id: user.id,
     body,
   });
-  await supabase
+  // Service role: conversations has no RLS UPDATE policy, so the ordering
+  // timestamp silently never moved. The sender was already validated above.
+  await createAdminClient()
     .from("conversations")
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", conversationId);

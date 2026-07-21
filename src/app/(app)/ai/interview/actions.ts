@@ -16,7 +16,8 @@ import type { InterviewAgent, InterviewDifficulty, Json } from "@/types/database
 const AGENTS: InterviewAgent[] = ["hr", "tech", "friendly"];
 const DIFFS: InterviewDifficulty[] = ["basic", "standard", "hard"];
 
-export const REASON_MSG: Record<AiReason, string> = {
+// Not exported: a "use server" module may only export async functions.
+const REASON_MSG: Record<AiReason, string> = {
   no_key: "כדי לתרגל ראיון תצטרכי מפתח Google — תוכלי להוסיף אותו בעמוד מפתחות ה-AI.",
   exhausted: "המפתח הגיע למכסת השימוש. הוסיפי מפתח נוסף ונמשיך 💜",
   invalid: "המפתח לא תקין יותר. בדקי אותו או הוסיפי חדש.",
@@ -114,10 +115,12 @@ export async function sendAnswer(
   );
   if (!reply.ok) return { reason: reply.reason, error: REASON_MSG[reply.reason] };
 
-  await supabase.from("interview_turns").insert([
+  const { error: turnErr } = await supabase.from("interview_turns").insert([
     { session_id: sessionId, role: "candidate", text: answer },
     { session_id: sessionId, role: "agent", text: reply.data },
   ]);
+  // A silent failure here would swallow the member's answer — tell her instead.
+  if (turnErr) return { error: "התשובה לא נשמרה. נסי לשלוח אותה שוב." };
 
   revalidatePath(`/ai/interview/${sessionId}`);
   return {};

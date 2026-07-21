@@ -104,7 +104,16 @@ export async function startPortalSession(clientId: string): Promise<void> {
 
 export async function endPortalSession(): Promise<void> {
   const jar = await cookies();
-  jar.delete(COOKIE);
+  // The session cookie is scoped to path=/portal. A bare delete() targets
+  // path=/ — a different cookie as far as the browser cares — so logout would
+  // silently leave the real session alive. Expire it on its own path instead.
+  jar.set(COOKIE, "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/portal",
+    maxAge: 0,
+  });
 }
 
 /** The signed-in client, or null. Also re-checks that access is still active. */

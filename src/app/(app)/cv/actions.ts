@@ -20,6 +20,11 @@ export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<C
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "בחרי קובץ להעלאה." };
   if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי — עד 10MB." };
+  // Server-side type check — the client `accept` attribute is only a hint.
+  const okType =
+    /\.(pdf|docx?)$/i.test(file.name) ||
+    ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(file.type);
+  if (!okType) return { error: "אפשר להעלות רק PDF או Word (doc/docx)." };
 
   const langRaw = String(formData.get("language") ?? "he");
   const language: CvLanguage = (LANGS as string[]).includes(langRaw)

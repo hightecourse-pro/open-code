@@ -100,7 +100,7 @@ export default async function RecordingsPage() {
                   <div className="font-display font-bold text-[14.5px] text-ink-1000">{s.title}</div>
                   <div className="text-xs text-ink-500">
                     {s.topic ? `${s.topic} · ` : ""}
-                    {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "long" })}
+                    {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "long", timeZone: "Asia/Jerusalem" })}
                   </div>
                 </div>
                 {!subscriber ? (

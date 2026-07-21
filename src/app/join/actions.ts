@@ -28,7 +28,10 @@ export async function checkMembershipActive(): Promise<boolean> {
  * configured — in production the real server CallBack activates the member.
  */
 export async function simulatePayment(plan: SubscriptionPlan): Promise<{ error?: string }> {
-  if (isNedarimConfigured()) {
+  // Hard-blocked in production regardless of env state: the real Nedarim
+  // CallBack is the only thing that may activate a paid membership there.
+  // Without this, a missing env var would let anyone self-activate for free.
+  if (process.env.NODE_ENV === "production" || isNedarimConfigured()) {
     return { error: "סימולציה זמינה רק בסביבת פיתוח (לפני חיבור נדרים פלוס)." };
   }
   const user = await getUser();

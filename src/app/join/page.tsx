@@ -92,7 +92,12 @@ export default async function JoinPage({
     const proto = h.get("x-forwarded-proto") ?? "https";
     const origin = process.env.NEXT_PUBLIC_SITE_URL || (host ? `${proto}://${host}` : "");
     const callbackUrl = `${origin}/api/webhooks/payments`;
-    const party = { profileId: profile.id, fullName: profile.full_name, email: "" };
+    // The member's email rides along so Nedarim can send her the receipt.
+    const { createClient } = await import("@/lib/supabase/server");
+    const {
+      data: { user },
+    } = await (await createClient()).auth.getUser();
+    const party = { profileId: profile.id, fullName: profile.full_name, email: user?.email ?? "" };
     fieldsByPlan = {
       monthly: buildTransactionFields(plansRec.monthly, party, callbackUrl),
       annual: buildTransactionFields(plansRec.annual, party, callbackUrl),

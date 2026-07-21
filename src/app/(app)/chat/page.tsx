@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber, requireProfile } from "@/lib/auth";
 import { Avatar, Button } from "@/components/ui";
 import { cn, timeAgo } from "@/lib/utils";
@@ -49,6 +50,20 @@ export default async function ChatPage({
         .eq("conversation_id", active.id)
         .order("created_at", { ascending: true })
     : { data: [] };
+
+  // Opening the thread reads it: mark the other side's messages as read.
+  // Service role because RLS doesn't let a recipient update a sender's rows —
+  // safe here since `active` came from the member's own conversation list.
+  // read_at drives both the mentor "first new message" email and the digest's
+  // unread count, so without this both fire forever.
+  if (active) {
+    await createAdminClient()
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", active.id)
+      .neq("sender_id", me.id)
+      .is("read_at", null);
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -118,7 +133,7 @@ export default async function ChatPage({
                     <div key={m.id} className={cn("flex flex-col max-w-[78%]", mine ? "self-end items-end" : "self-start items-start")}>
                       <div
                         className={cn(
-                          "px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap",
+                          "px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words",
                           mine
                             ? "bg-brand-gradient text-white rounded-2xl rounded-br-md"
                             : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"

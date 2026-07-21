@@ -61,7 +61,7 @@ export function PostCard({ post, canWrite = true }: { post: FeedPost; canWrite?:
         </div>
       </header>
 
-      <p className="text-[15px] leading-relaxed text-ink-900 whitespace-pre-wrap">{post.body}</p>
+      <p className="text-[15px] leading-relaxed text-ink-900 whitespace-pre-wrap break-words">{post.body}</p>
 
       {post.tech_tags.length > 0 && (
         <div className="flex gap-1.5 mt-2.5 flex-wrap">

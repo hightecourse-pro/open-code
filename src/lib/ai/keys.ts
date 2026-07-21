@@ -58,16 +58,17 @@ export async function addUserKey(rawKey: string, label?: string): Promise<AddKey
     return { ok: false, error: "המפתח נראה קצר מדי או מכיל רווחים. העתיקי אותו שוב מ-Google AI Studio." };
   }
 
-  const valid = await verifyGeminiKey(key);
-  if (!valid) {
-    return { ok: false, error: "המפתח לא עבר אימות מול Google. בדקי שהעתקת אותו במלואו." };
-  }
-
+  // Auth first — never spend an outbound Google call on an unauthenticated request.
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "תצטרכי להתחבר מחדש." };
+
+  const valid = await verifyGeminiKey(key);
+  if (!valid) {
+    return { ok: false, error: "המפתח לא עבר אימות מול Google. בדקי שהעתקת אותו במלואו." };
+  }
 
   const { error } = await supabase.from("user_ai_keys").insert({
     profile_id: user.id,

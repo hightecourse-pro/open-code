@@ -55,7 +55,7 @@ export async function GET(req: Request) {
   const [posts, jobs, sessions, convos, unread, profiles, usersList] = await Promise.all([
     admin.from("posts").select("id", { count: "exact", head: true }).eq("kind", "forum").gte("created_at", since),
     admin.from("jobs").select("id", { count: "exact", head: true }).eq("status", "open").gte("created_at", since),
-    admin.from("sessions").select("title, scheduled_at").neq("status", "done").gte("scheduled_at", now).lte("scheduled_at", in7).order("scheduled_at", { ascending: true }),
+    admin.from("sessions").select("title, scheduled_at").neq("status", "done").is("canceled_at", null).gte("scheduled_at", now).lte("scheduled_at", in7).order("scheduled_at", { ascending: true }),
     admin.from("conversations").select("id, a_id, b_id"),
     admin.from("messages").select("conversation_id, sender_id").is("read_at", null),
     admin.from("profiles").select("*"),
@@ -66,7 +66,7 @@ export async function GET(req: Request) {
   const newJobs = jobs.count ?? 0;
   const upcomingSessions = (sessions.data ?? []).map((s) => ({
     title: s.title,
-    when: new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "short" }),
+    when: new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "short", timeZone: "Asia/Jerusalem" }),
   }));
 
   const nameOf = new Map((profiles.data ?? []).map((p) => [p.id, p.first_name || p.full_name?.split(" ")[0] || ""]));

@@ -25,6 +25,38 @@ export { applyFilters, searchableText } from "./filters";
 /** Free-text URLs in an answer become clickable project/repo links. */
 const LINK_KEYS = new Set(["github", "ai_project_links", "portfolio", "links"]);
 
+/**
+ * Question labels are written for the member filling her profile ("מה התחום
+ * שלך?"). A hiring client reads ABOUT her, so the portal swaps in neutral,
+ * third-person labels. Unmapped keys fall back to the original label.
+ */
+const PORTAL_LABELS: Record<string, string> = {
+  specialization: "תחום התמחות",
+  tech_stack: "טכנולוגיות",
+  dev_tech: "טכנולוגיות שתרגלה בפועל בהכשרה",
+  genai_known: "ידע ב-GenAI",
+  genai_practiced: "התנסות מעשית ב-GenAI (פרויקט)",
+  ai_project_links: "פרויקטי AI",
+  ai_tools_used: "כלי AI בשימוש בפועל",
+  practicum_done: "ביצעה פרקטיקום / פרויקט עם לקוח אמיתי",
+  practicum_employer: "המעסיק בפרקטיקום",
+  practicum_tech: "טכנולוגיות הפרקטיקום",
+  practicum_placement: "פתוחה להשמה דרך פרקטיקום",
+  remote_commute: "נכונות להגעה למשרה היברידית מרוחקת",
+  years_experience: "שנות ניסיון",
+  exp_role: "תפקידים עם ניסיון",
+  exp_tech: "טכנולוגיות מניסיון תעסוקתי",
+  exp_languages: "שפות תכנות מניסיון",
+  currently_working: "עובדת כיום",
+  work_description: "תיאור התפקיד והעשייה",
+  bio: "היכרות קצרה",
+};
+
+/** The label a portal client sees for a question. */
+function portalLabel(q: ConfigQuestion): string {
+  return PORTAL_LABELS[q.key] ?? q.label_he;
+}
+
 function extractUrls(text: string): string[] {
   return text.match(/https?:\/\/[^\s,]+/g) ?? [];
 }
@@ -101,12 +133,12 @@ function buildCatalogue(
           if (lang) langs.add(lang);
         }
       }
-      out.push({ key: q.key, label: q.label_he, values: [...langs].sort((a, b) => a.localeCompare(b, "he")) });
+      out.push({ key: q.key, label: portalLabel(q), values: [...langs].sort((a, b) => a.localeCompare(b, "he")) });
       continue;
     }
 
     if (q.field_type === "bool") {
-      out.push({ key: q.key, label: q.label_he, values: ["כן", "לא"] });
+      out.push({ key: q.key, label: portalLabel(q), values: ["כן", "לא"] });
       continue;
     }
 
@@ -125,7 +157,7 @@ function buildCatalogue(
       const values = [...new Set([...defined, ...seen])].filter(
         (v) => v && v !== "other" && v !== "אחר"
       );
-      if (values.length) out.push({ key: q.key, label: q.label_he, values });
+      if (values.length) out.push({ key: q.key, label: portalLabel(q), values });
       continue;
     }
 
@@ -137,7 +169,7 @@ function buildCatalogue(
       if (seen.size) {
         out.push({
           key: q.key,
-          label: q.label_he,
+          label: portalLabel(q),
           values: [...seen].sort((a, b) => Number(a) - Number(b)),
         });
       }
@@ -213,10 +245,10 @@ export async function loadCandidates(): Promise<{
       const { values, kind } = toDisplay(q, mine.get(q.id), labelsFor(q));
       if (values.length === 0) continue;
       if (kind === "links") {
-        for (const url of values) links.push({ label: q.label_he, url });
+        for (const url of values) links.push({ label: portalLabel(q), url });
         continue;
       }
-      fields.push({ key: q.key, label: q.label_he, values, kind });
+      fields.push({ key: q.key, label: portalLabel(q), values, kind });
     }
 
     const headline = fields
