@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deactivateSubscription } from "@/lib/payments/subscription";
+import { processShareQueue } from "@/lib/drive-shares";
 
 /**
- * Expires subscriptions whose paid period has ended: the member moves to
- * `paused` and her Drive access is queued for removal. Without this nothing
- * ever ends a subscription on its own — it had to be done by hand.
+ * Daily maintenance. Two jobs in one endpoint because the Hobby plan allows
+ * only once-a-day crons, so we can't afford a separate schedule per task:
+ *   1. Expire subscriptions past their paid period (member → paused, Drive
+ *      access queued for removal).
+ *   2. Action the Drive share queue (grant/revoke access). Between daily runs,
+ *      the "סנכרון עכשיו" button in /admin/shares does it on demand.
  *
  * Scheduled daily in vercel.json; also callable with ?secret=CRON_SECRET.
  */
@@ -68,6 +72,19 @@ export async function GET(request: Request) {
     }
   }
 
+  // …then action the Drive share queue (grants + revocations).
+  let drive;
+  try {
+    drive = await processShareQueue(60);
+  } catch (e) {
+    console.error("[subscriptions] drive sync failed:", e);
+  }
+
   // Bounded per run; the rest are picked up by tomorrow's run.
-  return NextResponse.json({ ok: true, expired: expiredCount, remaining: ids.length - expiredCount });
+  return NextResponse.json({
+    ok: true,
+    expired: expiredCount,
+    remaining: ids.length - expiredCount,
+    drive,
+  });
 }

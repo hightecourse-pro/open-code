@@ -7,7 +7,9 @@ import { processShareQueue } from "@/lib/drive-shares";
  * and removes it from those who shouldn't. Idempotent — anything that fails
  * is retried on the next run and stays visible in /admin/shares.
  *
- * Scheduled in vercel.json; also callable manually with ?secret=CRON_SECRET.
+ * Kept as a standalone endpoint for manual/testing use (?secret=CRON_SECRET)
+ * and behind the "סנכרון עכשיו" button. The daily scheduled run lives in the
+ * subscriptions cron, since Hobby allows only one cron per day.
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;

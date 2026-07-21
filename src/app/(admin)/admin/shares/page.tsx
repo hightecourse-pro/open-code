@@ -58,8 +58,8 @@ export default async function AdminSharesPage() {
           <Zap size={18} className="shrink-0 mt-0.5" />
           <div className="flex-1">
             <b className="font-display">שיתוף אוטומטי פעיל.</b> חברה שמצטרפת מקבלת את החומרים לבד,
-            ומי שעוזבת מאבדת גישה אוטומטית. הסנכרון רץ כל רבע שעה — מה שנשאר כאן זה מה שלא הצליח
-            אוטומטית וצריך טיפול ידני.
+            ומי שעוזבת מאבדת גישה אוטומטית. הסנכרון רץ אוטומטית פעם ביום — ולסנכרון מיידי אפשר ללחוץ
+            &quot;סנכרון עכשיו&quot;. מה שנשאר כאן זה מה שלא הצליח וצריך טיפול ידני.
           </div>
           <form action={syncDriveNow}>
             <Button type="submit" size="sm" variant="ghost">סנכרון עכשיו</Button>
