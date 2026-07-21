@@ -6,6 +6,7 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { decryptSecret, encryptSecret } from "@/lib/ai/crypto";
 
 const COOKIE = "oc_portal";
 const MAX_AGE = 60 * 60 * 12; // a working day
@@ -23,18 +24,35 @@ function sessionSecret(): string {
 
 // ------------------------------------------------------------- passwords
 
-/** scrypt hash — no external dependency, and slow enough to be worth it. */
-export function hashPassword(password: string, salt?: string): { hash: string; salt: string } {
-  const s = salt ?? crypto.randomBytes(16).toString("hex");
-  const hash = crypto.scryptSync(password.normalize("NFKC"), s, 64).toString("hex");
-  return { hash, salt: s };
+/**
+ * Passwords are stored ENCRYPTED, not hashed, on purpose: the admin generates
+ * them and has to be able to read them back to hand to the client. The table
+ * is admin-only and they gate nothing beyond privacy-filtered profiles.
+ */
+export function encryptPassword(password: string): string {
+  return encryptSecret(password);
 }
 
-export function verifyPassword(password: string, hash: string, salt: string): boolean {
-  const computed = hashPassword(password, salt).hash;
-  const a = Buffer.from(computed);
-  const b = Buffer.from(hash);
-  return a.length === b.length && crypto.timingSafeEqual(a, b);
+export function decryptPassword(payload: string | null | undefined): string | null {
+  if (!payload) return null;
+  try {
+    return decryptSecret(payload);
+  } catch {
+    return null;
+  }
+}
+
+/** Constant-time string compare, length-safe. */
+function constantEquals(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  return ab.length === bb.length && crypto.timingSafeEqual(ab, bb);
+}
+
+/** Legacy scrypt verification, for any client created before the switch. */
+function verifyLegacy(password: string, hash: string, salt: string): boolean {
+  const computed = crypto.scryptSync(password.normalize("NFKC"), salt, 64).toString("hex");
+  return constantEquals(computed, hash);
 }
 
 /**
@@ -110,13 +128,22 @@ export async function getPortalClient(): Promise<PortalClient | null> {
 /** Verify credentials. Returns the client on success, null otherwise. */
 export async function authenticate(username: string, password: string): Promise<PortalClient | null> {
   const admin = createAdminClient();
+  // select("*") so this works whether or not the password_enc migration ran.
   const { data } = await admin
     .from("portal_clients")
-    .select("id, company_name, username, password_hash, password_salt, is_active")
+    .select("*")
     .eq("username", username.trim().toLowerCase())
     .maybeSingle();
   if (!data || !data.is_active) return null;
-  if (!verifyPassword(password, data.password_hash, data.password_salt)) return null;
+
+  const enc = (data as { password_enc?: string | null }).password_enc;
+  const stored = decryptPassword(enc);
+  const ok = stored
+    ? constantEquals(password, stored)
+    : !!data.password_hash &&
+      !!data.password_salt &&
+      verifyLegacy(password, data.password_hash, data.password_salt);
+  if (!ok) return null;
 
   await admin
     .from("portal_clients")

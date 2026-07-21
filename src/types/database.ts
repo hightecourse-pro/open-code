@@ -125,8 +125,10 @@ export interface Database {
           id: string;
           company_name: string;
           username: string;
-          password_hash: string;
-          password_salt: string;
+          /** Encrypted (reversible) password — admin can re-read it. */
+          password_enc: string | null;
+          password_hash: string | null;
+          password_salt: string | null;
           contact_name: string | null;
           contact_email: string | null;
           is_active: boolean;
@@ -138,8 +140,9 @@ export interface Database {
           id?: string;
           company_name: string;
           username: string;
-          password_hash: string;
-          password_salt: string;
+          password_enc?: string | null;
+          password_hash?: string | null;
+          password_salt?: string | null;
           contact_name?: string | null;
           contact_email?: string | null;
           is_active?: boolean;

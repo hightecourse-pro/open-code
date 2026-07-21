@@ -3,12 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { generatePassword, hashPassword } from "@/lib/portal/auth";
+import { encryptPassword, generatePassword } from "@/lib/portal/auth";
 
 /**
- * `password` travels back to the admin exactly once. The DB only ever holds a
- * scrypt hash, so there is no second chance to show it — the UI has to make
- * that clear at the moment it appears.
+ * The password is stored encrypted (not hashed) so the admin can re-read it
+ * later on the clients screen — she's the one handing it to the client.
  */
 export type ClientFormState = {
   error?: string;
@@ -16,6 +15,12 @@ export type ClientFormState = {
 };
 
 export type PasswordResult = { error?: string; password?: string };
+
+/** Missing-column errors let a create/update work before the migration runs. */
+function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "42703" || /password_enc|column/i.test(error.message ?? "");
+}
 
 /**
  * Clients type this into a login box, so it has to survive being read out over
@@ -57,17 +62,22 @@ export async function createPortalClient(
   if (taken) return { error: `שם המשתמש "${username}" כבר תפוס.` };
 
   const password = generatePassword();
-  const { hash, salt } = hashPassword(password);
-
-  const { error } = await admin.from("portal_clients").insert({
+  const base = {
     company_name: companyName,
     username,
-    password_hash: hash,
-    password_salt: salt,
     contact_name: contactName,
     contact_email: contactEmail,
-  });
-  if (error) return { error: "לא הצלחנו ליצור את הלקוח. ייתכן ששם המשתמש כבר קיים." };
+  };
+
+  const { error } = await admin
+    .from("portal_clients")
+    .insert({ ...base, password_enc: encryptPassword(password) });
+  if (error) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_portal_password.sql) ב-Supabase." };
+    }
+    return { error: "לא הצלחנו ליצור את הלקוח. ייתכן ששם המשתמש כבר קיים." };
+  }
 
   revalidatePath("/admin/clients");
   return { created: { company: companyName, username, password } };
@@ -78,13 +88,16 @@ export async function regeneratePortalPassword(id: string): Promise<PasswordResu
   await requireRole("admin");
 
   const password = generatePassword();
-  const { hash, salt } = hashPassword(password);
-
   const { error } = await createAdminClient()
     .from("portal_clients")
-    .update({ password_hash: hash, password_salt: salt })
+    .update({ password_enc: encryptPassword(password) })
     .eq("id", id);
-  if (error) return { error: "איפוס הסיסמה נכשל. נסי שוב." };
+  if (error) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_portal_password.sql) ב-Supabase." };
+    }
+    return { error: "איפוס הסיסמה נכשל. נסי שוב." };
+  }
 
   revalidatePath("/admin/clients");
   return { password };

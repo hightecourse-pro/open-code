@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { Building2, Check, Copy, KeyRound, Trash2 } from "lucide-react";
+import { Building2, Check, Copy, Eye, EyeOff, KeyRound, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Field, Input } from "@/components/ui";
 import { timeAgo } from "@/lib/utils";
 import {
@@ -22,6 +22,8 @@ export interface PortalClientRow {
   created_at: string;
   last_login_at: string | null;
   job_count: number;
+  /** Decrypted server-side; null for clients created before the switch. */
+  password: string | null;
 }
 
 /** Copies text and flips to a confirmation for a moment. */
@@ -55,8 +57,8 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 }
 
 /**
- * The one and only sighting of a generated password — the DB stores a scrypt
- * hash, so this panel is genuinely the last chance to write it down.
+ * The credentials to hand to the client. The password is stored encrypted, so
+ * it can always be re-read here — no "last chance" pressure.
  */
 function CredentialsPanel({
   company,
@@ -73,9 +75,7 @@ function CredentialsPanel({
         <b className="font-display font-bold text-ink-1000 block">
           {company ? `פרטי ההתחברות של ${company}` : "פרטי ההתחברות"}
         </b>
-        <span className="text-[12.5px] text-[#8C5E0E]">
-          העתיקו ושמרו — הסיסמה לא תוצג שוב
-        </span>
+        <span className="text-[12.5px] text-[#8C5E0E]">אפשר להעתיק ולשלוח ללקוח.</span>
       </div>
 
       <div className="grid gap-2 sm:grid-cols-2">
@@ -115,6 +115,7 @@ function ClientRow({ client }: { client: PortalClientRow }) {
   const [pending, start] = useTransition();
   const [issued, setIssued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showPw, setShowPw] = useState(false);
 
   return (
     <div className="py-3.5 border-b border-ink-100 last:border-b-0 flex flex-col gap-3">
@@ -135,6 +136,28 @@ function ClientRow({ client }: { client: PortalClientRow }) {
               <span dir="ltr" className="font-mono">
                 · {client.contact_email}
               </span>
+            )}
+          </div>
+          {/* The password, revealable and copyable at any time. */}
+          <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
+            <span className="font-semibold">סיסמה:</span>
+            {client.password ? (
+              <>
+                <code dir="ltr" className="font-mono text-ink-900 select-all tracking-wide">
+                  {showPw ? client.password : "••••••••"}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => setShowPw((s) => !s)}
+                  className="inline-flex items-center gap-1 text-brand-purple hover:text-brand-pink-deep"
+                >
+                  {showPw ? <EyeOff size={13} /> : <Eye size={13} />}
+                  {showPw ? "הסתרה" : "הצגה"}
+                </button>
+                {showPw && <CopyButton value={client.password} label="העתקה" />}
+              </>
+            ) : (
+              <span className="text-ink-400">לא זמינה — הפיקי סיסמה חדשה</span>
             )}
           </div>
         </div>
@@ -227,7 +250,7 @@ export function ClientsManager({ clients }: { clients: PortalClientRow[] }) {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">הוספת לקוח</h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          הסיסמה נוצרת אוטומטית ומוצגת פעם אחת בלבד לאחר השמירה.
+          הסיסמה נוצרת אוטומטית. תמיד אפשר לראות אותה ולהעתיק אותה שוב מרשימת הלקוחות למטה.
         </p>
 
         <form ref={formRef} action={action} className="flex flex-col gap-3">
