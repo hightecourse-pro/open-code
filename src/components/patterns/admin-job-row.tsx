@@ -136,9 +136,11 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
           </Field>
           <Field label="מיקום"><Input name="location" defaultValue={job.location ?? ""} /></Field>
           <Field label="טכנולוגיות (מופרדות בפסיק)"><Input name="tech" dir="ltr" defaultValue={job.tech_tags.join(", ")} /></Field>
-          <Field label="לקוח פורטל (לא חובה)">
-            <Select name="client_id" defaultValue={job.client_id ?? ""}>
-              <option value="">— ללא —</option>
+          <Field label={source === "ours" ? "לקוח (חובה למשרה שלנו)" : "לקוח פורטל (לא חובה)"}>
+            <Select name="client_id" defaultValue={job.client_id ?? ""} required={source === "ours"}>
+              <option value="" disabled={source === "ours"}>
+                {source === "ours" ? "בחרי לקוח…" : "— ללא —"}
+              </option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>{c.company_name}</option>
               ))}

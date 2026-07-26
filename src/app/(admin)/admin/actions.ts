@@ -381,6 +381,10 @@ function jobFields(formData: FormData) {
 
 function validateJob(f: ReturnType<typeof jobFields>): string | null {
   if (!f.company || !f.title) return "חברה ותפקיד הם שדות חובה.";
+  // Our jobs always belong to a client — the whole pipeline (portal, send-to-
+  // client, CRM) hangs off that link, so it's chosen first, never afterthought.
+  if (f.source === "ours" && !f.client_id)
+    return "למשרה שלנו חובה לבחור לקוח — בחרי מהרשימה או צרי לקוח חדש.";
   // Market ("open") jobs are applied to off-site — a link is required.
   if (f.source === "open" && !f.external_url) return "למשרה מהשוק חובה קישור להגשה.";
   return null;
@@ -1139,6 +1143,42 @@ export async function createCrmLead(_prev: FormState, formData: FormData): Promi
   revalidatePath("/admin/crm");
   revalidatePath("/admin/clients");
   return { ok: true };
+}
+
+/**
+ * Create a client inline from the new-job flow and hand its id back so the
+ * form can select it. Born as job_active — a client created while adding a
+ * job is by definition one with a job in progress.
+ */
+export async function quickCreateClientForJob(
+  company: string,
+  contactName?: string,
+  contactEmail?: string
+): Promise<{ id?: string; company_name?: string; error?: string }> {
+  await requireRole("admin");
+  const company_name = company.trim();
+  if (!company_name) return { error: "שם החברה הוא שדה חובה." };
+
+  const { data, error } = await createAdminClient()
+    .from("portal_clients")
+    .insert({
+      company_name,
+      contact_name: contactName?.trim() || null,
+      contact_email: contactEmail?.trim() || null,
+      crm_status: "job_active",
+    })
+    .select("id, company_name")
+    .single();
+  if (error || !data) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
+    }
+    return { error: "לא הצלחנו ליצור את הלקוח. נסי שוב." };
+  }
+
+  revalidatePath("/admin/crm");
+  revalidatePath("/admin/clients");
+  return { id: data.id, company_name: data.company_name };
 }
 
 /** Update a CRM client's contact details, pipeline status and internal notes. */
