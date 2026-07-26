@@ -777,7 +777,7 @@ export async function publishJob(
       }
       const p = nameOf.get(profileId);
       const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
-      const built = jobPublishedEmail(name, job.title, job.company, excerpt, applyUrl);
+      const built = jobPublishedEmail(name, job.title, excerpt, applyUrl);
       const result = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
       if (result.ok) {
         sent++;
@@ -1100,7 +1100,7 @@ export async function setApplicationStatus(applicationId: string, status: Applic
         const email = authUser?.user?.email;
         if (email && job) {
           const name = profile?.first_name || profile?.full_name?.split(" ")[0] || undefined;
-          const built = applicationStatusEmail(job.title, job.company, status, name);
+          const built = applicationStatusEmail(job.title, null, status, name);
           const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
           if (!sent.ok) console.error("[application email] send failed:", sent.error);
         }

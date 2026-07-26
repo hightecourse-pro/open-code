@@ -197,8 +197,16 @@ function ClientRow({ client }: { client: CrmClientRow }) {
           <ClientEditForm client={client} />
 
           <div>
-            <div className="text-xs font-semibold text-ink-700 mb-1.5">
-              המשרות של {client.company_name} ({client.jobs.length})
+            <div className="flex items-center justify-between gap-2 mb-1.5">
+              <div className="text-xs font-semibold text-ink-700">
+                המשרות של {client.company_name} ({client.jobs.length})
+              </div>
+              <Link
+                href={`/admin/jobs?client=${client.id}`}
+                className="text-xs font-semibold text-brand-purple hover:text-brand-pink-deep transition-colors"
+              >
+                + משרה חדשה ללקוח
+              </Link>
             </div>
             {client.jobs.length > 0 ? (
               <div className="flex flex-col">

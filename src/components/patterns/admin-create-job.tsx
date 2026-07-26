@@ -15,7 +15,14 @@ const EMPLOYMENT: { value: string; label: string }[] = [
   { value: "freelance", label: "פרילנס" },
 ];
 
-export function AdminCreateJob({ clients }: { clients: PortalClientOption[] }) {
+export function AdminCreateJob({
+  clients,
+  initialClientId,
+}: {
+  clients: PortalClientOption[];
+  /** Pre-selected client (arriving from the CRM's "משרה חדשה" button). */
+  initialClientId?: string;
+}) {
   const [state, action, pending] = useActionState<FormState, FormData>(createJob, {});
   const [source, setSource] = useState("ours");
   const [kind, setKind] = useState("immediate");
@@ -24,8 +31,12 @@ export function AdminCreateJob({ clients }: { clients: PortalClientOption[] }) {
   // CRM) hangs off that link. The list is local so an inline quick-create can
   // append + select the new client without a page round-trip.
   const [clientList, setClientList] = useState(clients);
-  const [clientId, setClientId] = useState("");
-  const [company, setCompany] = useState("");
+  const [clientId, setClientId] = useState(
+    initialClientId && clients.some((c) => c.id === initialClientId) ? initialClientId : ""
+  );
+  const [company, setCompany] = useState(
+    clients.find((c) => c.id === initialClientId)?.company_name ?? ""
+  );
   const [showQuick, setShowQuick] = useState(false);
   const [quick, setQuick] = useState({ company: "", contact: "", email: "" });
   const [quickError, setQuickError] = useState<string | null>(null);
@@ -133,15 +144,21 @@ export function AdminCreateJob({ clients }: { clients: PortalClientOption[] }) {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="חברה" htmlFor="j-company">
-          <Input
-            id="j-company"
-            name="company"
-            required
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-          />
-        </Field>
+        {source === "ours" ? (
+          // The client IS the company — no duplicate typing, it rides along
+          // hidden. (Members never see it anyway; it's internal + portal-only.)
+          <input type="hidden" name="company" value={company} />
+        ) : (
+          <Field label="חברה" htmlFor="j-company">
+            <Input
+              id="j-company"
+              name="company"
+              required
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+            />
+          </Field>
+        )}
         <Field label="תפקיד" htmlFor="j-title">
           <Input id="j-title" name="title" required />
         </Field>

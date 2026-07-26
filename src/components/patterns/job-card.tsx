@@ -97,10 +97,14 @@ export function JobCard({
             logo
           )}
         >
-          {job.company.slice(0, 1)}
+          {job.source === "ours" ? "ק" : job.company.slice(0, 1)}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-[12.5px] text-ink-500">{job.company}</div>
+          {/* The client behind an internal job is confidential — members see
+              only the role and its requirements. */}
+          <div className="text-[12.5px] text-ink-500">
+            {job.source === "ours" ? "משרה בלעדית · קוד פתוח" : job.company}
+          </div>
           <div className="font-display text-[17px] font-bold text-ink-1000">{job.title}</div>
           <div className="flex gap-3 text-xs text-ink-500 flex-wrap mt-1.5">
             {job.location && (

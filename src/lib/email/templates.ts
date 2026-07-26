@@ -198,25 +198,27 @@ export function dailyDigestEmail(data: DigestData): BuiltEmail {
 /** Notify an applicant that her application status changed. */
 export function applicationStatusEmail(
   jobTitle: string,
-  company: string,
+  company: string | null,
   status: "in_review" | "accepted" | "rejected",
   name?: string
 ): BuiltEmail {
+  // Internal jobs keep the client confidential — pass company: null there.
+  const at = company ? ` ב־${company}` : "";
   const per = {
     in_review: {
       subject: `המועמדות שלך בבדיקה · ${jobTitle}`,
       heading: "המועמדות שלך בבדיקה 👀",
-      line: `המועמדות שלך למשרת <b>${jobTitle}</b> ב־${company} נמצאת עכשיו בבדיקה. נעדכן אותך ברגע שיש חדש!`,
+      line: `המועמדות שלך למשרת <b>${jobTitle}</b>${at} נמצאת עכשיו בבדיקה. נעדכן אותך ברגע שיש חדש!`,
     },
     accepted: {
       subject: `חדשות טובות על המועמדות שלך 🎉 · ${jobTitle}`,
       heading: "מזל טוב! 🎉",
-      line: `המועמדות שלך למשרת <b>${jobTitle}</b> ב־${company} התקבלה! ניצור איתך קשר עם כל הפרטים.`,
+      line: `המועמדות שלך למשרת <b>${jobTitle}</b>${at} התקבלה! ניצור איתך קשר עם כל הפרטים.`,
     },
     rejected: {
       subject: `עדכון על המועמדות שלך · ${jobTitle}`,
       heading: "הפעם זה לא התקדם 💜",
-      line: `המועמדות למשרת <b>${jobTitle}</b> ב־${company} לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך. יש עוד משרות שמחכות לך, ואנחנו כאן בשבילך.`,
+      line: `המועמדות למשרת <b>${jobTitle}</b>${at} לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך. יש עוד משרות שמחכות לך, ואנחנו כאן בשבילך.`,
     },
   }[status];
 
@@ -463,7 +465,6 @@ export function applicationPipelineEmail(
 export function jobPublishedEmail(
   name: string | undefined,
   jobTitle: string,
-  company: string,
   descriptionText: string,
   applyUrl: string
 ): BuiltEmail {
@@ -473,7 +474,8 @@ export function jobPublishedEmail(
       heading: "משרה חדשה במיוחד בשבילך 💼",
       lines: [
         `${name ? `היי ${escapeHtml(name)}, ` : "היי, "}חשבנו עלייך! פתחנו משרה חדשה שנראית לנו מתאימה בדיוק לך:`,
-        `<b>${escapeHtml(jobTitle)}</b> · ${escapeHtml(company)}`,
+        // The client's name is confidential — the role speaks for itself.
+        `<b>${escapeHtml(jobTitle)}</b> · משרה בלעדית דרך קוד פתוח`,
         ...(descriptionText ? [escapeHtml(descriptionText)] : []),
         "מחכות לראות את המועמדות שלך 💜",
       ],

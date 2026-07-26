@@ -32,18 +32,17 @@ const SUBMITTED_PILL = { label: "הוגשנו אותך למשרה ✨", cls: "bg
 
 function Row({
   title,
-  company,
   pill,
 }: {
   title: string;
-  company: string;
   pill: { label: string; cls: string };
 }) {
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0 flex-wrap">
       <div className="flex-1 min-w-[150px]">
         <div className="text-[14px] font-semibold text-ink-900">{title}</div>
-        <div className="text-xs text-ink-500">{company}</div>
+        {/* Internal jobs never reveal the client — the role stands alone. */}
+        <div className="text-xs text-ink-500">משרה דרך קוד פתוח</div>
       </div>
       <span
         className={
@@ -84,7 +83,7 @@ export function MyApplications({
           </h3>
           <div className="flex flex-col">
             {applications.map((a) => (
-              <Row key={a.jobId} title={a.title} company={a.company} pill={STATUS_PILL[a.status]} />
+              <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} />
             ))}
           </div>
         </div>
@@ -97,7 +96,7 @@ export function MyApplications({
           </h3>
           <div className="flex flex-col">
             {submitted.map((s) => (
-              <Row key={s.jobId} title={s.title} company={s.company} pill={SUBMITTED_PILL} />
+              <Row key={s.jobId} title={s.title} pill={SUBMITTED_PILL} />
             ))}
           </div>
         </div>

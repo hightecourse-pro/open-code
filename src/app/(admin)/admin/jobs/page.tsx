@@ -23,8 +23,14 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; variant: "warm" | "
   declined: { label: "לא נבחרה", variant: "pink" },
 };
 
-export default async function AdminJobsPage() {
+export default async function AdminJobsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ client?: string }>;
+}) {
   await requireRole("admin");
+  // Arriving from the CRM's "משרה חדשה ללקוח" — preselect that client.
+  const { client: initialClientId } = await searchParams;
   const supabase = await createClient();
   const { data: jobs } = await supabase
     .from("jobs")
@@ -67,7 +73,7 @@ export default async function AdminJobsPage() {
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-3">הוספת משרה</h3>
-        <AdminCreateJob clients={clients} />
+        <AdminCreateJob clients={clients} initialClientId={initialClientId} />
       </div>
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">

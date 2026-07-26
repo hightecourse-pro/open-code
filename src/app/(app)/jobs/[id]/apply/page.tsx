@@ -64,7 +64,8 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">
           הגשת מועמדות: {job.title}
         </h1>
-        <p className="t-body-sm text-ink-700">{job.company}</p>
+        {/* The client's identity stays internal — she applies to the role. */}
+        <p className="t-body-sm text-ink-700">משרה בלעדית דרך קוד פתוח 💜</p>
       </div>
 
       {existing ? (

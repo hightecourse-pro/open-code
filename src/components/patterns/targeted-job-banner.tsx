@@ -23,7 +23,7 @@ export function TargetedJobBanner({ jobs }: { jobs: TargetedJobLite[] }) {
       <div className="flex flex-col gap-1.5">
         {jobs.map((job) => (
           <div key={job.id} className="font-display font-bold text-[16px]">
-            💼 משרה חדשה מחכה לך: {job.title} — {job.company}
+            💼 משרה חדשה מחכה לך: {job.title}
           </div>
         ))}
         <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold opacity-90 mt-1">
