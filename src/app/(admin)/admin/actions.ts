@@ -6,12 +6,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
 import {
+  applicationPipelineEmail,
   applicationStatusEmail,
+  candidateSubmittedEmail,
   jobCandidatesEmail,
   jobPublishedEmail,
 } from "@/lib/email/templates";
 import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
 import { loadClientJob } from "@/lib/portal/jobs";
+import { decryptPassword } from "@/lib/portal/auth";
 import { getSiteUrl } from "@/lib/site";
 import { sanitizeRichHtml } from "@/lib/rich-text";
 import type {
@@ -779,8 +782,15 @@ export async function removeJobCandidate(jobId: string, profileId: string): Prom
  * the same privacy gate the portal renders behind — so a member who opted out
  * (or is paused / no longer a listed junior) is never named to the client,
  * even if she is still a row in job_candidates.
+ *
+ * The email also carries the client's portal credentials and an optional
+ * personal note; each candidate actually sent gets her own "הגשנו אותך" email
+ * and — if she applied — her application flips to status "sent".
  */
-export async function sendJobCandidatesToClient(jobId: string): Promise<{ ok?: boolean; error?: string }> {
+export async function sendJobCandidatesToClient(
+  jobId: string,
+  personalNote?: string
+): Promise<{ ok?: boolean; error?: string }> {
   await requireRole("admin");
   const admin = createAdminClient();
 
@@ -792,20 +802,27 @@ export async function sendJobCandidatesToClient(jobId: string): Promise<{ ok?: b
   if (!job) return { error: "המשרה לא נמצאה." };
   if (!job.client_id) return { error: "המשרה לא מקושרת ללקוח פורטל. חברי אותה ללקוח בעריכת המשרה." };
 
+  // Service-role read: the password is stored encrypted (reversible — see
+  // portal/auth.ts) exactly so it can be handed to the client here.
   const { data: client } = await admin
     .from("portal_clients")
-    .select("company_name, contact_email")
+    .select("company_name, contact_email, username, password_enc")
     .eq("id", job.client_id)
     .maybeSingle();
   if (!client?.contact_email) {
     return { error: "ללקוח אין אימייל ליצירת קשר. הוסיפי אותו במסך לקוחות פורטל." };
+  }
+  const password = decryptPassword(client.password_enc);
+  if (!client.username || !password) {
+    return { error: "ללקוח אין עדיין פרטי גישה — הקצי במסך לקוחות פורטל." };
   }
 
   // Resolve names through the portal's single door, never from profiles
   // directly — this drops any curated candidate the client can't actually see,
   // so the email and the portal job page always name exactly the same people.
   const clientJob = await loadClientJob(job.client_id, jobId);
-  const names = (clientJob?.candidates ?? []).map((c) => c.name).filter(Boolean);
+  const sentCandidates = clientJob?.candidates ?? [];
+  const names = sentCandidates.map((c) => c.name).filter(Boolean);
   if (names.length === 0) {
     return {
       error:
@@ -817,13 +834,180 @@ export async function sendJobCandidatesToClient(jobId: string): Promise<{ ok?: b
     client.company_name,
     job.title,
     names,
-    `${getSiteUrl()}/portal/job/${jobId}`
+    `${getSiteUrl()}/portal/job/${jobId}`,
+    {
+      personalNote: personalNote?.trim() || null,
+      credentials: { username: client.username, password },
+    }
   );
   const sent = await sendResendEmail({ to: client.contact_email, subject: built.subject, html: built.html });
   if (!sent.ok) {
     console.error("[job candidates email] send failed:", sent.error);
     return { error: "המייל לא נשלח. נסי שוב." };
   }
+
+  // The client has the list — the job pipeline moves to "candidates sent".
+  const { error: pipelineError } = await admin
+    .from("jobs")
+    .update({ pipeline_status: "candidates_sent" })
+    .eq("id", jobId);
+  if (pipelineError) console.error("[job candidates] pipeline update failed:", pipelineError);
+
+  // Everything below is best-effort per candidate — the client email is out.
+  const now = new Date().toISOString();
+  const candidateIds = sentCandidates.map((c) => c.id);
+  const { data: apps } = candidateIds.length
+    ? await admin
+        .from("applications")
+        .select("id, applicant_id")
+        .eq("job_id", jobId)
+        .in("applicant_id", candidateIds)
+    : { data: [] as { id: string; applicant_id: string }[] };
+  const appOf = new Map((apps ?? []).map((a) => [a.applicant_id, a.id]));
+
+  const { data: people } = candidateIds.length
+    ? await admin.from("profiles").select("id, first_name, full_name").in("id", candidateIds)
+    : { data: [] as { id: string; first_name: string | null; full_name: string }[] };
+  const personOf = new Map((people ?? []).map((p) => [p.id, p]));
+
+  for (const candidate of sentCandidates) {
+    const applicationId = appOf.get(candidate.id);
+    if (applicationId) {
+      const { error: appError } = await admin
+        .from("applications")
+        .update({ status: "sent", sent_to_client_at: now })
+        .eq("id", applicationId);
+      if (appError) console.error("[job candidates] application update failed:", appError);
+    }
+    try {
+      const { data: authUser } = await admin.auth.admin.getUserById(candidate.id);
+      const email = authUser?.user?.email;
+      if (!email) continue;
+      const p = personOf.get(candidate.id);
+      const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
+      const memberBuilt = candidateSubmittedEmail(name, job.title, !!applicationId);
+      const memberSent = await sendResendEmail({
+        to: email,
+        subject: memberBuilt.subject,
+        html: memberBuilt.html,
+      });
+      if (!memberSent.ok) console.error("[candidate submitted email] send failed:", memberSent.error);
+    } catch (e) {
+      console.error("[candidate submitted email] failed:", e);
+    }
+  }
+
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
+  return { ok: true };
+}
+
+// ------------------------------------------------------------- review center
+
+export type AdminMark = "optional" | "not_fit" | "approved";
+
+/**
+ * Internal review mark on an application (אופציונלית / לא מתאימה / אישור
+ * סופי). Admin-only — never surfaces to the member or the client.
+ */
+export async function setApplicationMark(
+  applicationId: string,
+  mark: AdminMark | null
+): Promise<FormState> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+
+  const { data: app } = await admin
+    .from("applications")
+    .select("id, job_id")
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (!app) return { error: "ההגשה לא נמצאה." };
+
+  const { error } = await admin
+    .from("applications")
+    .update({ admin_mark: mark })
+    .eq("id", applicationId);
+  if (error) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
+    }
+    return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
+  }
+
+  revalidatePath(`/admin/jobs/${app.job_id}`);
+  return { ok: true };
+}
+
+export type PipelineStatus = "interview" | "exam" | "hired" | "declined";
+
+const PIPELINE_STATUSES: PipelineStatus[] = ["interview", "exam", "hired", "declined"];
+
+/**
+ * Move an application along the client pipeline (ראיון/מבחן/גויסה/בפעם הבאה)
+ * and email the member a warm update. Hiring also celebrates on her profile —
+ * found_job / hired_via_us / hired_at / workplace.
+ */
+export async function updateApplicationPipeline(
+  applicationId: string,
+  status: PipelineStatus
+): Promise<FormState> {
+  await requireRole("admin");
+  if (!PIPELINE_STATUSES.includes(status)) return { error: "סטטוס לא תקין." };
+  const admin = createAdminClient();
+
+  const { data: app } = await admin
+    .from("applications")
+    .select("id, applicant_id, job_id")
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (!app) return { error: "ההגשה לא נמצאה." };
+
+  const { data: job } = await admin
+    .from("jobs")
+    .select("title, company")
+    .eq("id", app.job_id)
+    .maybeSingle();
+
+  const { error } = await admin.from("applications").update({ status }).eq("id", applicationId);
+  if (error) return { error: "עדכון הסטטוס נכשל. נסי שוב." };
+
+  // גויסה 🎉 — mark the placement on her profile so the community stats know
+  // she found her job through us.
+  if (status === "hired") {
+    const { error: hiredError } = await admin
+      .from("profiles")
+      .update({
+        found_job: true,
+        hired_via_us: true,
+        hired_at: new Date().toISOString(),
+        workplace: job?.company ?? null,
+      })
+      .eq("id", app.applicant_id);
+    if (hiredError) console.error("[pipeline] hired profile update failed:", hiredError);
+  }
+
+  // Best-effort: the warm status email must not fail the update itself.
+  try {
+    const [{ data: profile }, { data: authUser }] = await Promise.all([
+      admin.from("profiles").select("first_name, full_name").eq("id", app.applicant_id).single(),
+      admin.auth.admin.getUserById(app.applicant_id),
+    ]);
+    const email = authUser?.user?.email;
+    if (email && job) {
+      const name = profile?.first_name || profile?.full_name?.split(" ")[0] || undefined;
+      const built = applicationPipelineEmail(name, job.title, status);
+      const sentEmail = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+      if (!sentEmail.ok) console.error("[pipeline email] send failed:", sentEmail.error);
+    }
+  } catch (e) {
+    console.error("[pipeline email] failed:", e);
+  }
+
+  revalidatePath(`/admin/jobs/${app.job_id}`);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
   return { ok: true };
 }
 

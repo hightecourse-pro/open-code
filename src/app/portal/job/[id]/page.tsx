@@ -13,6 +13,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Briefcase, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { CandidateCard } from "@/components/portal/candidate-card";
+import { CandidateFeedback } from "@/components/portal/candidate-feedback";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { favoriteIds } from "@/lib/portal/favorites";
 import { requirePortalClient } from "@/app/portal/session";
@@ -124,8 +125,14 @@ export default async function PortalJobPage({
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 list-none p-0 m-0">
             {job.candidates.map((candidate) => (
-              <li key={candidate.id}>
+              <li key={candidate.id} className="flex flex-col">
                 <CandidateCard candidate={candidate} favorited={favs.has(candidate.id)} />
+                <CandidateFeedback
+                  jobId={job.id}
+                  profileId={candidate.id}
+                  initialMarked={job.feedback?.[candidate.id]?.interviewMarked ?? false}
+                  initialNote={job.feedback?.[candidate.id]?.clientNote ?? null}
+                />
               </li>
             ))}
           </ul>

@@ -292,7 +292,13 @@ export function jobCandidatesEmail(
   companyName: string,
   jobTitle: string,
   candidateNames: string[],
-  portalUrl: string
+  portalUrl: string,
+  opts?: {
+    /** A personal word from the admin, shown highlighted (escaped here). */
+    personalNote?: string | null;
+    /** Portal access details, shown in a bordered mono block. */
+    credentials?: { username: string; password: string } | null;
+  }
 ): BuiltEmail {
   const names = candidateNames.slice(0, 12);
   const list = names.length
@@ -305,19 +311,121 @@ export function jobCandidatesEmail(
       ? `<p style="font-size:13px; color:${C.muted}; margin:0 0 14px;">ועוד ${candidateNames.length - names.length} מועמדות בפורטל.</p>`
       : "";
 
+  const personalNote = opts?.personalNote?.trim();
+  const note = personalNote
+    ? `<span style="display:block; background:${C.bg}; border-inline-start:3px solid ${C.pink}; border-radius:8px; padding:12px 16px; font-size:14.5px; line-height:1.7; color:${C.ink};">${escapeHtml(personalNote)}</span>`
+    : null;
+
+  // dir=ltr on the values so username/password never get bidi-scrambled.
+  const credValue = (v: string) =>
+    `<b dir="ltr" style="font-family:'Courier New',monospace; font-size:14px; color:${C.ink}; unicode-bidi:isolate;">${escapeHtml(v)}</b>`;
+  const creds = opts?.credentials
+    ? `<span style="display:block; border:1px solid ${C.border}; background:${C.bg}; border-radius:10px; padding:12px 16px;">
+        <span style="display:block; font-size:13px; color:${C.muted}; margin-bottom:6px;">פרטי הגישה לפורטל:</span>
+        <span style="display:block; font-size:14px; color:${C.body}; margin-bottom:4px;">שם משתמש: ${credValue(opts.credentials.username)}</span>
+        <span style="display:block; font-size:14px; color:${C.body};">סיסמה: ${credValue(opts.credentials.password)}</span>
+      </span>`
+    : null;
+
   return {
     subject: `מועמדות למשרת ${jobTitle} · קוד פתוח`,
     html: renderEmail({
       heading: "בחרנו לכם מועמדות 👋",
       lines: [
-        `שלום ${companyName},`,
-        `ריכזנו עבורכם מועמדות רלוונטיות למשרת <b>${jobTitle}</b>. אפשר לצפות בפרופיל המלא של כל אחת — ולהוריד קורות חיים אם תרצו.`,
+        `שלום ${escapeHtml(companyName)},`,
+        ...(note ? [note] : []),
+        `ריכזנו עבורכם מועמדות רלוונטיות למשרת <b>${escapeHtml(jobTitle)}</b>. אפשר לצפות בפרופיל המלא של כל אחת — ולהוריד קורות חיים אם תרצו.`,
         `${list}${more}`,
-        "הכניסה לפורטל עם שם המשתמש והסיסמה שקיבלתם.",
+        creds ?? "הכניסה לפורטל עם שם המשתמש והסיסמה שקיבלתם.",
       ],
       ctaText: "צפייה במועמדות למשרה",
       ctaUrl: portalUrl,
       footnote: "המידע מיועד לשימוש בתהליכי הגיוס שלכם בלבד.",
+    }),
+  };
+}
+
+/**
+ * Tell a member we submitted her CV to a client. `applied` — she applied to
+ * the job herself; false — the admin curated her for it without an application.
+ */
+export function candidateSubmittedEmail(
+  name: string | undefined,
+  jobTitle: string,
+  applied: boolean
+): BuiltEmail {
+  const firstLine = applied
+    ? "רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרה שהגשת אליה מועמדות :)"
+    : `רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרת ${escapeHtml(jobTitle)} — אנחנו מאמינות שאת יכולה להתאים :)`;
+
+  return {
+    subject: "קוד פתוח מגישה אותך למשרה",
+    html: renderEmail({
+      heading: "הגשנו אותך למשרה 💜",
+      lines: [
+        ...(name ? [`היי ${escapeHtml(name)},`] : []),
+        firstLine,
+        "עמותת קוד פתוח משקיעה משאבים רבים כדי לאתר ולייצר משרות בתקופה כל כך מאתגרת.",
+        `העלות המינימלית שלנו לכל משרה כזו היא 2500 ש"ח, ולכן אנחנו גובים את הסכום הזה לאחר כל השמה מוצלחת בעז"ה (התשלום לאחר הודעת הקבלה לארגון)`,
+        "נשמח לקבל עדכון כשיצרו איתך קשר לראיון או מבחן",
+        "מאחלות לך הצלחה וסייעתא דשמיא, צוות קוד פתוח",
+      ],
+    }),
+  };
+}
+
+/** Warm update to an applicant when the admin moves her along the client pipeline. */
+export function applicationPipelineEmail(
+  name: string | undefined,
+  jobTitle: string,
+  status: "interview" | "exam" | "hired" | "declined"
+): BuiltEmail {
+  const title = escapeHtml(jobTitle);
+  const per = {
+    interview: {
+      subject: `זומנת לראיון! 🎉 · ${jobTitle}`,
+      heading: "זומנת לראיון! 🎉",
+      lines: [
+        `חדשות מצוינות — המועמדות שלך למשרת <b>${title}</b> מתקדמת, ואת מוזמנת לראיון!`,
+        "זה הזמן לנשום עמוק, לעבור שוב על פרטי המשרה ולהגיע בדיוק כמו שאת. מחזיקות לך אצבעות 💜",
+      ],
+      cta: true,
+    },
+    exam: {
+      subject: `יש מבחן בדרך 💪 · ${jobTitle}`,
+      heading: "יש מבחן בדרך 💪",
+      lines: [
+        `בהמשך למועמדות שלך למשרת <b>${title}</b> — השלב הבא הוא מבחן.`,
+        "קחי את הזמן להתכונן בנחת — את מסוגלת לזה לגמרי, ואנחנו כאן לכל שאלה 💜",
+      ],
+      cta: true,
+    },
+    hired: {
+      subject: `מזל טוב! התקבלת 🎉 · ${jobTitle}`,
+      heading: "מזל טוב! התקבלת 🎉",
+      lines: [
+        `איזו התרגשות — התקבלת למשרת <b>${title}</b>! 🎉`,
+        "עבדת בשביל זה, וזה כולו שלך. מאחלות לך המון הצלחה בתפקיד החדש — ותמיד נשמח לשמוע איך הולך 💜",
+      ],
+      cta: false,
+    },
+    declined: {
+      subject: `עדכון על המועמדות שלך · ${jobTitle}`,
+      heading: "הפעם זה לא התקדם 💜",
+      lines: [
+        `המועמדות שלך למשרת <b>${title}</b> לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך.`,
+        "יש עוד משרות שמחכות לך, ואנחנו ממשיכות לחפש בשבילך. אנחנו כאן 💜",
+      ],
+      cta: true,
+    },
+  }[status];
+
+  return {
+    subject: per.subject,
+    html: renderEmail({
+      heading: per.heading,
+      lines: [...(name ? [`היי ${escapeHtml(name)},`] : []), ...per.lines],
+      ...(per.cta ? { ctaText: "לכל המשרות", ctaUrl: `${SITE}/jobs` } : {}),
     }),
   };
 }

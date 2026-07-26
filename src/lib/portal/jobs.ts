@@ -9,6 +9,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadCandidates } from "./candidates";
 import type { CandidateDetail } from "./types";
 
+export interface ClientJobFeedback {
+  interviewMarked: boolean;
+  clientNote: string | null;
+}
+
 export interface ClientJob {
   id: string;
   title: string;
@@ -17,6 +22,12 @@ export interface ClientJob {
   status: string;
   created_at: string;
   candidates: CandidateDetail[];
+  /**
+   * The client's own feedback per candidate id (interview mark + note). Only
+   * loadClientJob (the single-job view) fills it, and only for candidates the
+   * client can actually see.
+   */
+  feedback?: Record<string, ClientJobFeedback>;
 }
 
 /** All of this client's jobs, each with its curated candidate list. */
@@ -82,7 +93,7 @@ export async function loadClientJob(clientId: string, jobId: string): Promise<Cl
 
   const { data: rows } = await admin
     .from("job_candidates")
-    .select("profile_id, created_at")
+    .select("profile_id, created_at, interview_marked, client_note")
     .eq("job_id", jobId)
     .order("created_at", { ascending: true });
 
@@ -92,6 +103,18 @@ export async function loadClientJob(clientId: string, jobId: string): Promise<Cl
     .map((r) => byId.get(r.profile_id))
     .filter((c): c is CandidateDetail => !!c);
 
+  // Feedback only for candidates the client can see — a hidden candidate's row
+  // must not leak even as a bare id.
+  const shown = new Set(list.map((c) => c.id));
+  const feedback: Record<string, ClientJobFeedback> = {};
+  for (const r of rows ?? []) {
+    if (!shown.has(r.profile_id)) continue;
+    feedback[r.profile_id] = {
+      interviewMarked: r.interview_marked === true,
+      clientNote: r.client_note ?? null,
+    };
+  }
+
   return {
     id: job.id,
     title: job.title,
@@ -100,5 +123,6 @@ export async function loadClientJob(clientId: string, jobId: string): Promise<Cl
     status: job.status,
     created_at: job.created_at,
     candidates: list,
+    feedback,
   };
 }
