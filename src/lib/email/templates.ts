@@ -265,20 +265,46 @@ function escapeHtml(text: string): string {
 export function mentorRequestEmail(
   memberName: string,
   reasonLabel: string,
-  note?: string | null
+  note?: string | null,
+  kind: "general" | "employment" = "general"
 ): BuiltEmail {
+  const employment = kind === "employment";
   return {
-    subject: `בקשה למנטורית מ${memberName} · קוד פתוח`,
+    subject: employment
+      ? `ליווי תעסוקתי · בקשה מ${memberName} · קוד פתוח`
+      : `בקשה למנטורית מ${memberName} · קוד פתוח`,
     html: renderEmail({
-      heading: "בקשה חדשה למנטורית 👑",
+      heading: employment ? "בקשה חדשה לליווי תעסוקתי 💼" : "בקשה חדשה למנטורית 👑",
       lines: [
-        `<b>${escapeHtml(memberName)}</b> ביקשה שנחבר אותה למנטורית.`,
+        employment
+          ? `<b>${escapeHtml(memberName)}</b> מתחילה עבודה חדשה וביקשה ליווי לחודשים הראשונים.`
+          : `<b>${escapeHtml(memberName)}</b> ביקשה שנחבר אותה למנטורית.`,
         `<b>הסיבה:</b> ${escapeHtml(reasonLabel)}`,
         ...(note ? [`<b>מה שהיא כתבה:</b> ${escapeHtml(note)}`] : []),
       ],
       ctaText: "לבקשות למנטורית",
       ctaUrl: `${SITE}/admin/mentor-requests`,
-      footnote: "אפשר לסמן את הבקשה כטופלה במסך הניהול.",
+      footnote: "אפשר לשייך מנטורית ולסמן את הבקשה כטופלה במסך הניהול.",
+    }),
+  };
+}
+
+/** Tell a member which mentor will accompany her, with a link to the chat. */
+export function assignedMentorEmail(
+  memberName: string | undefined,
+  mentorName: string
+): BuiltEmail {
+  return {
+    subject: "צוותה לך מנטורית לליווי 👑",
+    html: renderEmail({
+      heading: "צוותה לך מנטורית לליווי 👑",
+      lines: [
+        `${memberName ? `היי ${escapeHtml(memberName)}, ` : ""}חדשות משמחות — <b>${escapeHtml(mentorName)}</b> תלווה אותך מעכשיו 💜`,
+        "היא כבר יודעת עלייך — אפשר לכתוב לה בצ'אט מתי שנוח לך.",
+      ],
+      ctaText: "לצ'אט",
+      ctaUrl: `${SITE}/chat`,
+      footnote: "מאחלות לך המון הצלחה — ואנחנו כאן לכל דבר 💜",
     }),
   };
 }

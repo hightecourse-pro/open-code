@@ -2,9 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Sparkles, Crown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { Alert } from "@/components/ui";
 import { JobCard } from "@/components/patterns/job-card";
+import {
+  MyApplications,
+  type MyApplicationItem,
+  type MySubmittedItem,
+} from "@/components/patterns/my-applications";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import type { Job, JobSource } from "@/types/database";
@@ -74,6 +80,41 @@ export default async function JobsPage({
     targetedJobs = tJobs ?? [];
   }
   const targetedSet = new Set(targetedJobs.map((j) => j.id));
+
+  // "המשרות שלי": where each of her applications stands, plus jobs the admin
+  // submitted her to proactively. job_candidates is admin-only under RLS, so
+  // it (and the job titles, which may be closed/hidden by now) are resolved
+  // with the service role — strictly filtered to her own profile_id.
+  let myAppItems: MyApplicationItem[] = [];
+  let submittedForHer: MySubmittedItem[] = [];
+  if (user) {
+    const adminClient = createAdminClient();
+    const { data: candRows } = await adminClient
+      .from("job_candidates")
+      .select("job_id")
+      .eq("profile_id", user.id);
+    const appRows = (myApplications ?? []).filter((a) => a.status !== "draft");
+    const appliedJobIds = new Set((myApplications ?? []).map((a) => a.job_id));
+    const candJobIds = [...new Set((candRows ?? []).map((c) => c.job_id))].filter(
+      (id) => !appliedJobIds.has(id)
+    );
+    const lookupIds = [...new Set([...appRows.map((a) => a.job_id), ...candJobIds])];
+    if (lookupIds.length > 0) {
+      const { data: jobRows } = await adminClient
+        .from("jobs")
+        .select("id, title, company")
+        .in("id", lookupIds);
+      const jobOf = new Map((jobRows ?? []).map((j) => [j.id, j]));
+      myAppItems = appRows.flatMap((a) => {
+        const j = jobOf.get(a.job_id);
+        return j ? [{ jobId: a.job_id, title: j.title, company: j.company, status: a.status }] : [];
+      });
+      submittedForHer = candJobIds.flatMap((id) => {
+        const j = jobOf.get(id);
+        return j ? [{ jobId: id, title: j.title, company: j.company }] : [];
+      });
+    }
+  }
 
   // The member's tech stack from her profile answers, normalized for matching:
   // answers store taxonomy values (e.g. "react") while admins type job tags in
@@ -171,6 +212,8 @@ export default async function JobsPage({
           </div>
         </section>
       )}
+
+      <MyApplications applications={myAppItems} submitted={submittedForHer} />
 
       <div className="flex gap-2.5">
         {TABS.map((tab) => {

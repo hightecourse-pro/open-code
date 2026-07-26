@@ -5,6 +5,7 @@ import { Composer } from "@/components/patterns/composer";
 import { PostCard, type FeedPost } from "@/components/patterns/post-card";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { TargetedJobBanner, type TargetedJobLite } from "@/components/patterns/targeted-job-banner";
+import { HiredBanner } from "@/components/patterns/hired-banner";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import type { PostComment } from "@/components/patterns/post-interactions";
@@ -13,6 +14,11 @@ import type { UserRole } from "@/types/database";
 export const metadata: Metadata = { title: "פורום" };
 // Always fresh — a new post shows without a manual refresh.
 export const dynamic = "force-dynamic";
+
+/** ISO cutoff for the hired-celebration window — the last 60 days. */
+function hiredCelebrationSince(): string {
+  return new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+}
 
 type ProfileLite = {
   id: string;
@@ -47,6 +53,15 @@ export default async function ForumPage() {
       .order("published_at", { ascending: false });
     targetedJobs = tJobs ?? [];
   }
+
+  // Members who recently started a job — the whole community celebrates.
+  const { data: recentlyHired } = await supabase
+    .from("profiles")
+    .select("full_name, workplace")
+    .eq("found_job", true)
+    .gte("hired_at", hiredCelebrationSince())
+    .order("hired_at", { ascending: false })
+    .limit(6);
 
   const { data: posts } = await supabase
     .from("posts")
@@ -131,6 +146,8 @@ export default async function ForumPage() {
       </div>
 
       <TargetedJobBanner jobs={targetedJobs} />
+
+      <HiredBanner members={recentlyHired ?? []} />
 
       {canWrite ? (
         <Composer kind="forum" />

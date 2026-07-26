@@ -149,6 +149,11 @@ export default async function AdminMemberProfilePage({
             )}
             {profile.is_experienced && <Badge variant="purple">עם ניסיון</Badge>}
             {profile.specialization && <Badge variant="tech">{profile.specialization}</Badge>}
+            {profile.hired_via_us && (
+              <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] px-2 py-0.5 rounded-full">
+                🎉 גויסה דרך קוד פתוח 💜
+              </span>
+            )}
           </div>
           <div className="text-[13px] text-ink-500 mt-2 flex flex-col gap-0.5">
             {email && (
@@ -158,6 +163,14 @@ export default async function AdminMemberProfilePage({
             )}
             <span>הצטרפה: {new Date(profile.created_at).toLocaleDateString("he-IL")}</span>
             <span>העדפת מייל: {DIGEST_LABEL[profile.digest_frequency] ?? profile.digest_frequency}</span>
+            {profile.found_job && (
+              <span>
+                💼 מצאה עבודה{profile.workplace ? ` · ${profile.workplace}` : ""}
+                {profile.hired_at
+                  ? ` · מ־${new Date(profile.hired_at).toLocaleDateString("he-IL")}`
+                  : ""}
+              </span>
+            )}
           </div>
         </div>
         <MemberActions profileId={profile.id} status={profile.status} />

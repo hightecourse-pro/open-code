@@ -8,6 +8,7 @@ import { sendResendEmail } from "@/lib/email/resend";
 import {
   applicationPipelineEmail,
   applicationStatusEmail,
+  assignedMentorEmail,
   candidateSubmittedEmail,
   jobCandidatesEmail,
   jobPublishedEmail,
@@ -79,6 +80,58 @@ export async function setMentorRequestStatus(id: string, status: "open" | "handl
     .from("mentor_requests")
     .update({ status, handled_at: status === "handled" ? new Date().toISOString() : null })
     .eq("id", id);
+  revalidatePath("/admin/mentor-requests");
+  revalidatePath("/mentor");
+}
+
+/**
+ * Assign a mentor to a member's request: marks it handled with the mentor
+ * recorded, and tells the member who will accompany her (best-effort email).
+ */
+export async function assignMentorToRequest(requestId: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const mentorId = String(formData.get("mentor_id") ?? "");
+  if (!mentorId) return;
+  const supabase = await createClient();
+
+  const { data: req } = await supabase
+    .from("mentor_requests")
+    .select("id, profile_id")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!req) return;
+
+  const { error } = await supabase
+    .from("mentor_requests")
+    .update({
+      assigned_mentor_id: mentorId,
+      status: "handled",
+      handled_at: new Date().toISOString(),
+    })
+    .eq("id", requestId);
+  if (error) return;
+
+  // Best-effort: a failed email never rolls back the assignment.
+  try {
+    const [{ data: member }, { data: mentor }] = await Promise.all([
+      supabase.from("profiles").select("first_name, full_name").eq("id", req.profile_id).maybeSingle(),
+      supabase.from("profiles").select("full_name").eq("id", mentorId).maybeSingle(),
+    ]);
+    const admin = createAdminClient();
+    const { data: authUser } = await admin.auth.admin.getUserById(req.profile_id);
+    const email = authUser?.user?.email;
+    if (email) {
+      const built = assignedMentorEmail(
+        member?.first_name || member?.full_name || undefined,
+        mentor?.full_name || "מנטורית מהקהילה"
+      );
+      const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+      if (!sent.ok) console.error("[assign mentor email] send failed:", sent.error);
+    }
+  } catch (e) {
+    console.error("[assign mentor email] failed:", e);
+  }
+
   revalidatePath("/admin/mentor-requests");
   revalidatePath("/mentor");
 }

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireProfile } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { ProfileForm } from "@/components/patterns/profile-form";
+import { EmploymentCard } from "@/components/patterns/employment-card";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { PortalVisibility } from "@/components/patterns/portal-visibility";
@@ -21,7 +22,13 @@ export default async function ProfilePage() {
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
 
-  const [{ data: questions }, { data: answers }, { data: priv }, taxonomyOptions] = await Promise.all([
+  const [
+    { data: questions },
+    { data: answers },
+    { data: priv },
+    { data: employmentReq },
+    taxonomyOptions,
+  ] = await Promise.all([
     supabase
       .from("config_questions")
       .select("*")
@@ -35,6 +42,14 @@ export default async function ProfilePage() {
       .from("member_private")
       .select("drive_email, drive_email_requested_at")
       .eq("profile_id", profile.id)
+      .maybeSingle(),
+    // An open accompaniment request → the card shows "we're on it" instead of the form.
+    supabase
+      .from("mentor_requests")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .eq("status", "open")
+      .eq("kind", "employment")
       .maybeSingle(),
     getTaxonomyOptions(),
   ]);
@@ -76,6 +91,13 @@ export default async function ProfilePage() {
           taxonomyOptions={taxonomyOptions}
         />
       </div>
+
+      <EmploymentCard
+        foundJob={profile.found_job}
+        workplace={profile.workplace}
+        hiredViaUs={profile.hired_via_us}
+        hasOpenEmploymentRequest={!!employmentReq}
+      />
 
       <PortalVisibility listed={profile.portal_listed !== false} />
 

@@ -3,6 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendResendEmail } from "@/lib/email/resend";
+import { mentorRequestEmail } from "@/lib/email/templates";
+import { mentorReasonLabel } from "@/lib/mentor-requests";
 import { FIELD_VALIDATORS } from "@/lib/validators";
 import { LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/language-skills";
 import { repointSharesToNewEmail } from "@/lib/drive-shares";
@@ -66,6 +70,116 @@ export async function setDriveEmail(
   await repointSharesToNewEmail(user.id);
 
   revalidatePath("/profile");
+  return { ok: true };
+}
+
+export type EmploymentState = { ok?: boolean; error?: string };
+
+/**
+ * "מצאתי עבודה" — the member updates her own employment status. hired_at is
+ * stamped only on the false→true transition (so the celebration window is
+ * honest), workplace clears when she turns it off, and hired_via_us is
+ * pipeline-owned — never touched here.
+ */
+export async function updateEmployment(
+  _prev: EmploymentState,
+  formData: FormData
+): Promise<EmploymentState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "תצטרכי להתחבר מחדש." };
+
+  const foundJob = formData.get("found_job") === "on";
+  const workplace = String(formData.get("workplace") ?? "").trim().slice(0, 200);
+
+  const { data: before } = await supabase
+    .from("profiles")
+    .select("found_job")
+    .eq("id", user.id)
+    .single();
+
+  const update: { found_job: boolean; workplace: string | null; hired_at?: string } = {
+    found_job: foundJob,
+    workplace: foundJob ? workplace || null : null,
+  };
+  if (foundJob && !before?.found_job) update.hired_at = new Date().toISOString();
+
+  const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+  if (error) return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
+
+  revalidatePath("/profile");
+  revalidatePath("/forum"); // the hired-celebration banner lives there
+  return { ok: true };
+}
+
+export type EmploymentMentorState = { ok?: boolean; already?: boolean; error?: string };
+
+/**
+ * A member starting a new job asks for mentor accompaniment for the first
+ * months. Lands in the same admin queue as regular mentor requests, tagged
+ * kind='employment'; the team is emailed best-effort.
+ */
+export async function requestEmploymentMentor(
+  _prev: EmploymentMentorState,
+  formData: FormData
+): Promise<EmploymentMentorState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "תצטרכי להתחבר מחדש." };
+
+  const note = String(formData.get("note") ?? "").trim().slice(0, 1000);
+
+  // One open accompaniment request is enough — a second ask is just a repeat.
+  const { data: existing } = await supabase
+    .from("mentor_requests")
+    .select("id")
+    .eq("profile_id", user.id)
+    .eq("status", "open")
+    .eq("kind", "employment")
+    .maybeSingle();
+  if (existing) return { ok: true, already: true };
+
+  const { error } = await supabase.from("mentor_requests").insert({
+    profile_id: user.id,
+    kind: "employment",
+    reason: "first_months",
+    note: note || null,
+  });
+  if (error) return { error: "לא הצלחנו לשלוח את הבקשה כרגע. בואי ננסה שוב." };
+
+  // Best-effort team email — a failed send never loses the request.
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+
+    const admin = createAdminClient();
+    const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
+    const built = mentorRequestEmail(
+      profile?.full_name || "חברת קהילה",
+      mentorReasonLabel("first_months"),
+      note,
+      "employment"
+    );
+    for (const a of admins ?? []) {
+      const { data: authUser } = await admin.auth.admin.getUserById(a.id);
+      const email = authUser?.user?.email;
+      if (!email) continue;
+      const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+      if (!sent.ok) console.error("[employment mentor email] send failed:", sent.error);
+    }
+  } catch (e) {
+    console.error("[employment mentor email] failed:", e);
+  }
+
+  revalidatePath("/profile");
+  revalidatePath("/admin/mentor-requests");
   return { ok: true };
 }
 
