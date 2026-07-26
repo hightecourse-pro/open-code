@@ -18,7 +18,10 @@ export const Switch = React.forwardRef<HTMLInputElement, SwitchProps>(function S
         <span
           className={cn(
             "w-11 h-6 rounded-full bg-ink-300 transition-colors duration-[220ms]",
-            "peer-checked:bg-brand-gradient peer-focus-visible:shadow-[0_0_0_3px_rgba(224,65,141,0.15)]"
+            // .bg-brand-gradient is a plain CSS class, so Tailwind can't build a
+            // peer-checked: variant from it — inline the gradient var instead.
+            "peer-checked:[background:var(--gradient-brand)]",
+            "peer-focus-visible:shadow-[0_0_0_3px_rgba(224,65,141,0.15)]"
           )}
         />
         <span
