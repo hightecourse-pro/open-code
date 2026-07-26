@@ -24,6 +24,7 @@ import type {
   EmploymentType,
   JobKind,
   JobSource,
+  JobStatus,
   ProfileStatus,
   ReportStatus,
   TaxonomyKind,
@@ -422,9 +423,13 @@ function isMissingColumn(error: { code?: string; message?: string } | null): boo
 /** Post a new job to the board. */
 export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
-  const f = jobFields(formData);
-  const err = validateJob(f);
+  const fields = jobFields(formData);
+  const err = validateJob(fields);
   if (err) return { error: err };
+
+  // An "ours" job is born CLOSED (invisible on the board) — it goes live only
+  // when the admin publishes it to its audience. Market jobs open immediately.
+  const f = { ...fields, status: (fields.source === "ours" ? "closed" : "open") as JobStatus };
 
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").insert(f);
