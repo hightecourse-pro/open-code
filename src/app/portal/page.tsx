@@ -11,6 +11,10 @@ export default async function PortalSearchPage() {
   const client = await getPortalClient();
   if (!client) redirect("/portal/login");
 
+  // Default contract: a client sees only the candidates we sent to her jobs.
+  // Free search is an explicit per-client grant.
+  if (!client.can_search) redirect("/portal/jobs");
+
   // loadCandidates() is the only door to candidate data: it filters to listed
   // profiles and to employer-visible answers, so nothing else needs to be
   // checked here. member_crm (VIP, internal notes) is never touched.

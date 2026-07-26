@@ -67,6 +67,9 @@ export async function createPortalClient(
     username,
     contact_name: contactName,
     contact_email: contactEmail,
+    // Created straight with credentials — in CRM terms that's already
+    // "משרה בטיפול" (the clients screen shows only this status).
+    crm_status: "job_active" as const,
   };
 
   const { error } = await admin
@@ -74,13 +77,75 @@ export async function createPortalClient(
     .insert({ ...base, password_enc: encryptPassword(password) });
   if (error) {
     if (isMissingColumn(error)) {
-      return { error: "צריך להריץ קודם את ה-SQL האחרון (_portal_password.sql) ב-Supabase." };
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
     }
     return { error: "לא הצלחנו ליצור את הלקוח. ייתכן ששם המשתמש כבר קיים." };
   }
 
   revalidatePath("/admin/clients");
+  revalidatePath("/admin/crm");
   return { created: { company: companyName, username, password } };
+}
+
+/**
+ * Assign portal credentials to a CRM lead that reached "משרה בטיפול" — the
+ * lead and the client are the same portal_clients row, so this UPDATES the
+ * existing row by id (never inserts a duplicate).
+ */
+export async function assignPortalCredentials(
+  id: string,
+  _prev: ClientFormState,
+  formData: FormData
+): Promise<ClientFormState> {
+  await requireRole("admin");
+
+  const username = normaliseUsername(String(formData.get("username") ?? ""));
+  if (!username) return { error: "שם המשתמש צריך להכיל אותיות באנגלית או ספרות." };
+  if (username.length < 3) return { error: "שם המשתמש קצר מדי — לפחות 3 תווים." };
+
+  const admin = createAdminClient();
+
+  const { data: client } = await admin
+    .from("portal_clients")
+    .select("id, company_name, username")
+    .eq("id", id)
+    .maybeSingle();
+  if (!client) return { error: "הלקוח לא נמצא. רענני את הדף ונסי שוב." };
+  if (client.username) return { error: "ללקוח הזה כבר יש פרטי גישה." };
+
+  const { data: taken } = await admin
+    .from("portal_clients")
+    .select("id")
+    .eq("username", username)
+    .neq("id", id)
+    .maybeSingle();
+  if (taken) return { error: `שם המשתמש "${username}" כבר תפוס.` };
+
+  const password = generatePassword();
+  const { error } = await admin
+    .from("portal_clients")
+    .update({ username, password_enc: encryptPassword(password), crm_status: "job_active" })
+    .eq("id", id);
+  if (error) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
+    }
+    return { error: "הקצאת פרטי הגישה נכשלה. נסי שוב." };
+  }
+
+  revalidatePath("/admin/clients");
+  revalidatePath("/admin/crm");
+  return { created: { company: client.company_name, username, password } };
+}
+
+/**
+ * Allow / block the portal's free candidate search for one client. Off by
+ * default — a client sees only the candidates we sent her unless this is on.
+ */
+export async function setClientCanSearch(id: string, on: boolean): Promise<void> {
+  await requireRole("admin");
+  await createAdminClient().from("portal_clients").update({ can_search: on }).eq("id", id);
+  revalidatePath("/admin/clients");
 }
 
 /** Issue a new password. The old one stops working immediately. */
@@ -115,5 +180,6 @@ export async function deletePortalClient(id: string): Promise<void> {
   await requireRole("admin");
   await createAdminClient().from("portal_clients").delete().eq("id", id);
   revalidatePath("/admin/clients");
+  revalidatePath("/admin/crm");
   revalidatePath("/admin/jobs");
 }

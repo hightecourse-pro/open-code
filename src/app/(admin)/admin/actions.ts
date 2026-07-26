@@ -9,9 +9,12 @@ import { applicationStatusEmail, jobCandidatesEmail } from "@/lib/email/template
 import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { getSiteUrl } from "@/lib/site";
+import { sanitizeRichHtml } from "@/lib/rich-text";
 import type {
   ApplicationStatus,
+  ClientCrmStatus,
   EmploymentType,
+  JobKind,
   JobSource,
   ProfileStatus,
   ReportStatus,
@@ -263,6 +266,13 @@ export async function updatePricing(
 export type FormState = { ok?: boolean; error?: string };
 
 const EMPLOYMENT: EmploymentType[] = ["full", "part", "student", "freelance"];
+const JOB_KINDS: JobKind[] = [
+  "immediate",
+  "practicum_placement",
+  "practicum_percent",
+  "practicum_free",
+  "other",
+];
 
 function jobFields(formData: FormData) {
   // Linking a job to a portal client is what routes the right CV to the right
@@ -278,6 +288,18 @@ function jobFields(formData: FormData) {
     ? (empRaw as EmploymentType)
     : "full";
   const external_url = String(formData.get("external_url") ?? "").trim() || null;
+
+  const kindRaw = String(formData.get("job_kind") ?? "immediate");
+  const job_kind: JobKind = JOB_KINDS.includes(kindRaw as JobKind)
+    ? (kindRaw as JobKind)
+    : "immediate";
+  // The employer's hire-percentage only means something on a percent-practicum
+  // job — anything else (or an empty/invalid value) is stored as null.
+  const pctRaw = String(formData.get("practicum_percent") ?? "").trim();
+  const pct = pctRaw ? Math.round(Number(pctRaw)) : NaN;
+  const practicum_percent =
+    job_kind === "practicum_percent" && Number.isFinite(pct) && pct >= 1 && pct <= 100 ? pct : null;
+
   return {
     company,
     title,
@@ -291,6 +313,9 @@ function jobFields(formData: FormData) {
       .map((t) => t.trim())
       .filter(Boolean),
     external_url,
+    job_kind,
+    practicum_percent,
+    description_html: sanitizeRichHtml(String(formData.get("description_html") ?? "")) || null,
   };
 }
 
@@ -302,16 +327,32 @@ function validateJob(f: ReturnType<typeof jobFields>): string | null {
 }
 
 /** Everything except the portal link — used to retry before that migration. */
-function withoutClient(f: ReturnType<typeof jobFields>) {
+function withoutClient<T extends { client_id: string | null }>(f: T) {
   const { client_id: _drop, ...rest } = f;
   void _drop;
+  return rest;
+}
+
+/** Everything except the CRM-migration columns (_jobs_crm.sql) — retry before it ran. */
+function withoutCrmColumns<T extends { job_kind: JobKind; practicum_percent: number | null; description_html: string | null }>(
+  f: T
+) {
+  const { job_kind: _k, practicum_percent: _p, description_html: _d, ...rest } = f;
+  void _k;
+  void _p;
+  void _d;
   return rest;
 }
 
 /** Postgres/PostgREST "column does not exist" — the pre-migration case only. */
 function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
-  return error.code === "42703" || /client_id|cv_document_id|column/i.test(error.message ?? "");
+  return (
+    error.code === "42703" ||
+    /client_id|cv_document_id|job_kind|practicum_percent|description_html|column/i.test(
+      error.message ?? ""
+    )
+  );
 }
 
 /** Post a new job to the board. */
@@ -324,11 +365,18 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
   const supabase = await createClient();
   const { error } = await supabase.from("jobs").insert(f);
   if (error) {
-    // Backward-safe: retry without the portal link ONLY when that column is
-    // what's missing — a real error must still surface.
+    // Backward-safe: retry without newer-migration columns ONLY when a column
+    // is what's missing — a real error must still surface. First without the
+    // CRM columns (_jobs_crm.sql), then also without the portal link.
     if (!isMissingColumn(error)) return { error: error.message };
-    const { error: retry } = await supabase.from("jobs").insert(withoutClient(f));
-    if (retry) return { error: retry.message };
+    const { error: retry } = await supabase.from("jobs").insert(withoutCrmColumns(f));
+    if (retry) {
+      if (!isMissingColumn(retry)) return { error: retry.message };
+      const { error: retry2 } = await supabase
+        .from("jobs")
+        .insert(withoutClient(withoutCrmColumns(f)));
+      if (retry2) return { error: retry2.message };
+    }
   }
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
@@ -345,8 +393,15 @@ export async function editJob(jobId: string, _prev: FormState, formData: FormDat
   const { error } = await supabase.from("jobs").update(f).eq("id", jobId);
   if (error) {
     if (!isMissingColumn(error)) return { error: error.message };
-    const { error: retry } = await supabase.from("jobs").update(withoutClient(f)).eq("id", jobId);
-    if (retry) return { error: retry.message };
+    const { error: retry } = await supabase.from("jobs").update(withoutCrmColumns(f)).eq("id", jobId);
+    if (retry) {
+      if (!isMissingColumn(retry)) return { error: retry.message };
+      const { error: retry2 } = await supabase
+        .from("jobs")
+        .update(withoutClient(withoutCrmColumns(f)))
+        .eq("id", jobId);
+      if (retry2) return { error: retry2.message };
+    }
   }
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
@@ -369,6 +424,83 @@ export async function deleteJob(jobId: string): Promise<void> {
   await supabase.from("jobs").delete().eq("id", jobId);
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
+}
+
+// ------------------------------------------------------------ job questions
+// The built-in question ("למה את חושבת שאת מתאימה למשרה?") lives in code —
+// these are only the extra, per-job questions the admin defines.
+
+/** Add a required application question to a job (appended last). */
+export async function addJobQuestion(
+  jobId: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+  const question = String(formData.get("question") ?? "").trim();
+  if (!question) return { error: "כתבי את נוסח השאלה." };
+
+  const supabase = await createClient();
+  const { data: last } = await supabase
+    .from("job_questions")
+    .select("sort_order")
+    .eq("job_id", jobId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("job_questions")
+    .insert({ job_id: jobId, question, sort_order: (last?.sort_order ?? -1) + 1 });
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/jobs/${jobId}`);
+  return { ok: true };
+}
+
+/** Remove a question from a job. */
+export async function deleteJobQuestion(id: string, jobId: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("job_questions").delete().eq("id", id).eq("job_id", jobId);
+  revalidatePath(`/admin/jobs/${jobId}`);
+}
+
+/** Move a question one step up/down by swapping sort_order with its neighbor. */
+export async function moveJobQuestion(id: string, jobId: string, dir: "up" | "down"): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const { data: rows } = await supabase
+    .from("job_questions")
+    .select("id, sort_order")
+    .eq("job_id", jobId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (!rows || rows.length < 2) return;
+
+  const idx = rows.findIndex((r) => r.id === id);
+  const swapIdx = dir === "up" ? idx - 1 : idx + 1;
+  if (idx < 0 || swapIdx < 0 || swapIdx >= rows.length) return;
+
+  const a = rows[idx];
+  const b = rows[swapIdx];
+  if (a.sort_order !== b.sort_order) {
+    await Promise.all([
+      supabase.from("job_questions").update({ sort_order: b.sort_order }).eq("id", a.id),
+      supabase.from("job_questions").update({ sort_order: a.sort_order }).eq("id", b.id),
+    ]);
+  } else {
+    // Legacy rows can share a sort_order — reindex the whole list (with the
+    // two swapped) so every question gets a distinct integer again.
+    const order = rows.map((r) => r.id);
+    [order[idx], order[swapIdx]] = [order[swapIdx], order[idx]];
+    await Promise.all(
+      order.map((qid, i) =>
+        supabase.from("job_questions").update({ sort_order: i }).eq("id", qid)
+      )
+    );
+  }
+  revalidatePath(`/admin/jobs/${jobId}`);
 }
 
 // ------------------------------------------------------- portal job candidates
@@ -483,6 +615,80 @@ export async function setApplicationStatus(applicationId: string, status: Applic
       console.error("[application email] failed:", e);
     }
   }
+}
+
+// ------------------------------------------------------------- client CRM
+
+const CRM_STATUSES: ClientCrmStatus[] = ["initial_call", "materials_sent", "job_active", "hired"];
+
+/** Shared parse for the CRM contact fields (empty strings become null). */
+function crmContactFields(formData: FormData) {
+  return {
+    contact_name: String(formData.get("contact_name") ?? "").trim() || null,
+    contact_phone: String(formData.get("contact_phone") ?? "").trim() || null,
+    contact_email: String(formData.get("contact_email") ?? "").trim() || null,
+  };
+}
+
+/**
+ * Add a lead to the client CRM. The lead and the portal client are the same
+ * portal_clients row — credentials (username/password) are assigned later, on
+ * the clients screen, once the lead reaches "משרה בטיפול".
+ */
+export async function createCrmLead(_prev: FormState, formData: FormData): Promise<FormState> {
+  await requireRole("admin");
+
+  const company_name = String(formData.get("company_name") ?? "").trim();
+  if (!company_name) return { error: "שם החברה הוא שדה חובה." };
+
+  const { error } = await createAdminClient()
+    .from("portal_clients")
+    .insert({ company_name, ...crmContactFields(formData), crm_status: "initial_call" });
+  if (error) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
+    }
+    return { error: "לא הצלחנו להוסיף את הליד. נסי שוב." };
+  }
+
+  revalidatePath("/admin/crm");
+  revalidatePath("/admin/clients");
+  return { ok: true };
+}
+
+/** Update a CRM client's contact details, pipeline status and internal notes. */
+export async function updateCrmClient(
+  id: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+
+  const statusRaw = String(formData.get("crm_status") ?? "");
+  if (!CRM_STATUSES.includes(statusRaw as ClientCrmStatus)) {
+    return { error: "סטטוס לא תקין." };
+  }
+
+  const { error } = await createAdminClient()
+    .from("portal_clients")
+    .update({
+      ...crmContactFields(formData),
+      crm_status: statusRaw as ClientCrmStatus,
+      crm_notes: String(formData.get("crm_notes") ?? "").trim() || null,
+    })
+    .eq("id", id);
+  if (error) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
+    }
+    return { error: "השמירה נכשלה. נסי שוב." };
+  }
+
+  // The clients screen shows only "משרה בטיפול" — a status change moves rows
+  // between the two screens, so both must refresh.
+  revalidatePath("/admin/crm");
+  revalidatePath("/admin/clients");
+  return { ok: true };
 }
 
 /** Soft-cancel a session: shows "בוטל" and auto-hides from members after 24h. */

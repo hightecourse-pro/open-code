@@ -5,7 +5,14 @@ import Link from "next/link";
 import { Pencil, Lock, Unlock, Trash2, Users } from "lucide-react";
 import { Alert, Badge, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { editJob, setJobStatus, deleteJob, type FormState } from "@/app/(admin)/admin/actions";
-import type { EmploymentType, JobSource, JobStatus } from "@/types/database";
+import { RichTextEditor } from "./rich-text-editor";
+import type {
+  EmploymentType,
+  JobKind,
+  JobPipelineStatus,
+  JobSource,
+  JobStatus,
+} from "@/types/database";
 
 export interface AdminJob {
   id: string;
@@ -17,8 +24,12 @@ export interface AdminJob {
   tech_tags: string[];
   external_url: string | null;
   description: string;
+  description_html: string | null;
   status: JobStatus;
   client_id: string | null;
+  job_kind: JobKind;
+  practicum_percent: number | null;
+  pipeline_status: JobPipelineStatus;
 }
 
 export interface PortalClientOption {
@@ -33,9 +44,38 @@ const EMP: Record<EmploymentType, string> = {
   freelance: "פרילנס",
 };
 
+/** Shared job-kind labels (create form + edit form + row). */
+export const JOB_KIND_OPTIONS: { value: JobKind; label: string }[] = [
+  { value: "immediate", label: "גיוס מיידי" },
+  { value: "practicum_placement", label: "פרקטיקום 3 חודשים עם השמה בקצה" },
+  { value: "practicum_percent", label: "פרקטיקום עם % גיוס" },
+  { value: "practicum_free", label: "פרקטיקום ללא התחייבות" },
+  { value: "other", label: "אחר" },
+];
+
+const KIND_LABEL = Object.fromEntries(JOB_KIND_OPTIONS.map((k) => [k.value, k.label])) as Record<
+  JobKind,
+  string
+>;
+
+// The recruitment-pipeline pill. The status itself is changed from the job's
+// detail page — here it is display-only.
+const PIPELINE: Record<
+  JobPipelineStatus,
+  { label: string; variant: "tech" | "mint" | "indigo" | "warm" | "grad" | "pink" }
+> = {
+  draft: { label: "לא פורסם", variant: "tech" },
+  published: { label: "פורסם", variant: "mint" },
+  candidates_sent: { label: "נשלחו מועמדות", variant: "indigo" },
+  interviews: { label: "ראיונות", variant: "warm" },
+  hired: { label: "גויס", variant: "grad" },
+  closed_no_hire: { label: "נסגר ללא גיוס", variant: "pink" },
+};
+
 export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalClientOption[] }) {
   const [editing, setEditing] = useState(false);
   const [source, setSource] = useState(job.source);
+  const [kind, setKind] = useState<JobKind>(job.job_kind ?? "immediate");
   const [state, action, pending] = useActionState<FormState, FormData>(
     async (prev, formData) => {
       const result = await editJob(job.id, prev, formData);
@@ -47,8 +87,9 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
   );
 
   function openEdit() {
-    // Re-sync from the row's current data so the "סוג" select never drifts.
+    // Re-sync from the row's current data so the selects never drift.
     setSource(job.source);
+    setKind(job.job_kind ?? "immediate");
     setEditing(true);
   }
 
@@ -60,12 +101,32 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <Field label="חברה"><Input name="company" defaultValue={job.company} required /></Field>
           <Field label="תפקיד"><Input name="title" defaultValue={job.title} required /></Field>
-          <Field label="סוג">
+          <Field label="מקור">
             <Select name="source" value={source} onChange={(e) => setSource(e.target.value as JobSource)}>
               <option value="ours">משרה שלנו</option>
               <option value="open">משרה מהשוק</option>
             </Select>
           </Field>
+          <Field label="סוג משרה">
+            <Select name="job_kind" value={kind} onChange={(e) => setKind(e.target.value as JobKind)}>
+              {JOB_KIND_OPTIONS.map((k) => (
+                <option key={k.value} value={k.value}>{k.label}</option>
+              ))}
+            </Select>
+          </Field>
+          {kind === "practicum_percent" && (
+            <Field label="אחוז גיוס">
+              <Input
+                name="practicum_percent"
+                type="number"
+                min={1}
+                max={100}
+                defaultValue={job.practicum_percent ?? ""}
+                placeholder="למשל 15"
+                className="max-w-32"
+              />
+            </Field>
+          )}
           <Field label="היקף">
             <Select name="employment_type" defaultValue={job.employment_type}>
               {Object.entries(EMP).map(([v, l]) => (
@@ -87,7 +148,10 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
         <Field label={source === "open" ? "קישור להגשה (חובה)" : "קישור להגשה (לא חובה)"}>
           <Input name="external_url" dir="ltr" defaultValue={job.external_url ?? ""} required={source === "open"} />
         </Field>
-        <Field label="תיאור"><Textarea name="description" defaultValue={job.description} /></Field>
+        <Field label="תיאור מעוצב">
+          <RichTextEditor name="description_html" defaultValue={job.description_html} />
+        </Field>
+        <Field label="תיאור (טקסט פשוט, גיבוי)"><Textarea name="description" defaultValue={job.description} /></Field>
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={pending}>{pending ? "שומר…" : "שמירה"}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>ביטול</Button>
@@ -95,6 +159,9 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
       </form>
     );
   }
+
+  const pipeline = PIPELINE[job.pipeline_status] ?? PIPELINE.draft;
+  const kindLabel = KIND_LABEL[job.job_kind] ?? KIND_LABEL.immediate;
 
   return (
     <div className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0">
@@ -104,8 +171,13 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
         <div className="text-xs text-ink-500 truncate">
           {job.company} · {EMP[job.employment_type]}
           {job.location ? ` · ${job.location}` : ""}
+          {` · ${kindLabel}`}
+          {job.job_kind === "practicum_percent" && job.practicum_percent != null
+            ? ` (${job.practicum_percent}%)`
+            : ""}
         </div>
       </div>
+      <Badge variant={pipeline.variant}>{pipeline.label}</Badge>
       <Badge variant={job.status === "open" ? "mint" : "tech"}>{job.status === "open" ? "פתוחה" : "סגורה"}</Badge>
       <Link
         href={`/admin/jobs/${job.id}`}

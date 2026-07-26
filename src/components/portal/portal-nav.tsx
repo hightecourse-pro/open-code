@@ -11,12 +11,17 @@ const ITEMS = [
   { href: "/portal/favorites", label: "המועדפות שלי", icon: Star },
 ];
 
-/** The portal's top-bar sections. Dark-surface styling to sit on the ink bar. */
-export function PortalNav() {
+/**
+ * The portal's top-bar sections. Dark-surface styling to sit on the ink bar.
+ * Free search is a per-client grant — without it the search item is hidden
+ * (the page itself also redirects, so this is presentation, not the gate).
+ */
+export function PortalNav({ canSearch }: { canSearch: boolean }) {
   const pathname = usePathname();
+  const items = canSearch ? ITEMS : ITEMS.filter((item) => item.href !== "/portal");
   return (
     <nav className="flex items-center gap-1">
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const active =
           item.href === "/portal" ? pathname === "/portal" : pathname.startsWith(item.href);
         const Icon = item.icon;

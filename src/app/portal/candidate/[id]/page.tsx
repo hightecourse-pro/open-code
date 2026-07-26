@@ -26,14 +26,18 @@ import {
 import { Alert, Avatar, Badge, Button, type BadgeProps } from "@/components/ui";
 import { loadCandidates, type CandidateDetail, type CandidateField } from "@/lib/portal/candidates";
 import { favoriteIds } from "@/lib/portal/favorites";
+import { candidateSentToClient } from "@/lib/portal/jobs";
 import { FavoriteButton } from "@/components/portal/favorite-button";
-import { requirePortalClient } from "@/app/portal/session";
+import { portalClient, requirePortalClient } from "@/app/portal/session";
 
 /**
  * loadCandidates() is a whole-list read; cache() collapses the metadata pass
  * and the render pass into a single one per request.
  */
 const candidates = cache(loadCandidates);
+
+/** Same collapse for the sent-to-client gate: metadata + page check once. */
+const sentToClient = cache(candidateSentToClient);
 
 async function findCandidate(id: string): Promise<CandidateDetail | null> {
   const { candidates: all } = await candidates();
@@ -143,7 +147,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const candidate = await findCandidate(id);
-  return { title: candidate ? candidate.name : "מועמדת" };
+  if (!candidate) return { title: "מועמדת" };
+
+  // Even a browser-tab title must not leak a name the client isn't allowed to
+  // see — apply the same sent-to-client gate the page body applies.
+  const client = await portalClient();
+  if (client && !client.can_search && !(await sentToClient(client.id, candidate.id))) {
+    return { title: "מועמדת" };
+  }
+  return { title: candidate.name };
 }
 
 export default async function CandidateProfilePage({
@@ -161,6 +173,10 @@ export default async function CandidateProfilePage({
   const candidate = await findCandidate(id);
   if (!candidate) notFound();
 
+  // Without free search, a client may only open candidates we sent to one of
+  // her jobs; anyone else must be indistinguishable from not existing.
+  if (!client.can_search && !(await sentToClient(client.id, candidate.id))) notFound();
+
   const favs = await favoriteIds(client.id);
   const groups = groupFields(candidate);
   const cvHref = `/portal/candidate/${candidate.id}/cv`;
@@ -168,11 +184,11 @@ export default async function CandidateProfilePage({
   return (
     <div className="flex flex-col gap-6 pb-24 lg:pb-0">
       <Link
-        href="/portal"
+        href={client.can_search ? "/portal" : "/portal/jobs"}
         className="t-body-sm inline-flex w-fit items-center gap-1.5 font-semibold text-ink-700 transition-colors duration-150 hover:text-brand-purple print:hidden"
       >
         <ArrowRight size={16} />
-        חזרה לחיפוש
+        {client.can_search ? "חזרה לחיפוש" : "חזרה למשרות שלי"}
       </Link>
 
       {cv === "none" && (

@@ -16,6 +16,11 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; variant: "warm" | "
   in_review: { label: "בבדיקה", variant: "indigo" },
   accepted: { label: "התקבלה", variant: "mint" },
   rejected: { label: "נדחתה", variant: "pink" },
+  sent: { label: "הוגשה ללקוח", variant: "indigo" },
+  interview: { label: "בראיון", variant: "warm" },
+  exam: { label: "במבחן", variant: "warm" },
+  hired: { label: "גויסה", variant: "mint" },
+  declined: { label: "לא נבחרה", variant: "pink" },
 };
 
 export default async function AdminJobsPage() {
@@ -23,7 +28,9 @@ export default async function AdminJobsPage() {
   const supabase = await createClient();
   const { data: jobs } = await supabase
     .from("jobs")
-    .select("id, company, title, source, employment_type, location, tech_tags, external_url, description, status, client_id, created_at")
+    .select(
+      "id, company, title, source, employment_type, location, tech_tags, external_url, description, description_html, status, client_id, job_kind, practicum_percent, pipeline_status, created_at"
+    )
     .order("created_at", { ascending: false });
 
   // Portal clients a job can be linked to (admin-only table → service role).

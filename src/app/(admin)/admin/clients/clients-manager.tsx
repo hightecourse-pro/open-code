@@ -2,12 +2,14 @@
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Building2, Check, Copy, Eye, EyeOff, KeyRound, Trash2 } from "lucide-react";
-import { Alert, Badge, Button, Field, Input } from "@/components/ui";
+import { Alert, Badge, Button, Field, Input, Switch } from "@/components/ui";
 import { timeAgo } from "@/lib/utils";
 import {
+  assignPortalCredentials,
   createPortalClient,
   deletePortalClient,
   regeneratePortalPassword,
+  setClientCanSearch,
   setPortalClientActive,
   type ClientFormState,
 } from "./actions";
@@ -15,10 +17,13 @@ import {
 export interface PortalClientRow {
   id: string;
   company_name: string;
+  /** Empty for CRM leads that haven't been assigned credentials yet. */
   username: string;
   contact_name: string | null;
   contact_email: string | null;
   is_active: boolean;
+  /** May this client use the portal's free candidate search? */
+  can_search: boolean;
   created_at: string;
   last_login_at: string | null;
   job_count: number;
@@ -111,11 +116,60 @@ function CredentialsPanel({
   );
 }
 
+/**
+ * A CRM lead that reached "משרה בטיפול" but has no portal access yet — this
+ * assigns username + password to the SAME row (update, not a new client).
+ */
+function AssignCredentials({ client }: { client: PortalClientRow }) {
+  const [state, action, pending] = useActionState<ClientFormState, FormData>(
+    (prev, formData) => assignPortalCredentials(client.id, prev, formData),
+    {}
+  );
+
+  if (state.created) {
+    return (
+      <CredentialsPanel
+        company={state.created.company}
+        username={state.created.username}
+        password={state.created.password}
+      />
+    );
+  }
+
+  return (
+    <form action={action} className="border border-ink-200 bg-ink-50 rounded-[14px] p-3.5 flex flex-col gap-2.5">
+      {state.error && <Alert variant="danger">{state.error}</Alert>}
+      <div className="flex items-end gap-2.5 flex-wrap">
+        <Field
+          label="שם משתמש (אנגלית, ללא רווחים)"
+          htmlFor={`assign-username-${client.id}`}
+          className="flex-1 min-w-[180px]"
+        >
+          <Input
+            id={`assign-username-${client.id}`}
+            name="username"
+            dir="ltr"
+            required
+            autoComplete="off"
+            placeholder="alta-cyber"
+          />
+        </Field>
+        <Button type="submit" size="sm" disabled={pending}>
+          <KeyRound size={14} />
+          {pending ? "מקצה…" : "הקצאת פרטי גישה"}
+        </Button>
+      </div>
+      <p className="text-[12px] text-ink-500">הסיסמה תיווצר אוטומטית ותוצג כאן להעתקה.</p>
+    </form>
+  );
+}
+
 function ClientRow({ client }: { client: PortalClientRow }) {
   const [pending, start] = useTransition();
   const [issued, setIssued] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPw, setShowPw] = useState(false);
+  const hasCredentials = Boolean(client.username);
 
   return (
     <div className="py-3.5 border-b border-ink-100 last:border-b-0 flex flex-col gap-3">
@@ -128,9 +182,13 @@ function ClientRow({ client }: { client: PortalClientRow }) {
             </Badge>
           </div>
           <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
-            <code dir="ltr" className="font-mono text-ink-700">
-              {client.username}
-            </code>
+            {hasCredentials ? (
+              <code dir="ltr" className="font-mono text-ink-700">
+                {client.username}
+              </code>
+            ) : (
+              <span className="text-[#8C5E0E] font-semibold">טרם הוקצו פרטי גישה</span>
+            )}
             {client.contact_name && <span>· {client.contact_name}</span>}
             {client.contact_email && (
               <span dir="ltr" className="font-mono">
@@ -139,26 +197,40 @@ function ClientRow({ client }: { client: PortalClientRow }) {
             )}
           </div>
           {/* The password, revealable and copyable at any time. */}
-          <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
-            <span className="font-semibold">סיסמה:</span>
-            {client.password ? (
-              <>
-                <code dir="ltr" className="font-mono text-ink-900 select-all tracking-wide">
-                  {showPw ? client.password : "••••••••"}
-                </code>
-                <button
-                  type="button"
-                  onClick={() => setShowPw((s) => !s)}
-                  className="inline-flex items-center gap-1 text-brand-purple hover:text-brand-pink-deep"
-                >
-                  {showPw ? <EyeOff size={13} /> : <Eye size={13} />}
-                  {showPw ? "הסתרה" : "הצגה"}
-                </button>
-                {showPw && <CopyButton value={client.password} label="העתקה" />}
-              </>
-            ) : (
-              <span className="text-ink-400">לא זמינה — הפיקי סיסמה חדשה</span>
-            )}
+          {hasCredentials && (
+            <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
+              <span className="font-semibold">סיסמה:</span>
+              {client.password ? (
+                <>
+                  <code dir="ltr" className="font-mono text-ink-900 select-all tracking-wide">
+                    {showPw ? client.password : "••••••••"}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((s) => !s)}
+                    className="inline-flex items-center gap-1 text-brand-purple hover:text-brand-pink-deep"
+                  >
+                    {showPw ? <EyeOff size={13} /> : <Eye size={13} />}
+                    {showPw ? "הסתרה" : "הצגה"}
+                  </button>
+                  {showPw && <CopyButton value={client.password} label="העתקה" />}
+                </>
+              ) : (
+                <span className="text-ink-400">לא זמינה — הפיקי סיסמה חדשה</span>
+              )}
+            </div>
+          )}
+          {/* Free candidate search — off by default; the client only sees what we sent. */}
+          <div className="mt-1.5">
+            <Switch
+              label={<span className="text-xs text-ink-700">חיפוש חופשי בפורטל</span>}
+              defaultChecked={client.can_search}
+              disabled={pending}
+              onChange={(e) => {
+                const on = e.target.checked;
+                start(() => void setClientCanSearch(client.id, on));
+              }}
+            />
           </div>
         </div>
 
@@ -170,23 +242,25 @@ function ClientRow({ client }: { client: PortalClientRow }) {
         </div>
 
         <div className="flex gap-1.5 items-center">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={pending}
-            onClick={() => {
-              setError(null);
-              start(async () => {
-                const res = await regeneratePortalPassword(client.id);
-                if (res.error) setError(res.error);
-                else if (res.password) setIssued(res.password);
-              });
-            }}
-          >
-            <KeyRound size={14} />
-            סיסמה חדשה
-          </Button>
+          {hasCredentials && (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={pending}
+              onClick={() => {
+                setError(null);
+                start(async () => {
+                  const res = await regeneratePortalPassword(client.id);
+                  if (res.error) setError(res.error);
+                  else if (res.password) setIssued(res.password);
+                });
+              }}
+            >
+              <KeyRound size={14} />
+              סיסמה חדשה
+            </Button>
+          )}
 
           <Button
             type="button"
@@ -222,6 +296,7 @@ function ClientRow({ client }: { client: PortalClientRow }) {
         </div>
       </div>
 
+      {!hasCredentials && <AssignCredentials client={client} />}
       {error && <Alert variant="danger">{error}</Alert>}
       {issued && (
         <CredentialsPanel
@@ -296,7 +371,7 @@ export function ClientsManager({ clients }: { clients: PortalClientRow[] }) {
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-3">
-          כל הלקוחות ({clients.length})
+          לקוחות במשרה בטיפול ({clients.length})
         </h3>
 
         {clients.length > 0 ? (
@@ -308,7 +383,9 @@ export function ClientsManager({ clients }: { clients: PortalClientRow[] }) {
         ) : (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <Building2 size={28} className="text-ink-300" />
-            <p className="text-ink-500 text-sm">אין עדיין לקוחות פורטל.</p>
+            <p className="text-ink-500 text-sm">
+              אין עדיין לקוחות בסטטוס &quot;משרה בטיפול&quot;. קדמי ליד ב-CRM כדי שיופיע כאן.
+            </p>
           </div>
         )}
       </div>

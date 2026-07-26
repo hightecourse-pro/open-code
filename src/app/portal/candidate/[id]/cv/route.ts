@@ -10,6 +10,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { getPortalClient } from "@/lib/portal/auth";
+import { candidateSentToClient } from "@/lib/portal/jobs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Matches the signed-URL lifetime used elsewhere in the app. */
@@ -46,6 +47,13 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 
   if (!candidate) {
     return noStore(NextResponse.redirect(new URL("/portal", request.url)));
+  }
+
+  // Without free search, a client may only fetch CVs of candidates we sent to
+  // one of her jobs — the same gate as the profile page. 404, not a redirect,
+  // so the response doesn't hint the candidate exists.
+  if (!client.can_search && !(await candidateSentToClient(client.id, id))) {
+    return noStore(new NextResponse(null, { status: 404 }));
   }
 
   const profileUrl = new URL(`/portal/candidate/${id}`, request.url);

@@ -21,6 +21,11 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; cls: string }> = {
   in_review: { label: "המועמדות שלך בבדיקה 👀", cls: "text-brand-indigo" },
   accepted: { label: "התקבלת! 🎉", cls: "text-success" },
   rejected: { label: "הפעם זה לא התקדם — ממשיכות הלאה 💪", cls: "text-ink-500" },
+  sent: { label: "המועמדות שלך הוגשה למעסיק 🤞", cls: "text-brand-indigo" },
+  interview: { label: "זומנת לראיון! 🎯", cls: "text-success" },
+  exam: { label: "עברת שלב — יש מבחן בדרך ✍️", cls: "text-brand-indigo" },
+  hired: { label: "גויסת! 🎉", cls: "text-success" },
+  declined: { label: "הפעם זה לא התקדם — ממשיכות הלאה 💪", cls: "text-ink-500" },
 };
 
 const LOGO_GRADIENTS = [

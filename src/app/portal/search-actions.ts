@@ -29,6 +29,15 @@ export async function smartSearch(
   const client = await getPortalClient();
   if (!client) return { status: "error", message: "פג תוקף החיבור. יש להתחבר מחדש." };
 
+  // Free search is a per-client grant; the search page redirects without it,
+  // but the action is reachable by direct POST, so it re-checks on its own.
+  if (!client.can_search) {
+    return {
+      status: "error",
+      message: "חיפוש חופשי אינו זמין בחשבון זה. המועמדות שנבחרו עבורכם מופיעות בעמוד ״המשרות שלי״.",
+    };
+  }
+
   const text = String(formData.get("q") ?? "").trim();
   if (!text) return { status: "idle" };
 

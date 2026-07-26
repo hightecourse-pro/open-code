@@ -3,7 +3,9 @@
 import { useActionState, useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { createJob, type FormState } from "@/app/(admin)/admin/actions";
+import { RichTextEditor } from "./rich-text-editor";
 import type { PortalClientOption } from "./admin-job-row";
+import { JOB_KIND_OPTIONS } from "./admin-job-row";
 
 const EMPLOYMENT: { value: string; label: string }[] = [
   { value: "full", label: "משרה מלאה" },
@@ -15,6 +17,7 @@ const EMPLOYMENT: { value: string; label: string }[] = [
 export function AdminCreateJob({ clients }: { clients: PortalClientOption[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createJob, {});
   const [source, setSource] = useState("open");
+  const [kind, setKind] = useState("immediate");
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -27,12 +30,34 @@ export function AdminCreateJob({ clients }: { clients: PortalClientOption[] }) {
         <Field label="תפקיד" htmlFor="j-title">
           <Input id="j-title" name="title" required />
         </Field>
-        <Field label="סוג משרה" htmlFor="j-source">
+        <Field label="מקור המשרה" htmlFor="j-source">
           <Select id="j-source" name="source" value={source} onChange={(e) => setSource(e.target.value)}>
             <option value="ours">משרה שלנו (הגשה פנימית)</option>
             <option value="open">משרה מהשוק (הגשה חיצונית)</option>
           </Select>
         </Field>
+        <Field label="סוג משרה" htmlFor="j-kind">
+          <Select id="j-kind" name="job_kind" value={kind} onChange={(e) => setKind(e.target.value)}>
+            {JOB_KIND_OPTIONS.map((k) => (
+              <option key={k.value} value={k.value}>
+                {k.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        {kind === "practicum_percent" && (
+          <Field label="אחוז גיוס" htmlFor="j-pct">
+            <Input
+              id="j-pct"
+              name="practicum_percent"
+              type="number"
+              min={1}
+              max={100}
+              placeholder="למשל 15"
+              className="max-w-32"
+            />
+          </Field>
+        )}
         <Field label="היקף" htmlFor="j-emp">
           <Select id="j-emp" name="employment_type" defaultValue="full">
             {EMPLOYMENT.map((e) => (
@@ -69,7 +94,10 @@ export function AdminCreateJob({ clients }: { clients: PortalClientOption[] }) {
           placeholder="https://…"
         />
       </Field>
-      <Field label="תיאור" htmlFor="j-desc">
+      <Field label="תיאור מעוצב" htmlFor="j-desc-rich">
+        <RichTextEditor id="j-desc-rich" name="description_html" />
+      </Field>
+      <Field label="תיאור (טקסט פשוט, גיבוי)" htmlFor="j-desc">
         <Textarea id="j-desc" name="description" />
       </Field>
       <Button type="submit" disabled={pending} className="w-fit">

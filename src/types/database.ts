@@ -31,7 +31,17 @@ export type ReportStatus = "open" | "reviewed" | "dismissed";
 export type JobSource = "ours" | "open";
 export type JobStatus = "open" | "closed";
 export type EmploymentType = "full" | "part" | "student" | "freelance";
-export type ApplicationStatus = "draft" | "submitted" | "in_review" | "accepted" | "rejected";
+export type ApplicationStatus =
+  | "draft"
+  | "submitted"
+  | "in_review"
+  | "accepted"
+  | "rejected"
+  | "sent"
+  | "interview"
+  | "exam"
+  | "hired"
+  | "declined";
 export type EnrollmentStatus = "active" | "completed" | "returned";
 export type SessionStatus = "scheduled" | "live" | "done";
 // Phase 3
@@ -45,6 +55,10 @@ export type CvLanguage = "he" | "en" | "job";
 export type ContentOwner = "course" | "session";
 export type LinkKind = "video" | "materials";
 export type ShareStatus = "pending" | "shared" | "revoked";
+// Jobs CRM
+export type JobKind = "immediate" | "practicum_placement" | "practicum_percent" | "practicum_free" | "other";
+export type JobPipelineStatus = "draft" | "published" | "candidates_sent" | "interviews" | "hired" | "closed_no_hire";
+export type ClientCrmStatus = "initial_call" | "materials_sent" | "job_active" | "hired";
 
 type Timestamps = { created_at: string; updated_at: string };
 
@@ -73,6 +87,10 @@ export interface Database {
           digest_frequency: string; // 'daily' | 'unread' | 'off'
           /** Opt-out from the employer portal listing. */
           portal_listed: boolean;
+          found_job: boolean;
+          workplace: string | null;
+          hired_via_us: boolean;
+          hired_at: string | null;
         } & Timestamps;
         Insert: {
           id: string;
@@ -93,6 +111,10 @@ export interface Database {
           profile_completed?: boolean;
           digest_frequency?: string;
           portal_listed?: boolean;
+          found_job?: boolean;
+          workplace?: string | null;
+          hired_via_us?: boolean;
+          hired_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -104,6 +126,8 @@ export interface Database {
           reason: string;
           note: string | null;
           status: string; // 'open' | 'handled'
+          kind: "general" | "employment";
+          assigned_mentor_id: string | null;
           created_at: string;
           handled_at: string | null;
         };
@@ -113,6 +137,8 @@ export interface Database {
           reason: string;
           note?: string | null;
           status?: string;
+          kind?: "general" | "employment";
+          assigned_mentor_id?: string | null;
           created_at?: string;
           handled_at?: string | null;
         };
@@ -124,13 +150,19 @@ export interface Database {
         Row: {
           id: string;
           company_name: string;
-          username: string;
+          /** Null until the client reaches "job_active" and portal access is assigned. */
+          username: string | null;
           /** Encrypted (reversible) password — admin can re-read it. */
           password_enc: string | null;
           password_hash: string | null;
           password_salt: string | null;
           contact_name: string | null;
+          contact_phone: string | null;
           contact_email: string | null;
+          crm_status: ClientCrmStatus;
+          /** May this client use the portal's free candidate search? */
+          can_search: boolean;
+          crm_notes: string | null;
           is_active: boolean;
           notes: string | null;
           created_at: string;
@@ -139,12 +171,16 @@ export interface Database {
         Insert: {
           id?: string;
           company_name: string;
-          username: string;
+          username?: string | null;
           password_enc?: string | null;
           password_hash?: string | null;
           password_salt?: string | null;
           contact_name?: string | null;
+          contact_phone?: string | null;
           contact_email?: string | null;
+          crm_status?: ClientCrmStatus;
+          can_search?: boolean;
+          crm_notes?: string | null;
           is_active?: boolean;
           notes?: string | null;
           created_at?: string;
@@ -159,6 +195,9 @@ export interface Database {
           id: string;
           job_id: string;
           profile_id: string;
+          /** Client asked to interview this candidate. */
+          interview_marked: boolean;
+          client_note: string | null;
           created_at: string;
           created_by: string | null;
         };
@@ -166,10 +205,52 @@ export interface Database {
           id?: string;
           job_id: string;
           profile_id: string;
+          interview_marked?: boolean;
+          client_note?: string | null;
           created_at?: string;
           created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["job_candidates"]["Insert"]>;
+        Relationships: [];
+      };
+      /** The audience a targeted job was published to (by criteria or manual pick). */
+      job_targets: {
+        Row: {
+          job_id: string;
+          profile_id: string;
+          source: "criteria" | "manual";
+          emailed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          job_id: string;
+          profile_id: string;
+          source?: "criteria" | "manual";
+          emailed_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["job_targets"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Admin-defined application questions per job. */
+      job_questions: {
+        Row: {
+          id: string;
+          job_id: string;
+          question: string;
+          sort_order: number;
+          required: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          job_id: string;
+          question: string;
+          sort_order?: number;
+          required?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["job_questions"]["Insert"]>;
         Relationships: [];
       };
       /** Candidates a portal client marked as favorites. */
@@ -506,6 +587,12 @@ export interface Database {
           posted_by: string | null;
           /** The portal client this job belongs to, if any. */
           client_id: string | null;
+          job_kind: JobKind;
+          /** Employer share (1-100) for practicum_percent jobs. */
+          practicum_percent: number | null;
+          pipeline_status: JobPipelineStatus;
+          description_html: string | null;
+          published_at: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -524,6 +611,11 @@ export interface Database {
           is_visible?: boolean;
           status?: JobStatus;
           posted_by?: string | null;
+          job_kind?: JobKind;
+          practicum_percent?: number | null;
+          pipeline_status?: JobPipelineStatus;
+          description_html?: string | null;
+          published_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["jobs"]["Insert"]>;
         Relationships: [];
@@ -538,6 +630,10 @@ export interface Database {
           submitted_at: string;
           /** The CV she attached for this job — what the client downloads. */
           cv_document_id: string | null;
+          /** {question_id: answer, fit: "..."} */
+          answers: Json | null;
+          admin_mark: "optional" | "not_fit" | "approved" | null;
+          sent_to_client_at: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -547,6 +643,9 @@ export interface Database {
           note?: string | null;
           submitted_at?: string;
           cv_document_id?: string | null;
+          answers?: Json | null;
+          admin_mark?: "optional" | "not_fit" | "approved" | null;
+          sent_to_client_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
         Relationships: [];

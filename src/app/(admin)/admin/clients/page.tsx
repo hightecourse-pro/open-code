@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { decryptPassword } from "@/lib/portal/auth";
@@ -24,13 +25,23 @@ export default async function AdminClientsPage() {
     if (j.client_id) jobCounts.set(j.client_id, (jobCounts.get(j.client_id) ?? 0) + 1);
   }
 
-  const rows: PortalClientRow[] = (clients ?? []).map((c) => ({
+  // The CRM (/admin/crm) is the master list of ALL clients and leads. This
+  // screen handles portal access only, so it shows just the clients whose
+  // status is "משרה בטיפול". Pre-migration rows have no crm_status — any row
+  // with credentials counts as job_active.
+  const activeClients = (clients ?? []).filter(
+    (c) => (c.crm_status ?? (c.username ? "job_active" : "initial_call")) === "job_active"
+  );
+
+  const rows: PortalClientRow[] = activeClients.map((c) => ({
     id: c.id,
     company_name: c.company_name,
-    username: c.username,
+    // CRM leads have no portal credentials yet — the list shows them without one.
+    username: c.username ?? "",
     contact_name: c.contact_name,
     contact_email: c.contact_email,
     is_active: c.is_active,
+    can_search: c.can_search ?? false,
     created_at: c.created_at,
     last_login_at: c.last_login_at,
     job_count: jobCounts.get(c.id) ?? 0,
@@ -50,6 +61,14 @@ export default async function AdminClientsPage() {
             /portal/login
           </span>{" "}
           עם שם המשתמש והסיסמה שתפיקי כאן.
+        </p>
+        <p className="text-[13px] text-ink-500 mt-1">
+          מוצגות כאן רק לקוחות בסטטוס &quot;משרה בטיפול&quot;. את הרשימה המלאה — כולל לידים
+          — תמצאי ב
+          <Link href="/admin/crm" className="font-semibold text-brand-purple hover:text-brand-pink-deep underline">
+            ־CRM הלקוחות
+          </Link>
+          .
         </p>
       </div>
 

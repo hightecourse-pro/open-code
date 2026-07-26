@@ -15,6 +15,13 @@ export interface PortalClient {
   id: string;
   company_name: string;
   username: string;
+  /** May this client free-search all candidates, or only see the ones we sent her? */
+  can_search: boolean;
+}
+
+/** Missing column (pre-migration) and null both mean the safe default: no free search. */
+function readCanSearch(row: { can_search?: boolean | null }): boolean {
+  return row.can_search === true;
 }
 
 function sessionSecret(): string {
@@ -125,13 +132,20 @@ export async function getPortalClient(): Promise<PortalClient | null> {
   const clientId = readToken(token);
   if (!clientId) return null;
 
+  // select("*") so this works whether or not the can_search migration ran.
   const { data } = await createAdminClient()
     .from("portal_clients")
-    .select("id, company_name, username, is_active")
+    .select("*")
     .eq("id", clientId)
     .maybeSingle();
   if (!data || !data.is_active) return null;
-  return { id: data.id, company_name: data.company_name, username: data.username };
+  // A signed-in client always has credentials; leads without a username never log in.
+  return {
+    id: data.id,
+    company_name: data.company_name,
+    username: data.username ?? "",
+    can_search: readCanSearch(data),
+  };
 }
 
 /** Verify credentials. Returns the client on success, null otherwise. */
@@ -159,5 +173,10 @@ export async function authenticate(username: string, password: string): Promise<
     .update({ last_login_at: new Date().toISOString() })
     .eq("id", data.id);
 
-  return { id: data.id, company_name: data.company_name, username: data.username };
+  return {
+    id: data.id,
+    company_name: data.company_name,
+    username: data.username ?? "",
+    can_search: readCanSearch(data),
+  };
 }

@@ -50,6 +50,26 @@ export async function loadClientJobs(clientId: string): Promise<ClientJob[]> {
   return jobs.map((j) => ({ ...j, candidates: byJob.get(j.id) ?? [] }));
 }
 
+/**
+ * Whether we ever sent this candidate to this client — i.e. a job_candidates
+ * row exists on one of the client's jobs. This is the privacy gate for clients
+ * without free search: any other candidate must look like she doesn't exist.
+ */
+export async function candidateSentToClient(clientId: string, profileId: string): Promise<boolean> {
+  const admin = createAdminClient();
+  const { data: jobs } = await admin.from("jobs").select("id").eq("client_id", clientId);
+  if (!jobs?.length) return false;
+
+  const { data: row } = await admin
+    .from("job_candidates")
+    .select("id")
+    .eq("profile_id", profileId)
+    .in("job_id", jobs.map((j) => j.id))
+    .limit(1)
+    .maybeSingle();
+  return !!row;
+}
+
 /** One job, only if it belongs to this client. null otherwise (404 upstream). */
 export async function loadClientJob(clientId: string, jobId: string): Promise<ClientJob | null> {
   const admin = createAdminClient();

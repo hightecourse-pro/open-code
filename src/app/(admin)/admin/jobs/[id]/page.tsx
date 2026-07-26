@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Inbox, Mail, UserCheck, UserPlus } from "lucide-react";
+import { ArrowRight, Inbox, ListChecks, Mail, UserCheck, UserPlus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { Alert, Badge, Button } from "@/components/ui";
 import { addJobCandidate, removeJobCandidate } from "@/app/(admin)/admin/actions";
 import { CandidatePicker } from "./candidate-picker";
+import { JobQuestionsManager } from "./job-questions";
 import { SendCandidatesButton } from "./send-candidates-button";
 
 export const metadata: Metadata = { title: "ניהול מועמדות למשרה" };
@@ -32,25 +33,32 @@ export default async function AdminJobCandidatesPage({
     .maybeSingle();
   if (!job) notFound();
 
-  const [{ data: applications }, { data: curated }, { data: members }] = await Promise.all([
-    admin
-      .from("applications")
-      .select("id, applicant_id, submitted_at")
-      .eq("job_id", id)
-      .order("submitted_at", { ascending: false }),
-    admin
-      .from("job_candidates")
-      .select("profile_id, created_at")
-      .eq("job_id", id)
-      .order("created_at", { ascending: false }),
-    admin
-      .from("profiles")
-      .select("id, full_name, specialization")
-      .eq("status", "active")
-      .eq("role", "junior")
-      .eq("profile_completed", true)
-      .order("full_name", { ascending: true }),
-  ]);
+  const [{ data: applications }, { data: curated }, { data: members }, { data: questions }] =
+    await Promise.all([
+      admin
+        .from("applications")
+        .select("id, applicant_id, submitted_at")
+        .eq("job_id", id)
+        .order("submitted_at", { ascending: false }),
+      admin
+        .from("job_candidates")
+        .select("profile_id, created_at")
+        .eq("job_id", id)
+        .order("created_at", { ascending: false }),
+      admin
+        .from("profiles")
+        .select("id, full_name, specialization")
+        .eq("status", "active")
+        .eq("role", "junior")
+        .eq("profile_completed", true)
+        .order("full_name", { ascending: true }),
+      admin
+        .from("job_questions")
+        .select("id, question, sort_order")
+        .eq("job_id", id)
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true }),
+    ]);
 
   const client = job.client_id
     ? (
@@ -114,6 +122,19 @@ export default async function AdminJobCandidatesPage({
             </Alert>
           )}
         </div>
+      </div>
+
+      {/* Required application questions */}
+      <div className={cardClass}>
+        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+          <ListChecks size={16} className="text-brand-purple" /> שאלות חובה למועמדות
+        </h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          שאלות שכל מועמדת עונה עליהן בהגשה למשרה הזו. שימי לב: השאלה
+          {" “למה את חושבת שאת מתאימה למשרה?” "}
+          נשאלת תמיד אוטומטית — אין צורך להוסיף אותה.
+        </p>
+        <JobQuestionsManager jobId={job.id} questions={questions ?? []} />
       </div>
 
       {/* Send to client */}

@@ -25,14 +25,14 @@ export default async function PortalLayout({ children }: { children: React.React
         <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-6">
           {/* The lockup is drawn for light surfaces — a white chip keeps it legible on the ink bar. */}
           <Link
-            href="/portal"
+            href={client.can_search ? "/portal" : "/portal/jobs"}
             className="inline-flex items-center rounded-sm bg-ink-0 px-2.5 py-1.5 hover:no-underline"
           >
             <Logo width={100} priority />
           </Link>
 
           <span aria-hidden className="h-6 w-px bg-white/15" />
-          <PortalNav />
+          <PortalNav canSearch={client.can_search} />
 
           <div className="ms-auto flex items-center gap-4">
             <div className="hidden text-end leading-tight sm:block">
