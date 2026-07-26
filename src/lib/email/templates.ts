@@ -322,6 +322,50 @@ export function jobCandidatesEmail(
   };
 }
 
+/**
+ * Tell a member a job was published specifically to her (targeted audience).
+ * The description is a plain-text excerpt — never raw HTML from the editor.
+ */
+export function jobPublishedEmail(
+  name: string | undefined,
+  jobTitle: string,
+  company: string,
+  descriptionText: string,
+  applyUrl: string
+): BuiltEmail {
+  return {
+    subject: "משרה חדשה במיוחד בשבילך 💼",
+    html: renderEmail({
+      heading: "משרה חדשה במיוחד בשבילך 💼",
+      lines: [
+        `${name ? `היי ${escapeHtml(name)}, ` : "היי, "}חשבנו עלייך! פתחנו משרה חדשה שנראית לנו מתאימה בדיוק לך:`,
+        `<b>${escapeHtml(jobTitle)}</b> · ${escapeHtml(company)}`,
+        ...(descriptionText ? [escapeHtml(descriptionText)] : []),
+        "מחכות לראות את המועמדות שלך 💜",
+      ],
+      ctaText: "לצפייה והגשה",
+      ctaUrl: applyUrl,
+      footnote: "המשרה פורסמה לקבוצה מצומצמת של חברות שמתאימות לה — שווה להגיש מוקדם.",
+    }),
+  };
+}
+
+/** Short confirmation to a member right after she submits an application. */
+export function applyConfirmationEmail(name: string | undefined, jobTitle: string): BuiltEmail {
+  return {
+    subject: "קיבלנו את המועמדות שלך 💜",
+    html: renderEmail({
+      heading: "קיבלנו את המועמדות שלך 💜",
+      lines: [
+        `${name ? `היי ${escapeHtml(name)}, ` : ""}המועמדות שלך למשרת <b>${escapeHtml(jobTitle)}</b> הוגשה בהצלחה 🎉`,
+        "אנחנו עוברות על כל הגשה באהבה — נעדכן אותך בכל התקדמות.",
+      ],
+      ctaText: "לכל המשרות",
+      ctaUrl: `${SITE}/jobs`,
+    }),
+  };
+}
+
 /** Fallback for any other auth action (email change, reauth, invite, …). */
 export function genericActionEmail(actionUrl: string): BuiltEmail {
   return {

@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Inbox, ListChecks, Mail, UserCheck, UserPlus } from "lucide-react";
+import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, UserCheck, UserPlus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
+import { getTaxonomyOptions } from "@/lib/taxonomies";
 import { Alert, Badge, Button } from "@/components/ui";
 import { addJobCandidate, removeJobCandidate } from "@/app/(admin)/admin/actions";
 import { CandidatePicker } from "./candidate-picker";
 import { JobQuestionsManager } from "./job-questions";
+import { PublishPanel } from "./publish-panel";
 import { SendCandidatesButton } from "./send-candidates-button";
 
 export const metadata: Metadata = { title: "ניהול מועמדות למשרה" };
@@ -28,13 +30,19 @@ export default async function AdminJobCandidatesPage({
 
   const { data: job } = await admin
     .from("jobs")
-    .select("id, title, company, client_id, source")
+    .select("id, title, company, client_id, source, pipeline_status, published_at")
     .eq("id", id)
     .maybeSingle();
   if (!job) notFound();
 
-  const [{ data: applications }, { data: curated }, { data: members }, { data: questions }] =
-    await Promise.all([
+  const [
+    { data: applications },
+    { data: curated },
+    { data: members },
+    { data: questions },
+    { count: targetsCount },
+    taxonomies,
+  ] = await Promise.all([
       admin
         .from("applications")
         .select("id, applicant_id, submitted_at")
@@ -58,6 +66,11 @@ export default async function AdminJobCandidatesPage({
         .eq("job_id", id)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true }),
+      admin
+        .from("job_targets")
+        .select("profile_id", { count: "exact", head: true })
+        .eq("job_id", id),
+      getTaxonomyOptions(),
     ]);
 
   const client = job.client_id
@@ -123,6 +136,37 @@ export default async function AdminJobCandidatesPage({
           )}
         </div>
       </div>
+
+      {/* Targeted publishing — our jobs only (market jobs are applied to off-site) */}
+      {job.source === "ours" && (
+        <div
+          className={
+            job.pipeline_status === "draft"
+              ? `${cardClass} border-[1.5px] border-brand-pink shadow-glow-pink`
+              : cardClass
+          }
+        >
+          <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+            <Megaphone size={16} className="text-brand-pink-deep" /> פרסום המשרה
+          </h3>
+          <p className="text-[12.5px] text-ink-500 mb-3">
+            {job.pipeline_status === "draft"
+              ? "המשרה עדיין טיוטה — בחרי את קהל היעד ופרסמי אותה. רק החברות שנבחרו יראו אותה ויקבלו מייל."
+              : "המשרה פורסמה לקהל היעד שנבחר."}
+          </p>
+          <PublishPanel
+            jobId={job.id}
+            specializations={taxonomies.specialization ?? []}
+            regions={taxonomies.region ?? []}
+            allMembers={members ?? []}
+            published={
+              job.pipeline_status === "draft"
+                ? null
+                : { at: job.published_at, audienceCount: targetsCount ?? 0 }
+            }
+          />
+        </div>
+      )}
 
       {/* Required application questions */}
       <div className={cardClass}>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles, Crown } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -160,6 +161,14 @@ export function JobCard({
           >
             <Check size={14} /> {applicationStatus ? APP_STATUS[applicationStatus].label : "הגשת"}
           </span>
+        ) : job.source === "ours" ? (
+          // Our jobs go through the application wizard (questions + CV choice).
+          <Link
+            href={`/jobs/${job.id}/apply`}
+            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white"
+          >
+            הגשת מועמדות
+          </Link>
         ) : job.source === "open" && job.external_url ? (
           <a
             href={job.external_url}

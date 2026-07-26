@@ -4,6 +4,7 @@ import { getUser } from "@/lib/auth";
 import { Composer } from "@/components/patterns/composer";
 import { PostCard, type FeedPost } from "@/components/patterns/post-card";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
+import { TargetedJobBanner, type TargetedJobLite } from "@/components/patterns/targeted-job-banner";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import type { PostComment } from "@/components/patterns/post-interactions";
@@ -26,6 +27,26 @@ export default async function ForumPage() {
   const user = await getUser();
   const profile = await requireCommunityAccess();
   const canWrite = isSubscriber(profile);
+
+  // Jobs published specifically to this member (job_targets — RLS lets her
+  // read her own rows). Shown as a prominent banner above the feed.
+  let targetedJobs: TargetedJobLite[] = [];
+  const { data: myTargets } = await supabase
+    .from("job_targets")
+    .select("job_id")
+    .eq("profile_id", profile.id);
+  const targetIds = (myTargets ?? []).map((t) => t.job_id);
+  if (targetIds.length > 0) {
+    const { data: tJobs } = await supabase
+      .from("jobs")
+      .select("id, title, company")
+      .in("id", targetIds)
+      .eq("status", "open")
+      .eq("source", "ours")
+      .eq("pipeline_status", "published")
+      .order("published_at", { ascending: false });
+    targetedJobs = tJobs ?? [];
+  }
 
   const { data: posts } = await supabase
     .from("posts")
@@ -108,6 +129,8 @@ export default async function ForumPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הפורום</h1>
         <p className="t-body-sm text-ink-700">שאלות, התייעצויות ושיתופי ידע — אנחנו פה אחת בשביל השנייה.</p>
       </div>
+
+      <TargetedJobBanner jobs={targetedJobs} />
 
       {canWrite ? (
         <Composer kind="forum" />

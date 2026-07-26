@@ -5,7 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
-import { applicationStatusEmail, jobCandidatesEmail } from "@/lib/email/templates";
+import {
+  applicationStatusEmail,
+  jobCandidatesEmail,
+  jobPublishedEmail,
+} from "@/lib/email/templates";
 import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { getSiteUrl } from "@/lib/site";
@@ -501,6 +505,250 @@ export async function moveJobQuestion(id: string, jobId: string, dir: "up" | "do
     );
   }
   revalidatePath(`/admin/jobs/${jobId}`);
+}
+
+// ---------------------------------------------------- targeted job publishing
+
+export interface AudienceFilters {
+  specialization?: string[];
+  region?: string[];
+  /** true = experienced only, false = juniors only, undefined = everyone. */
+  experienced?: boolean;
+}
+
+export interface AudienceMember {
+  id: string;
+  full_name: string;
+  specialization: string | null;
+  region: string | null;
+}
+
+/**
+ * Members eligible for a targeted publish: active, junior, completed profile,
+ * matching the criteria. Specialization/region live both as denormalized
+ * profile columns and as intake answers (stored as taxonomy VALUES while the
+ * columns may hold Hebrew labels) — so a selected option matches either form.
+ */
+export async function previewAudience(
+  jobId: string,
+  filters: AudienceFilters
+): Promise<{ members?: AudienceMember[]; error?: string }> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+
+  const { data: job } = await admin.from("jobs").select("id").eq("id", jobId).maybeSingle();
+  if (!job) return { error: "המשרה לא נמצאה." };
+
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, full_name, specialization, region, is_experienced")
+    .eq("status", "active")
+    .eq("role", "junior")
+    .eq("profile_completed", true)
+    .order("full_name", { ascending: true });
+
+  let members = profiles ?? [];
+  if (typeof filters.experienced === "boolean") {
+    members = members.filter((p) => !!p.is_experienced === filters.experienced);
+  }
+
+  const wantSpec = (filters.specialization ?? []).filter(Boolean);
+  const wantRegion = (filters.region ?? []).filter(Boolean);
+
+  // value → Hebrew label, for both matching and display.
+  const { data: tax } = await admin
+    .from("config_taxonomies")
+    .select("kind, value, label_he")
+    .in("kind", ["specialization", "region"]);
+  const labelOf = new Map((tax ?? []).map((t) => [`${t.kind}:${t.value}`, t.label_he]));
+
+  // Intake answers for the two criteria questions (the profile columns can be
+  // empty for members who only answered the dynamic form).
+  const { data: qs } = await admin
+    .from("config_questions")
+    .select("id, key")
+    .in("key", ["specialization", "region"]);
+  const keyOf = new Map((qs ?? []).map((q) => [q.id, q.key]));
+  const answerOf = new Map<string, { specialization: string[]; region: string[] }>();
+  if ((qs ?? []).length > 0 && members.length > 0) {
+    const { data: ans } = await admin
+      .from("profile_answers")
+      .select("profile_id, question_id, value")
+      .in("question_id", (qs ?? []).map((q) => q.id))
+      .in("profile_id", members.map((m) => m.id));
+    for (const a of ans ?? []) {
+      const key = keyOf.get(a.question_id);
+      if (key !== "specialization" && key !== "region") continue;
+      const entry = answerOf.get(a.profile_id) ?? { specialization: [], region: [] };
+      const raw = Array.isArray(a.value) ? a.value : [a.value];
+      for (const v of raw) if (typeof v === "string" && v.trim()) entry[key].push(v.trim());
+      answerOf.set(a.profile_id, entry);
+    }
+  }
+
+  const pool = (
+    m: (typeof members)[number],
+    kind: "specialization" | "region"
+  ): string[] => {
+    const col = kind === "specialization" ? m.specialization : m.region;
+    return [...(col ? [col] : []), ...(answerOf.get(m.id)?.[kind] ?? [])].map((v) =>
+      v.trim().toLowerCase()
+    );
+  };
+  const matches = (
+    m: (typeof members)[number],
+    kind: "specialization" | "region",
+    wanted: string[]
+  ): boolean => {
+    const have = pool(m, kind);
+    return wanted.some((v) => {
+      const value = v.trim().toLowerCase();
+      const label = (labelOf.get(`${kind}:${v}`) ?? "").trim().toLowerCase();
+      return have.some((h) => h === value || (label !== "" && h === label));
+    });
+  };
+
+  if (wantSpec.length > 0) members = members.filter((m) => matches(m, "specialization", wantSpec));
+  if (wantRegion.length > 0) members = members.filter((m) => matches(m, "region", wantRegion));
+
+  // Display: prefer the profile column, fall back to the first answer, and
+  // swap machine values for their Hebrew labels.
+  const display = (m: (typeof members)[number], kind: "specialization" | "region") => {
+    const raw =
+      (kind === "specialization" ? m.specialization : m.region) ??
+      answerOf.get(m.id)?.[kind]?.[0] ??
+      null;
+    if (!raw) return null;
+    return labelOf.get(`${kind}:${raw}`) ?? raw;
+  };
+
+  return {
+    members: members.map((m) => ({
+      id: m.id,
+      full_name: m.full_name,
+      specialization: display(m, "specialization"),
+      region: display(m, "region"),
+    })),
+  };
+}
+
+/** Plain-text excerpt of the job description for the email body. */
+function jobExcerpt(html: string | null, fallback: string, max = 200): string {
+  const text = (html ? html.replace(/<[^>]*>/g, " ") : fallback)
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
+}
+
+/**
+ * Publish a job to its chosen audience: write job_targets, flip the job to
+ * published/open, and email every target that wasn't emailed yet — so
+ * re-publishing with a wider audience only mails the newly added members.
+ */
+export async function publishJob(
+  jobId: string,
+  profileIds: string[]
+): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number }> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+
+  const { data: job } = await admin
+    .from("jobs")
+    .select("id, title, company, description, description_html, published_at")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (!job) return { error: "המשרה לא נמצאה." };
+
+  const ids = [...new Set(profileIds.filter(Boolean))];
+  if (ids.length === 0) return { error: "בחרי לפחות חברה אחת לפרסום המשרה." };
+
+  const { error: targetsError } = await admin.from("job_targets").upsert(
+    ids.map((profile_id) => ({ job_id: jobId, profile_id, source: "criteria" as const })),
+    { onConflict: "job_id,profile_id", ignoreDuplicates: true }
+  );
+  if (targetsError) {
+    if (isMissingColumn(targetsError)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
+    }
+    return { error: "שמירת קהל היעד נכשלה. נסי שוב." };
+  }
+
+  const { error: jobError } = await admin
+    .from("jobs")
+    .update({
+      pipeline_status: "published",
+      status: "open",
+      published_at: job.published_at ?? new Date().toISOString(),
+    })
+    .eq("id", jobId);
+  if (jobError) return { error: "עדכון סטטוס המשרה נכשל. נסי שוב." };
+
+  // Email only targets that never got the announcement.
+  const { data: pending } = await admin
+    .from("job_targets")
+    .select("profile_id")
+    .eq("job_id", jobId)
+    .is("emailed_at", null);
+  const toEmail = (pending ?? []).map((t) => t.profile_id);
+
+  const { data: named } = toEmail.length
+    ? await admin.from("profiles").select("id, first_name, full_name").in("id", toEmail)
+    : { data: [] as { id: string; first_name: string | null; full_name: string }[] };
+  const nameOf = new Map((named ?? []).map((p) => [p.id, p]));
+
+  const excerpt = jobExcerpt(job.description_html, job.description);
+  const applyUrl = `${getSiteUrl()}/jobs`;
+  let sent = 0;
+  let failed = 0;
+  for (const profileId of toEmail) {
+    try {
+      const { data: authUser } = await admin.auth.admin.getUserById(profileId);
+      const email = authUser?.user?.email;
+      if (!email) {
+        failed++;
+        continue;
+      }
+      const p = nameOf.get(profileId);
+      const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
+      const built = jobPublishedEmail(name, job.title, job.company, excerpt, applyUrl);
+      const result = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+      if (result.ok) {
+        sent++;
+        await admin
+          .from("job_targets")
+          .update({ emailed_at: new Date().toISOString() })
+          .eq("job_id", jobId)
+          .eq("profile_id", profileId);
+      } else {
+        failed++;
+        console.error("[publish job email] send failed:", result.error);
+      }
+    } catch (e) {
+      failed++;
+      console.error("[publish job email] failed:", e);
+    }
+  }
+
+  revalidatePath("/admin/jobs");
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/jobs");
+  revalidatePath("/forum");
+  return { ok: true, sent, failed };
+}
+
+/**
+ * Bring a published job back to draft so the admin can adjust the audience and
+ * publish again. Existing targets keep seeing the job (status stays open);
+ * re-publishing emails only newly added members.
+ */
+export async function reopenJobPublish(jobId: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("jobs").update({ pipeline_status: "draft" }).eq("id", jobId);
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
 }
 
 // ------------------------------------------------------- portal job candidates
