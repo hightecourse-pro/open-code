@@ -58,7 +58,7 @@ if (process.argv.includes("--cleanup")) {
 const password_enc = encryptSecret(CLIENT_PASSWORD);
 let { data: client } = await sb.from("portal_clients").select("id").eq("username", CLIENT_USERNAME).maybeSingle();
 if (client) {
-  await sb.from("portal_clients").update({ password_enc, is_active: true, contact_email: "qa-portal@opencode.test" }).eq("id", client.id);
+  await sb.from("portal_clients").update({ password_enc, is_active: true, can_search: true, contact_email: "qa-portal@opencode.test" }).eq("id", client.id);
   console.log(`ℹ️  portal client exists: ${client.id} (password refreshed)`);
 } else {
   const { data: inserted, error } = await sb
@@ -69,6 +69,7 @@ if (client) {
       password_enc,
       contact_email: "qa-portal@opencode.test",
       is_active: true,
+      can_search: true,
     })
     .select("id")
     .single();
