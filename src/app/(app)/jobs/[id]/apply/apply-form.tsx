@@ -3,8 +3,9 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { FileText, Sparkles, Upload } from "lucide-react";
-import { Alert, Button, Field, Textarea } from "@/components/ui";
+import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import type { QuestionAnswerType } from "@/types/database";
 import { submitApplication, type ApplyState } from "./actions";
 
 export interface ApplyQuestion {
@@ -12,6 +13,9 @@ export interface ApplyQuestion {
   question: string;
   sort_order: number;
   required: boolean;
+  answer_type: QuestionAnswerType;
+  /** Choice options (select/multiselect) — empty for free-text/number. */
+  options: string[];
 }
 
 export interface ApplyCvDoc {
@@ -60,15 +64,56 @@ export function ApplyForm({
         </span>
       </div>
 
-      {/* Per-job required questions */}
+      {/* Per-job required questions — rendered by their answer type */}
       {questions.map((q, i) => (
-        <Field key={q.id} label={`${i + 1}. ${q.question}`} htmlFor={`q_${q.id}`}>
-          <Textarea
-            id={`q_${q.id}`}
-            name={`q_${q.id}`}
-            required={q.required !== false}
-            placeholder="התשובה שלך…"
-          />
+        <Field
+          key={q.id}
+          label={`${i + 1}. ${q.question}`}
+          htmlFor={q.answer_type === "multiselect" ? undefined : `q_${q.id}`}
+        >
+          {q.answer_type === "number" ? (
+            <Input
+              id={`q_${q.id}`}
+              name={`q_${q.id}`}
+              type="number"
+              inputMode="numeric"
+              required={q.required !== false}
+              placeholder="התשובה שלך במספר…"
+              className="max-w-52"
+            />
+          ) : q.answer_type === "select" ? (
+            <Select
+              id={`q_${q.id}`}
+              name={`q_${q.id}`}
+              required={q.required !== false}
+              defaultValue=""
+            >
+              <option value="" disabled>
+                בחרי…
+              </option>
+              {q.options.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </Select>
+          ) : q.answer_type === "multiselect" ? (
+            // At-least-one is enforced server-side — checkboxes can't carry a
+            // group-level required attribute.
+            <div className="flex flex-col gap-2 rounded-sm border border-ink-300 bg-ink-0 px-3.5 py-3">
+              {q.options.map((opt) => (
+                <Checkbox key={opt} name={`q_${q.id}`} value={opt} label={opt} />
+              ))}
+              <span className="text-xs text-ink-500">אפשר לסמן כמה</span>
+            </div>
+          ) : (
+            <Textarea
+              id={`q_${q.id}`}
+              name={`q_${q.id}`}
+              required={q.required !== false}
+              placeholder="התשובה שלך…"
+            />
+          )}
         </Field>
       ))}
 

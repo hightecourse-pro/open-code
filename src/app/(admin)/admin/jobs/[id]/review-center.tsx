@@ -39,8 +39,12 @@ export interface ReviewApplication {
   status: string;
   adminMark: AdminMark | null;
   sentToClientAt: string | null;
-  /** {questionId: answer} + the built-in "fit" answer — parsed server-side. */
-  answers: Record<string, string>;
+  /**
+   * {questionId: answer} + the built-in "fit" answer — parsed server-side.
+   * Values follow the question's answer type: string (paragraph/select),
+   * number (number) or string[] (multiselect).
+   */
+  answers: Record<string, string | number | string[]>;
   /** Signed URL (1h) for her application CV, else her latest CV. */
   cvUrl: string | null;
   profile: ReviewProfileSummary | null;
@@ -87,6 +91,11 @@ const PIPELINE_OPTIONS: { value: PipelineStatus; label: string }[] = [
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+}
+
+/** jsonb answer → display text: arrays join with a middot, numbers stringify. */
+function answerText(v: string | number | string[]): string {
+  return Array.isArray(v) ? v.join(" · ") : String(v);
 }
 
 // --------------------------------------------------------------------- tiles
@@ -518,16 +527,17 @@ export function ReviewCenter({
               <div className="text-[12px] font-bold text-ink-700">התשובות שלה</div>
               {(() => {
                 const qa: { label: string; answer: string }[] = [];
-                if (selected.answers.fit) {
-                  qa.push({ label: FIT_QUESTION, answer: selected.answers.fit });
+                if (selected.answers.fit !== undefined) {
+                  qa.push({ label: FIT_QUESTION, answer: answerText(selected.answers.fit) });
                 }
                 for (const q of questions) {
                   const ans = selected.answers[q.id];
-                  if (ans) qa.push({ label: q.question, answer: ans });
+                  if (ans !== undefined) qa.push({ label: q.question, answer: answerText(ans) });
                 }
                 const known = new Set(["fit", ...questions.map((q) => q.id)]);
                 for (const [k, v] of Object.entries(selected.answers)) {
-                  if (!known.has(k)) qa.push({ label: "שאלה נוספת (הוסרה מהמשרה)", answer: v });
+                  if (!known.has(k))
+                    qa.push({ label: "שאלה נוספת (הוסרה מהמשרה)", answer: answerText(v) });
                 }
                 if (qa.length === 0) {
                   return (

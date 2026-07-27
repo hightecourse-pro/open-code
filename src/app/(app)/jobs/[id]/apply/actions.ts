@@ -6,9 +6,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResendEmail } from "@/lib/email/resend";
 import { applyConfirmationEmail } from "@/lib/email/templates";
-import type { Json } from "@/types/database";
+import type { Json, QuestionAnswerType } from "@/types/database";
 
 export type ApplyState = { error?: string };
+
+const ANSWER_TYPES: QuestionAnswerType[] = ["paragraph", "number", "select", "multiselect"];
 
 // Same CV rules as the CV screen (src/app/(app)/cv/actions.ts).
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
@@ -44,18 +46,55 @@ export async function submitApplication(
     return { error: "המשרה כבר לא זמינה להגשה." };
   }
 
-  // Required answers — validated against the job's questions, not the form.
+  // Required answers — validated per answer type against the job's questions
+  // in the DB, never against whatever the form happened to send.
   const { data: questions } = await supabase
     .from("job_questions")
-    .select("id, required")
-    .eq("job_id", jobId);
-  const answers: Record<string, string> = {};
+    .select("id, question, required, answer_type, options")
+    .eq("job_id", jobId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  const answers: Record<string, string | number | string[]> = {};
   for (const q of questions ?? []) {
-    const v = String(formData.get(`q_${q.id}`) ?? "").trim();
-    if (!v && q.required !== false) {
-      return { error: "כמעט שם — נשארו שאלות חובה בלי תשובה 🙂" };
+    const required = q.required !== false;
+    const type: QuestionAnswerType = ANSWER_TYPES.includes(q.answer_type)
+      ? q.answer_type
+      : "paragraph";
+    const options = Array.isArray(q.options)
+      ? q.options.filter((o): o is string => typeof o === "string")
+      : [];
+
+    if (type === "multiselect") {
+      const values = formData
+        .getAll(`q_${q.id}`)
+        .map((v) => String(v).trim())
+        .filter(Boolean);
+      if (values.length === 0) {
+        if (required) return { error: `חסרה תשובה לשאלה: ${q.question}` };
+        continue;
+      }
+      if (!values.every((v) => options.includes(v))) {
+        return { error: `תשובה לא תקינה לשאלה: ${q.question}` };
+      }
+      answers[q.id] = values;
+      continue;
     }
-    if (v) answers[q.id] = v;
+
+    const v = String(formData.get(`q_${q.id}`) ?? "").trim();
+    if (!v) {
+      if (required) return { error: `חסרה תשובה לשאלה: ${q.question}` };
+      continue;
+    }
+    if (type === "number") {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return { error: `תשובה לא תקינה לשאלה: ${q.question}` };
+      answers[q.id] = n;
+    } else if (type === "select") {
+      if (!options.includes(v)) return { error: `תשובה לא תקינה לשאלה: ${q.question}` };
+      answers[q.id] = v;
+    } else {
+      answers[q.id] = v;
+    }
   }
   const fit = String(formData.get("fit") ?? "").trim();
   if (!fit) return { error: "ספרי לנו למה את מתאימה למשרה — זו הדרך שלך לבלוט 💜" };

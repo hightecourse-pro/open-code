@@ -27,6 +27,7 @@ import type {
   JobSource,
   JobStatus,
   ProfileStatus,
+  QuestionAnswerType,
   ReportStatus,
   TaxonomyKind,
   UserRole,
@@ -431,6 +432,40 @@ function isMissingColumn(error: { code?: string; message?: string } | null): boo
   );
 }
 
+const ANSWER_TYPES: QuestionAnswerType[] = ["paragraph", "number", "select", "multiselect"];
+
+interface CleanJobQuestion {
+  question: string;
+  answer_type: QuestionAnswerType;
+  options: string[] | null;
+}
+
+/**
+ * Sanitize an admin-typed application question: trimmed non-empty text, a
+ * valid answer type (anything else → paragraph) and — for the two choice
+ * types — deduped non-empty options (max 20). A choice question with fewer
+ * than two options degrades to a free-text paragraph.
+ */
+function sanitizeJobQuestion(
+  rawQuestion: unknown,
+  rawType: unknown,
+  rawOptions: unknown
+): CleanJobQuestion | null {
+  const question = String(rawQuestion ?? "").trim();
+  if (!question) return null;
+  let answer_type: QuestionAnswerType = ANSWER_TYPES.includes(rawType as QuestionAnswerType)
+    ? (rawType as QuestionAnswerType)
+    : "paragraph";
+  let options: string[] | null = null;
+  if (answer_type === "select" || answer_type === "multiselect") {
+    const list = Array.isArray(rawOptions) ? rawOptions : [];
+    const clean = [...new Set(list.map((o) => String(o ?? "").trim()).filter(Boolean))].slice(0, 20);
+    if (clean.length >= 2) options = clean;
+    else answer_type = "paragraph";
+  }
+  return { question, answer_type, options };
+}
+
 /** Post a new job to the board. */
 export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
@@ -473,18 +508,41 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
   }
 
   // Required application questions typed during creation (JSON array of
-  // strings from the form). Best-effort — the job itself is already saved.
+  // {question, answer_type, options} objects — legacy plain strings still
+  // parse). Best-effort — the job itself is already saved.
   if (jobId) {
     try {
       const raw = JSON.parse(String(formData.get("questions") ?? "[]")) as unknown;
       const questions = (Array.isArray(raw) ? raw : [])
-        .map((q) => String(q).trim())
-        .filter(Boolean)
+        .map((q) =>
+          typeof q === "object" && q !== null
+            ? sanitizeJobQuestion(
+                (q as Record<string, unknown>).question,
+                (q as Record<string, unknown>).answer_type,
+                (q as Record<string, unknown>).options
+              )
+            : sanitizeJobQuestion(q, "paragraph", null)
+        )
+        .filter((q): q is CleanJobQuestion => q !== null)
         .slice(0, 20);
       if (questions.length) {
-        await supabase
-          .from("job_questions")
-          .insert(questions.map((question, i) => ({ job_id: jobId!, question, sort_order: i })));
+        const { error: qError } = await supabase.from("job_questions").insert(
+          questions.map((q, i) => ({
+            job_id: jobId!,
+            question: q.question,
+            answer_type: q.answer_type,
+            options: q.options,
+            sort_order: i,
+          }))
+        );
+        if (qError && isMissingColumn(qError)) {
+          // Pre-migration DB: keep the questions, drop the answer-type columns.
+          await supabase
+            .from("job_questions")
+            .insert(questions.map((q, i) => ({ job_id: jobId!, question: q.question, sort_order: i })));
+        } else if (qError) {
+          console.error("[create job] questions insert failed:", qError);
+        }
       }
     } catch (e) {
       console.error("[create job] questions insert failed:", e);
@@ -551,8 +609,12 @@ export async function addJobQuestion(
   formData: FormData
 ): Promise<FormState> {
   await requireRole("admin");
-  const question = String(formData.get("question") ?? "").trim();
-  if (!question) return { error: "כתבי את נוסח השאלה." };
+  const parsed = sanitizeJobQuestion(
+    formData.get("question"),
+    String(formData.get("answer_type") ?? "paragraph"),
+    String(formData.get("options") ?? "").split(",")
+  );
+  if (!parsed) return { error: "כתבי את נוסח השאלה." };
 
   const supabase = await createClient();
   const { data: last } = await supabase
@@ -563,10 +625,22 @@ export async function addJobQuestion(
     .limit(1)
     .maybeSingle();
 
-  const { error } = await supabase
-    .from("job_questions")
-    .insert({ job_id: jobId, question, sort_order: (last?.sort_order ?? -1) + 1 });
-  if (error) return { error: error.message };
+  const sort_order = (last?.sort_order ?? -1) + 1;
+  const { error } = await supabase.from("job_questions").insert({
+    job_id: jobId,
+    question: parsed.question,
+    answer_type: parsed.answer_type,
+    options: parsed.options,
+    sort_order,
+  });
+  if (error) {
+    // Pre-migration DB: keep the question, drop the answer-type columns.
+    if (!isMissingColumn(error)) return { error: error.message };
+    const { error: retry } = await supabase
+      .from("job_questions")
+      .insert({ job_id: jobId, question: parsed.question, sort_order });
+    if (retry) return { error: retry.message };
+  }
 
   revalidatePath(`/admin/jobs/${jobId}`);
   return { ok: true };

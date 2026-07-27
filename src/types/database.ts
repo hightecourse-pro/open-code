@@ -58,6 +58,8 @@ export type ShareStatus = "pending" | "shared" | "revoked";
 // Jobs CRM
 export type JobKind = "immediate" | "practicum_placement" | "practicum_percent" | "practicum_free" | "other";
 export type JobPipelineStatus = "draft" | "published" | "candidates_sent" | "interviews" | "hired" | "closed_no_hire";
+/** How a required job question is answered — like Google Forms field types. */
+export type QuestionAnswerType = "paragraph" | "number" | "select" | "multiselect";
 export type ClientCrmStatus = "initial_call" | "materials_sent" | "job_active" | "hired";
 
 type Timestamps = { created_at: string; updated_at: string };
@@ -238,6 +240,8 @@ export interface Database {
           id: string;
           job_id: string;
           question: string;
+          answer_type: QuestionAnswerType;
+          options: Json | null;
           sort_order: number;
           required: boolean;
           created_at: string;
@@ -246,6 +250,8 @@ export interface Database {
           id?: string;
           job_id: string;
           question: string;
+          answer_type?: QuestionAnswerType;
+          options?: Json | null;
           sort_order?: number;
           required?: boolean;
           created_at?: string;

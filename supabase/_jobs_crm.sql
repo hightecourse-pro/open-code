@@ -127,3 +127,11 @@ alter table public.mentor_requests
   add column if not exists kind text not null default 'general'
     check (kind in ('general','employment')),
   add column if not exists assigned_mentor_id uuid references public.profiles(id) on delete set null;
+
+-- ---------------------------------------------- 9) סוגי תשובה לשאלות משרה
+-- כמו גוגל פורם: פסקה / מספר / בחירה מרשימה / בחירה מרובה. לשאלות בחירה
+-- options מחזיק את רשימת האפשרויות (מערך JSON של מחרוזות).
+alter table public.job_questions
+  add column if not exists answer_type text not null default 'paragraph'
+    check (answer_type in ('paragraph','number','select','multiselect')),
+  add column if not exists options jsonb;

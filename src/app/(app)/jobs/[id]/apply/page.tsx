@@ -33,7 +33,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
   const [{ data: questions }, { data: cvDocs }, { data: existing }] = await Promise.all([
     supabase
       .from("job_questions")
-      .select("id, question, sort_order, required")
+      .select("id, question, sort_order, required, answer_type, options")
       .eq("job_id", id)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
@@ -78,7 +78,17 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
       ) : (
         <ApplyForm
           jobId={job.id}
-          questions={questions ?? []}
+          // options is jsonb — coerce to a clean string[] for the form.
+          questions={(questions ?? []).map((q) => ({
+            id: q.id,
+            question: q.question,
+            sort_order: q.sort_order,
+            required: q.required,
+            answer_type: q.answer_type ?? "paragraph",
+            options: Array.isArray(q.options)
+              ? q.options.filter((o): o is string => typeof o === "string")
+              : [],
+          }))}
           cvDocs={cvDocs ?? []}
         />
       )}

@@ -18,12 +18,20 @@ export const metadata: Metadata = { title: "ניהול מועמדות למשרה
 
 const cardClass = "bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm";
 
-/** applications.answers is jsonb {question_id: answer, fit: "..."} — keep strings only. */
-function parseAnswers(value: unknown): Record<string, string> {
+/**
+ * applications.answers is jsonb {question_id: answer, fit: "..."} — answers
+ * can be strings (paragraph/select), numbers (number) or string[] (multiselect).
+ */
+function parseAnswers(value: unknown): Record<string, string | number | string[]> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  const out: Record<string, string> = {};
+  const out: Record<string, string | number | string[]> = {};
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
     if (typeof v === "string" && v.trim()) out[k] = v;
+    else if (typeof v === "number" && Number.isFinite(v)) out[k] = v;
+    else if (Array.isArray(v)) {
+      const list = v.filter((x): x is string => typeof x === "string" && x.trim() !== "");
+      if (list.length) out[k] = list;
+    }
   }
   return out;
 }
@@ -73,7 +81,7 @@ export default async function AdminJobCandidatesPage({
         .order("full_name", { ascending: true }),
       admin
         .from("job_questions")
-        .select("id, question, sort_order")
+        .select("id, question, answer_type, options, sort_order")
         .eq("job_id", id)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true }),
@@ -83,6 +91,17 @@ export default async function AdminJobCandidatesPage({
         .eq("job_id", id),
       getTaxonomyOptions(),
     ]);
+
+  // job_questions.options is jsonb — coerce to a clean string[] for the UI.
+  const questionItems = (questions ?? []).map((q) => ({
+    id: q.id,
+    question: q.question,
+    sort_order: q.sort_order,
+    answer_type: q.answer_type ?? "paragraph",
+    options: Array.isArray(q.options)
+      ? q.options.filter((o): o is string => typeof o === "string")
+      : [],
+  }));
 
   const client = job.client_id
     ? (
@@ -279,7 +298,7 @@ export default async function AdminJobCandidatesPage({
           {" “למה את חושבת שאת מתאימה למשרה?” "}
           נשאלת תמיד אוטומטית — אין צורך להוסיף אותה.
         </p>
-        <JobQuestionsManager jobId={job.id} questions={questions ?? []} />
+        <JobQuestionsManager jobId={job.id} questions={questionItems} />
       </div>
 
       {/* Send to client */}
@@ -305,7 +324,7 @@ export default async function AdminJobCandidatesPage({
         <ReviewCenter
           jobId={job.id}
           applications={reviewApplications}
-          questions={(questions ?? []).map((q) => ({ id: q.id, question: q.question }))}
+          questions={questionItems.map((q) => ({ id: q.id, question: q.question }))}
         />
       </div>
 

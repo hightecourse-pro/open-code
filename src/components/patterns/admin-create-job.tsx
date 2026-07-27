@@ -2,8 +2,14 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
-import { Alert, Button, Field, Input, Select } from "@/components/ui";
+import { Alert, Badge, Button, Field, Input, Select } from "@/components/ui";
 import { createJob, quickCreateClientForJob, type FormState } from "@/app/(admin)/admin/actions";
+import {
+  ANSWER_TYPE_BADGE,
+  ANSWER_TYPE_LABEL,
+  ANSWER_TYPE_OPTIONS,
+} from "@/app/(admin)/admin/jobs/[id]/job-questions";
+import type { QuestionAnswerType } from "@/types/database";
 import { RichTextEditor } from "./rich-text-editor";
 import type { PortalClientOption } from "./admin-job-row";
 import { JOB_KIND_OPTIONS } from "./admin-job-row";
@@ -42,15 +48,32 @@ export function AdminCreateJob({
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickPending, startQuick] = useTransition();
 
-  // Required application questions, composed right here during creation.
-  const [questions, setQuestions] = useState<string[]>([]);
+  // Required application questions, composed right here during creation —
+  // each with a Google-Forms-style answer type (+ options for choice types).
+  const [questions, setQuestions] = useState<
+    { question: string; answer_type: QuestionAnswerType; options: string[] }[]
+  >([]);
   const [newQuestion, setNewQuestion] = useState("");
+  const [newType, setNewType] = useState<QuestionAnswerType>("paragraph");
+  const [newOptions, setNewOptions] = useState("");
+  const newIsChoice = newType === "select" || newType === "multiselect";
 
   function addQuestion() {
-    const q = newQuestion.trim();
-    if (!q) return;
-    setQuestions((prev) => [...prev, q]);
+    const question = newQuestion.trim();
+    if (!question) return;
+    const options = newIsChoice
+      ? [...new Set(newOptions.split(",").map((o) => o.trim()).filter(Boolean))].slice(0, 20)
+      : [];
+    // Same rule as the server: a choice question needs at least two options —
+    // with fewer it degrades to a free-text paragraph.
+    const answer_type: QuestionAnswerType =
+      newIsChoice && options.length < 2 ? "paragraph" : newType;
+    setQuestions((prev) => [
+      ...prev,
+      { question, answer_type, options: answer_type === "paragraph" ? [] : options },
+    ]);
     setNewQuestion("");
+    setNewOptions("");
   }
 
   function selectClient(id: string) {
@@ -237,23 +260,37 @@ export function AdminCreateJob({
             דרישות המשרה. אפשר לערוך גם אחר כך בדף המשרה.
           </p>
           {questions.map((q, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className="text-xs text-ink-400 shrink-0">{i + 1}.</span>
-              <span className="flex-1 text-sm text-ink-900">{q}</span>
+            <div key={i} className="flex items-start gap-2">
+              <span className="text-xs text-ink-400 shrink-0 mt-0.5">{i + 1}.</span>
+              <span className="flex-1 min-w-0 text-sm text-ink-900">
+                {q.question}
+                {q.options.length > 0 && (
+                  <span className="block text-xs text-ink-500 mt-0.5 truncate">
+                    {q.options.join(" · ")}
+                  </span>
+                )}
+              </span>
+              <Badge
+                variant={ANSWER_TYPE_BADGE[q.answer_type]}
+                className="shrink-0 px-2 py-0.5 text-[10.5px]"
+              >
+                {ANSWER_TYPE_LABEL[q.answer_type]}
+              </Badge>
               <button
                 type="button"
                 onClick={() => setQuestions(questions.filter((_, j) => j !== i))}
-                className="text-ink-400 hover:text-danger text-xs font-semibold"
+                className="text-ink-400 hover:text-danger text-xs font-semibold shrink-0 mt-0.5"
               >
                 הסרה
               </button>
             </div>
           ))}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Input
               value={newQuestion}
               onChange={(e) => setNewQuestion(e.target.value)}
               placeholder="למשל: כמה שנות ניסיון יש לך ב-React?"
+              className="flex-1 min-w-52"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -261,10 +298,39 @@ export function AdminCreateJob({
                 }
               }}
             />
+            <Select
+              value={newType}
+              onChange={(e) => setNewType(e.target.value as QuestionAnswerType)}
+              className="w-auto shrink-0"
+              aria-label="סוג התשובה"
+            >
+              {ANSWER_TYPE_OPTIONS.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </Select>
             <Button type="button" size="sm" variant="ghost" onClick={addQuestion} disabled={!newQuestion.trim()}>
               <Plus size={14} /> הוספה
             </Button>
           </div>
+          {newIsChoice && (
+            <>
+              <Input
+                value={newOptions}
+                onChange={(e) => setNewOptions(e.target.value)}
+                placeholder="אפשרות 1, אפשרות 2, …"
+                aria-label="אפשרויות לבחירה (מופרדות בפסיק)"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addQuestion();
+                  }
+                }}
+              />
+              <p className="t-caption -mt-1">לפחות שתי אפשרויות, מופרדות בפסיק.</p>
+            </>
+          )}
           <input type="hidden" name="questions" value={JSON.stringify(questions)} />
         </div>
       )}
