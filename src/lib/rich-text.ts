@@ -81,3 +81,23 @@ export function sanitizeRichHtml(html: string): string {
     .trim();
   return textOnly ? result : "";
 }
+
+/**
+ * The plain-text mirror of rich HTML: line breaks preserved, formatting
+ * dropped. Used for emails and anywhere the styled version can't render —
+ * the admin writes once, this copy derives itself.
+ */
+export function htmlToPlainText(html: string | null | undefined): string {
+  if (!html) return "";
+  return html
+    .replace(/<(br|\/p|\/div|\/li|\/h3|\/ul|\/ol)[^>]*>/gi, "\n")
+    .replace(/<li[^>]*>/gi, "• ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

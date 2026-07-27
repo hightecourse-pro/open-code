@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
@@ -17,7 +18,7 @@ import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { decryptPassword } from "@/lib/portal/auth";
 import { getSiteUrl } from "@/lib/site";
-import { sanitizeRichHtml } from "@/lib/rich-text";
+import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import type {
   ApplicationStatus,
   ClientCrmStatus,
@@ -380,6 +381,16 @@ function jobFields(formData: FormData) {
   };
 }
 
+/**
+ * The plain description mirrors the rich one (line breaks kept, styling
+ * dropped) — the admin writes once. A manually typed plain text only wins
+ * when no rich text exists.
+ */
+function withDerivedDescription(f: ReturnType<typeof jobFields>) {
+  const derived = htmlToPlainText(f.description_html);
+  return { ...f, description: derived || f.description };
+}
+
 function validateJob(f: ReturnType<typeof jobFields>): string | null {
   if (!f.company || !f.title) return "חברה ותפקיד הם שדות חובה.";
   // Our jobs always belong to a client — the whole pipeline (portal, send-to-
@@ -429,33 +440,67 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
 
   // An "ours" job is born CLOSED (invisible on the board) — it goes live only
   // when the admin publishes it to its audience. Market jobs open immediately.
-  const f = { ...fields, status: (fields.source === "ours" ? "closed" : "open") as JobStatus };
+  const f = {
+    ...withDerivedDescription(fields),
+    status: (fields.source === "ours" ? "closed" : "open") as JobStatus,
+  };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("jobs").insert(f);
+  let jobId: string | null = null;
+  const { data: created, error } = await supabase.from("jobs").insert(f).select("id").single();
+  jobId = created?.id ?? null;
   if (error) {
     // Backward-safe: retry without newer-migration columns ONLY when a column
     // is what's missing — a real error must still surface. First without the
     // CRM columns (_jobs_crm.sql), then also without the portal link.
     if (!isMissingColumn(error)) return { error: error.message };
-    const { error: retry } = await supabase.from("jobs").insert(withoutCrmColumns(f));
+    const { data: r1, error: retry } = await supabase
+      .from("jobs")
+      .insert(withoutCrmColumns(f))
+      .select("id")
+      .single();
+    jobId = r1?.id ?? null;
     if (retry) {
       if (!isMissingColumn(retry)) return { error: retry.message };
-      const { error: retry2 } = await supabase
+      const { data: r2, error: retry2 } = await supabase
         .from("jobs")
-        .insert(withoutClient(withoutCrmColumns(f)));
+        .insert(withoutClient(withoutCrmColumns(f)))
+        .select("id")
+        .single();
+      jobId = r2?.id ?? null;
       if (retry2) return { error: retry2.message };
     }
   }
+
+  // Required application questions typed during creation (JSON array of
+  // strings from the form). Best-effort — the job itself is already saved.
+  if (jobId) {
+    try {
+      const raw = JSON.parse(String(formData.get("questions") ?? "[]")) as unknown;
+      const questions = (Array.isArray(raw) ? raw : [])
+        .map((q) => String(q).trim())
+        .filter(Boolean)
+        .slice(0, 20);
+      if (questions.length) {
+        await supabase
+          .from("job_questions")
+          .insert(questions.map((question, i) => ({ job_id: jobId!, question, sort_order: i })));
+      }
+    } catch (e) {
+      console.error("[create job] questions insert failed:", e);
+    }
+  }
+
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
-  return { ok: true };
+  // Back to the list, with the fresh job on top.
+  redirect("/admin/jobs?created=1");
 }
 
 /** Edit an existing job. */
 export async function editJob(jobId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
-  const f = jobFields(formData);
+  const f = withDerivedDescription(jobFields(formData));
   const err = validateJob(f);
   if (err) return { error: err };
   const supabase = await createClient();

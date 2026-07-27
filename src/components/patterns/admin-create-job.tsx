@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
-import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
+import { Alert, Button, Field, Input, Select } from "@/components/ui";
 import { createJob, quickCreateClientForJob, type FormState } from "@/app/(admin)/admin/actions";
 import { RichTextEditor } from "./rich-text-editor";
 import type { PortalClientOption } from "./admin-job-row";
@@ -42,6 +42,17 @@ export function AdminCreateJob({
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickPending, startQuick] = useTransition();
 
+  // Required application questions, composed right here during creation.
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [newQuestion, setNewQuestion] = useState("");
+
+  function addQuestion() {
+    const q = newQuestion.trim();
+    if (!q) return;
+    setQuestions((prev) => [...prev, q]);
+    setNewQuestion("");
+  }
+
   function selectClient(id: string) {
     setClientId(id);
     const c = clientList.find((x) => x.id === id);
@@ -68,7 +79,6 @@ export function AdminCreateJob({
   return (
     <form action={action} className="flex flex-col gap-3">
       {state.error && <Alert variant="danger">{state.error}</Alert>}
-      {state.ok && <Alert variant="success">המשרה נוספה ✓</Alert>}
 
       <Field label="מקור המשרה" htmlFor="j-source">
         <Select id="j-source" name="source" value={source} onChange={(e) => setSource(e.target.value)}>
@@ -212,12 +222,53 @@ export function AdminCreateJob({
           placeholder="https://…"
         />
       </Field>
-      <Field label="תיאור מעוצב" htmlFor="j-desc-rich">
+      <Field label="דרישות המשרה (תיאור מעוצב)" htmlFor="j-desc-rich">
         <RichTextEditor id="j-desc-rich" name="description_html" />
       </Field>
-      <Field label="תיאור (טקסט פשוט, גיבוי)" htmlFor="j-desc">
-        <Textarea id="j-desc" name="description" />
-      </Field>
+      <p className="t-caption -mt-1.5">
+        גרסת טקסט פשוט (למיילים) נוצרת אוטומטית מהתיאור — עם מעברי השורות, בלי העיצוב.
+      </p>
+
+      {source === "ours" && (
+        <div className="rounded-md border border-ink-200 bg-ink-50/60 p-3 flex flex-col gap-2">
+          <div className="text-sm font-semibold text-ink-900">שאלות חובה למועמדות</div>
+          <p className="t-caption -mt-1">
+            השאלה &quot;למה את חושבת שאת מתאימה למשרה?&quot; נשאלת תמיד — כאן מוסיפים שאלות לפי
+            דרישות המשרה. אפשר לערוך גם אחר כך בדף המשרה.
+          </p>
+          {questions.map((q, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-xs text-ink-400 shrink-0">{i + 1}.</span>
+              <span className="flex-1 text-sm text-ink-900">{q}</span>
+              <button
+                type="button"
+                onClick={() => setQuestions(questions.filter((_, j) => j !== i))}
+                className="text-ink-400 hover:text-danger text-xs font-semibold"
+              >
+                הסרה
+              </button>
+            </div>
+          ))}
+          <div className="flex items-center gap-2">
+            <Input
+              value={newQuestion}
+              onChange={(e) => setNewQuestion(e.target.value)}
+              placeholder="למשל: כמה שנות ניסיון יש לך ב-React?"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addQuestion();
+                }
+              }}
+            />
+            <Button type="button" size="sm" variant="ghost" onClick={addQuestion} disabled={!newQuestion.trim()}>
+              <Plus size={14} /> הוספה
+            </Button>
+          </div>
+          <input type="hidden" name="questions" value={JSON.stringify(questions)} />
+        </div>
+      )}
+
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "מוסיף…" : "הוספת משרה"}
       </Button>

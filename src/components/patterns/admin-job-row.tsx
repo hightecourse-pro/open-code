@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Pencil, Lock, Unlock, Trash2, Users } from "lucide-react";
-import { Alert, Badge, Button, Field, Input, Select, Textarea } from "@/components/ui";
+import { Alert, Badge, Button, Field, Input, Select } from "@/components/ui";
 import { editJob, setJobStatus, deleteJob, type FormState } from "@/app/(admin)/admin/actions";
 import { RichTextEditor } from "./rich-text-editor";
 import type {
@@ -30,6 +30,7 @@ export interface AdminJob {
   job_kind: JobKind;
   practicum_percent: number | null;
   pipeline_status: JobPipelineStatus;
+  created_at?: string;
 }
 
 export interface PortalClientOption {
@@ -150,10 +151,9 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
         <Field label={source === "open" ? "קישור להגשה (חובה)" : "קישור להגשה (לא חובה)"}>
           <Input name="external_url" dir="ltr" defaultValue={job.external_url ?? ""} required={source === "open"} />
         </Field>
-        <Field label="תיאור מעוצב">
+        <Field label="דרישות המשרה (תיאור מעוצב)">
           <RichTextEditor name="description_html" defaultValue={job.description_html} />
         </Field>
-        <Field label="תיאור (טקסט פשוט, גיבוי)"><Textarea name="description" defaultValue={job.description} /></Field>
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={pending}>{pending ? "שומר…" : "שמירה"}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>ביטול</Button>

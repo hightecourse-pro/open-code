@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Bold, Heading3, Link2, List, ListOrdered } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,14 +21,26 @@ export function RichTextEditor({
   defaultValue?: string | null;
   id?: string;
 }) {
-  // The initial HTML is frozen for the life of the mount — React never
-  // re-renders the contentEditable's children, the browser owns them.
-  const [initialHtml] = useState(defaultValue ?? "");
-  const [html, setHtml] = useState(initialHtml);
+  // Fully uncontrolled: React never touches the contentEditable's children
+  // (any re-render that rewrites them blocks typing). The initial HTML is set
+  // once on mount, and every input mirrors straight into the hidden field.
   const areaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const seededRef = useRef(false);
+
+  function seed(node: HTMLDivElement | null) {
+    areaRef.current = node;
+    if (node && !seededRef.current) {
+      seededRef.current = true;
+      if (defaultValue) node.innerHTML = defaultValue;
+      if (inputRef.current) inputRef.current.value = node.innerHTML;
+    }
+  }
 
   function sync() {
-    setHtml(areaRef.current?.innerHTML ?? "");
+    if (inputRef.current && areaRef.current) {
+      inputRef.current.value = areaRef.current.innerHTML;
+    }
   }
 
   function exec(command: string, value?: string) {
@@ -93,7 +105,7 @@ export function RichTextEditor({
         ))}
       </div>
       <div
-        ref={areaRef}
+        ref={seed}
         id={id}
         contentEditable
         role="textbox"
@@ -101,7 +113,6 @@ export function RichTextEditor({
         suppressContentEditableWarning
         onInput={sync}
         onBlur={sync}
-        dangerouslySetInnerHTML={{ __html: initialHtml }}
         className={cn(
           "min-h-28 px-3.5 py-3 font-body text-sm text-ink-900 focus:outline-none",
           // Tailwind preflight strips list/heading styles — restore them so the
@@ -112,7 +123,7 @@ export function RichTextEditor({
           "[&_p]:my-1"
         )}
       />
-      <input type="hidden" name={name} value={html} />
+      <input type="hidden" name={name} ref={inputRef} />
     </div>
   );
 }

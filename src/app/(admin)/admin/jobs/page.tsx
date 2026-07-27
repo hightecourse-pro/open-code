@@ -3,8 +3,8 @@ import { Badge, Button } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { AdminCreateJob } from "@/components/patterns/admin-create-job";
-import { AdminJobRow, type AdminJob, type PortalClientOption } from "@/components/patterns/admin-job-row";
+import { AdminJobsManager } from "@/components/patterns/admin-jobs-manager";
+import { type AdminJob, type PortalClientOption } from "@/components/patterns/admin-job-row";
 import { setApplicationStatus } from "../actions";
 import type { ApplicationStatus } from "@/types/database";
 
@@ -26,11 +26,11 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; variant: "warm" | "
 export default async function AdminJobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ client?: string }>;
+  searchParams: Promise<{ client?: string; created?: string }>;
 }) {
   await requireRole("admin");
   // Arriving from the CRM's "משרה חדשה ללקוח" — preselect that client.
-  const { client: initialClientId } = await searchParams;
+  const { client: initialClientId, created } = await searchParams;
   const supabase = await createClient();
   const { data: jobs } = await supabase
     .from("jobs")
@@ -71,20 +71,12 @@ export default async function AdminJobsPage({
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול משרות</h1>
       </div>
 
-      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-3">הוספת משרה</h3>
-        <AdminCreateJob clients={clients} initialClientId={initialClientId} />
-      </div>
-
-      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-3">כל המשרות ({jobs?.length ?? 0})</h3>
-        <div className="flex flex-col">
-          {(jobs ?? []).map((j) => (
-            <AdminJobRow key={j.id} job={j as AdminJob} clients={clients} />
-          ))}
-          {(jobs ?? []).length === 0 && <p className="text-ink-500 text-sm py-4">אין משרות עדיין.</p>}
-        </div>
-      </div>
+      <AdminJobsManager
+        jobs={(jobs ?? []) as AdminJob[]}
+        clients={clients}
+        initialClientId={initialClientId}
+        created={created === "1"}
+      />
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">הגשות מועמדות</h3>
