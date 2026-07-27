@@ -1130,6 +1130,33 @@ const PIPELINE_STATUSES: PipelineStatus[] = ["interview", "exam", "hired", "decl
  * and email the member a warm update. Hiring also celebrates on her profile —
  * found_job / hired_via_us / hired_at / workplace.
  */
+/**
+ * Close a job's journey — "גויס" (filled, possibly by several members) or
+ * "נסגר ללא גיוס" — or reopen it. Closing also takes it off the board.
+ */
+export async function setJobOutcome(
+  jobId: string,
+  outcome: "hired" | "closed_no_hire" | "reopen"
+): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  if (outcome === "reopen") {
+    await admin
+      .from("jobs")
+      .update({ pipeline_status: "published", status: "open" })
+      .eq("id", jobId);
+  } else {
+    await admin
+      .from("jobs")
+      .update({ pipeline_status: outcome, status: "closed" })
+      .eq("id", jobId);
+  }
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin/crm");
+  revalidatePath("/jobs");
+}
+
 export async function updateApplicationPipeline(
   applicationId: string,
   status: PipelineStatus
@@ -1147,12 +1174,22 @@ export async function updateApplicationPipeline(
 
   const { data: job } = await admin
     .from("jobs")
-    .select("title, company")
+    .select("title, company, pipeline_status")
     .eq("id", app.job_id)
     .maybeSingle();
 
   const { error } = await admin.from("applications").update({ status }).eq("id", applicationId);
   if (error) return { error: "עדכון הסטטוס נכשל. נסי שוב." };
+
+  // The first candidate reaching an interview/exam moves the JOB to
+  // "ראיונות" automatically. Hiring never auto-closes the job — a role can
+  // hire several members, so that call stays with the admin.
+  if (
+    (status === "interview" || status === "exam") &&
+    (job?.pipeline_status === "published" || job?.pipeline_status === "candidates_sent")
+  ) {
+    await admin.from("jobs").update({ pipeline_status: "interviews" }).eq("id", app.job_id);
+  }
 
   // גויסה 🎉 — mark the placement on her profile so the community stats know
   // she found her job through us.

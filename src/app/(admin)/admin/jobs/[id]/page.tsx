@@ -7,7 +7,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import { Alert, Badge, Button } from "@/components/ui";
-import { removeJobCandidate } from "@/app/(admin)/admin/actions";
+import { removeJobCandidate, setJobOutcome } from "@/app/(admin)/admin/actions";
+import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { CandidatePicker } from "./candidate-picker";
 import { JobQuestionsManager } from "./job-questions";
 import { PublishPanel } from "./publish-panel";
@@ -124,6 +125,7 @@ export default async function AdminJobCandidatesPage({
   // Names for applicants + curated candidates — they may not all be in the
   // active-junior list above (e.g. paused members).
   const appList = applications ?? [];
+  const hiredCount = appList.filter((a) => a.status === "hired").length;
   const applicantIds = [...new Set(appList.map((a) => a.applicant_id))];
   const curatedIds = [...new Set((curated ?? []).map((c) => c.profile_id))];
   const needIds = [...new Set([...applicantIds, ...curatedIds])];
@@ -255,6 +257,50 @@ export default async function AdminJobCandidatesPage({
             </Alert>
           )}
         </div>
+
+        {/* Job outcome — hired can be several members, so closing is always
+            the admin's call; only "interviews" moves automatically. */}
+        {job.source === "ours" && (
+          <div className="mt-3 pt-3 border-t border-ink-100 flex items-center gap-2 flex-wrap">
+            {job.pipeline_status === "hired" || job.pipeline_status === "closed_no_hire" ? (
+              <>
+                <Badge variant={job.pipeline_status === "hired" ? "grad" : "pink"}>
+                  {job.pipeline_status === "hired" ? "המשרה גויסה 🎉" : "נסגרה ללא גיוס"}
+                </Badge>
+                <ConfirmActionButton
+                  action={setJobOutcome.bind(null, job.id, "reopen")}
+                  message="להחזיר את המשרה לפעילה? היא תחזור להיות גלויה לקהל שלה."
+                  className="text-[12.5px] font-semibold text-brand-purple hover:text-brand-pink-deep"
+                >
+                  החזרה לפעילה
+                </ConfirmActionButton>
+              </>
+            ) : (
+              <>
+                {hiredCount > 0 && (
+                  <span className="text-[12.5px] text-ink-700">
+                    🎉 {hiredCount === 1 ? "מועמדת אחת גויסה" : `${hiredCount} מועמדות גויסו`} —
+                    כשסיימת לגייס, סגרי את המשרה:
+                  </span>
+                )}
+                <ConfirmActionButton
+                  action={setJobOutcome.bind(null, job.id, "hired")}
+                  message="לסמן את המשרה כגויסה? היא תרד מהלוח ותסומן 'גויס' אצל הלקוח."
+                  className="inline-flex items-center rounded-full bg-brand-gradient text-white text-[12.5px] font-semibold px-3.5 py-1.5 hover:brightness-105 transition-[filter]"
+                >
+                  סימון המשרה כגויסה 🎉
+                </ConfirmActionButton>
+                <ConfirmActionButton
+                  action={setJobOutcome.bind(null, job.id, "closed_no_hire")}
+                  message="לסגור את המשרה ללא גיוס? היא תרד מהלוח."
+                  className="inline-flex items-center rounded-full border border-ink-300 text-ink-700 text-[12.5px] font-semibold px-3.5 py-1.5 hover:border-danger hover:text-danger transition-colors"
+                >
+                  סגירה ללא גיוס
+                </ConfirmActionButton>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Targeted publishing — our jobs only (market jobs are applied to off-site) */}

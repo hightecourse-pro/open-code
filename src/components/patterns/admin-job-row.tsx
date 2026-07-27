@@ -77,6 +77,10 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
   const [editing, setEditing] = useState(false);
   const [source, setSource] = useState(job.source);
   const [kind, setKind] = useState<JobKind>(job.job_kind ?? "immediate");
+  // Controlled so the hidden company field follows the chosen client (ours).
+  const [clientSel, setClientSel] = useState(job.client_id ?? "");
+  const companyForClient =
+    clients.find((c) => c.id === clientSel)?.company_name ?? job.company;
   const [state, action, pending] = useActionState<FormState, FormData>(
     async (prev, formData) => {
       const result = await editJob(job.id, prev, formData);
@@ -100,7 +104,12 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
         {state.error && <Alert variant="danger">{state.error}</Alert>}
         {state.ok && <Alert variant="success">נשמר ✓</Alert>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <Field label="חברה"><Input name="company" defaultValue={job.company} required /></Field>
+          {source === "ours" ? (
+            // The client IS the company — it rides along hidden, no retyping.
+            <input type="hidden" name="company" value={companyForClient} />
+          ) : (
+            <Field label="חברה"><Input name="company" defaultValue={job.company} required /></Field>
+          )}
           <Field label="תפקיד"><Input name="title" defaultValue={job.title} required /></Field>
           <Field label="מקור">
             <Select name="source" value={source} onChange={(e) => setSource(e.target.value as JobSource)}>
@@ -138,7 +147,12 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
           <Field label="מיקום"><Input name="location" defaultValue={job.location ?? ""} /></Field>
           <Field label="טכנולוגיות (מופרדות בפסיק)"><Input name="tech" dir="ltr" defaultValue={job.tech_tags.join(", ")} /></Field>
           <Field label={source === "ours" ? "לקוח (חובה למשרה שלנו)" : "לקוח פורטל (לא חובה)"}>
-            <Select name="client_id" defaultValue={job.client_id ?? ""} required={source === "ours"}>
+            <Select
+              name="client_id"
+              value={clientSel}
+              onChange={(e) => setClientSel(e.target.value)}
+              required={source === "ours"}
+            >
               <option value="" disabled={source === "ours"}>
                 {source === "ours" ? "בחרי לקוח…" : "— ללא —"}
               </option>
@@ -154,6 +168,14 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
         <Field label="דרישות המשרה (תיאור מעוצב)">
           <RichTextEditor name="description_html" defaultValue={job.description_html} />
         </Field>
+        {source === "ours" && (
+          <p className="t-caption">
+            שאלות החובה למועמדות עורכים{" "}
+            <Link href={`/admin/jobs/${job.id}`} className="font-semibold text-brand-purple hover:text-brand-pink-deep">
+              בדף ניהול המשרה ←
+            </Link>
+          </p>
+        )}
         <div className="flex gap-2">
           <Button type="submit" size="sm" disabled={pending}>{pending ? "שומר…" : "שמירה"}</Button>
           <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>ביטול</Button>
