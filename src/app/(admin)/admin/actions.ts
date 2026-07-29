@@ -726,7 +726,9 @@ export async function previewAudience(
   const { data: profiles } = await admin
     .from("profiles")
     .select("id, full_name, specialization, region, is_experienced")
-    .eq("status", "active")
+    // Placement reaches free members too (user decision 2026-07-29): pending =
+    // browsing free member, active = paying. Only paused/rejected stay out.
+    .in("status", ["active", "pending"])
     .eq("role", "junior")
     .eq("profile_completed", true)
     .order("full_name", { ascending: true });

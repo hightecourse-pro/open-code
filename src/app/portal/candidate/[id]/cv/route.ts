@@ -39,7 +39,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     .from("profiles")
     .select("id")
     .eq("id", id)
-    .eq("status", "active")
+    .in("status", ["active", "pending"])
     .eq("profile_completed", true)
     .eq("role", "junior")
     .not("portal_listed", "is", false)

@@ -76,7 +76,7 @@ export default async function AdminJobCandidatesPage({
       admin
         .from("profiles")
         .select("id, full_name, specialization")
-        .eq("status", "active")
+        .in("status", ["active", "pending"])
         .eq("role", "junior")
         .eq("profile_completed", true)
         .order("full_name", { ascending: true }),

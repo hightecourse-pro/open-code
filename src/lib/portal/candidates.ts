@@ -1,7 +1,9 @@
 // Candidate data for the employer portal.
 //
 // PRIVACY CONTRACT — everything in this file obeys it:
-//   * Only profiles that are active, completed and portal_listed appear.
+//   * Only junior members (free or paying — placement reaches both, user
+//     decision 2026-07-29), with a completed profile, who haven't opted out
+//     (portal_listed) appear. Paused/rejected members never do.
 //   * Only answers to questions flagged employer_visible are ever returned.
 //     Anything not opted in (ID number, phone, address…) never leaves the DB.
 //   * member_crm (VIP flag, VIP reason, internal notes) is never read here.
@@ -200,7 +202,7 @@ export async function loadCandidates(): Promise<{
   const { data: profiles } = await admin
     .from("profiles")
     .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, status, profile_completed")
-    .eq("status", "active")
+    .in("status", ["active", "pending"])
     .eq("profile_completed", true)
     // Only job-seeking members — never admins or mentors.
     .eq("role", "junior")
