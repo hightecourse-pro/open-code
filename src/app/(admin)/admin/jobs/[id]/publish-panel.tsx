@@ -47,6 +47,8 @@ export function PublishPanel({
   const [selRegion, setSelRegion] = useState<string[]>([]);
   const [exp, setExp] = useState<"all" | "yes" | "no">("all");
   const [audience, setAudience] = useState<AudienceMember[] | null>(null);
+  // The community-wide eligible pool (before criteria) — for honest empty states.
+  const [pool, setPool] = useState<number | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [extras, setExtras] = useState<PickerMember[]>([]);
   const [query, setQuery] = useState("");
@@ -71,6 +73,7 @@ export function PublishPanel({
         return;
       }
       setError(null);
+      setPool(res.pool ?? null);
       setAudience(res.members);
       // New criteria — start with everyone matched checked.
       setChecked(new Set(res.members.map((m) => m.id)));
@@ -238,7 +241,9 @@ export function PublishPanel({
           <p className="text-ink-500 text-sm py-1">טוענת את הקהל המתאים…</p>
         ) : audience.length === 0 ? (
           <p className="text-ink-500 text-sm py-1">
-            אין חברות שמתאימות לקריטריונים — אפשר להרחיב אותם או להוסיף ידנית למטה.
+            {pool === 0
+              ? "אין כרגע בקהילה חברות שעומדות בתנאי הפרסום (פעילה + ג׳וניורית + פרופיל מושלם). אשרי חברות ממתינות או עזרי להן להשלים פרופיל — ואז הקהל ייבנה כאן."
+              : "אין חברות שמתאימות לקריטריונים — אפשר להרחיב אותם או להוסיף ידנית למטה."}
           </p>
         ) : (
           <div className="flex flex-col max-h-[320px] overflow-y-auto">

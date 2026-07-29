@@ -55,25 +55,32 @@ export function AdminCreateJob({
   >([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [newType, setNewType] = useState<QuestionAnswerType>("paragraph");
-  const [newOptions, setNewOptions] = useState("");
+  // Choice options are composed one by one, Google-Forms style.
+  const [draftOptions, setDraftOptions] = useState<string[]>([]);
+  const [optionDraft, setOptionDraft] = useState("");
   const newIsChoice = newType === "select" || newType === "multiselect";
+  const canAddQuestion = !!newQuestion.trim() && (!newIsChoice || draftOptions.length >= 2);
+
+  function addOption() {
+    const o = optionDraft.trim();
+    if (!o || draftOptions.includes(o) || draftOptions.length >= 20) return;
+    setDraftOptions((prev) => [...prev, o]);
+    setOptionDraft("");
+  }
 
   function addQuestion() {
-    const question = newQuestion.trim();
-    if (!question) return;
-    const options = newIsChoice
-      ? [...new Set(newOptions.split(",").map((o) => o.trim()).filter(Boolean))].slice(0, 20)
-      : [];
-    // Same rule as the server: a choice question needs at least two options —
-    // with fewer it degrades to a free-text paragraph.
-    const answer_type: QuestionAnswerType =
-      newIsChoice && options.length < 2 ? "paragraph" : newType;
+    if (!canAddQuestion) return;
     setQuestions((prev) => [
       ...prev,
-      { question, answer_type, options: answer_type === "paragraph" ? [] : options },
+      {
+        question: newQuestion.trim(),
+        answer_type: newType,
+        options: newIsChoice ? draftOptions : [],
+      },
     ]);
     setNewQuestion("");
-    setNewOptions("");
+    setDraftOptions([]);
+    setOptionDraft("");
   }
 
   function selectClient(id: string) {
@@ -310,26 +317,55 @@ export function AdminCreateJob({
                 </option>
               ))}
             </Select>
-            <Button type="button" size="sm" variant="ghost" onClick={addQuestion} disabled={!newQuestion.trim()}>
-              <Plus size={14} /> הוספה
+            <Button type="button" size="sm" variant="ghost" onClick={addQuestion} disabled={!canAddQuestion}>
+              <Plus size={14} /> הוספת השאלה
             </Button>
           </div>
           {newIsChoice && (
-            <>
-              <Input
-                value={newOptions}
-                onChange={(e) => setNewOptions(e.target.value)}
-                placeholder="אפשרות 1, אפשרות 2, …"
-                aria-label="אפשרויות לבחירה (מופרדות בפסיק)"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    addQuestion();
-                  }
-                }}
-              />
-              <p className="t-caption -mt-1">לפחות שתי אפשרויות, מופרדות בפסיק.</p>
-            </>
+            <div className="rounded-sm border border-ink-200 bg-white p-2.5 flex flex-col gap-2">
+              {draftOptions.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {draftOptions.map((o) => (
+                    <span
+                      key={o}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-tint-purple text-brand-purple text-xs font-semibold px-3 py-1"
+                    >
+                      {o}
+                      <button
+                        type="button"
+                        onClick={() => setDraftOptions((prev) => prev.filter((x) => x !== o))}
+                        aria-label={`הסרת האפשרות ${o}`}
+                        className="hover:text-danger cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <Input
+                  value={optionDraft}
+                  onChange={(e) => setOptionDraft(e.target.value)}
+                  placeholder="הקלידי אפשרות ולחצי Enter…"
+                  aria-label="הוספת אפשרות לבחירה"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addOption();
+                    }
+                  }}
+                />
+                <Button type="button" size="sm" variant="ghost" onClick={addOption} disabled={!optionDraft.trim()}>
+                  <Plus size={13} /> אפשרות
+                </Button>
+              </div>
+              <p className="t-caption -mt-0.5">
+                {draftOptions.length < 2
+                  ? `עוד ${2 - draftOptions.length} אפשרויות לפחות כדי להוסיף את השאלה`
+                  : `${draftOptions.length} אפשרויות`}
+              </p>
+            </div>
           )}
           <input type="hidden" name="questions" value={JSON.stringify(questions)} />
         </div>

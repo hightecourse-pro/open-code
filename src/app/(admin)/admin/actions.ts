@@ -716,7 +716,7 @@ export interface AudienceMember {
 export async function previewAudience(
   jobId: string,
   filters: AudienceFilters
-): Promise<{ members?: AudienceMember[]; error?: string }> {
+): Promise<{ members?: AudienceMember[]; pool?: number; error?: string }> {
   await requireRole("admin");
   const admin = createAdminClient();
 
@@ -792,8 +792,15 @@ export async function previewAudience(
     });
   };
 
-  if (wantSpec.length > 0) members = members.filter((m) => matches(m, "specialization", wantSpec));
-  if (wantRegion.length > 0) members = members.filter((m) => matches(m, "region", wantRegion));
+  // A criterion with EVERY option checked excludes no one — including members
+  // whose profile simply doesn't carry that field yet. Only a real narrowing
+  // (a strict subset of the options) filters.
+  const totalOf = (kind: string) => (tax ?? []).filter((t) => t.kind === kind).length;
+  const specNarrows = wantSpec.length > 0 && wantSpec.length < totalOf("specialization");
+  const regionNarrows = wantRegion.length > 0 && wantRegion.length < totalOf("region");
+
+  if (specNarrows) members = members.filter((m) => matches(m, "specialization", wantSpec));
+  if (regionNarrows) members = members.filter((m) => matches(m, "region", wantRegion));
 
   // Display: prefer the profile column, fall back to the first answer, and
   // swap machine values for their Hebrew labels.
@@ -813,6 +820,9 @@ export async function previewAudience(
       specialization: display(m, "specialization"),
       region: display(m, "region"),
     })),
+    // The pre-criteria pool — lets the UI distinguish "the community has no
+    // eligible members yet" from "the criteria filtered everyone out".
+    pool: (profiles ?? []).length,
   };
 }
 

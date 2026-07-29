@@ -60,6 +60,16 @@ export function JobQuestionsManager({
     {}
   );
   const [newType, setNewType] = useState<QuestionAnswerType>("paragraph");
+  // Choice options are composed one by one, Google-Forms style.
+  const [draftOptions, setDraftOptions] = useState<string[]>([]);
+  const [optionDraft, setOptionDraft] = useState("");
+
+  function addOption() {
+    const o = optionDraft.trim();
+    if (!o || draftOptions.includes(o) || draftOptions.length >= 20) return;
+    setDraftOptions((prev) => [...prev, o]);
+    setOptionDraft("");
+  }
   const isChoice = newType === "select" || newType === "multiselect";
 
   return (
@@ -151,16 +161,52 @@ export function JobQuestionsManager({
           </Button>
         </div>
         {isChoice && (
-          <>
-            <Input
-              name="options"
-              placeholder="אפשרות 1, אפשרות 2, …"
-              aria-label="אפשרויות לבחירה (מופרדות בפסיק)"
-            />
-            <p className="text-[12px] text-ink-500 -mt-1">
-              לפחות שתי אפשרויות, מופרדות בפסיק.
+          <div className="rounded-sm border border-ink-200 bg-white p-2.5 flex flex-col gap-2">
+            {draftOptions.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {draftOptions.map((o) => (
+                  <span
+                    key={o}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-tint-purple text-brand-purple text-xs font-semibold px-3 py-1"
+                  >
+                    {o}
+                    <button
+                      type="button"
+                      onClick={() => setDraftOptions((prev) => prev.filter((x) => x !== o))}
+                      aria-label={`הסרת האפשרות ${o}`}
+                      className="hover:text-danger cursor-pointer"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-2">
+              <Input
+                value={optionDraft}
+                onChange={(e) => setOptionDraft(e.target.value)}
+                placeholder="הקלידי אפשרות ולחצי Enter…"
+                aria-label="הוספת אפשרות לבחירה"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addOption();
+                  }
+                }}
+              />
+              <Button type="button" size="sm" variant="ghost" onClick={addOption} disabled={!optionDraft.trim()}>
+                אפשרות +
+              </Button>
+            </div>
+            <p className="text-[12px] text-ink-500 -mt-0.5">
+              {draftOptions.length < 2
+                ? `עוד ${2 - draftOptions.length} אפשרויות לפחות`
+                : `${draftOptions.length} אפשרויות`}
             </p>
-          </>
+            {/* The server action reads a comma-separated field — the chips feed it. */}
+            <input type="hidden" name="options" value={draftOptions.join(", ")} />
+          </div>
         )}
       </form>
     </div>
