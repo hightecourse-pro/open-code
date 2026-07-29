@@ -25,7 +25,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
   // RLS decides visibility (targeted jobs only for their audience).
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, title, company, source, status")
+    .select("id, title, company, source, status, description, description_html, location, employment_type")
     .eq("id", id)
     .maybeSingle();
   if (!job || job.source !== "ours" || job.status !== "open") notFound();
@@ -67,6 +67,29 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
         {/* The client's identity stays internal — she applies to the role. */}
         <p className="t-body-sm text-ink-700">משרה בלעדית דרך קוד פתוח 💜</p>
       </div>
+
+      {/* The requirements exactly as the admin styled them (sanitized at save
+          time by the allowlist in lib/rich-text — brand styles apply here). */}
+      {(job.description_html || job.description) && (
+        <section className="rounded-[18px] border border-ink-200 bg-white p-6 shadow-sm">
+          <h2 className="font-display text-lg font-bold text-ink-1000 mb-3">דרישות המשרה</h2>
+          {job.description_html ? (
+            <div
+              dir="rtl"
+              className={[
+                "font-body text-[15px] leading-relaxed text-ink-900",
+                "[&_ul]:list-disc [&_ul]:ps-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:ps-5 [&_ol]:my-1.5",
+                "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-base [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-brand-purple",
+                "[&_a]:text-brand-purple [&_a]:underline",
+                "[&_p]:my-1.5 [&_b]:text-ink-1000 [&_strong]:text-ink-1000",
+              ].join(" ")}
+              dangerouslySetInnerHTML={{ __html: job.description_html }}
+            />
+          ) : (
+            <p className="t-body whitespace-pre-line text-ink-900">{job.description}</p>
+          )}
+        </section>
+      )}
 
       {existing ? (
         <Alert variant="info" title="כבר הגשת למשרה הזו 💜">
