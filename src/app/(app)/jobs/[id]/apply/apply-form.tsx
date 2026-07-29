@@ -25,9 +25,10 @@ export interface ApplyCvDoc {
 }
 
 /**
- * The application wizard form: a friendly profile nudge, the job's required
- * questions, the built-in "fit" question, and the CV choice — her main
- * (latest) CV or a job-tailored upload.
+ * The application wizard form: a friendly profile nudge, the job's questions
+ * (required or optional — optional ones are labeled "רשות"), the built-in
+ * "fit" question, and the CV choice — her main (latest) CV or a job-tailored
+ * upload.
  */
 export function ApplyForm({
   jobId,
@@ -64,11 +65,11 @@ export function ApplyForm({
         </span>
       </div>
 
-      {/* Per-job required questions — rendered by their answer type */}
+      {/* Per-job questions — rendered by their answer type */}
       {questions.map((q, i) => (
         <Field
           key={q.id}
-          label={`${i + 1}. ${q.question}`}
+          label={`${i + 1}. ${q.question}${q.required !== false ? "" : " (רשות)"}`}
           htmlFor={q.answer_type === "multiselect" ? undefined : `q_${q.id}`}
         >
           {q.answer_type === "number" ? (
@@ -98,8 +99,9 @@ export function ApplyForm({
               ))}
             </Select>
           ) : q.answer_type === "multiselect" ? (
-            // At-least-one is enforced server-side — checkboxes can't carry a
-            // group-level required attribute.
+            // At-least-one is enforced server-side (only when the question is
+            // required) — checkboxes can't carry a group-level required
+            // attribute.
             <div className="flex flex-col gap-2 rounded-sm border border-ink-300 bg-ink-0 px-3.5 py-3">
               {q.options.map((opt) => (
                 <Checkbox key={opt} name={`q_${q.id}`} value={opt} label={opt} />

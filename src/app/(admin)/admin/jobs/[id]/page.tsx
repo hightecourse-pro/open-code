@@ -82,7 +82,7 @@ export default async function AdminJobCandidatesPage({
         .order("full_name", { ascending: true }),
       admin
         .from("job_questions")
-        .select("id, question, answer_type, options, sort_order")
+        .select("id, question, answer_type, options, required, sort_order")
         .eq("job_id", id)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true }),
@@ -103,6 +103,7 @@ export default async function AdminJobCandidatesPage({
     options: Array.isArray(q.options)
       ? q.options.filter((o): o is string => typeof o === "string")
       : [],
+    required: q.required !== false,
   }));
 
   const client = job.client_id
@@ -347,13 +348,13 @@ export default async function AdminJobCandidatesPage({
         </div>
       )}
 
-      {/* Required application questions */}
+      {/* Application questions (required or optional) */}
       <div className={cardClass}>
         <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
-          <ListChecks size={16} className="text-brand-purple" /> שאלות חובה למועמדות
+          <ListChecks size={16} className="text-brand-purple" /> שאלות למועמדות
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          שאלות שכל מועמדת עונה עליהן בהגשה למשרה הזו. שימי לב: השאלה
+          שאלות שכל מועמדת רואה בהגשה למשרה הזו — כל שאלה אפשר לסמן כחובה או רשות. שימי לב: השאלה
           {" “למה את חושבת שאת מתאימה למשרה?” "}
           נשאלת תמיד אוטומטית — אין צורך להוסיף אותה.
         </p>

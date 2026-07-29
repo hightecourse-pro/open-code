@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
-import { Alert, Badge, Button, Input, Select } from "@/components/ui";
+import { Alert, Badge, Button, Checkbox, Input, Select } from "@/components/ui";
 import {
   addJobQuestion,
   deleteJobQuestion,
@@ -40,13 +40,16 @@ export interface JobQuestionItem {
   answer_type: QuestionAnswerType;
   /** Choice options (select/multiselect) — empty for free-text/number. */
   options: string[];
+  /** Must she answer? Optional questions render with a "רשות" badge. */
+  required: boolean;
   sort_order: number;
 }
 
 /**
- * Per-job required application questions: add, delete and reorder. The list
- * itself comes from the server page (ordered by sort_order) — every action
- * revalidates the page, so the server stays the source of truth.
+ * Per-job application questions (required or optional): add, delete and
+ * reorder. The list itself comes from the server page (ordered by sort_order)
+ * — every action revalidates the page, so the server stays the source of
+ * truth.
  */
 export function JobQuestionsManager({
   jobId,
@@ -92,6 +95,11 @@ export function JobQuestionsManager({
                   </span>
                 )}
               </span>
+              {!q.required && (
+                <Badge variant="tech" className="shrink-0 px-2 py-0.5 text-[10.5px]">
+                  רשות
+                </Badge>
+              )}
               <Badge
                 variant={ANSWER_TYPE_BADGE[q.answer_type]}
                 className="shrink-0 px-2 py-0.5 text-[10.5px]"
@@ -156,6 +164,8 @@ export function JobQuestionsManager({
               </option>
             ))}
           </Select>
+          {/* Checkbox present in the form data = required; unchecked = רשות. */}
+          <Checkbox name="required" label="שאלת חובה" defaultChecked className="shrink-0" />
           <Button type="submit" size="sm" disabled={pending} className="shrink-0">
             {pending ? "מוסיפה…" : "הוספת שאלה"}
           </Button>

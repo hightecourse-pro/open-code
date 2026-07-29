@@ -439,6 +439,7 @@ interface CleanJobQuestion {
   question: string;
   answer_type: QuestionAnswerType;
   options: string[] | null;
+  required: boolean;
 }
 
 /**
@@ -450,7 +451,8 @@ interface CleanJobQuestion {
 function sanitizeJobQuestion(
   rawQuestion: unknown,
   rawType: unknown,
-  rawOptions: unknown
+  rawOptions: unknown,
+  rawRequired?: unknown
 ): CleanJobQuestion | null {
   const question = String(rawQuestion ?? "").trim();
   if (!question) return null;
@@ -464,7 +466,9 @@ function sanitizeJobQuestion(
     if (clean.length >= 2) options = clean;
     else answer_type = "paragraph";
   }
-  return { question, answer_type, options };
+  // Anything except an explicit "off" keeps the default: required.
+  const required = rawRequired === false || rawRequired === "false" || rawRequired === "off" ? false : true;
+  return { question, answer_type, options, required };
 }
 
 /** Post a new job to the board. */
@@ -520,7 +524,8 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
             ? sanitizeJobQuestion(
                 (q as Record<string, unknown>).question,
                 (q as Record<string, unknown>).answer_type,
-                (q as Record<string, unknown>).options
+                (q as Record<string, unknown>).options,
+                (q as Record<string, unknown>).required
               )
             : sanitizeJobQuestion(q, "paragraph", null)
         )
@@ -533,6 +538,7 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
             question: q.question,
             answer_type: q.answer_type,
             options: q.options,
+            required: q.required,
             sort_order: i,
           }))
         );
@@ -613,7 +619,8 @@ export async function addJobQuestion(
   const parsed = sanitizeJobQuestion(
     formData.get("question"),
     String(formData.get("answer_type") ?? "paragraph"),
-    String(formData.get("options") ?? "").split(",")
+    String(formData.get("options") ?? "").split(","),
+    formData.get("required") === null ? "off" : "on"
   );
   if (!parsed) return { error: "כתבי את נוסח השאלה." };
 

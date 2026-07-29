@@ -2,7 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { Plus } from "lucide-react";
-import { Alert, Badge, Button, Field, Input, Select } from "@/components/ui";
+import { Alert, Badge, Button, Checkbox, Field, Input, Select } from "@/components/ui";
 import { createJob, quickCreateClientForJob, type FormState } from "@/app/(admin)/admin/actions";
 import {
   ANSWER_TYPE_BADGE,
@@ -48,13 +48,15 @@ export function AdminCreateJob({
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickPending, startQuick] = useTransition();
 
-  // Required application questions, composed right here during creation —
-  // each with a Google-Forms-style answer type (+ options for choice types).
+  // Application questions, composed right here during creation — each with a
+  // Google-Forms-style answer type (+ options for choice types) and a
+  // required/optional flag (required by default).
   const [questions, setQuestions] = useState<
-    { question: string; answer_type: QuestionAnswerType; options: string[] }[]
+    { question: string; answer_type: QuestionAnswerType; options: string[]; required: boolean }[]
   >([]);
   const [newQuestion, setNewQuestion] = useState("");
   const [newType, setNewType] = useState<QuestionAnswerType>("paragraph");
+  const [newRequired, setNewRequired] = useState(true);
   // Choice options are composed one by one, Google-Forms style.
   const [draftOptions, setDraftOptions] = useState<string[]>([]);
   const [optionDraft, setOptionDraft] = useState("");
@@ -76,9 +78,11 @@ export function AdminCreateJob({
         question: newQuestion.trim(),
         answer_type: newType,
         options: newIsChoice ? draftOptions : [],
+        required: newRequired,
       },
     ]);
     setNewQuestion("");
+    setNewRequired(true);
     setDraftOptions([]);
     setOptionDraft("");
   }
@@ -261,10 +265,10 @@ export function AdminCreateJob({
 
       {source === "ours" && (
         <div className="rounded-md border border-ink-200 bg-ink-50/60 p-3 flex flex-col gap-2">
-          <div className="text-sm font-semibold text-ink-900">שאלות חובה למועמדות</div>
+          <div className="text-sm font-semibold text-ink-900">שאלות למועמדות</div>
           <p className="t-caption -mt-1">
             השאלה &quot;למה את חושבת שאת מתאימה למשרה?&quot; נשאלת תמיד — כאן מוסיפים שאלות לפי
-            דרישות המשרה. אפשר לערוך גם אחר כך בדף המשרה.
+            דרישות המשרה, וכל שאלה אפשר לסמן כחובה או רשות. אפשר לערוך גם אחר כך בדף המשרה.
           </p>
           {questions.map((q, i) => (
             <div key={i} className="flex items-start gap-2">
@@ -277,6 +281,11 @@ export function AdminCreateJob({
                   </span>
                 )}
               </span>
+              {!q.required && (
+                <Badge variant="tech" className="shrink-0 px-2 py-0.5 text-[10.5px]">
+                  רשות
+                </Badge>
+              )}
               <Badge
                 variant={ANSWER_TYPE_BADGE[q.answer_type]}
                 className="shrink-0 px-2 py-0.5 text-[10.5px]"
@@ -317,6 +326,12 @@ export function AdminCreateJob({
                 </option>
               ))}
             </Select>
+            <Checkbox
+              label="שאלת חובה"
+              checked={newRequired}
+              onChange={(e) => setNewRequired(e.target.checked)}
+              className="shrink-0"
+            />
             <Button type="button" size="sm" variant="ghost" onClick={addQuestion} disabled={!canAddQuestion}>
               <Plus size={14} /> הוספת השאלה
             </Button>
