@@ -10,41 +10,41 @@ import {
   reopenJobPublish,
   type AudienceMember,
 } from "@/app/(admin)/admin/actions";
+import type { AudienceCatalogueField } from "@/lib/admin/audience";
 import type { PickerMember } from "./candidate-picker";
 
-export interface TaxOption {
-  value: string;
-  label: string;
-}
-
 const MAX_SEARCH_ROWS = 8;
+const PREVIEW_DEBOUNCE_MS = 300;
 
 /**
- * The targeted-publish flow for an "ours" job: pick criteria (specialization /
- * region / experience), preview the matching audience with per-member
- * checkboxes, optionally add anyone by search, then publish — which writes
- * job_targets, opens the job and emails every target.
+ * The targeted-publish flow for an "ours" job: pick criteria over ANY profile
+ * parameter (the catalogue mirrors the portal search: parameter select + value
+ * chips + active-filter chips) plus experience, preview the matching audience
+ * with per-member checkboxes, optionally add anyone by search, then publish —
+ * which writes job_targets, opens the job and emails every target.
  *
  * After publish (published != null) it renders the summary + re-open option.
  */
 export function PublishPanel({
   jobId,
-  specializations,
-  regions,
+  catalogue,
   allMembers,
   published,
 }: {
   jobId: string;
-  specializations: TaxOption[];
-  regions: TaxOption[];
+  /** Every filterable profile criterion, from buildAudienceCatalogue(). */
+  catalogue: AudienceCatalogueField[];
   /** All active members, for the "add anyone" search (same list as the candidate picker). */
   allMembers: PickerMember[];
   /** Null while the job is a draft; otherwise the published summary. */
   published: { at: string | null; audienceCount: number } | null;
 }) {
   const router = useRouter();
-  const [selSpec, setSelSpec] = useState<string[]>([]);
-  const [selRegion, setSelRegion] = useState<string[]>([]);
+  // question key → selected values. Filters accumulate across parameters, so
+  // switching the visible parameter never changes what's selected.
+  const [criteria, setCriteria] = useState<Record<string, string[]>>({});
+  const [activeKey, setActiveKey] = useState(catalogue[0]?.key ?? "");
+  const [valueQuery, setValueQuery] = useState("");
   const [exp, setExp] = useState<"all" | "yes" | "no">("all");
   const [audience, setAudience] = useState<AudienceMember[] | null>(null);
   // The community-wide eligible pool (before criteria) — for honest empty states.
@@ -59,29 +59,32 @@ export function PublishPanel({
 
   const isDraft = published === null;
 
-  // Live audience preview — refetch whenever the criteria change.
+  // Live audience preview — refetch whenever the criteria change (debounced,
+  // so rapid chip-toggling fires one request instead of one per click).
   useEffect(() => {
     if (!isDraft) return;
-    startPreview(async () => {
-      const res = await previewAudience(jobId, {
-        specialization: selSpec,
-        region: selRegion,
-        experienced: exp === "all" ? undefined : exp === "yes",
+    const timer = setTimeout(() => {
+      startPreview(async () => {
+        const res = await previewAudience(jobId, {
+          criteria,
+          experienced: exp === "all" ? undefined : exp === "yes",
+        });
+        if (!res.members) {
+          setError(res.error ?? "טעינת הקהל נכשלה. נסי שוב.");
+          return;
+        }
+        setError(null);
+        setPool(res.pool ?? null);
+        setAudience(res.members);
+        // New criteria — start with everyone matched checked.
+        setChecked(new Set(res.members.map((m) => m.id)));
+        // Anyone manually added who now matches the criteria is no longer "extra".
+        const ids = new Set(res.members.map((m) => m.id));
+        setExtras((prev) => prev.filter((e) => !ids.has(e.id)));
       });
-      if (!res.members) {
-        setError(res.error ?? "טעינת הקהל נכשלה. נסי שוב.");
-        return;
-      }
-      setError(null);
-      setPool(res.pool ?? null);
-      setAudience(res.members);
-      // New criteria — start with everyone matched checked.
-      setChecked(new Set(res.members.map((m) => m.id)));
-      // Anyone manually added who now matches the criteria is no longer "extra".
-      const ids = new Set(res.members.map((m) => m.id));
-      setExtras((prev) => prev.filter((e) => !ids.has(e.id)));
-    });
-  }, [isDraft, jobId, selSpec, selRegion, exp, startPreview]);
+    }, PREVIEW_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [isDraft, jobId, criteria, exp, startPreview]);
 
   const audienceIds = useMemo(() => new Set((audience ?? []).map((m) => m.id)), [audience]);
 
@@ -101,8 +104,38 @@ export function PublishPanel({
 
   const selectedCount = checked.size + extras.length;
 
-  function toggleCriterion(list: string[], value: string, set: (next: string[]) => void) {
-    set(list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  const active = catalogue.find((f) => f.key === activeKey) ?? null;
+
+  const visibleValues = useMemo(() => {
+    if (!active) return [];
+    const q = valueQuery.trim().toLowerCase();
+    return q ? active.values.filter((v) => v.toLowerCase().includes(q)) : active.values;
+  }, [active, valueQuery]);
+
+  // The active-filter chips row — every selected value across all parameters.
+  const chips = useMemo(
+    () =>
+      Object.entries(criteria).flatMap(([key, values]) =>
+        values.map((value) => ({
+          key,
+          value,
+          label: catalogue.find((f) => f.key === key)?.label ?? key,
+        }))
+      ),
+    [catalogue, criteria]
+  );
+
+  function toggleValue(key: string, value: string) {
+    setCriteria((prev) => {
+      const current = prev[key] ?? [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      const out = { ...prev };
+      if (next.length) out[key] = next;
+      else delete out[key]; // drop empty keys — they don't filter
+      return out;
+    });
   }
 
   function toggleMember(id: string, on: boolean) {
@@ -181,39 +214,70 @@ export function PublishPanel({
     <div className="flex flex-col gap-4">
       {error && <Alert variant="danger">{error}</Alert>}
 
-      {/* Criteria */}
+      {/* Criteria — every profile parameter, mirroring the portal search */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <div className="text-xs font-semibold text-ink-700 mb-2">תחום התמחות</div>
-          <div className="flex flex-col gap-1.5">
-            {specializations.map((o) => (
-              <Checkbox
-                key={o.value}
-                label={o.label}
-                checked={selSpec.includes(o.value)}
-                onChange={() => toggleCriterion(selSpec, o.value, setSelSpec)}
-              />
-            ))}
-            {specializations.length === 0 && (
-              <span className="text-[12px] text-ink-400">אין תחומים מוגדרים.</span>
-            )}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs font-semibold text-ink-700 mb-2">אזור</div>
-          <div className="flex flex-col gap-1.5">
-            {regions.map((o) => (
-              <Checkbox
-                key={o.value}
-                label={o.label}
-                checked={selRegion.includes(o.value)}
-                onChange={() => toggleCriterion(selRegion, o.value, setSelRegion)}
-              />
-            ))}
-            {regions.length === 0 && (
-              <span className="text-[12px] text-ink-400">אין אזורים מוגדרים.</span>
-            )}
-          </div>
+        <div className="md:col-span-2 flex flex-col gap-2">
+          <div className="text-xs font-semibold text-ink-700">פרמטר</div>
+          {catalogue.length === 0 ? (
+            <span className="text-[12px] text-ink-400">אין פרמטרים מוגדרים לסינון.</span>
+          ) : (
+            <>
+              <Select
+                value={activeKey}
+                onChange={(e) => {
+                  setActiveKey(e.target.value);
+                  setValueQuery("");
+                }}
+                aria-label="בחירת פרמטר לסינון"
+              >
+                {catalogue.map((f) => (
+                  <option key={f.key} value={f.key}>
+                    {f.label}
+                    {criteria[f.key]?.length ? ` (${criteria[f.key].length})` : ""}
+                  </option>
+                ))}
+              </Select>
+              {active && active.values.length > 8 && (
+                <Input
+                  type="search"
+                  value={valueQuery}
+                  onChange={(e) => setValueQuery(e.target.value)}
+                  placeholder="סינון הערכים ברשימה…"
+                  aria-label="סינון הערכים ברשימה"
+                />
+              )}
+              <div
+                role="group"
+                aria-label={active ? `ערכים עבור ${active.label}` : "ערכים"}
+                className="max-h-48 overflow-y-auto rounded-md border border-ink-200 bg-ink-50 p-2 flex flex-wrap gap-1.5"
+              >
+                {visibleValues.length === 0 ? (
+                  <p className="text-[12px] text-ink-500 p-1.5">אין ערכים תואמים.</p>
+                ) : (
+                  visibleValues.map((value) => {
+                    const on = (criteria[activeKey] ?? []).includes(value);
+                    return (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => toggleValue(activeKey, value)}
+                        aria-pressed={on}
+                        className={[
+                          "inline-flex items-center px-3 py-[5px] rounded-full text-xs font-semibold",
+                          "transition-colors duration-150 border cursor-pointer",
+                          on
+                            ? "bg-brand-pink-deep text-white border-brand-pink-deep"
+                            : "bg-ink-0 text-ink-700 border-ink-200 hover:border-brand-purple",
+                        ].join(" ")}
+                      >
+                        {value}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </>
+          )}
         </div>
         <div>
           <div className="text-xs font-semibold text-ink-700 mb-2">ניסיון</div>
@@ -227,6 +291,33 @@ export function PublishPanel({
           </p>
         </div>
       </div>
+
+      {/* Active filters */}
+      {chips.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[12px] text-ink-500">הסינון הפעיל:</span>
+          {chips.map((chip) => (
+            <button
+              key={`${chip.key}:${chip.value}`}
+              type="button"
+              onClick={() => toggleValue(chip.key, chip.value)}
+              className="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold bg-tint-pink text-brand-pink-deep hover:bg-brand-pink-deep hover:text-white transition-colors duration-150 cursor-pointer"
+            >
+              <span className="opacity-70">{chip.label}:</span>
+              {chip.value}
+              <X size={12} aria-hidden />
+              <span className="sr-only">הסרת הסינון</span>
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() => setCriteria({})}
+            className="text-[12px] text-ink-500 underline underline-offset-2 hover:text-brand-pink-deep cursor-pointer"
+          >
+            איפוס
+          </button>
+        </div>
+      )}
 
       {/* Audience preview */}
       <div className="border border-ink-200 rounded-md p-3.5">
@@ -257,7 +348,17 @@ export function PublishPanel({
                   onChange={(e) => toggleMember(m.id, e.target.checked)}
                   label={
                     <span className="flex flex-col">
-                      <span className="font-medium text-ink-900">{m.full_name}</span>
+                      <span className="font-medium text-ink-900 inline-flex items-center gap-1.5">
+                        {m.full_name}
+                        {m.is_vip && (
+                          <span title="VIP — עדיפות בהשמות" className="text-[13px]">⭐</span>
+                        )}
+                        {m.is_subscriber && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-tint-pink text-brand-pink-deep">
+                            מנויה
+                          </span>
+                        )}
+                      </span>
                       <span className="text-xs text-ink-500">
                         {[m.specialization, m.region].filter(Boolean).join(" · ") || "—"}
                       </span>

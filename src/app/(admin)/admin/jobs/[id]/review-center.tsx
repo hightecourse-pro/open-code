@@ -9,7 +9,7 @@ import {
   Plus,
   Search,
 } from "lucide-react";
-import { Alert, Badge, Button, Input, Select } from "@/components/ui";
+import { Alert, Badge, Button, Checkbox, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
   addJobCandidate,
@@ -38,6 +38,8 @@ export interface ReviewApplication {
   submittedAt: string;
   status: string;
   adminMark: AdminMark | null;
+  /** Her private "why not fit" note — rides only with a not_fit mark. */
+  adminMarkReason: string | null;
   sentToClientAt: string | null;
   /**
    * {questionId: answer} + the built-in "fit" answer — parsed server-side.
@@ -50,6 +52,10 @@ export interface ReviewApplication {
   profile: ReviewProfileSummary | null;
   curated: boolean;
   clientFeedback: { interviewMarked: boolean; clientNote: string | null } | null;
+  /** מנויה (profiles.status === "active") — internal indication only. */
+  isSubscriber: boolean;
+  /** VIP from the admin-only member_crm — internal indication only. */
+  isVip: boolean;
 }
 
 // -------------------------------------------------------------------- labels
@@ -109,6 +115,24 @@ function Stat({ label, value, className }: { label: string; value: number; class
   );
 }
 
+/** ⭐ (VIP) + "מנויה" pill — internal indications, admin-only surface. */
+function MemberFlair({ app, starClass }: { app: ReviewApplication; starClass?: string }) {
+  return (
+    <>
+      {app.isVip && (
+        <span title="VIP — עדיפות בהשמות" className={cn("shrink-0 text-[13px]", starClass)}>
+          ⭐
+        </span>
+      )}
+      {app.isSubscriber && (
+        <span className="shrink-0 rounded-full bg-tint-pink px-1.5 py-0.5 text-[10px] font-bold text-brand-pink-deep">
+          מנויה
+        </span>
+      )}
+    </>
+  );
+}
+
 // ----------------------------------------------------------------- component
 
 /**
@@ -129,19 +153,29 @@ export function ReviewCenter({
   const [query, setQuery] = useState("");
   const [markFilter, setMarkFilter] = useState<"all" | "none" | AdminMark>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // "בלי הלא רלוונטיות שכבר בדקתי" — not_fit rows are hidden by default.
+  const [showNotFit, setShowNotFit] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(applications[0]?.id ?? null);
 
   // Optimistic overrides on top of the server-rendered props.
   const [marks, setMarks] = useState<Record<string, AdminMark | null>>({});
+  const [reasons, setReasons] = useState<Record<string, string | null>>({});
   const [statuses, setStatuses] = useState<Record<string, string>>({});
   const [curatedLocal, setCuratedLocal] = useState<Set<string>>(() => new Set());
   const [actionError, setActionError] = useState<string | null>(null);
+  // The inline "why not fit" box — open for at most one application at a time.
+  const [reasonEditor, setReasonEditor] = useState<{ id: string; draft: string } | null>(null);
   const [, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
 
   const markOf = useCallback(
     (a: ReviewApplication): AdminMark | null => (a.id in marks ? marks[a.id] : a.adminMark),
     [marks]
+  );
+  const reasonOf = useCallback(
+    (a: ReviewApplication): string | null =>
+      a.id in reasons ? reasons[a.id] : a.adminMarkReason,
+    [reasons]
   );
   const statusOf = useCallback(
     (a: ReviewApplication): string => statuses[a.id] ?? a.status,
@@ -163,20 +197,35 @@ export function ReviewCenter({
       else if (m === "approved") approved++;
       if (a.sentToClientAt || statusOf(a) === "sent") sentToClient++;
     }
-    return { total: applications.length, optional, notFit, approved, sentToClient };
+    return {
+      total: applications.length,
+      reviewed: optional + notFit + approved, // "נבדקה" = has any admin mark
+      optional,
+      notFit,
+      approved,
+      sentToClient,
+    };
   }, [applications, markOf, statusOf]);
+
+  // Explicitly filtering by "לא מתאימות" is a request to see them — don't let
+  // the default hide turn that filter into an empty list.
+  const notFitVisible = showNotFit || markFilter === "not_fit";
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return applications.filter((a) => {
+    const list = applications.filter((a) => {
       if (q && !(a.profile?.fullName ?? "").toLowerCase().includes(q)) return false;
       const m = markOf(a);
+      if (m === "not_fit" && !notFitVisible) return false;
       if (markFilter === "none" && m !== null) return false;
       if (markFilter !== "all" && markFilter !== "none" && m !== markFilter) return false;
       if (statusFilter !== "all" && statusOf(a) !== statusFilter) return false;
       return true;
     });
-  }, [applications, query, markFilter, statusFilter, markOf, statusOf]);
+    // VIPs first; sort is stable, so the existing (newest-first) order holds
+    // within each group.
+    return list.sort((a, b) => Number(b.isVip) - Number(a.isVip));
+  }, [applications, query, markFilter, statusFilter, notFitVisible, markOf, statusOf]);
 
   // Keep a valid selection even when the filters drop the selected row.
   const selected = filtered.find((a) => a.id === selectedId) ?? filtered[0] ?? null;
@@ -184,13 +233,49 @@ export function ReviewCenter({
 
   function applyMark(app: ReviewApplication, m: AdminMark) {
     const current = markOf(app);
+    if (m === "not_fit" && current !== "not_fit") {
+      // "לא מתאימה" first asks (optionally) why — the save happens from the box.
+      setActionError(null);
+      setReasonEditor({ id: app.id, draft: reasonOf(app) ?? "" });
+      return;
+    }
     const next = current === m ? null : m; // clicking the active mark clears it
+    const prevReason = reasonOf(app);
     setActionError(null);
+    if (reasonEditor?.id === app.id) setReasonEditor(null);
     setMarks((prev) => ({ ...prev, [app.id]: next }));
+    // Any save that isn't not_fit clears the reason server-side — mirror it.
+    setReasons((prev) => ({ ...prev, [app.id]: null }));
     startTransition(async () => {
       const res = await setApplicationMark(app.id, next);
       if (res?.error) {
         setMarks((prev) => ({ ...prev, [app.id]: current }));
+        setReasons((prev) => ({ ...prev, [app.id]: prevReason }));
+        setActionError(res.error);
+      }
+    });
+  }
+
+  /** Save not_fit with an optional reason (from the inline box). */
+  function saveNotFit(app: ReviewApplication, reason: string | null) {
+    const prevMark = markOf(app);
+    const prevReason = reasonOf(app);
+    const clean = (reason ?? "").trim().slice(0, 500) || null;
+    setActionError(null);
+    setReasonEditor(null);
+    setMarks((prev) => ({ ...prev, [app.id]: "not_fit" }));
+    setReasons((prev) => ({ ...prev, [app.id]: clean }));
+    // The row is about to disappear from the default view — move the detail
+    // pane to the next visible applicant (or the previous one, or none).
+    if (!notFitVisible && selected?.id === app.id) {
+      const idx = filtered.findIndex((x) => x.id === app.id);
+      setSelectedId(filtered[idx + 1]?.id ?? filtered[idx - 1]?.id ?? null);
+    }
+    startTransition(async () => {
+      const res = await setApplicationMark(app.id, "not_fit", clean);
+      if (res?.error) {
+        setMarks((prev) => ({ ...prev, [app.id]: prevMark }));
+        setReasons((prev) => ({ ...prev, [app.id]: prevReason }));
         setActionError(res.error);
       }
     });
@@ -236,28 +321,47 @@ export function ReviewCenter({
   return (
     <div className="flex flex-col gap-4">
       {/* ------------------------------------------------- dashboard strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        <Stat label="הגישו" value={counts.total} className="border-ink-200 bg-ink-0 text-ink-900" />
-        <Stat
-          label="אופציונליות"
-          value={counts.optional}
-          className="border-[#F0DCA8] bg-tint-warm text-[#8C5E0E]"
-        />
-        <Stat
-          label="לא מתאימות"
-          value={counts.notFit}
-          className="border-[#F2BBC8] bg-danger-bg text-[#A8254B]"
-        />
-        <Stat
-          label="אושרו סופית"
-          value={counts.approved}
-          className="border-[#BFE4D1] bg-tint-mint text-[#0F6E4A]"
-        />
-        <Stat
-          label="הוגשו ללקוח"
-          value={counts.sentToClient}
-          className="border-[#DDC9EC] bg-tint-purple text-brand-purple"
-        />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <span className="text-[12.5px] font-bold text-ink-900 whitespace-nowrap">
+            נבדקו {counts.reviewed} מתוך {counts.total}
+          </span>
+          <div className="h-1.5 flex-1 rounded-full bg-ink-100 overflow-hidden" aria-hidden>
+            <div
+              className="h-full rounded-full bg-brand-gradient transition-[width] duration-300"
+              style={{
+                width: `${counts.total ? Math.round((counts.reviewed / counts.total) * 100) : 0}%`,
+              }}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <Stat
+            label="הגישו"
+            value={counts.total}
+            className="border-ink-200 bg-ink-0 text-ink-900"
+          />
+          <Stat
+            label="אופציונליות"
+            value={counts.optional}
+            className="border-[#F0DCA8] bg-tint-warm text-[#8C5E0E]"
+          />
+          <Stat
+            label="לא מתאימות"
+            value={counts.notFit}
+            className="border-[#F2BBC8] bg-danger-bg text-[#A8254B]"
+          />
+          <Stat
+            label="אושרו סופית"
+            value={counts.approved}
+            className="border-[#BFE4D1] bg-tint-mint text-[#0F6E4A]"
+          />
+          <Stat
+            label="הוגשו ללקוח"
+            value={counts.sentToClient}
+            className="border-[#DDC9EC] bg-tint-purple text-brand-purple"
+          />
+        </div>
       </div>
 
       {/* --------------------------------------------------------- filters */}
@@ -301,6 +405,15 @@ export function ReviewCenter({
             </option>
           ))}
         </Select>
+        <Checkbox
+          checked={showNotFit}
+          onChange={(e) => setShowNotFit(e.target.checked)}
+          label={
+            <span className="text-[12.5px] text-ink-700">
+              הצגת לא רלוונטיות ({counts.notFit})
+            </span>
+          }
+        />
       </div>
 
       {actionError && <Alert variant="danger">{actionError}</Alert>}
@@ -327,8 +440,11 @@ export function ReviewCenter({
                   active ? "bg-tint-purple" : "hover:bg-ink-50"
                 )}
               >
-                <span className="font-medium text-ink-900 text-sm truncate">
-                  {a.profile?.fullName ?? "מועמדת"}
+                <span className="flex items-center gap-1.5 min-w-0">
+                  <span className="font-medium text-ink-900 text-sm truncate">
+                    {a.profile?.fullName ?? "מועמדת"}
+                  </span>
+                  <MemberFlair app={a} starClass="text-[12px]" />
                 </span>
                 <span className="text-[11.5px] text-ink-500 truncate">
                   {a.profile?.specialization ?? "—"} · {fmtDate(a.submittedAt)}
@@ -355,6 +471,11 @@ export function ReviewCenter({
                     </span>
                   )}
                 </span>
+                {mark === "not_fit" && reasonOf(a) && (
+                  <span className="text-[11px] text-ink-400 truncate">
+                    הסיבה שלך: {reasonOf(a)}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -366,8 +487,9 @@ export function ReviewCenter({
             {/* header + prev/next */}
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
-                <h4 className="font-display text-lg font-bold text-ink-1000">
+                <h4 className="font-display text-lg font-bold text-ink-1000 flex items-center gap-1.5 flex-wrap">
                   {selected.profile?.fullName ?? "מועמדת"}
+                  <MemberFlair app={selected} starClass="text-[15px]" />
                 </h4>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   {selected.profile?.specialization && (
@@ -453,6 +575,54 @@ export function ReviewCenter({
                   );
                 })}
               </div>
+
+              {/* the inline "why not fit" box — optional, admin-only */}
+              {reasonEditor?.id === selected.id ? (
+                <div className="mt-2 flex flex-col gap-2 rounded-[12px] border border-ink-200 bg-ink-50 p-3">
+                  <Textarea
+                    value={reasonEditor.draft}
+                    onChange={(e) => setReasonEditor({ id: selected.id, draft: e.target.value })}
+                    placeholder="למה לא מתאימה? (אופציונלי, רק לך)"
+                    aria-label="סיבת אי-ההתאמה (פנימי, אופציונלי)"
+                    maxLength={500}
+                    rows={2}
+                    autoFocus
+                    className="min-h-16 bg-ink-0 text-[13px]"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => saveNotFit(selected, reasonEditor.draft)}
+                    >
+                      שמירה
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => saveNotFit(selected, null)}
+                    >
+                      בלי סיבה
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                markOf(selected) === "not_fit" && (
+                  <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-[12.5px] text-ink-500">
+                    {reasonOf(selected) && <span>הסיבה שלך: {reasonOf(selected)}</span>}
+                    <button
+                      type="button"
+                      className="font-semibold text-brand-purple hover:underline"
+                      onClick={() =>
+                        setReasonEditor({ id: selected.id, draft: reasonOf(selected) ?? "" })
+                      }
+                    >
+                      {reasonOf(selected) ? "עריכת הסיבה" : "הוספת סיבה"}
+                    </button>
+                  </div>
+                )
+              )}
             </div>
 
             {/* pipeline status */}

@@ -135,3 +135,8 @@ alter table public.job_questions
   add column if not exists answer_type text not null default 'paragraph'
     check (answer_type in ('paragraph','number','select','multiselect')),
   add column if not exists options jsonb;
+
+-- --------------------------------------- 10) סיבת "לא רלוונטית" בסינון
+-- כשהאדמין פוסלת מועמדת למשרה היא יכולה לרשום לעצמה למה (פנימי בלבד).
+alter table public.applications
+  add column if not exists admin_mark_reason text;

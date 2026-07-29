@@ -639,6 +639,7 @@ export interface Database {
           /** {question_id: answer, fit: "..."} */
           answers: Json | null;
           admin_mark: "optional" | "not_fit" | "approved" | null;
+          admin_mark_reason: string | null;
           sent_to_client_at: string | null;
         } & Timestamps;
         Insert: {
@@ -651,6 +652,7 @@ export interface Database {
           cv_document_id?: string | null;
           answers?: Json | null;
           admin_mark?: "optional" | "not_fit" | "approved" | null;
+          admin_mark_reason?: string | null;
           sent_to_client_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;

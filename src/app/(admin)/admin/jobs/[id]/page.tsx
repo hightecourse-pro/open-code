@@ -5,7 +5,7 @@ import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, UserCheck, UserPlus } f
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
-import { getTaxonomyOptions } from "@/lib/taxonomies";
+import { buildAudienceCatalogue } from "@/lib/admin/audience";
 import { Alert, Badge, Button } from "@/components/ui";
 import { removeJobCandidate, setJobOutcome } from "@/app/(admin)/admin/actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
@@ -61,11 +61,11 @@ export default async function AdminJobCandidatesPage({
     { data: members },
     { data: questions },
     { count: targetsCount },
-    taxonomies,
+    audienceCatalogue,
   ] = await Promise.all([
       admin
         .from("applications")
-        .select("id, applicant_id, submitted_at, status, admin_mark, answers, cv_document_id, sent_to_client_at")
+        .select("id, applicant_id, submitted_at, status, admin_mark, admin_mark_reason, answers, cv_document_id, sent_to_client_at")
         .eq("job_id", id)
         .order("submitted_at", { ascending: false }),
       admin
@@ -90,7 +90,8 @@ export default async function AdminJobCandidatesPage({
         .from("job_targets")
         .select("profile_id", { count: "exact", head: true })
         .eq("job_id", id),
-      getTaxonomyOptions(),
+      // The publish panel's criteria palette — only "ours" jobs render it.
+      job.source === "ours" ? buildAudienceCatalogue() : Promise.resolve([]),
     ]);
 
   // job_questions.options is jsonb — coerce to a clean string[] for the UI.
@@ -132,7 +133,7 @@ export default async function AdminJobCandidatesPage({
   const { data: named } = needIds.length
     ? await admin
         .from("profiles")
-        .select("id, full_name, specialization, region, is_experienced")
+        .select("id, full_name, specialization, region, is_experienced, status")
         .in("id", needIds)
     : {
         data: [] as {
@@ -141,10 +142,20 @@ export default async function AdminJobCandidatesPage({
           specialization: string | null;
           region: string | null;
           is_experienced: boolean;
+          status: string;
         }[],
       };
   const profileOf = new Map((named ?? []).map((p) => [p.id, p]));
   const curatedSet = new Set(curatedIds);
+
+  // VIP flags from the admin-only member_crm table — an internal triage aid
+  // that stays on this admin surface, never in the portal or member views.
+  const { data: crmRows } = applicantIds.length
+    ? await admin.from("member_crm").select("profile_id, is_vip").in("profile_id", applicantIds)
+    : { data: [] as { profile_id: string; is_vip: boolean }[] };
+  const vipSet = new Set(
+    (crmRows ?? []).filter((c) => c.is_vip === true).map((c) => c.profile_id)
+  );
 
   // The client's portal feedback per curated candidate (interview mark + note).
   const feedbackOf = new Map(
@@ -208,6 +219,7 @@ export default async function AdminJobCandidatesPage({
       submittedAt: a.submitted_at,
       status: a.status,
       adminMark: a.admin_mark ?? null,
+      adminMarkReason: a.admin_mark_reason ?? null,
       sentToClientAt: a.sent_to_client_at ?? null,
       answers: parseAnswers(a.answers),
       cvUrl: path ? (cvUrlOf.get(path) ?? null) : null,
@@ -221,6 +233,8 @@ export default async function AdminJobCandidatesPage({
         : null,
       curated: curatedSet.has(a.applicant_id),
       clientFeedback: feedbackOf.get(a.applicant_id) ?? null,
+      isSubscriber: p?.status === "active",
+      isVip: vipSet.has(a.applicant_id),
     };
   });
 
@@ -322,8 +336,7 @@ export default async function AdminJobCandidatesPage({
           </p>
           <PublishPanel
             jobId={job.id}
-            specializations={taxonomies.specialization ?? []}
-            regions={taxonomies.region ?? []}
+            catalogue={audienceCatalogue}
             allMembers={members ?? []}
             published={
               job.pipeline_status === "draft"

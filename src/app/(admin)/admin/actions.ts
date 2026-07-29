@@ -15,6 +15,7 @@ import {
   jobPublishedEmail,
 } from "@/lib/email/templates";
 import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
+import { loadAudiencePools } from "@/lib/admin/audience";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { decryptPassword } from "@/lib/portal/auth";
 import { getSiteUrl } from "@/lib/site";
@@ -694,8 +695,11 @@ export async function moveJobQuestion(id: string, jobId: string, dir: "up" | "do
 // ---------------------------------------------------- targeted job publishing
 
 export interface AudienceFilters {
-  specialization?: string[];
-  region?: string[];
+  /**
+   * question key → selected catalogue values (display labels). A key with an
+   * empty selection doesn't filter; keys come from buildAudienceCatalogue().
+   */
+  criteria?: Record<string, string[]>;
   /** true = experienced only, false = juniors only, undefined = everyone. */
   experienced?: boolean;
 }
@@ -705,13 +709,19 @@ export interface AudienceMember {
   full_name: string;
   specialization: string | null;
   region: string | null;
+  /** Paying member (active) vs free (pending). Admin-only indication. */
+  is_subscriber: boolean;
+  /** Internal VIP flag from member_crm — never leaves admin screens. */
+  is_vip: boolean;
 }
 
 /**
- * Members eligible for a targeted publish: active, junior, completed profile,
- * matching the criteria. Specialization/region live both as denormalized
- * profile columns and as intake answers (stored as taxonomy VALUES while the
- * columns may hold Hebrew labels) — so a selected option matches either form.
+ * Members eligible for a targeted publish: active/pending juniors with a
+ * completed profile, matched against ANY profile criterion. A member passes
+ * when, for every criterion with selected values, at least one of them appears
+ * in her pool (case-insensitive; pools are label-resolved). Pools come from
+ * src/lib/admin/audience.ts — the same pass that builds the panel's catalogue —
+ * so what the admin picks and what a member "has" can never drift apart.
  */
 export async function previewAudience(
   jobId: string,
@@ -723,108 +733,52 @@ export async function previewAudience(
   const { data: job } = await admin.from("jobs").select("id").eq("id", jobId).maybeSingle();
   if (!job) return { error: "המשרה לא נמצאה." };
 
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, full_name, specialization, region, is_experienced")
-    // Placement reaches free members too (user decision 2026-07-29): pending =
-    // browsing free member, active = paying. Only paused/rejected stay out.
-    .in("status", ["active", "pending"])
-    .eq("role", "junior")
-    .eq("profile_completed", true)
-    .order("full_name", { ascending: true });
+  const { members: eligible, pools } = await loadAudiencePools();
 
-  let members = profiles ?? [];
+  let members = eligible;
   if (typeof filters.experienced === "boolean") {
-    members = members.filter((p) => !!p.is_experienced === filters.experienced);
+    members = members.filter((p) => p.is_experienced === filters.experienced);
   }
 
-  const wantSpec = (filters.specialization ?? []).filter(Boolean);
-  const wantRegion = (filters.region ?? []).filter(Boolean);
-
-  // value → Hebrew label, for both matching and display.
-  const { data: tax } = await admin
-    .from("config_taxonomies")
-    .select("kind, value, label_he")
-    .in("kind", ["specialization", "region"]);
-  const labelOf = new Map((tax ?? []).map((t) => [`${t.kind}:${t.value}`, t.label_he]));
-
-  // Intake answers for the two criteria questions (the profile columns can be
-  // empty for members who only answered the dynamic form).
-  const { data: qs } = await admin
-    .from("config_questions")
-    .select("id, key")
-    .in("key", ["specialization", "region"]);
-  const keyOf = new Map((qs ?? []).map((q) => [q.id, q.key]));
-  const answerOf = new Map<string, { specialization: string[]; region: string[] }>();
-  if ((qs ?? []).length > 0 && members.length > 0) {
-    const { data: ans } = await admin
-      .from("profile_answers")
-      .select("profile_id, question_id, value")
-      .in("question_id", (qs ?? []).map((q) => q.id))
-      .in("profile_id", members.map((m) => m.id));
-    for (const a of ans ?? []) {
-      const key = keyOf.get(a.question_id);
-      if (key !== "specialization" && key !== "region") continue;
-      const entry = answerOf.get(a.profile_id) ?? { specialization: [], region: [] };
-      const raw = Array.isArray(a.value) ? a.value : [a.value];
-      for (const v of raw) if (typeof v === "string" && v.trim()) entry[key].push(v.trim());
-      answerOf.set(a.profile_id, entry);
-    }
-  }
-
-  const pool = (
-    m: (typeof members)[number],
-    kind: "specialization" | "region"
-  ): string[] => {
-    const col = kind === "specialization" ? m.specialization : m.region;
-    return [...(col ? [col] : []), ...(answerOf.get(m.id)?.[kind] ?? [])].map((v) =>
-      v.trim().toLowerCase()
-    );
-  };
-  const matches = (
-    m: (typeof members)[number],
-    kind: "specialization" | "region",
-    wanted: string[]
-  ): boolean => {
-    const have = pool(m, kind);
-    return wanted.some((v) => {
-      const value = v.trim().toLowerCase();
-      const label = (labelOf.get(`${kind}:${v}`) ?? "").trim().toLowerCase();
-      return have.some((h) => h === value || (label !== "" && h === label));
+  // OR within one criterion, AND across criteria — like the portal search.
+  const criteria = Object.entries(filters.criteria ?? {})
+    .map(([key, values]) => ({
+      key,
+      wanted: (values ?? []).filter(Boolean).map((v) => v.trim().toLowerCase()),
+    }))
+    .filter((c) => c.wanted.length > 0);
+  if (criteria.length > 0) {
+    members = members.filter((m) => {
+      const mine = pools.get(m.id);
+      return criteria.every(({ key, wanted }) => {
+        const have = mine?.get(key) ?? [];
+        return wanted.some((w) => have.includes(w));
+      });
     });
-  };
+  }
 
-  // A criterion with EVERY option checked excludes no one — including members
-  // whose profile simply doesn't carry that field yet. Only a real narrowing
-  // (a strict subset of the options) filters.
-  const totalOf = (kind: string) => (tax ?? []).filter((t) => t.kind === kind).length;
-  const specNarrows = wantSpec.length > 0 && wantSpec.length < totalOf("specialization");
-  const regionNarrows = wantRegion.length > 0 && wantRegion.length < totalOf("region");
+  // VIP flags (member_crm is admin-only — this stays in admin surfaces, never
+  // the portal). VIPs float to the top of the audience list.
+  const { data: crm } = members.length
+    ? await admin.from("member_crm").select("profile_id, is_vip").in("profile_id", members.map((m) => m.id))
+    : { data: [] as { profile_id: string; is_vip: boolean | null }[] };
+  const vipSet = new Set((crm ?? []).filter((c) => c.is_vip === true).map((c) => c.profile_id));
 
-  if (specNarrows) members = members.filter((m) => matches(m, "specialization", wantSpec));
-  if (regionNarrows) members = members.filter((m) => matches(m, "region", wantRegion));
-
-  // Display: prefer the profile column, fall back to the first answer, and
-  // swap machine values for their Hebrew labels.
-  const display = (m: (typeof members)[number], kind: "specialization" | "region") => {
-    const raw =
-      (kind === "specialization" ? m.specialization : m.region) ??
-      answerOf.get(m.id)?.[kind]?.[0] ??
-      null;
-    if (!raw) return null;
-    return labelOf.get(`${kind}:${raw}`) ?? raw;
-  };
+  const shaped = members.map((m) => ({
+    id: m.id,
+    full_name: m.full_name,
+    specialization: m.specialization,
+    region: m.region,
+    is_subscriber: m.status === "active",
+    is_vip: vipSet.has(m.id),
+  }));
+  shaped.sort((a, b) => Number(b.is_vip) - Number(a.is_vip) || a.full_name.localeCompare(b.full_name, "he"));
 
   return {
-    members: members.map((m) => ({
-      id: m.id,
-      full_name: m.full_name,
-      specialization: display(m, "specialization"),
-      region: display(m, "region"),
-    })),
+    members: shaped,
     // The pre-criteria pool — lets the UI distinguish "the community has no
     // eligible members yet" from "the criteria filtered everyone out".
-    pool: (profiles ?? []).length,
+    pool: eligible.length,
   };
 }
 
@@ -1106,7 +1060,8 @@ export type AdminMark = "optional" | "not_fit" | "approved";
  */
 export async function setApplicationMark(
   applicationId: string,
-  mark: AdminMark | null
+  mark: AdminMark | null,
+  reason?: string | null
 ): Promise<FormState> {
   await requireRole("admin");
   const admin = createAdminClient();
@@ -1118,9 +1073,12 @@ export async function setApplicationMark(
     .maybeSingle();
   if (!app) return { error: "ההגשה לא נמצאה." };
 
+  // The reason rides only with "לא מתאימה" — clearing/other marks clear it.
+  const admin_mark_reason =
+    mark === "not_fit" ? (reason ?? "").trim().slice(0, 500) || null : null;
   const { error } = await admin
     .from("applications")
-    .update({ admin_mark: mark })
+    .update({ admin_mark: mark, admin_mark_reason })
     .eq("id", applicationId);
   if (error) {
     if (isMissingColumn(error)) {
