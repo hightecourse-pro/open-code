@@ -190,7 +190,7 @@ export function AdminCreateJob({
                 onClick={createQuickClient}
                 className="w-fit"
               >
-                {quickPending ? "יוצרת…" : "יצירת לקוח ובחירה"}
+                {quickPending ? "יוצר…" : "יצירת לקוח ובחירה"}
               </Button>
               <p className="t-caption">
                 הלקוח ייווצר בסטטוס &quot;משרה בטיפול&quot; — פרטי גישה לפורטל מקצים אחר כך במסך

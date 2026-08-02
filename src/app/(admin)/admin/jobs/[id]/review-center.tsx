@@ -85,6 +85,7 @@ const STATUS_LABEL: Record<string, string> = {
   exam: "מבחן",
   hired: "גויסה 🎉",
   declined: "בפעם הבאה",
+  waitlisted: "התקדמנו בינתיים",
 };
 
 const PIPELINE_OPTIONS: { value: PipelineStatus; label: string }[] = [

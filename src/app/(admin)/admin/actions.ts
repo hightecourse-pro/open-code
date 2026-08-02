@@ -583,6 +583,7 @@ export async function editJob(jobId: string, _prev: FormState, formData: FormDat
     }
   }
   revalidatePath("/admin/jobs");
+  revalidatePath(`/admin/jobs/${jobId}`);
   revalidatePath("/jobs");
   return { ok: true };
 }
@@ -639,6 +640,7 @@ export async function addJobQuestion(
     question: parsed.question,
     answer_type: parsed.answer_type,
     options: parsed.options,
+    required: parsed.required,
     sort_order,
   });
   if (error) {
@@ -647,6 +649,48 @@ export async function addJobQuestion(
     const { error: retry } = await supabase
       .from("job_questions")
       .insert({ job_id: jobId, question: parsed.question, sort_order });
+    if (retry) return { error: retry.message };
+  }
+
+  revalidatePath(`/admin/jobs/${jobId}`);
+  return { ok: true };
+}
+
+/** Edit an existing application question: text, answer type, options, required. */
+export async function updateJobQuestion(
+  questionId: string,
+  jobId: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+  const parsed = sanitizeJobQuestion(
+    formData.get("question"),
+    String(formData.get("answer_type") ?? "paragraph"),
+    String(formData.get("options") ?? "").split(","),
+    formData.get("required") === null ? "off" : "on"
+  );
+  if (!parsed) return { error: "כתבי את נוסח השאלה." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("job_questions")
+    .update({
+      question: parsed.question,
+      answer_type: parsed.answer_type,
+      options: parsed.options,
+      required: parsed.required,
+    })
+    .eq("id", questionId)
+    .eq("job_id", jobId);
+  if (error) {
+    // Pre-migration DB: keep the text edit, drop the answer-type columns.
+    if (!isMissingColumn(error)) return { error: error.message };
+    const { error: retry } = await supabase
+      .from("job_questions")
+      .update({ question: parsed.question })
+      .eq("id", questionId)
+      .eq("job_id", jobId);
     if (retry) return { error: retry.message };
   }
 
@@ -945,7 +989,7 @@ export async function sendJobCandidatesToClient(
   jobId: string,
   personalNote?: string
 ): Promise<{ ok?: boolean; error?: string }> {
-  await requireRole("admin");
+  const me = await requireRole("admin");
   const admin = createAdminClient();
 
   const { data: job } = await admin
@@ -971,6 +1015,26 @@ export async function sendJobCandidatesToClient(
     return { error: "ללקוח אין עדיין פרטי גישה — הקצי במסך לקוחות פורטל." };
   }
 
+  // Forgiving auto-curation: "אישור סופי" alone is enough to send — every
+  // approved application joins job_candidates first (existing rows untouched).
+  // Best-effort: a pre-migration DB without admin_mark simply adds nothing.
+  const { data: approvedApps } = await admin
+    .from("applications")
+    .select("applicant_id")
+    .eq("job_id", jobId)
+    .eq("admin_mark", "approved");
+  if (approvedApps?.length) {
+    const { error: curateError } = await admin.from("job_candidates").upsert(
+      [...new Set(approvedApps.map((a) => a.applicant_id))].map((profileId) => ({
+        job_id: jobId,
+        profile_id: profileId,
+        created_by: me.id,
+      })),
+      { onConflict: "job_id,profile_id", ignoreDuplicates: true }
+    );
+    if (curateError) console.error("[job candidates] auto-curate failed:", curateError);
+  }
+
   // Resolve names through the portal's single door, never from profiles
   // directly — this drops any curated candidate the client can't actually see,
   // so the email and the portal job page always name exactly the same people.
@@ -978,6 +1042,40 @@ export async function sendJobCandidatesToClient(
   const sentCandidates = clientJob?.candidates ?? [];
   const names = sentCandidates.map((c) => c.name).filter(Boolean);
   if (names.length === 0) {
+    // Curated rows exist but the privacy gate hides every one of them — tell
+    // the admin exactly who is hidden and why (service-role read; this list is
+    // admin-facing only and never reaches the client).
+    const { data: curatedRows } = await admin
+      .from("job_candidates")
+      .select("profile_id")
+      .eq("job_id", jobId);
+    const hiddenIds = [...new Set((curatedRows ?? []).map((r) => r.profile_id))];
+    if (hiddenIds.length) {
+      const { data: hiddenProfiles } = await admin
+        .from("profiles")
+        .select("id, full_name, role, status, profile_completed, portal_listed")
+        .in("id", hiddenIds);
+      const parts = (hiddenProfiles ?? []).map((p) => {
+        const reason =
+          p.role === "admin"
+            ? "חשבון אדמין (רק ג'וניוריות מוצגות)"
+            : p.role !== "junior"
+              ? "חשבון מנטורית (רק ג'וניוריות מוצגות)"
+              : p.status !== "active" && p.status !== "pending"
+                ? "חברה מושהית"
+                : p.profile_completed !== true
+                  ? "הפרופיל לא הושלם"
+                  : p.portal_listed === false
+                    ? "ביקשה לא להופיע בפורטל"
+                    : "לא עומדת בתנאי התצוגה בפורטל";
+        return `${p.full_name} — ${reason}`;
+      });
+      if (parts.length) {
+        return {
+          error: `אף אחת מהמועמדות שנבחרו לא ניתנת להצגה ללקוח: ${parts.join(", ")}.`,
+        };
+      }
+    }
     return {
       error:
         "אין מועמדות שניתן להציג ללקוח למשרה הזו. ודאי שהוספת מועמדות פעילות המפורסמות בפורטל.",
@@ -1049,6 +1147,22 @@ export async function sendJobCandidatesToClient(
     } catch (e) {
       console.error("[candidate submitted email] failed:", e);
     }
+  }
+
+  // The client has the shortlist — every fresh application that is NOT part of
+  // it moves to the waitlist. No email: the member just sees the gentle
+  // "התקדמנו בינתיים עם מועמדות אחרות 💜" label in her jobs area.
+  {
+    let waitQuery = admin
+      .from("applications")
+      .update({ status: "waitlisted" })
+      .eq("job_id", jobId)
+      .in("status", ["submitted", "in_review"]);
+    if (candidateIds.length) {
+      waitQuery = waitQuery.not("applicant_id", "in", `(${candidateIds.join(",")})`);
+    }
+    const { error: waitError } = await waitQuery;
+    if (waitError) console.error("[job candidates] waitlist update failed:", waitError);
   }
 
   revalidatePath(`/admin/jobs/${jobId}`);

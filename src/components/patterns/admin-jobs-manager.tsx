@@ -129,7 +129,7 @@ export function AdminJobsManager({
 
         <div className="flex flex-col">
           {list.map((j) => (
-            <AdminJobRow key={j.id} job={j} clients={clients} />
+            <AdminJobRow key={j.id} job={j} />
           ))}
           {list.length === 0 && (
             <p className="text-ink-500 text-sm py-4">

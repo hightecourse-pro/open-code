@@ -41,7 +41,8 @@ export type ApplicationStatus =
   | "interview"
   | "exam"
   | "hired"
-  | "declined";
+  | "declined"
+  | "waitlisted";
 export type EnrollmentStatus = "active" | "completed" | "returned";
 export type SessionStatus = "scheduled" | "live" | "done";
 // Phase 3

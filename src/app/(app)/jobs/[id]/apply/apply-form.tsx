@@ -83,21 +83,39 @@ export function ApplyForm({
               className="max-w-52"
             />
           ) : q.answer_type === "select" ? (
-            <Select
-              id={`q_${q.id}`}
-              name={`q_${q.id}`}
-              required={q.required !== false}
-              defaultValue=""
-            >
-              <option value="" disabled>
-                בחרי…
-              </option>
-              {q.options.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
+            q.options.length <= 4 ? (
+              // Few options → radio group (one answer), Google-Forms style.
+              <div className="flex flex-col gap-2 rounded-sm border border-ink-300 bg-ink-0 px-3.5 py-3">
+                {q.options.map((opt) => (
+                  <label key={opt} className="inline-flex items-center gap-2.5 cursor-pointer text-sm text-ink-900">
+                    <input
+                      type="radio"
+                      name={`q_${q.id}`}
+                      value={opt}
+                      required={q.required !== false}
+                      className="accent-[#E0418D] w-4 h-4"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              <Select
+                id={`q_${q.id}`}
+                name={`q_${q.id}`}
+                required={q.required !== false}
+                defaultValue=""
+              >
+                <option value="" disabled>
+                  בחרי…
                 </option>
-              ))}
-            </Select>
+                {q.options.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </Select>
+            )
           ) : q.answer_type === "multiselect" ? (
             // At-least-one is enforced server-side (only when the question is
             // required) — checkboxes can't carry a group-level required

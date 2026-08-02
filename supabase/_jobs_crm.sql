@@ -140,3 +140,7 @@ alter table public.job_questions
 -- כשהאדמין פוסלת מועמדת למשרה היא יכולה לרשום לעצמה למה (פנימי בלבד).
 alter table public.applications
   add column if not exists admin_mark_reason text;
+
+-- ------------------------------- 11) סטטוס "התקדמנו בינתיים" למועמדות
+-- כששולחים מועמדות ללקוח, שאר המגישות מסומנות בעדינות (בלי מייל).
+alter type public.application_status add value if not exists 'waitlisted';

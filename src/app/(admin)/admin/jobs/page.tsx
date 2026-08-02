@@ -21,6 +21,7 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; variant: "warm" | "
   exam: { label: "במבחן", variant: "warm" },
   hired: { label: "גויסה", variant: "mint" },
   declined: { label: "לא נבחרה", variant: "pink" },
+  waitlisted: { label: "התקדמנו בינתיים", variant: "tech" },
 };
 
 export default async function AdminJobsPage({

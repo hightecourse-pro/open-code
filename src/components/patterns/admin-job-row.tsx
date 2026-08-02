@@ -1,11 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Pencil, Lock, Unlock, Trash2, Users } from "lucide-react";
-import { Alert, Badge, Button, Field, Input, Select } from "@/components/ui";
-import { editJob, setJobStatus, deleteJob, type FormState } from "@/app/(admin)/admin/actions";
-import { RichTextEditor } from "./rich-text-editor";
+import { Badge } from "@/components/ui";
+import { setJobStatus, deleteJob } from "@/app/(admin)/admin/actions";
 import type {
   EmploymentType,
   JobKind,
@@ -73,117 +71,11 @@ const PIPELINE: Record<
   closed_no_hire: { label: "נסגר ללא גיוס", variant: "pink" },
 };
 
-export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalClientOption[] }) {
-  const [editing, setEditing] = useState(false);
-  const [source, setSource] = useState(job.source);
-  const [kind, setKind] = useState<JobKind>(job.job_kind ?? "immediate");
-  // Controlled so the hidden company field follows the chosen client (ours).
-  const [clientSel, setClientSel] = useState(job.client_id ?? "");
-  const companyForClient =
-    clients.find((c) => c.id === clientSel)?.company_name ?? job.company;
-  const [state, action, pending] = useActionState<FormState, FormData>(
-    async (prev, formData) => {
-      const result = await editJob(job.id, prev, formData);
-      // A successful save closes the edit form (the list refreshes via revalidate).
-      if (result.ok) setEditing(false);
-      return result;
-    },
-    {}
-  );
-
-  function openEdit() {
-    // Re-sync from the row's current data so the selects never drift.
-    setSource(job.source);
-    setKind(job.job_kind ?? "immediate");
-    setEditing(true);
-  }
-
-  if (editing) {
-    return (
-      <form action={action} className="py-3 border-b border-ink-100 flex flex-col gap-2.5">
-        {state.error && <Alert variant="danger">{state.error}</Alert>}
-        {state.ok && <Alert variant="success">נשמר ✓</Alert>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {source === "ours" ? (
-            // The client IS the company — it rides along hidden, no retyping.
-            <input type="hidden" name="company" value={companyForClient} />
-          ) : (
-            <Field label="חברה"><Input name="company" defaultValue={job.company} required /></Field>
-          )}
-          <Field label="תפקיד"><Input name="title" defaultValue={job.title} required /></Field>
-          <Field label="מקור">
-            <Select name="source" value={source} onChange={(e) => setSource(e.target.value as JobSource)}>
-              <option value="ours">משרה שלנו</option>
-              <option value="open">משרה מהשוק</option>
-            </Select>
-          </Field>
-          <Field label="סוג משרה">
-            <Select name="job_kind" value={kind} onChange={(e) => setKind(e.target.value as JobKind)}>
-              {JOB_KIND_OPTIONS.map((k) => (
-                <option key={k.value} value={k.value}>{k.label}</option>
-              ))}
-            </Select>
-          </Field>
-          {kind === "practicum_percent" && (
-            <Field label="אחוז גיוס">
-              <Input
-                name="practicum_percent"
-                type="number"
-                min={1}
-                max={100}
-                defaultValue={job.practicum_percent ?? ""}
-                placeholder="למשל 15"
-                className="max-w-32"
-              />
-            </Field>
-          )}
-          <Field label="היקף">
-            <Select name="employment_type" defaultValue={job.employment_type}>
-              {Object.entries(EMP).map(([v, l]) => (
-                <option key={v} value={v}>{l}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="מיקום"><Input name="location" defaultValue={job.location ?? ""} /></Field>
-          <Field label="טכנולוגיות (מופרדות בפסיק)"><Input name="tech" dir="ltr" defaultValue={job.tech_tags.join(", ")} /></Field>
-          <Field label={source === "ours" ? "לקוח (חובה למשרה שלנו)" : "לקוח פורטל (לא חובה)"}>
-            <Select
-              name="client_id"
-              value={clientSel}
-              onChange={(e) => setClientSel(e.target.value)}
-              required={source === "ours"}
-            >
-              <option value="" disabled={source === "ours"}>
-                {source === "ours" ? "בחרי לקוח…" : "— ללא —"}
-              </option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.company_name}</option>
-              ))}
-            </Select>
-          </Field>
-        </div>
-        <Field label={source === "open" ? "קישור להגשה (חובה)" : "קישור להגשה (לא חובה)"}>
-          <Input name="external_url" dir="ltr" defaultValue={job.external_url ?? ""} required={source === "open"} />
-        </Field>
-        <Field label="דרישות המשרה (תיאור מעוצב)">
-          <RichTextEditor name="description_html" defaultValue={job.description_html} />
-        </Field>
-        {source === "ours" && (
-          <p className="t-caption">
-            שאלות החובה למועמדות עורכים{" "}
-            <Link href={`/admin/jobs/${job.id}`} className="font-semibold text-brand-purple hover:text-brand-pink-deep">
-              בדף ניהול המשרה ←
-            </Link>
-          </p>
-        )}
-        <div className="flex gap-2">
-          <Button type="submit" size="sm" disabled={pending}>{pending ? "שומר…" : "שמירה"}</Button>
-          <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>ביטול</Button>
-        </div>
-      </form>
-    );
-  }
-
+/**
+ * One job in the admin list. Editing lives on the job page's "פרטי המשרה" tab
+ * — the pencil links there; the row keeps the quick actions (lock, delete).
+ */
+export function AdminJobRow({ job }: { job: AdminJob }) {
   const pipeline = PIPELINE[job.pipeline_status] ?? PIPELINE.draft;
   const kindLabel = KIND_LABEL[job.job_kind] ?? KIND_LABEL.immediate;
 
@@ -210,9 +102,13 @@ export function AdminJobRow({ job, clients }: { job: AdminJob; clients: PortalCl
       >
         <Users size={15} />
       </Link>
-      <button type="button" onClick={openEdit} className="text-ink-400 hover:text-brand-purple p-1.5" title="עריכה">
+      <Link
+        href={`/admin/jobs/${job.id}?tab=details`}
+        className="text-ink-400 hover:text-brand-purple p-1.5"
+        title="עריכת המשרה"
+      >
         <Pencil size={15} />
-      </button>
+      </Link>
       <form action={setJobStatus.bind(null, job.id, job.status !== "open")}>
         <button type="submit" className="text-ink-400 hover:text-brand-pink-deep p-1.5" title={job.status === "open" ? "סגירת משרה" : "פתיחה מחדש"}>
           {job.status === "open" ? <Lock size={15} /> : <Unlock size={15} />}

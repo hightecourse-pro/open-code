@@ -199,7 +199,7 @@ export function PublishPanel({
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <Button size="sm" variant="secondary" onClick={onReopen} disabled={publishing}>
-            {publishing ? "פותחת…" : "פתיחה מחדש של הפרסום"}
+            {publishing ? "פותח…" : "פתיחה מחדש של הפרסום"}
           </Button>
           <span className="text-[12px] text-ink-500">
             פתיחה מחדש מאפשרת להרחיב את הקהל — מייל יישלח רק לחברות חדשות שיתווספו.
@@ -329,7 +329,7 @@ export function PublishPanel({
           {previewing && <Loader2 size={14} className="animate-spin text-ink-400" />}
         </div>
         {audience === null ? (
-          <p className="text-ink-500 text-sm py-1">טוענת את הקהל המתאים…</p>
+          <p className="text-ink-500 text-sm py-1">טוען את הקהל המתאים…</p>
         ) : audience.length === 0 ? (
           <p className="text-ink-500 text-sm py-1">
             {pool === 0
@@ -437,7 +437,7 @@ export function PublishPanel({
       <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-ink-100">
         <Button onClick={onPublish} disabled={publishing || selectedCount === 0}>
           <Megaphone size={15} />
-          {publishing ? "מפרסמת ושולחת מיילים…" : `פרסום המשרה ל־${selectedCount} חברות`}
+          {publishing ? "מפרסם ושולח מיילים…" : `פרסום המשרה ל־${selectedCount} חברות`}
         </Button>
         <span className="text-[12px] text-ink-500">
           הפרסום פותח את המשרה לקהל שנבחר ושולח לכל אחת מייל אישי.

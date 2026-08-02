@@ -26,6 +26,7 @@ const STATUS_PILL: Record<ApplicationStatus, { label: string; cls: string }> = {
   exam: { label: "מבחן 💪", cls: "bg-tint-indigo text-brand-indigo" },
   hired: { label: "גויסת! 🎉", cls: "bg-brand-gradient text-white" },
   declined: { label: "בפעם הבאה 💜", cls: "bg-tint-pink text-brand-pink-deep" },
+  waitlisted: { label: "התקדמנו בינתיים עם מועמדות אחרות 💜", cls: "bg-ink-100 text-ink-700" },
 };
 
 const SUBMITTED_PILL = { label: "הוגשנו אותך למשרה ✨", cls: "bg-tint-pink text-brand-pink-deep" };

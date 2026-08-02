@@ -27,6 +27,7 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; cls: string }> = {
   exam: { label: "עברת שלב — יש מבחן בדרך ✍️", cls: "text-brand-indigo" },
   hired: { label: "גויסת! 🎉", cls: "text-success" },
   declined: { label: "הפעם זה לא התקדם — ממשיכות הלאה 💪", cls: "text-ink-500" },
+  waitlisted: { label: "התקדמנו בינתיים עם מועמדות אחרות 💜", cls: "text-ink-500" },
 };
 
 const LOGO_GRADIENTS = [

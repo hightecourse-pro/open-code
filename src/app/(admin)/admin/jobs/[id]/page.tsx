@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, UserCheck, UserPlus } from "lucide-react";
+import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, Pencil, UserCheck, UserPlus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
@@ -9,15 +9,32 @@ import { buildAudienceCatalogue } from "@/lib/admin/audience";
 import { Alert, Badge, Button } from "@/components/ui";
 import { removeJobCandidate, setJobOutcome } from "@/app/(admin)/admin/actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
+import type { PortalClientOption } from "@/components/patterns/admin-job-row";
 import { CandidatePicker } from "./candidate-picker";
+import { JobDetailsForm, type JobDetailsData } from "./job-details-form";
 import { JobQuestionsManager } from "./job-questions";
+import { JobTabs, type JobTabDef } from "./job-tabs";
 import { PublishPanel } from "./publish-panel";
 import { ReviewCenter, type ReviewApplication } from "./review-center";
 import { SendCandidatesButton } from "./send-candidates-button";
 
-export const metadata: Metadata = { title: "ניהול מועמדות למשרה" };
+export const metadata: Metadata = { title: "ניהול משרה" };
 
 const cardClass = "bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm";
+
+// The recruitment-pipeline pill in the header — display-only (the status is
+// changed from the details tab / review center).
+const PIPELINE: Record<
+  string,
+  { label: string; variant: "tech" | "mint" | "indigo" | "warm" | "grad" | "pink" }
+> = {
+  draft: { label: "לא פורסם", variant: "tech" },
+  published: { label: "פורסם", variant: "mint" },
+  candidates_sent: { label: "נשלחו מועמדות", variant: "indigo" },
+  interviews: { label: "ראיונות", variant: "warm" },
+  hired: { label: "גויס", variant: "grad" },
+  closed_no_hire: { label: "נסגר ללא גיוס", variant: "pink" },
+};
 
 /**
  * applications.answers is jsonb {question_id: answer, fit: "..."} — answers
@@ -37,20 +54,24 @@ function parseAnswers(value: unknown): Record<string, string | number | string[]
   return out;
 }
 
-export default async function AdminJobCandidatesPage({
+export default async function AdminJobPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   // This page reads employer-portal data via the service role, so gate it
   // explicitly beyond the (admin) layout.
   await requireRole("admin");
-  const { id } = await params;
+  const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   const admin = createAdminClient();
 
   const { data: job } = await admin
     .from("jobs")
-    .select("id, title, company, client_id, source, pipeline_status, published_at")
+    .select(
+      "id, title, company, client_id, source, employment_type, location, tech_tags, external_url, description_html, status, job_kind, practicum_percent, pipeline_status, published_at"
+    )
     .eq("id", id)
     .maybeSingle();
   if (!job) notFound();
@@ -61,6 +82,7 @@ export default async function AdminJobCandidatesPage({
     { data: members },
     { data: questions },
     { count: targetsCount },
+    { data: clientRows },
     audienceCatalogue,
   ] = await Promise.all([
       admin
@@ -90,9 +112,20 @@ export default async function AdminJobCandidatesPage({
         .from("job_targets")
         .select("profile_id", { count: "exact", head: true })
         .eq("job_id", id),
+      // Portal clients the edit form can link the job to.
+      admin
+        .from("portal_clients")
+        .select("id, company_name")
+        .eq("is_active", true)
+        .order("company_name", { ascending: true }),
       // The publish panel's criteria palette — only "ours" jobs render it.
       job.source === "ours" ? buildAudienceCatalogue() : Promise.resolve([]),
     ]);
+
+  const clientOptions: PortalClientOption[] = (clientRows ?? []).map((c) => ({
+    id: c.id,
+    company_name: c.company_name,
+  }));
 
   // job_questions.options is jsonb — coerce to a clean string[] for the UI.
   const questionItems = (questions ?? []).map((q) => ({
@@ -239,155 +272,164 @@ export default async function AdminJobCandidatesPage({
     };
   });
 
-  return (
-    <div className="flex flex-col gap-5">
-      <Link
-        href="/admin/jobs"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline self-start"
-      >
-        <ArrowRight size={15} /> חזרה לניהול משרות
-      </Link>
+  const jobDetails: JobDetailsData = {
+    id: job.id,
+    company: job.company,
+    title: job.title,
+    source: job.source,
+    employment_type: job.employment_type,
+    location: job.location,
+    tech_tags: Array.isArray(job.tech_tags) ? job.tech_tags : [],
+    external_url: job.external_url,
+    description_html: job.description_html ?? null,
+    client_id: job.client_id,
+    job_kind: job.job_kind ?? "immediate",
+    practicum_percent: job.practicum_percent ?? null,
+  };
 
-      {/* Header */}
-      <div className={cardClass}>
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="min-w-0">
-            <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדות/&gt;</span>
-            <h1 className="font-display text-[24px] font-black text-ink-1000 mt-1">{job.title}</h1>
-            <p className="text-[13px] text-ink-500 mt-1">{job.company}</p>
-          </div>
-          <Badge variant={job.source === "ours" ? "pink" : "tech"}>
-            {job.source === "ours" ? "משרה שלנו" : "משרה מהשוק"}
-          </Badge>
-        </div>
-        <div className="mt-3">
-          {client ? (
-            <p className="text-[13px] text-ink-700">
-              מקושרת ללקוח:{" "}
-              <span className="font-semibold text-ink-900">{client.company_name}</span>
-            </p>
-          ) : (
-            <Alert variant="warn">
-              לא מקושרת ללקוח — חברי אותה ללקוח בעריכת המשרה.
-            </Alert>
-          )}
-        </div>
+  const pipelinePill = PIPELINE[job.pipeline_status] ?? PIPELINE.draft;
 
-        {/* Job outcome — hired can be several members, so closing is always
-            the admin's call; only "interviews" moves automatically. */}
-        {job.source === "ours" && (
-          <div className="mt-3 pt-3 border-t border-ink-100 flex items-center gap-2 flex-wrap">
-            {job.pipeline_status === "hired" || job.pipeline_status === "closed_no_hire" ? (
-              <>
-                <Badge variant={job.pipeline_status === "hired" ? "grad" : "pink"}>
-                  {job.pipeline_status === "hired" ? "המשרה גויסה 🎉" : "נסגרה ללא גיוס"}
-                </Badge>
-                <ConfirmActionButton
-                  action={setJobOutcome.bind(null, job.id, "reopen")}
-                  message="להחזיר את המשרה לפעילה? היא תחזור להיות גלויה לקהל שלה."
-                  className="text-[12.5px] font-semibold text-brand-purple hover:text-brand-pink-deep"
-                >
-                  החזרה לפעילה
-                </ConfirmActionButton>
-              </>
-            ) : (
-              <>
-                {hiredCount > 0 && (
-                  <span className="text-[12.5px] text-ink-700">
-                    🎉 {hiredCount === 1 ? "מועמדת אחת גויסה" : `${hiredCount} מועמדות גויסו`} —
-                    כשסיימת לגייס, סגרי את המשרה:
-                  </span>
-                )}
-                <ConfirmActionButton
-                  action={setJobOutcome.bind(null, job.id, "hired")}
-                  message="לסמן את המשרה כגויסה? היא תרד מהלוח ותסומן 'גויס' אצל הלקוח."
-                  className="inline-flex items-center rounded-full bg-brand-gradient text-white text-[12.5px] font-semibold px-3.5 py-1.5 hover:brightness-105 transition-[filter]"
-                >
-                  סימון המשרה כגויסה 🎉
-                </ConfirmActionButton>
-                <ConfirmActionButton
-                  action={setJobOutcome.bind(null, job.id, "closed_no_hire")}
-                  message="לסגור את המשרה ללא גיוס? היא תרד מהלוח."
-                  className="inline-flex items-center rounded-full border border-ink-300 text-ink-700 text-[12.5px] font-semibold px-3.5 py-1.5 hover:border-danger hover:text-danger transition-colors"
-                >
-                  סגירה ללא גיוס
-                </ConfirmActionButton>
-              </>
-            )}
-          </div>
+  // ------------------------------------------------------------------- tabs
+  const tabs: JobTabDef[] = [
+    { key: "details", label: "פרטי המשרה" },
+    ...(job.source === "ours" ? [{ key: "publish", label: "פרסום" }] : []),
+    { key: "questions", label: "שאלות", count: questionItems.length },
+    { key: "review", label: "מועמדות", count: appList.length },
+    { key: "client", label: "לקוח" },
+  ];
+  // Default: straight into the review center when there's anything to review.
+  const fallbackTab = appList.length > 0 ? "review" : "details";
+  const initialTab = tabs.some((t) => t.key === tab) ? tab! : fallbackTab;
+
+  const detailsPanel = (
+    <div className={cardClass}>
+      <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+        <Pencil size={16} className="text-brand-purple" /> פרטי המשרה
+      </h3>
+      <div className="mb-3">
+        {client ? (
+          <p className="text-[13px] text-ink-700">
+            מקושרת ללקוח:{" "}
+            <span className="font-semibold text-ink-900">{client.company_name}</span>
+          </p>
+        ) : (
+          <Alert variant="warn">לא מקושרת ללקוח — בחרי לקוח בטופס שלמטה.</Alert>
         )}
       </div>
+      <JobDetailsForm job={jobDetails} clients={clientOptions} />
 
-      {/* Targeted publishing — our jobs only (market jobs are applied to off-site) */}
+      {/* Job outcome — hired can be several members, so closing is always
+          the admin's call; only "interviews" moves automatically. */}
       {job.source === "ours" && (
-        <div
-          className={
-            job.pipeline_status === "draft"
-              ? `${cardClass} border-[1.5px] border-brand-pink shadow-glow-pink`
-              : cardClass
-          }
-        >
-          <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
-            <Megaphone size={16} className="text-brand-pink-deep" /> פרסום המשרה
-          </h3>
-          <p className="text-[12.5px] text-ink-500 mb-3">
-            {job.pipeline_status === "draft"
-              ? "המשרה עדיין טיוטה — בחרי את קהל היעד ופרסמי אותה. רק החברות שנבחרו יראו אותה ויקבלו מייל."
-              : "המשרה פורסמה לקהל היעד שנבחר."}
-          </p>
-          <PublishPanel
-            jobId={job.id}
-            catalogue={audienceCatalogue}
-            allMembers={members ?? []}
-            published={
-              job.pipeline_status === "draft"
-                ? null
-                : { at: job.published_at, audienceCount: targetsCount ?? 0 }
-            }
-          />
+        <div className="mt-4 pt-3 border-t border-ink-100 flex items-center gap-2 flex-wrap">
+          {job.pipeline_status === "hired" || job.pipeline_status === "closed_no_hire" ? (
+            <>
+              <Badge variant={job.pipeline_status === "hired" ? "grad" : "pink"}>
+                {job.pipeline_status === "hired" ? "המשרה גויסה 🎉" : "נסגרה ללא גיוס"}
+              </Badge>
+              <ConfirmActionButton
+                action={setJobOutcome.bind(null, job.id, "reopen")}
+                message="להחזיר את המשרה לפעילה? היא תחזור להיות גלויה לקהל שלה."
+                className="text-[12.5px] font-semibold text-brand-purple hover:text-brand-pink-deep"
+              >
+                החזרה לפעילה
+              </ConfirmActionButton>
+            </>
+          ) : (
+            <>
+              {hiredCount > 0 && (
+                <span className="text-[12.5px] text-ink-700">
+                  🎉 {hiredCount === 1 ? "מועמדת אחת גויסה" : `${hiredCount} מועמדות גויסו`} —
+                  כשסיימת לגייס, סגרי את המשרה:
+                </span>
+              )}
+              <ConfirmActionButton
+                action={setJobOutcome.bind(null, job.id, "hired")}
+                message="לסמן את המשרה כגויסה? היא תרד מהלוח ותסומן 'גויס' אצל הלקוח."
+                className="inline-flex items-center rounded-full bg-brand-gradient text-white text-[12.5px] font-semibold px-3.5 py-1.5 hover:brightness-105 transition-[filter]"
+              >
+                סימון המשרה כגויסה 🎉
+              </ConfirmActionButton>
+              <ConfirmActionButton
+                action={setJobOutcome.bind(null, job.id, "closed_no_hire")}
+                message="לסגור את המשרה ללא גיוס? היא תרד מהלוח."
+                className="inline-flex items-center rounded-full border border-ink-300 text-ink-700 text-[12.5px] font-semibold px-3.5 py-1.5 hover:border-danger hover:text-danger transition-colors"
+              >
+                סגירה ללא גיוס
+              </ConfirmActionButton>
+            </>
+          )}
         </div>
       )}
+    </div>
+  );
 
-      {/* Application questions (required or optional) */}
-      <div className={cardClass}>
+  // Targeted publishing — our jobs only (market jobs are applied to off-site)
+  const publishPanel =
+    job.source === "ours" ? (
+      <div
+        className={
+          job.pipeline_status === "draft"
+            ? `${cardClass} border-[1.5px] border-brand-pink shadow-glow-pink`
+            : cardClass
+        }
+      >
         <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
-          <ListChecks size={16} className="text-brand-purple" /> שאלות למועמדות
+          <Megaphone size={16} className="text-brand-pink-deep" /> פרסום המשרה
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          שאלות שכל מועמדת רואה בהגשה למשרה הזו — כל שאלה אפשר לסמן כחובה או רשות. שימי לב: השאלה
-          {" “למה את חושבת שאת מתאימה למשרה?” "}
-          נשאלת תמיד אוטומטית — אין צורך להוסיף אותה.
+          {job.pipeline_status === "draft"
+            ? "המשרה עדיין טיוטה — בחרי את קהל היעד ופרסמי אותה. רק החברות שנבחרו יראו אותה ויקבלו מייל."
+            : "המשרה פורסמה לקהל היעד שנבחר."}
         </p>
-        <JobQuestionsManager jobId={job.id} questions={questionItems} />
-      </div>
-
-      {/* Send to client */}
-      <div className={cardClass}>
-        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
-          <Mail size={16} className="text-brand-purple" /> שליחה ללקוח
-        </h3>
-        <p className="text-[12.5px] text-ink-500 mb-3">
-          המייל שולח ללקוח קישור לצפייה במועמדות שנבחרו, ישירות בעמוד המשרה בפורטל.
-        </p>
-        <SendCandidatesButton jobId={job.id} clientName={client?.company_name ?? null} />
-      </div>
-
-      {/* Review center — the applicants who submitted to this job */}
-      <div className={cardClass}>
-        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
-          <Inbox size={16} className="text-brand-pink-deep" /> מועמדות שהגישו ({appList.length})
-        </h3>
-        <p className="text-[12.5px] text-ink-500 mb-3">
-          מרכז הבדיקה: תשובות, קורות חיים, סימון פנימי וניהול הצינור מול הלקוח.
-          הסימונים פנימיים בלבד — לא נחשפים ללקוח ולא למועמדת.
-        </p>
-        <ReviewCenter
+        <PublishPanel
           jobId={job.id}
-          applications={reviewApplications}
-          questions={questionItems.map((q) => ({ id: q.id, question: q.question }))}
+          catalogue={audienceCatalogue}
+          allMembers={members ?? []}
+          published={
+            job.pipeline_status === "draft"
+              ? null
+              : { at: job.published_at, audienceCount: targetsCount ?? 0 }
+          }
         />
       </div>
+    ) : null;
 
+  // Application questions (required or optional)
+  const questionsPanel = (
+    <div className={cardClass}>
+      <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+        <ListChecks size={16} className="text-brand-purple" /> שאלות למועמדות
+      </h3>
+      <p className="text-[12.5px] text-ink-500 mb-3">
+        שאלות שכל מועמדת רואה בהגשה למשרה הזו — כל שאלה אפשר לסמן כחובה או רשות. שימי לב: השאלה
+        {" “למה את חושבת שאת מתאימה למשרה?” "}
+        נשאלת תמיד אוטומטית — אין צורך להוסיף אותה.
+      </p>
+      <JobQuestionsManager jobId={job.id} questions={questionItems} />
+    </div>
+  );
+
+  // Review center — the applicants who submitted to this job
+  const reviewPanel = (
+    <div className={cardClass}>
+      <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+        <Inbox size={16} className="text-brand-pink-deep" /> מועמדות שהגישו ({appList.length})
+      </h3>
+      <p className="text-[12.5px] text-ink-500 mb-3">
+        מרכז הבדיקה: תשובות, קורות חיים, סימון פנימי וניהול הצינור מול הלקוח.
+        הסימונים פנימיים בלבד — לא נחשפים ללקוח ולא למועמדת.
+      </p>
+      <ReviewCenter
+        jobId={job.id}
+        applications={reviewApplications}
+        questions={questionItems.map((q) => ({ id: q.id, question: q.question }))}
+      />
+    </div>
+  );
+
+  const clientPanel = (
+    <div className="flex flex-col gap-5">
       {/* Curated */}
       <div className={cardClass}>
         <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
@@ -447,6 +489,60 @@ export default async function AdminJobCandidatesPage({
         </p>
         <CandidatePicker jobId={job.id} members={members ?? []} addedIds={curatedIds} />
       </div>
+
+      {/* Send to client */}
+      <div className={cardClass}>
+        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+          <Mail size={16} className="text-brand-purple" /> שליחה ללקוח
+        </h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          המייל שולח ללקוח קישור לצפייה במועמדות שנבחרו, ישירות בעמוד המשרה בפורטל.
+          מועמדות שסימנת {"“אישור סופי”"} במרכז הבדיקה מצטרפות לרשימה אוטומטית בשליחה.
+        </p>
+        <SendCandidatesButton jobId={job.id} clientName={client?.company_name ?? null} />
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-5">
+      <Link
+        href="/admin/jobs"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline self-start"
+      >
+        <ArrowRight size={15} /> חזרה לניהול משרות
+      </Link>
+
+      {/* Header */}
+      <div className={cardClass}>
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="min-w-0">
+            <span className="font-mono text-xs text-brand-pink-deep">&lt;משרה/&gt;</span>
+            <h1 className="font-display text-[24px] font-black text-ink-1000 mt-1">{job.title}</h1>
+            <p className="text-[13px] text-ink-500 mt-1">{job.company}</p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {job.source === "ours" && (
+              <Badge variant={pipelinePill.variant}>{pipelinePill.label}</Badge>
+            )}
+            <Badge variant={job.source === "ours" ? "pink" : "tech"}>
+              {job.source === "ours" ? "משרה שלנו" : "משרה מהשוק"}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      <JobTabs
+        tabs={tabs}
+        initialTab={initialTab}
+        panels={{
+          details: detailsPanel,
+          publish: publishPanel,
+          questions: questionsPanel,
+          review: reviewPanel,
+          client: clientPanel,
+        }}
+      />
     </div>
   );
 }
