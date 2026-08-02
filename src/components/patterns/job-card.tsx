@@ -132,10 +132,25 @@ export function JobCard({
         </button>
       </div>
 
-      {job.description && (
-        <p className="text-[13.5px] text-ink-700 leading-relaxed mb-3 line-clamp-3">
-          {job.description}
-        </p>
+      {job.description_html ? (
+        // The admin's styled requirements (sanitized at save by the allowlist
+        // in lib/rich-text) — shown as she composed them, clamped for the card.
+        <div
+          dir="rtl"
+          className={[
+            "text-[13.5px] text-ink-700 leading-relaxed mb-3 line-clamp-4",
+            "[&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5",
+            "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-[14px] [&_h3]:text-brand-purple",
+            "[&_a]:text-brand-purple [&_a]:underline [&_p]:my-1 [&_b]:text-ink-1000 [&_strong]:text-ink-1000",
+          ].join(" ")}
+          dangerouslySetInnerHTML={{ __html: job.description_html }}
+        />
+      ) : (
+        job.description && (
+          <p className="text-[13.5px] text-ink-700 leading-relaxed mb-3 line-clamp-3 whitespace-pre-line">
+            {job.description}
+          </p>
+        )
       )}
 
       {job.tech_tags.length > 0 && (

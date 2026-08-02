@@ -494,7 +494,7 @@ export function applyConfirmationEmail(name: string | undefined, jobTitle: strin
       heading: "קיבלנו את המועמדות שלך 💜",
       lines: [
         `${name ? `היי ${escapeHtml(name)}, ` : ""}המועמדות שלך למשרת <b>${escapeHtml(jobTitle)}</b> הוגשה בהצלחה 🎉`,
-        "אנחנו עוברות על כל הגשה באהבה — נעדכן אותך בכל התקדמות.",
+        "אנחנו עוברות על כל הגשה באופן אישי — נעדכן אותך בכל התקדמות.",
       ],
       ctaText: "לכל המשרות",
       ctaUrl: `${SITE}/jobs`,

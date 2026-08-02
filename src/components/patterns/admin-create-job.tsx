@@ -63,6 +63,20 @@ export function AdminCreateJob({
   const newIsChoice = newType === "select" || newType === "multiselect";
   const canAddQuestion = !!newQuestion.trim() && (!newIsChoice || draftOptions.length >= 2);
 
+  // A question typed but not yet "added" must not be lost on submit — the
+  // hidden field carries it too (same shape, same validation server-side).
+  const submittedQuestions = canAddQuestion
+    ? [
+        ...questions,
+        {
+          question: newQuestion.trim(),
+          answer_type: newType,
+          options: newIsChoice ? draftOptions : [],
+          required: newRequired,
+        },
+      ]
+    : questions;
+
   function addOption() {
     const o = optionDraft.trim();
     if (!o || draftOptions.includes(o) || draftOptions.length >= 20) return;
@@ -382,7 +396,7 @@ export function AdminCreateJob({
               </p>
             </div>
           )}
-          <input type="hidden" name="questions" value={JSON.stringify(questions)} />
+          <input type="hidden" name="questions" value={JSON.stringify(submittedQuestions)} />
         </div>
       )}
 
