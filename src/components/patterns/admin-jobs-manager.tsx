@@ -4,7 +4,12 @@ import { useMemo, useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { Alert, Input, Select } from "@/components/ui";
 import { AdminCreateJob } from "./admin-create-job";
-import { AdminJobRow, type AdminJob, type PortalClientOption } from "./admin-job-row";
+import {
+  AdminJobRow,
+  type AdminJob,
+  type JobAppCounts,
+  type PortalClientOption,
+} from "./admin-job-row";
 
 const PIPELINE_FILTERS: { value: string; label: string }[] = [
   { value: "", label: "כל הסטטוסים" },
@@ -29,11 +34,13 @@ function isDone(j: AdminJob): boolean {
 export function AdminJobsManager({
   jobs,
   clients,
+  appCounts,
   initialClientId,
   created,
 }: {
   jobs: AdminJob[];
   clients: PortalClientOption[];
+  appCounts?: Record<string, JobAppCounts>;
   initialClientId?: string;
   created?: boolean;
 }) {
@@ -66,29 +73,11 @@ export function AdminJobsManager({
       {created && <Alert variant="success">המשרה נוספה ✓ הנה היא ברשימה.</Alert>}
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        {/* Header: title on the right, + on the left (RTL end). */}
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <h3 className="font-display text-base font-bold">כל המשרות ({jobs.length})</h3>
-          <button
-            type="button"
-            onClick={() => setFormOpen((v) => !v)}
-            aria-expanded={formOpen}
-            title={formOpen ? "סגירת הטופס" : "הוספת משרה"}
-            className="inline-flex items-center gap-1.5 rounded-full bg-brand-gradient text-white text-[13px] font-semibold px-4 py-2 hover:brightness-105 transition-[filter] cursor-pointer"
-          >
-            {formOpen ? <X size={15} /> : <Plus size={15} />}
-            {formOpen ? "סגירה" : "משרה חדשה"}
-          </button>
-        </div>
-
-        {formOpen && (
-          <div className="mb-4 rounded-md border border-brand-purple/25 bg-tint-purple/20 p-4">
-            <AdminCreateJob clients={clients} initialClientId={initialClientId} />
-          </div>
-        )}
-
-        {/* Filters */}
+        {/* Toolbar: title, search, filters and the create button — one wrapping row. */}
         <div className="flex flex-wrap items-center gap-2 mb-3">
+          <h3 className="font-display text-base font-bold shrink-0 me-1">
+            כל המשרות ({jobs.length})
+          </h3>
           <div className="relative flex-1 min-w-48">
             <Search
               size={14}
@@ -125,11 +114,38 @@ export function AdminJobsManager({
             <option value="ours">שלנו</option>
             <option value="open">מהשוק</option>
           </Select>
+          <button
+            type="button"
+            onClick={() => setFormOpen((v) => !v)}
+            aria-expanded={formOpen}
+            title={formOpen ? "סגירת הטופס" : "הוספת משרה"}
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand-gradient text-white text-[13px] font-semibold px-4 py-2 hover:brightness-105 transition-[filter] cursor-pointer"
+          >
+            {formOpen ? <X size={15} /> : <Plus size={15} />}
+            {formOpen ? "סגירה" : "משרה חדשה"}
+          </button>
         </div>
 
+        {formOpen && (
+          <div className="mb-4 rounded-md border border-brand-purple/25 bg-tint-purple/20 p-4">
+            <AdminCreateJob clients={clients} initialClientId={initialClientId} />
+          </div>
+        )}
+
         <div className="flex flex-col">
-          {list.map((j) => (
-            <AdminJobRow key={j.id} job={j} />
+          {list
+            .filter((j) => !isDone(j))
+            .map((j) => (
+              <AdminJobRow key={j.id} job={j} appCounts={appCounts?.[j.id]} />
+            ))}
+          {list.some(isDone) && (
+            <div className="flex items-center gap-2 pt-4 pb-1 text-xs font-semibold text-ink-400">
+              הסתיימו ({list.filter(isDone).length})
+              <span aria-hidden className="flex-1 h-px bg-ink-100" />
+            </div>
+          )}
+          {list.filter(isDone).map((j) => (
+            <AdminJobRow key={j.id} job={j} appCounts={appCounts?.[j.id]} className="opacity-70" />
           ))}
           {list.length === 0 && (
             <p className="text-ink-500 text-sm py-4">
