@@ -1212,6 +1212,51 @@ export async function setApplicationMark(
   return { ok: true };
 }
 
+/**
+ * The same internal mark, applied to a whole selection at once (the review
+ * center's bulk bar). One reason is shared by every row — and rides only with
+ * "לא מתאימה", any other mark clears it. Admin-only, capped at 200 rows.
+ */
+export async function setApplicationMarkBulk(
+  applicationIds: string[],
+  mark: AdminMark | null,
+  reason?: string | null
+): Promise<FormState> {
+  await requireRole("admin");
+  const ids = [...new Set(applicationIds.filter((id) => typeof id === "string" && id))].slice(
+    0,
+    200
+  );
+  if (ids.length === 0) return { error: "לא נבחרו הגשות." };
+  const admin = createAdminClient();
+
+  // All rows in one bulk come from a single job's review center — resolve the
+  // job from the first row for the revalidation.
+  const { data: rows } = await admin
+    .from("applications")
+    .select("job_id")
+    .in("id", ids)
+    .limit(1);
+  const jobId = rows?.[0]?.job_id;
+  if (!jobId) return { error: "ההגשות לא נמצאו." };
+
+  const admin_mark_reason =
+    mark === "not_fit" ? (reason ?? "").trim().slice(0, 500) || null : null;
+  const { error } = await admin
+    .from("applications")
+    .update({ admin_mark: mark, admin_mark_reason })
+    .in("id", ids);
+  if (error) {
+    if (isMissingColumn(error)) {
+      return { error: "צריך להריץ קודם את ה-SQL האחרון (_jobs_crm.sql) ב-Supabase." };
+    }
+    return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
+  }
+
+  revalidatePath(`/admin/jobs/${jobId}`);
+  return { ok: true };
+}
+
 export type PipelineStatus = "interview" | "exam" | "hired" | "declined";
 
 const PIPELINE_STATUSES: PipelineStatus[] = ["interview", "exam", "hired", "declined"];

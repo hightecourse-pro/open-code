@@ -6,17 +6,22 @@ import {
   ChevronRight,
   ExternalLink,
   FileText,
+  List,
   Plus,
   Search,
+  Table2,
+  X,
 } from "lucide-react";
 import { Alert, Badge, Button, Checkbox, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
   addJobCandidate,
   setApplicationMark,
+  setApplicationMarkBulk,
   updateApplicationPipeline,
 } from "@/app/(admin)/admin/actions";
 import type { AdminMark, PipelineStatus } from "@/app/(admin)/admin/actions";
+import type { AudienceCatalogueField } from "@/lib/admin/audience";
 
 // ----------------------------------------------------------------- data types
 
@@ -146,17 +151,33 @@ export function ReviewCenter({
   jobId,
   applications,
   questions,
+  criteriaCatalogue,
+  criteriaPools,
 }: {
   jobId: string;
   applications: ReviewApplication[];
   questions: ReviewQuestion[];
+  /** Profile-parameter palette scoped to the applicants (no dead chips). */
+  criteriaCatalogue: AudienceCatalogueField[];
+  /** profile id → question key → her values, label-resolved + lowercased. */
+  criteriaPools: Record<string, Record<string, string[]>>;
 }) {
   const [query, setQuery] = useState("");
   const [markFilter, setMarkFilter] = useState<"all" | "none" | AdminMark>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // Profile-parameter criteria: question key → selected values. Selections
+  // accumulate across parameters, like the publish panel.
+  const [criteria, setCriteria] = useState<Record<string, string[]>>({});
+  const [activeKey, setActiveKey] = useState(criteriaCatalogue[0]?.key ?? "");
+  const [valueQuery, setValueQuery] = useState("");
   // "בלי הלא רלוונטיות שכבר בדקתי" — not_fit rows are hidden by default.
   const [showNotFit, setShowNotFit] = useState(false);
+  const [view, setView] = useState<"list" | "table">("list");
   const [selectedId, setSelectedId] = useState<string | null>(applications[0]?.id ?? null);
+  // Multi-select for the bulk-mark bar (application ids, visible rows only).
+  const [selection, setSelection] = useState<Set<string>>(() => new Set());
+  const [bulkReasonOpen, setBulkReasonOpen] = useState(false);
+  const [bulkReason, setBulkReason] = useState("");
 
   // Optimistic overrides on top of the server-rendered props.
   const [marks, setMarks] = useState<Record<string, AdminMark | null>>({});
@@ -214,6 +235,14 @@ export function ReviewCenter({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // OR within one criterion, AND across criteria — same semantics as
+    // previewAudience, matched against the lowercased applicant pools.
+    const wanted = Object.entries(criteria)
+      .map(([key, values]) => ({
+        key,
+        values: values.filter(Boolean).map((v) => v.trim().toLowerCase()),
+      }))
+      .filter((c) => c.values.length > 0);
     const list = applications.filter((a) => {
       if (q && !(a.profile?.fullName ?? "").toLowerCase().includes(q)) return false;
       const m = markOf(a);
@@ -221,12 +250,76 @@ export function ReviewCenter({
       if (markFilter === "none" && m !== null) return false;
       if (markFilter !== "all" && markFilter !== "none" && m !== markFilter) return false;
       if (statusFilter !== "all" && statusOf(a) !== statusFilter) return false;
+      if (wanted.length > 0) {
+        const mine = criteriaPools[a.applicantId] ?? {};
+        for (const c of wanted) {
+          const have = mine[c.key] ?? [];
+          if (!c.values.some((v) => have.includes(v))) return false;
+        }
+      }
       return true;
     });
     // VIPs first; sort is stable, so the existing (newest-first) order holds
     // within each group.
     return list.sort((a, b) => Number(b.isVip) - Number(a.isVip));
-  }, [applications, query, markFilter, statusFilter, notFitVisible, markOf, statusOf]);
+  }, [
+    applications,
+    query,
+    criteria,
+    criteriaPools,
+    markFilter,
+    statusFilter,
+    notFitVisible,
+    markOf,
+    statusOf,
+  ]);
+
+  // The effective selection is only ever the visible rows — a filter change
+  // narrows it (derived, no state pruning) and the bulk bar follows it.
+  const visibleSelection = useMemo(() => {
+    if (selection.size === 0) return selection;
+    const next = new Set<string>();
+    for (const a of filtered) if (selection.has(a.id)) next.add(a.id);
+    return next;
+  }, [selection, filtered]);
+
+  // --------------------------------------------------- criteria bar helpers
+
+  const activeField = criteriaCatalogue.find((f) => f.key === activeKey) ?? null;
+
+  const visibleValues = useMemo(() => {
+    if (!activeField) return [];
+    const q = valueQuery.trim().toLowerCase();
+    return q
+      ? activeField.values.filter((v) => v.toLowerCase().includes(q))
+      : activeField.values;
+  }, [activeField, valueQuery]);
+
+  // The active-filter chips row — every selected value across all parameters.
+  const criteriaChips = useMemo(
+    () =>
+      Object.entries(criteria).flatMap(([key, values]) =>
+        values.map((value) => ({
+          key,
+          value,
+          label: criteriaCatalogue.find((f) => f.key === key)?.label ?? key,
+        }))
+      ),
+    [criteriaCatalogue, criteria]
+  );
+
+  function toggleCriterion(key: string, value: string) {
+    setCriteria((prev) => {
+      const current = prev[key] ?? [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      const out = { ...prev };
+      if (next.length) out[key] = next;
+      else delete out[key]; // drop empty keys — they don't filter
+      return out;
+    });
+  }
 
   // Keep a valid selection even when the filters drop the selected row.
   const selected = filtered.find((a) => a.id === selectedId) ?? filtered[0] ?? null;
@@ -277,6 +370,76 @@ export function ReviewCenter({
       if (res?.error) {
         setMarks((prev) => ({ ...prev, [app.id]: prevMark }));
         setReasons((prev) => ({ ...prev, [app.id]: prevReason }));
+        setActionError(res.error);
+      }
+    });
+  }
+
+  // ------------------------------------------------- bulk selection + marks
+
+  function toggleSelected(id: string, on: boolean) {
+    setSelection((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  const allVisibleSelected =
+    filtered.length > 0 && visibleSelection.size === filtered.length;
+
+  function toggleSelectAll(on: boolean) {
+    setSelection(on ? new Set(filtered.map((a) => a.id)) : new Set());
+  }
+
+  function clearSelection() {
+    setSelection(new Set());
+    setBulkReasonOpen(false);
+    setBulkReason("");
+  }
+
+  /**
+   * Apply one mark (or clear) to the whole selection — optimistic like the
+   * single mark: rows, counts and the auto-hide of not_fit react instantly,
+   * a failure rolls everything back (selection included) with an error.
+   */
+  function applyBulk(mark: AdminMark | null, reason?: string | null) {
+    // The server caps a bulk at 200 rows — mirror it so the optimistic state
+    // never claims more than what actually gets written.
+    const ids = [...visibleSelection].slice(0, 200);
+    if (ids.length === 0) return;
+    const idSet = new Set(ids);
+    const prevMarks: Record<string, AdminMark | null> = {};
+    const prevReasons: Record<string, string | null> = {};
+    for (const a of applications) {
+      if (!idSet.has(a.id)) continue;
+      prevMarks[a.id] = markOf(a);
+      prevReasons[a.id] = reasonOf(a);
+    }
+    // The reason rides only with not_fit — mirror the server's clearing.
+    const clean = mark === "not_fit" ? (reason ?? "").trim().slice(0, 500) || null : null;
+    setActionError(null);
+    setBulkReasonOpen(false);
+    setBulkReason("");
+    if (reasonEditor && idSet.has(reasonEditor.id)) setReasonEditor(null);
+    setMarks((prev) => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = mark;
+      return next;
+    });
+    setReasons((prev) => {
+      const next = { ...prev };
+      for (const id of ids) next[id] = clean;
+      return next;
+    });
+    setSelection(new Set()); // cleared optimistically — restored on failure
+    startTransition(async () => {
+      const res = await setApplicationMarkBulk(ids, mark, clean);
+      if (res?.error) {
+        setMarks((prev) => ({ ...prev, ...prevMarks }));
+        setReasons((prev) => ({ ...prev, ...prevReasons }));
+        setSelection(new Set(ids));
         setActionError(res.error);
       }
     });
@@ -415,69 +578,385 @@ export function ReviewCenter({
             </span>
           }
         />
+        {/* view toggle — רשימה / טבלה */}
+        <div
+          className="ms-auto flex items-center gap-1"
+          role="group"
+          aria-label="בחירת תצוגה"
+        >
+          {(
+            [
+              { key: "list", label: "רשימה", Icon: List },
+              { key: "table", label: "טבלה", Icon: Table2 },
+            ] as const
+          ).map(({ key, label, Icon }) => (
+            <button
+              key={key}
+              type="button"
+              aria-pressed={view === key}
+              onClick={() => setView(key)}
+              className={cn(
+                "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[12px] font-semibold transition-colors cursor-pointer",
+                view === key
+                  ? "border-brand-purple bg-tint-purple text-brand-purple"
+                  : "border-ink-200 bg-ink-0 text-ink-500 hover:text-ink-900 hover:border-ink-400"
+              )}
+            >
+              <Icon size={13} aria-hidden /> {label}
+            </button>
+          ))}
+        </div>
       </div>
+
+      {/* ------------------------------------------- profile-criteria bar */}
+      {criteriaCatalogue.length > 0 && (
+        <div className="flex flex-col gap-2 rounded-[14px] border border-ink-200 bg-ink-0 p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[12px] font-bold text-ink-700">סינון לפי פרופיל:</span>
+            <Select
+              value={activeKey}
+              onChange={(e) => {
+                setActiveKey(e.target.value);
+                setValueQuery("");
+              }}
+              className="w-auto min-w-[160px] py-2"
+              aria-label="בחירת פרמטר לסינון"
+            >
+              {criteriaCatalogue.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.label}
+                  {criteria[f.key]?.length ? ` (${criteria[f.key].length})` : ""}
+                </option>
+              ))}
+            </Select>
+            {activeField && activeField.values.length > 8 && (
+              <Input
+                type="search"
+                value={valueQuery}
+                onChange={(e) => setValueQuery(e.target.value)}
+                placeholder="סינון הערכים ברשימה…"
+                aria-label="סינון הערכים ברשימה"
+                className="w-auto min-w-[160px] py-2"
+              />
+            )}
+          </div>
+          <div
+            role="group"
+            aria-label={activeField ? `ערכים עבור ${activeField.label}` : "ערכים"}
+            className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto"
+          >
+            {visibleValues.length === 0 ? (
+              <p className="text-[12px] text-ink-500 p-1">אין ערכים תואמים.</p>
+            ) : (
+              visibleValues.map((value) => {
+                const on = (criteria[activeKey] ?? []).includes(value);
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => toggleCriterion(activeKey, value)}
+                    aria-pressed={on}
+                    className={cn(
+                      "inline-flex items-center px-3 py-[5px] rounded-full text-xs font-semibold transition-colors duration-150 border cursor-pointer",
+                      on
+                        ? "bg-brand-pink-deep text-white border-brand-pink-deep"
+                        : "bg-ink-0 text-ink-700 border-ink-200 hover:border-brand-purple"
+                    )}
+                  >
+                    {value}
+                  </button>
+                );
+              })
+            )}
+          </div>
+          {criteriaChips.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-ink-100">
+              <span className="text-[12px] text-ink-500">הסינון הפעיל:</span>
+              {criteriaChips.map((chip) => (
+                <button
+                  key={`${chip.key}:${chip.value}`}
+                  type="button"
+                  onClick={() => toggleCriterion(chip.key, chip.value)}
+                  className="inline-flex items-center gap-1.5 px-3 py-[5px] rounded-full text-xs font-semibold bg-tint-pink text-brand-pink-deep hover:bg-brand-pink-deep hover:text-white transition-colors duration-150 cursor-pointer"
+                >
+                  <span className="opacity-70">{chip.label}:</span>
+                  {chip.value}
+                  <X size={12} aria-hidden />
+                  <span className="sr-only">הסרת הסינון</span>
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setCriteria({})}
+                className="text-[12px] text-ink-500 underline underline-offset-2 hover:text-brand-pink-deep cursor-pointer"
+              >
+                איפוס
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {actionError && <Alert variant="danger">{actionError}</Alert>}
 
+      {/* ------------------------------------------------- bulk action bar */}
+      {visibleSelection.size > 0 && (
+        <div className="sticky top-2 z-20 flex flex-col gap-2 rounded-[14px] border border-brand-purple/40 bg-tint-purple p-3 shadow-sm">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[12.5px] font-bold text-brand-purple whitespace-nowrap">
+              {visibleSelection.size} נבחרו
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setBulkReasonOpen(true)}
+            >
+              סימון כלא רלוונטיות
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => applyBulk("optional")}>
+              אופציונליות
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => applyBulk("approved")}>
+              אישור סופי
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => applyBulk(null)}>
+              ניקוי סימון
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={clearSelection}>
+              ביטול בחירה
+            </Button>
+          </div>
+          {bulkReasonOpen && (
+            <div className="flex flex-col gap-2 rounded-[12px] border border-ink-200 bg-ink-0 p-3">
+              <Textarea
+                value={bulkReason}
+                onChange={(e) => setBulkReason(e.target.value)}
+                placeholder="סיבה משותפת (אופציונלי, רק לך)"
+                aria-label="סיבה משותפת לאי-ההתאמה (פנימי, אופציונלי)"
+                maxLength={500}
+                rows={2}
+                autoFocus
+                className="min-h-16 text-[13px]"
+              />
+              <div className="flex items-center gap-2">
+                <Button type="button" size="sm" onClick={() => applyBulk("not_fit", bulkReason)}>
+                  סימון {visibleSelection.size} כלא רלוונטיות
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setBulkReasonOpen(false);
+                    setBulkReason("");
+                  }}
+                >
+                  ביטול
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* -------------------------------------------------- table view */}
+      {view === "table" && (
+        <div className="max-h-[560px] overflow-x-auto overflow-y-auto rounded-[14px] border border-ink-200 bg-ink-0">
+          {filtered.length === 0 ? (
+            <p className="text-ink-500 text-sm px-3 py-4">אין מועמדות שתואמות את הסינון.</p>
+          ) : (
+            <table className="w-full min-w-[860px] text-sm border-separate border-spacing-0">
+              <thead>
+                <tr className="text-start">
+                  {[
+                    <Checkbox
+                      key="all"
+                      checked={allVisibleSelected}
+                      onChange={(e) => toggleSelectAll(e.target.checked)}
+                      aria-label="בחירת כל המועמדות המוצגות"
+                    />,
+                    "שם",
+                    "תחום",
+                    "אזור",
+                    "ניסיון",
+                    "סטטוס",
+                    "סימון פנימי",
+                    "הוגשה",
+                    "",
+                  ].map((h, i) => (
+                    <th
+                      key={i}
+                      className="sticky top-0 z-[1] bg-ink-50 border-b border-ink-200 px-3 py-2 text-start text-[11.5px] font-bold text-ink-700 whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((a, i) => {
+                  const mark = markOf(a);
+                  const status = statusOf(a);
+                  const reason = reasonOf(a);
+                  return (
+                    <tr key={a.id} className={cn(i % 2 === 1 ? "bg-ink-50" : "bg-ink-0")}>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top">
+                        <Checkbox
+                          checked={selection.has(a.id)}
+                          onChange={(e) => toggleSelected(a.id, e.target.checked)}
+                          aria-label={`בחירת ${a.profile?.fullName ?? "מועמדת"}`}
+                        />
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top">
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-medium text-ink-900 whitespace-nowrap">
+                            {a.profile?.fullName ?? "מועמדת"}
+                          </span>
+                          <MemberFlair app={a} starClass="text-[12px]" />
+                        </span>
+                        {mark === "not_fit" && reason && (
+                          <span className="block max-w-[220px] truncate text-[11px] text-ink-400">
+                            הסיבה שלך: {reason}
+                          </span>
+                        )}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
+                        {a.profile?.specialization ?? "—"}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
+                        {a.profile?.region ?? "—"}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
+                        {a.profile?.isExperienced ? "בעלת ניסיון" : "—"}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
+                        <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-bold text-ink-700">
+                          {STATUS_LABEL[status] ?? status}
+                        </span>
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
+                        {mark ? (
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-[10.5px] font-bold",
+                              MARK_CHIP[mark]
+                            )}
+                          >
+                            {MARK_LABEL[mark]}
+                          </span>
+                        ) : (
+                          <span className="text-ink-400">—</span>
+                        )}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 tabular-nums whitespace-nowrap">
+                        {fmtDate(a.submittedAt)}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedId(a.id);
+                            setView("list");
+                          }}
+                          className="text-[12.5px] font-semibold text-brand-purple hover:underline cursor-pointer"
+                        >
+                          פתיחה
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
       {/* ------------------------------------------------- list + detail */}
+      {view === "list" && (
       <div className="grid gap-4 lg:grid-cols-[280px_minmax(0,1fr)] items-start">
         {/* list */}
         <div className="flex flex-col max-h-[560px] overflow-y-auto rounded-[14px] border border-ink-200 bg-ink-0">
           {filtered.length === 0 && (
             <p className="text-ink-500 text-sm px-3 py-4">אין מועמדות שתואמות את הסינון.</p>
           )}
+          {filtered.length > 0 && (
+            <div className="flex items-center gap-2 border-b border-ink-100 bg-ink-50 px-3 py-2">
+              <Checkbox
+                checked={allVisibleSelected}
+                onChange={(e) => toggleSelectAll(e.target.checked)}
+                label={
+                  <span className="text-[11.5px] font-semibold text-ink-700">
+                    בחירת כל המוצגות ({filtered.length})
+                  </span>
+                }
+              />
+            </div>
+          )}
           {filtered.map((a) => {
             const active = selected?.id === a.id;
             const mark = markOf(a);
             const status = statusOf(a);
             return (
-              <button
+              <div
                 key={a.id}
-                type="button"
-                onClick={() => setSelectedId(a.id)}
-                aria-current={active ? "true" : undefined}
                 className={cn(
-                  "flex flex-col items-stretch gap-1 border-b border-ink-100 px-3 py-2.5 text-start transition-colors last:border-b-0",
+                  "flex items-start gap-1.5 border-b border-ink-100 ps-3 transition-colors last:border-b-0",
                   active ? "bg-tint-purple" : "hover:bg-ink-50"
                 )}
               >
-                <span className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-medium text-ink-900 text-sm truncate">
-                    {a.profile?.fullName ?? "מועמדת"}
+                <span className="pt-3">
+                  <Checkbox
+                    checked={selection.has(a.id)}
+                    onChange={(e) => toggleSelected(a.id, e.target.checked)}
+                    aria-label={`בחירת ${a.profile?.fullName ?? "מועמדת"}`}
+                  />
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedId(a.id)}
+                  aria-current={active ? "true" : undefined}
+                  className="flex min-w-0 flex-1 flex-col items-stretch gap-1 pe-3 py-2.5 text-start cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5 min-w-0">
+                    <span className="font-medium text-ink-900 text-sm truncate">
+                      {a.profile?.fullName ?? "מועמדת"}
+                    </span>
+                    <MemberFlair app={a} starClass="text-[12px]" />
                   </span>
-                  <MemberFlair app={a} starClass="text-[12px]" />
-                </span>
-                <span className="text-[11.5px] text-ink-500 truncate">
-                  {a.profile?.specialization ?? "—"} · {fmtDate(a.submittedAt)}
-                </span>
-                <span className="flex flex-wrap gap-1">
-                  {mark && (
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-[10.5px] font-bold",
-                        MARK_CHIP[mark]
-                      )}
-                    >
-                      {MARK_LABEL[mark]}
-                    </span>
-                  )}
-                  {status !== "submitted" && (
-                    <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-bold text-ink-700">
-                      {STATUS_LABEL[status] ?? status}
-                    </span>
-                  )}
-                  {a.clientFeedback?.interviewMarked && (
-                    <span className="rounded-full bg-tint-warm px-2 py-0.5 text-[10.5px] font-bold text-crown-gold border border-crown-gold-soft">
-                      ⭐ לראיון
-                    </span>
-                  )}
-                </span>
-                {mark === "not_fit" && reasonOf(a) && (
-                  <span className="text-[11px] text-ink-400 truncate">
-                    הסיבה שלך: {reasonOf(a)}
+                  <span className="text-[11.5px] text-ink-500 truncate">
+                    {a.profile?.specialization ?? "—"} · {fmtDate(a.submittedAt)}
                   </span>
-                )}
-              </button>
+                  <span className="flex flex-wrap gap-1">
+                    {mark && (
+                      <span
+                        className={cn(
+                          "rounded-full px-2 py-0.5 text-[10.5px] font-bold",
+                          MARK_CHIP[mark]
+                        )}
+                      >
+                        {MARK_LABEL[mark]}
+                      </span>
+                    )}
+                    {status !== "submitted" && (
+                      <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-bold text-ink-700">
+                        {STATUS_LABEL[status] ?? status}
+                      </span>
+                    )}
+                    {a.clientFeedback?.interviewMarked && (
+                      <span className="rounded-full bg-tint-warm px-2 py-0.5 text-[10.5px] font-bold text-crown-gold border border-crown-gold-soft">
+                        ⭐ לראיון
+                      </span>
+                    )}
+                  </span>
+                  {mark === "not_fit" && reasonOf(a) && (
+                    <span className="text-[11px] text-ink-400 truncate">
+                      הסיבה שלך: {reasonOf(a)}
+                    </span>
+                  )}
+                </button>
+              </div>
             );
           })}
         </div>
@@ -732,6 +1211,7 @@ export function ReviewCenter({
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }

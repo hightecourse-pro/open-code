@@ -5,7 +5,7 @@ import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, Pencil, UserCheck, User
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
-import { buildAudienceCatalogue } from "@/lib/admin/audience";
+import { buildAudienceCatalogue, loadAudiencePools } from "@/lib/admin/audience";
 import { Alert, Badge, Button } from "@/components/ui";
 import { removeJobCandidate, setJobOutcome } from "@/app/(admin)/admin/actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
@@ -190,6 +190,18 @@ export default async function AdminJobPage({
   const vipSet = new Set(
     (crmRows ?? []).filter((c) => c.is_vip === true).map((c) => c.profile_id)
   );
+
+  // The review center's criteria engine, scoped to THE APPLICANTS (no
+  // eligibility gates — a paused member who applied still counts): the
+  // catalogue offers only values actually seen among them (no dead chips) and
+  // the pools feed the client-side matching, label-resolved + lowercased.
+  const [applicantCatalogue, applicantPoolData] = applicantIds.length
+    ? await Promise.all([buildAudienceCatalogue(applicantIds), loadAudiencePools(applicantIds)])
+    : [[], null];
+  const applicantPools: Record<string, Record<string, string[]>> = {};
+  for (const [pid, mine] of applicantPoolData?.pools ?? []) {
+    applicantPools[pid] = Object.fromEntries(mine);
+  }
 
   // The client's portal feedback per curated candidate (interview mark + note).
   const feedbackOf = new Map(
@@ -424,6 +436,8 @@ export default async function AdminJobPage({
         jobId={job.id}
         applications={reviewApplications}
         questions={questionItems.map((q) => ({ id: q.id, question: q.question }))}
+        criteriaCatalogue={applicantCatalogue}
+        criteriaPools={applicantPools}
       />
     </div>
   );

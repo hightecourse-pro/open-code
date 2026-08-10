@@ -98,24 +98,38 @@ interface AudienceData {
   valuePools: Map<string, Map<string, string[]>>;
 }
 
-/**
- * The eligible members with everything they "have" per question key: the
- * denormalized profile columns (specialization/region — which may hold taxonomy
- * VALUES or Hebrew labels, so both resolve) plus their profile_answers, all as
- * display labels. One loader feeds both the catalogue and the matching pools.
- */
-async function loadAudienceData(): Promise<AudienceData> {
-  const admin = createAdminClient();
-  const [{ data: profiles }, questions, taxonomies] = await Promise.all([
-    admin
-      .from("profiles")
-      .select("id, full_name, specialization, region, is_experienced, status")
+/** The eligible-audience profile query, or an id-scoped one (no gates). */
+function profilesQuery(profileIds?: string[]) {
+  const base = createAdminClient()
+    .from("profiles")
+    .select("id, full_name, specialization, region, is_experienced, status");
+  // Id scope (e.g. a job's applicants): they're already in — she applied, so
+  // she counts even if paused or with an incomplete profile. No gates.
+  if (profileIds) return base.in("id", profileIds).order("full_name", { ascending: true });
+  return (
+    base
       // Placement reaches free members too (user decision 2026-07-29): pending =
       // browsing free member, active = paying. Only paused/rejected stay out.
       .in("status", ["active", "pending"])
       .eq("role", "junior")
       .eq("profile_completed", true)
-      .order("full_name", { ascending: true }),
+      .order("full_name", { ascending: true })
+  );
+}
+
+/**
+ * The eligible members with everything they "have" per question key: the
+ * denormalized profile columns (specialization/region — which may hold taxonomy
+ * VALUES or Hebrew labels, so both resolve) plus their profile_answers, all as
+ * display labels. One loader feeds both the catalogue and the matching pools.
+ *
+ * With `profileIds` the member set is scoped purely to those ids, WITHOUT the
+ * eligibility gates above.
+ */
+async function loadAudienceData(profileIds?: string[]): Promise<AudienceData> {
+  const admin = createAdminClient();
+  const [{ data: profiles }, questions, taxonomies] = await Promise.all([
+    profilesQuery(profileIds),
     loadQuestions(),
     getTaxonomyOptions(),
   ]);
@@ -174,8 +188,13 @@ async function loadAudienceData(): Promise<AudienceData> {
  * are skipped (nothing discrete to offer); experience stays a separate select
  * in the panel.
  */
-export async function buildAudienceCatalogue(): Promise<AudienceCatalogueField[]> {
-  const { questions, taxonomies, members, valuePools } = await loadAudienceData();
+export async function buildAudienceCatalogue(
+  profileIds?: string[]
+): Promise<AudienceCatalogueField[]> {
+  const { questions, taxonomies, members, valuePools } = await loadAudienceData(profileIds);
+  // Id-scoped catalogues (a job's applicants) offer only values actually seen
+  // in the scope — every chip matches at least one row, no dead chips.
+  const scoped = profileIds !== undefined;
 
   const seenFor = (key: string): Set<string> => {
     const seen = new Set<string>();
@@ -188,17 +207,24 @@ export async function buildAudienceCatalogue(): Promise<AudienceCatalogueField[]
   const out: AudienceCatalogueField[] = [];
   for (const q of questions) {
     if (q.key === LANGUAGE_SKILLS_KEY) {
-      const langs = new Set<string>([...DEFAULT_LANGUAGES, ...seenFor(q.key)]);
-      out.push({
-        key: q.key,
-        label: q.label_he,
-        values: [...langs].sort((a, b) => a.localeCompare(b, "he")),
-      });
+      const langs = scoped
+        ? seenFor(q.key)
+        : new Set<string>([...DEFAULT_LANGUAGES, ...seenFor(q.key)]);
+      if (langs.size) {
+        out.push({
+          key: q.key,
+          label: q.label_he,
+          values: [...langs].sort((a, b) => a.localeCompare(b, "he")),
+        });
+      }
       continue;
     }
 
     if (q.field_type === "bool") {
-      out.push({ key: q.key, label: q.label_he, values: ["כן", "לא"] });
+      const values = scoped
+        ? ["כן", "לא"].filter((v) => seenFor(q.key).has(v))
+        : ["כן", "לא"];
+      if (values.length) out.push({ key: q.key, label: q.label_he, values });
       continue;
     }
 
@@ -208,9 +234,12 @@ export async function buildAudienceCatalogue(): Promise<AudienceCatalogueField[]
         : Array.isArray(q.options)
           ? (q.options as unknown as { value: string; label: string }[]).map((o) => o.label)
           : [];
-      const values = [...new Set([...defined, ...seenFor(q.key)])].filter(
-        (v) => v && v !== "other" && v !== "אחר"
-      );
+      const seen = seenFor(q.key);
+      // Scoped: defined ordering first (only where seen), then free-typed extras.
+      const union = scoped
+        ? [...defined.filter((v) => seen.has(v)), ...seen]
+        : [...defined, ...seen];
+      const values = [...new Set(union)].filter((v) => v && v !== "other" && v !== "אחר");
       if (values.length) out.push({ key: q.key, label: q.label_he, values });
       continue;
     }
@@ -236,8 +265,8 @@ export async function buildAudienceCatalogue(): Promise<AudienceCatalogueField[]
  * case-insensitive matching against catalogue values. previewAudience filters
  * on these so the panel's chips and the matching can never drift apart.
  */
-export async function loadAudiencePools(): Promise<AudiencePools> {
-  const { members, valuePools } = await loadAudienceData();
+export async function loadAudiencePools(profileIds?: string[]): Promise<AudiencePools> {
+  const { members, valuePools } = await loadAudienceData(profileIds);
 
   const pools = new Map<string, Map<string, string[]>>();
   const shaped = members.map((m) => {
