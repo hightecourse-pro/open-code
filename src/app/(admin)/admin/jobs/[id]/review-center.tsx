@@ -112,12 +112,37 @@ function answerText(v: string | number | string[]): string {
 
 // --------------------------------------------------------------------- tiles
 
-function Stat({ label, value, className }: { label: string; value: number; className: string }) {
+function Stat({
+  label,
+  value,
+  className,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  className: string;
+  /** Is this tile's filter currently applied? */
+  active?: boolean;
+  /** Tiles double as filters — clicking applies, clicking again clears. */
+  onClick?: () => void;
+}) {
   return (
-    <div className={cn("rounded-[14px] border px-3 py-2.5 text-center", className)}>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      title={active ? "ביטול הסינון" : `סינון לפי ${label}`}
+      className={cn(
+        "rounded-[14px] border px-3 py-2.5 text-center cursor-pointer transition-shadow",
+        "hover:shadow-md focus-visible:outline-none focus-visible:shadow-[0_0_0_3px_rgba(224,65,141,0.2)]",
+        active && "shadow-[0_0_0_2.5px_rgba(224,65,141,0.45)]",
+        className
+      )}
+    >
       <div className="font-display text-xl font-black leading-none">{value}</div>
       <div className="mt-1 text-[11.5px] font-semibold">{label}</div>
-    </div>
+    </button>
   );
 }
 
@@ -499,30 +524,56 @@ export function ReviewCenter({
             />
           </div>
         </div>
+        {/* The tiles double as one-click filters (click again to clear). */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <Stat
             label="הגישו"
             value={counts.total}
+            active={markFilter === "all" && statusFilter === "all"}
+            onClick={() => {
+              setMarkFilter("all");
+              setStatusFilter("all");
+            }}
             className="border-ink-200 bg-ink-0 text-ink-900"
           />
           <Stat
             label="אופציונליות"
             value={counts.optional}
+            active={markFilter === "optional"}
+            onClick={() => {
+              setStatusFilter("all");
+              setMarkFilter((v) => (v === "optional" ? "all" : "optional"));
+            }}
             className="border-[#F0DCA8] bg-tint-warm text-[#8C5E0E]"
           />
           <Stat
             label="לא מתאימות"
             value={counts.notFit}
+            active={markFilter === "not_fit"}
+            onClick={() => {
+              setStatusFilter("all");
+              setMarkFilter((v) => (v === "not_fit" ? "all" : "not_fit"));
+            }}
             className="border-[#F2BBC8] bg-danger-bg text-[#A8254B]"
           />
           <Stat
             label="אושרו סופית"
             value={counts.approved}
+            active={markFilter === "approved"}
+            onClick={() => {
+              setStatusFilter("all");
+              setMarkFilter((v) => (v === "approved" ? "all" : "approved"));
+            }}
             className="border-[#BFE4D1] bg-tint-mint text-[#0F6E4A]"
           />
           <Stat
             label="הוגשו ללקוח"
             value={counts.sentToClient}
+            active={statusFilter === "sent"}
+            onClick={() => {
+              setMarkFilter("all");
+              setStatusFilter((v) => (v === "sent" ? "all" : "sent"));
+            }}
             className="border-[#DDC9EC] bg-tint-purple text-brand-purple"
           />
         </div>
