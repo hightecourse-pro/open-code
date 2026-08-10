@@ -9,15 +9,28 @@ export type LangSkill = { lang: string; level: string };
 
 export const LANG_LEVELS: { value: string; label: string }[] = [
   { value: "native", label: "שפת אם" },
-  { value: "fluent", label: "קריאה, כתיבה ודיבור שוטף" },
-  { value: "read_write", label: "קריאה וכתיבה" },
+  { value: "fluent", label: "דיבור שוטף" },
+  { value: "read_write", label: "קריאה וכתיבה בלבד" },
+  { value: "none", label: "לא שולטת" },
 ];
+
+/**
+ * Level values that appeared in older stored answers, mapped to the closest
+ * current level (the current value set already resolves via LANG_LEVELS).
+ */
+const LEGACY_LEVELS: Record<string, string> = {
+  basic: "read_write",
+  read: "read_write",
+  write: "read_write",
+  spoken: "fluent",
+};
 
 /** Languages every member is asked about; more can be added freely. */
 export const DEFAULT_LANGUAGES = ["עברית", "אנגלית"];
 
 export function langLevelLabel(value: string): string {
-  return LANG_LEVELS.find((l) => l.value === value)?.label ?? value;
+  const resolved = LEGACY_LEVELS[value] ?? value;
+  return LANG_LEVELS.find((l) => l.value === resolved)?.label ?? value;
 }
 
 /** Parse a stored answer value back into a clean, deduped skills list. */

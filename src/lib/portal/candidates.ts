@@ -16,8 +16,15 @@ import {
   langLevelLabel,
   parseLangSkills,
 } from "@/lib/language-skills";
+import {
+  EXPERIENCE_KEYS,
+  WORK_HISTORY_KEY,
+  experienceKindLabel,
+  experienceRangeLabel,
+  parseExperienceEntries,
+} from "@/lib/experience-entries";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
-import type { CandidateDetail, CandidateField, CatalogueField } from "./types";
+import type { CandidateDetail, CandidateField, CatalogueField, ExperienceEntryDisplay } from "./types";
 
 // Shapes and the pure filter live in their own modules so the client filter UI
 // can use them without pulling this server-only file into the browser bundle.
@@ -25,7 +32,7 @@ export type { CandidateDetail, CandidateField, CandidateSummary, CatalogueField 
 export { applyFilters, searchableText } from "./filters";
 
 /** Free-text URLs in an answer become clickable project/repo links. */
-const LINK_KEYS = new Set(["github", "ai_project_links", "portfolio", "links"]);
+const LINK_KEYS = new Set(["github", "ai_project_links", "live_links", "portfolio", "links"]);
 
 /**
  * Question labels are written for the member filling her profile ("מה התחום
@@ -39,7 +46,11 @@ const PORTAL_LABELS: Record<string, string> = {
   genai_known: "ידע ב-GenAI",
   genai_practiced: "התנסות מעשית ב-GenAI (פרויקט)",
   ai_project_links: "פרויקטי AI",
+  live_links: "פרויקטים חיים",
   ai_tools_used: "כלי AI בשימוש בפועל",
+  practical_experience: "התנסות מעשית",
+  work_history: "ניסיון תעסוקתי",
+  practicum_description: "תיאור הפרקטיקום",
   practicum_done: "ביצעה פרקטיקום / פרויקט עם לקוח אמיתי",
   practicum_employer: "המעסיק בפרקטיקום",
   practicum_tech: "טכנולוגיות הפרקטיקום",
@@ -87,12 +98,39 @@ function labelResolverFrom(taxonomies: Partial<Record<TaxonomyKind, TaxonomyOpti
 function toDisplay(
   q: ConfigQuestion,
   raw: unknown,
-  labels: Map<string, string>
-): { values: string[]; kind: CandidateField["kind"] } {
+  labels: Map<string, string>,
+  techLabels: Map<string, string>
+): { values: string[]; kind: CandidateField["kind"]; entries?: ExperienceEntryDisplay[] } {
   if (q.key === LANGUAGE_SKILLS_KEY) {
     return {
       values: parseLangSkills(raw).map((s) => `${s.lang} — ${langLevelLabel(s.level)}`),
       kind: "chips",
+    };
+  }
+  // Experience lists → rich entries: headline + tech chips + free description.
+  if (EXPERIENCE_KEYS.has(q.key)) {
+    const entries: ExperienceEntryDisplay[] = parseExperienceEntries(raw)
+      .filter((e) => e.place)
+      .map((e) => ({
+        headline: [
+          e.place,
+          q.key === WORK_HISTORY_KEY
+            ? e.current
+              ? "מקום נוכחי/אחרון"
+              : ""
+            : experienceKindLabel(e.kind),
+          experienceRangeLabel(e),
+        ]
+          .filter(Boolean)
+          .join(" · "),
+        tech: e.tech.map((t) => techLabels.get(t) ?? t),
+        description: e.description,
+      }));
+    return {
+      // Flattened copy so the free-text search still matches these answers.
+      values: entries.flatMap((e) => [e.headline, ...e.tech, e.description].filter(Boolean)),
+      kind: "experience",
+      entries,
     };
   }
   if (Array.isArray(raw)) {
@@ -127,6 +165,10 @@ function buildCatalogue(
   const out: CatalogueField[] = [];
 
   for (const q of questions) {
+    // Experience lists are rich objects, not chip-filterable values — the
+    // free-text search covers them.
+    if (EXPERIENCE_KEYS.has(q.key)) continue;
+
     if (q.key === LANGUAGE_SKILLS_KEY) {
       const langs = new Set<string>(DEFAULT_LANGUAGES);
       for (const c of candidates) {
@@ -198,6 +240,8 @@ export async function loadCandidates(): Promise<{
   const showSpecialization = visibleKeys.has("specialization");
   const showRegion = visibleKeys.has("region");
   const labelsFor = labelResolverFrom(taxonomies);
+  // Experience entries carry tech taxonomy VALUES — resolve them to labels.
+  const techLabels = new Map((taxonomies.tech ?? []).map((o) => [o.value, o.label]));
 
   const { data: profiles } = await admin
     .from("profiles")
@@ -244,13 +288,13 @@ export async function loadCandidates(): Promise<{
 
     for (const q of questions) {
       if (!mine.has(q.id)) continue;
-      const { values, kind } = toDisplay(q, mine.get(q.id), labelsFor(q));
+      const { values, kind, entries } = toDisplay(q, mine.get(q.id), labelsFor(q), techLabels);
       if (values.length === 0) continue;
       if (kind === "links") {
         for (const url of values) links.push({ label: portalLabel(q), url });
         continue;
       }
-      fields.push({ key: q.key, label: portalLabel(q), values, kind });
+      fields.push({ key: q.key, label: portalLabel(q), values, kind, entries });
     }
 
     const headline = fields

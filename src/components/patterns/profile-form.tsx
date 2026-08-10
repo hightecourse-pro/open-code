@@ -14,6 +14,14 @@ import {
   parseLangSkills,
   type LangSkill,
 } from "@/lib/language-skills";
+import {
+  EXPERIENCE_KEYS,
+  PRACTICAL_EXPERIENCE_KEY,
+  isCompleteExperienceEntry,
+  parseExperienceEntries,
+  type ExperienceEntry,
+} from "@/lib/experience-entries";
+import { ExperienceListEditor } from "@/components/patterns/experience-list-editor";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 
 type Option = { value: string; label: string };
@@ -26,7 +34,15 @@ export interface ProfileFormProps {
   taxonomyOptions?: Partial<Record<TaxonomyKind, Option[]>>;
 }
 
-const LONG_TEXT = new Set(["bio", "ai_project_links", "notes_for_us", "work_description"]);
+const LONG_TEXT = new Set([
+  "bio",
+  "ai_project_links",
+  "github",
+  "live_links",
+  "notes_for_us",
+  "work_description",
+  "practicum_description",
+]);
 const isOtherVal = (v: string) => v === "other";
 
 // Ordered wizard sections. Questions are matched by key; anything unmatched
@@ -45,17 +61,17 @@ const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
   {
     title: "הניסיון המקצועי שלך",
     hint: "ספרי לנו על הניסיון — ככה נדע לאילו משרות לכוון בשבילך.",
-    keys: ["years_experience", "exp_role", "exp_tech", "exp_languages", "currently_working", "current_workplace", "work_description", "specific_job"],
+    keys: ["years_experience", "exp_role", "exp_tech", "exp_languages", "work_history", "practical_experience", "currently_working", "current_workplace", "work_description", "specific_job"],
   },
   {
     title: "כישורים וכלים",
     hint: "מה את יודעת לעשות בפועל — רק מה שבאמת התנסית בו, בלי לחץ 💜",
-    keys: ["dev_tech", "genai_known", "genai_practiced", "ai_tools_used", "ai_project_links", "ai_gaps"],
+    keys: ["dev_tech", "genai_known", "genai_practiced", "ai_tools_used", "github", "ai_project_links", "live_links", "ai_gaps"],
   },
   {
     title: "פרקטיקום והשמה",
     hint: "כמה העדפות שיעזרו לנו להציע לך בדיוק את ההזדמנויות הנכונות.",
-    keys: ["practicum_done", "practicum_employer", "practicum_tech", "practicum_placement", "remote_commute", "paid_placement"],
+    keys: ["practicum_done", "practicum_employer", "practicum_tech", "practicum_description", "practicum_placement", "remote_commute", "paid_placement"],
   },
   {
     title: "עוד משהו?",
@@ -94,7 +110,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   // --- state ---
   const initBools: Record<string, boolean> = {};
   const initSelOther: Record<string, boolean> = {};
-  const initMultiOther: Record<string, boolean> = {};
+  // Multiselects render as chip toggles — the selection is client state,
+  // submitted through hidden inputs (storage stays an array of option values).
+  const initMultiVals: Record<string, string[]> = {};
   for (const q of rest) {
     if (q.field_type === "bool") initBools[q.key] = answers[q.id] === true;
     const vals = opts(q).map((o) => o.value);
@@ -103,12 +121,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       if (typeof cur === "string" && cur && !vals.includes(cur)) initSelOther[q.id] = true;
     } else if (q.field_type === "multiselect" || q.field_type === "tags") {
       const arr = Array.isArray(answers[q.id]) ? (answers[q.id] as string[]) : [];
-      if (arr.some((v) => !vals.includes(v))) initMultiOther[q.id] = true;
+      const known = arr.filter((v) => vals.includes(v) && !isOtherVal(v));
+      // Custom (free-text) values keep the "אחר" chip on with its text intact.
+      initMultiVals[q.id] = arr.some((v) => !vals.includes(v)) ? [...known, "other"] : known;
     }
   }
   const [bools, setBools] = useState(initBools);
   const [selOther, setSelOther] = useState(initSelOther);
-  const [multiOther, setMultiOther] = useState(initMultiOther);
+  const [multiVals, setMultiVals] = useState(initMultiVals);
 
   // Language-skills matrix: saved rows first, then any default language not
   // answered yet (with an empty level = "not stored").
@@ -170,7 +190,13 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   function missing(q: ConfigQuestion, fd: FormData): boolean {
     const key = `q_${q.id}`;
     if (q.key === LANGUAGE_SKILLS_KEY) {
-      return !fd.getAll(`${key}__level`).some((v) => String(v).trim());
+      // עברית ואנגלית are always present and must each carry a rated level.
+      const langs = fd.getAll(`${key}__lang`).map(String);
+      const levels = fd.getAll(`${key}__level`).map(String);
+      return DEFAULT_LANGUAGES.some((lang) => {
+        const i = langs.indexOf(lang);
+        return i === -1 || !LANG_LEVELS.some((l) => l.value === levels[i]);
+      });
     }
     if (q.field_type === "multiselect" || q.field_type === "tags") {
       const vals = fd.getAll(key).map(String);
@@ -186,12 +212,40 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (q.field_type === "bool") return false;
     return !String(fd.get(key) ?? "").trim();
   }
+  /** Entry-level rules for the two JSON-array experience questions. */
+  function experienceError(q: ConfigQuestion, fd: FormData): string | undefined {
+    let entries: ExperienceEntry[] = [];
+    try {
+      entries = parseExperienceEntries(JSON.parse(String(fd.get(`q_${q.id}`) || "[]")));
+    } catch {
+      entries = [];
+    }
+    const requireKind = q.key === PRACTICAL_EXPERIENCE_KEY;
+    if (entries.some((e) => !isCompleteExperienceEntry(e, requireKind))) {
+      return requireKind
+        ? "בכל התנסות שהוספת צריך למלא סוג, מקום, תיאור ותאריכי התחלה וסיום 🙂"
+        : "בכל מקום עבודה שהוספת צריך למלא מקום, תיאור ותאריכי התחלה וסיום 🙂";
+    }
+    if (q.required && entries.length === 0) {
+      return "הוסיפי לפחות מקום עבודה אחד כדי שנוכל להציג את הניסיון שלך 🙂";
+    }
+    return undefined;
+  }
+
   function validateStep(qs: ConfigQuestion[]): boolean {
     const fd = new FormData(formRef.current!);
     const errs: Record<string, string> = {};
     for (const q of qs) {
+      if (EXPERIENCE_KEYS.has(q.key)) {
+        const msg = experienceError(q, fd);
+        if (msg) errs[q.id] = msg;
+        continue;
+      }
       if (q.required && missing(q, fd)) {
-        errs[q.id] = "שדה חובה";
+        errs[q.id] =
+          q.key === LANGUAGE_SKILLS_KEY
+            ? "סמני את רמת השליטה שלך בעברית ובאנגלית 🙂"
+            : "שדה חובה";
         continue;
       }
       const check = FIELD_VALIDATORS[q.key];
@@ -241,6 +295,27 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     const list = opts(q);
     const err = errors[q.id];
 
+    // Experience lists: repeatable JSON-array editors (CV-style entries).
+    if (EXPERIENCE_KEYS.has(q.key)) {
+      const isPractical = q.key === PRACTICAL_EXPERIENCE_KEY;
+      return (
+        <Field key={q.id} label={q.label_he} error={err}>
+          {isPractical && (
+            <p className="t-body-sm text-ink-500 -mt-0.5 mb-1">
+              כאן צריך להופיע כל מה שמופיע בקורות החיים שלך — זה מה שלקוחות פוטנציאליים רואים.
+            </p>
+          )}
+          <ExperienceListEditor
+            name={key}
+            variant={isPractical ? "practical" : "work"}
+            initial={parseExperienceEntries(current)}
+            techOptions={taxonomyOptions.tech ?? []}
+            error={!!err}
+          />
+        </Field>
+      );
+    }
+
     // Language skills: a (language × level) matrix with an "add language" row.
     if (q.key === LANGUAGE_SKILLS_KEY) {
       return (
@@ -261,7 +336,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                       )
                     }
                   >
-                    <option value="">לא רלוונטי</option>
+                    <option value="">בחרי רמה…</option>
                     {LANG_LEVELS.map((l) => (
                       <option key={l.value} value={l.value}>
                         {l.label}
@@ -345,26 +420,44 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
 
     if (q.field_type === "multiselect" || q.field_type === "tags") {
-      const arr = Array.isArray(current) ? (current as string[]) : [];
-      const isOther = multiOther[q.id];
+      // Chip toggles (the portal-search pattern) — friendlier than a checkbox
+      // wall; the selection submits via hidden inputs in the same array format.
+      const selected = multiVals[q.id] ?? [];
+      const isOther = selected.includes("other");
       return (
         <Field key={q.id} label={q.label_he} error={err}>
-          <div className="flex flex-wrap gap-x-4 gap-y-2.5 pt-1">
-            {list.map((o) => (
-              <Checkbox
-                key={o.value}
-                name={key}
-                value={o.value}
-                defaultChecked={isOtherVal(o.value) ? isOther : arr.includes(o.value)}
-                label={o.label}
-                onChange={
-                  isOtherVal(o.value)
-                    ? (e) => setMultiOther((s) => ({ ...s, [q.id]: e.target.checked }))
-                    : undefined
-                }
-              />
-            ))}
+          <div className="flex flex-wrap gap-2 pt-1" role="group" aria-label={q.label_he}>
+            {list.map((o) => {
+              const on = selected.includes(o.value);
+              return (
+                <button
+                  key={o.value}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() =>
+                    setMultiVals((s) => ({
+                      ...s,
+                      [q.id]: on
+                        ? selected.filter((v) => v !== o.value)
+                        : [...selected, o.value],
+                    }))
+                  }
+                  className={cn(
+                    "inline-flex items-center px-3 py-[5px] rounded-full text-xs font-semibold",
+                    "transition-colors duration-150 border cursor-pointer",
+                    on
+                      ? "bg-brand-pink-deep text-white border-brand-pink-deep"
+                      : "bg-ink-0 text-ink-700 border-ink-200 hover:border-brand-purple"
+                  )}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
           </div>
+          {selected.map((v) => (
+            <input key={v} type="hidden" name={key} value={v} />
+          ))}
           {isOther && (
             <Input name={`${key}__other`} placeholder="פירוט…" defaultValue={customText(q)} className="mt-2" />
           )}

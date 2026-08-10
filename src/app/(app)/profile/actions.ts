@@ -4,7 +4,14 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
-import { LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/language-skills";
+import { DEFAULT_LANGUAGES, LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/language-skills";
+import {
+  EXPERIENCE_KEYS,
+  PRACTICAL_EXPERIENCE_KEY,
+  isCompleteExperienceEntry,
+  parseExperienceEntries,
+  type ExperienceEntry,
+} from "@/lib/experience-entries";
 import { repointSharesToNewEmail } from "@/lib/drive-shares";
 import type { Json, QuestionScope } from "@/types/database";
 
@@ -180,9 +187,42 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
           return true;
         });
       value = skills as unknown as Json;
-      empty = skills.length === 0;
-      if (q.required && empty) missing.push(q.label_he);
+      // עברית ואנגלית must each be rated when the question is required.
+      if (q.required && !DEFAULT_LANGUAGES.every((l) => skills.some((s) => s.lang === l))) {
+        missing.push(`${q.label_he} (עברית ואנגלית)`);
+      }
       answered.push({ question_id: q.id, value });
+      continue;
+    }
+
+    // Experience lists (practical_experience / work_history): a JSON array of
+    // entries from the wizard's list editor. Every ADDED entry must be
+    // complete; work_history (required) needs at least one entry.
+    if (EXPERIENCE_KEYS.has(q.key)) {
+      let entries: ExperienceEntry[] = [];
+      try {
+        entries = parseExperienceEntries(JSON.parse(String(formData.get(key) || "[]")));
+      } catch {
+        entries = [];
+      }
+      // Only one work_history entry may be "מקום נוכחי/אחרון".
+      let seenCurrent = false;
+      entries = entries.map((e) => {
+        if (!e.current) return e;
+        if (seenCurrent) return { ...e, current: undefined };
+        seenCurrent = true;
+        return e;
+      });
+      const requireKind = q.key === PRACTICAL_EXPERIENCE_KEY;
+      if (entries.some((e) => !isCompleteExperienceEntry(e, requireKind))) {
+        invalid.push(
+          requireKind
+            ? "בכל התנסות שהוספת צריך למלא סוג, מקום, תיאור ותאריכי התחלה וסיום 🙂"
+            : "בכל מקום עבודה שהוספת צריך למלא מקום, תיאור ותאריכי התחלה וסיום 🙂"
+        );
+      }
+      if (q.required && entries.length === 0) missing.push(q.label_he);
+      answered.push({ question_id: q.id, value: entries as unknown as Json });
       continue;
     }
 

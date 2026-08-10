@@ -63,6 +63,7 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
     icon: Briefcase,
     tone: "purple",
     keys: [
+      "work_history",
       "years_experience",
       "exp_role",
       "currently_working",
@@ -93,7 +94,14 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
     title: "התנסות מעשית",
     icon: FlaskConical,
     tone: "mint",
-    keys: ["practicum_done", "practicum_employer", "practicum_tech", "practicum_placement"],
+    keys: [
+      "practical_experience",
+      "practicum_done",
+      "practicum_employer",
+      "practicum_tech",
+      "practicum_description",
+      "practicum_placement",
+    ],
   },
   {
     title: "זמינות והעדפות",
@@ -369,7 +377,32 @@ function FieldRow({ field, tone }: { field: CandidateField; tone: BadgeProps["va
     <div className="break-inside-avoid">
       <dt className="t-micro mb-2 font-semibold text-ink-700 uppercase">{field.label}</dt>
       <dd>
-        {field.kind === "chips" ? (
+        {field.kind === "experience" ? (
+          <div className="flex flex-col gap-3">
+            {(field.entries ?? []).map((entry, i) => (
+              <div
+                key={`${entry.headline}-${i}`}
+                className="rounded-[14px] border border-ink-100 bg-ink-0/60 p-4 break-inside-avoid"
+              >
+                <div className="text-[15px] font-bold text-ink-1000">{entry.headline}</div>
+                {entry.tech.length > 0 && (
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
+                    {entry.tech.map((t) => (
+                      <Badge key={t} variant="tech">
+                        {t}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+                {entry.description && (
+                  <p className="t-body-sm mt-2.5 max-w-[68ch] whitespace-pre-line text-ink-900">
+                    {entry.description}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : field.kind === "chips" ? (
           <div className="flex flex-wrap gap-2">
             {field.values.map((value) => (
               <Badge key={value} variant={tone}>
