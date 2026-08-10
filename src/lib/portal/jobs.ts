@@ -23,9 +23,9 @@ export interface ClientJob {
   created_at: string;
   candidates: CandidateDetail[];
   /**
-   * The client's own feedback per candidate id (interview mark + note). Only
-   * loadClientJob (the single-job view) fills it, and only for candidates the
-   * client can actually see.
+   * The client's own feedback per candidate id (interview mark + note). Both
+   * loaders fill it, and only for candidates the client can actually see — a
+   * hidden candidate's row must not leak even as a bare id.
    */
   feedback?: Record<string, ClientJobFeedback>;
 }
@@ -42,7 +42,7 @@ export async function loadClientJobs(clientId: string): Promise<ClientJob[]> {
 
   const { data: rows } = await admin
     .from("job_candidates")
-    .select("job_id, profile_id, created_at")
+    .select("job_id, profile_id, created_at, interview_marked, client_note")
     .in("job_id", jobs.map((j) => j.id))
     .order("created_at", { ascending: true });
 
@@ -50,15 +50,27 @@ export async function loadClientJobs(clientId: string): Promise<ClientJob[]> {
   const byId = new Map(candidates.map((c) => [c.id, c]));
 
   const byJob = new Map<string, CandidateDetail[]>();
+  const feedbackByJob = new Map<string, Record<string, ClientJobFeedback>>();
   for (const r of rows ?? []) {
     const c = byId.get(r.profile_id);
-    if (!c) continue; // not listed / opted out → never shown
+    if (!c) continue; // not listed / opted out → never shown, feedback row included
     const arr = byJob.get(r.job_id) ?? [];
     arr.push(c);
     byJob.set(r.job_id, arr);
+
+    const fb = feedbackByJob.get(r.job_id) ?? {};
+    fb[r.profile_id] = {
+      interviewMarked: r.interview_marked === true,
+      clientNote: r.client_note ?? null,
+    };
+    feedbackByJob.set(r.job_id, fb);
   }
 
-  return jobs.map((j) => ({ ...j, candidates: byJob.get(j.id) ?? [] }));
+  return jobs.map((j) => ({
+    ...j,
+    candidates: byJob.get(j.id) ?? [],
+    feedback: feedbackByJob.get(j.id) ?? {},
+  }));
 }
 
 /**

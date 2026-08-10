@@ -30,8 +30,10 @@ export default async function PortalSearchPage() {
           {/* RLM after the dash keeps the count attached to the Hebrew text even
               when the company name ends in Latin characters. */}
           {client.company_name} —{"‏"}{" "}
-          {candidates.length === 1 ? "מועמדת אחת זמינה" : `${candidates.length} מועמדות זמינות`}{" "}
-          לחיפוש. אפשר לסנן לפי פרמטרים, או פשוט לתאר במילים חופשיות את מי שאתם מחפשים.
+          {candidates.length === 1
+            ? "מועמדת אחת מחכה כאן."
+            : `${candidates.length} מועמדות מחכות כאן.`}{" "}
+          סננו לפי פרמטרים, או כתבו במילים שלכם מי חסרה לכם בצוות.
         </p>
       </header>
 

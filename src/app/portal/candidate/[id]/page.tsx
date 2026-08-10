@@ -192,14 +192,14 @@ export default async function CandidateProfilePage({
       </Link>
 
       {cv === "none" && (
-        <Alert variant="info" title="עדיין אין קורות חיים בתיק">
-          המועמדת לא העלתה קובץ קורות חיים. הפרופיל כאן מכיל את כל מה שהיא שיתפה איתנו — ואפשר לפנות
-          אלינו ונשלים את הקובץ מולה.
+        <Alert variant="info" title="עדיין אין כאן קורות חיים">
+          המועמדת עוד לא העלתה קובץ. כל מה שהיא שיתפה נמצא בפרופיל שלפניכם — ואם חשוב לכם הקובץ,
+          כתבו לנו ונשלים אותו מולה.
         </Alert>
       )}
       {cv === "error" && (
         <Alert variant="warn" title="לא הצלחנו לפתוח את הקובץ">
-          משהו השתבש בהורדת קורות החיים. נסו שוב בעוד רגע, ואם זה חוזר — דברו איתנו ונטפל בזה.
+          משהו השתבש בדרך. נסו שוב בעוד רגע, ואם זה חוזר — כתבו לנו ונטפל בזה.
         </Alert>
       )}
 
@@ -290,7 +290,7 @@ export default async function CandidateProfilePage({
 
           {groups.length === 0 && candidate.links.length === 0 && (
             <p className="t-body-sm rounded-[18px] border border-dashed border-ink-200 bg-white p-6 text-center">
-              הפרופיל המלא של {candidate.name} עדיין בהשלמה. קורות החיים שלה זמינים להורדה.
+              הפרופיל של {candidate.name} עוד בהשלמה — בינתיים, קורות החיים שלה כאן להורדה.
             </p>
           )}
         </div>
@@ -299,7 +299,7 @@ export default async function CandidateProfilePage({
           <div className="rounded-[18px] border border-ink-200 bg-white p-5 shadow-sm">
             <h2 className="font-display text-base font-bold text-ink-1000">קורות חיים</h2>
             <p className="t-caption mt-1.5">
-              הקובץ המלא של {candidate.name}, כפי שהיא שיתפה אותו איתנו.
+              הקובץ ש{candidate.name} שיתפה איתנו, מוכן להורדה.
             </p>
             <Button asChild variant="primary" size="md" className="mt-4 w-full">
               <a href={cvHref}>

@@ -58,7 +58,7 @@ export default async function PortalLayout({ children }: { children: React.React
       <footer className="border-t border-ink-200 bg-ink-0">
         <div className="mx-auto max-w-[1200px] px-6 py-6">
           <p className="t-caption">
-            הגישה לפורטל ניתנת על ידי קוד פתוח. המידע המוצג מיועד לשימוש בתהליכי הגיוס שלכם בלבד.
+            הפורטל של קוד פתוח. המידע כאן מיועד לגיוס שלכם בלבד — תודה ששומרים אותו בינינו.
           </p>
         </div>
       </footer>

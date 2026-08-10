@@ -111,7 +111,7 @@ export default async function PortalJobPage({
       <section className="flex flex-col gap-5">
         <div className="flex items-baseline justify-between gap-3 border-t border-ink-200 pt-5">
           <h2 className="font-display text-[17px] font-bold text-ink-1000">
-            המועמדות שריכזנו עבורכם
+            המועמדות שבחרנו למשרה שלכם
           </h2>
           {job.candidates.length > 0 && (
             <span className="t-caption">{candidatesLabel(job.candidates.length)}</span>
@@ -120,7 +120,7 @@ export default async function PortalJobPage({
 
         {job.candidates.length === 0 ? (
           <p className="t-body-sm rounded-xl border border-dashed border-ink-200 bg-white/70 px-4 py-10 text-center text-ink-500">
-            עדיין לא צורפו מועמדות למשרה הזו — נעדכן אתכם ברגע שנאתר מועמדות מתאימות.
+            אנחנו עוד מחפשות מועמדות למשרה הזו. ברגע שנמצא — תראו אותן כאן ותקבלו עדכון.
           </p>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 list-none p-0 m-0">
@@ -130,6 +130,7 @@ export default async function PortalJobPage({
                 <CandidateFeedback
                   jobId={job.id}
                   profileId={candidate.id}
+                  candidateName={candidate.name}
                   initialMarked={job.feedback?.[candidate.id]?.interviewMarked ?? false}
                   initialNote={job.feedback?.[candidate.id]?.clientNote ?? null}
                 />

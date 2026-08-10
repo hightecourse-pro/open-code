@@ -24,8 +24,10 @@ export default async function PortalFavoritesPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המועדפות שלי</h1>
         <p className="t-body-sm text-ink-500">
           {candidates.length === 0
-            ? "המועמדות שתסמנו בחיפוש יישמרו כאן, לחזרה מהירה בכל עת."
-            : `${candidates.length} מועמדות ששמרתם לצפייה חוזרת.`}
+            ? "המקום של המועמדות שסימנתם בכוכב."
+            : candidates.length === 1
+              ? "מועמדת אחת ששמרתם."
+              : `${candidates.length} מועמדות ששמרתם.`}
         </p>
       </header>
 
@@ -35,9 +37,9 @@ export default async function PortalFavoritesPage() {
             <Star size={26} />
           </span>
           <div>
-            <p className="font-display text-lg font-bold text-ink-1000">עדיין לא סימנתם מועדפות</p>
+            <p className="font-display text-lg font-bold text-ink-1000">עדיין אין כאן מועדפות</p>
             <p className="t-body-sm text-ink-500 mt-1 max-w-[46ch] mx-auto">
-              סמנו ⭐ על מועמדת בחיפוש כדי לשמור אותה כאן.
+              ראיתם מועמדת ששווה לזכור? סמנו לה כוכב, והיא תחכה לכם כאן.
             </p>
           </div>
           <Link

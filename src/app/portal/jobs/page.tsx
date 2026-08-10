@@ -10,6 +10,7 @@ import Link from "next/link";
 import { ArrowLeft, Briefcase, MapPin, Users } from "lucide-react";
 import { Badge } from "@/components/ui";
 import { CandidateCard } from "@/components/portal/candidate-card";
+import { CandidateFeedback } from "@/components/portal/candidate-feedback";
 import { loadClientJobs } from "@/lib/portal/jobs";
 import { favoriteIds } from "@/lib/portal/favorites";
 import { requirePortalClient } from "@/app/portal/session";
@@ -44,8 +45,8 @@ export default async function PortalJobsPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המשרות שלי</h1>
         <p className="t-body-sm text-ink-500">
-          {client.company_name} — ריכזנו לכל משרה את המועמדות המתאימות ביותר. אפשר להיכנס לכל
-          משרה לתצוגה ממוקדת, ולסמן בכוכב את מי שבא לכם לחזור אליה.
+          {client.company_name} — אלו המועמדות שבחרנו למשרות שלכם. אפשר לסמן כוכב למי ששווה
+          לזכור, ולהזמין לראיון ישר מכאן.
         </p>
       </header>
 
@@ -55,10 +56,10 @@ export default async function PortalJobsPage() {
             <Briefcase size={22} />
           </span>
           <p className="font-display text-lg font-bold text-ink-1000">
-            עדיין אין משרות פעילות — נעדכן אתכם.
+            עדיין אין כאן משרות.
           </p>
           <p className="t-body-sm text-ink-500 mt-1.5 mx-auto max-w-[46ch]">
-            ברגע שנפתח עבורכם משרה ונאתר לה מועמדות מתאימות, הן יופיעו כאן ותקבלו על כך עדכון.
+            כשנפתח משרה ונמצא לה מועמדות, הכול יופיע כאן — ותקבלו מאיתנו עדכון.
           </p>
         </div>
       ) : (
@@ -94,7 +95,7 @@ export default async function PortalJobsPage() {
                   href={`/portal/job/${job.id}`}
                   className="t-body-sm inline-flex shrink-0 items-center gap-1.5 font-semibold text-brand-purple transition-colors duration-150 hover:text-brand-pink-deep hover:no-underline"
                 >
-                  לצפייה במשרה
+                  לעמוד המשרה
                   <ArrowLeft size={16} />
                 </Link>
               </div>
@@ -102,13 +103,20 @@ export default async function PortalJobsPage() {
               {/* ------------------------------------------- candidate grid */}
               {job.candidates.length === 0 ? (
                 <p className="t-body-sm rounded-xl border border-dashed border-ink-200 bg-white/70 px-4 py-8 text-center text-ink-500">
-                  עדיין לא צורפו מועמדות למשרה הזו — נעדכן אתכם ברגע שיהיו.
+                  אנחנו עוד מחפשות מועמדות למשרה הזו — נעדכן אתכם ברגע שיהיו.
                 </p>
               ) : (
                 <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 list-none p-0 m-0">
                   {job.candidates.map((candidate) => (
-                    <li key={candidate.id}>
+                    <li key={candidate.id} className="flex flex-col">
                       <CandidateCard candidate={candidate} favorited={favs.has(candidate.id)} />
+                      <CandidateFeedback
+                        jobId={job.id}
+                        profileId={candidate.id}
+                        candidateName={candidate.name}
+                        initialMarked={job.feedback?.[candidate.id]?.interviewMarked ?? false}
+                        initialNote={job.feedback?.[candidate.id]?.clientNote ?? null}
+                      />
                     </li>
                   ))}
                 </ul>

@@ -25,7 +25,7 @@ export default function PortalLoginPage() {
           <div className="mt-7">
             <h1 className="t-h3">התחברו לפורטל</h1>
             <p className="t-body-sm mt-1">
-              הזינו את פרטי הגישה שקיבלתם כדי לצפות בפרופילים המתאימים למשרות שלכם.
+              הזינו את הפרטים שקיבלתם מאיתנו — המועמדות שלכם מחכות בפנים.
             </p>
           </div>
 
@@ -65,7 +65,7 @@ export default function PortalLoginPage() {
         </div>
 
         <p className="t-caption mt-5 text-center text-white/45">
-          הגישה לפורטל ניתנת על ידי קוד פתוח. לקבלת פרטי גישה או לאיפוס סיסמה — פנו אלינו.
+          אין לכם פרטי גישה, או שהסיסמה נשכחה? כתבו לנו ונסדר את זה.
         </p>
       </div>
     </main>

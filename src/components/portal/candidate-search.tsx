@@ -110,7 +110,7 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
               </h2>
             </div>
             <p className="t-body-sm text-ink-500 mt-1">
-              בחרו פרמטר וסמנו ערך אחד או יותר. אפשר לשלב כמה פרמטרים יחד.
+              בחרו פרמטר, סמנו ערכים, ושלבו כמה פרמטרים שתרצו.
             </p>
           </div>
 
@@ -190,7 +190,7 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
               <h2 className="font-display font-bold text-[17px] text-ink-1000">חיפוש חופשי</h2>
             </div>
             <p className="t-body-sm text-ink-500 mt-1">
-              כתבו מה אתם מחפשים במשפט אחד, ואנחנו נתרגם את זה לסינון.
+              תארו במשפט אחד את מי שאתם מחפשים — הסינון כבר עלינו.
             </p>
           </div>
 
@@ -203,12 +203,12 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
               name="q"
               defaultValue={smart.status === "ok" ? smart.text : ""}
               rows={3}
-              placeholder="מחפשים בוגרת בוטקאמפ עם React ואנגלית שוטפת"
-              aria-label="תיאור המועמדת שאתן מחפשות"
+              placeholder="למשל: בוגרת בוטקאמפ עם React ואנגלית שוטפת"
+              aria-label="תיאור המועמדת שאתם מחפשים"
             />
             <div className="flex items-center gap-2">
               <Button type="submit" disabled={smartPending}>
-                {smartPending ? "מחפשות…" : "חיפוש חכם"}
+                {smartPending ? "מחפשים…" : "חיפוש חכם"}
               </Button>
               {smartActive && (
                 <Button type="button" variant="ghost" onClick={() => setSmartCleared(true)}>
@@ -223,8 +223,8 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
           {smartActive && (
             <div className="rounded-sm bg-tint-purple p-3">
               <p className="t-body-sm text-ink-700">
-                <span className="font-semibold text-brand-purple">כך הבנו את הבקשה: </span>
-                {smart.interpretation || "לא זוהו פרמטרים מתוך המשפט."}
+                <span className="font-semibold text-brand-purple">ככה הבנו אתכם: </span>
+                {smart.interpretation || "לא הצלחנו לחלץ פרמטרים מהמשפט — נסו לנסח אותו אחרת."}
               </p>
             </div>
           )}
@@ -274,9 +274,9 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
 
       {results.length === 0 ? (
         <Card className="text-center py-10">
-          <p className="font-display font-bold text-ink-900">אין מועמדות שמתאימות לסינון הזה.</p>
+          <p className="font-display font-bold text-ink-900">הסינון הזה לא תפס אף מועמדת.</p>
           <p className="t-body-sm text-ink-500 mt-1">
-            אפשר להסיר כמה פרמטרים, או לנסח את החיפוש החופשי אחרת.
+            נסו להוריד פרמטר אחד או שניים, או לנסח את החיפוש אחרת.
           </p>
         </Card>
       ) : (
