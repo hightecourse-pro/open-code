@@ -141,6 +141,13 @@ export async function submitApplication(
     cvId = latest?.id ?? null;
   }
 
+  // An application is a CV in front of an employer — never let one through
+  // without a document behind it (the form preselects upload when she has
+  // none, but the server is the gate).
+  if (!cvId) {
+    return { error: "אי אפשר להגיש בלי קורות חיים — העלי קובץ מותאם או העלי קודם קו״ח בעמוד קורות החיים 💜" };
+  }
+
   const base = { job_id: jobId, applicant_id: user.id, status: "submitted" as const };
   let { error } = await supabase.from("applications").insert({
     ...base,
