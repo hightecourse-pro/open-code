@@ -144,3 +144,16 @@ alter table public.applications
 -- ------------------------------- 11) סטטוס "התקדמנו בינתיים" למועמדות
 -- כששולחים מועמדות ללקוח, שאר המגישות מסומנות בעדינות (בלי מייל).
 alter type public.application_status add value if not exists 'waitlisted';
+
+-- ------------------------- 12) ללקוח מגיע רק מה שהוגש לו במפורש
+-- צירוף מועמדת למשרה הוא שלב הכנה פנימי; היא מופיעה בפורטל הלקוח רק אחרי
+-- "הגשה ללקוח" (sent_at נחתם בשליחה). אין מצב שמשהו אצל הלקוח ולא באדמין.
+alter table public.job_candidates
+  add column if not exists sent_at timestamptz;
+
+-- משרות שכבר נשלחו דרך הזרימה (לפני העמודה) — נחשבות שנשלחו.
+update public.job_candidates jc
+set sent_at = now()
+where jc.sent_at is null
+  and exists (select 1 from public.jobs j
+              where j.id = jc.job_id and j.pipeline_status in ('candidates_sent','interviews','hired'));

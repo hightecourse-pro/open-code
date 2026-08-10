@@ -1038,7 +1038,8 @@ export async function sendJobCandidatesToClient(
   // Resolve names through the portal's single door, never from profiles
   // directly — this drops any curated candidate the client can't actually see,
   // so the email and the portal job page always name exactly the same people.
-  const clientJob = await loadClientJob(job.client_id, jobId);
+  // includeUnsent: this IS the send — we preview what's about to go out.
+  const clientJob = await loadClientJob(job.client_id, jobId, { includeUnsent: true });
   const sentCandidates = clientJob?.candidates ?? [];
   const names = sentCandidates.map((c) => c.name).filter(Boolean);
   if (names.length === 0) {
@@ -1108,6 +1109,18 @@ export async function sendJobCandidatesToClient(
   // Everything below is best-effort per candidate — the client email is out.
   const now = new Date().toISOString();
   const candidateIds = sentCandidates.map((c) => c.id);
+
+  // Stamp the send: only from this moment do these candidates exist for the
+  // client (the portal filters on sent_at). First send time is preserved.
+  if (candidateIds.length) {
+    const { error: stampError } = await admin
+      .from("job_candidates")
+      .update({ sent_at: now })
+      .eq("job_id", jobId)
+      .in("profile_id", candidateIds)
+      .is("sent_at", null);
+    if (stampError) console.error("[job candidates] sent_at stamp failed:", stampError);
+  }
   const { data: apps } = candidateIds.length
     ? await admin
         .from("applications")

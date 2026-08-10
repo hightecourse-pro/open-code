@@ -4,6 +4,10 @@
 // applies here: only listed, active, completed members with employer-visible
 // fields — a member who opted out of the portal never appears, even if an
 // admin added her to a job.
+//
+// SENT gate: curation is internal staging. A candidate reaches the client ONLY
+// after the admin's explicit "הגשה ללקוח" (job_candidates.sent_at is stamped).
+// Nothing may appear at the client that didn't pass through the admin flow.
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadCandidates } from "./candidates";
@@ -44,6 +48,7 @@ export async function loadClientJobs(clientId: string): Promise<ClientJob[]> {
     .from("job_candidates")
     .select("job_id, profile_id, created_at, interview_marked, client_note")
     .in("job_id", jobs.map((j) => j.id))
+    .not("sent_at", "is", null)
     .order("created_at", { ascending: true });
 
   const { candidates } = await loadCandidates();
@@ -74,9 +79,9 @@ export async function loadClientJobs(clientId: string): Promise<ClientJob[]> {
 }
 
 /**
- * Whether we ever sent this candidate to this client — i.e. a job_candidates
- * row exists on one of the client's jobs. This is the privacy gate for clients
- * without free search: any other candidate must look like she doesn't exist.
+ * Whether we ever SENT this candidate to this client — a job_candidates row on
+ * one of the client's jobs with sent_at stamped. This is the privacy gate for
+ * clients without free search: any other candidate must look nonexistent.
  */
 export async function candidateSentToClient(clientId: string, profileId: string): Promise<boolean> {
   const admin = createAdminClient();
@@ -88,13 +93,22 @@ export async function candidateSentToClient(clientId: string, profileId: string)
     .select("id")
     .eq("profile_id", profileId)
     .in("job_id", jobs.map((j) => j.id))
+    .not("sent_at", "is", null)
     .limit(1)
     .maybeSingle();
   return !!row;
 }
 
-/** One job, only if it belongs to this client. null otherwise (404 upstream). */
-export async function loadClientJob(clientId: string, jobId: string): Promise<ClientJob | null> {
+/**
+ * One job, only if it belongs to this client. null otherwise (404 upstream).
+ * includeUnsent is for the ADMIN send flow only — it previews the not-yet-sent
+ * curated list through the same privacy gate. Portal pages never pass it.
+ */
+export async function loadClientJob(
+  clientId: string,
+  jobId: string,
+  opts?: { includeUnsent?: boolean }
+): Promise<ClientJob | null> {
   const admin = createAdminClient();
   const { data: job } = await admin
     .from("jobs")
@@ -103,11 +117,13 @@ export async function loadClientJob(clientId: string, jobId: string): Promise<Cl
     .maybeSingle();
   if (!job || job.client_id !== clientId) return null;
 
-  const { data: rows } = await admin
+  let rowsQuery = admin
     .from("job_candidates")
     .select("profile_id, created_at, interview_marked, client_note")
     .eq("job_id", jobId)
     .order("created_at", { ascending: true });
+  if (!opts?.includeUnsent) rowsQuery = rowsQuery.not("sent_at", "is", null);
+  const { data: rows } = await rowsQuery;
 
   const { candidates } = await loadCandidates();
   const byId = new Map(candidates.map((c) => [c.id, c]));

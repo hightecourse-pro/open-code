@@ -92,7 +92,7 @@ export default async function AdminJobPage({
         .order("submitted_at", { ascending: false }),
       admin
         .from("job_candidates")
-        .select("profile_id, created_at, interview_marked, client_note")
+        .select("profile_id, created_at, interview_marked, client_note, sent_at")
         .eq("job_id", id)
         .order("created_at", { ascending: false }),
       admin
@@ -149,13 +149,19 @@ export default async function AdminJobPage({
       ).data
     : null;
 
-  // The exact set the client actually sees in the portal (privacy-gated). A
-  // curated candidate outside it — opted out, paused, no longer a listed junior
-  // — is silently hidden from the client, so flag it for the admin instead of
-  // letting the counts quietly disagree.
+  // Who PASSES the privacy gate (includeUnsent — this is the admin preview).
+  // A curated candidate outside it — opted out, paused, no longer a listed
+  // junior — will be hidden from the client, so flag it here. Separately,
+  // sent_at tells whether she was actually submitted yet: the client sees only
+  // gate-passing AND sent candidates.
   const visibleToClient = job.client_id
-    ? new Set((await loadClientJob(job.client_id, id))?.candidates.map((c) => c.id) ?? [])
+    ? new Set(
+        (await loadClientJob(job.client_id, id, { includeUnsent: true }))?.candidates.map(
+          (c) => c.id
+        ) ?? []
+      )
     : null;
+  const sentAtOf = new Map((curated ?? []).map((c) => [c.profile_id, c.sent_at ?? null]));
 
   // Names for applicants + curated candidates — they may not all be in the
   // active-junior list above (e.g. paused members).
@@ -478,9 +484,17 @@ export default async function AdminJobPage({
                   {c.interview_marked === true && (
                     <Badge variant="warm">הלקוח מסמן לראיון ⭐</Badge>
                   )}
-                  {hidden && (
+                  {hidden ? (
                     <Badge variant="warm" title="לא עומדת בתנאי התצוגה בפורטל (למשל ביקשה לא להופיע, או אינה פעילה) — הלקוח לא יראה אותה ולא תישלח במייל.">
                       לא מוצגת ללקוח
+                    </Badge>
+                  ) : sentAtOf.get(c.profile_id) ? (
+                    <Badge variant="mint" title="נשלחה ללקוח — מופיעה אצלו בפורטל.">
+                      נשלחה ללקוח ✓
+                    </Badge>
+                  ) : (
+                    <Badge variant="tech" title="נבחרה למשרה אך טרם הוגשה — הלקוח יראה אותה רק אחרי 'שליחה ללקוח'.">
+                      טרם נשלחה
                     </Badge>
                   )}
                   <form action={removeJobCandidate.bind(null, job.id, c.profile_id)}>

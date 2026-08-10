@@ -201,6 +201,7 @@ export interface Database {
           /** Client asked to interview this candidate. */
           interview_marked: boolean;
           client_note: string | null;
+          sent_at: string | null;
           created_at: string;
           created_by: string | null;
         };
@@ -210,6 +211,7 @@ export interface Database {
           profile_id: string;
           interview_marked?: boolean;
           client_note?: string | null;
+          sent_at?: string | null;
           created_at?: string;
           created_by?: string | null;
         };
