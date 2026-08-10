@@ -254,6 +254,27 @@ export function driveEmailRequestEmail(name?: string): BuiltEmail {
   };
 }
 
+/** Tell the team a portal client just marked a candidate for an interview. */
+export function clientInterviewEmail(
+  companyName: string,
+  candidateName: string,
+  jobTitle: string,
+  adminUrl: string
+): BuiltEmail {
+  return {
+    subject: `🎯 ${companyName} מסמנת לראיון · ${jobTitle}`,
+    html: renderEmail({
+      heading: "יש התעניינות מלקוח 🎯",
+      lines: [
+        `<b>${escapeHtml(companyName)}</b> סימנה בפורטל שהיא רוצה לראיין את <b>${escapeHtml(candidateName)}</b> למשרת <b>${escapeHtml(jobTitle)}</b>.`,
+        "שווה לעדכן את המועמדת ולקבוע סטטוס ראיון במרכז הסינון.",
+      ],
+      ctaText: "למרכז הסינון",
+      ctaUrl: adminUrl,
+    }),
+  };
+}
+
 /** Member-supplied text goes into email HTML — neutralize markup first. */
 function escapeHtml(text: string): string {
   return text

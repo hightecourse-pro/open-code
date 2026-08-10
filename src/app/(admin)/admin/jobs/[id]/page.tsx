@@ -302,13 +302,21 @@ export default async function AdminJobPage({
   const pipelinePill = PIPELINE[job.pipeline_status] ?? PIPELINE.draft;
 
   // ------------------------------------------------------------------- tabs
+  // Two different lists on purpose: "מועמדות" counts APPLICATIONS, "לקוח"
+  // counts what the client actually sees (curated) — the labels say so.
   const tabs: JobTabDef[] = [
     { key: "details", label: "פרטי המשרה" },
     ...(job.source === "ours" ? [{ key: "publish", label: "פרסום" }] : []),
     { key: "questions", label: "שאלות", count: questionItems.length },
     { key: "review", label: "מועמדות", count: appList.length },
-    { key: "client", label: "לקוח" },
+    { key: "client", label: "לקוח", count: curatedIds.length },
   ];
+
+  // Candidates the client flagged for an interview — front-page news.
+  const interviewMarkedNames = (curated ?? [])
+    .filter((c) => c.interview_marked === true)
+    .map((c) => profileOf.get(c.profile_id)?.full_name)
+    .filter((n): n is string => !!n);
   // Default: straight into the review center when there's anything to review.
   const fallbackTab = appList.length > 0 ? "review" : "details";
   const initialTab = tabs.some((t) => t.key === tab) ? tab! : fallbackTab;
@@ -450,7 +458,8 @@ export default async function AdminJobPage({
           <UserCheck size={16} className="text-brand-purple" /> המועמדות שנבחרו למשרה ({curated?.length ?? 0})
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          אלו המועמדות שהלקוח יראה בפורטל עבור המשרה הזו.
+          אלו המועמדות שהלקוח רואה בפורטל — הרשימה הזו נבחרת על ידך (מהמגישות או
+          ידנית), והיא נפרדת מרשימת ההגשות בטאב &quot;מועמדות&quot;.
         </p>
         {curated && curated.length > 0 ? (
           <div className="flex flex-col">
@@ -545,6 +554,13 @@ export default async function AdminJobPage({
           </div>
         </div>
       </div>
+
+      {interviewMarkedNames.length > 0 && (
+        <Alert variant="success" title="🎯 הלקוח מסמן לראיון">
+          {interviewMarkedNames.join(", ")} — עדכני את המועמדת וקבעי סטטוס ראיון בטאב
+          המועמדות.
+        </Alert>
+      )}
 
       <JobTabs
         tabs={tabs}
