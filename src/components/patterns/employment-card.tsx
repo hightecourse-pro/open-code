@@ -1,39 +1,30 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Briefcase, HeartHandshake } from "lucide-react";
-import { Alert, Button, Field, Input, Switch, Textarea } from "@/components/ui";
-import {
-  requestEmploymentMentor,
-  updateEmployment,
-  type EmploymentMentorState,
-  type EmploymentState,
-} from "@/app/(app)/profile/actions";
+import Link from "next/link";
+import { Briefcase, HeartHandshake, MessageCircle } from "lucide-react";
+import { Alert, Button, Field, Input, Switch } from "@/components/ui";
+import { updateEmployment, type EmploymentState } from "@/app/(app)/profile/actions";
 
 /**
- * "עדכון תעסוקה" — she tells us she found a job (workplace optional), and once
- * she has one we offer mentor accompaniment for the first months. hired_via_us
- * is pipeline-owned — here it only earns her a celebratory gold badge.
+ * "עדכון תעסוקה" — she tells us she found a job (workplace optional, shown
+ * only to herself and the team). hired_via_us is pipeline-owned — here it only
+ * earns her a celebratory gold badge. Mentor accompaniment is the admin's
+ * call: when a mentor was assigned, the card shows her with a link to chat.
  */
 export function EmploymentCard({
   foundJob,
   workplace,
   hiredViaUs,
-  hasOpenEmploymentRequest,
+  mentorName,
 }: {
   foundJob: boolean;
   workplace: string | null;
   hiredViaUs: boolean;
-  hasOpenEmploymentRequest: boolean;
+  mentorName: string | null;
 }) {
   const [on, setOn] = useState(foundJob);
   const [state, save, saving] = useActionState<EmploymentState, FormData>(updateEmployment, {});
-  const [mentorState, requestMentor, requesting] = useActionState<EmploymentMentorState, FormData>(
-    requestEmploymentMentor,
-    {}
-  );
-
-  const requestReceived = hasOpenEmploymentRequest || !!mentorState.ok;
 
   return (
     <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm flex flex-col gap-3">
@@ -77,48 +68,23 @@ export function EmploymentCard({
         </Button>
       </form>
 
-      {on && (
-        <div className="border-t border-ink-100 pt-4 mt-1 flex flex-col gap-2.5">
+      {mentorName && (
+        <div className="border-t border-ink-100 pt-4 mt-1 flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <HeartHandshake size={17} className="text-brand-pink-deep" />
             <h3 className="font-display text-[15.5px] font-bold text-ink-1000">
-              מתחילה עבודה חדשה? מגיע לך ליווי 💜
+              המנטורית שלך לליווי: {mentorName} 👑
             </h3>
           </div>
           <p className="t-body-sm text-ink-700">
-            מנטורית מנוסה תלווה אותך בחודשים הראשונים בתפקיד — שתהיה לך כתובת לכל שאלה.
+            היא מלווה אותך בחודשים הראשונים בתפקיד — שתהיה לך כתובת לכל שאלה 💜
           </p>
-
-          {requestReceived ? (
-            <Alert variant="success">
-              {mentorState.ok && !mentorState.already
-                ? "הבקשה נשלחה 💜 נצוות לך מנטורית ונעדכן אותך במייל."
-                : "כבר קיבלנו את הבקשה שלך — מטפלות בה 💜"}
-            </Alert>
-          ) : (
-            <>
-              {mentorState.error && <Alert variant="danger">{mentorState.error}</Alert>}
-              <form action={requestMentor} className="flex flex-col gap-3">
-                <Field label="מה היית רוצה מהליווי? (בקשות מיוחדות)" htmlFor="mentor_note">
-                  <Textarea
-                    id="mentor_note"
-                    name="note"
-                    rows={3}
-                    placeholder="לא חובה — אפשר גם לשלוח כמו שזה"
-                  />
-                </Field>
-                <Button
-                  type="submit"
-                  variant="secondary"
-                  size="sm"
-                  disabled={requesting}
-                  className="w-fit"
-                >
-                  {requesting ? "שולחות…" : "אשמח לליווי 💜"}
-                </Button>
-              </form>
-            </>
-          )}
+          <Link
+            href="/chat"
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple hover:underline w-fit"
+          >
+            <MessageCircle size={14} /> לצ&apos;אט עם המנטורית
+          </Link>
         </div>
       )}
     </div>

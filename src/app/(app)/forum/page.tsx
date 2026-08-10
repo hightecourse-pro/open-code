@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { Composer } from "@/components/patterns/composer";
 import { PostCard, type FeedPost } from "@/components/patterns/post-card";
@@ -54,14 +55,31 @@ export default async function ForumPage() {
     targetedJobs = tJobs ?? [];
   }
 
-  // Members who recently started a job — the whole community celebrates.
-  const { data: recentlyHired } = await supabase
-    .from("profiles")
-    .select("full_name, workplace")
-    .eq("found_job", true)
-    .gte("hired_at", hiredCelebrationSince())
-    .order("hired_at", { ascending: false })
-    .limit(6);
+  // Women who recently started a job — the whole community celebrates. Two
+  // sources: members (profiles) and off-community placements (manual_hires,
+  // admin-only RLS → service role; banner names are public by design).
+  // Names only — workplace is never shown to other members.
+  const hiredSince = hiredCelebrationSince();
+  const [{ data: hiredMembers }, { data: manualHires }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, hired_at")
+      .eq("found_job", true)
+      .gte("hired_at", hiredSince)
+      .order("hired_at", { ascending: false })
+      .limit(6),
+    createAdminClient()
+      .from("manual_hires")
+      .select("full_name, hired_at")
+      .gte("hired_at", hiredSince)
+      .order("hired_at", { ascending: false })
+      .limit(6),
+  ]);
+  const recentlyHired = [...(hiredMembers ?? []), ...(manualHires ?? [])]
+    .filter((h) => !!h.hired_at)
+    .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
+    .slice(0, 6)
+    .map((h) => ({ full_name: h.full_name }));
 
   const { data: posts } = await supabase
     .from("posts")
@@ -147,7 +165,7 @@ export default async function ForumPage() {
 
       <TargetedJobBanner jobs={targetedJobs} />
 
-      <HiredBanner members={recentlyHired ?? []} />
+      <HiredBanner members={recentlyHired} />
 
       {canWrite ? (
         <Composer kind="forum" />

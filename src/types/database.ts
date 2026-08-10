@@ -262,6 +262,25 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["job_questions"]["Insert"]>;
         Relationships: [];
       };
+      /** Women placed via Open Code before ever joining — banner-only names. */
+      manual_hires: {
+        Row: {
+          id: string;
+          full_name: string;
+          hired_at: string;
+          created_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          full_name: string;
+          hired_at?: string;
+          created_at?: string;
+          created_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["manual_hires"]["Insert"]>;
+        Relationships: [];
+      };
       /** Candidates a portal client marked as favorites. */
       portal_favorites: {
         Row: { client_id: string; profile_id: string; created_at: string };

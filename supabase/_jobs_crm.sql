@@ -157,3 +157,18 @@ set sent_at = now()
 where jc.sent_at is null
   and exists (select 1 from public.jobs j
               where j.id = jc.job_id and j.pipeline_status in ('candidates_sent','interviews','hired'));
+
+-- --------------------- 13) מגויסות שלא הצטרפו לקהילה (לבאנר מזל-טוב)
+-- בנות שהושמו דרך קוד פתוח לפני שנרשמו — מופיעות בבאנר לפי שם בלבד.
+create table if not exists public.manual_hires (
+  id         uuid primary key default gen_random_uuid(),
+  full_name  text not null,
+  hired_at   timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  created_by uuid references public.profiles(id) on delete set null
+);
+
+alter table public.manual_hires enable row level security;
+drop policy if exists "manual_hires_admin" on public.manual_hires;
+create policy "manual_hires_admin" on public.manual_hires
+  for all to authenticated using (public.is_admin()) with check (public.is_admin());

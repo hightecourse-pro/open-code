@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Download, FileText, Mail, StickyNote } from "lucide-react";
+import { ArrowRight, Briefcase, Download, FileText, Mail, StickyNote } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
@@ -9,6 +9,10 @@ import { Avatar, Badge } from "@/components/ui";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
+import {
+  EmploymentMentorAssign,
+  MemberEmploymentForm,
+} from "@/components/patterns/member-employment-admin";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import { LANGUAGE_SKILLS_KEY, langLevelLabel, parseLangSkills } from "@/lib/language-skills";
 import type { ConfigQuestion } from "@/types/database";
@@ -38,20 +42,62 @@ export default async function AdminMemberProfilePage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: profile }, { data: questions }, { data: answers }, { data: crm }, taxonomyOptions] =
-    await Promise.all([
-      supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
-      supabase
-        .from("config_questions")
-        .select("*")
-        .order("sort_order", { ascending: true }),
-      supabase.from("profile_answers").select("question_id, value").eq("profile_id", id),
-      // VIP + notes live in the admin-only member_crm table (null pre-migration).
-      supabase.from("member_crm").select("*").eq("profile_id", id).maybeSingle(),
-      getTaxonomyOptions(),
-    ]);
+  const [
+    { data: profile },
+    { data: questions },
+    { data: answers },
+    { data: crm },
+    { data: mentors },
+    { data: employmentReq },
+    taxonomyOptions,
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", id).maybeSingle(),
+    supabase
+      .from("config_questions")
+      .select("*")
+      .order("sort_order", { ascending: true }),
+    supabase.from("profile_answers").select("question_id, value").eq("profile_id", id),
+    // VIP + notes live in the admin-only member_crm table (null pre-migration).
+    supabase.from("member_crm").select("*").eq("profile_id", id).maybeSingle(),
+    // Active mentors for the employment-accompaniment assignment control.
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .eq("role", "mentor")
+      .eq("status", "active")
+      .order("full_name", { ascending: true }),
+    // Her latest employment accompaniment assignment (if any).
+    supabase
+      .from("mentor_requests")
+      .select("assigned_mentor_id")
+      .eq("profile_id", id)
+      .eq("kind", "employment")
+      .not("assigned_mentor_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getTaxonomyOptions(),
+  ]);
 
   if (!profile) notFound();
+
+  // Resolve the assigned mentor's name (she may no longer be in the active list).
+  let assignedMentorName: string | null = null;
+  if (employmentReq?.assigned_mentor_id) {
+    assignedMentorName =
+      (mentors ?? []).find((m) => m.id === employmentReq.assigned_mentor_id)?.full_name ?? null;
+    if (!assignedMentorName) {
+      const { data: assigned } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", employmentReq.assigned_mentor_id)
+        .maybeSingle();
+      assignedMentorName = assigned?.full_name ?? null;
+    }
+  }
+  const hiredAtDate = (profile.hired_at ? new Date(profile.hired_at) : new Date())
+    .toISOString()
+    .slice(0, 10);
   const isVip = crm?.is_vip ?? profile.is_vip ?? false;
   const vipReason = crm?.vip_reason ?? null;
   const internalNotes = crm?.internal_notes ?? profile.internal_notes ?? null;
@@ -174,6 +220,30 @@ export default async function AdminMemberProfilePage({
           </div>
         </div>
         <MemberActions profileId={profile.id} status={profile.status} />
+      </div>
+
+      {/* Employment — admin-editable, incl. retroactive hired-via-us marking */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
+        <h3 className="font-display text-base font-bold flex items-center gap-1.5">
+          <Briefcase size={16} className="text-brand-purple" /> תעסוקה
+        </h3>
+        <MemberEmploymentForm
+          profileId={profile.id}
+          foundJob={profile.found_job}
+          hiredViaUs={profile.hired_via_us}
+          workplace={profile.workplace}
+          hiredAtDate={hiredAtDate}
+        />
+        {profile.found_job && (
+          <div className="border-t border-ink-100 pt-4 flex flex-col gap-2">
+            <h4 className="font-display text-[14.5px] font-bold text-ink-1000">ליווי תעסוקתי</h4>
+            <EmploymentMentorAssign
+              profileId={profile.id}
+              mentors={mentors ?? []}
+              assignedMentorName={assignedMentorName}
+            />
+          </div>
+        )}
       </div>
 
       {/* Internal notes / CRM */}

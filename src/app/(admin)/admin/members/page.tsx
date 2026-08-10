@@ -7,6 +7,7 @@ import {
   type MemberRow,
   type FilterDef,
 } from "@/components/patterns/members-table";
+import { ManualHiresCard, type ManualHireRow } from "@/components/patterns/manual-hires-card";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import {
   LANGUAGE_SKILLS_KEY,
@@ -44,19 +45,30 @@ export default async function AdminMembersPage() {
   await requireRole("admin");
   const supabase = await createClient();
 
-  const [{ data: members }, { data: questions }, { data: crm }, answers, taxonomyOptions] =
-    await Promise.all([
-      supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-      supabase
-        .from("config_questions")
-        .select("*")
-        .eq("active", true)
-        .order("sort_order", { ascending: true }),
-      // VIP + notes live in the admin-only member_crm table (empty pre-migration).
-      supabase.from("member_crm").select("profile_id, is_vip, vip_reason, internal_notes"),
-      fetchAllAnswers(),
-      getTaxonomyOptions(),
-    ]);
+  const [
+    { data: members },
+    { data: questions },
+    { data: crm },
+    { data: manualHires },
+    answers,
+    taxonomyOptions,
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").order("created_at", { ascending: false }),
+    supabase
+      .from("config_questions")
+      .select("*")
+      .eq("active", true)
+      .order("sort_order", { ascending: true }),
+    // VIP + notes live in the admin-only member_crm table (empty pre-migration).
+    supabase.from("member_crm").select("profile_id, is_vip, vip_reason, internal_notes"),
+    // Off-community placements for the forum banner (admin-only table).
+    supabase
+      .from("manual_hires")
+      .select("id, full_name, hired_at")
+      .order("hired_at", { ascending: false }),
+    fetchAllAnswers(),
+    getTaxonomyOptions(),
+  ]);
 
   const crmOf = new Map((crm ?? []).map((c) => [c.profile_id, c]));
 
@@ -189,6 +201,11 @@ export default async function AdminMembersPage() {
       </div>
 
       <MembersTable members={rows} filterDefs={filterDefs} answersByMember={answersByMember} />
+
+      <ManualHiresCard
+        hires={(manualHires ?? []) as ManualHireRow[]}
+        defaultDate={new Date().toISOString().slice(0, 10)}
+      />
     </div>
   );
 }

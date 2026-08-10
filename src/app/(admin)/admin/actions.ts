@@ -140,6 +140,155 @@ export async function assignMentorToRequest(requestId: string, formData: FormDat
   revalidatePath("/mentor");
 }
 
+/**
+ * Employment accompaniment is the admin's call — assign a mentor to accompany
+ * a member in her first months on the job. Upsert-style: an existing
+ * employment mentor_request row (latest) is updated, otherwise one is
+ * inserted already handled. The member is told by email (best-effort).
+ */
+export async function assignEmploymentMentor(
+  profileId: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+  const mentorId = String(formData.get("mentor_id") ?? "");
+  if (!mentorId) return { error: "בחרי מנטורית מהרשימה." };
+  // Service role: RLS only lets a member insert her OWN request — here the
+  // ADMIN creates the assignment on the member's behalf (role verified above).
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  const { data: existing } = await supabase
+    .from("mentor_requests")
+    .select("id")
+    .eq("profile_id", profileId)
+    .eq("kind", "employment")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = existing
+    ? await supabase
+        .from("mentor_requests")
+        .update({ assigned_mentor_id: mentorId, status: "handled", handled_at: now })
+        .eq("id", existing.id)
+    : await supabase.from("mentor_requests").insert({
+        profile_id: profileId,
+        kind: "employment",
+        reason: "first_months",
+        status: "handled",
+        assigned_mentor_id: mentorId,
+        handled_at: now,
+      });
+  if (error) return { error: "השיוך נכשל. רענני את הדף ונסי שוב." };
+
+  // Best-effort: a failed email never rolls back the assignment.
+  try {
+    const [{ data: member }, { data: mentor }] = await Promise.all([
+      supabase.from("profiles").select("first_name, full_name").eq("id", profileId).maybeSingle(),
+      supabase.from("profiles").select("full_name").eq("id", mentorId).maybeSingle(),
+    ]);
+    const admin = createAdminClient();
+    const { data: authUser } = await admin.auth.admin.getUserById(profileId);
+    const email = authUser?.user?.email;
+    if (email) {
+      const built = assignedMentorEmail(
+        member?.first_name || member?.full_name || undefined,
+        mentor?.full_name || "מנטורית מהקהילה"
+      );
+      const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+      if (!sent.ok) console.error("[assign employment mentor email] send failed:", sent.error);
+    }
+  } catch (e) {
+    console.error("[assign employment mentor email] failed:", e);
+  }
+
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/profile");
+  revalidatePath("/admin/mentor-requests");
+  return { ok: true };
+}
+
+/**
+ * Admin-set employment status on a member's profile (retroactive marking).
+ * hired_at is only ever set while found_job is on; turning found_job off
+ * clears hired_via_us, hired_at and workplace together.
+ */
+export async function setMemberEmployment(
+  profileId: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+
+  const foundJob = formData.get("found_job") === "on";
+  const hiredViaUs = formData.get("hired_via_us") === "on";
+  const workplace = String(formData.get("workplace") ?? "").trim().slice(0, 200);
+  const dateRaw = String(formData.get("hired_at") ?? "").trim();
+
+  let update: {
+    found_job: boolean;
+    hired_via_us: boolean;
+    workplace: string | null;
+    hired_at: string | null;
+  };
+  if (foundJob) {
+    const parsed = dateRaw ? new Date(dateRaw) : new Date();
+    update = {
+      found_job: true,
+      hired_via_us: hiredViaUs,
+      workplace: workplace || null,
+      hired_at: (Number.isNaN(parsed.getTime()) ? new Date() : parsed).toISOString(),
+    };
+  } else {
+    update = { found_job: false, hired_via_us: false, workplace: null, hired_at: null };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("profiles").update(update).eq("id", profileId);
+  if (error) return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
+
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/forum"); // the hired-celebration banner lives there
+  return { ok: true };
+}
+
+// -------------------------------------------------- manual hires (banner-only)
+
+/**
+ * Add a woman placed via Open Code without ever joining the community — her
+ * name (only) joins the forum's hired-celebration banner for 60 days.
+ */
+export async function addManualHire(_prev: FormState, formData: FormData): Promise<FormState> {
+  const me = await requireRole("admin");
+
+  const full_name = String(formData.get("full_name") ?? "").trim().slice(0, 120);
+  if (!full_name) return { error: "כתבי את השם המלא." };
+  const dateRaw = String(formData.get("hired_at") ?? "").trim();
+  const parsed = dateRaw ? new Date(dateRaw) : new Date();
+  const hired_at = (Number.isNaN(parsed.getTime()) ? new Date() : parsed).toISOString();
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("manual_hires")
+    .insert({ full_name, hired_at, created_by: me.id });
+  if (error) return { error: "לא הצלחנו להוסיף כרגע. נסי שוב." };
+
+  revalidatePath("/admin/members");
+  revalidatePath("/forum");
+  return { ok: true };
+}
+
+/** Remove an off-community hire from the banner list. */
+export async function deleteManualHire(id: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("manual_hires").delete().eq("id", id);
+  revalidatePath("/admin/members");
+  revalidatePath("/forum");
+}
+
 export type CrmState = { error?: string };
 
 /**

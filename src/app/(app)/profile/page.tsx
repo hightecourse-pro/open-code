@@ -43,19 +43,33 @@ export default async function ProfilePage() {
       .select("drive_email, drive_email_requested_at")
       .eq("profile_id", profile.id)
       .maybeSingle(),
-    // An open accompaniment request → the card shows "we're on it" instead of the form.
+    // Her latest employment accompaniment assignment (admin-assigned) — the
+    // card shows the mentor's name with a link to chat.
     supabase
       .from("mentor_requests")
-      .select("id")
+      .select("assigned_mentor_id")
       .eq("profile_id", profile.id)
-      .eq("status", "open")
       .eq("kind", "employment")
+      .not("assigned_mentor_id", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle(),
     getTaxonomyOptions(),
   ]);
 
   const answerMap: Record<string, unknown> = {};
   for (const a of answers ?? []) answerMap[a.question_id] = a.value;
+
+  // Resolve the assigned mentor's name for the employment card.
+  let employmentMentorName: string | null = null;
+  if (employmentReq?.assigned_mentor_id) {
+    const { data: mentor } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", employmentReq.assigned_mentor_id)
+      .maybeSingle();
+    employmentMentorName = mentor?.full_name ?? null;
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -96,7 +110,7 @@ export default async function ProfilePage() {
         foundJob={profile.found_job}
         workplace={profile.workplace}
         hiredViaUs={profile.hired_via_us}
-        hasOpenEmploymentRequest={!!employmentReq}
+        mentorName={employmentMentorName}
       />
 
       <PortalVisibility listed={profile.portal_listed !== false} />

@@ -1,19 +1,18 @@
 export interface HiredMember {
   full_name: string;
-  workplace: string | null;
 }
 
 /**
- * Festive congratulations for members who recently started a new job
- * (found_job + hired_at within the celebration window). Server component —
- * the caller queries and passes the members; renders nothing when empty.
+ * Festive congratulations for women who recently started a new job
+ * (members with found_job + hired_at, and off-community placements — both
+ * within the celebration window). Names only — a member's workplace is never
+ * shown to other members. Server component — the caller queries and passes
+ * the names; renders nothing when empty.
  */
 export function HiredBanner({ members }: { members: HiredMember[] }) {
   if (members.length === 0) return null;
 
-  const names = members
-    .map((m) => (m.workplace ? `${m.full_name} (${m.workplace})` : m.full_name))
-    .join(", ");
+  const names = members.map((m) => m.full_name).join(", ");
 
   return (
     <div className="bg-brand-gradient text-white rounded-[18px] p-5 shadow-glow-pink">
