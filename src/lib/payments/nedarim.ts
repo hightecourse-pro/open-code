@@ -29,6 +29,8 @@ export interface TransactionParty {
   profileId: string;
   fullName: string;
   email: string;
+  /** Nedarim requires a phone on every transaction ("נא לציין מספר טלפון"). */
+  phone: string;
 }
 
 /**
@@ -54,6 +56,7 @@ export function buildTransactionFields(
     FirstName: party.fullName,
     LastName: "",
     Mail: party.email,
+    Phone: party.phone,
     Comment: `מנוי ${plan.label} — קוד פתוח`,
     CallBack: callbackUrl,
     Param1: party.profileId,

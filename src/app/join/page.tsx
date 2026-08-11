@@ -94,10 +94,33 @@ export default async function JoinPage({
     const callbackUrl = `${origin}/api/webhooks/payments`;
     // The member's email rides along so Nedarim can send her the receipt.
     const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
     const {
       data: { user },
-    } = await (await createClient()).auth.getUser();
-    const party = { profileId: profile.id, fullName: profile.full_name, email: user?.email ?? "" };
+    } = await supabase.auth.getUser();
+    // Nedarim requires a phone. If she already answered the profile
+    // questionnaire we pre-fill it; otherwise the checkout asks for it.
+    const { data: phoneQ } = await supabase
+      .from("config_questions")
+      .select("id")
+      .eq("key", "phone")
+      .maybeSingle();
+    let phone = "";
+    if (phoneQ) {
+      const { data: ans } = await supabase
+        .from("profile_answers")
+        .select("value")
+        .eq("profile_id", profile.id)
+        .eq("question_id", phoneQ.id)
+        .maybeSingle();
+      if (typeof ans?.value === "string") phone = ans.value;
+    }
+    const party = {
+      profileId: profile.id,
+      fullName: profile.full_name,
+      email: user?.email ?? "",
+      phone,
+    };
     fieldsByPlan = {
       monthly: buildTransactionFields(plansRec.monthly, party, callbackUrl),
       annual: buildTransactionFields(plansRec.annual, party, callbackUrl),

@@ -3,9 +3,15 @@
 import { useEffect, useRef, useState } from "react";
 import { NEDARIM_IFRAME_URL } from "@/lib/payments/nedarim";
 import { checkMembershipActive } from "@/app/join/actions";
-import { Alert, Button } from "@/components/ui";
+import { Alert, Button, Field, Input } from "@/components/ui";
 
 type Status = "idle" | "processing" | "success" | "error";
+
+/** Israeli mobile: 05X + 7 digits, dashes/spaces allowed while typing. */
+function normalizePhone(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  return /^05\d{8}$/.test(digits) ? digits : null;
+}
 
 /**
  * Real Nedarim Plus card form. The iframe lives on Nedarim's domain; we drive
@@ -18,6 +24,10 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [activationTimedOut, setActivationTimedOut] = useState(false);
+  // Nedarim rejects transactions without a phone; pre-filled from her profile
+  // answer when she already gave one, editable either way (receipt goes there).
+  const [phone, setPhone] = useState(fields.Phone ?? "");
+  const [phoneError, setPhoneError] = useState<string | null>(null);
 
   // After a successful charge, wait for the Nedarim CallBack to activate the
   // member (it's asynchronous), then continue — avoids bouncing back to /join.
@@ -117,6 +127,20 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
       {status === "processing" && (
         <Alert variant="info">מעבד את התשלום… אל תסגרי את החלון.</Alert>
       )}
+      <Field label="טלפון נייד (לאישור התשלום ולקבלה)" htmlFor="checkout-phone" error={phoneError}>
+        <Input
+          id="checkout-phone"
+          type="tel"
+          inputMode="tel"
+          dir="ltr"
+          placeholder="05X-XXXXXXX"
+          value={phone}
+          onChange={(e) => {
+            setPhone(e.target.value);
+            setPhoneError(null);
+          }}
+        />
+      </Field>
       <iframe
         ref={ref}
         src={NEDARIM_IFRAME_URL}
@@ -128,9 +152,14 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
       <Button
         type="button"
         onClick={() => {
+          const normalized = normalizePhone(phone);
+          if (!normalized) {
+            setPhoneError("צריך מספר נייד תקין, למשל 052-1234567 🙂");
+            return;
+          }
           setError(null);
           setStatus("processing");
-          post("FinishTransaction2", fields);
+          post("FinishTransaction2", { ...fields, Phone: normalized });
         }}
         disabled={status === "processing"}
         className="w-full"
