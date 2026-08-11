@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { NEDARIM_IFRAME_URL } from "@/lib/payments/nedarim";
 import { checkMembershipActive } from "@/app/join/actions";
 import { Alert, Button, Field, Input } from "@/components/ui";
@@ -109,9 +110,9 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
         {activationTimedOut ? (
           <>
             תודה רבה! ההפעלה אורכת רגע. רענני את העמוד בעוד דקה —
-            <a href="/forum" className="font-semibold text-brand-purple underline">
+            <Link href="/forum" className="font-semibold text-brand-purple underline">
               {" "}או נסי להמשיך לקהילה
-            </a>
+            </Link>
             . אם זה לא נפתח, נעדכן אותך במייל.
           </>
         ) : (
