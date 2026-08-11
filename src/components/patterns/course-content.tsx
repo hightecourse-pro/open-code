@@ -1,21 +1,31 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Video, FolderOpen, ExternalLink, Check, Star } from "lucide-react";
+import { Video, FolderOpen, ExternalLink, Check, Star, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { driveEmbedUrl } from "@/lib/drive";
 import { recordView, setStudied, saveCourseFeedback } from "@/app/(app)/courses/actions";
 import type { ContentLink } from "@/types/database";
 
+/** A course unit (קוביה) — one year-cycle with its recordings and materials. */
+export interface CourseUnitContent {
+  id: string;
+  name: string;
+  year: number | null;
+  links: ContentLink[];
+}
+
 export interface CourseContentProps {
   courseId: string;
   links: ContentLink[];
+  /** When present, links render grouped into unit cards; legacy courses pass none. */
+  units?: CourseUnitContent[];
   studied: boolean;
   rating: number | null;
   feedback: string | null;
 }
 
-export function CourseContent({ courseId, links, studied, rating, feedback }: CourseContentProps) {
+export function CourseContent({ courseId, links, units, studied, rating, feedback }: CourseContentProps) {
   const videos = links.filter((l) => l.kind === "video");
   const materials = links.filter((l) => l.kind === "materials");
 
@@ -28,7 +38,10 @@ export function CourseContent({ courseId, links, studied, rating, feedback }: Co
   const [fbOpen, setFbOpen] = useState(rating == null);
   const [, start] = useTransition();
 
-  if (links.length === 0) {
+  const unitList = (units ?? []).filter((u) => u.links.length > 0);
+  const hasUnits = unitList.length > 0;
+
+  if (!hasUnits && links.length === 0) {
     return (
       <div className="bg-white border border-ink-200 rounded-[16px] p-5 text-sm text-ink-500">
         נשתף איתך את חומרי הקורס אישית בקרוב 💜
@@ -36,69 +49,94 @@ export function CourseContent({ courseId, links, studied, rating, feedback }: Co
     );
   }
 
+  function videoBlock(v: ContentLink) {
+    const embed = driveEmbedUrl(v.url);
+    return (
+      <div key={v.id} className="bg-white border border-ink-200 rounded-[16px] overflow-hidden shadow-sm">
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-ink-100">
+          <Video size={15} className="text-brand-pink-deep" />
+          <span className="font-display font-semibold text-sm text-ink-1000">{v.title}</span>
+          <a
+            href={v.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => start(() => void recordView(v.id))}
+            className="ms-auto inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-brand-purple"
+          >
+            פתחי בדרייב <ExternalLink size={12} />
+          </a>
+        </div>
+        {embed ? (
+          <iframe
+            src={embed}
+            title={v.title}
+            allow="autoplay"
+            className="w-full aspect-video"
+            onLoad={() => start(() => void recordView(v.id))}
+          />
+        ) : (
+          <div className="p-4 text-sm text-ink-500">
+            אי אפשר להציג את הסרטון כאן —{" "}
+            <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-brand-purple underline">
+              צפייה בדרייב
+            </a>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function materialsBlock(items: ContentLink[]) {
+    if (items.length === 0) return null;
+    return (
+      <div className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
+        <div className="font-display font-semibold text-sm text-ink-1000 mb-2">חומרי לימוד</div>
+        <div className="flex flex-wrap gap-2">
+          {items.map((m) => (
+            <a
+              key={m.id}
+              href={m.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-[13px] bg-tint-purple text-brand-purple border border-[#DDC9EC] rounded-md px-3 py-1.5 hover:bg-tint-indigo"
+            >
+              <FolderOpen size={14} /> {m.title} <ExternalLink size={12} />
+            </a>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Videos — embedded, view-only */}
-      {videos.length > 0 && (
-        <div className="flex flex-col gap-4">
-          {videos.map((v) => {
-            const embed = driveEmbedUrl(v.url);
-            return (
-              <div key={v.id} className="bg-white border border-ink-200 rounded-[16px] overflow-hidden shadow-sm">
-                <div className="flex items-center gap-2 px-4 py-2.5 border-b border-ink-100">
-                  <Video size={15} className="text-brand-pink-deep" />
-                  <span className="font-display font-semibold text-sm text-ink-1000">{v.title}</span>
-                  <a
-                    href={v.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    onClick={() => start(() => void recordView(v.id))}
-                    className="ms-auto inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-brand-purple"
-                  >
-                    פתחי בדרייב <ExternalLink size={12} />
-                  </a>
-                </div>
-                {embed ? (
-                  <iframe
-                    src={embed}
-                    title={v.title}
-                    allow="autoplay"
-                    className="w-full aspect-video"
-                    onLoad={() => start(() => void recordView(v.id))}
-                  />
-                ) : (
-                  <div className="p-4 text-sm text-ink-500">
-                    אי אפשר להציג את הסרטון כאן —{" "}
-                    <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-brand-purple underline">
-                      צפייה בדרייב
-                    </a>
-                  </div>
+      {hasUnits
+        ? unitList.map((unit) => (
+            <section
+              key={unit.id}
+              className="border border-ink-200 rounded-[20px] bg-ink-50/50 p-4 flex flex-col gap-4"
+            >
+              <header className="flex items-center gap-2.5 flex-wrap">
+                <h3 className="font-display font-bold text-[16px] text-ink-1000">{unit.name}</h3>
+                {unit.year && (
+                  <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-full px-2.5 py-0.5">
+                    <CalendarDays size={12} /> {unit.year}
+                  </span>
                 )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Materials — folders open out */}
-      {materials.length > 0 && (
-        <div className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
-          <div className="font-display font-semibold text-sm text-ink-1000 mb-2">חומרי לימוד</div>
-          <div className="flex flex-wrap gap-2">
-            {materials.map((m) => (
-              <a
-                key={m.id}
-                href={m.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-[13px] bg-tint-purple text-brand-purple border border-[#DDC9EC] rounded-md px-3 py-1.5 hover:bg-tint-indigo"
-              >
-                <FolderOpen size={14} /> {m.title} <ExternalLink size={12} />
-              </a>
-            ))}
-          </div>
-        </div>
-      )}
+                <span className="text-[12px] text-ink-500">
+                  {unit.links.filter((l) => l.kind === "video").length} שיעורים
+                </span>
+              </header>
+              {unit.links.filter((l) => l.kind === "video").map(videoBlock)}
+              {materialsBlock(unit.links.filter((l) => l.kind === "materials"))}
+            </section>
+          ))
+        : (
+          <>
+            {videos.map(videoBlock)}
+            {materialsBlock(materials)}
+          </>
+        )}
 
       {/* Studied + feedback */}
       <div className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm flex flex-col gap-3">

@@ -704,6 +704,8 @@ export interface Database {
           drive_url: string | null;
           cover_variant: number;
           is_published: boolean;
+          /** The Excel import key — one course per קוד קורס. */
+          code: number | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -716,6 +718,7 @@ export interface Database {
           drive_url?: string | null;
           cover_variant?: number;
           is_published?: boolean;
+          code?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["courses"]["Insert"]>;
         Relationships: [];
@@ -980,6 +983,8 @@ export interface Database {
           url: string;
           sort_order: number;
           created_at: string;
+          /** The course unit (קוביה) this link belongs to; legacy links have none. */
+          unit_id: string | null;
         };
         Insert: {
           id?: string;
@@ -990,8 +995,29 @@ export interface Database {
           url: string;
           sort_order?: number;
           created_at?: string;
+          unit_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["content_links"]["Insert"]>;
+        Relationships: [];
+      };
+      course_units: {
+        Row: {
+          id: string;
+          course_id: string;
+          name: string;
+          year: number | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          course_id: string;
+          name: string;
+          year?: number | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["course_units"]["Insert"]>;
         Relationships: [];
       };
       content_shares: {
@@ -1128,4 +1154,5 @@ export type Conversation = Database["public"]["Tables"]["conversations"]["Row"];
 export type Message = Database["public"]["Tables"]["messages"]["Row"];
 export type CvDocument = Database["public"]["Tables"]["cv_documents"]["Row"];
 export type ContentLink = Database["public"]["Tables"]["content_links"]["Row"];
+export type CourseUnit = Database["public"]["Tables"]["course_units"]["Row"];
 export type ContentShare = Database["public"]["Tables"]["content_shares"]["Row"];

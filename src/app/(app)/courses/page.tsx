@@ -31,6 +31,19 @@ export default async function CoursesPage() {
 
   const activeCourse = active ? (courses ?? []).find((c) => c.id === active.course_id) : null;
 
+  // Unit (קוביה) headers for every course — the cards show the year cycles.
+  // Tolerates the table not existing yet (pre-migration deploys).
+  const { data: allUnits } = await supabase
+    .from("course_units")
+    .select("id, course_id, name, year, sort_order")
+    .order("sort_order", { ascending: true });
+  const unitsByCourse = new Map<string, { id: string; name: string; year: number | null }[]>();
+  for (const u of allUnits ?? []) {
+    const arr = unitsByCourse.get(u.course_id) ?? [];
+    arr.push({ id: u.id, name: u.name, year: u.year });
+    unitsByCourse.set(u.course_id, arr);
+  }
+
   // Load the active course's Drive links (videos + materials folders).
   let activeLinks: ContentLink[] = [];
   if (activeCourse) {
@@ -42,6 +55,13 @@ export default async function CoursesPage() {
       .order("sort_order", { ascending: true });
     activeLinks = data ?? [];
   }
+
+  // Group the active course's links into its units; legacy links stay flat.
+  const activeUnits = (unitsByCourse.get(activeCourse?.id ?? "") ?? []).map((u) => ({
+    ...u,
+    links: activeLinks.filter((l) => l.unit_id === u.id),
+  }));
+  const legacyLinks = activeLinks.filter((l) => !l.unit_id);
 
   return (
     <div className="flex flex-col gap-5">
@@ -66,10 +86,7 @@ export default async function CoursesPage() {
           <div className="flex-1 min-w-0">
             <div className="font-mono text-[11px] opacity-80">הקורס הפעיל שלך</div>
             <div className="font-display text-[22px] font-black my-1">{activeCourse.title}</div>
-            <div className="text-[13px] opacity-85 mb-2">
-              {activeCourse.instructor ? `עם ${activeCourse.instructor} · ` : ""}
-              {activeCourse.lessons_count} שיעורים
-            </div>
+            <div className="text-[13px] opacity-85 mb-2">{activeCourse.lessons_count} שיעורים</div>
             <div className="h-1.5 bg-white/20 rounded-full overflow-hidden max-w-[300px]">
               <div className="h-full bg-white rounded-full" style={{ width: `${active?.progress_pct ?? 0}%` }} />
             </div>
@@ -101,7 +118,8 @@ export default async function CoursesPage() {
       {activeCourse && (
         <CourseContent
           courseId={activeCourse.id}
-          links={activeLinks}
+          links={legacyLinks}
+          units={activeUnits}
           studied={active?.studied ?? false}
           rating={active?.rating ?? null}
           feedback={active?.feedback ?? null}
@@ -118,14 +136,25 @@ export default async function CoursesPage() {
 
       <h2 className="font-display text-lg font-bold text-ink-1000">כל הקורסים</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(courses ?? []).map((course) => (
-          <CourseCard
-            key={course.id}
-            course={course}
-            locked={!!activeCourse && activeCourse.id !== course.id}
-            needsSubscription={!subscriber}
-          />
-        ))}
+        {(courses ?? []).map((course) => {
+          const units = unitsByCourse.get(course.id) ?? [];
+          const years = [...new Set(units.map((u) => u.year).filter(Boolean))] as number[];
+          const cycles =
+            units.length > 1
+              ? `${units.length} מחזורים${years.length ? ` · ${Math.min(...years)}–${Math.max(...years)}` : ""}`
+              : years.length
+                ? `מחזור ${years[0]}`
+                : null;
+          return (
+            <CourseCard
+              key={course.id}
+              course={course}
+              cycles={cycles}
+              locked={!!activeCourse && activeCourse.id !== course.id}
+              needsSubscription={!subscriber}
+            />
+          );
+        })}
       </div>
     </div>
   );

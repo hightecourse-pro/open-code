@@ -18,6 +18,8 @@ const COVERS = [
 
 export interface CourseCardProps {
   course: Course;
+  /** Year-cycle summary, e.g. "3 מחזורים · 2023–2025" (courses with units). */
+  cycles?: string | null;
   /** True when the member already has a different active course (locked). */
   locked: boolean;
   /** True for a free member — the catalogue is visible, opening isn't. */
@@ -25,7 +27,7 @@ export interface CourseCardProps {
   onStartError?: (msg: string) => void;
 }
 
-export function CourseCard({ course, locked, needsSubscription = false }: CourseCardProps) {
+export function CourseCard({ course, cycles, locked, needsSubscription = false }: CourseCardProps) {
   const [pending, start] = useTransition();
   const cover = COVERS[(course.cover_variant - 1) % COVERS.length];
 
@@ -59,10 +61,19 @@ export function CourseCard({ course, locked, needsSubscription = false }: Course
         <div className="font-display font-bold text-[15.5px] text-ink-1000 leading-tight mb-1">
           {course.title}
         </div>
-        <div className="text-[12.5px] text-ink-500 flex gap-2.5">
+        <div className="text-[12.5px] text-ink-500 flex gap-2.5 flex-wrap">
           <span>{course.lessons_count} שיעורים</span>
-          <span>·</span>
-          <span>{course.duration_hours} שעות</span>
+          {cycles ? (
+            <>
+              <span>·</span>
+              <span>{cycles}</span>
+            </>
+          ) : (
+            <>
+              <span>·</span>
+              <span>{course.duration_hours} שעות</span>
+            </>
+          )}
         </div>
         {needsSubscription ? (
           <Link
