@@ -31,6 +31,11 @@ export interface TransactionParty {
   email: string;
   /** Nedarim requires a phone on every transaction ("נא לציין מספר טלפון"). */
   phone: string;
+  /** תעודת זהות — reported to Nedarim (מספר זהות on the receipt). */
+  idNumber: string;
+  /** Street + house number, when she already answered the questionnaire. */
+  street: string;
+  city: string;
 }
 
 /**
@@ -57,7 +62,16 @@ export function buildTransactionFields(
     LastName: "",
     Mail: party.email,
     Phone: party.phone,
-    Comment: `מנוי ${plan.label} — קוד פתוח`,
+    Zeout: party.idNumber,
+    // Nedarim's docs vary between Street/Adresse — send both, extras are ignored.
+    Street: party.street,
+    Adresse: party.street,
+    City: party.city,
+    // The report's קטגוריה — the owner's fixed wording; the plan itself rides
+    // in Param2 (and the amount). Comment stays empty, like her reference.
+    Groupe: "דמי מנוי - קהילת קוד פתוח",
+    Category: "דמי מנוי - קהילת קוד פתוח",
+    Comment: "",
     CallBack: callbackUrl,
     Param1: party.profileId,
     Param2: plan.id,

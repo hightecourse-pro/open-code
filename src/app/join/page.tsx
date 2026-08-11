@@ -98,28 +98,43 @@ export default async function JoinPage({
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    // Nedarim requires a phone. If she already answered the profile
-    // questionnaire we pre-fill it; otherwise the checkout asks for it.
-    const { data: phoneQ } = await supabase
+    // Nedarim's report should carry her details (ID, phone, address). Whatever
+    // she already answered in the questionnaire is pre-filled; phone + ID are
+    // asked in the checkout itself when missing.
+    const { data: qRows } = await supabase
       .from("config_questions")
-      .select("id")
-      .eq("key", "phone")
-      .maybeSingle();
-    let phone = "";
-    if (phoneQ) {
-      const { data: ans } = await supabase
-        .from("profile_answers")
-        .select("value")
-        .eq("profile_id", profile.id)
-        .eq("question_id", phoneQ.id)
-        .maybeSingle();
-      if (typeof ans?.value === "string") phone = ans.value;
-    }
+      .select("id, key, options")
+      .in("key", ["phone", "id_number", "city", "street", "house_number"]);
+    const qByKey = new Map((qRows ?? []).map((q) => [q.key, q]));
+    const qIds = (qRows ?? []).map((q) => q.id);
+    const { data: ansRows } = qIds.length
+      ? await supabase
+          .from("profile_answers")
+          .select("question_id, value")
+          .eq("profile_id", profile.id)
+          .in("question_id", qIds)
+      : { data: [] };
+    const ansById = new Map((ansRows ?? []).map((a) => [a.question_id, a.value]));
+    const answer = (key: string): string => {
+      const q = qByKey.get(key);
+      const v = q ? ansById.get(q.id) : undefined;
+      return typeof v === "string" ? v : "";
+    };
+    // City is stored as the option value — the report wants the Hebrew label.
+    const cityQ = qByKey.get("city");
+    const cityOpts = Array.isArray(cityQ?.options)
+      ? (cityQ.options as unknown as { value: string; label: string }[])
+      : [];
+    const cityRaw = answer("city");
+    const city = cityOpts.find((o) => o.value === cityRaw)?.label ?? cityRaw;
     const party = {
       profileId: profile.id,
       fullName: profile.full_name,
       email: user?.email ?? "",
-      phone,
+      phone: answer("phone"),
+      idNumber: answer("id_number"),
+      street: [answer("street"), answer("house_number")].filter(Boolean).join(" "),
+      city,
     };
     fieldsByPlan = {
       monthly: buildTransactionFields(plansRec.monthly, party, callbackUrl),

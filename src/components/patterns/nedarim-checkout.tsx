@@ -14,6 +14,20 @@ function normalizePhone(raw: string): string | null {
   return /^05\d{8}$/.test(digits) ? digits : null;
 }
 
+/** Israeli ID with its check digit (short old IDs are zero-padded). */
+function normalizeIsraeliId(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length < 5 || digits.length > 9) return null;
+  const id = digits.padStart(9, "0");
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    let n = Number(id[i]) * (i % 2 === 0 ? 1 : 2);
+    if (n > 9) n -= 9;
+    sum += n;
+  }
+  return sum % 10 === 0 ? digits : null;
+}
+
 /**
  * Real Nedarim Plus card form. The iframe lives on Nedarim's domain; we drive
  * it via postMessage and listen for the transaction result. The authoritative
@@ -25,10 +39,13 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   const [status, setStatus] = useState<Status>("idle");
   const [error, setError] = useState<string | null>(null);
   const [activationTimedOut, setActivationTimedOut] = useState(false);
-  // Nedarim rejects transactions without a phone; pre-filled from her profile
-  // answer when she already gave one, editable either way (receipt goes there).
+  // Nedarim rejects transactions without a phone, and the owner's report needs
+  // the ID too; both pre-filled from her profile answers when they exist,
+  // editable either way (the receipt goes to these details).
   const [phone, setPhone] = useState(fields.Phone ?? "");
   const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [idNumber, setIdNumber] = useState(fields.Zeout ?? "");
+  const [idError, setIdError] = useState<string | null>(null);
 
   // After a successful charge, wait for the Nedarim CallBack to activate the
   // member (it's asynchronous), then continue — avoids bouncing back to /join.
@@ -128,20 +145,38 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
       {status === "processing" && (
         <Alert variant="info">מעבד את התשלום… אל תסגרי את החלון.</Alert>
       )}
-      <Field label="טלפון נייד (לאישור התשלום ולקבלה)" htmlFor="checkout-phone" error={phoneError}>
-        <Input
-          id="checkout-phone"
-          type="tel"
-          inputMode="tel"
-          dir="ltr"
-          placeholder="05X-XXXXXXX"
-          value={phone}
-          onChange={(e) => {
-            setPhone(e.target.value);
-            setPhoneError(null);
-          }}
-        />
-      </Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="טלפון נייד" htmlFor="checkout-phone" error={phoneError}>
+          <Input
+            id="checkout-phone"
+            type="tel"
+            inputMode="tel"
+            dir="ltr"
+            placeholder="05X-XXXXXXX"
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setPhoneError(null);
+            }}
+          />
+        </Field>
+        <Field label="תעודת זהות" htmlFor="checkout-id" error={idError}>
+          <Input
+            id="checkout-id"
+            inputMode="numeric"
+            dir="ltr"
+            maxLength={9}
+            value={idNumber}
+            onChange={(e) => {
+              setIdNumber(e.target.value);
+              setIdError(null);
+            }}
+          />
+        </Field>
+      </div>
+      <p className="text-[12px] text-ink-500 -mt-1.5">
+        הפרטים משמשים לאישור התשלום ולקבלה — לא מוצגים לאף אחת אחרת.
+      </p>
       <iframe
         ref={ref}
         src={NEDARIM_IFRAME_URL}
@@ -153,14 +188,18 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
       <Button
         type="button"
         onClick={() => {
-          const normalized = normalizePhone(phone);
-          if (!normalized) {
+          const normalizedPhone = normalizePhone(phone);
+          const normalizedId = normalizeIsraeliId(idNumber);
+          if (!normalizedPhone) {
             setPhoneError("צריך מספר נייד תקין, למשל 052-1234567 🙂");
-            return;
           }
+          if (!normalizedId) {
+            setIdError("מספר תעודת הזהות לא נראה תקין 🙂");
+          }
+          if (!normalizedPhone || !normalizedId) return;
           setError(null);
           setStatus("processing");
-          post("FinishTransaction2", { ...fields, Phone: normalized });
+          post("FinishTransaction2", { ...fields, Phone: normalizedPhone, Zeout: normalizedId });
         }}
         disabled={status === "processing"}
         className="w-full"
