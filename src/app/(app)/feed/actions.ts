@@ -40,6 +40,7 @@ export async function toggleReaction(postId: string, kind: ReactionKind): Promis
     await supabase.from("reactions").insert({ post_id: postId, profile_id: user.id, kind });
   }
   revalidatePath("/forum");
+  revalidatePath(`/forum/${postId}`);
 }
 
 /** Add a comment to a post. */
@@ -53,6 +54,7 @@ export async function addComment(postId: string, formData: FormData): Promise<vo
   if (!user || !(await canWrite())) return;
   await supabase.from("comments").insert({ post_id: postId, author_id: user.id, body });
   revalidatePath("/forum");
+  revalidatePath(`/forum/${postId}`);
 }
 
 /** Report a post or comment for moderation. */

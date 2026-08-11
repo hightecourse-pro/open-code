@@ -1,19 +1,17 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getUser } from "@/lib/auth";
 import { Composer } from "@/components/patterns/composer";
-import { PostCard, type FeedPost } from "@/components/patterns/post-card";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
+import { ForumTopicRow, topicTitle, type ForumTopic } from "@/components/patterns/forum-topic-row";
 import { TargetedJobBanner, type TargetedJobLite } from "@/components/patterns/targeted-job-banner";
 import { HiredBanner } from "@/components/patterns/hired-banner";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
-import type { PostComment } from "@/components/patterns/post-interactions";
 import type { UserRole } from "@/types/database";
 
 export const metadata: Metadata = { title: "פורום" };
-// Always fresh — a new post shows without a manual refresh.
+// Always fresh — a new topic shows without a manual refresh.
 export const dynamic = "force-dynamic";
 
 /** ISO cutoff for the hired-celebration window — the last 60 days. */
@@ -31,12 +29,11 @@ type ProfileLite = {
 
 export default async function ForumPage() {
   const supabase = await createClient();
-  const user = await getUser();
   const profile = await requireCommunityAccess();
   const canWrite = isSubscriber(profile);
 
   // Jobs published specifically to this member (job_targets — RLS lets her
-  // read her own rows). Shown as a prominent banner above the feed.
+  // read her own rows). Shown as a prominent banner above the topic list.
   let targetedJobs: TargetedJobLite[] = [];
   const { data: myTargets } = await supabase
     .from("job_targets")
@@ -91,27 +88,31 @@ export default async function ForumPage() {
 
   const postIds = (posts ?? []).map((p) => p.id);
 
-  // Reactions + comments for the visible posts (small sets; fine to load).
-  const [{ data: reactions }, { data: comments }] = await Promise.all([
-    postIds.length
-      ? supabase.from("reactions").select("post_id, profile_id, kind").in("post_id", postIds)
-      : Promise.resolve({ data: [] }),
+  // The list needs numbers, not content: reply count + last activity per
+  // topic, and like counts. The replies themselves load on the topic page.
+  const [{ data: commentMeta }, { data: reactions }] = await Promise.all([
     postIds.length
       ? supabase
           .from("comments")
-          .select("id, post_id, body, author_id, created_at")
+          .select("post_id, created_at")
           .in("post_id", postIds)
           .order("created_at", { ascending: true })
       : Promise.resolve({ data: [] }),
+    postIds.length
+      ? supabase.from("reactions").select("post_id, kind").in("post_id", postIds).eq("kind", "like")
+      : Promise.resolve({ data: [] }),
   ]);
 
-  // Resolve all authors (posts + comments) in one query.
-  const authorIds = [
-    ...new Set([
-      ...(posts ?? []).map((p) => p.author_id),
-      ...(comments ?? []).map((c) => c.author_id),
-    ]),
-  ];
+  const replyCount = new Map<string, number>();
+  const lastReplyAt = new Map<string, string>();
+  for (const c of commentMeta ?? []) {
+    replyCount.set(c.post_id, (replyCount.get(c.post_id) ?? 0) + 1);
+    lastReplyAt.set(c.post_id, c.created_at); // ascending order → ends on the newest
+  }
+  const likeCount = new Map<string, number>();
+  for (const r of reactions ?? []) likeCount.set(r.post_id, (likeCount.get(r.post_id) ?? 0) + 1);
+
+  const authorIds = [...new Set((posts ?? []).map((p) => p.author_id))];
   let authors: ProfileLite[] = [];
   if (authorIds.length) {
     const { data } = await supabase
@@ -122,36 +123,23 @@ export default async function ForumPage() {
   }
   const authorMap = new Map(authors.map((a) => [a.id, a]));
 
-  const commentsByPost = new Map<string, PostComment[]>();
-  for (const c of comments ?? []) {
-    const a = authorMap.get(c.author_id);
-    const arr = commentsByPost.get(c.post_id) ?? [];
-    arr.push({
-      id: c.id,
-      body: c.body,
-      author_name: a?.full_name ?? "חברת קהילה",
-      author_initials: a?.avatar_initials ?? null,
-      created_at: c.created_at,
-    });
-    commentsByPost.set(c.post_id, arr);
-  }
-
-  const forumPosts: FeedPost[] = (posts ?? []).map((p) => {
-    const rx = (reactions ?? []).filter((r) => r.post_id === p.id);
-    return {
-      id: p.id,
-      body: p.body,
-      intent: p.intent,
-      tech_tags: p.tech_tags,
-      is_official: p.is_official,
-      is_pinned: p.is_pinned,
-      created_at: p.created_at,
-      author: authorMap.get(p.author_id) ?? null,
-      likeCount: rx.filter((r) => r.kind === "like").length,
-      liked: !!user && rx.some((r) => r.kind === "like" && r.profile_id === user.id),
-      saved: !!user && rx.some((r) => r.kind === "save" && r.profile_id === user.id),
-      comments: commentsByPost.get(p.id) ?? [],
-    };
+  const topics: ForumTopic[] = (posts ?? []).map((p) => ({
+    id: p.id,
+    title: topicTitle(p.body),
+    intent: p.intent,
+    tech_tags: p.tech_tags,
+    is_official: p.is_official,
+    is_pinned: p.is_pinned,
+    created_at: p.created_at,
+    last_activity_at: lastReplyAt.get(p.id) ?? p.created_at,
+    author: authorMap.get(p.author_id) ?? null,
+    replyCount: replyCount.get(p.id) ?? 0,
+    likeCount: likeCount.get(p.id) ?? 0,
+  }));
+  // Pinned stay on top; inside each group the freshest conversation wins.
+  topics.sort((a, b) => {
+    if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
+    return new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime();
   });
 
   return (
@@ -160,7 +148,10 @@ export default async function ForumPage() {
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;פורום/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הפורום</h1>
-        <p className="t-body-sm text-ink-700">שאלות, התייעצויות ושיתופי ידע — אנחנו פה אחת בשביל השנייה.</p>
+        <p className="t-body-sm text-ink-700">
+          שאלות, התייעצויות ושיתופי ידע — אנחנו פה אחת בשביל השנייה. לחצי על נושא כדי לקרוא את
+          השיחה כולה.
+        </p>
       </div>
 
       <TargetedJobBanner jobs={targetedJobs} />
@@ -177,16 +168,21 @@ export default async function ForumPage() {
         />
       )}
 
-      {forumPosts.length === 0 ? (
+      {topics.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
           {canWrite
             ? "הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?"
             : "הפורום שקט עכשיו — בקרוב יהיה כאן מלא."}
         </div>
       ) : (
-        <div className="flex flex-col gap-3.5">
-          {forumPosts.map((post) => (
-            <PostCard key={post.id} post={post} canWrite={canWrite} />
+        <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden divide-y divide-ink-100">
+          <div className="flex items-center px-4 py-2.5 text-[11.5px] font-bold text-ink-400 uppercase tracking-wide bg-ink-50/60">
+            <span className="flex-1">נושא</span>
+            <span className="w-20 text-center">תגובות</span>
+            <span className="hidden md:block w-16 text-end">פעילות</span>
+          </div>
+          {topics.map((t) => (
+            <ForumTopicRow key={t.id} topic={t} />
           ))}
         </div>
       )}

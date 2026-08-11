@@ -23,13 +23,21 @@ export interface FeedPost {
   comments?: PostComment[];
 }
 
-const INTENT_LABEL: Record<PostIntent, string> = {
+export const INTENT_LABEL: Record<PostIntent, string> = {
   consult: "התייעצות",
   knowledge: "שיתוף ידע",
   success: "הצלחה 🎉",
 };
 
-export function PostCard({ post, canWrite = true }: { post: FeedPost; canWrite?: boolean }) {
+export function PostCard({
+  post,
+  canWrite = true,
+  defaultOpenComments = false,
+}: {
+  post: FeedPost;
+  canWrite?: boolean;
+  defaultOpenComments?: boolean;
+}) {
   const author = post.author;
   const isMentor = author?.role === "mentor";
   const isStaff = author?.role === "admin";
@@ -80,6 +88,7 @@ export function PostCard({ post, canWrite = true }: { post: FeedPost; canWrite?:
         saved={post.saved ?? false}
         comments={post.comments ?? []}
         canWrite={canWrite}
+        defaultOpenComments={defaultOpenComments}
       />
     </article>
   );

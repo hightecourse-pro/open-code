@@ -23,6 +23,8 @@ export interface PostInteractionsProps {
   comments: PostComment[];
   /** Free members read the thread but don't take part in it. */
   canWrite?: boolean;
+  /** The topic page opens the replies; the list keeps them behind a click. */
+  defaultOpenComments?: boolean;
 }
 
 export function PostInteractions({
@@ -32,10 +34,11 @@ export function PostInteractions({
   saved,
   comments,
   canWrite = true,
+  defaultOpenComments = false,
 }: PostInteractionsProps) {
   const [like, setLike] = useState({ on: liked, count: likeCount });
   const [isSaved, setIsSaved] = useState(saved);
-  const [openComments, setOpenComments] = useState(false);
+  const [openComments, setOpenComments] = useState(defaultOpenComments);
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [, start] = useTransition();
