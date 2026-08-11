@@ -17,11 +17,15 @@ import {
 import {
   EXPERIENCE_KEYS,
   PRACTICAL_EXPERIENCE_KEY,
+  PRACTICUM_PERIOD_KEY,
   isCompleteExperienceEntry,
+  isValidYm,
   parseExperienceEntries,
+  parsePracticumPeriod,
   type ExperienceEntry,
 } from "@/lib/experience-entries";
 import { ExperienceListEditor } from "@/components/patterns/experience-list-editor";
+import { PeriodPicker } from "@/components/patterns/period-picker";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 
 type Option = { value: string; label: string };
@@ -71,7 +75,7 @@ const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
   {
     title: "פרקטיקום והשמה",
     hint: "כמה העדפות שיעזרו לנו להציע לך בדיוק את ההזדמנויות הנכונות.",
-    keys: ["practicum_done", "practicum_employer", "practicum_tech", "practicum_description", "practicum_placement", "remote_commute", "paid_placement"],
+    keys: ["practicum_done", "practicum_employer", "practicum_period", "practicum_tech", "practicum_description", "practicum_placement", "remote_commute", "paid_placement"],
   },
   {
     title: "עוד משהו?",
@@ -231,6 +235,23 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
     return undefined;
   }
+  /** practicum_period: start required; end required unless "עוד לא סיימתי"; end after start. */
+  function periodError(q: ConfigQuestion, fd: FormData): string | undefined {
+    let raw: unknown = null;
+    try {
+      raw = JSON.parse(String(fd.get(`q_${q.id}`) || "null"));
+    } catch {
+      raw = null;
+    }
+    const p = parsePracticumPeriod(raw);
+    if (!q.required && !p.start && !p.end) return undefined;
+    if (!isValidYm(p.start)) return "סמני מתי התחלת — ואם עוד לא סיימת, סמני את זה 🙂";
+    if (p.end !== "current") {
+      if (!isValidYm(p.end)) return "סמני גם מתי סיימת — או סמני \"עוד לא סיימתי\" 🙂";
+      if (p.end < p.start) return "רגע, תאריך הסיום יוצא לפני ההתחלה — בדקי שוב את התאריכים 🙂";
+    }
+    return undefined;
+  }
 
   function validateStep(qs: ConfigQuestion[]): boolean {
     const fd = new FormData(formRef.current!);
@@ -238,6 +259,11 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     for (const q of qs) {
       if (EXPERIENCE_KEYS.has(q.key)) {
         const msg = experienceError(q, fd);
+        if (msg) errs[q.id] = msg;
+        continue;
+      }
+      if (q.key === PRACTICUM_PERIOD_KEY) {
+        const msg = periodError(q, fd);
         if (msg) errs[q.id] = msg;
         continue;
       }
@@ -312,6 +338,15 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             techOptions={taxonomyOptions.tech ?? []}
             error={!!err}
           />
+        </Field>
+      );
+    }
+
+    // Practicum period: start/end month pickers submitting one JSON object.
+    if (q.key === PRACTICUM_PERIOD_KEY) {
+      return (
+        <Field key={q.id} label={q.label_he} error={err}>
+          <PeriodPicker name={key} initial={parsePracticumPeriod(current)} />
         </Field>
       );
     }

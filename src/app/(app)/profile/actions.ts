@@ -8,12 +8,15 @@ import { DEFAULT_LANGUAGES, LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/langu
 import {
   EXPERIENCE_KEYS,
   PRACTICAL_EXPERIENCE_KEY,
+  PRACTICUM_PERIOD_KEY,
   isCompleteExperienceEntry,
+  isValidYm,
   parseExperienceEntries,
+  parsePracticumPeriod,
   type ExperienceEntry,
 } from "@/lib/experience-entries";
 import { repointSharesToNewEmail } from "@/lib/drive-shares";
-import type { Json, QuestionScope } from "@/types/database";
+import type { Database, Json, QuestionScope } from "@/types/database";
 
 export type ProfileState = { ok?: boolean; error?: string };
 
@@ -226,6 +229,30 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       continue;
     }
 
+    // practicum_period: one {"start","end"} object from the wizard's period
+    // picker. It only reaches here when practicum_done is on (the depends_on
+    // skip above), so an unanswered practicum never blocks the save.
+    if (q.key === PRACTICUM_PERIOD_KEY) {
+      let raw: unknown = null;
+      try {
+        raw = JSON.parse(String(formData.get(key) || "null"));
+      } catch {
+        raw = null;
+      }
+      const p = parsePracticumPeriod(raw);
+      if (!p.start && !p.end) {
+        if (q.required) missing.push(q.label_he);
+      } else if (!isValidYm(p.start)) {
+        invalid.push("סמני מתי התחלת את הפרקטיקום — ואם עוד לא סיימת, סמני את זה 🙂");
+      } else if (p.end !== "current" && !isValidYm(p.end)) {
+        invalid.push("סמני גם מתי הסתיים הפרקטיקום — או סמני \"עוד לא סיימתי\" 🙂");
+      } else if (p.end !== "current" && p.end < p.start) {
+        invalid.push("רגע, תאריך סיום הפרקטיקום יוצא לפני ההתחלה — בדקי שוב את התאריכים 🙂");
+      }
+      answered.push({ question_id: q.id, value: { start: p.start, end: p.end } });
+      continue;
+    }
+
     if (q.field_type === "multiselect" || q.field_type === "tags") {
       let values = formData.getAll(key).map(String);
       if (values.includes("other")) {
@@ -286,17 +313,56 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     })
     .eq("id", user.id);
 
+  // Change-tracked save: one read of what's already stored, then upserts only
+  // for answers whose value actually changed (or is brand new) — so a row's
+  // updated_at honestly means "when this answer last changed", not "when she
+  // last hit save".
+  const { data: storedRows } = await supabase
+    .from("profile_answers")
+    .select("question_id, value")
+    .eq("profile_id", user.id);
+  const stored = new Map((storedRows ?? []).map((r) => [r.question_id, r.value]));
+
+  const savedAt = new Date().toISOString();
   for (const a of answered) {
+    if (stored.has(a.question_id) && stableJson(stored.get(a.question_id)) === stableJson(a.value)) {
+      continue; // unchanged — leave the row (and its updated_at) alone
+    }
+    // The updated_at column exists on the table (its Row type carries it) but
+    // the hand-written Insert type omits DB-defaulted timestamps — cast through
+    // the Insert shape so the explicit change stamp still reaches the row.
+    const payload = {
+      profile_id: user.id,
+      question_id: a.question_id,
+      value: a.value,
+      updated_at: savedAt,
+    };
     await supabase
       .from("profile_answers")
-      .upsert(
-        { profile_id: user.id, question_id: a.question_id, value: a.value },
-        { onConflict: "profile_id,question_id" }
-      );
+      .upsert(payload as Database["public"]["Tables"]["profile_answers"]["Insert"], {
+        onConflict: "profile_id,question_id",
+      });
   }
 
   revalidatePath("/profile");
   // On first completion, drop the onboarding gate and land in the community.
   if (firstCompletion) redirect("/forum");
   return { ok: true };
+}
+
+/**
+ * Deterministic JSON for change detection: object keys are sorted (Postgres
+ * jsonb reorders them, so a naive stringify would see phantom changes) and
+ * undefined is handled the way JSON.stringify serializes it (dropped in
+ * objects, null in arrays).
+ */
+function stableJson(v: unknown): string {
+  if (v === undefined) return "null";
+  if (v === null || typeof v !== "object") return JSON.stringify(v);
+  if (Array.isArray(v)) {
+    return `[${v.map((item) => stableJson(item === undefined ? null : item)).join(",")}]`;
+  }
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o).filter((k) => o[k] !== undefined).sort();
+  return `{${keys.map((k) => `${JSON.stringify(k)}:${stableJson(o[k])}`).join(",")}}`;
 }

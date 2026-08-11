@@ -89,3 +89,33 @@ export function experienceRangeLabel(e: ExperienceEntry): string {
   const end = e.end === "current" ? "היום" : e.end ? formatYm(e.end) : "";
   return end ? `${formatYm(e.start)}–${end}` : formatYm(e.start);
 }
+
+// ---- practicum period ("practicum_period") --------------------------------
+// A single {start, end} month range (not a list): WHEN the practicum
+// happened. Special-cased by key in the profile wizard (PeriodPicker) and
+// stored in profile_answers as {"start":"YYYY-MM","end":"YYYY-MM"} — or
+// {"start":"YYYY-MM","end":"current"} while she's still in it.
+
+export const PRACTICUM_PERIOD_KEY = "practicum_period";
+
+export type PracticumPeriod = { start: string; end: string };
+
+/** Parse a stored practicum_period answer; malformed/legacy → empty fields. */
+export function parsePracticumPeriod(value: unknown): PracticumPeriod {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { start: "", end: "" };
+  }
+  const o = value as Record<string, unknown>;
+  return {
+    start: typeof o.start === "string" ? o.start.trim() : "",
+    end: typeof o.end === "string" ? o.end.trim() : "",
+  };
+}
+
+/** "08.2025–02.2026" / "08.2025–היום" (portal display); malformed → "". */
+export function practicumPeriodLabel(value: unknown): string {
+  const p = parsePracticumPeriod(value);
+  if (!isValidYm(p.start)) return "";
+  const end = p.end === "current" ? "היום" : isValidYm(p.end) ? formatYm(p.end) : "";
+  return end ? `${formatYm(p.start)}–${end}` : formatYm(p.start);
+}

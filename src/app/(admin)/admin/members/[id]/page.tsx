@@ -15,6 +15,14 @@ import {
 } from "@/components/patterns/member-employment-admin";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import { LANGUAGE_SKILLS_KEY, langLevelLabel, parseLangSkills } from "@/lib/language-skills";
+import {
+  EXPERIENCE_KEYS,
+  PRACTICUM_PERIOD_KEY,
+  experienceKindLabel,
+  experienceRangeLabel,
+  parseExperienceEntries,
+  practicumPeriodLabel,
+} from "@/lib/experience-entries";
 import type { ConfigQuestion } from "@/types/database";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
@@ -30,6 +38,18 @@ const CV_LANG: Record<string, string> = {
   en: "אנגלית",
   job: "מותאם למשרה",
 };
+
+// An answer counts as "edited later" only when updated_at is well past
+// created_at — the initial insert itself may touch updated_at within seconds.
+const ANSWER_EDIT_GRACE_MS = 60_000;
+
+// DD.MM.YYYY, admin-facing (updated-at markers).
+const DMY = new Intl.DateTimeFormat("he-IL", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Asia/Jerusalem",
+});
 
 export default async function AdminMemberProfilePage({
   params,
@@ -56,7 +76,11 @@ export default async function AdminMemberProfilePage({
       .from("config_questions")
       .select("*")
       .order("sort_order", { ascending: true }),
-    supabase.from("profile_answers").select("question_id, value").eq("profile_id", id),
+    supabase
+      .from("profile_answers")
+      // Timestamps power the internal "עודכן" markers — admin eyes only.
+      .select("question_id, value, created_at, updated_at")
+      .eq("profile_id", id),
     // VIP + notes live in the admin-only member_crm table (null pre-migration).
     supabase.from("member_crm").select("*").eq("profile_id", id).maybeSingle(),
     // Active mentors for the employment-accompaniment assignment control.
@@ -127,6 +151,28 @@ export default async function AdminMemberProfilePage({
 
   const answerMap = new Map((answers ?? []).map((a) => [a.question_id, a.value]));
 
+  // Answers she changed after first filling them in (internal admin info —
+  // must never surface in the employer portal or member views).
+  const answerEditedAt = new Map<string, Date>();
+  for (const a of answers ?? []) {
+    const created = Date.parse(a.created_at);
+    const updated = Date.parse(a.updated_at);
+    if (
+      Number.isFinite(created) &&
+      Number.isFinite(updated) &&
+      updated - created > ANSWER_EDIT_GRACE_MS
+    ) {
+      answerEditedAt.set(a.question_id, new Date(updated));
+    }
+  }
+  let lastEditedAt: Date | null = null;
+  for (const d of answerEditedAt.values()) {
+    if (!lastEditedAt || d > lastEditedAt) lastEditedAt = d;
+  }
+
+  // Experience entries store tech taxonomy VALUES — resolve to labels here.
+  const techLabels = new Map((taxonomyOptions.tech ?? []).map((o) => [o.value, o.label]));
+
   // Turn stored machine values back into the human labels the member picked.
   function labelsFor(q: ConfigQuestion): Map<string, string> {
     const opts = q.taxonomy_kind
@@ -136,14 +182,62 @@ export default async function AdminMemberProfilePage({
         : [];
     return new Map(opts.map((o) => [o.value, o.label]));
   }
-  function display(q: ConfigQuestion): string {
+  function display(q: ConfigQuestion): React.ReactNode {
     const v = answerMap.get(q.id);
     if (v === undefined || v === null || v === "") return "—";
     if (q.key === LANGUAGE_SKILLS_KEY) {
       const skills = parseLangSkills(v);
-      return skills.length
-        ? skills.map((s) => `${s.lang} — ${langLevelLabel(s.level)}`).join(" · ")
-        : "—";
+      return skills.length ? (
+        <div className="flex flex-col gap-0.5">
+          {skills.map((s) => (
+            <div key={s.lang}>
+              {s.lang} — {langLevelLabel(s.level)}
+            </div>
+          ))}
+        </div>
+      ) : (
+        "—"
+      );
+    }
+    // Experience lists (practical_experience / work_history) → readable
+    // entries instead of raw JSON.
+    if (EXPERIENCE_KEYS.has(q.key)) {
+      const entries = parseExperienceEntries(v);
+      if (!entries.length) return "—";
+      return (
+        <ul className="flex flex-col gap-2.5">
+          {entries.map((e, i) => {
+            const meta = [
+              e.current ? "מקום נוכחי/אחרון" : experienceKindLabel(e.kind),
+              experienceRangeLabel(e),
+            ]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <li key={i} className="border-r-2 border-ink-200 pr-2.5">
+                <div>
+                  {e.place || "—"}
+                  {meta && <span className="text-ink-500 font-normal"> · {meta}</span>}
+                </div>
+                {e.tech.length > 0 && (
+                  <div className="text-[12.5px] text-ink-500 font-normal mt-0.5">
+                    {e.tech.map((t) => techLabels.get(t) ?? t).join(" · ")}
+                  </div>
+                )}
+                {e.description && (
+                  <div className="text-[13px] text-ink-700 font-normal mt-0.5 whitespace-pre-wrap">
+                    {e.description}
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      );
+    }
+    // {"start":"YYYY-MM","end":"YYYY-MM"|"current"} → "MM.YYYY–MM.YYYY" / "MM.YYYY–היום".
+    if (q.key === PRACTICUM_PERIOD_KEY) {
+      return practicumPeriodLabel(v) || "—";
     }
     const labels = labelsFor(q);
     if (Array.isArray(v)) {
@@ -295,20 +389,35 @@ export default async function AdminMemberProfilePage({
 
       {/* The full intake profile */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">תשובות הפרופיל</h3>
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <h3 className="font-display text-base font-bold">תשובות הפרופיל</h3>
+          {lastEditedAt && (
+            <span className="text-[11px] font-semibold text-ink-500 bg-ink-50 border border-ink-200 rounded-full px-2 py-0.5">
+              עודכן לאחרונה: {DMY.format(lastEditedAt)}
+            </span>
+          )}
+        </div>
         <p className="text-[12.5px] text-ink-500 mb-3">
           כל מה שהיא מילאה בטופס ההצטרפות ובפרופיל ({answered.length} שדות).
         </p>
         {answered.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-            {answered.map((q) => (
-              <div key={q.id} className="py-2.5 border-b border-ink-100">
-                <div className="text-[11.5px] text-ink-500">{q.label_he}</div>
-                <div className="text-[14px] text-ink-900 font-medium mt-0.5 break-words">
-                  {display(q)}
+            {answered.map((q) => {
+              const edited = answerEditedAt.get(q.id);
+              return (
+                <div key={q.id} className="py-2.5 border-b border-ink-100">
+                  <div className="text-[11.5px] text-ink-500">
+                    {q.label_he}
+                    {edited && (
+                      <span className="text-[10.5px] text-ink-400"> · עודכן {DMY.format(edited)}</span>
+                    )}
+                  </div>
+                  <div className="text-[14px] text-ink-900 font-medium mt-0.5 break-words">
+                    {display(q)}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-ink-500 text-sm py-2">היא עדיין לא השלימה את הפרופיל.</p>

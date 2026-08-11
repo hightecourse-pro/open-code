@@ -18,10 +18,12 @@ import {
 } from "@/lib/language-skills";
 import {
   EXPERIENCE_KEYS,
+  PRACTICUM_PERIOD_KEY,
   WORK_HISTORY_KEY,
   experienceKindLabel,
   experienceRangeLabel,
   parseExperienceEntries,
+  practicumPeriodLabel,
 } from "@/lib/experience-entries";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 import type { CandidateDetail, CandidateField, CatalogueField, ExperienceEntryDisplay } from "./types";
@@ -53,6 +55,7 @@ const PORTAL_LABELS: Record<string, string> = {
   practicum_description: "תיאור הפרקטיקום",
   practicum_done: "ביצעה פרקטיקום / פרויקט עם לקוח אמיתי",
   practicum_employer: "המעסיק בפרקטיקום",
+  practicum_period: "תקופת הפרקטיקום",
   practicum_tech: "טכנולוגיות הפרקטיקום",
   practicum_placement: "פתוחה להשמה דרך פרקטיקום",
   remote_commute: "נכונות להגעה למשרה היברידית מרוחקת",
@@ -132,6 +135,12 @@ function toDisplay(
       kind: "experience",
       entries,
     };
+  }
+  // Practicum period: a {"start","end"} object → one "MM.YYYY–MM.YYYY" value
+  // ("MM.YYYY–היום" while she's still in it). Malformed/legacy → empty.
+  if (q.key === PRACTICUM_PERIOD_KEY) {
+    const label = practicumPeriodLabel(raw);
+    return { values: label ? [label] : [], kind: "text" };
   }
   if (Array.isArray(raw)) {
     const items = raw
