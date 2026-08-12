@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Share2, UserCheck, Zap, ZapOff, Eye, BookOpen, Search } from "lucide-react";
+import { Share2, UserCheck, Zap, ZapOff, Eye, BookOpen, Search, Gift } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { isDriveAutomationConfigured } from "@/lib/drive-api";
 import { markShareStatus, dismissShare, syncDriveNow } from "../content/actions";
-import { revokeShare } from "./actions";
+import { grantShareManually, removeShare } from "./actions";
 
 export const metadata: Metadata = { title: "תור שיתופים" };
 
@@ -34,13 +34,19 @@ export default async function AdminSharesPage({
 
   // Everything at once: the action queue (pending/revoked) AND the live shares
   // that answer "what does she actually have?".
+  // select("*") so the screen keeps working whether or not the manual-share
+  // migration has run yet.
   const { data: allShares } = await supabase
     .from("content_shares")
-    .select("id, owner_type, owner_id, profile_id, status, created_at, shared_at, granted_email")
+    .select("*")
     .order("created_at", { ascending: true });
 
   const shares = (allShares ?? []).filter((s) => s.status !== "shared");
-  const live = (allShares ?? []).filter((s) => s.status === "shared");
+  // "Who has what" also shows manual grants that haven't synced yet — the
+  // admin decided them, so they must be visible (and removable) immediately.
+  const live = (allShares ?? []).filter(
+    (s) => s.status === "shared" || (s.status === "pending" && s.granted_manually)
+  );
 
   const profileIds = [...new Set((allShares ?? []).map((s) => s.profile_id))];
   const courseIds = [...new Set((allShares ?? []).filter((s) => s.owner_type === "course").map((s) => s.owner_id))];
@@ -93,6 +99,17 @@ export default async function AdminSharesPage({
 
   const tabHref = (v: "member" | "content") =>
     `/admin/shares?view=${v}${needle ? `&q=${encodeURIComponent(q ?? "")}` : ""}`;
+
+  // Pickers for the manual-share form.
+  const [{ data: members }, { data: allCourses }, { data: allSessions }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("status", ["active", "pending"])
+      .order("full_name", { ascending: true }),
+    supabase.from("courses").select("id, title").eq("is_published", true).order("title"),
+    supabase.from("sessions").select("id, title").order("scheduled_at", { ascending: false }).limit(60),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -154,6 +171,63 @@ export default async function AdminSharesPage({
         ) : (
           <p className="text-ink-500 text-sm">אין שיתופים ממתינים 💜</p>
         )}
+      </section>
+
+      {/* ---------- Manual share — an extra course for one member ---------- */}
+      <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
+        <div>
+          <h3 className="font-display text-base font-bold flex items-center gap-2">
+            <Gift size={16} className="text-brand-pink-deep" /> שיתוף אישי — קורס נוסף למשתתפת
+          </h3>
+          <p className="text-[12.5px] text-ink-500 mt-0.5">
+            כאן את פותחת למישהי קורס או סשן מעבר לקורס הפעיל שלה. השיתוף נשאר עד שתסירי אותו —
+            החלפת קורס או סיום מנוי לא נוגעים בו.
+          </p>
+        </div>
+        <form action={grantShareManually} className="flex flex-wrap items-center gap-2">
+          <select
+            name="profile_id"
+            required
+            defaultValue=""
+            className="text-[13px] border border-ink-300 rounded-md px-2.5 py-2 min-w-[170px]"
+          >
+            <option value="" disabled>
+              בחרי משתתפת…
+            </option>
+            {(members ?? []).map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.full_name}
+              </option>
+            ))}
+          </select>
+          <select
+            name="content"
+            required
+            defaultValue=""
+            className="text-[13px] border border-ink-300 rounded-md px-2.5 py-2 flex-1 min-w-[200px]"
+          >
+            <option value="" disabled>
+              בחרי תוכן לשיתוף…
+            </option>
+            <optgroup label="קורסים">
+              {(allCourses ?? []).map((c) => (
+                <option key={c.id} value={`course:${c.id}`}>
+                  {c.title}
+                </option>
+              ))}
+            </optgroup>
+            <optgroup label="סשנים">
+              {(allSessions ?? []).map((s) => (
+                <option key={s.id} value={`session:${s.id}`}>
+                  {s.title}
+                </option>
+              ))}
+            </optgroup>
+          </select>
+          <Button type="submit" size="sm">
+            שיתוף
+          </Button>
+        </form>
       </section>
 
       {/* ---------- Who has what — the live picture ---------- */}
@@ -236,13 +310,20 @@ export default async function AdminSharesPage({
                       <span className="text-[13px] text-ink-900">
                         {byContent ? r.memberName : r.contentTitle}
                       </span>
+                      {r.granted_manually && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-brand-pink-deep bg-tint-pink border border-[#F3C6DD] rounded-full px-2 py-px">
+                          <Gift size={11} /> שיתוף אישי
+                        </span>
+                      )}
                       {r.granted_email && (
                         <span className="text-[11.5px] text-ink-400" dir="ltr">
                           {r.granted_email}
                         </span>
                       )}
-                      <span className="text-[11.5px] text-ink-400">שותף {dmy(r.shared_at)}</span>
-                      <form action={revokeShare.bind(null, r.id)} className="ms-auto">
+                      <span className="text-[11.5px] text-ink-400">
+                        {r.status === "shared" ? `שותף ${dmy(r.shared_at)}` : "ממתין לשיתוף בדרייב"}
+                      </span>
+                      <form action={removeShare.bind(null, r.id)} className="ms-auto">
                         <button
                           type="submit"
                           className="text-[11.5px] text-ink-400 hover:text-danger transition-colors"

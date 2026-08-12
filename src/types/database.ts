@@ -1032,6 +1032,8 @@ export interface Database {
           created_at: string;
           shared_at: string | null;
           revoked_at: string | null;
+          /** An admin handed her this course on purpose — it outlives her enrolment. */
+          granted_manually: boolean;
         };
         Insert: {
           id?: string;
@@ -1043,6 +1045,7 @@ export interface Database {
           shared_at?: string | null;
           revoked_at?: string | null;
           granted_email?: string | null;
+          granted_manually?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["content_shares"]["Insert"]>;
         Relationships: [];

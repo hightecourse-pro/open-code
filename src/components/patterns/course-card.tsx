@@ -22,12 +22,20 @@ export interface CourseCardProps {
   cycles?: string | null;
   /** True when the member already has a different active course (locked). */
   locked: boolean;
+  /** An admin opened this course for her personally — it isn't locked. */
+  gifted?: boolean;
   /** True for a free member — the catalogue is visible, opening isn't. */
   needsSubscription?: boolean;
   onStartError?: (msg: string) => void;
 }
 
-export function CourseCard({ course, cycles, locked, needsSubscription = false }: CourseCardProps) {
+export function CourseCard({
+  course,
+  cycles,
+  locked,
+  gifted = false,
+  needsSubscription = false,
+}: CourseCardProps) {
   const [pending, start] = useTransition();
   const cover = COVERS[(course.cover_variant - 1) % COVERS.length];
 
@@ -41,13 +49,19 @@ export function CourseCard({ course, cycles, locked, needsSubscription = false }
   return (
     <div
       className={cn(
-        "bg-white border border-ink-200 rounded-[18px] overflow-hidden transition-[transform,box-shadow] duration-[220ms]",
-        locked ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-md"
+        "bg-white border rounded-[18px] overflow-hidden transition-[transform,box-shadow] duration-[220ms]",
+        gifted ? "border-[#F3C6DD]" : "border-ink-200",
+        locked && !gifted ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-md"
       )}
     >
       <div className={cn("h-[120px] relative flex items-center justify-center text-white font-mono text-5xl font-black", cover)}>
         {course.title.slice(0, 1)}
-        {locked && (
+        {gifted && (
+          <div className="absolute inset-x-0 bottom-0 bg-white/92 text-brand-pink-deep text-[12px] font-display font-semibold py-1 text-center">
+            נפתח עבורך אישית 💜
+          </div>
+        )}
+        {locked && !gifted && (
           <div className="absolute inset-0 bg-ink-1000/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5 text-white text-[13px] font-display font-semibold">
             <Lock size={22} />
             יש לך קורס פעיל אחר
@@ -82,6 +96,8 @@ export function CourseCard({ course, cycles, locked, needsSubscription = false }
           >
             <Sparkles size={13} /> נפתח עם מנוי
           </Link>
+        ) : gifted ? (
+          <div className="mt-3 text-[12.5px] text-ink-500">החומרים שלו מחכים לך למעלה 💜</div>
         ) : (
           !locked && (
             <button

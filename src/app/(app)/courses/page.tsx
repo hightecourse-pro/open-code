@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Info, Play } from "lucide-react";
+import { Info, Play, Gift } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { CourseCard } from "@/components/patterns/course-card";
@@ -62,6 +62,33 @@ export default async function CoursesPage() {
     links: activeLinks.filter((l) => l.unit_id === u.id),
   }));
   const legacyLinks = activeLinks.filter((l) => !l.unit_id);
+
+  // Courses an admin opened for her personally — extra, on top of the active
+  // one, and they stay until an admin takes them back.
+  const { data: gifted } = user
+    ? await supabase
+        .from("content_shares")
+        .select("owner_id")
+        .eq("profile_id", user.id)
+        .eq("owner_type", "course")
+        .eq("granted_manually", true)
+        .neq("status", "revoked")
+    : { data: [] };
+  const giftedIds = [...new Set((gifted ?? []).map((g) => g.owner_id))].filter(
+    (id) => id !== activeCourse?.id
+  );
+  const giftedCourses = (courses ?? []).filter((c) => giftedIds.includes(c.id));
+
+  let giftedLinks: ContentLink[] = [];
+  if (giftedCourses.length) {
+    const { data } = await supabase
+      .from("content_links")
+      .select("*")
+      .eq("owner_type", "course")
+      .in("owner_id", giftedCourses.map((c) => c.id))
+      .order("sort_order", { ascending: true });
+    giftedLinks = data ?? [];
+  }
 
   return (
     <div className="flex flex-col gap-5">
@@ -126,6 +153,34 @@ export default async function CoursesPage() {
         />
       )}
 
+      {/* Personally opened for her by the team — not part of the monthly swap. */}
+      {giftedCourses.map((course) => {
+        const links = giftedLinks.filter((l) => l.owner_id === course.id);
+        const units = (unitsByCourse.get(course.id) ?? []).map((u) => ({
+          ...u,
+          links: links.filter((l) => l.unit_id === u.id),
+        }));
+        return (
+          <div key={course.id} className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Gift size={16} className="text-brand-pink-deep" />
+              <h2 className="font-display text-lg font-bold text-ink-1000">{course.title}</h2>
+              <span className="text-[12px] font-semibold text-brand-pink-deep bg-tint-pink border border-[#F3C6DD] rounded-full px-2.5 py-0.5">
+                נפתח עבורך אישית 💜
+              </span>
+            </div>
+            <CourseContent
+              courseId={course.id}
+              links={links.filter((l) => !l.unit_id)}
+              units={units}
+              studied={false}
+              rating={null}
+              feedback={null}
+            />
+          </div>
+        );
+      })}
+
       <div className="flex gap-2.5 items-start bg-tint-purple border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-700">
         <Info size={18} className="text-brand-purple shrink-0 mt-0.5" />
         <span>
@@ -150,6 +205,7 @@ export default async function CoursesPage() {
               key={course.id}
               course={course}
               cycles={cycles}
+              gifted={giftedIds.includes(course.id)}
               locked={!!activeCourse && activeCourse.id !== course.id}
               needsSubscription={!subscriber}
             />
