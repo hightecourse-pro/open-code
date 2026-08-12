@@ -230,7 +230,6 @@ export async function setMemberEmployment(
   let update: {
     found_job: boolean;
     hired_via_us: boolean;
-    workplace: string | null;
     hired_at: string | null;
   };
   if (foundJob) {
@@ -238,16 +237,25 @@ export async function setMemberEmployment(
     update = {
       found_job: true,
       hired_via_us: hiredViaUs,
-      workplace: workplace || null,
       hired_at: (Number.isNaN(parsed.getTime()) ? new Date() : parsed).toISOString(),
     };
   } else {
-    update = { found_job: false, hired_via_us: false, workplace: null, hired_at: null };
+    update = { found_job: false, hired_via_us: false, hired_at: null };
   }
 
   const supabase = await createClient();
   const { error } = await supabase.from("profiles").update(update).eq("id", profileId);
   if (error) return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
+
+  // The workplace name lives in member_private — other members must never be
+  // able to read where she works (and for an internal job it IS the client).
+  const { error: wpError } = await createAdminClient()
+    .from("member_private")
+    .upsert(
+      { profile_id: profileId, workplace: foundJob ? workplace || null : null },
+      { onConflict: "profile_id" }
+    );
+  if (wpError) return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
 
   revalidatePath(`/admin/members/${profileId}`);
   revalidatePath("/forum"); // the hired-celebration banner lives there
@@ -1498,10 +1506,21 @@ export async function updateApplicationPipeline(
         found_job: true,
         hired_via_us: true,
         hired_at: new Date().toISOString(),
-        workplace: job?.company ?? null,
       })
       .eq("id", app.applicant_id);
     if (hiredError) console.error("[pipeline] hired profile update failed:", hiredError);
+
+    // Where she works is team-only (member_private) — on an internal job the
+    // company IS the client, and rule 1 says that name never leaves the team.
+    if (job?.company) {
+      const { error: wpError } = await admin
+        .from("member_private")
+        .upsert(
+          { profile_id: app.applicant_id, workplace: job.company },
+          { onConflict: "profile_id" }
+        );
+      if (wpError) console.error("[pipeline] workplace write failed:", wpError);
+    }
   }
 
   // Best-effort: the warm status email must not fail the update itself.

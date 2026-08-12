@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { isSubscriber } from "@/lib/auth";
 import { queueRevokes, queueShares } from "@/lib/drive-shares";
 
 function monthStart(): string {
@@ -23,10 +24,12 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
   // Opening a course now grants real Drive access, so verify membership here
   // and not only in the page layout — a server action is directly callable.
   const [{ data: me }, { data: course }] = await Promise.all([
-    supabase.from("profiles").select("status").eq("id", user.id).single(),
+    supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("courses").select("id, is_published").eq("id", courseId).maybeSingle(),
   ]);
-  if (me?.status !== "active") {
+  // The same rule the screen uses to show the button — otherwise an admin sees
+  // "התחילי קורס" and gets told to buy a subscription when she clicks it.
+  if (!me || !isSubscriber(me)) {
     return { error: "פתיחת קורס נפתחת עם מנוי לקהילה 💜" };
   }
   if (!course?.is_published) return { error: "הקורס הזה לא זמין כרגע." };

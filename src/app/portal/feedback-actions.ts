@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getPortalClient } from "@/lib/portal/auth";
+import { loadClientJob } from "@/lib/portal/jobs";
 import { sendResendEmail } from "@/lib/email/resend";
 import { clientInterviewEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
@@ -29,11 +30,15 @@ export async function saveCandidateFeedback(
     .maybeSingle();
   if (!job || job.client_id !== client.id) return { ok: false };
 
+  // The sent_at gate applies to WRITES too: a candidate we curated but never
+  // submitted — or who opted out of the portal — must be untouchable here,
+  // exactly as she is invisible to every read path.
   const { data: row } = await admin
     .from("job_candidates")
     .select("id, interview_marked")
     .eq("job_id", jobId)
     .eq("profile_id", profileId)
+    .not("sent_at", "is", null)
     .maybeSingle();
   if (!row) return { ok: false };
 
@@ -51,15 +56,14 @@ export async function saveCandidateFeedback(
   // (best-effort, never blocks the client's click; only on the false→true flip).
   if (patch.interviewMarked === true && row.interview_marked !== true) {
     try {
-      const { data: candidate } = await admin
-        .from("profiles")
-        .select("full_name")
-        .eq("id", profileId)
-        .maybeSingle();
+      // The name comes through the privacy door, not straight from profiles —
+      // this file must not become a second way to read member data.
+      const clientJob = await loadClientJob(client.id, jobId);
+      const candidate = clientJob?.candidates.find((c) => c.id === profileId);
       const built = clientInterviewEmail(
         client.company_name,
-        candidate?.full_name || "מועמדת",
-        job.title,
+        candidate?.name || "מועמדת",
+        clientJob?.title ?? job.title,
         `${getSiteUrl()}/admin/jobs/${jobId}?tab=review`
       );
       const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");

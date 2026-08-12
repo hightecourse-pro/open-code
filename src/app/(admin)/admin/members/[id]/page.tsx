@@ -122,6 +122,14 @@ export default async function AdminMemberProfilePage({
   const hiredAtDate = (profile.hired_at ? new Date(profile.hired_at) : new Date())
     .toISOString()
     .slice(0, 10);
+  // Where she works is team-only, so it lives in member_private — never on the
+  // profile row every member can read.
+  const { data: privateRow } = await supabase
+    .from("member_private")
+    .select("workplace")
+    .eq("profile_id", id)
+    .maybeSingle();
+  const workplace = privateRow?.workplace ?? null;
   const isVip = crm?.is_vip ?? profile.is_vip ?? false;
   const vipReason = crm?.vip_reason ?? null;
   const internalNotes = crm?.internal_notes ?? profile.internal_notes ?? null;
@@ -305,7 +313,7 @@ export default async function AdminMemberProfilePage({
             <span>העדפת מייל: {DIGEST_LABEL[profile.digest_frequency] ?? profile.digest_frequency}</span>
             {profile.found_job && (
               <span>
-                💼 מצאה עבודה{profile.workplace ? ` · ${profile.workplace}` : ""}
+                💼 מצאה עבודה{workplace ? ` · ${workplace}` : ""}
                 {profile.hired_at
                   ? ` · מ־${new Date(profile.hired_at).toLocaleDateString("he-IL")}`
                   : ""}
@@ -325,7 +333,7 @@ export default async function AdminMemberProfilePage({
           profileId={profile.id}
           foundJob={profile.found_job}
           hiredViaUs={profile.hired_via_us}
-          workplace={profile.workplace}
+          workplace={workplace}
           hiredAtDate={hiredAtDate}
         />
         {profile.found_job && (

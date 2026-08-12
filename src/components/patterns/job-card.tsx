@@ -62,6 +62,7 @@ export function JobCard({
 }: JobCardProps) {
   const [isSaved, setSaved] = useState(saved);
   const [hasApplied, setApplied] = useState(applied);
+  const [applyError, setApplyError] = useState<string | null>(null);
   const [, start] = useTransition();
   const logo = LOGO_GRADIENTS[(job.logo_variant - 1) % LOGO_GRADIENTS.length];
   const techSet = new Set(myTech);
@@ -74,7 +75,14 @@ export function JobCard({
 
   function onApply() {
     setApplied(true);
-    start(() => void applyToJob(job.id));
+    start(async () => {
+      const res = await applyToJob(job.id);
+      // Don't leave her believing she applied when she didn't.
+      if (res?.error) {
+        setApplied(false);
+        setApplyError(res.error);
+      }
+    });
   }
 
   return (
@@ -168,6 +176,12 @@ export function JobCard({
         <div className="flex items-center gap-1.5 text-[12px] text-[#8C5E0E] bg-tint-warm border border-[#F0DCA8] rounded-md px-2.5 py-1.5 mb-3">
           <Crown size={12} className="shrink-0" />
           עדיפות למנויות הקהילה
+        </div>
+      )}
+
+      {applyError && (
+        <div className="text-[12.5px] text-danger bg-danger-bg border border-[#F5C6C0] rounded-md px-2.5 py-1.5 mb-3">
+          {applyError}
         </div>
       )}
 

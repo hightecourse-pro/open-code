@@ -40,7 +40,7 @@ export default async function ProfilePage() {
     // Owner-only row — her Drive address isn't on the shared profiles table.
     supabase
       .from("member_private")
-      .select("drive_email, drive_email_requested_at")
+      .select("drive_email, drive_email_requested_at, workplace")
       .eq("profile_id", profile.id)
       .maybeSingle(),
     // Her latest employment accompaniment assignment (admin-assigned) — the
@@ -108,7 +108,7 @@ export default async function ProfilePage() {
 
       <EmploymentCard
         foundJob={profile.found_job}
-        workplace={profile.workplace}
+        workplace={priv?.workplace ?? null}
         hiredViaUs={profile.hired_via_us}
         mentorName={employmentMentorName}
       />

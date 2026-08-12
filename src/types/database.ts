@@ -91,7 +91,6 @@ export interface Database {
           /** Opt-out from the employer portal listing. */
           portal_listed: boolean;
           found_job: boolean;
-          workplace: string | null;
           hired_via_us: boolean;
           hired_at: string | null;
         } & Timestamps;
@@ -115,7 +114,6 @@ export interface Database {
           digest_frequency?: string;
           portal_listed?: boolean;
           found_job?: boolean;
-          workplace?: string | null;
           hired_via_us?: boolean;
           hired_at?: string | null;
         };
@@ -325,12 +323,15 @@ export interface Database {
           profile_id: string;
           drive_email: string | null;
           drive_email_requested_at: string | null;
+          /** Where she works — team-only; never readable by other members. */
+          workplace: string | null;
           updated_at: string;
         };
         Insert: {
           profile_id: string;
           drive_email?: string | null;
           drive_email_requested_at?: string | null;
+          workplace?: string | null;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["member_private"]["Insert"]>;

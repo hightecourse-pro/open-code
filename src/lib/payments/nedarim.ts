@@ -13,6 +13,8 @@ import type { SubscriptionPlan } from "@/types/database";
  */
 
 export const NEDARIM_IFRAME_URL = "https://www.matara.pro/nedarimplus/iframe/";
+/** The only window allowed to exchange postMessages with the checkout. */
+export const NEDARIM_ORIGIN = "https://www.matara.pro";
 
 export function getNedarimConfig() {
   const mosadId = process.env.NEDARIM_MOSAD_ID;

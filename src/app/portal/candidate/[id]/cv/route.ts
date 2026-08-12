@@ -31,6 +31,16 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   const { id } = await ctx.params;
   const admin = createAdminClient();
 
+  // Submission gate FIRST. Checking "is she listed?" before "may this client
+  // reach her?" made the two answers distinguishable: an unknown id redirected
+  // while a real-but-unsent candidate 404'd, so the 404 confirmed she exists.
+  // Both failures must look identical — 404, like the profile page.
+  const reachable =
+    client.can_search || (await candidateSentToClient(client.id, id));
+  if (!reachable) {
+    return noStore(new NextResponse(null, { status: 404 }));
+  }
+
   // The listing gate, mirroring loadCandidates() exactly (portal_listed is
   // nullable pre-migration and null counts as listed). Kept as a narrow query
   // rather than loadCandidates() because this route only needs a yes/no and
@@ -46,13 +56,6 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     .maybeSingle();
 
   if (!candidate) {
-    return noStore(NextResponse.redirect(new URL("/portal", request.url)));
-  }
-
-  // Without free search, a client may only fetch CVs of candidates we sent to
-  // one of her jobs — the same gate as the profile page. 404, not a redirect,
-  // so the response doesn't hint the candidate exists.
-  if (!client.can_search && !(await candidateSentToClient(client.id, id))) {
     return noStore(new NextResponse(null, { status: 404 }));
   }
 

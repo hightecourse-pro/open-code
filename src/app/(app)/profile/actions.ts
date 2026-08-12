@@ -106,14 +106,21 @@ export async function updateEmployment(
     .eq("id", user.id)
     .single();
 
-  const update: { found_job: boolean; workplace: string | null; hired_at?: string } = {
-    found_job: foundJob,
-    workplace: foundJob ? workplace || null : null,
-  };
+  const update: { found_job: boolean; hired_at?: string } = { found_job: foundJob };
   if (foundJob && !before?.found_job) update.hired_at = new Date().toISOString();
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
   if (error) return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
+
+  // Where she works stays between her and the team — member_private, never the
+  // profile row the whole community can read.
+  const { error: wpError } = await supabase
+    .from("member_private")
+    .upsert(
+      { profile_id: user.id, workplace: foundJob ? workplace || null : null },
+      { onConflict: "profile_id" }
+    );
+  if (wpError) return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
 
   revalidatePath("/profile");
   revalidatePath("/forum"); // the hired-celebration banner lives there

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { NEDARIM_IFRAME_URL } from "@/lib/payments/nedarim";
+import { NEDARIM_IFRAME_URL, NEDARIM_ORIGIN } from "@/lib/payments/nedarim";
 import { checkMembershipActive } from "@/app/join/actions";
 import { Alert, Button, Field, Input } from "@/components/ui";
 
@@ -74,6 +74,9 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
 
   useEffect(() => {
     function onMessage(e: MessageEvent) {
+      // Only the payment iframe may drive this UI — otherwise any window could
+      // shout "payment succeeded" and walk the member into the success screen.
+      if (e.origin !== NEDARIM_ORIGIN) return;
       let raw: unknown = e.data;
       if (typeof raw === "string") {
         try {
@@ -118,7 +121,9 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   }, []);
 
   function post(name: string, value: unknown) {
-    ref.current?.contentWindow?.postMessage({ Name: name, Value: value }, "*");
+    // Addressed to Nedarim explicitly — card details must never be posted to
+    // whatever happens to be in the frame.
+    ref.current?.contentWindow?.postMessage({ Name: name, Value: value }, NEDARIM_ORIGIN);
   }
 
   if (status === "success") {

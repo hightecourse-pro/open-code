@@ -12,7 +12,12 @@ export interface HiredMember {
 export function HiredBanner({ members }: { members: HiredMember[] }) {
   if (members.length === 0) return null;
 
-  const names = members.map((m) => m.full_name).join(", ");
+  // First names — a celebration between friends, not a roster of full names
+  // broadcast to the whole community.
+  const names = members
+    .map((m) => m.full_name.trim().split(/\s+/)[0])
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <div className="bg-brand-gradient text-white rounded-[18px] p-5 shadow-glow-pink">

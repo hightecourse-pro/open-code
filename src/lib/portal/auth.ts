@@ -26,7 +26,21 @@ function readCanSearch(row: { can_search?: boolean | null }): boolean {
 
 function sessionSecret(): string {
   // Reuses the app's existing server secret; falls back so local dev works.
-  return process.env.PORTAL_SESSION_SECRET || process.env.AI_KEY_SECRET || "";
+  const secret = process.env.PORTAL_SESSION_SECRET || process.env.AI_KEY_SECRET || "";
+  if (!secret) {
+    // Silently returning "" used to hand out cookies that could never be
+    // accepted again — the client logged in "successfully" and then bounced on
+    // the login page forever, with nothing in the logs to explain it.
+    throw new Error(
+      "portal_session_secret_missing: set PORTAL_SESSION_SECRET (see .env.example) — the employer portal cannot sign sessions without it"
+    );
+  }
+  return secret;
+}
+
+/** Whether portal sessions can work at all — for a clear message, not a guess. */
+export function isPortalSessionConfigured(): boolean {
+  return !!(process.env.PORTAL_SESSION_SECRET || process.env.AI_KEY_SECRET);
 }
 
 // ------------------------------------------------------------- passwords
@@ -80,27 +94,54 @@ function sign(value: string): string {
   return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url");
 }
 
-/** `<clientId>.<expiry>.<signature>` — stateless, tamper-evident. */
-function buildToken(clientId: string): string {
-  const payload = `${clientId}.${Date.now() + MAX_AGE * 1000}`;
-  return `${payload}.${sign(payload)}`;
+/**
+ * A fingerprint of the client's CURRENT credentials, mixed into the session
+ * signature. Resetting the password changes it, which invalidates every live
+ * cookie — otherwise "the old password stops working immediately" would only
+ * be true for the login form, and whoever was already inside stayed inside.
+ */
+function credentialFingerprint(row: {
+  password_enc?: string | null;
+  password_hash?: string | null;
+}): string {
+  const material = row.password_enc ?? row.password_hash ?? "";
+  return crypto.createHash("sha256").update(material).digest("base64url").slice(0, 16);
 }
 
-function readToken(token: string): string | null {
+/** `<clientId>.<expiry>.<signature>` — stateless, tamper-evident. */
+function buildToken(clientId: string, fingerprint: string): string {
+  const payload = `${clientId}.${Date.now() + MAX_AGE * 1000}`;
+  return `${payload}.${sign(`${payload}.${fingerprint}`)}`;
+}
+
+/** Parsed shape only — the signature needs the client row to be verified. */
+function parseToken(token: string): { clientId: string; expiry: string; signature: string } | null {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
   const [clientId, expiry, signature] = parts;
-  const expected = sign(`${clientId}.${expiry}`);
-  const a = Buffer.from(signature);
-  const b = Buffer.from(expected);
-  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null;
+  if (!clientId || !expiry || !signature) return null;
   if (Number(expiry) < Date.now()) return null;
-  return clientId;
+  return { clientId, expiry, signature };
+}
+
+function signatureMatches(
+  parsed: { clientId: string; expiry: string; signature: string },
+  fingerprint: string
+): boolean {
+  const expected = sign(`${parsed.clientId}.${parsed.expiry}.${fingerprint}`);
+  const a = Buffer.from(parsed.signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 export async function startPortalSession(clientId: string): Promise<void> {
+  const { data } = await createAdminClient()
+    .from("portal_clients")
+    .select("*")
+    .eq("id", clientId)
+    .maybeSingle();
   const jar = await cookies();
-  jar.set(COOKIE, buildToken(clientId), {
+  jar.set(COOKIE, buildToken(clientId, credentialFingerprint(data ?? {})), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -125,20 +166,24 @@ export async function endPortalSession(): Promise<void> {
 
 /** The signed-in client, or null. Also re-checks that access is still active. */
 export async function getPortalClient(): Promise<PortalClient | null> {
-  if (!sessionSecret()) return null;
+  // sessionSecret() throws when unset — a loud misconfiguration beats a portal
+  // that quietly refuses every session it just issued.
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
-  const clientId = readToken(token);
-  if (!clientId) return null;
+  const parsed = parseToken(token);
+  if (!parsed) return null;
 
   // select("*") so this works whether or not the can_search migration ran.
   const { data } = await createAdminClient()
     .from("portal_clients")
     .select("*")
-    .eq("id", clientId)
+    .eq("id", parsed.clientId)
     .maybeSingle();
   if (!data || !data.is_active) return null;
+  // Signed against the credentials as they were at login — a password reset
+  // since then ends this session too.
+  if (!signatureMatches(parsed, credentialFingerprint(data))) return null;
   // A signed-in client always has credentials; leads without a username never log in.
   return {
     id: data.id,
