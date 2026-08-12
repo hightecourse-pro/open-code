@@ -10,10 +10,13 @@ import type { ContentLink, ContentOwner } from "@/types/database";
 export function ContentLinksEditor({
   ownerType,
   ownerId,
+  unitId = null,
   links,
 }: {
   ownerType: ContentOwner;
   ownerId: string;
+  /** The course unit these links belong to, when the course has units. */
+  unitId?: string | null;
   links: ContentLink[];
 }) {
   return (
@@ -51,7 +54,7 @@ export function ContentLinksEditor({
       )}
 
       <form
-        action={addContentLink.bind(null, ownerType, ownerId)}
+        action={addContentLink.bind(null, ownerType, ownerId, unitId)}
         className="flex flex-wrap items-center gap-2 pt-2 border-t border-ink-100"
       >
         <select name="kind" defaultValue="video" className="text-[12px] border border-ink-300 rounded-md px-2 py-1.5">

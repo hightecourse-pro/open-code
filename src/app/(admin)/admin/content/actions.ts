@@ -69,6 +69,59 @@ export async function deleteCourse(id: string): Promise<void> {
   revalidatePath("/courses");
 }
 
+// ------------------------------------------------------------ course units
+// A unit (קוביה) is one year-cycle of a course: its own name, year and links.
+
+/** A sane year, or null. Keeps a typo out of the members' course page. */
+function parseYear(raw: FormDataEntryValue | null): number | null {
+  const n = Number(String(raw ?? "").trim());
+  return Number.isInteger(n) && n >= 2000 && n <= 2100 ? n : null;
+}
+
+export async function createCourseUnit(courseId: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  const supabase = await createClient();
+  const { data: max } = await supabase
+    .from("course_units")
+    .select("sort_order")
+    .eq("course_id", courseId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  await supabase.from("course_units").insert({
+    course_id: courseId,
+    name,
+    year: parseYear(formData.get("year")),
+    sort_order: (max?.sort_order ?? 0) + 1,
+  });
+  revalidatePath("/admin/content");
+  revalidatePath("/courses");
+}
+
+export async function updateCourseUnit(id: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const name = String(formData.get("name") ?? "").trim();
+  if (!name) return;
+  const supabase = await createClient();
+  await supabase
+    .from("course_units")
+    .update({ name, year: parseYear(formData.get("year")) })
+    .eq("id", id);
+  revalidatePath("/admin/content");
+  revalidatePath("/courses");
+}
+
+/** Delete a unit. Its links go with it (FK cascade) — the form warns about that. */
+export async function deleteCourseUnit(id: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("course_units").delete().eq("id", id);
+  revalidatePath("/admin/content");
+  revalidatePath("/courses");
+}
+
 export async function deleteSessionContent(id: string): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();
@@ -77,10 +130,15 @@ export async function deleteSessionContent(id: string): Promise<void> {
   revalidatePath("/events");
 }
 
-/** Add a Drive link (video or materials folder) to a course/session. */
+/**
+ * Add a Drive link (video or materials folder) to a course/session. When the
+ * course is split into units, the link belongs to one of them — sharing still
+ * happens per course, so the Drive queue behaves identically either way.
+ */
 export async function addContentLink(
   ownerType: ContentOwner,
   ownerId: string,
+  unitId: string | null,
   formData: FormData
 ): Promise<void> {
   await requireRole("admin");
@@ -100,6 +158,7 @@ export async function addContentLink(
   await supabase.from("content_links").insert({
     owner_type: ownerType,
     owner_id: ownerId,
+    unit_id: unitId,
     kind,
     title,
     url,

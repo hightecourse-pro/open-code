@@ -1,27 +1,50 @@
 import type { Metadata } from "next";
-import { Share2, UserCheck, Zap, ZapOff } from "lucide-react";
+import Link from "next/link";
+import { Share2, UserCheck, Zap, ZapOff, Eye, BookOpen, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge, Button } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import { isDriveAutomationConfigured } from "@/lib/drive-api";
 import { markShareStatus, dismissShare, syncDriveNow } from "../content/actions";
+import { revokeShare } from "./actions";
 
 export const metadata: Metadata = { title: "תור שיתופים" };
 
-export default async function AdminSharesPage() {
+/** DD.MM.YYYY — how dates read everywhere else in the admin. */
+const DMY = new Intl.DateTimeFormat("he-IL", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Asia/Jerusalem",
+});
+const dmy = (iso: string | null) => (iso ? DMY.format(new Date(iso)) : "—");
+
+export default async function AdminSharesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string; q?: string }>;
+}) {
+  const { view, q } = await searchParams;
+  const byContent = view === "content";
+  const needle = (q ?? "").trim().toLowerCase();
+
   const supabase = await createClient();
   // Cheap env check — no live Google call on every page render.
   const driveOn = isDriveAutomationConfigured();
 
-  // Action-needed shares: pending (share it) or revoked (un-share it).
-  const { data: shares } = await supabase
+  // Everything at once: the action queue (pending/revoked) AND the live shares
+  // that answer "what does she actually have?".
+  const { data: allShares } = await supabase
     .from("content_shares")
-    .select("id, owner_type, owner_id, profile_id, status, created_at")
-    .neq("status", "shared")
+    .select("id, owner_type, owner_id, profile_id, status, created_at, shared_at, granted_email")
     .order("created_at", { ascending: true });
 
-  const profileIds = [...new Set((shares ?? []).map((s) => s.profile_id))];
-  const courseIds = [...new Set((shares ?? []).filter((s) => s.owner_type === "course").map((s) => s.owner_id))];
-  const sessionIds = [...new Set((shares ?? []).filter((s) => s.owner_type === "session").map((s) => s.owner_id))];
+  const shares = (allShares ?? []).filter((s) => s.status !== "shared");
+  const live = (allShares ?? []).filter((s) => s.status === "shared");
+
+  const profileIds = [...new Set((allShares ?? []).map((s) => s.profile_id))];
+  const courseIds = [...new Set((allShares ?? []).filter((s) => s.owner_type === "course").map((s) => s.owner_id))];
+  const sessionIds = [...new Set((allShares ?? []).filter((s) => s.owner_type === "session").map((s) => s.owner_id))];
 
   const [{ data: profiles }, { data: courses }, { data: sessions }] = await Promise.all([
     profileIds.length
@@ -39,8 +62,37 @@ export default async function AdminSharesPage() {
     ...(sessions ?? []).map((s) => [`session:${s.id}`, s.title] as [string, string]),
   ]);
 
-  const pending = (shares ?? []).filter((s) => s.status === "pending");
-  const revoked = (shares ?? []).filter((s) => s.status === "revoked");
+  const pending = shares.filter((s) => s.status === "pending");
+  const revoked = shares.filter((s) => s.status === "revoked");
+
+  // --- live shares, enriched and filtered ---------------------------------
+  type LiveRow = (typeof live)[number] & { memberName: string; contentTitle: string };
+  const liveRows: LiveRow[] = live.map((s) => ({
+    ...s,
+    memberName: nameOf.get(s.profile_id) ?? "—",
+    contentTitle: titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—",
+  }));
+  const filtered = needle
+    ? liveRows.filter(
+        (r) =>
+          r.memberName.toLowerCase().includes(needle) || r.contentTitle.toLowerCase().includes(needle)
+      )
+    : liveRows;
+
+  // Grouped both ways — the tabs just pick which grouping to render.
+  const groups = new Map<string, { label: string; rows: LiveRow[] }>();
+  for (const r of filtered) {
+    const key = byContent ? `${r.owner_type}:${r.owner_id}` : r.profile_id;
+    const label = byContent ? r.contentTitle : r.memberName;
+    const g = groups.get(key) ?? { label, rows: [] };
+    g.rows.push(r);
+    groups.set(key, g);
+  }
+  const grouped = [...groups.values()].sort((a, b) => a.label.localeCompare(b.label, "he"));
+  const memberCount = new Set(filtered.map((r) => r.profile_id)).size;
+
+  const tabHref = (v: "member" | "content") =>
+    `/admin/shares?view=${v}${needle ? `&q=${encodeURIComponent(q ?? "")}` : ""}`;
 
   return (
     <div className="flex flex-col gap-6">
@@ -101,6 +153,109 @@ export default async function AdminSharesPage() {
           </div>
         ) : (
           <p className="text-ink-500 text-sm">אין שיתופים ממתינים 💜</p>
+        )}
+      </section>
+
+      {/* ---------- Who has what — the live picture ---------- */}
+      <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
+        <div className="flex items-end justify-between flex-wrap gap-3">
+          <div>
+            <h3 className="font-display text-base font-bold flex items-center gap-2">
+              <Eye size={16} className="text-brand-purple" /> מה משותף למי
+            </h3>
+            <p className="text-[12.5px] text-ink-500 mt-0.5">
+              {filtered.length > 0
+                ? `${memberCount} משתתפות · ${filtered.length} שיתופים פעילים`
+                : "התמונה המלאה של מי יש לה גישה למה, ברגע זה."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex rounded-md border border-ink-200 overflow-hidden">
+              <Link
+                href={tabHref("member")}
+                className={cn(
+                  "px-3 py-1.5 text-[12.5px] font-semibold transition-colors",
+                  !byContent ? "bg-brand-gradient text-white" : "text-ink-700 hover:bg-ink-50"
+                )}
+              >
+                לפי משתתפת
+              </Link>
+              <Link
+                href={tabHref("content")}
+                className={cn(
+                  "px-3 py-1.5 text-[12.5px] font-semibold transition-colors",
+                  byContent ? "bg-brand-gradient text-white" : "text-ink-700 hover:bg-ink-50"
+                )}
+              >
+                לפי תוכן
+              </Link>
+            </div>
+            <form className="flex items-center gap-1.5">
+              {byContent && <input type="hidden" name="view" value="content" />}
+              <div className="relative">
+                <Search size={13} className="absolute start-2 top-1/2 -translate-y-1/2 text-ink-400" />
+                <input
+                  name="q"
+                  defaultValue={q ?? ""}
+                  placeholder="חיפוש שם או תוכן…"
+                  className="text-[12.5px] border border-ink-300 rounded-md ps-7 pe-2 py-1.5 w-44"
+                />
+              </div>
+              <Button type="submit" size="sm" variant="ghost">חיפוש</Button>
+            </form>
+          </div>
+        </div>
+
+        {grouped.length === 0 ? (
+          <p className="text-ink-500 text-sm">
+            {needle
+              ? "לא מצאנו שיתוף שמתאים לחיפוש — אולי לנסות מילה אחרת?"
+              : "עדיין אין שיתופים פעילים. ברגע שמשתתפת תצטרף או תפתח קורס, זה יופיע כאן 💜"}
+          </p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {grouped.map((g) => (
+              <div key={g.label} className="border border-ink-200 rounded-[14px] overflow-hidden">
+                <div className="flex items-center gap-2 bg-ink-50 px-3.5 py-2">
+                  {byContent ? (
+                    <BookOpen size={14} className="text-brand-pink-deep" />
+                  ) : (
+                    <UserCheck size={14} className="text-brand-purple" />
+                  )}
+                  <span className="font-display font-bold text-[13.5px] text-ink-1000">{g.label}</span>
+                  <span className="text-[11.5px] text-ink-500">
+                    {byContent ? `${g.rows.length} משתתפות` : `${g.rows.length} פריטים`}
+                  </span>
+                </div>
+                <ul className="divide-y divide-ink-100">
+                  {g.rows.map((r) => (
+                    <li key={r.id} className="flex items-center gap-2.5 px-3.5 py-2 flex-wrap">
+                      <Badge variant={r.owner_type === "course" ? "pink" : "purple"}>
+                        {r.owner_type === "course" ? "קורס" : "סשן"}
+                      </Badge>
+                      <span className="text-[13px] text-ink-900">
+                        {byContent ? r.memberName : r.contentTitle}
+                      </span>
+                      {r.granted_email && (
+                        <span className="text-[11.5px] text-ink-400" dir="ltr">
+                          {r.granted_email}
+                        </span>
+                      )}
+                      <span className="text-[11.5px] text-ink-400">שותף {dmy(r.shared_at)}</span>
+                      <form action={revokeShare.bind(null, r.id)} className="ms-auto">
+                        <button
+                          type="submit"
+                          className="text-[11.5px] text-ink-400 hover:text-danger transition-colors"
+                        >
+                          ביטול שיתוף
+                        </button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
         )}
       </section>
 

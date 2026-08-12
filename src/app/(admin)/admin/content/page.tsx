@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Trash2, BookOpen, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { ContentLinksEditor } from "@/components/patterns/content-links-editor";
+import { CourseUnitsEditor } from "@/components/patterns/course-units-editor";
 import { Collapsible } from "@/components/patterns/collapsible";
 import {
   createCourse,
@@ -10,16 +11,17 @@ import {
   deleteCourse,
   deleteSessionContent,
 } from "./actions";
-import type { ContentLink } from "@/types/database";
+import type { ContentLink, CourseUnit } from "@/types/database";
 
 export const metadata: Metadata = { title: "ניהול תכנים" };
 
 export default async function AdminContentPage() {
   const supabase = await createClient();
-  const [{ data: courses }, { data: sessions }, { data: links }] = await Promise.all([
+  const [{ data: courses }, { data: sessions }, { data: links }, { data: units }] = await Promise.all([
     supabase.from("courses").select("*").order("created_at", { ascending: false }),
     supabase.from("sessions").select("id, title, topic, scheduled_at").order("scheduled_at", { ascending: false }),
     supabase.from("content_links").select("*").order("sort_order", { ascending: true }),
+    supabase.from("course_units").select("*").order("sort_order", { ascending: true }),
   ]);
 
   const linksByOwner = new Map<string, ContentLink[]>();
@@ -28,6 +30,20 @@ export default async function AdminContentPage() {
     const arr = linksByOwner.get(key) ?? [];
     arr.push(l);
     linksByOwner.set(key, arr);
+  }
+
+  const unitsByCourse = new Map<string, CourseUnit[]>();
+  for (const u of units ?? []) {
+    const arr = unitsByCourse.get(u.course_id) ?? [];
+    arr.push(u);
+    unitsByCourse.set(u.course_id, arr);
+  }
+  const linksByUnit = new Map<string, ContentLink[]>();
+  for (const l of links ?? []) {
+    if (!l.unit_id) continue;
+    const arr = linksByUnit.get(l.unit_id) ?? [];
+    arr.push(l);
+    linksByUnit.set(l.unit_id, arr);
   }
 
   return (
@@ -78,9 +94,17 @@ export default async function AdminContentPage() {
                 </form>
               </div>
               <div className="text-[11px] text-ink-500 mb-3">
-                {c.lessons_count} שיעורים · {c.duration_hours} שעות
+                {c.lessons_count} שיעורים
+                {(unitsByCourse.get(c.id)?.length ?? 0) > 0
+                  ? ` · ${unitsByCourse.get(c.id)!.length} קוביות`
+                  : ` · ${c.duration_hours} שעות`}
               </div>
-              <ContentLinksEditor ownerType="course" ownerId={c.id} links={linksByOwner.get(`course:${c.id}`) ?? []} />
+              <CourseUnitsEditor
+                courseId={c.id}
+                units={unitsByCourse.get(c.id) ?? []}
+                linksByUnit={linksByUnit}
+                unassigned={(linksByOwner.get(`course:${c.id}`) ?? []).filter((l) => !l.unit_id)}
+              />
             </div>
           ))}
           {(courses ?? []).length === 0 && <p className="text-ink-500 text-sm">אין קורסים עדיין — הוסיפי את הראשון 💜</p>}
