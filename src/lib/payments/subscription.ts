@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
+import { queueRevokeAll } from "@/lib/drive-shares";
 import { buildPlans } from "./plans";
 import { getPricingAdmin } from "./pricing";
 import type { SubscriptionPlan } from "@/types/database";
@@ -78,16 +78,10 @@ export async function activateSubscription(input: ActivateInput) {
   // Activate the member.
   await admin.from("profiles").update({ status: "active" }).eq("id", input.profileId);
 
-  // Queue everything she's entitled to — all session recordings plus the
-  // course she had open, so a renewal restores her course too. Deliberately
-  // DB-only: this runs inside the payment webhook, and a slow Google call
-  // could time it out and get the payment retried.
-  try {
-    await queueEverythingFor(input.profileId);
-  } catch (e) {
-    console.error("[drive] activation queue failed:", e);
-  }
-
+  // No Drive work here, by design. Activation only decides what she MAY open;
+  // the access itself is created when she opens it (ensureAccess). That also
+  // keeps this webhook free of Google round-trips — a timed-out webhook gets
+  // retried by the provider, which would duplicate the payment.
   return { subscriptionId };
 }
 

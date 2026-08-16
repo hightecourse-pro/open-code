@@ -10,8 +10,10 @@ export type ShareFormState = { ok?: string; error?: string };
 
 /**
  * Hand a member an extra course/session on purpose — outside the
- * one-course-at-a-time model. The row is flagged granted_manually so nothing
- * automatic takes it away: only an admin can, with removeShare below.
+ * one-course-at-a-time model. The row is flagged granted_manually, which
+ * exempts it from the monthly course swap (queueRevokes) and nothing else:
+ * an admin can take it back with removeShare below, and leaving the community
+ * takes it back by itself (queueRevokeAll — no exception for manual rows).
  *
  * Queued as "pending", exactly like an automatic share, so the same Drive
  * worker performs it (or the manual queue shows it when automation is off).

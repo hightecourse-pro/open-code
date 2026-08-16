@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { CourseCard } from "@/components/patterns/course-card";
 import { CourseContent } from "@/components/patterns/course-content";
+import { LoggedLink } from "@/components/patterns/logged-link";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { returnCourse } from "./actions";
@@ -64,17 +65,23 @@ export default async function CoursesPage() {
   const legacyLinks = activeLinks.filter((l) => !l.unit_id);
 
   // Courses an admin opened for her personally — extra, on top of the active
-  // one, and they stay until an admin takes them back.
-  const { data: gifted } = user
+  // one. They survive the monthly swap, and end when an admin removes them or
+  // when she leaves the community / stops paying.
+  // One read, two jobs: which courses an admin opened for her personally, and
+  // which ones she has already unlocked in Drive (those skip the gate).
+  const { data: myShares } = user
     ? await supabase
         .from("content_shares")
-        .select("owner_id")
+        .select("owner_id, status, granted_manually")
         .eq("profile_id", user.id)
         .eq("owner_type", "course")
-        .eq("granted_manually", true)
         .neq("status", "revoked")
     : { data: [] };
-  const giftedIds = [...new Set((gifted ?? []).map((g) => g.owner_id))].filter(
+  const gifted = (myShares ?? []).filter((s) => s.granted_manually);
+  const unlockedCourses = new Set(
+    (myShares ?? []).filter((s) => s.status === "shared").map((s) => s.owner_id)
+  );
+  const giftedIds = [...new Set(gifted.map((g) => g.owner_id))].filter(
     (id) => id !== activeCourse?.id
   );
   const giftedCourses = (courses ?? []).filter((c) => giftedIds.includes(c.id));
@@ -120,15 +127,19 @@ export default async function CoursesPage() {
             <div className="text-xs opacity-85 mt-1.5">השלמת {active?.progress_pct ?? 0}% מהקורס</div>
           </div>
           <div className="flex flex-col gap-2 sm:ms-auto">
-            {activeLinks.length > 0 && (
-              <a
+            {/* Only once she really holds the Drive share — otherwise this
+                button would land her on Google's sign-in screen. Before that
+                the gate below is the way in. */}
+            {activeLinks.length > 0 && unlockedCourses.has(activeCourse.id) && (
+              <LoggedLink
                 href={activeLinks[0].url}
-                target="_blank"
-                rel="noopener noreferrer"
+                ownerType="course"
+                ownerId={activeCourse.id}
+                linkId={activeLinks[0].id}
                 className="font-display font-semibold text-[13.5px] px-[18px] py-2.5 rounded-md bg-white text-brand-pink-deep text-center"
               >
                 המשיכי לקורס
-              </a>
+              </LoggedLink>
             )}
             <form action={returnCourse}>
               <button
@@ -150,6 +161,7 @@ export default async function CoursesPage() {
           studied={active?.studied ?? false}
           rating={active?.rating ?? null}
           feedback={active?.feedback ?? null}
+          unlocked={unlockedCourses.has(activeCourse.id)}
         />
       )}
 
@@ -176,6 +188,7 @@ export default async function CoursesPage() {
               studied={false}
               rating={null}
               feedback={null}
+              unlocked={unlockedCourses.has(course.id)}
             />
           </div>
         );

@@ -63,20 +63,37 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     .maybeSingle();
   if (!conv) return;
   const otherId = conv.a_id === user.id ? conv.b_id : conv.a_id;
-  const [{ data: me }, { data: other }] = await Promise.all([
+  const [{ data: me }, otherRes] = await Promise.all([
     supabase.from("profiles").select("role, status, first_name, full_name").eq("id", user.id).single(),
-    supabase.from("profiles").select("role, status").eq("id", otherId).single(),
+    supabase.from("profiles").select("role, status, digest_frequency").eq("id", otherId).single(),
   ]);
-  const otherIsActiveMentor = other?.role === "mentor" && other?.status === "active";
+  // digest_frequency arrived in a later migration. If it isn't in the database
+  // yet the whole select fails, the recipient reads as "not active" and members
+  // stop being able to write to each other — a mail preference must never cost
+  // us the chat. Fall back to the columns that were always there.
+  const otherFallback = otherRes.error
+    ? (await supabase.from("profiles").select("role, status").eq("id", otherId).single()).data
+    : null;
+  const other = otherRes.data ?? (otherFallback && { ...otherFallback, digest_frequency: "daily" });
   if (other?.status !== "active") return;
   // Free members read their history but don't send.
   if (!me || !(me.status === "active" || me.role === "admin")) return;
 
-  // Notify the mentor by email — but only on the first new (unread) message from
-  // this member, so a burst of messages doesn't send a burst of emails.
-  const notifyMentor = me?.role === "junior" && otherIsActiveMentor;
+  // The RECIPIENT decides whether an email goes out — never anyone's role.
+  // This used to be `sender is junior && recipient is an active mentor`, from
+  // the days when a member could only write to a mentor. Members now message
+  // each other freely, so that role pair matched almost nothing and most
+  // messages notified nobody (BUG-002). What matters is that a message is
+  // waiting for HER: any active member gets the heads-up, mentor or not.
+  // The one voice that overrides us is her own — digest_frequency 'off' is
+  // "בלי מיילים" in her profile, so we stay quiet. 'daily'/'unread' both want
+  // to hear about waiting messages, and a missing value defaults to 'daily'
+  // (so this still behaves if the digest-prefs migration hasn't run).
+  const wantsEmail = (other.digest_frequency || "daily") !== "off";
+  // Still only on the first new (unread) message from this sender in this
+  // conversation, so a burst of messages doesn't become a burst of mail.
   let isFirstNew = false;
-  if (notifyMentor) {
+  if (wantsEmail) {
     const { count } = await supabase
       .from("messages")
       .select("id", { count: "exact", head: true })
@@ -98,24 +115,24 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", conversationId);
 
-  if (!notifyMentor || !isFirstNew) {
-    // "the mentor got no email" looks identical whether a gate closed or the
-    // send failed. Name the closed gate so the logs answer it in one look.
-    console.log("[chat email] skipped", { notifyMentor, isFirstNew });
+  if (!wantsEmail || !isFirstNew) {
+    // "she got no email" looks identical whether a gate closed or the send
+    // failed. Name the closed gate so the logs answer it in one look.
+    console.log("[chat email] skipped", { wantsEmail, isFirstNew });
   } else {
     try {
       const admin = createAdminClient();
-      const { data: mentorUser } = await admin.auth.admin.getUserById(otherId);
-      const email = mentorUser?.user?.email;
+      const { data: recipientUser } = await admin.auth.admin.getUserById(otherId);
+      const email = recipientUser?.user?.email;
       if (email) {
         const fromName = me?.first_name || me?.full_name?.split(" ")[0] || "חברה";
         const built = newMessageEmail(fromName);
         const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
         // Surface failures in the server logs (RESEND_API_KEY missing, bounced
-        // address, …) — otherwise "the mentor never got an email" is invisible.
-        if (!sent.ok) console.error("[chat email] send to mentor failed:", sent.error);
+        // address, …) — otherwise "she never got an email" is invisible.
+        if (!sent.ok) console.error("[chat email] send to recipient failed:", sent.error);
       } else {
-        console.error("[chat email] mentor has no email address:", otherId);
+        console.error("[chat email] recipient has no email address:", otherId);
       }
     } catch (e) {
       // Email is best-effort — never block sending the message.

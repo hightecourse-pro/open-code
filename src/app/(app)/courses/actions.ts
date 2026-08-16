@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSubscriber } from "@/lib/auth";
-import { queueRevokes, queueShares } from "@/lib/drive-shares";
+import { queueRevokes } from "@/lib/drive-shares";
+import { ensureAccess } from "@/lib/content-access";
 
 function monthStart(): string {
   return new Date().toISOString().slice(0, 7) + "-01"; // YYYY-MM-01
@@ -95,26 +96,21 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
     });
   }
 
-  // Queue this course's Drive material for her (the sync worker grants it).
+  // Pressing "התחילי קורס" IS the access attempt — there is no reason to make
+  // her press a second button. Grant it now; anything that fails leaves the
+  // row pending and the worker finishes it.
   try {
-    await queueShares(user.id, "course", [courseId]);
+    await ensureAccess(user.id, "course", courseId);
   } catch (e) {
-    console.error("[drive] course queue failed:", e);
+    console.error("[drive] course access failed:", e);
   }
 
   revalidatePath("/courses");
   return { ok: true };
 }
 
-/** Record that a member opened/watched a course video (feeds admin analytics). */
-export async function recordView(linkId: string): Promise<void> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
-  await supabase.from("content_views").insert({ link_id: linkId, profile_id: user.id });
-}
+// `recordView` moved to src/app/(app)/content/actions.ts, where all the entry
+// logging lives — courses and sessions alike.
 
 /** Mark the active course as studied (or not). */
 export async function setStudied(courseId: string, studied: boolean): Promise<void> {

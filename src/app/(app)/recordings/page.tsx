@@ -2,9 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Play, Video, ExternalLink, Hourglass, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { getUser, isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { mayOpenSessions } from "@/lib/content-access";
+import { ContentGate } from "@/components/patterns/content-gate";
+import { LoggedLink } from "@/components/patterns/logged-link";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
-import { cn } from "@/lib/utils";
+import { cn, fmtIsraelDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "הקלטות סשנים" };
 
@@ -28,11 +31,15 @@ function videoUrl(rec: object): string | null {
 
 export default async function RecordingsPage() {
   const supabase = await createClient();
+  const user = await getUser();
   const profile = await requireCommunityAccess();
   const subscriber = isSubscriber(profile);
+  // Whose recordings these are: paying members, mentors and the team — the
+  // same rule the Drive grant enforces, so the button never refuses her.
+  const paysForSessions = mayOpenSessions(profile);
 
   // Free members read the sanitized views — no video URLs in them at all.
-  const [{ data: recordings }, { data: doneSessions }] = await Promise.all([
+  const [{ data: recordings }, { data: doneSessions }, { data: myShares }] = await Promise.all([
     supabase
       .from(subscriber ? "recordings" : "recordings_public")
       .select("*")
@@ -43,7 +50,18 @@ export default async function RecordingsPage() {
       .eq("status", "done")
       .eq("is_published", true)
       .order("scheduled_at", { ascending: false }),
+    // What she has ALREADY opened. Those sessions skip the gate entirely —
+    // it costs her one press per session, ever.
+    user
+      ? supabase
+          .from("content_shares")
+          .select("owner_id")
+          .eq("profile_id", user.id)
+          .eq("owner_type", "session")
+          .eq("status", "shared")
+      : Promise.resolve({ data: [] }),
   ]);
+  const unlockedSessions = new Set((myShares ?? []).map((s) => s.owner_id));
 
   // Finished sessions land here automatically, with their Drive video links
   // (from ניהול תכנים). Sessions already curated into `recordings` are skipped.
@@ -51,11 +69,20 @@ export default async function RecordingsPage() {
   const sessions = (doneSessions ?? []).filter(
     (s) => !s.canceled_at && !curatedSessionIds.has(s.id)
   );
+  // A session opened to the whole community is free — but "the community"
+  // means an approved, live membership, the same floor `canAccess` applies
+  // before it hands out a Drive permission. So a signup still waiting for
+  // approval, and a member whose subscription ended, see the locked row rather
+  // than a button that would refuse them.
+  const inCommunity = profile.status === "active";
+  const mayOpen = (s: { open_to_all: boolean }) =>
+    paysForSessions || (inCommunity && s.open_to_all);
   // Drive links are paid material — never fetched for a free member.
   // A free member sees the recordings of sessions the team opened to the whole
   // community; everything else stays paid material. RLS enforces exactly the
   // same rule, so a hand-crafted request gets no more than this page shows.
-  const readableSessions = subscriber ? sessions : sessions.filter((s) => s.open_to_all);
+  const readableSessions = subscriber ? sessions : sessions.filter(mayOpen);
+  const openToAllCount = inCommunity ? sessions.filter((s) => s.open_to_all).length : 0;
   const { data: sessionLinks } = readableSessions.length
     ? await supabase
         .from("content_links")
@@ -65,10 +92,10 @@ export default async function RecordingsPage() {
         .in("owner_id", readableSessions.map((s) => s.id))
         .order("sort_order", { ascending: true })
     : { data: [] };
-  const linksBySession = new Map<string, { title: string; url: string }[]>();
+  const linksBySession = new Map<string, { id: string; title: string; url: string }[]>();
   for (const l of sessionLinks ?? []) {
     const arr = linksBySession.get(l.owner_id) ?? [];
-    arr.push({ title: l.title, url: l.url });
+    arr.push({ id: l.id, title: l.title, url: l.url });
     linksBySession.set(l.owner_id, arr);
   }
 
@@ -80,11 +107,11 @@ export default async function RecordingsPage() {
         <p className="t-body-sm text-ink-700">כל הסשנים השבועיים — זמינים לצפייה מתי שנוח לך.</p>
       </div>
 
-      {!subscriber && (
+      {!paysForSessions && (
         <UpgradeCard
           title="הצפייה בהקלטות נפתחת עם מנוי"
           body={
-            readableSessions.length > 0
+            openToAllCount > 0
               ? "כמה סשנים פתחנו לכל הקהילה ואת מוזמנת לצפות בהם עכשיו. שאר ההקלטות נפתחות עם מנוי."
               : "כאן את רואה מה כבר נלמד בקהילה. עם מנוי כל ההקלטות נפתחות לצפייה מתי שנוח לך."
           }
@@ -108,10 +135,10 @@ export default async function RecordingsPage() {
                   <div className="font-display font-bold text-[14.5px] text-ink-1000">{s.title}</div>
                   <div className="text-xs text-ink-500">
                     {s.topic ? `${s.topic} · ` : ""}
-                    {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "long", timeZone: "Asia/Jerusalem" })}
+                    {fmtIsraelDate(s.scheduled_at, { day: "numeric", month: "long" })}
                   </div>
                 </div>
-                {!subscriber && !s.open_to_all ? (
+                {!mayOpen(s) ? (
                   <Link
                     href="/join"
                     className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple bg-white border-[1.5px] border-brand-purple rounded-md px-3.5 py-2 hover:bg-tint-purple transition-colors"
@@ -119,19 +146,30 @@ export default async function RecordingsPage() {
                     <Lock size={13} /> נפתח עם מנוי
                   </Link>
                 ) : links.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {links.map((l) => (
-                      <a
-                        key={l.url}
-                        href={l.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-2"
-                      >
-                        <Play size={13} fill="currentColor" /> {l.title} <ExternalLink size={11} />
-                      </a>
-                    ))}
-                  </div>
+                  // The first press opens her Drive access to this session's
+                  // recordings; from then on the links are simply here.
+                  <ContentGate
+                    ownerType="session"
+                    ownerId={s.id}
+                    unlocked={unlockedSessions.has(s.id)}
+                    variant="inline"
+                    label="צפייה"
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      {links.map((l) => (
+                        <LoggedLink
+                          key={l.url}
+                          href={l.url}
+                          ownerType="session"
+                          ownerId={s.id}
+                          linkId={l.id}
+                          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-2"
+                        >
+                          <Play size={13} fill="currentColor" /> {l.title} <ExternalLink size={11} />
+                        </LoggedLink>
+                      ))}
+                    </div>
+                  </ContentGate>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-500">
                     <Hourglass size={13} /> ההקלטה תעלה בקרוב
@@ -147,13 +185,16 @@ export default async function RecordingsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {recordings.map((rec) => {
             const cover = COVERS[(rec.cover_variant - 1) % COVERS.length];
-            return (
-              <a
-                key={rec.id}
-                href={subscriber ? videoUrl(rec) ?? "#" : "/join"}
-                title={subscriber ? undefined : "הצפייה נפתחת עם מנוי"}
-                className="bg-white border border-ink-200 rounded-2xl overflow-hidden transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md"
-              >
+            const href = subscriber ? videoUrl(rec) ?? "#" : "/join";
+            const cardClass =
+              "bg-white border border-ink-200 rounded-2xl overflow-hidden transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md";
+            // These curated links live on `recordings.video_url`, not in
+            // content_links — they were never granted or revoked per member,
+            // so there is nothing to unlock here. We do log the entry, so
+            // "every access is documented" is actually true.
+            const logged = subscriber && rec.session_id;
+            const inner = (
+              <>
                 <div className={cn("h-24 relative flex items-center justify-center", cover)}>
                   <div className="w-[42px] h-[42px] rounded-full bg-white/90 flex items-center justify-center text-brand-pink-deep shadow-md">
                     {subscriber ? (
@@ -179,6 +220,26 @@ export default async function RecordingsPage() {
                     {rec.title}
                   </div>
                 </div>
+              </>
+            );
+            return logged ? (
+              <LoggedLink
+                key={rec.id}
+                href={href}
+                ownerType="session"
+                ownerId={rec.session_id as string}
+                className={cardClass}
+              >
+                {inner}
+              </LoggedLink>
+            ) : (
+              <a
+                key={rec.id}
+                href={href}
+                title={subscriber ? undefined : "הצפייה נפתחת עם מנוי"}
+                className={cardClass}
+              >
+                {inner}
               </a>
             );
           })}

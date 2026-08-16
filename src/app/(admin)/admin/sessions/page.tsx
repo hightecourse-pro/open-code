@@ -5,18 +5,9 @@ import { Badge } from "@/components/ui";
 import { AdminCreateSession } from "@/components/patterns/admin-create-session";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { cancelSession, deleteSession, markSessionDone } from "../actions";
+import { SessionTimeEditor } from "./session-time-editor";
 
 export const metadata: Metadata = { title: "ניהול סשנים" };
-
-function fmt(iso: string) {
-  return new Date(iso).toLocaleDateString("he-IL", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Asia/Jerusalem",
-  });
-}
 
 export default async function AdminSessionsPage() {
   const supabase = await createClient();
@@ -31,6 +22,7 @@ export default async function AdminSessionsPage() {
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;סשנים/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול סשנים</h1>
+        <p className="t-body-sm text-ink-700">כל השעות כאן — ובכל מה שהחברות רואות — הן שעון ישראל.</p>
       </div>
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
@@ -45,7 +37,7 @@ export default async function AdminSessionsPage() {
             <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0">
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-ink-900 truncate">{s.title}</div>
-                <div className="text-xs text-ink-500" dir="ltr">{fmt(s.scheduled_at)}</div>
+                <SessionTimeEditor sessionId={s.id} scheduledAt={s.scheduled_at} />
               </div>
               {s.topic && <Badge variant="purple">{s.topic}</Badge>}
               {s.canceled_at ? (

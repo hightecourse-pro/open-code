@@ -1078,10 +1078,53 @@ export interface Database {
         Update: never;
         Relationships: [];
       };
+      /**
+       * Every time a member opens course/session material. `owner_type`/
+       * `owner_id` are what an admin actually reads ("she watched this
+       * session"); `link_id` is the specific video when there is one, and is
+       * nullable so deleting a link never erases the history.
+       * The owner columns land with supabase/_content_access_log.sql — the app
+       * falls back to the legacy {link_id, profile_id} insert until it runs.
+       */
       content_views: {
-        Row: { id: string; link_id: string; profile_id: string; created_at: string };
-        Insert: { id?: string; link_id: string; profile_id: string; created_at?: string };
+        Row: {
+          id: string;
+          link_id: string | null;
+          profile_id: string;
+          created_at: string;
+          owner_type?: ContentOwner | null;
+          owner_id?: string | null;
+          /** How she got in: unlock | embed | open. */
+          source?: string | null;
+        };
+        Insert: {
+          id?: string;
+          link_id?: string | null;
+          profile_id: string;
+          created_at?: string;
+          owner_type?: ContentOwner | null;
+          owner_id?: string | null;
+          source?: string | null;
+        };
         Update: Partial<Database["public"]["Tables"]["content_views"]["Insert"]>;
+        Relationships: [];
+      };
+      /**
+       * Admin rollup of `content_views`: member × content → how many opens,
+       * first and last. Admin-only inside the view itself (is_admin()), the
+       * same pattern as `sessions_public`.
+       */
+      content_open_stats: {
+        Row: {
+          profile_id: string;
+          owner_type: ContentOwner;
+          owner_id: string;
+          opens: number;
+          first_open: string;
+          last_open: string;
+        };
+        Insert: never;
+        Update: never;
         Relationships: [];
       };
       reports: {
@@ -1190,3 +1233,5 @@ export type CvDocument = Database["public"]["Tables"]["cv_documents"]["Row"];
 export type ContentLink = Database["public"]["Tables"]["content_links"]["Row"];
 export type CourseUnit = Database["public"]["Tables"]["course_units"]["Row"];
 export type ContentShare = Database["public"]["Tables"]["content_shares"]["Row"];
+export type ContentView = Database["public"]["Tables"]["content_views"]["Row"];
+export type ContentOpenStat = Database["public"]["Tables"]["content_open_stats"]["Row"];

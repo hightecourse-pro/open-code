@@ -4,21 +4,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { UpgradeNote } from "@/components/patterns/upgrade-prompt";
+// Vercel renders in UTC; these formatters pin every session time to Israel time.
+import { fmtIsraelDate, fmtIsraelTime } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "אירועים וסשנים" };
 
 /** The join link only exists on the subscriber read — free rows simply lack it. */
 function joinUrl(session: object): string | null {
   return (session as { zoom_url?: string | null }).zoom_url ?? null;
-}
-
-// Explicit timezone: Vercel renders in UTC, and a bare toLocale* would show
-// members a session time that's off by 2-3 hours.
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("he-IL", { weekday: "long", day: "numeric", month: "long", timeZone: "Asia/Jerusalem" });
-}
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 }
 
 export default async function EventsPage() {
@@ -82,10 +75,10 @@ export default async function EventsPage() {
             >
               <div className="w-14 h-14 rounded-md bg-brand-gradient-soft flex flex-col items-center justify-center shrink-0">
                 <span className="font-display font-black text-lg text-ink-1000 leading-none">
-                  {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", timeZone: "Asia/Jerusalem" })}
+                  {fmtIsraelDate(s.scheduled_at, { day: "numeric" })}
                 </span>
                 <span className="text-[10px] text-ink-500">
-                  {new Date(s.scheduled_at).toLocaleDateString("he-IL", { month: "short", timeZone: "Asia/Jerusalem" })}
+                  {fmtIsraelDate(s.scheduled_at, { month: "short" })}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
@@ -101,7 +94,7 @@ export default async function EventsPage() {
                   )}
                 </div>
                 <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-1.5">
-                  <Calendar size={12} /> {fmtDate(s.scheduled_at)} · {fmtTime(s.scheduled_at)}
+                  <Calendar size={12} /> {fmtIsraelDate(s.scheduled_at)} · {fmtIsraelTime(s.scheduled_at)} (שעון ישראל)
                 </div>
               </div>
               {!s.canceled_at &&
@@ -141,7 +134,7 @@ export default async function EventsPage() {
                 key={s.id}
                 className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0"
               >
-                <div className="text-ink-400 text-xs font-mono w-20 shrink-0">{fmtDate(s.scheduled_at)}</div>
+                <div className="text-ink-400 text-xs font-mono w-20 shrink-0">{fmtIsraelDate(s.scheduled_at, { day: "numeric", month: "short" })}</div>
                 <div className="font-medium text-ink-900 flex-1">{s.title}</div>
                 <a href="/recordings" className="text-brand-purple text-sm font-semibold">
                   {subscriber ? "להקלטה" : "להקלטות"}

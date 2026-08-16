@@ -123,13 +123,20 @@ export function magicLinkEmail(actionUrl: string, name?: string): BuiltEmail {
   };
 }
 
-/** Notify a mentor that a member wrote to her in chat. */
+/**
+ * Notify a member that someone wrote to her in chat. Any member may write to
+ * any member, so the copy names only the sender — never a role ("המנטורית שלך",
+ * "מנטי") — and reads the same whoever is on the other side.
+ */
 export function newMessageEmail(fromName: string): BuiltEmail {
   return {
     subject: `הודעה חדשה מ־${fromName} · קוד פתוח`,
     html: renderEmail({
       heading: "יש לך הודעה חדשה 💬",
-      lines: [`${fromName} כתבה לך בצ'אט של קוד פתוח.`, "אפשר להיכנס ולהשיב מתי שנוח לך."],
+      lines: [
+        `<b>${escapeHtml(fromName)}</b> כתבה לך בצ'אט של קוד פתוח.`,
+        "אפשר להיכנס ולהשיב לה מתי שנוח לך 💜",
+      ],
       ctaText: "לצ'אט",
       ctaUrl: `${SITE}/chat`,
       footnote: "מקבלת יותר מדי מיילים? תוכלי לשנות את זה בפרופיל ← העדפות מייל.",

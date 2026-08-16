@@ -1,11 +1,25 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Alert, Button, Field, Input } from "@/components/ui";
 import { createSession, type FormState } from "@/app/(admin)/admin/actions";
+import { fmtIsraelDateTime, israelLocalToIso } from "@/lib/utils";
 
 export function AdminCreateSession() {
   const [state, action, pending] = useActionState<FormState, FormData>(createSession, {});
+  // The visible field holds Israel wall-clock text; the hidden one carries the
+  // instant. Without this the browser's own zone (or the server's UTC) would
+  // decide what "19:00" means.
+  const [when, setWhen] = useState("");
+  // React clears the uncontrolled fields after a successful action; this one is
+  // controlled, so it's cleared here — during render, on the state object the
+  // action returned, which is the pattern React recommends over an effect.
+  const [seen, setSeen] = useState(state);
+  if (seen !== state) {
+    setSeen(state);
+    if (state.ok) setWhen("");
+  }
+  const iso = israelLocalToIso(when);
 
   return (
     <form action={action} className="flex flex-col gap-3">
@@ -18,8 +32,19 @@ export function AdminCreateSession() {
         <Field label="נושא" htmlFor="s-topic">
           <Input id="s-topic" name="topic" placeholder="AI / DevOps / הכנה לראיונות" />
         </Field>
-        <Field label="מועד" htmlFor="s-date">
-          <Input id="s-date" name="scheduled_at" type="datetime-local" required dir="ltr" />
+        <Field label="מועד (שעון ישראל)" htmlFor="s-date">
+          <Input
+            id="s-date"
+            type="datetime-local"
+            required
+            dir="ltr"
+            value={when}
+            onChange={(e) => setWhen(e.target.value)}
+          />
+          <input type="hidden" name="scheduled_at" value={iso} />
+          <p className="text-xs text-ink-500">
+            {iso ? `יישמר ויוצג לחברות: ${fmtIsraelDateTime(iso)} (שעון ישראל)` : "השעה שתקלידי היא שעון ישראל."}
+          </p>
         </Field>
         <Field label="קישור Zoom" htmlFor="s-zoom">
           <Input id="s-zoom" name="zoom_url" dir="ltr" placeholder="https://zoom.us/…" />

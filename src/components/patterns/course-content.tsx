@@ -4,7 +4,9 @@ import { useState, useTransition } from "react";
 import { Video, FolderOpen, ExternalLink, Check, Star, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { driveEmbedUrl } from "@/lib/drive";
-import { recordView, setStudied, saveCourseFeedback } from "@/app/(app)/courses/actions";
+import { setStudied, saveCourseFeedback } from "@/app/(app)/courses/actions";
+import { logContentOpen } from "@/app/(app)/content/actions";
+import { ContentGate } from "@/components/patterns/content-gate";
 import type { ContentLink } from "@/types/database";
 
 /** A course unit (קוביה) — one year-cycle with its recordings and materials. */
@@ -23,9 +25,22 @@ export interface CourseContentProps {
   studied: boolean;
   rating: number | null;
   feedback: string | null;
+  /**
+   * She already holds a live Drive share for this course. False → the material
+   * is behind one "צפייה" press, which is what actually opens it in Drive.
+   */
+  unlocked?: boolean;
 }
 
-export function CourseContent({ courseId, links, units, studied, rating, feedback }: CourseContentProps) {
+export function CourseContent({
+  courseId,
+  links,
+  units,
+  studied,
+  rating,
+  feedback,
+  unlocked = false,
+}: CourseContentProps) {
   const videos = links.filter((l) => l.kind === "video");
   const materials = links.filter((l) => l.kind === "materials");
 
@@ -60,7 +75,16 @@ export function CourseContent({ courseId, links, units, studied, rating, feedbac
             href={v.url}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={() => start(() => void recordView(v.id))}
+            onClick={() =>
+              start(() =>
+                void logContentOpen({
+                  ownerType: "course",
+                  ownerId: courseId,
+                  linkId: v.id,
+                  source: "open",
+                })
+              )
+            }
             className="ms-auto inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-brand-purple"
           >
             פתחי בדרייב <ExternalLink size={12} />
@@ -72,7 +96,18 @@ export function CourseContent({ courseId, links, units, studied, rating, feedbac
             title={v.title}
             allow="autoplay"
             className="w-full aspect-video"
-            onLoad={() => start(() => void recordView(v.id))}
+            // Fires on every mount and re-render — the 30-minute throttle in
+            // the log is what keeps "כמה פעמים" meaningful.
+            onLoad={() =>
+              start(() =>
+                void logContentOpen({
+                  ownerType: "course",
+                  ownerId: courseId,
+                  linkId: v.id,
+                  source: "embed",
+                })
+              )
+            }
           />
         ) : (
           <div className="p-4 text-sm text-ink-500">
@@ -98,6 +133,16 @@ export function CourseContent({ courseId, links, units, studied, rating, feedbac
               href={m.url}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() =>
+                start(() =>
+                  void logContentOpen({
+                    ownerType: "course",
+                    ownerId: courseId,
+                    linkId: m.id,
+                    source: "open",
+                  })
+                )
+              }
               className="inline-flex items-center gap-1.5 text-[13px] bg-tint-purple text-brand-purple border border-[#DDC9EC] rounded-md px-3 py-1.5 hover:bg-tint-indigo"
             >
               <FolderOpen size={14} /> {m.title} <ExternalLink size={12} />
@@ -108,7 +153,11 @@ export function CourseContent({ courseId, links, units, studied, rating, feedbac
     );
   }
 
-  return (
+  // One gate for the whole course — not one per video. The grant unit in
+  // content_shares is the course, so a single press covers every unit,
+  // recording and materials folder in it. The משוב card below stays outside
+  // it: marking a course as studied has nothing to do with Drive.
+  const material = (
     <div className="flex flex-col gap-4">
       {hasUnits
         ? unitList.map((unit) => (
@@ -137,6 +186,19 @@ export function CourseContent({ courseId, links, units, studied, rating, feedbac
             {materialsBlock(materials)}
           </>
         )}
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col gap-4">
+      <ContentGate
+        ownerType="course"
+        ownerId={courseId}
+        unlocked={unlocked}
+        label="פתחי את חומרי הקורס"
+      >
+        {material}
+      </ContentGate>
 
       {/* Studied + feedback */}
       <div className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm flex flex-col gap-3">

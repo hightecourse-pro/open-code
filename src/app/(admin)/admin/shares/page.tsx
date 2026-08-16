@@ -92,6 +92,16 @@ export default async function AdminSharesPage({
       : Promise.resolve({ data: [] }),
   ]);
 
+  // When she first walked in. Under "access on attempt" that date IS the
+  // explanation of why the share exists. Null before the log migration runs —
+  // the column then simply doesn't render.
+  const { data: openStats } = await supabase
+    .from("content_open_stats")
+    .select("profile_id, owner_type, owner_id, first_open");
+  const firstOpenOf = new Map(
+    (openStats ?? []).map((r) => [`${r.profile_id}:${r.owner_type}:${r.owner_id}`, r.first_open])
+  );
+
   const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
   const titleOf = new Map<string, string>([
     ...(courses ?? []).map((c) => [`course:${c.id}`, c.title] as [string, string]),
@@ -156,9 +166,10 @@ export default async function AdminSharesPage({
         <div className="flex items-start gap-2.5 bg-tint-mint border border-[#A7E3C6] rounded-md p-3.5 px-4 text-[13.5px] text-[#1B7A4B]">
           <Zap size={18} className="shrink-0 mt-0.5" />
           <div className="flex-1">
-            <b className="font-display">שיתוף אוטומטי פעיל.</b> חברה שמצטרפת מקבלת את החומרים לבד,
-            ומי שעוזבת מאבדת גישה אוטומטית. הסנכרון רץ אוטומטית פעם ביום — ולסנכרון מיידי אפשר ללחוץ
-            &quot;סנכרון עכשיו&quot;. מה שנשאר כאן זה מה שלא הצליח וצריך טיפול ידני.
+            <b className="font-display">שיתוף אוטומטי פעיל.</b> הגישה נפתחת ברגע שחברה נכנסת
+            לתוכן — לא בהצטרפות. לכן הרשימה כאן קצרה בכוונה: נשאר בה רק מה שלא הצליח וצריך טיפול
+            ידני, ומה שצריך להסיר. מי שעוזבת מאבדת בדיוק את מה שהיא באמת פתחה. הסנכרון רץ פעם
+            ביום — ולסנכרון מיידי אפשר ללחוץ &quot;סנכרון עכשיו&quot;.
           </div>
           <form action={syncDriveNow}>
             <Button type="submit" size="sm" variant="ghost">סנכרון עכשיו</Button>
@@ -210,8 +221,9 @@ export default async function AdminSharesPage({
             <Gift size={16} className="text-brand-pink-deep" /> שיתוף אישי — קורס נוסף למשתתפת
           </h3>
           <p className="text-[12.5px] text-ink-500 mt-0.5">
-            כאן את פותחת למישהי קורס או סשן מעבר לקורס הפעיל שלה. השיתוף נשאר עד שתסירי אותו —
-            החלפת קורס או סיום מנוי לא נוגעים בו.
+            כאן את פותחת למישהי קורס או סשן מעבר לקורס הפעיל שלה. החלפת קורס לא נוגעת בו — הוא
+            נשאר איתה. הוא נסגר כשאת מסירה אותו כאן, וגם מעצמו כשהיא עוזבת את הקהילה או כשהמנוי
+            שלה מסתיים.
           </p>
         </div>
         <ManualShareForm
@@ -231,7 +243,7 @@ export default async function AdminSharesPage({
             <p className="text-[12.5px] text-ink-500 mt-0.5">
               {filtered.length > 0
                 ? `${memberCount} משתתפות · ${filtered.length} שיתופים פעילים`
-                : "התמונה המלאה של מי יש לה גישה למה, ברגע זה."}
+                : "כאן מופיע כל תוכן שמישהי באמת פתחה. ריק? פשוט עוד לא נכנסו 💜"}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -275,7 +287,7 @@ export default async function AdminSharesPage({
           <p className="text-ink-500 text-sm">
             {needle
               ? "לא מצאנו שיתוף שמתאים לחיפוש — אולי לנסות מילה אחרת?"
-              : "עדיין אין שיתופים פעילים. ברגע שמשתתפת תצטרף או תפתח קורס, זה יופיע כאן 💜"}
+              : "עדיין אין שיתופים פעילים. ברגע שמשתתפת תיכנס לקורס או להקלטה, זה יופיע כאן 💜"}
           </p>
         ) : (
           <div className="flex flex-col gap-3">
@@ -314,6 +326,12 @@ export default async function AdminSharesPage({
                       <span className="text-[11.5px] text-ink-400">
                         {r.status === "shared" ? `שותף ${dmy(r.shared_at)}` : "ממתין לשיתוף בדרייב"}
                       </span>
+                      {firstOpenOf.has(`${r.profile_id}:${r.owner_type}:${r.owner_id}`) && (
+                        <span className="text-[11.5px] text-ink-400">
+                          נפתח לראשונה{" "}
+                          {dmy(firstOpenOf.get(`${r.profile_id}:${r.owner_type}:${r.owner_id}`) ?? null)}
+                        </span>
+                      )}
                       <form action={removeShare.bind(null, r.id)} className="ms-auto">
                         <button
                           type="submit"

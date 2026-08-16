@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Briefcase, Download, FileText, Mail, StickyNote } from "lucide-react";
+import { ArrowRight, Briefcase, Download, FileText, Mail, PlayCircle, StickyNote } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
@@ -156,6 +156,94 @@ export default async function AdminMemberProfilePage({
         .createSignedUrls((cvDocs ?? []).map((d) => d.file_path), 3600)
     : { data: [] };
   const cvUrlOf = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
+
+  // ---- What she actually watched ------------------------------------------
+  // Since access opens on attempt, this is also the answer to "why does she
+  // have this share?". Falls back to the link-level view count until
+  // supabase/_content_access_log.sql has run.
+  const { data: openRows, error: openErr } = await supabase
+    .from("content_open_stats")
+    .select("owner_type, owner_id, opens, first_open, last_open")
+    .eq("profile_id", id);
+  const openLogReady = !openErr;
+
+  type Watched = {
+    ownerType: "course" | "session";
+    ownerId: string;
+    opens: number;
+    firstOpen: string;
+    lastOpen: string;
+  };
+  let watched: Watched[] = (openRows ?? []).map((r) => ({
+    ownerType: r.owner_type,
+    ownerId: r.owner_id,
+    opens: r.opens,
+    firstOpen: r.first_open,
+    lastOpen: r.last_open,
+  }));
+
+  if (!openLogReady) {
+    const { data: rawViews } = await adminClient
+      .from("content_views")
+      .select("link_id, created_at")
+      .eq("profile_id", id);
+    const linkIds = [...new Set((rawViews ?? []).map((v) => v.link_id).filter(Boolean))];
+    const { data: viewedLinks } = linkIds.length
+      ? await adminClient
+          .from("content_links")
+          .select("id, owner_type, owner_id")
+          .in("id", linkIds as string[])
+      : { data: [] };
+    const ownerOf = new Map((viewedLinks ?? []).map((l) => [l.id, l]));
+    const acc = new Map<string, Watched>();
+    for (const v of rawViews ?? []) {
+      const owner = v.link_id ? ownerOf.get(v.link_id) : null;
+      if (!owner) continue;
+      const key = `${owner.owner_type}:${owner.owner_id}`;
+      const row = acc.get(key);
+      if (row) {
+        row.opens += 1;
+        if (v.created_at < row.firstOpen) row.firstOpen = v.created_at;
+        if (v.created_at > row.lastOpen) row.lastOpen = v.created_at;
+      } else {
+        acc.set(key, {
+          ownerType: owner.owner_type,
+          ownerId: owner.owner_id,
+          opens: 1,
+          firstOpen: v.created_at,
+          lastOpen: v.created_at,
+        });
+      }
+    }
+    watched = [...acc.values()];
+  }
+  watched.sort((a, b) => b.lastOpen.localeCompare(a.lastOpen));
+
+  // Names for the content, and whether the Drive share is still live.
+  const watchedCourseIds = watched.filter((w) => w.ownerType === "course").map((w) => w.ownerId);
+  const watchedSessionIds = watched.filter((w) => w.ownerType === "session").map((w) => w.ownerId);
+  const [{ data: watchedCourses }, { data: watchedSessions }, { data: herShares }] =
+    await Promise.all([
+      watchedCourseIds.length
+        ? supabase.from("courses").select("id, title").in("id", watchedCourseIds)
+        : Promise.resolve({ data: [] }),
+      watchedSessionIds.length
+        ? supabase.from("sessions").select("id, title").in("id", watchedSessionIds)
+        : Promise.resolve({ data: [] }),
+      watched.length
+        ? supabase
+            .from("content_shares")
+            .select("owner_type, owner_id, status")
+            .eq("profile_id", id)
+        : Promise.resolve({ data: [] }),
+    ]);
+  const contentTitleOf = new Map<string, string>([
+    ...(watchedCourses ?? []).map((c) => [`course:${c.id}`, c.title] as [string, string]),
+    ...(watchedSessions ?? []).map((s) => [`session:${s.id}`, s.title] as [string, string]),
+  ]);
+  const shareStatusOf = new Map(
+    (herShares ?? []).map((s) => [`${s.owner_type}:${s.owner_id}`, s.status])
+  );
 
   const answerMap = new Map((answers ?? []).map((a) => [a.question_id, a.value]));
 
@@ -392,6 +480,72 @@ export default async function AdminMemberProfilePage({
           </div>
         ) : (
           <p className="text-ink-500 text-sm">היא עדיין לא העלתה קורות חיים.</p>
+        )}
+      </div>
+
+      {/* What she watched — courses and session recordings alike */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm overflow-x-auto">
+        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+          <PlayCircle size={16} className="text-brand-pink-deep" /> מה היא צפתה
+        </h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          כל כניסה לתוכן — קורסים והקלטות סשנים. הגישה בדרייב נפתחת בכניסה הראשונה, אז זו גם
+          התשובה ל&quot;למה יש לה את זה&quot;.
+        </p>
+        {!openLogReady && (
+          <p className="text-[12.5px] text-[#8C5E0E] bg-tint-warm border border-[#F0DCA8] rounded-md px-3 py-2 mb-3">
+            עוד לא הרצנו את{" "}
+            <span className="font-mono text-[11.5px]" dir="ltr">
+              supabase/_content_access_log.sql
+            </span>{" "}
+            — בינתיים רואים כאן רק צפיות בסרטוני קורסים.
+          </p>
+        )}
+        {watched.length > 0 ? (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-ink-500 text-xs text-right border-b border-ink-100">
+                <th className="py-2 font-semibold">סוג</th>
+                <th className="py-2 font-semibold">שם התוכן</th>
+                <th className="py-2 font-semibold">נכנסה לראשונה</th>
+                <th className="py-2 font-semibold">כניסה אחרונה</th>
+                <th className="py-2 font-semibold">כמה פעמים</th>
+                <th className="py-2 font-semibold">עדיין יש גישה</th>
+              </tr>
+            </thead>
+            <tbody>
+              {watched.map((w) => {
+                const key = `${w.ownerType}:${w.ownerId}`;
+                const status = shareStatusOf.get(key);
+                return (
+                  <tr key={key} className="border-b border-ink-100 last:border-b-0">
+                    <td className="py-2.5">
+                      <Badge variant={w.ownerType === "course" ? "pink" : "purple"}>
+                        {w.ownerType === "course" ? "קורס" : "סשן"}
+                      </Badge>
+                    </td>
+                    <td className="py-2.5 font-medium text-ink-900">
+                      {contentTitleOf.get(key) ?? "—"}
+                    </td>
+                    <td className="py-2.5 text-ink-500">{DMY.format(new Date(w.firstOpen))}</td>
+                    <td className="py-2.5 text-ink-500">{DMY.format(new Date(w.lastOpen))}</td>
+                    <td className="py-2.5">{w.opens}</td>
+                    <td className="py-2.5 text-ink-700">
+                      {status === "shared"
+                        ? "כן"
+                        : status === "pending"
+                          ? "ממתין לשיתוף"
+                          : status === "revoked"
+                            ? "בהסרה"
+                            : "לא"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <p className="text-ink-500 text-sm py-2">היא עדיין לא נכנסה לתוכן.</p>
         )}
       </div>
 

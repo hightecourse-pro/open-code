@@ -1,14 +1,18 @@
 // Keeps Google Drive access in sync with community membership.
 //
-// Design: membership events (join, leave, start/return a course, add a
-// session) only WRITE TO THE QUEUE — a couple of fast database rows, no
-// network calls. A separate worker (`processShareQueue`, driven by a cron
-// route and a "sync now" button in the admin screen) does the actual Drive
-// work in bounded batches.
+// Design (since "access on attempt"): a share is created when a member really
+// opens something — `ensureAccess` in `src/lib/content-access.ts` does the
+// Drive call inside her click. Joining, renewing or publishing a new session
+// no longer fan out rows across everyone; they only change WHO MAY unlock.
+// The upside is that leaving revokes exactly what she actually opened.
 //
-// That split matters: activateSubscription runs inside the payment webhook,
-// and blocking it on dozens of Google round-trips would risk a timeout — and
-// a timed-out webhook gets retried by the provider, duplicating payments.
+// What lives here is the rest of the lifecycle: revokes (leaving, returning a
+// course, closing a session back), re-pointing to a new Google address,
+// re-opening a share when new material is added — and the worker.
+//
+// `processShareQueue` (cron + a "sync now" button) is now the RETRY LANE, not
+// the engine: it drains rows `ensureAccess` left `pending` after a Drive
+// failure and the `revoked` rows waiting to be undone. Normally it runs empty.
 //
 // `content_shares` stays the source of truth and the audit trail:
 //   pending  → should have access, not granted yet
@@ -32,13 +36,18 @@ import type { ContentOwner } from "@/types/database";
 
 // ---------------------------------------------------------------- queueing
 
-/** Mark that a member should have access to these courses/sessions. */
+/**
+ * Mark that a member should have access to these courses/sessions.
+ *
+ * Returns false when the row could not be written — `ensureAccess` must know,
+ * because a Drive grant with no row behind it is access nobody can revoke.
+ */
 export async function queueShares(
   profileId: string,
   ownerType: ContentOwner,
   ownerIds: string[]
-): Promise<void> {
-  if (ownerIds.length === 0) return;
+): Promise<boolean> {
+  if (ownerIds.length === 0) return true;
   const admin = createAdminClient();
 
   // A previously-revoked row must come back to life, so upsert (not ignore).
@@ -52,12 +61,25 @@ export async function queueShares(
     })),
     { onConflict: "owner_type,owner_id,profile_id" }
   );
-  if (error) console.error("[drive] queueShares failed:", error.message);
+  if (error) {
+    console.error("[drive] queueShares failed:", error.message);
+    return false;
+  }
+  return true;
 }
 
 /**
- * Mark that a member should lose access. Rows that were never granted are
- * dropped outright; granted ones become `revoked` for the worker to undo.
+ * Mark that a member should lose access to specific content — returning a
+ * course, switching to another one. Rows that were never granted are dropped
+ * outright; granted ones become `revoked` for the worker to undo.
+ *
+ * A share an admin opened BY HAND is deliberately left alone: the
+ * `granted_manually` branch of `canAccess` treats it as an entitlement of its
+ * own, independent of the enrolment, so revoking it here would strip Drive
+ * access the app still says she has. A personal share ends when the admin
+ * removes it,
+ * or when she leaves the community — `queueRevokeAll` below, which does NOT
+ * make this exception.
  */
 export async function queueRevokes(
   profileId: string,
@@ -67,74 +89,42 @@ export async function queueRevokes(
   if (ownerIds.length === 0) return;
   const admin = createAdminClient();
 
+  // Before the granted_manually migration the column doesn't exist. The lookup
+  // then fails and we simply revoke everything, exactly as we did before the
+  // exception existed — a revoke must never fail open.
+  const { data: manual, error: manualErr } = await admin
+    .from("content_shares")
+    .select("id")
+    .eq("profile_id", profileId)
+    .eq("owner_type", ownerType)
+    .eq("granted_manually", true)
+    .in("owner_id", ownerIds);
+  if (manualErr) console.error("[drive] queueRevokes manual lookup failed:", manualErr.message);
+  const keep = manualErr ? [] : (manual ?? []).map((r) => r.id);
+  const spare = `(${keep.join(",")})`;
+
   // Only "pending" is safe to delete — a "revoked" row is outstanding work.
-  const { error: delErr } = await admin
+  let cleanup = admin
     .from("content_shares")
     .delete()
     .eq("profile_id", profileId)
     .eq("owner_type", ownerType)
     .eq("status", "pending")
     .in("owner_id", ownerIds);
+  if (keep.length > 0) cleanup = cleanup.not("id", "in", spare);
+  const { error: delErr } = await cleanup;
   if (delErr) console.error("[drive] queueRevokes cleanup failed:", delErr.message);
 
-  const { error } = await admin
+  let revoke = admin
     .from("content_shares")
     .update({ status: "revoked", revoked_at: new Date().toISOString() })
     .eq("profile_id", profileId)
     .eq("owner_type", ownerType)
     .eq("status", "shared")
     .in("owner_id", ownerIds);
+  if (keep.length > 0) revoke = revoke.not("id", "in", spare);
+  const { error } = await revoke;
   if (error) console.error("[drive] queueRevokes failed:", error.message);
-}
-
-/**
- * Session recordings are paid material: they belong to paying members, to
- * mentors and to the team. A single session can be opened to the whole
- * community, and then the free tier gets it too.
- */
-async function paysForSessions(profileId: string): Promise<boolean> {
-  const { data } = await createAdminClient()
-    .from("profiles")
-    .select("status, member_tier, role")
-    .eq("id", profileId)
-    .maybeSingle();
-  if (!data || data.status !== "active") return false;
-  return data.member_tier === "paid" || data.role === "mentor" || data.role === "admin";
-}
-
-/**
- * Everything a member is entitled to right now: the sessions her tier covers,
- * plus the course she currently has open. Used when access is (re)granted, so
- * a renewal restores her course too — not only the session recordings.
- */
-export async function queueEverythingFor(profileId: string): Promise<void> {
-  const sessions = (await paysForSessions(profileId))
-    ? await allSessionIds()
-    : await allSessionIds({ openToAllOnly: true });
-  await queueShares(profileId, "session", sessions);
-
-  const { data: active } = await createAdminClient()
-    .from("enrollments")
-    .select("course_id")
-    .eq("profile_id", profileId)
-    .eq("status", "active")
-    .maybeSingle();
-  if (active?.course_id) await queueShares(profileId, "course", [active.course_id]);
-}
-
-/** Session ids — all of them, or only the ones opened to the whole community. */
-export async function allSessionIds(opts?: { openToAllOnly?: boolean }): Promise<string[]> {
-  const out: string[] = [];
-  const admin = createAdminClient();
-  const PAGE = 1000;
-  for (let from = 0; ; from += PAGE) {
-    let q = admin.from("sessions").select("id").range(from, from + PAGE - 1);
-    if (opts?.openToAllOnly) q = q.eq("open_to_all", true);
-    const { data } = await q;
-    out.push(...(data ?? []).map((s) => s.id));
-    if (!data || data.length < PAGE) break;
-  }
-  return out;
 }
 
 /**
@@ -161,43 +151,20 @@ async function sessionAudienceIds(openToAll: boolean): Promise<string[]> {
   return out;
 }
 
-/** A new session belongs to everyone already entitled to it, not just future joiners. */
-export async function queueSessionForAllMembers(sessionId: string): Promise<void> {
-  const admin = createAdminClient();
-  const { data: session } = await admin
-    .from("sessions")
-    .select("open_to_all")
-    .eq("id", sessionId)
-    .maybeSingle();
-  const members = await sessionAudienceIds(session?.open_to_all === true);
-  if (members.length === 0) return;
-  // One bulk write — never a per-member loop that a timeout could cut short.
-  const { error } = await admin.from("content_shares").upsert(
-    members.map((profile_id) => ({
-      owner_type: "session" as const,
-      owner_id: sessionId,
-      profile_id,
-      status: "pending" as const,
-      revoked_at: null,
-    })),
-    { onConflict: "owner_type,owner_id,profile_id" }
-  );
-  if (error) console.error("[drive] queueSessionForAllMembers failed:", error.message);
-}
-
 /**
- * The session's audience changed. Opening it up grants the free tier access;
- * closing it takes that access back — while paying members, mentors and the
- * team keep theirs either way.
+ * The session's audience changed.
+ *
+ * Opening it to everyone grants nothing by itself — it only WIDENS who may
+ * unlock it, and the free members who care will open it themselves.
+ * Closing it back is the half that still matters here: it takes a real, live
+ * Drive permission away from a free member who already opened the session,
+ * while paying members, mentors and the team keep theirs.
  */
 export async function syncSessionAudience(sessionId: string, openToAll: boolean): Promise<void> {
-  const admin = createAdminClient();
-  const entitled = new Set(await sessionAudienceIds(openToAll));
+  if (openToAll) return;
 
-  if (openToAll) {
-    await queueSessionForAllMembers(sessionId);
-    return;
-  }
+  const admin = createAdminClient();
+  const entitled = new Set(await sessionAudienceIds(false));
 
   // Closing: anyone holding it who is no longer entitled loses it.
   const { data: held } = await admin
@@ -223,7 +190,12 @@ export async function syncSessionAudience(sessionId: string, openToAll: boolean)
   }
 }
 
-/** A member is leaving: queue removal of everything she was given. */
+/**
+ * A member is leaving (paused, rejected, subscription ended): queue removal of
+ * everything she was given — personal shares an admin opened by hand included.
+ * Deliberately unfiltered: leaving the community ends ALL access to the
+ * material, and /admin/shares says so.
+ */
 export async function queueRevokeAll(profileId: string): Promise<void> {
   const admin = createAdminClient();
   const { error: delErr } = await admin
@@ -295,7 +267,7 @@ export interface SyncResult {
  * Where to share this member's material: the Google address she gave us if
  * she has one, otherwise the address she signed up with.
  */
-async function emailOf(profileId: string): Promise<string | null> {
+export async function emailOf(profileId: string): Promise<string | null> {
   const admin = createAdminClient();
   try {
     // Backward-safe: before the migration the table is missing, and we fall
@@ -361,7 +333,7 @@ async function requestGmail(profileId: string): Promise<boolean> {
 }
 
 /** Drive object ids for a course/session, skipping links that aren't Drive URLs. */
-async function fileIdsFor(ownerType: ContentOwner, ownerId: string): Promise<string[]> {
+export async function fileIdsFor(ownerType: ContentOwner, ownerId: string): Promise<string[]> {
   const { data } = await createAdminClient()
     .from("content_links")
     .select("url")

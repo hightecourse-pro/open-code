@@ -14,7 +14,7 @@ import {
   jobCandidatesEmail,
   jobPublishedEmail,
 } from "@/lib/email/templates";
-import { queueEverythingFor, queueRevokeAll } from "@/lib/drive-shares";
+import { queueRevokeAll } from "@/lib/drive-shares";
 import { loadAudiencePools } from "@/lib/admin/audience";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { decryptPassword } from "@/lib/portal/auth";
@@ -337,13 +337,12 @@ export async function setMemberStatus(profileId: string, status: ProfileStatus) 
   const { error } = await supabase.from("profiles").update({ status }).eq("id", profileId);
   if (error) return { error: error.message };
 
-  // Drive access follows membership: approving grants the session material,
-  // pausing/rejecting takes it back. Queue-only so the button stays instant —
-  // the sync worker does the Drive work.
+  // Drive access follows membership — but only one way now. Approving her
+  // grants nothing: it decides what she MAY open, and the material reaches her
+  // when she opens it. Pausing or rejecting still takes back everything she
+  // really did open.
   try {
-    if (status === "active") {
-      await queueEverythingFor(profileId);
-    } else if (status === "paused" || status === "rejected") {
+    if (status === "paused" || status === "rejected") {
       await queueRevokeAll(profileId);
     }
   } catch (e) {

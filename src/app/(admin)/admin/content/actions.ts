@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 import {
   processShareQueue,
-  queueSessionForAllMembers,
   requeueOwnerForSharedMembers,
   syncSessionAudience,
 } from "@/lib/drive-shares";
@@ -37,25 +36,15 @@ export async function createSessionContent(formData: FormData): Promise<void> {
   const title = String(formData.get("title") ?? "").trim();
   if (!title) return;
   const supabase = await createClient();
-  const { data: created } = await supabase
-    .from("sessions")
-    .insert({
-      title,
-      topic: String(formData.get("topic") ?? "").trim() || null,
-      scheduled_at: new Date().toISOString(),
-      is_published: true,
-    })
-    .select("id")
-    .single();
-
-  // Every existing member gets the new session too — not just future joiners.
-  if (created) {
-    try {
-      await queueSessionForAllMembers(created.id);
-    } catch (e) {
-      console.error("[drive] new session queue failed:", e);
-    }
-  }
+  // Nothing is shared here on purpose: a new session creates zero share rows.
+  // The members entitled to it open it themselves from /recordings, and that
+  // is what creates the row — so what we later revoke is what she really used.
+  await supabase.from("sessions").insert({
+    title,
+    topic: String(formData.get("topic") ?? "").trim() || null,
+    scheduled_at: new Date().toISOString(),
+    is_published: true,
+  });
 
   revalidatePath("/admin/content");
   revalidatePath("/admin/shares");
