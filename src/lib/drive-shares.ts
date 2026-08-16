@@ -213,6 +213,12 @@ export interface SyncResult {
   skipped: number;
   /** Members emailed because their address isn't a Google account. */
   gmailRequested: number;
+  /**
+   * What Google actually said, for the first few failures. A bare count tells
+   * an admin nothing — "the service account cannot see this file" tells her
+   * exactly what to fix.
+   */
+  errors?: string[];
 }
 
 /**
@@ -423,6 +429,10 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
       // Left in place: retried next run, and visible in the manual queue.
       result.failed++;
       console.error(`[drive] ${row.status} failed (${key} → ${email}):`, e);
+      if ((result.errors ??= []).length < 3) {
+        const msg = e instanceof Error ? e.message : String(e);
+        result.errors.push(`${key} → ${email}: ${msg.slice(0, 300)}`);
+      }
     }
   }
 
