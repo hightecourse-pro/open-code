@@ -54,7 +54,8 @@ export async function sendMessage(conversationId: string, formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // A junior may only message an active mentor — block once a mentor is removed.
+  // Members write to each other. The gates are membership (free members read
+  // their history but don't send) and that the other side is still here.
   const { data: conv } = await supabase
     .from("conversations")
     .select("a_id, b_id")
@@ -67,7 +68,7 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     supabase.from("profiles").select("role, status").eq("id", otherId).single(),
   ]);
   const otherIsActiveMentor = other?.role === "mentor" && other?.status === "active";
-  if (me?.role === "junior" && !otherIsActiveMentor) return;
+  if (other?.status !== "active") return;
   // Free members read their history but don't send.
   if (!me || !(me.status === "active" || me.role === "admin")) return;
 

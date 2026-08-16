@@ -529,6 +529,8 @@ export interface Database {
           is_official: boolean;
           is_pinned: boolean;
           status: PostStatus;
+          /** Set when the author fixed her words inside the edit window. */
+          edited_at: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -539,6 +541,7 @@ export interface Database {
           tech_tags?: string[];
           is_official?: boolean;
           is_pinned?: boolean;
+          edited_at?: string | null;
           status?: PostStatus;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;
@@ -550,8 +553,9 @@ export interface Database {
           post_id: string;
           author_id: string;
           body: string;
+          edited_at: string | null;
         } & Timestamps;
-        Insert: { id?: string; post_id: string; author_id: string; body: string };
+        Insert: { id?: string; post_id: string; author_id: string; body: string; edited_at?: string | null };
         Update: Partial<Database["public"]["Tables"]["comments"]["Insert"]>;
         Relationships: [];
       };
@@ -1100,7 +1104,27 @@ export interface Database {
         Relationships: [];
       };
     };
-    Views: Record<never, never>;
+    Views: {
+      /**
+       * What one member may see about another (supabase/_community_v2.sql).
+       * Deliberately narrow: no `status` and no `member_tier`, so nobody can
+       * tell who pays. Read-only — the directory reads this, never `profiles`.
+       */
+      members_directory: {
+        Row: {
+          id: string;
+          full_name: string;
+          first_name: string | null;
+          avatar_initials: string | null;
+          specialization: string | null;
+          region: string | null;
+          role: UserRole;
+          bio: string | null;
+          created_at: string;
+        };
+        Relationships: [];
+      };
+    };
     Functions: {
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_mentor: { Args: Record<string, never>; Returns: boolean };

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Heart, MessageCircle, Bookmark, Flag, Send, Lock } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
+import { CommentBody } from "@/components/patterns/comment-body";
+import { TextToolbar } from "@/components/patterns/text-toolbar";
 import { toggleReaction, addComment, reportContent } from "@/app/(app)/feed/actions";
 
 export interface PostComment {
@@ -13,6 +15,9 @@ export interface PostComment {
   author_name: string;
   author_initials: string | null;
   created_at: string;
+  edited_at?: string | null;
+  /** True when the signed-in member wrote it — she may fix it for 10 minutes. */
+  mine?: boolean;
 }
 
 export interface PostInteractionsProps {
@@ -42,6 +47,7 @@ export function PostInteractions({
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [, start] = useTransition();
+  const replyRef = useRef<HTMLTextAreaElement>(null);
 
   function onLike() {
     setLike((s) => ({ on: !s.on, count: s.count + (s.on ? -1 : 1) }));
@@ -129,29 +135,42 @@ export function PostInteractions({
               <Avatar size="xs" tone="pink" initials={c.author_initials || c.author_name.slice(0, 1) || "ק"} />
               <div className="flex-1 min-w-0 bg-ink-50 rounded-lg px-3 py-2">
                 <div className="text-[12.5px] font-semibold text-ink-900">
-                  {c.author_name} <span className="text-ink-400 font-normal">· {timeAgo(c.created_at)}</span>
+                  {c.author_name}{" "}
+                  <span className="text-ink-400 font-normal">
+                    · {timeAgo(c.created_at)}
+                    {c.edited_at ? " · נערך" : ""}
+                  </span>
                 </div>
-                <div className="text-[13.5px] text-ink-800 whitespace-pre-wrap">{c.body}</div>
+                <CommentBody
+                  commentId={c.id}
+                  body={c.body}
+                  createdAt={c.created_at}
+                  canEdit={c.mine === true}
+                />
               </div>
             </div>
           ))}
 
           {canWrite ? (
-            <form action={addComment.bind(null, postId)} className="flex gap-2 items-end">
-              <textarea
-                name="body"
-                rows={1}
-                required
-                placeholder="הוסיפי תגובה…"
-                className="flex-1 text-[13.5px] border border-ink-300 rounded-md px-3 py-2 outline-none focus:border-brand-purple resize-none"
-              />
-              <button
-                type="submit"
-                aria-label="שליחת תגובה"
-                className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0"
-              >
-                <Send size={16} />
-              </button>
+            <form action={addComment.bind(null, postId)} className="flex flex-col gap-1.5">
+              <div className="flex gap-2 items-end">
+                <textarea
+                  ref={replyRef}
+                  name="body"
+                  rows={1}
+                  required
+                  placeholder="הוסיפי תגובה…"
+                  className="flex-1 text-[13.5px] border border-ink-300 rounded-md px-3 py-2 outline-none focus:border-brand-purple resize-none"
+                />
+                <button
+                  type="submit"
+                  aria-label="שליחת תגובה"
+                  className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0"
+                >
+                  <Send size={16} />
+                </button>
+              </div>
+              <TextToolbar targetRef={replyRef} />
             </form>
           ) : (
             <Link

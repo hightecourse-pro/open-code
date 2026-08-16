@@ -1,5 +1,6 @@
 import { Avatar, Badge } from "@/components/ui";
 import { timeAgo } from "@/lib/utils";
+import { PostBody } from "@/components/patterns/post-body";
 import { PostInteractions, type PostComment } from "@/components/patterns/post-interactions";
 import type { PostIntent, UserRole } from "@/types/database";
 
@@ -11,6 +12,10 @@ export interface FeedPost {
   is_official: boolean;
   is_pinned: boolean;
   created_at: string;
+  /** Set once she fixed her words — shown quietly next to the time. */
+  edited_at?: string | null;
+  /** True when the signed-in member wrote this one. */
+  mine?: boolean;
   author: {
     full_name: string;
     avatar_initials: string | null;
@@ -62,14 +67,24 @@ export function PostCard({
             )}
           </div>
           <div className="text-[12.5px] text-ink-500">
-            {[INTENT_LABEL[post.intent], author?.specialization, timeAgo(post.created_at)]
+            {[
+              INTENT_LABEL[post.intent],
+              author?.specialization,
+              timeAgo(post.created_at),
+              post.edited_at ? "נערך" : null,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </div>
         </div>
       </header>
 
-      <p className="text-[15px] leading-relaxed text-ink-900 whitespace-pre-wrap break-words">{post.body}</p>
+      <PostBody
+        postId={post.id}
+        body={post.body}
+        createdAt={post.created_at}
+        canEdit={post.mine === true}
+      />
 
       {post.tech_tags.length > 0 && (
         <div className="flex gap-1.5 mt-2.5 flex-wrap">

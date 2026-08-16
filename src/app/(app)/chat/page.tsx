@@ -3,7 +3,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber, requireProfile } from "@/lib/auth";
-import { Avatar, Button } from "@/components/ui";
+import { Avatar } from "@/components/ui";
+import { RichText } from "@/components/patterns/rich-text";
+import { ChatComposer } from "@/components/patterns/chat-composer";
 import { cn, timeAgo } from "@/lib/utils";
 import { sendMessage } from "./actions";
 
@@ -33,15 +35,12 @@ export default async function ChatPage({
   const active = (conversations ?? []).find((c) => c.id === activeId) ?? null;
   const activeOther = active ? otherMap.get(active.a_id === me.id ? active.b_id : active.a_id) : null;
 
-  // A junior may only message an active mentor. Once a mentor is removed, the
-  // thread stays readable but new messages are blocked. Mentors/staff can reply.
-  // Writing at all is part of the paid membership — a free member reads her
-  // history but doesn't send.
+  // Members talk to each other — that is what the directory is for. The only
+  // limits: writing is part of the membership (a free member reads her history
+  // but doesn't send), and a thread with someone who has left the community
+  // stays readable rather than open.
   const subscriber = isSubscriber(me);
-  const canSend =
-    subscriber &&
-    (me.role !== "junior" ||
-      (!!activeOther && activeOther.role === "mentor" && activeOther.status === "active"));
+  const canSend = subscriber && !!activeOther && activeOther.status === "active";
 
   const { data: messages } = active
     ? await supabase
@@ -133,13 +132,13 @@ export default async function ChatPage({
                     <div key={m.id} className={cn("flex flex-col max-w-[78%]", mine ? "self-end items-end" : "self-start items-start")}>
                       <div
                         className={cn(
-                          "px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words",
+                          "px-3.5 py-2 text-sm leading-relaxed break-words",
                           mine
-                            ? "bg-brand-gradient text-white rounded-2xl rounded-br-md"
+                            ? "bg-brand-gradient text-white rounded-2xl rounded-br-md [&_a]:text-white [&_a]:underline [&_code]:bg-white/25 [&_b]:text-white"
                             : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
                         )}
                       >
-                        {m.body}
+                        <RichText body={m.body} />
                       </div>
                       <span className="text-[10.5px] text-ink-400 mt-0.5 px-1">{timeAgo(m.created_at)}</span>
                     </div>
@@ -153,20 +152,7 @@ export default async function ChatPage({
               </div>
 
               {canSend ? (
-                <form
-                  action={sendMessage.bind(null, active.id)}
-                  className="flex gap-2 p-3 border-t border-ink-100"
-                >
-                  <input
-                    name="body"
-                    autoComplete="off"
-                    placeholder="כתבי הודעה…"
-                    className="flex-1 px-3.5 py-2.5 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple"
-                  />
-                  <Button type="submit" size="sm">
-                    שליחה
-                  </Button>
-                </form>
+                <ChatComposer action={sendMessage.bind(null, active.id)} />
               ) : !subscriber ? (
                 <Link
                   href="/join"
@@ -176,7 +162,7 @@ export default async function ChatPage({
                 </Link>
               ) : (
                 <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
-                  המנטורית כבר לא זמינה לשיחות חדשות. אפשר לפנות למנטורית אחרת מעמוד המנטוריות 💜
+                  החברה הזו כבר לא פעילה בקהילה, אז אי אפשר לשלוח לה הודעות חדשות — השיחה נשמרת כאן 💜
                 </div>
               )}
             </>

@@ -4,6 +4,7 @@ import { useActionState, useRef, useState } from "react";
 import { MessageSquare } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { TextToolbar } from "@/components/patterns/text-toolbar";
 import { createPost, type ComposerState } from "@/app/(app)/feed/actions";
 import type { PostIntent } from "@/types/database";
 
@@ -16,6 +17,7 @@ const INTENTS: { value: PostIntent; label: string }[] = [
 export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
   const [intent, setIntent] = useState<PostIntent>("knowledge");
   const formRef = useRef<HTMLFormElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [state, action, pending] = useActionState<ComposerState, FormData>(
     async (prev, formData) => {
       const result = await createPost(prev, formData);
@@ -42,11 +44,14 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
         <input type="hidden" name="intent" value={intent} />
         <input type="hidden" name="kind" value={kind} />
         <textarea
+          ref={bodyRef}
           name="body"
           rows={2}
           placeholder="מה את רוצה לשתף עם הקהילה?"
           className="w-full border-none outline-none resize-none text-[15px] text-ink-900 py-1.5 placeholder:text-ink-400"
         />
+
+        <TextToolbar targetRef={bodyRef} className="mt-1 mb-1" />
 
         <div className="flex gap-2 mt-2.5 flex-wrap">
           {INTENTS.map((it) => (

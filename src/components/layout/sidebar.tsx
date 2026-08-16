@@ -20,6 +20,7 @@ import {
   Shield,
   Sparkles,
   User,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,6 +35,7 @@ const SECTIONS: NavSection[] = [
   {
     items: [
       { href: "/forum", label: "פורום הקהילה", icon: MessageSquare },
+      { href: "/members", label: "המשתתפות שלנו", icon: Users },
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
       { href: "/events", label: "אירועים ומיטאפים", icon: Calendar },
       { href: "/jobs", label: "משרות", icon: Briefcase },

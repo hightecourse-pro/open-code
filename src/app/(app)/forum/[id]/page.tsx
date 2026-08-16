@@ -24,7 +24,7 @@ async function loadPost(id: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("posts")
-    .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id")
+    .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, edited_at, author_id")
     .eq("id", id)
     .eq("kind", "forum")
     .maybeSingle();
@@ -55,7 +55,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     supabase.from("reactions").select("post_id, profile_id, kind").eq("post_id", post.id),
     supabase
       .from("comments")
-      .select("id, post_id, body, author_id, created_at")
+      .select("id, post_id, body, author_id, created_at, edited_at")
       .eq("post_id", post.id)
       .order("created_at", { ascending: true }),
   ]);
@@ -75,6 +75,8 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       author_name: a?.full_name ?? "חברת קהילה",
       author_initials: a?.avatar_initials ?? null,
       created_at: c.created_at,
+      edited_at: c.edited_at,
+      mine: !!user && c.author_id === user.id,
     };
   });
 
@@ -87,6 +89,8 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     is_official: post.is_official,
     is_pinned: post.is_pinned,
     created_at: post.created_at,
+    edited_at: post.edited_at,
+    mine: !!user && post.author_id === user.id,
     author: authorMap.get(post.author_id) ?? null,
     likeCount: rx.filter((r) => r.kind === "like").length,
     liked: !!user && rx.some((r) => r.kind === "like" && r.profile_id === user.id),
