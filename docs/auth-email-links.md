@@ -47,9 +47,9 @@ Supabase → **Authentication → Email Templates**. להחליף בכל תבנ�
 בלי השינוי הזה בדשבורד — התבניות שבקוד לא משפיעות על כלום, כי Supabase שולח
 את מה שכתוב אצלה.
 
-> הערה: קבצי הייחוס `supabase/email-templates/*.html` ושתי ההוראות
-> "Keep the `{{ .ConfirmationURL }}` variable" ב‑`supabase/AUTH-SETUP.md`
-> וב‑`supabase/BREVO-EMAIL.md` עדיין מפנים לנוסח הישן וצריך לעדכן אותם.
+> קבצי הייחוס ב-`supabase/email-templates/` כבר מעודכנים לנוסח הזה (ארבע תבניות),
+> ואפשר להעתיק מהם ישירות לדשבורד. שתי ההוראות "Keep the {{ .ConfirmationURL }}
+> variable" ב-`supabase/AUTH-SETUP.md` וב-`supabase/BREVO-EMAIL.md` כבר לא נכונות.
 
 ### 2. כתובות מורשות
 
