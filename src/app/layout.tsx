@@ -17,8 +17,8 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "קוד פתוח — קהילת ג'וניוריות בהייטק",
-    template: "%s · קוד פתוח",
+    default: "קהילת קוד פתוח — פותחים לך דלת להייטק",
+    template: "%s · קהילת קוד פתוח",
   },
   description:
     "קהילה חמה ותומכת לג'וניוריות בתחום הפיתוח — כלי AI, סימולטור ראיונות, קורסים, לוח משרות ומנטוריות. אנחנו ביחד.",

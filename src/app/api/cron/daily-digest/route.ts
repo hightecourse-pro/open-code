@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isResendConfigured, sendResendEmail } from "@/lib/email/resend";
 import { dailyDigestEmail } from "@/lib/email/templates";
+import { isRestDay } from "@/lib/hebrew-calendar";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -32,6 +33,14 @@ export async function GET(req: Request) {
   const dry = url.searchParams.get("dry") === "1";
   const all = url.searchParams.get("all") === "1";
   const testEmail = url.searchParams.get("test");
+
+  // The community rests on Shabbat and on the festivals — and so does its
+  // mail. A test address is still allowed through, so the digest can be
+  // checked on any day. ?force=1 is the deliberate override.
+  const rest = isRestDay();
+  if (rest.rest && !testEmail && url.searchParams.get("force") !== "1") {
+    return NextResponse.json({ ok: true, skipped: rest.reason, sent: 0 });
+  }
 
   // Deliver a sample digest to one address (for testing), without touching members.
   if (testEmail) {
@@ -103,6 +112,7 @@ export async function GET(req: Request) {
 
   const results: { email: string; ok: boolean; error?: string }[] = [];
   let sent = 0;
+  let nothingToSay = 0;
   for (const id of recipients) {
     if (sent >= MAX_SENDS) break;
     const email = emailOf.get(id);
@@ -116,6 +126,16 @@ export async function GET(req: Request) {
       newJobs,
       upcomingSessions,
     };
+    // An empty digest is worse than no digest — it teaches her to ignore us.
+    const hasNews =
+      data.unreadCount > 0 ||
+      data.newForumPosts > 0 ||
+      data.newJobs > 0 ||
+      data.upcomingSessions.length > 0;
+    if (!hasNews) {
+      nothingToSay += 1;
+      continue;
+    }
     if (dry) {
       results.push({ email, ok: true });
       sent += 1;
@@ -133,6 +153,7 @@ export async function GET(req: Request) {
     all,
     global: { newForumPosts, newJobs, upcomingSessions: upcomingSessions.length },
     candidates: recipients.length,
+    nothingToSay,
     sent,
     failures: results.filter((r) => !r.ok),
   });

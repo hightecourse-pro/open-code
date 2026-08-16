@@ -16,7 +16,8 @@ import { getSiteUrl } from "@/lib/site";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || getSiteUrl();
 const LOGO = `${SITE}/logo-opencode.png`;
-const TAGLINE = "קהילה לחרדיות בהייטק";
+const BRAND = "קהילת קוד פתוח";
+const TAGLINE = "פותחים לך דלת להייטק";
 
 export interface EmailContent {
   /** Big heading inside the card. */
@@ -62,7 +63,7 @@ export function renderEmail(c: EmailContent): string {
     </div>
   </div>
   <div style="text-align:center; color:${C.muted}; font-size:12px; margin-top:18px;">
-    קוד פתוח · ${TAGLINE} 💜
+    ${BRAND} · ${TAGLINE} 💜
   </div>
 </div>`;
 }
@@ -142,12 +143,18 @@ export interface DigestData {
 
 /** The daily digest: a warm roundup of what's waiting for a member. */
 export function dailyDigestEmail(data: DigestData): BuiltEmail {
+  // A table, not flexbox: Gmail and Outlook drop display:flex, which collapsed
+  // the row and ran the text straight into the link with no space between them.
   const row = (emoji: string, text: string, href: string, cta: string) =>
-    `<div style="display:flex; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid ${C.border};">
-      <div style="font-size:20px;">${emoji}</div>
-      <div style="flex:1; font-size:14px; color:${C.body};">${text}</div>
-      <a href="${SITE}${href}" style="font-size:13px; font-weight:700; color:${C.pink}; text-decoration:none; white-space:nowrap;">${cta} ←</a>
-    </div>`;
+    `<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-bottom:1px solid ${C.border};">
+      <tr>
+        <td width="28" style="font-size:20px; padding:12px 0 12px 8px; vertical-align:top;">${emoji}</td>
+        <td style="font-size:14px; line-height:1.6; color:${C.body}; padding:12px 4px;">${text}</td>
+        <td style="padding:12px 8px 12px 0; text-align:left; vertical-align:middle;">
+          <a href="${SITE}${href}" style="font-size:13px; font-weight:700; color:${C.pink}; text-decoration:none; white-space:nowrap;">${cta} ←</a>
+        </td>
+      </tr>
+    </table>`;
 
   const rows: string[] = [];
   if (data.unreadCount > 0) {
@@ -185,10 +192,14 @@ export function dailyDigestEmail(data: DigestData): BuiltEmail {
       <p style="font-size:14px; line-height:1.6; color:${C.body}; margin:0 0 12px;">הנה מה שמחכה לך היום בקהילה:</p>
       ${rows.join("")}
       <a href="${SITE}/forum" style="display:inline-block; background:${C.gradient}; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:12px 28px; border-radius:10px; margin:18px 0 2px;">כניסה לקהילה</a>
+      <p style="font-size:12.5px; line-height:1.7; color:${C.muted}; margin:18px 0 0;">
+        אפשר לשנות את תדירות המיילים או להפסיק אותם לגמרי בכל רגע —
+        <a href="${SITE}/profile" style="color:${C.pink}; text-decoration:underline;">בהגדרות שלך</a>.
+      </p>
     </div>
   </div>
   <div style="text-align:center; color:${C.muted}; font-size:12px; margin-top:18px;">
-    קוד פתוח · ${TAGLINE} 💜
+    ${BRAND} · ${TAGLINE} 💜
   </div>
 </div>`;
 
