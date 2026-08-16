@@ -4,6 +4,7 @@ import { activateSubscription } from "@/lib/payments/subscription";
 import { buildPlans } from "@/lib/payments/plans";
 import { getPricingAdmin } from "@/lib/payments/pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendResendEmail } from "@/lib/email/resend";
 import type { Json } from "@/types/database";
 
 /**
@@ -12,14 +13,27 @@ import type { Json } from "@/types/database";
  *
  * NOTHING in the iframe payload can authenticate this call: Mosad, ApiValid and
  * the CallBack URL we hand the iframe all travel through the member's own
- * browser. The shared secret therefore has to come from somewhere she never
- * sees — the CallBack URL configured in the Nedarim account itself:
+ * browser. So the caller is authenticated one of two ways, either is enough:
  *
- *     https://<site>/api/webhooks/payments?key=<NEDARIM_CALLBACK_SECRET>
+ *   1. WHERE it comes from — Nedarim's own servers (NEDARIM_CALLBACK_IPS, or
+ *      the addresses observed in production below). A member's browser cannot
+ *      forge a source address on a TCP request that has to reach us.
+ *   2. A shared secret she never sees — set NEDARIM_CALLBACK_SECRET and put it
+ *      in the CallBack URL configured in the Nedarim ACCOUNT:
+ *      https://<site>/api/webhooks/payments?key=<secret>
  *
- * With no secret configured we refuse to activate anyone. That is deliberate:
- * a broken payment flow is recoverable, a free-subscription hole is not.
+ * A call that satisfies neither is refused: a free-subscription hole is worse
+ * than a payment we have to chase. Refusals are recorded AND emailed to the
+ * team, because the failure mode we care about is not noticing.
  */
+
+/**
+ * Nedarim's callback addresses, observed in production. Extend via
+ * NEDARIM_CALLBACK_IPS rather than editing this — and if a real payment is
+ * ever refused as ip_not_allowed, the rejection email carries the address to
+ * add.
+ */
+const KNOWN_NEDARIM_IPS = ["18.194.219.73"];
 
 /** Best-effort diagnostic. Keeps the last call AND the last rejection. */
 async function logEvent(value: Record<string, unknown>) {
@@ -37,6 +51,53 @@ async function logEvent(value: Record<string, unknown>) {
   }
 }
 
+/**
+ * Tell the team a payment callback was refused. A refusal means someone may
+ * have paid without getting access — the one failure that must never sit
+ * quietly in a log. Throttled to once an hour so a hostile caller can't turn
+ * this into a mail flood.
+ */
+async function alertAdmins(record: Record<string, unknown>) {
+  try {
+    const admin = createAdminClient();
+    const { data: last } = await admin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "last_webhook_alert_at")
+      .maybeSingle();
+    const lastAt = typeof last?.value === "string" ? Date.parse(last.value) : 0;
+    if (Number.isFinite(lastAt) && Date.now() - lastAt < 60 * 60 * 1000) return;
+    await admin
+      .from("app_settings")
+      .upsert(
+        { key: "last_webhook_alert_at", value: new Date().toISOString() as unknown as Json },
+        { onConflict: "key" }
+      );
+
+    const p = (record.params ?? {}) as Record<string, string>;
+    const html = `
+      <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7">
+        <h2 style="color:#C81E66">שיחת תשלום נדחתה — ייתכן שמישהי שילמה ולא קיבלה גישה</h2>
+        <p><b>סיבה:</b> ${record.outcome}</p>
+        <p><b>כתובת השולח:</b> ${record.ip || "לא ידועה"}</p>
+        <p><b>שם:</b> ${p.ClientName ?? "—"} · <b>מייל:</b> ${p.Mail ?? "—"} ·
+           <b>סכום:</b> ${p.Amount ?? "—"} ₪ · <b>אישור נדרים:</b> ${p.ID ?? "—"}</p>
+        <p>אם זו קריאה אמיתית מנדרים — צריך להוסיף את הכתובת שלמעלה ל־NEDARIM_CALLBACK_IPS
+           (או להגדיר NEDARIM_CALLBACK_SECRET בכתובת ה־CallBack בחשבון נדרים), ואז להפעיל
+           את המנוי ידנית.</p>
+      </div>`;
+    const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
+    for (const a of admins ?? []) {
+      const { data: authUser } = await admin.auth.admin.getUserById(a.id);
+      const email = authUser?.user?.email;
+      if (!email) continue;
+      await sendResendEmail({ to: email, subject: "⚠️ תשלום נדחה בשער התשלומים", html });
+    }
+  } catch (e) {
+    console.error("[webhook/payments] alert failed", String(e));
+  }
+}
+
 function constantEquals(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -44,10 +105,16 @@ function constantEquals(a: string, b: string): boolean {
   return diff === 0;
 }
 
-/** The caller's address, as far as the proxy in front of us reports it. */
+/**
+ * The caller's address. x-real-ip is preferred because our host sets it from
+ * the actual connection; x-forwarded-for is only a fallback for other
+ * environments. Both are ultimately headers, which is why the address is one
+ * of two accepted proofs and NEDARIM_CALLBACK_SECRET is the stronger one.
+ */
 function callerIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for") ?? "";
-  return (fwd.split(",")[0] || req.headers.get("x-real-ip") || "").trim();
+  const real = req.headers.get("x-real-ip");
+  if (real?.trim()) return real.trim();
+  return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
 }
 
 export async function POST(req: Request) {
@@ -85,34 +152,36 @@ export async function POST(req: Request) {
     record.outcome = outcome;
     console.warn("[webhook/payments] rejected:", outcome, record);
     await logEvent(record);
+    // "ignored_incomplete" is Nedarim's own noise (a failed card, a probe) —
+    // not a payment we lost, so it doesn't wake anyone.
+    if (outcome !== "ignored_incomplete" && outcome !== "duplicate_ignored") {
+      await alertAdmins(record);
+    }
     return NextResponse.json({ error }, { status });
   };
 
   if (!cfg) return reject("not_configured", 503, "payments not configured");
 
-  // 1. Shared secret — configured in the Nedarim account's CallBack URL.
+  // 1. Authenticate: the right address, or the shared secret. Either suffices.
+  const allowlist = [
+    ...KNOWN_NEDARIM_IPS,
+    ...(process.env.NEDARIM_CALLBACK_IPS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+  ];
+  const fromNedarim = allowlist.includes(callerIp(req));
+
   const secret = process.env.NEDARIM_CALLBACK_SECRET ?? "";
-  if (!secret) {
+  const secretOk = !!secret && !!providedKey && constantEquals(providedKey, secret);
+
+  if (!fromNedarim && !secretOk) {
     return reject(
-      "no_secret_configured",
-      503,
-      "callback secret not configured — refusing to activate"
+      providedKey ? "bad_secret" : "unauthenticated_caller",
+      401,
+      "unauthorized"
     );
   }
-  if (!providedKey || !constantEquals(providedKey, secret)) {
-    return reject("bad_secret", 401, "unauthorized");
-  }
+  record.authedBy = secretOk ? "secret" : "ip";
 
-  // 2. Optional IP allowlist, when the provider's addresses are known.
-  const allowlist = (process.env.NEDARIM_CALLBACK_IPS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (allowlist.length && !allowlist.includes(callerIp(req))) {
-    return reject("ip_not_allowed", 403, "forbidden");
-  }
-
-  // 3. The Mosad number is required — never "checked only when present".
+  // 2. The Mosad number is required — never "checked only when present".
   const mosad = params.MosadNumber ?? params.Mosad ?? "";
   if (!mosad || mosad !== cfg.mosadId) {
     return reject("unrecognized_mosad", 401, "unrecognized mosad");
@@ -128,12 +197,21 @@ export async function POST(req: Request) {
     return reject("missing_transaction_id", 400, "missing transaction id");
   }
 
-  // 4. The amount has to be the price of the plan it claims to pay for.
+  // 3. The amount is recorded as charged, and flagged when it doesn't match
+  // today's price — a standing order keeps charging the price it was created
+  // at, so a mismatch usually means the price changed, not fraud. The caller
+  // is already authenticated; refusing here would silently stop renewals.
   const plans = buildPlans(await getPricingAdmin());
   const expected = plans[cb.plan].amountAgorot;
   if (cb.amountAgorot !== expected) {
     record.expectedAmountAgorot = expected;
-    return reject("amount_mismatch", 400, "amount does not match plan");
+    record.amountMismatch = true;
+    console.warn(
+      `[webhook/payments] amount ${cb.amountAgorot} != plan ${expected} for ${cb.plan}`
+    );
+  }
+  if (!cb.amountAgorot || cb.amountAgorot <= 0) {
+    return reject("non_positive_amount", 400, "amount missing");
   }
 
   const admin = createAdminClient();
