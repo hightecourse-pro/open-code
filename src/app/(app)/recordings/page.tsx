@@ -52,13 +52,17 @@ export default async function RecordingsPage() {
     (s) => !s.canceled_at && !curatedSessionIds.has(s.id)
   );
   // Drive links are paid material — never fetched for a free member.
-  const { data: sessionLinks } = subscriber && sessions.length
+  // A free member sees the recordings of sessions the team opened to the whole
+  // community; everything else stays paid material. RLS enforces exactly the
+  // same rule, so a hand-crafted request gets no more than this page shows.
+  const readableSessions = subscriber ? sessions : sessions.filter((s) => s.open_to_all);
+  const { data: sessionLinks } = readableSessions.length
     ? await supabase
         .from("content_links")
         .select("*")
         .eq("owner_type", "session")
         .eq("kind", "video")
-        .in("owner_id", sessions.map((s) => s.id))
+        .in("owner_id", readableSessions.map((s) => s.id))
         .order("sort_order", { ascending: true })
     : { data: [] };
   const linksBySession = new Map<string, { title: string; url: string }[]>();
@@ -79,7 +83,11 @@ export default async function RecordingsPage() {
       {!subscriber && (
         <UpgradeCard
           title="הצפייה בהקלטות נפתחת עם מנוי"
-          body="כאן את רואה מה כבר נלמד בקהילה. עם מנוי כל ההקלטות נפתחות לצפייה מתי שנוח לך."
+          body={
+            readableSessions.length > 0
+              ? "כמה סשנים פתחנו לכל הקהילה ואת מוזמנת לצפות בהם עכשיו. שאר ההקלטות נפתחות עם מנוי."
+              : "כאן את רואה מה כבר נלמד בקהילה. עם מנוי כל ההקלטות נפתחות לצפייה מתי שנוח לך."
+          }
         />
       )}
 
@@ -103,7 +111,7 @@ export default async function RecordingsPage() {
                     {new Date(s.scheduled_at).toLocaleDateString("he-IL", { day: "numeric", month: "long", timeZone: "Asia/Jerusalem" })}
                   </div>
                 </div>
-                {!subscriber ? (
+                {!subscriber && !s.open_to_all ? (
                   <Link
                     href="/join"
                     className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple bg-white border-[1.5px] border-brand-purple rounded-md px-3.5 py-2 hover:bg-tint-purple transition-colors"

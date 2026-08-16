@@ -7,6 +7,7 @@ import {
   processShareQueue,
   queueSessionForAllMembers,
   requeueOwnerForSharedMembers,
+  syncSessionAudience,
 } from "@/lib/drive-shares";
 import type { ContentOwner, LinkKind, ShareStatus } from "@/types/database";
 
@@ -120,6 +121,29 @@ export async function deleteCourseUnit(id: string): Promise<void> {
   await supabase.from("course_units").delete().eq("id", id);
   revalidatePath("/admin/content");
   revalidatePath("/courses");
+}
+
+/**
+ * Open a session's recording to the whole community, or close it back to
+ * paying members, mentors and the team. The share queue follows the decision
+ * both ways — opening grants the free tier, closing takes it back.
+ */
+export async function setSessionOpenToAll(id: string, open: boolean): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  const { error } = await supabase.from("sessions").update({ open_to_all: open }).eq("id", id);
+  if (error) {
+    console.error("[content] open_to_all update failed:", error.message);
+    return;
+  }
+  try {
+    await syncSessionAudience(id, open);
+  } catch (e) {
+    console.error("[drive] session audience sync failed:", e);
+  }
+  revalidatePath("/admin/content");
+  revalidatePath("/admin/shares");
+  revalidatePath("/recordings");
 }
 
 export async function deleteSessionContent(id: string): Promise<void> {

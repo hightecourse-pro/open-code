@@ -800,6 +800,8 @@ export interface Database {
           is_published: boolean;
           recording_id: string | null;
           canceled_at: string | null;
+          /** Recording open to the whole community, free tier included. */
+          open_to_all: boolean;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -811,6 +813,7 @@ export interface Database {
           status?: SessionStatus;
           is_published?: boolean;
           recording_id?: string | null;
+          open_to_all?: boolean;
           canceled_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sessions"]["Insert"]>;

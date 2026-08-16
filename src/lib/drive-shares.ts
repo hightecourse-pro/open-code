@@ -88,12 +88,30 @@ export async function queueRevokes(
 }
 
 /**
- * Everything a member is entitled to right now: every session, plus the
- * course she currently has open. Used when access is (re)granted, so a
- * renewal restores her course too — not only the session recordings.
+ * Session recordings are paid material: they belong to paying members, to
+ * mentors and to the team. A single session can be opened to the whole
+ * community, and then the free tier gets it too.
+ */
+async function paysForSessions(profileId: string): Promise<boolean> {
+  const { data } = await createAdminClient()
+    .from("profiles")
+    .select("status, member_tier, role")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!data || data.status !== "active") return false;
+  return data.member_tier === "paid" || data.role === "mentor" || data.role === "admin";
+}
+
+/**
+ * Everything a member is entitled to right now: the sessions her tier covers,
+ * plus the course she currently has open. Used when access is (re)granted, so
+ * a renewal restores her course too — not only the session recordings.
  */
 export async function queueEverythingFor(profileId: string): Promise<void> {
-  await queueShares(profileId, "session", await allSessionIds());
+  const sessions = (await paysForSessions(profileId))
+    ? await allSessionIds()
+    : await allSessionIds({ openToAllOnly: true });
+  await queueShares(profileId, "session", sessions);
 
   const { data: active } = await createAdminClient()
     .from("enrollments")
@@ -104,41 +122,55 @@ export async function queueEverythingFor(profileId: string): Promise<void> {
   if (active?.course_id) await queueShares(profileId, "course", [active.course_id]);
 }
 
-/** Every session the community shares (a new member gets all of them). */
-export async function allSessionIds(): Promise<string[]> {
+/** Session ids — all of them, or only the ones opened to the whole community. */
+export async function allSessionIds(opts?: { openToAllOnly?: boolean }): Promise<string[]> {
   const out: string[] = [];
   const admin = createAdminClient();
   const PAGE = 1000;
   for (let from = 0; ; from += PAGE) {
-    const { data } = await admin.from("sessions").select("id").range(from, from + PAGE - 1);
+    let q = admin.from("sessions").select("id").range(from, from + PAGE - 1);
+    if (opts?.openToAllOnly) q = q.eq("open_to_all", true);
+    const { data } = await q;
     out.push(...(data ?? []).map((s) => s.id));
     if (!data || data.length < PAGE) break;
   }
   return out;
 }
 
-/** Members who should have access to community material right now. */
-async function activeMemberIds(): Promise<string[]> {
+/**
+ * Who a session's recording belongs to. Default: paying members, mentors and
+ * the team. Opened to everyone: the whole active community.
+ */
+async function sessionAudienceIds(openToAll: boolean): Promise<string[]> {
   const out: string[] = [];
   const admin = createAdminClient();
   const PAGE = 1000;
   for (let from = 0; ; from += PAGE) {
     const { data } = await admin
       .from("profiles")
-      .select("id")
+      .select("id, member_tier, role")
       .eq("status", "active")
       .range(from, from + PAGE - 1);
-    out.push(...(data ?? []).map((p) => p.id));
+    for (const p of data ?? []) {
+      if (openToAll || p.member_tier === "paid" || p.role === "mentor" || p.role === "admin") {
+        out.push(p.id);
+      }
+    }
     if (!data || data.length < PAGE) break;
   }
   return out;
 }
 
-/** A new session belongs to everyone who's already a member, not just future joiners. */
+/** A new session belongs to everyone already entitled to it, not just future joiners. */
 export async function queueSessionForAllMembers(sessionId: string): Promise<void> {
-  const members = await activeMemberIds();
-  if (members.length === 0) return;
   const admin = createAdminClient();
+  const { data: session } = await admin
+    .from("sessions")
+    .select("open_to_all")
+    .eq("id", sessionId)
+    .maybeSingle();
+  const members = await sessionAudienceIds(session?.open_to_all === true);
+  if (members.length === 0) return;
   // One bulk write — never a per-member loop that a timeout could cut short.
   const { error } = await admin.from("content_shares").upsert(
     members.map((profile_id) => ({
@@ -151,6 +183,44 @@ export async function queueSessionForAllMembers(sessionId: string): Promise<void
     { onConflict: "owner_type,owner_id,profile_id" }
   );
   if (error) console.error("[drive] queueSessionForAllMembers failed:", error.message);
+}
+
+/**
+ * The session's audience changed. Opening it up grants the free tier access;
+ * closing it takes that access back — while paying members, mentors and the
+ * team keep theirs either way.
+ */
+export async function syncSessionAudience(sessionId: string, openToAll: boolean): Promise<void> {
+  const admin = createAdminClient();
+  const entitled = new Set(await sessionAudienceIds(openToAll));
+
+  if (openToAll) {
+    await queueSessionForAllMembers(sessionId);
+    return;
+  }
+
+  // Closing: anyone holding it who is no longer entitled loses it.
+  const { data: held } = await admin
+    .from("content_shares")
+    .select("id, profile_id, status")
+    .eq("owner_type", "session")
+    .eq("owner_id", sessionId)
+    .in("status", ["pending", "shared"]);
+
+  const losing = (held ?? []).filter((r) => !entitled.has(r.profile_id));
+  const neverGranted = losing.filter((r) => r.status === "pending").map((r) => r.id);
+  const granted = losing.filter((r) => r.status === "shared").map((r) => r.id);
+
+  if (neverGranted.length) {
+    await admin.from("content_shares").delete().in("id", neverGranted);
+  }
+  if (granted.length) {
+    const { error } = await admin
+      .from("content_shares")
+      .update({ status: "revoked", revoked_at: new Date().toISOString() })
+      .in("id", granted);
+    if (error) console.error("[drive] syncSessionAudience revoke failed:", error.message);
+  }
 }
 
 /** A member is leaving: queue removal of everything she was given. */

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Trash2, BookOpen, CalendarDays } from "lucide-react";
+import { Trash2, BookOpen, CalendarDays, Globe, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import { ContentLinksEditor } from "@/components/patterns/content-links-editor";
 import { CourseUnitsEditor } from "@/components/patterns/course-units-editor";
 import { Collapsible } from "@/components/patterns/collapsible";
@@ -10,6 +11,7 @@ import {
   createSessionContent,
   deleteCourse,
   deleteSessionContent,
+  setSessionOpenToAll,
 } from "./actions";
 import type { ContentLink, CourseUnit } from "@/types/database";
 
@@ -19,7 +21,7 @@ export default async function AdminContentPage() {
   const supabase = await createClient();
   const [{ data: courses }, { data: sessions }, { data: links }, { data: units }] = await Promise.all([
     supabase.from("courses").select("*").order("created_at", { ascending: false }),
-    supabase.from("sessions").select("id, title, topic, scheduled_at").order("scheduled_at", { ascending: false }),
+    supabase.from("sessions").select("id, title, topic, scheduled_at, open_to_all").order("scheduled_at", { ascending: false }),
     supabase.from("content_links").select("*").order("sort_order", { ascending: true }),
     supabase.from("course_units").select("*").order("sort_order", { ascending: true }),
   ]);
@@ -130,7 +132,7 @@ export default async function AdminContentPage() {
 
         {(sessions ?? []).map((s) => (
           <div key={s.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex items-center gap-2 mb-2 flex-wrap">
               <div className="font-display font-bold text-ink-1000">{s.title}</div>
               {s.topic && <span className="text-[11px] text-ink-400">{s.topic}</span>}
               <form action={deleteSessionContent.bind(null, s.id)} className="ms-auto">
@@ -139,6 +141,36 @@ export default async function AdminContentPage() {
                 </button>
               </form>
             </div>
+            {/* Audience: paid + mentors by default, or the whole community. */}
+            <form
+              action={setSessionOpenToAll.bind(null, s.id, !s.open_to_all)}
+              className="flex items-center gap-2 mb-3"
+            >
+              <button
+                type="submit"
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-[12px] font-semibold rounded-full px-3 py-1 border transition-colors",
+                  s.open_to_all
+                    ? "bg-tint-mint border-[#A7E3C6] text-[#1B7A4B]"
+                    : "bg-ink-50 border-ink-200 text-ink-500 hover:border-brand-purple"
+                )}
+              >
+                {s.open_to_all ? (
+                  <>
+                    <Globe size={12} /> פתוח לכל הקהילה
+                  </>
+                ) : (
+                  <>
+                    <Lock size={12} /> למנויות ולמנטוריות
+                  </>
+                )}
+              </button>
+              <span className="text-[11.5px] text-ink-400">
+                {s.open_to_all
+                  ? "כל המשתתפות מקבלות את ההקלטה — גם החינמיות. לחיצה תחזיר אותו למנויות בלבד."
+                  : "לחיצה תפתח את ההקלטה לכל הקהילה."}
+              </span>
+            </form>
             <ContentLinksEditor ownerType="session" ownerId={s.id} links={linksByOwner.get(`session:${s.id}`) ?? []} />
           </div>
         ))}
