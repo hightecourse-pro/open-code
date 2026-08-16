@@ -5,11 +5,42 @@ import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireCommunityAccess } from "@/lib/auth";
 import { Alert } from "@/components/ui";
-import { ApplyForm } from "./apply-form";
+import { ApplyForm, type ApplyCvDoc } from "./apply-form";
 
 export const metadata: Metadata = { title: "הגשת מועמדות" };
 // The job's questions and open/closed state must always be fresh.
 export const dynamic = "force-dynamic";
+
+/**
+ * Her CV documents, the one she marked as default first. is_default arrives
+ * with supabase/_cv_default.sql — before it runs the select fails with 42703
+ * and we fall back to newest-first, exactly the old behaviour.
+ */
+async function loadCvDocs(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profileId: string
+): Promise<ApplyCvDoc[]> {
+  const marked = await supabase
+    .from("cv_documents")
+    .select("id, label, created_at, is_default")
+    .eq("profile_id", profileId)
+    .order("is_default", { ascending: false })
+    .order("created_at", { ascending: false });
+  if (!marked.error) {
+    return (marked.data ?? []).map((d) => ({
+      id: d.id,
+      label: d.label,
+      created_at: d.created_at,
+      is_default: d.is_default === true,
+    }));
+  }
+  const { data } = await supabase
+    .from("cv_documents")
+    .select("id, label, created_at")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false });
+  return (data ?? []).map((d) => ({ ...d, is_default: false }));
+}
 
 /**
  * The application wizard for OUR jobs: per-job required questions, the
@@ -30,18 +61,14 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
     .maybeSingle();
   if (!job || job.source !== "ours" || job.status !== "open") notFound();
 
-  const [{ data: questions }, { data: cvDocs }, { data: existing }] = await Promise.all([
+  const [{ data: questions }, cvDocs, { data: existing }] = await Promise.all([
     supabase
       .from("job_questions")
       .select("id, question, sort_order, required, answer_type, options")
       .eq("job_id", id)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
-    supabase
-      .from("cv_documents")
-      .select("id, label, created_at")
-      .eq("profile_id", profile.id)
-      .order("created_at", { ascending: false }),
+    loadCvDocs(supabase, profile.id),
     supabase
       .from("applications")
       .select("id")
@@ -112,7 +139,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
               ? q.options.filter((o): o is string => typeof o === "string")
               : [],
           }))}
-          cvDocs={cvDocs ?? []}
+          cvDocs={cvDocs}
         />
       )}
     </div>

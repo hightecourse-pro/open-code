@@ -117,6 +117,67 @@ function profilesQuery(profileIds?: string[]) {
   );
 }
 
+/** PostgREST caps a plain select at 1000 rows — page until the pool is whole. */
+const PAGE = 1000;
+
+async function fetchAllProfiles(profileIds?: string[]) {
+  const out: AudienceData["members"] = [];
+  for (let from = 0; ; from += PAGE) {
+    // .order("id") on top of the name ordering keeps the pages disjoint even
+    // when two members share a full name.
+    const { data } = await profilesQuery(profileIds)
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    out.push(...((data ?? []) as AudienceData["members"]));
+    if (!data || data.length < PAGE) break;
+  }
+  return out;
+}
+
+/**
+ * Why the eligible pool is what it is — the numbers the publish panel states
+ * out loud, so "no criteria" never reads as "the whole community".
+ */
+export interface AudienceEligibility {
+  /** Junior + active/pending + profile_completed — the placement pool. */
+  eligible: number;
+  /** Juniors who haven't finished the intake wizard yet. */
+  notCompleted: number;
+  /** Paused or rejected juniors. */
+  paused: number;
+  /** Mentors and admins — never a placement audience. */
+  staff: number;
+}
+
+/** The eligible pool with the reasons members fall outside it (counts only). */
+export async function loadAudienceEligibility(): Promise<AudienceEligibility> {
+  const admin = createAdminClient();
+  const head = { count: "exact" as const, head: true };
+  const [eligible, notCompleted, paused, staff] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id", head)
+      .in("status", ["active", "pending"])
+      .eq("role", "junior")
+      .eq("profile_completed", true),
+    admin
+      .from("profiles")
+      .select("id", head)
+      .in("status", ["active", "pending"])
+      .eq("role", "junior")
+      .eq("profile_completed", false),
+    admin.from("profiles").select("id", head).eq("role", "junior").in("status", ["paused", "rejected"]),
+    admin.from("profiles").select("id", head).in("role", ["mentor", "admin"]),
+  ]);
+
+  return {
+    eligible: eligible.count ?? 0,
+    notCompleted: notCompleted.count ?? 0,
+    paused: paused.count ?? 0,
+    staff: staff.count ?? 0,
+  };
+}
+
 /**
  * The eligible members with everything they "have" per question key: the
  * denormalized profile columns (specialization/region — which may hold taxonomy
@@ -128,24 +189,26 @@ function profilesQuery(profileIds?: string[]) {
  */
 async function loadAudienceData(profileIds?: string[]): Promise<AudienceData> {
   const admin = createAdminClient();
-  const [{ data: profiles }, questions, taxonomies] = await Promise.all([
-    profilesQuery(profileIds),
+  const [members, questions, taxonomies] = await Promise.all([
+    fetchAllProfiles(profileIds),
     loadQuestions(),
     getTaxonomyOptions(),
   ]);
-  const members = profiles ?? [];
 
   const questionOf = new Map(questions.map((q) => [q.id, q]));
   const labelMapOf = new Map(questions.map((q) => [q.id, labelsFor(q, taxonomies)]));
 
   const answers: { profile_id: string; question_id: string; value: unknown }[] = [];
   if (members.length > 0) {
-    const PAGE = 1000;
     for (let from = 0; ; from += PAGE) {
       const { data } = await admin
         .from("profile_answers")
         .select("profile_id, question_id, value")
         .in("profile_id", members.map((m) => m.id))
+        // Without a stable order the pages overlap and a member silently loses
+        // the answer a criterion needs (same ordering as fetchAllAnswers).
+        .order("profile_id", { ascending: true })
+        .order("question_id", { ascending: true })
         .range(from, from + PAGE - 1);
       answers.push(...((data ?? []) as typeof answers));
       if (!data || data.length < PAGE) break;

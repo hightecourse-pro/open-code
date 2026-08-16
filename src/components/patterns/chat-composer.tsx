@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, type RefObject } from "react";
 import { Button } from "@/components/ui";
 import { TextToolbar } from "@/components/patterns/text-toolbar";
 
@@ -8,17 +8,31 @@ import { TextToolbar } from "@/components/patterns/text-toolbar";
  * The chat message box. Enter sends, Shift+Enter opens a new line — the
  * behaviour every messaging app has trained people to expect — and the
  * toolbar writes the same formatting markers the forum uses.
+ *
+ * `inputRef` lets the thread reach the box: when a send fails it puts her
+ * words back where she wrote them instead of losing them.
  */
-export function ChatComposer({ action }: { action: (formData: FormData) => void }) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+export function ChatComposer({
+  action,
+  inputRef,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
+}) {
+  const localRef = useRef<HTMLTextAreaElement>(null);
+  const ref = inputRef ?? localRef;
   const formRef = useRef<HTMLFormElement>(null);
 
   return (
     <form
       ref={formRef}
-      action={(fd) => {
-        action(fd);
+      // Awaited, not fired and forgotten: the surrounding transition has to
+      // stay pending for the whole send, or the optimistic bubble in the
+      // thread would vanish the instant it appeared.
+      action={async (fd) => {
+        const sending = action(fd);
         if (ref.current) ref.current.value = "";
+        await sending;
       }}
       className="flex flex-col gap-1.5 p-3 border-t border-ink-100"
     >

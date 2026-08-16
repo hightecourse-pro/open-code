@@ -49,12 +49,14 @@ export function CourseCard({
   return (
     <div
       className={cn(
-        "bg-white border rounded-[18px] overflow-hidden transition-[transform,box-shadow] duration-[220ms]",
+        // h-full + flex column so every CTA in the grid row lands on the same
+        // line, whatever the title/category above it does.
+        "bg-white border rounded-[18px] overflow-hidden h-full flex flex-col transition-[transform,box-shadow] duration-[220ms]",
         gifted ? "border-[#F3C6DD]" : "border-ink-200",
         locked && !gifted ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-md"
       )}
     >
-      <div className={cn("h-[120px] relative flex items-center justify-center text-white font-mono text-5xl font-black", cover)}>
+      <div className={cn("h-[120px] shrink-0 relative flex items-center justify-center text-white font-mono text-5xl font-black", cover)}>
         {course.title.slice(0, 1)}
         {gifted && (
           <div className="absolute inset-x-0 bottom-0 bg-white/92 text-brand-pink-deep text-[12px] font-display font-semibold py-1 text-center">
@@ -68,7 +70,7 @@ export function CourseCard({
           </div>
         )}
       </div>
-      <div className="p-4">
+      <div className="p-4 flex-1 flex flex-col">
         {course.category && (
           <div className="font-mono text-[11px] text-brand-pink-deep mb-1">{course.category}</div>
         )}
@@ -89,27 +91,31 @@ export function CourseCard({
             </>
           )}
         </div>
-        {needsSubscription ? (
-          <Link
-            href="/join"
-            className="mt-3 w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors"
-          >
-            <Sparkles size={13} /> נפתח עם מנוי
-          </Link>
-        ) : gifted ? (
-          <div className="mt-3 text-[12.5px] text-ink-500">החומרים שלו מחכים לך למעלה 💜</div>
-        ) : (
-          !locked && (
-            <button
-              type="button"
-              onClick={onStart}
-              disabled={pending}
-              className="mt-3 w-full font-display font-semibold text-[13px] py-2 rounded-md bg-brand-gradient text-white disabled:opacity-60"
+        {/* mt-auto on the wrapper (not on the CTA itself, whose own py-* would
+            win the merge) is what lines the buttons up across the grid row. */}
+        <div className="mt-auto pt-3">
+          {needsSubscription ? (
+            <Link
+              href="/join"
+              className="w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors"
             >
-              {pending ? "פותח…" : "התחילי קורס"}
-            </button>
-          )
-        )}
+              <Sparkles size={13} /> נפתח עם מנוי
+            </Link>
+          ) : gifted ? (
+            <div className="text-[12.5px] text-ink-500">החומרים שלו מחכים לך למעלה 💜</div>
+          ) : (
+            !locked && (
+              <button
+                type="button"
+                onClick={onStart}
+                disabled={pending}
+                className="w-full font-display font-semibold text-[13px] py-2 rounded-md bg-brand-gradient text-white disabled:opacity-60"
+              >
+                {pending ? "פותח…" : "התחילי קורס"}
+              </button>
+            )
+          )}
+        </div>
       </div>
     </div>
   );

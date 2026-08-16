@@ -9,7 +9,7 @@
 //   * member_crm (VIP flag, VIP reason, internal notes) is never read here.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getTaxonomyOptions, type TaxonomyOption } from "@/lib/taxonomies";
+import { getTaxonomyOptionsForPortal, type TaxonomyOption } from "@/lib/taxonomies";
 import {
   DEFAULT_LANGUAGES,
   LANGUAGE_SKILLS_KEY,
@@ -89,11 +89,14 @@ async function employerQuestions(): Promise<ConfigQuestion[]> {
 /** Machine value → the label a human picked, for select/multiselect answers. */
 function labelResolverFrom(taxonomies: Partial<Record<TaxonomyKind, TaxonomyOption[]>>) {
   return function labelsFor(q: ConfigQuestion): Map<string, string> {
-    const opts = q.taxonomy_kind
-      ? taxonomies[q.taxonomy_kind] ?? []
-      : Array.isArray(q.options)
-        ? (q.options as unknown as { value: string; label: string }[])
-        : [];
+    const own = Array.isArray(q.options)
+      ? (q.options as unknown as { value: string; label: string }[])
+      : [];
+    // A taxonomy-backed question (region, tech…) resolves through the list the
+    // admin maintains; if that list is empty we still fall back to the options
+    // stored on the question itself, so a client never reads a raw value.
+    const fromKind = q.taxonomy_kind ? taxonomies[q.taxonomy_kind] ?? [] : [];
+    const opts = fromKind.length ? fromKind : own;
     return new Map(opts.map((o) => [o.value, o.label]));
   };
 }
@@ -240,7 +243,13 @@ export async function loadCandidates(): Promise<{
   catalogue: CatalogueField[];
 }> {
   const admin = createAdminClient();
-  const [questions, taxonomies] = await Promise.all([employerQuestions(), getTaxonomyOptions()]);
+  // Taxonomies come through the service role like everything else here: the
+  // portal visitor is not a Supabase user, and the cookie-bound client would
+  // read zero rows — leaving every value unresolved ("center" instead of "מרכז").
+  const [questions, taxonomies] = await Promise.all([
+    employerQuestions(),
+    getTaxonomyOptionsForPortal(),
+  ]);
   const visibleIds = new Set(questions.map((q) => q.id));
   // The profiles row carries denormalized copies of a few answers. Honor the
   // employer_visible flag for these too — hiding the question hides the column.

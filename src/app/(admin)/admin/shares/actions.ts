@@ -6,6 +6,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import type { ContentOwner } from "@/types/database";
 
+export type ShareFormState = { ok?: string; error?: string };
+
 /**
  * Hand a member an extra course/session on purpose — outside the
  * one-course-at-a-time model. The row is flagged granted_manually so nothing
@@ -14,15 +16,46 @@ import type { ContentOwner } from "@/types/database";
  * Queued as "pending", exactly like an automatic share, so the same Drive
  * worker performs it (or the manual queue shows it when automation is off).
  */
-export async function grantShareManually(formData: FormData): Promise<void> {
+export async function grantShareManually(
+  _prev: ShareFormState,
+  formData: FormData
+): Promise<ShareFormState> {
   await requireRole("admin");
   const profileId = String(formData.get("profile_id") ?? "").trim();
   // The content picker sends one value: "course:<id>" / "session:<id>".
   const [ownerTypeRaw, ownerId] = String(formData.get("content") ?? "").split(":");
   const ownerType: ContentOwner = ownerTypeRaw === "session" ? "session" : "course";
-  if (!profileId || !ownerId) return;
+  if (!profileId || !ownerId) return { error: "צריך לבחור גם משתתפת וגם תוכן לשיתוף." };
 
   const admin = createAdminClient();
+
+  // She may already hold this content automatically. Re-queueing it as
+  // "pending" would send the Drive worker to re-grant something she has —
+  // so an existing live row is only FLAGGED as manual, never reset.
+  const { data: existing } = await admin
+    .from("content_shares")
+    .select("id, status, granted_manually")
+    .eq("owner_type", ownerType)
+    .eq("owner_id", ownerId)
+    .eq("profile_id", profileId)
+    .maybeSingle();
+
+  if (existing?.status === "shared") {
+    if (!existing.granted_manually) {
+      const { error } = await admin
+        .from("content_shares")
+        .update({ granted_manually: true })
+        .eq("id", existing.id);
+      if (error) {
+        console.error("[drive] manual flag failed:", error.message);
+        return { error: "לא הצלחנו לסמן את השיתוף כאישי — ננסה שוב?" };
+      }
+    }
+    revalidatePath("/admin/shares");
+    revalidatePath("/courses");
+    return { ok: "התוכן כבר פתוח עבורה — סימנו אותו כשיתוף אישי ✓" };
+  }
+
   const { error } = await admin.from("content_shares").upsert(
     {
       profile_id: profileId,
@@ -34,10 +67,14 @@ export async function grantShareManually(formData: FormData): Promise<void> {
     },
     { onConflict: "owner_type,owner_id,profile_id" }
   );
-  if (error) console.error("[drive] manual grant failed:", error.message);
+  if (error) {
+    console.error("[drive] manual grant failed:", error.message);
+    return { error: "לא הצלחנו לפתוח לה את התוכן — ננסה שוב?" };
+  }
 
   revalidatePath("/admin/shares");
   revalidatePath("/courses");
+  return { ok: "פתחנו לה את התוכן ✓ הוא מופיע עכשיו ב״מה משותף למי״." };
 }
 
 /**

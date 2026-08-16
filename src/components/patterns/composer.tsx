@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -16,12 +17,21 @@ const INTENTS: { value: PostIntent; label: string }[] = [
 
 export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
   const [intent, setIntent] = useState<PostIntent>("knowledge");
+  const [published, setPublished] = useState(false);
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [state, action, pending] = useActionState<ComposerState, FormData>(
     async (prev, formData) => {
       const result = await createPost(prev, formData);
-      if (!result.error) formRef.current?.reset();
+      if (!result.error) {
+        formRef.current?.reset();
+        setPublished(true);
+        // createPost already revalidates this route; this is the belt to its
+        // braces — a form cleared with nothing new on screen reads as "my post
+        // disappeared", and one extra fetch is cheaper than that doubt.
+        router.refresh();
+      }
       return result;
     },
     {}
@@ -48,6 +58,7 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
           name="body"
           rows={2}
           placeholder="מה את רוצה לשתף עם הקהילה?"
+          onInput={() => published && setPublished(false)}
           className="w-full border-none outline-none resize-none text-[15px] text-ink-900 py-1.5 placeholder:text-ink-400"
         />
 
@@ -71,7 +82,12 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
           ))}
         </div>
 
-        <div className="flex items-center mt-3 pt-3 border-t border-ink-100">
+        <div className="flex items-center gap-3 mt-3 pt-3 border-t border-ink-100">
+          {published && !pending && (
+            <span className="text-[12.5px] font-semibold text-brand-purple">
+              {kind === "forum" ? "פורסם! הנושא שלך בראש הרשימה 💜" : "פורסם! הפוסט שלך בראש הפיד 💜"}
+            </span>
+          )}
           <Button type="submit" size="sm" disabled={pending} className="ms-auto">
             {pending ? "שולח…" : "שיתוף"}
           </Button>

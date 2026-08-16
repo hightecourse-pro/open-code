@@ -9,6 +9,15 @@ const LANGS: CvLanguage[] = ["he", "en", "job"];
 
 export type CvDocState = { error?: string; ok?: boolean };
 
+/**
+ * Postgres "column does not exist" — cv_documents.is_default arrives with
+ * supabase/_cv_default.sql, and the CV screen must keep working before it runs.
+ */
+function isMissingDefaultColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === "42703" || /is_default|column/i.test(error.message ?? "");
+}
+
 /** Upload a CV document (he / en / job-specific) to the private 'cvs' bucket. */
 export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<CvDocState> {
   const supabase = await createClient();
@@ -40,17 +49,69 @@ export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<C
     .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
   if (upErr) return { error: "ההעלאה נכשלה. נסי שוב." };
 
-  const { error } = await supabase.from("cv_documents").insert({
+  const row = {
     profile_id: user.id,
     label,
     language,
     file_path: path,
     file_name: file.name,
-  });
+  };
+
+  // Her very first document becomes the default — otherwise she'd have a CV
+  // nothing is allowed to attach. A job-tailored upload never steals the flag.
+  const { count } = await supabase
+    .from("cv_documents")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", user.id);
+  const first = (count ?? 0) === 0;
+
+  let { error } = await supabase.from("cv_documents").insert({ ...row, is_default: first });
+  if (error && isMissingDefaultColumn(error)) {
+    ({ error } = await supabase.from("cv_documents").insert(row));
+  }
   if (error) return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
 
   revalidatePath("/cv");
+  revalidatePath("/jobs");
   return { ok: true };
+}
+
+/**
+ * Mark one of her documents as the default — the CV every application attaches
+ * unless she picked another. Cleared then set (two statements, not one
+ * transaction) so the partial unique index can never be violated; if the second
+ * write is lost she simply has no default, which every reader tolerates by
+ * falling back to her newest file.
+ */
+export async function setDefaultCv(id: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Only ever promote a document that is actually hers.
+  const { data: doc } = await supabase
+    .from("cv_documents")
+    .select("id")
+    .eq("id", id)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (!doc) return;
+
+  await supabase
+    .from("cv_documents")
+    .update({ is_default: false })
+    .eq("profile_id", user.id)
+    .eq("is_default", true);
+  await supabase
+    .from("cv_documents")
+    .update({ is_default: true })
+    .eq("id", id)
+    .eq("profile_id", user.id);
+
+  revalidatePath("/cv");
+  revalidatePath("/jobs");
 }
 
 /** Delete a CV document (storage object + row). Owner only. */
@@ -60,13 +121,46 @@ export async function deleteCv(id: string): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  const { data: doc } = await supabase
+  const { data: doc, error: readErr } = await supabase
     .from("cv_documents")
-    .select("file_path")
+    .select("file_path, is_default")
     .eq("id", id)
     .eq("profile_id", user.id)
     .maybeSingle();
-  if (doc) await supabase.storage.from("cvs").remove([doc.file_path]);
+  let wasDefault = doc?.is_default === true;
+  let filePath = doc?.file_path;
+  if (isMissingDefaultColumn(readErr)) {
+    wasDefault = false;
+    const { data: plain } = await supabase
+      .from("cv_documents")
+      .select("file_path")
+      .eq("id", id)
+      .eq("profile_id", user.id)
+      .maybeSingle();
+    filePath = plain?.file_path;
+  }
+  if (filePath) await supabase.storage.from("cvs").remove([filePath]);
   await supabase.from("cv_documents").delete().eq("id", id);
+
+  // Deleting the default must not leave her without one — the newest survivor
+  // takes over, which is exactly what the apply flow would have fallen back to.
+  if (wasDefault) {
+    const { data: next } = await supabase
+      .from("cv_documents")
+      .select("id")
+      .eq("profile_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (next) {
+      await supabase
+        .from("cv_documents")
+        .update({ is_default: true })
+        .eq("id", next.id)
+        .eq("profile_id", user.id);
+    }
+  }
+
   revalidatePath("/cv");
+  revalidatePath("/jobs");
 }

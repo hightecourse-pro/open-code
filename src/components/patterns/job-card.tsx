@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles, Crown } from "lucide-react";
 import { Badge } from "@/components/ui";
@@ -45,8 +45,8 @@ export interface JobCardProps {
   applicationStatus?: ApplicationStatus | null;
   /** Member's tech stack, lowercase, for match highlighting. */
   myTech?: string[];
-  /** Number of job tags matching the member's profile. */
-  matches?: number;
+  /** The job's tags she actually shares — named on the badge, never just counted. */
+  matchedTags?: string[];
   /** Free members may apply, but the board says subscribers come first. */
   subscriber?: boolean;
 }
@@ -57,15 +57,40 @@ export function JobCard({
   applied,
   applicationStatus = null,
   myTech = [],
-  matches = 0,
+  matchedTags = [],
   subscriber = true,
 }: JobCardProps) {
   const [isSaved, setSaved] = useState(saved);
   const [hasApplied, setApplied] = useState(applied);
   const [applyError, setApplyError] = useState<string | null>(null);
+  // The description is clamped on the card; "עוד" opens it in place, because a
+  // market job has no other screen where the full text exists.
+  const [expanded, setExpanded] = useState(false);
+  const [clamped, setClamped] = useState(false);
+  const bodyRef = useRef<HTMLDivElement | null>(null);
   const [, start] = useTransition();
   const logo = LOGO_GRADIENTS[(job.logo_variant - 1) % LOGO_GRADIENTS.length];
   const techSet = new Set(myTech);
+
+  // Show the affordance only when text is really cut off — measured once per
+  // mount and on resize (the clamp depends on the column width).
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const measure = () => setClamped(el.scrollHeight > el.clientHeight + 1);
+    measure();
+    let timer: ReturnType<typeof setTimeout>;
+    const onResize = () => {
+      clearTimeout(timer);
+      timer = setTimeout(measure, 150);
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", onResize);
+    };
+    // Re-measured when she expands: collapsing back must restore the button.
+  }, [expanded]);
 
   function onSave() {
     const next = !isSaved;
@@ -91,10 +116,13 @@ export function JobCard({
         <Badge variant={job.source === "ours" ? "pink" : "tech"}>
           {job.source === "ours" ? "משרה שלנו" : "משרה פתוחה"}
         </Badge>
-        {matches > 0 && (
-          <Badge variant="mint">
+        {matchedTags.length > 0 && (
+          <Badge variant="mint" title={`הטכנולוגיות המשותפות: ${matchedTags.join(", ")}`}>
             <Sparkles size={11} className="inline me-1" />
-            מתאימה לפרופיל שלך
+            מתאימה לפרופיל שלך ·{" "}
+            {matchedTags.length === 1
+              ? "טכנולוגיה משותפת אחת"
+              : `${matchedTags.length} טכנולוגיות משותפות`}
           </Badge>
         )}
       </div>
@@ -141,25 +169,45 @@ export function JobCard({
         </button>
       </div>
 
-      {job.description_html ? (
-        // The admin's styled requirements (sanitized at save by the allowlist
-        // in lib/rich-text) — shown as she composed them, clamped for the card.
-        <div
-          dir="rtl"
-          className={[
-            "text-[13.5px] text-ink-700 leading-relaxed mb-3 line-clamp-4",
-            "[&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5",
-            "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-[14px] [&_h3]:text-brand-purple",
-            "[&_a]:text-brand-purple [&_a]:underline [&_p]:my-1 [&_b]:text-ink-1000 [&_strong]:text-ink-1000",
-          ].join(" ")}
-          dangerouslySetInnerHTML={{ __html: job.description_html }}
-        />
-      ) : (
-        job.description && (
-          <p className="text-[13.5px] text-ink-700 leading-relaxed mb-3 line-clamp-3 whitespace-pre-line">
-            {job.description}
-          </p>
-        )
+      {(job.description_html || job.description) && (
+        <div className="mb-3">
+          {job.description_html ? (
+            // The admin's styled requirements (sanitized at save by the
+            // allowlist in lib/rich-text) — shown as she composed them.
+            <div
+              ref={bodyRef}
+              dir="rtl"
+              className={[
+                "text-[13.5px] text-ink-700 leading-relaxed",
+                expanded ? "" : "line-clamp-4",
+                "[&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5",
+                "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-[14px] [&_h3]:text-brand-purple",
+                "[&_a]:text-brand-purple [&_a]:underline [&_p]:my-1 [&_b]:text-ink-1000 [&_strong]:text-ink-1000",
+              ].join(" ")}
+              dangerouslySetInnerHTML={{ __html: job.description_html }}
+            />
+          ) : (
+            <div
+              ref={bodyRef}
+              className={cn(
+                "text-[13.5px] text-ink-700 leading-relaxed whitespace-pre-line",
+                !expanded && "line-clamp-4"
+              )}
+            >
+              {job.description}
+            </div>
+          )}
+          {(clamped || expanded) && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              className="mt-1 font-semibold text-[12.5px] text-brand-purple hover:text-brand-pink-deep cursor-pointer"
+            >
+              {expanded ? "פחות" : "עוד ←"}
+            </button>
+          )}
+        </div>
       )}
 
       {job.tech_tags.length > 0 && (

@@ -5,7 +5,12 @@ import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, Pencil, UserCheck, User
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
-import { buildAudienceCatalogue, loadAudiencePools } from "@/lib/admin/audience";
+import {
+  buildAudienceCatalogue,
+  loadAudienceEligibility,
+  loadAudiencePools,
+  type AudienceEligibility,
+} from "@/lib/admin/audience";
 import { Alert, Badge, Button } from "@/components/ui";
 import { removeJobCandidate, setJobOutcome } from "@/app/(admin)/admin/actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
@@ -84,6 +89,7 @@ export default async function AdminJobPage({
     { count: targetsCount },
     { data: clientRows },
     audienceCatalogue,
+    audienceEligibility,
   ] = await Promise.all([
       admin
         .from("applications")
@@ -120,6 +126,10 @@ export default async function AdminJobPage({
         .order("company_name", { ascending: true }),
       // The publish panel's criteria palette — only "ours" jobs render it.
       job.source === "ours" ? buildAudienceCatalogue() : Promise.resolve([]),
+      // …and why the pool is the size it is, so the panel can say it out loud.
+      job.source === "ours"
+        ? loadAudienceEligibility()
+        : Promise.resolve<AudienceEligibility | null>(null),
     ]);
 
   const clientOptions: PortalClientOption[] = (clientRows ?? []).map((c) => ({
@@ -342,7 +352,16 @@ export default async function AdminJobPage({
           <Alert variant="warn">לא מקושרת ללקוח — בחרי לקוח בטופס שלמטה.</Alert>
         )}
       </div>
-      <JobDetailsForm job={jobDetails} clients={clientOptions} />
+      {/* The form seeds source/kind/client into useState once. A re-render that
+          keeps the instance mounted (a ?tab= navigation, a revalidate after a
+          save) would leave those showing stale local state — and "משרה שלנו"
+          is the select's first option, i.e. what it falls back to. Keying on
+          the persisted values re-seeds them from the server. */}
+      <JobDetailsForm
+        key={`${job.id}:${job.source}:${job.job_kind ?? "immediate"}:${job.client_id ?? ""}`}
+        job={jobDetails}
+        clients={clientOptions}
+      />
 
       {/* Job outcome — hired can be several members, so closing is always
           the admin's call; only "interviews" moves automatically. */}
@@ -411,6 +430,7 @@ export default async function AdminJobPage({
         <PublishPanel
           jobId={job.id}
           catalogue={audienceCatalogue}
+          eligibility={audienceEligibility}
           allMembers={members ?? []}
           published={
             job.pipeline_status === "draft"

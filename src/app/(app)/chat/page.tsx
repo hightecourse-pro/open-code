@@ -4,12 +4,25 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber, requireProfile } from "@/lib/auth";
 import { Avatar } from "@/components/ui";
-import { RichText } from "@/components/patterns/rich-text";
-import { ChatComposer } from "@/components/patterns/chat-composer";
+import { ChatThread } from "@/components/patterns/chat-thread";
 import { cn, timeAgo } from "@/lib/utils";
+import type { UserRole } from "@/types/database";
 import { sendMessage } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
+
+/** How we name the woman on the other side, under her name in the header. */
+function roleWord(role: UserRole): string {
+  if (role === "mentor") return "מנטורית בקהילה";
+  if (role === "admin") return "מהצוות שלנו";
+  return "חברת קהילה";
+}
+
+/** One line of the last thing said in a thread — markers and all, shortened. */
+function previewText(body: string, mine: boolean): string {
+  const flat = body.replace(/\s+/g, " ").trim();
+  return `${mine ? "את: " : ""}${flat}`;
+}
 
 export default async function ChatPage({
   searchParams,
@@ -28,9 +41,26 @@ export default async function ChatPage({
   // Resolve the "other" participant for each conversation.
   const otherIds = [...new Set((conversations ?? []).map((c) => (c.a_id === me.id ? c.b_id : c.a_id)))];
   const { data: others } = otherIds.length
-    ? await supabase.from("profiles").select("id, full_name, avatar_initials, role, status").in("id", otherIds)
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_initials, role, status, specialization")
+        .in("id", otherIds)
     : { data: [] };
   const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
+
+  // Which of these women is the mentor an admin actually matched her with —
+  // otherwise her mentor looks like any other thread in the list. kind='general'
+  // only: an employment accompaniment is a placement companion, not the mentor
+  // this crown and the interview hint below are talking about.
+  const { data: assignments } = await supabase
+    .from("mentor_requests")
+    .select("assigned_mentor_id")
+    .eq("profile_id", me.id)
+    .eq("kind", "general")
+    .not("assigned_mentor_id", "is", null);
+  const myMentorIds = new Set(
+    (assignments ?? []).map((a) => a.assigned_mentor_id).filter((id): id is string => !!id)
+  );
 
   const active = (conversations ?? []).find((c) => c.id === activeId) ?? null;
   const activeOther = active ? otherMap.get(active.a_id === me.id ? active.b_id : active.a_id) : null;
@@ -64,6 +94,46 @@ export default async function ChatPage({
       .is("read_at", null);
   }
 
+  // The list needs to say what happened, not just when: a preview per thread
+  // and which ones are still waiting for her. Both run after the mark-read
+  // above, so the thread she just opened stops shouting at her.
+  const conversationIds = (conversations ?? []).map((c) => c.id);
+  const [{ data: recentMessages }, { data: unreadRows }] = conversationIds.length
+    ? await Promise.all([
+        // One window over the newest messages instead of a query per row — an
+        // older thread simply shows no preview.
+        supabase
+          .from("messages")
+          .select("conversation_id, sender_id, body, created_at")
+          .in("conversation_id", conversationIds)
+          .order("created_at", { ascending: false })
+          .limit(150),
+        supabase
+          .from("messages")
+          .select("conversation_id")
+          .in("conversation_id", conversationIds)
+          .neq("sender_id", me.id)
+          .is("read_at", null),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const lastMessage = new Map<string, { body: string; mine: boolean }>();
+  for (const m of recentMessages ?? []) {
+    // Newest first — the first row we meet for a conversation is its last word.
+    if (!lastMessage.has(m.conversation_id)) {
+      lastMessage.set(m.conversation_id, { body: m.body, mine: m.sender_id === me.id });
+    }
+  }
+  const unreadCount = new Map<string, number>();
+  for (const m of unreadRows ?? []) {
+    unreadCount.set(m.conversation_id, (unreadCount.get(m.conversation_id) ?? 0) + 1);
+  }
+
+  const activeIsMyMentor = !!activeOther && myMentorIds.has(activeOther.id);
+  const activeSubtitle = activeOther
+    ? [roleWord(activeOther.role), activeOther.specialization].filter(Boolean).join(" · ")
+    : "";
+
   return (
     <div className="flex flex-col gap-5">
       <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
@@ -74,6 +144,8 @@ export default async function ChatPage({
           {conversations && conversations.length > 0 ? (
             conversations.map((c) => {
               const other = otherMap.get(c.a_id === me.id ? c.b_id : c.a_id);
+              const preview = lastMessage.get(c.id);
+              const unread = unreadCount.get(c.id) ?? 0;
               return (
                 <Link
                   key={c.id}
@@ -92,18 +164,50 @@ export default async function ChatPage({
                     initials={other?.avatar_initials || other?.full_name?.slice(0, 1) || "ק"}
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="font-medium text-sm text-ink-900 truncate flex items-center gap-1">
-                      {other?.full_name ?? "חברה"}
-                      {other?.role === "mentor" && <span className="text-[10px]">👑</span>}
+                    <div className="flex items-center gap-1">
+                      <span className="font-medium text-sm text-ink-900 truncate">
+                        {other?.full_name ?? "חברה"}
+                      </span>
+                      {other && myMentorIds.has(other.id) && <span className="text-[10px]">👑</span>}
+                      <span className="ms-auto text-[10.5px] text-ink-400 shrink-0">
+                        {timeAgo(c.last_message_at)}
+                      </span>
                     </div>
-                    <div className="text-[11px] text-ink-500">{timeAgo(c.last_message_at)}</div>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={cn(
+                          "text-[11.5px] truncate flex-1",
+                          unread > 0 ? "text-ink-900 font-medium" : "text-ink-500"
+                        )}
+                      >
+                        {/* Outside the 150-message window we simply don't know
+                            what was said last — the timestamp above already
+                            tells the truth, and claiming nothing was written
+                            would be a lie about a full thread. */}
+                        {preview ? previewText(preview.body, preview.mine) : " "}
+                      </span>
+                      {unread > 0 && (
+                        <span
+                          aria-label={unread === 1 ? "הודעה אחת שלא נקראה" : `${unread} הודעות שלא נקראו`}
+                          className="w-2 h-2 rounded-full bg-brand-pink-deep shrink-0"
+                        />
+                      )}
+                    </div>
                   </div>
                 </Link>
               );
             })
           ) : (
-            <p className="text-sm text-ink-500 p-4 text-center">
-              אין עדיין שיחות — אפשר להתחיל אחת מעמוד המנטוריות 💬
+            <p className="text-sm text-ink-500 p-4 text-center leading-relaxed">
+              אין עדיין שיחות — אפשר להתחיל אחת מ
+              <Link href="/mentor" className="font-semibold text-brand-purple hover:underline">
+                עמוד המנטוריות
+              </Link>{" "}
+              או מ
+              <Link href="/members" className="font-semibold text-brand-purple hover:underline">
+                המשתתפות שלנו
+              </Link>{" "}
+              💬
             </p>
           )}
         </div>
@@ -119,52 +223,52 @@ export default async function ChatPage({
                   crown={activeOther.role === "mentor"}
                   initials={activeOther.avatar_initials || activeOther.full_name.slice(0, 1)}
                 />
-                <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
-                {activeOther.role === "mentor" && (
-                  <span className="text-[10.5px] font-bold bg-tint-warm text-[#8C5E0E] px-2 py-0.5 rounded-full">👑 מנטורית</span>
-                )}
-              </div>
-
-              <div className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40">
-                {(messages ?? []).map((m) => {
-                  const mine = m.sender_id === me.id;
-                  return (
-                    <div key={m.id} className={cn("flex flex-col max-w-[78%]", mine ? "self-end items-end" : "self-start items-start")}>
-                      <div
-                        className={cn(
-                          "px-3.5 py-2 text-sm leading-relaxed break-words",
-                          mine
-                            ? "bg-brand-gradient text-white rounded-2xl rounded-br-md [&_a]:text-white [&_a]:underline [&_code]:bg-white/25 [&_b]:text-white"
-                            : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
-                        )}
-                      >
-                        <RichText body={m.body} />
-                      </div>
-                      <span className="text-[10.5px] text-ink-400 mt-0.5 px-1">{timeAgo(m.created_at)}</span>
-                    </div>
-                  );
-                })}
-                {(messages ?? []).length === 0 && (
-                  <p className="text-sm text-ink-500 text-center my-auto">
-                    התחילי את השיחה — כתבי לה הודעה ראשונה 💜
-                  </p>
-                )}
-              </div>
-
-              {canSend ? (
-                <ChatComposer action={sendMessage.bind(null, active.id)} />
-              ) : !subscriber ? (
-                <Link
-                  href="/join"
-                  className="p-3.5 border-t border-ink-100 text-[13px] text-ink-700 text-center bg-tint-purple hover:text-brand-purple transition-colors"
-                >
-                  ההתכתבות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜
-                </Link>
-              ) : (
-                <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
-                  החברה הזו כבר לא פעילה בקהילה, אז אי אפשר לשלוח לה הודעות חדשות — השיחה נשמרת כאן 💜
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
+                    {activeIsMyMentor ? (
+                      <span className="text-[10.5px] font-bold bg-tint-warm text-[#8C5E0E] px-2 py-0.5 rounded-full">
+                        👑 המנטורית שלך
+                      </span>
+                    ) : (
+                      activeOther.role === "mentor" && (
+                        <span className="text-[10.5px] font-bold bg-tint-warm text-[#8C5E0E] px-2 py-0.5 rounded-full">
+                          👑 מנטורית
+                        </span>
+                      )
+                    )}
+                  </div>
+                  <div className="text-[12.5px] text-ink-500 truncate">{activeSubtitle}</div>
                 </div>
-              )}
+              </div>
+
+              <ChatThread
+                messages={messages ?? []}
+                meId={me.id}
+                action={canSend ? sendMessage.bind(null, active.id) : undefined}
+                hint={
+                  activeIsMyMentor
+                    ? "כאן אפשר לשאול על ראיונות, על החודשים הראשונים בעבודה או פשוט להתייעץ 💜"
+                    : undefined
+                }
+                footer={
+                  !subscriber ? (
+                    <Link
+                      href="/join"
+                      className="p-3.5 border-t border-ink-100 text-[13px] text-ink-700 text-center bg-tint-purple hover:text-brand-purple transition-colors"
+                    >
+                      ההתכתבות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜
+                    </Link>
+                  ) : (
+                    // Deliberately vague: why she can't write here is nobody
+                    // else's business — a member never learns another
+                    // member's status from us.
+                    <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
+                      אי אפשר לשלוח הודעות חדשות בשיחה הזו כרגע — היא נשמרת כאן במלואה 💜
+                    </div>
+                  )
+                }
+              />
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center text-ink-500 text-sm">

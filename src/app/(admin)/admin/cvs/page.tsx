@@ -31,12 +31,21 @@ export default async function AdminCvsPage() {
     : { data: [] };
   const memberOf = new Map((members ?? []).map((m) => [m.id, m]));
 
-  // One batched call for all download links.
+  // One batched call for all download links. Storage rethrows anything that
+  // isn't a StorageError (a network hiccup, a missing service-role key), which
+  // would crash the whole screen — the list of files is the point here, the
+  // links are a convenience, so a failure only costs the "הורדה" buttons.
   const paths = (docs ?? []).map((d) => d.file_path);
-  const { data: signed } = paths.length
-    ? await admin.storage.from("cvs").createSignedUrls(paths, 3600)
-    : { data: [] };
-  const urlOf = new Map((signed ?? []).map((s) => [s.path, s.signedUrl]));
+  let signed: { path: string | null; signedUrl: string | null }[] = [];
+  if (paths.length) {
+    try {
+      const { data } = await admin.storage.from("cvs").createSignedUrls(paths, 3600);
+      signed = data ?? [];
+    } catch (err) {
+      console.error("[admin/cvs] signed URLs failed:", err);
+    }
+  }
+  const urlOf = new Map(signed.map((s) => [s.path, s.signedUrl]));
 
   const rows: AdminCvRow[] = (docs ?? []).map((d) => ({
     id: d.id,

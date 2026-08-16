@@ -13,6 +13,7 @@ const C = {
 };
 
 import { getSiteUrl } from "@/lib/site";
+import { toSiteAuthLink } from "./auth-links";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || getSiteUrl();
 const LOGO = `${SITE}/logo-opencode.png`;
@@ -73,6 +74,10 @@ export interface BuiltEmail {
   html: string;
 }
 
+// The four auth emails below run their link through `toSiteAuthLink` so the
+// member always clicks a link on OUR domain that verifies server-side — a
+// Supabase verify link only works in the browser that started the flow.
+
 export function confirmSignupEmail(actionUrl: string, name?: string): BuiltEmail {
   return {
     subject: "אישור ההרשמה לקוד פתוח 💜",
@@ -83,7 +88,7 @@ export function confirmSignupEmail(actionUrl: string, name?: string): BuiltEmail
         "נשאר רק לאשר את כתובת המייל שלך, ואנחנו ממשיכות מכאן:",
       ],
       ctaText: "אישור הכתובת",
-      ctaUrl: actionUrl,
+      ctaUrl: toSiteAuthLink(actionUrl),
       footnote: "אם לא נרשמת לקוד פתוח, אפשר פשוט להתעלם מהמייל הזה.",
     }),
   };
@@ -99,7 +104,7 @@ export function resetPasswordEmail(actionUrl: string, name?: string): BuiltEmail
         "קיבלנו בקשה לאיפוס הסיסמה שלך. לחצי על הכפתור כדי לבחור סיסמה חדשה. הקישור תקף ל-60 דקות.",
       ],
       ctaText: "בחירת סיסמה חדשה",
-      ctaUrl: actionUrl,
+      ctaUrl: toSiteAuthLink(actionUrl),
       footnote: "לא ביקשת לאפס סיסמה? אפשר להתעלם — הסיסמה שלך לא תשתנה.",
     }),
   };
@@ -112,7 +117,7 @@ export function magicLinkEmail(actionUrl: string, name?: string): BuiltEmail {
       heading: "הכניסה שלך מחכה 💜",
       lines: [`${name ? `היי ${name}, ` : ""}לחצי על הכפתור כדי להיכנס לקוד פתוח:`],
       ctaText: "כניסה לקהילה",
-      ctaUrl: actionUrl,
+      ctaUrl: toSiteAuthLink(actionUrl),
       footnote: "אם לא ביקשת את הקישור, אפשר להתעלם מהמייל.",
     }),
   };
@@ -542,7 +547,7 @@ export function genericActionEmail(actionUrl: string): BuiltEmail {
       heading: "אישור פעולה",
       lines: ["כדי להשלים את הפעולה בחשבון שלך, לחצי על הכפתור:"],
       ctaText: "להמשך",
-      ctaUrl: actionUrl,
+      ctaUrl: toSiteAuthLink(actionUrl),
       footnote: "אם לא ביקשת זאת, אפשר להתעלם מהמייל.",
     }),
   };

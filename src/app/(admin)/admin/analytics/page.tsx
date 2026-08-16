@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "אנליטיקת למידה" };
@@ -9,10 +10,20 @@ export default async function AdminAnalyticsPage() {
   const [{ data: courses }, { data: enrollments }, { data: links }, { data: views }] =
     await Promise.all([
       supabase.from("courses").select("id, title").order("title"),
-      supabase.from("enrollments").select("course_id, rating, studied, feedback"),
+      supabase.from("enrollments").select("profile_id, course_id, rating, studied, feedback"),
       supabase.from("content_links").select("id, owner_id").eq("owner_type", "course").eq("kind", "video"),
       supabase.from("content_views").select("link_id"),
     ]);
+
+  // A משוב without a name is unusable — an admin needs to know who to answer.
+  // Only the members who actually wrote something are looked up.
+  const commenterIds = [
+    ...new Set((enrollments ?? []).filter((e) => e.feedback?.trim()).map((e) => e.profile_id)),
+  ];
+  const { data: commenters } = commenterIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", commenterIds)
+    : { data: [] };
+  const nameOf = new Map((commenters ?? []).map((p) => [p.id, p.full_name]));
 
   // Aggregate per course (small data set; fine in-memory).
   const linkToCourse = new Map((links ?? []).map((l) => [l.id, l.owner_id]));
@@ -80,15 +91,31 @@ export default async function AdminAnalyticsPage() {
         const titleOf = new Map((courses ?? []).map((c) => [c.id, c.title]));
         const comments = (enrollments ?? [])
           .filter((e) => e.feedback && e.feedback.trim())
-          .map((e) => ({ course: titleOf.get(e.course_id) ?? "—", rating: e.rating, text: e.feedback as string }));
+          .map((e) => ({
+            profileId: e.profile_id,
+            member: nameOf.get(e.profile_id) ?? "חברת קהילה",
+            course: titleOf.get(e.course_id) ?? "—",
+            rating: e.rating,
+            text: e.feedback as string,
+          }));
         if (comments.length === 0) return null;
         return (
           <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
             <h3 className="font-display text-base font-bold mb-3">משובים מהחברות</h3>
             <div className="flex flex-col gap-3">
-              {comments.map((c, i) => (
-                <div key={i} className="border-b border-ink-100 last:border-b-0 pb-3 last:pb-0">
+              {comments.map((c) => (
+                <div
+                  key={`${c.profileId}-${c.course}`}
+                  className="border-b border-ink-100 last:border-b-0 pb-3 last:pb-0"
+                >
                   <div className="flex items-center gap-2 text-xs text-ink-500 mb-0.5">
+                    <Link
+                      href={`/admin/members/${c.profileId}`}
+                      className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
+                    >
+                      {c.member}
+                    </Link>
+                    <span>·</span>
                     <span className="font-medium text-ink-700">{c.course}</span>
                     {c.rating != null && <span>{"⭐".repeat(c.rating)}</span>}
                   </div>

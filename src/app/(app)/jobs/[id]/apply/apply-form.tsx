@@ -22,13 +22,15 @@ export interface ApplyCvDoc {
   id: string;
   label: string;
   created_at: string;
+  /** The CV she marked as default on /cv — false for every doc pre-migration. */
+  is_default?: boolean;
 }
 
 /**
  * The application wizard form: a friendly profile nudge, the job's questions
  * (required or optional — optional ones are labeled "רשות"), the built-in
- * "fit" question, and the CV choice — her main (latest) CV or a job-tailored
- * upload.
+ * "fit" question, and the CV choice — the CV she marked as default (or her
+ * newest, if she hasn't marked one) or a job-tailored upload.
  */
 export function ApplyForm({
   jobId,
@@ -43,7 +45,9 @@ export function ApplyForm({
     submitApplication.bind(null, jobId),
     {}
   );
-  const mainCv = cvDocs[0] ?? null;
+  // Her marked default is the one that gets attached; without one, the newest.
+  const defaultCv = cvDocs.find((d) => d.is_default) ?? null;
+  const mainCv = defaultCv ?? cvDocs[0] ?? null;
   const [cvMode, setCvMode] = useState<"main" | "upload">(mainCv ? "main" : "upload");
 
   const radioClass = (active: boolean) =>
@@ -166,9 +170,20 @@ export function ApplyForm({
             />
             <span className="flex-1">
               <span className="flex items-center gap-1.5 font-semibold text-sm text-ink-900">
-                <FileText size={14} className="text-brand-purple" /> קורות החיים הראשיים שלי
+                <FileText size={14} className="text-brand-purple" />
+                {defaultCv ? "קורות החיים שסימנת כברירת מחדל" : "קורות החיים האחרונים שהעלית"}
               </span>
-              <span className="block text-xs text-ink-500 mt-0.5">{mainCv.label}</span>
+              <span className="block text-xs text-ink-500 mt-0.5">
+                {mainCv.label}
+                {!defaultCv && (
+                  <>
+                    {" · "}
+                    <Link href="/cv" className="text-brand-purple font-semibold">
+                      לבחירת ברירת מחדל
+                    </Link>
+                  </>
+                )}
+              </span>
             </span>
           </label>
         )}

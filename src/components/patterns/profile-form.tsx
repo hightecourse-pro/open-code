@@ -302,10 +302,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
     setErrors({});
     setStep(Math.min(cur + 1, totalSteps - 1));
+    toTop();
   }
   function back() {
     setErrors({});
     setStep(Math.max(0, cur - 1));
+    toTop();
+  }
+  /**
+   * All the steps stay mounted and only toggle `hidden`, so the viewport keeps
+   * the previous step's offset — after a long step she'd land mid-form instead
+   * of on the first field of the new one.
+   */
+  function toTop() {
+    alertRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   const stepTitle = cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;

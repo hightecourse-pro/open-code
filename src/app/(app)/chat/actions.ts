@@ -98,7 +98,11 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", conversationId);
 
-  if (notifyMentor && isFirstNew) {
+  if (!notifyMentor || !isFirstNew) {
+    // "the mentor got no email" looks identical whether a gate closed or the
+    // send failed. Name the closed gate so the logs answer it in one look.
+    console.log("[chat email] skipped", { notifyMentor, isFirstNew });
+  } else {
     try {
       const admin = createAdminClient();
       const { data: mentorUser } = await admin.auth.admin.getUserById(otherId);

@@ -110,17 +110,31 @@ export async function updateEmployment(
   if (foundJob && !before?.found_job) update.hired_at = new Date().toISOString();
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
-  if (error) return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
+  if (error) {
+    // Same warm message for both writes — the log is what tells them apart.
+    console.error("[employment] found_job write failed:", error);
+    return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
+  }
 
   // Where she works stays between her and the team — member_private, never the
   // profile row the whole community can read.
-  const { error: wpError } = await supabase
-    .from("member_private")
-    .upsert(
-      { profile_id: user.id, workplace: foundJob ? workplace || null : null },
-      { onConflict: "profile_id" }
-    );
-  if (wpError) return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
+  const { error: wpError } = await supabase.from("member_private").upsert(
+    {
+      profile_id: user.id,
+      workplace: foundJob ? workplace || null : null,
+      // member_private has no set_updated_at trigger, so on the UPDATE branch
+      // of the upsert the stamp would keep its original insert value forever.
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "profile_id" }
+  );
+  if (wpError) {
+    // Log the Postgres error itself (never the workplace value — on an internal
+    // job that string IS the hiring client's name) so a schema/permission
+    // failure is diagnosable instead of just "לא הצלחנו לשמור".
+    console.error("[employment] workplace write failed:", wpError);
+    return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
+  }
 
   revalidatePath("/profile");
   revalidatePath("/forum"); // the hired-celebration banner lives there

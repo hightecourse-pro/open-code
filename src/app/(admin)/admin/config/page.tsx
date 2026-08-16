@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui";
 import { QuestionToggle } from "@/components/patterns/question-toggle";
 import { TaxonomyManager } from "@/components/patterns/taxonomy-manager";
 import { QuestionOptionsEditor } from "@/components/patterns/question-options-editor";
+import { QuestionOrder } from "./question-order";
 import { PricingForm } from "@/components/patterns/pricing-form";
 import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans, shekels } from "@/lib/payments/plans";
@@ -32,7 +33,13 @@ export default async function AdminConfigPage() {
   const supabase = await createClient();
 
   const [{ data: questions }, { data: taxonomies }, pricing] = await Promise.all([
-    supabase.from("config_questions").select("*").order("sort_order", { ascending: true }),
+    supabase
+      .from("config_questions")
+      .select("*")
+      // Tie-break on created_at: seeded rows share sort_order values, and the
+      // reorder arrows have to move a row relative to what she actually sees.
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true }),
     supabase
       .from("config_taxonomies")
       .select("*")
@@ -88,10 +95,20 @@ export default async function AdminConfigPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">שאלות הפרופיל</h3>
         <p className="text-[12.5px] text-ink-500 mb-4">
-          השאלות שחברות ממלאות בפרופיל. כבי שאלה כדי להסתיר אותה בלי למחוק.
+          השאלות שחברות ממלאות בפרופיל, לפי הסדר שבו הן מופיעות. כבי שאלה כדי להסתיר אותה בלי
+          למחוק, והזיזי אותה עם החיצים כדי לשנות את מיקומה. שימי לב לתוויות — לשאלה יכולים להיות
+          תנאי הצגה נוספים מלבד היותה פעילה.
         </p>
         <div className="flex flex-col">
-          {(questions ?? []).map((q) => {
+          {(questions ?? []).map((q, i) => {
+            // A follow-up question is asked only when its parent bool is "כן" —
+            // so if the parent is switched off, the follow-up can never show up
+            // even while it says "פעילה". Say that out loud instead of leaving
+            // her to guess why an enabled question doesn't reach the members.
+            const parent = q.depends_on
+              ? (questions ?? []).find((p) => p.key === q.depends_on)
+              : undefined;
+            const parentOff = !!q.depends_on && (!parent || !parent.active);
             // Structural questions drive the form's logic — they can't be disabled.
             const locked = q.key === "has_experience";
             const editable =
@@ -106,7 +123,7 @@ export default async function AdminConfigPage() {
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-ink-900">{q.label_he}</div>
-                    <div className="text-xs text-ink-500 flex items-center gap-2 mt-0.5">
+                    <div className="text-xs text-ink-500 flex flex-wrap items-center gap-2 mt-0.5">
                       <span className="font-mono">{q.key}</span>
                       <Badge variant="purple">{FIELD_LABEL[q.field_type]}</Badge>
                       {q.required && <Badge variant="pink">חובה</Badge>}
@@ -116,8 +133,27 @@ export default async function AdminConfigPage() {
                       {q.scope !== "all" && (
                         <Badge variant="indigo">{q.scope === "mentor" ? "מנטוריות" : "ג'וניוריות"}</Badge>
                       )}
+                      {q.intake_track === "junior" && (
+                        <Badge variant="mint">רק למי שבתחילת הדרך</Badge>
+                      )}
+                      {q.intake_track === "experienced" && (
+                        <Badge variant="warm">רק למי שיש לה ניסיון</Badge>
+                      )}
+                      {q.depends_on && (
+                        <Badge variant="tech">
+                          רק אם ענתה כן על: {parent?.label_he ?? q.depends_on}
+                        </Badge>
+                      )}
                     </div>
+                    {q.active && parentOff && (
+                      <p className="text-[11.5px] text-[#8C5E0E] bg-tint-warm border border-[#F0DCA8] rounded-md px-2.5 py-1.5 mt-1.5">
+                        {parent
+                          ? `השאלה פעילה, אבל "${parent.label_he}" כבויה — כל עוד היא כבויה השאלה הזו לא תופיע אצל החברות. הפעילי אותה כדי שתחזור.`
+                          : `השאלה פעילה, אבל השאלה שהיא תלויה בה (${q.depends_on}) לא קיימת — כך היא לא תופיע אצל החברות.`}
+                      </p>
+                    )}
                   </div>
+                  <QuestionOrder id={q.id} index={i} total={(questions ?? []).length} />
                   {locked ? (
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-tint-mint text-[#1B7A4B]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#28A864]" />

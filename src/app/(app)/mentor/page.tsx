@@ -2,55 +2,73 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { MessageCircle, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getUser, isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { Avatar, Badge } from "@/components/ui";
 import { MentorRequestForm } from "@/components/patterns/mentor-request-form";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { startConversation } from "../chat/actions";
 
-export const metadata: Metadata = { title: "המנטוריות שלנו" };
+export const metadata: Metadata = { title: "המנטוריות שלי" };
 
 export default async function MentorPage() {
   const supabase = await createClient();
-  const user = await getUser();
   const profile = await requireCommunityAccess();
   const subscriber = isSubscriber(profile);
 
-  const [{ data: mentors }, { data: mentorship }, { data: openRequest }] = await Promise.all([
+  // Mentoring is a match we make, not a directory she browses: the only
+  // mentors on this page are the ones an admin assigned to her
+  // (mentor_requests.assigned_mentor_id). Backward-safe: before the
+  // mentor_requests migration runs this returns nothing and she sees the
+  // honest "not matched yet" state.
+  // kind='general' only: an employment accompaniment is a different promise —
+  // /profile presents it on its own — and counting it here would tell a woman
+  // who was given a placement companion that she already has a mentor,
+  // hiding the form she needs to ask for one.
+  const [{ data: assignments }, { data: openRequest }] = await Promise.all([
     supabase
-      .from("profiles")
-      .select("id, full_name, avatar_initials, specialization, bio")
-      .eq("role", "mentor")
-      .eq("status", "active")
-      .order("full_name", { ascending: true }),
-    user
-      ? supabase
-          .from("mentorships")
-          .select("id")
-          .eq("mentee_id", user.id)
-          .eq("status", "active")
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    // Backward-safe: before the mentor_requests migration runs this just
-    // returns null and the form still renders.
-    user
-      ? supabase
-          .from("mentor_requests")
-          .select("id")
-          .eq("profile_id", user.id)
-          .eq("status", "open")
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
+      .from("mentor_requests")
+      .select("assigned_mentor_id, created_at")
+      .eq("profile_id", profile.id)
+      .eq("kind", "general")
+      .not("assigned_mentor_id", "is", null)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("mentor_requests")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .eq("status", "open")
+      .maybeSingle(),
   ]);
 
-  const hasMentor = !!mentorship;
+  const assignedIds = [
+    ...new Set((assignments ?? []).map((a) => a.assigned_mentor_id).filter((id): id is string => !!id)),
+  ];
+
+  // members_directory, never `profiles`: the view carries no status or tier
+  // (rule: nobody can tell who pays) and a free member may read it, so she
+  // still sees who her mentor is even before she subscribes.
+  const { data: mentorRows } = assignedIds.length
+    ? await supabase
+        .from("members_directory")
+        .select("id, full_name, avatar_initials, specialization, bio")
+        .in("id", assignedIds)
+    : { data: [] };
+  const mentors = mentorRows ?? [];
+
+  // What she can actually see decides the page: an assignment to a mentor who
+  // has since left the community must not lock her out of asking for another.
+  const hasMentor = mentors.length > 0;
 
   return (
     <div className="flex flex-col gap-5">
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מנטוריות/&gt;</span>
-        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המנטוריות שלנו 👑</h1>
-        <p className="t-body-sm text-ink-700">נשים מנוסות שהצטרפו כדי לעזור. אפשר לכתוב להן ישירות.</p>
+        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המנטוריות שלי 👑</h1>
+        <p className="t-body-sm text-ink-700">
+          {hasMentor
+            ? "המנטוריות ששובצו לך אישית. אפשר לכתוב להן ישירות — הן כאן בשבילך."
+            : "כאן תמצאי את המנטורית ששובצה לך אישית — נשים מנוסות שמלוות בדיוק בשלב הזה."}
+        </p>
       </div>
 
       {/* No mentor matched yet → she can ask us to connect her with one. */}
@@ -60,11 +78,11 @@ export default async function MentorPage() {
         ) : (
           <UpgradeCard
             title="ליווי אישי של מנטורית נפתח עם מנוי"
-            body="את מוזמנת להכיר את המנטוריות שלנו. עם מנוי נחבר אותך לאחת מהן אישית, ותוכלי להתכתב איתה ישירות."
+            body="עם מנוי נחבר אותך למנטורית אישית — אישה מנוסה שכבר עברה את הדרך הזו, ותוכלי להתכתב איתה ישירות."
           />
         ))}
 
-      {mentors && mentors.length > 0 ? (
+      {hasMentor ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {mentors.map((m) => (
             <div key={m.id} className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
@@ -97,8 +115,19 @@ export default async function MentorPage() {
           ))}
         </div>
       ) : (
-        <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          המנטוריות הראשונות כבר בדרך אלינו 💜
+        <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700 flex flex-col gap-2">
+          <p>
+            {assignedIds.length > 0
+              ? "המנטורית ששובצה לך לא זמינה כאן כרגע. שלחי לנו בקשה ונחבר אותך לאחת אחרת 💜"
+              : "עוד לא שובצה לך מנטורית. כשנחבר אותך לאחת, היא תופיע כאן ותוכלי לכתוב לה ישירות 💜"}
+          </p>
+          <p className="text-[13.5px] text-ink-500">
+            בינתיים{" "}
+            <Link href="/members" className="font-semibold text-brand-purple hover:underline">
+              המשתתפות שלנו
+            </Link>{" "}
+            כאן — אפשר להכיר ולהתכתב עם כל אחת מהן.
+          </p>
         </div>
       )}
     </div>

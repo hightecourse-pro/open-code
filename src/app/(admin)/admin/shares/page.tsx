@@ -6,7 +6,8 @@ import { Badge, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { isDriveAutomationConfigured } from "@/lib/drive-api";
 import { markShareStatus, dismissShare, syncDriveNow } from "../content/actions";
-import { grantShareManually, removeShare } from "./actions";
+import { removeShare } from "./actions";
+import { ManualShareForm } from "./manual-share-form";
 
 export const metadata: Metadata = { title: "תור שיתופים" };
 
@@ -32,25 +33,54 @@ export default async function AdminSharesPage({
   // Cheap env check — no live Google call on every page render.
   const driveOn = isDriveAutomationConfigured();
 
-  // Everything at once: the action queue (pending/revoked) AND the live shares
-  // that answer "what does she actually have?".
-  // select("*") so the screen keeps working whether or not the manual-share
-  // migration has run yet.
-  const { data: allShares } = await supabase
-    .from("content_shares")
-    .select("*")
-    .order("created_at", { ascending: true });
+  // Scoped queries instead of one unbounded select("*"): the table grows as
+  // members × sessions, and past PostgREST's default row cap a single query
+  // silently dropped the NEWEST rows — precisely where a just-created manual
+  // grant lives, which is why it never showed up here. Everything is ordered
+  // newest-first so a truncation can only ever lose ancient history.
+  // select("*") stays, so a column added later still renders.
+  const ROW_CAP = 2000;
+  const [{ data: queueRows }, { data: sharedRows }, { data: manualRows }] = await Promise.all([
+    supabase
+      .from("content_shares")
+      .select("*")
+      .neq("status", "shared")
+      .order("created_at", { ascending: false })
+      .limit(ROW_CAP),
+    supabase
+      .from("content_shares")
+      .select("*")
+      .eq("status", "shared")
+      .order("created_at", { ascending: false })
+      .limit(ROW_CAP),
+    // Manual grants get their own small query so they can never fall off a cap.
+    supabase
+      .from("content_shares")
+      .select("*")
+      .eq("status", "pending")
+      .eq("granted_manually", true)
+      .order("created_at", { ascending: false })
+      .limit(500),
+  ]);
+  if ((queueRows ?? []).length === ROW_CAP || (sharedRows ?? []).length === ROW_CAP) {
+    console.warn("[shares] row cap reached — the oldest rows are not shown on /admin/shares");
+  }
 
-  const shares = (allShares ?? []).filter((s) => s.status !== "shared");
+  // The manual query overlaps the queue (both hold pending rows) — dedupe by id.
+  const shares = [
+    ...new Map([...(queueRows ?? []), ...(manualRows ?? [])].map((s) => [s.id, s])).values(),
+  ].sort((a, b) => a.created_at.localeCompare(b.created_at));
   // "Who has what" also shows manual grants that haven't synced yet — the
   // admin decided them, so they must be visible (and removable) immediately.
-  const live = (allShares ?? []).filter(
-    (s) => s.status === "shared" || (s.status === "pending" && s.granted_manually)
-  );
+  const live = [
+    ...(sharedRows ?? []),
+    ...shares.filter((s) => s.status === "pending" && s.granted_manually),
+  ];
 
-  const profileIds = [...new Set((allShares ?? []).map((s) => s.profile_id))];
-  const courseIds = [...new Set((allShares ?? []).filter((s) => s.owner_type === "course").map((s) => s.owner_id))];
-  const sessionIds = [...new Set((allShares ?? []).filter((s) => s.owner_type === "session").map((s) => s.owner_id))];
+  const known = [...shares, ...(sharedRows ?? [])];
+  const profileIds = [...new Set(known.map((s) => s.profile_id))];
+  const courseIds = [...new Set(known.filter((s) => s.owner_type === "course").map((s) => s.owner_id))];
+  const sessionIds = [...new Set(known.filter((s) => s.owner_type === "session").map((s) => s.owner_id))];
 
   const [{ data: profiles }, { data: courses }, { data: sessions }] = await Promise.all([
     profileIds.length
@@ -184,50 +214,11 @@ export default async function AdminSharesPage({
             החלפת קורס או סיום מנוי לא נוגעים בו.
           </p>
         </div>
-        <form action={grantShareManually} className="flex flex-wrap items-center gap-2">
-          <select
-            name="profile_id"
-            required
-            defaultValue=""
-            className="text-[13px] border border-ink-300 rounded-md px-2.5 py-2 min-w-[170px]"
-          >
-            <option value="" disabled>
-              בחרי משתתפת…
-            </option>
-            {(members ?? []).map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.full_name}
-              </option>
-            ))}
-          </select>
-          <select
-            name="content"
-            required
-            defaultValue=""
-            className="text-[13px] border border-ink-300 rounded-md px-2.5 py-2 flex-1 min-w-[200px]"
-          >
-            <option value="" disabled>
-              בחרי תוכן לשיתוף…
-            </option>
-            <optgroup label="קורסים">
-              {(allCourses ?? []).map((c) => (
-                <option key={c.id} value={`course:${c.id}`}>
-                  {c.title}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="סשנים">
-              {(allSessions ?? []).map((s) => (
-                <option key={s.id} value={`session:${s.id}`}>
-                  {s.title}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-          <Button type="submit" size="sm">
-            שיתוף
-          </Button>
-        </form>
+        <ManualShareForm
+          members={(members ?? []).map((m) => ({ id: m.id, label: m.full_name }))}
+          courses={(allCourses ?? []).map((c) => ({ id: c.id, label: c.title }))}
+          sessions={(allSessions ?? []).map((s) => ({ id: s.id, label: s.title }))}
+        />
       </section>
 
       {/* ---------- Who has what — the live picture ---------- */}

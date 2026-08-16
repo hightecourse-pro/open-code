@@ -56,7 +56,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { href: "/profile", label: "הפרופיל שלי", icon: User },
       { href: "/cv", label: "קורות החיים שלי", icon: FileText },
-      { href: "/mentor", label: "המנטוריות שלנו", icon: Crown },
+      { href: "/mentor", label: "המנטוריות שלי", icon: Crown },
       { href: "/chat", label: "צ'אטים", icon: MessageCircle, paid: true },
     ],
   },
@@ -69,6 +69,8 @@ export interface SidebarUser {
   isAdmin?: boolean;
   /** Free members see paid destinations marked with a lock. */
   isSubscriber?: boolean;
+  /** Chat messages waiting for her — shown as a badge on "צ'אטים". */
+  unreadCount?: number;
 }
 
 const DEFAULT_USER: SidebarUser = {
@@ -99,6 +101,10 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             const locked = item.paid && user.isSubscriber === false;
+            // The chat count comes from the server on every render; a static
+            // `badge` on the item would be a number nobody updates.
+            const unread = item.href === "/chat" ? (user.unreadCount ?? 0) : 0;
+            const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : item.badge?.toString();
             return (
               <Link
                 key={item.href}
@@ -116,17 +122,28 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
               >
                 <Icon size={18} className="shrink-0" />
                 <span>{item.label}</span>
-                {locked && (
-                  <Lock size={13} className={cn("ms-auto shrink-0", active ? "text-white/80" : "text-ink-400")} />
-                )}
-                {item.badge != null && (
-                  <span
-                    className={cn(
-                      "ms-auto px-2 py-px rounded-full text-[11px] font-bold",
-                      active ? "bg-white/25 text-white" : "bg-tint-pink text-brand-pink-deep"
+                {(locked || badge) && (
+                  <span className="ms-auto flex items-center gap-1.5">
+                    {locked && (
+                      <Lock size={13} className={cn("shrink-0", active ? "text-white/80" : "text-ink-400")} />
                     )}
-                  >
-                    {item.badge}
+                    {badge && (
+                      <span
+                        aria-label={
+                          unread > 0
+                            ? unread === 1
+                              ? "הודעה אחת שלא נקראה"
+                              : `${unread} הודעות שלא נקראו`
+                            : undefined
+                        }
+                        className={cn(
+                          "px-2 py-px rounded-full text-[11px] font-bold",
+                          active ? "bg-white/25 text-white" : "bg-tint-pink text-brand-pink-deep"
+                        )}
+                      >
+                        {badge}
+                      </span>
+                    )}
                   </span>
                 )}
               </Link>

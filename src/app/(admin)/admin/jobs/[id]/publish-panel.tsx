@@ -10,7 +10,7 @@ import {
   reopenJobPublish,
   type AudienceMember,
 } from "@/app/(admin)/admin/actions";
-import type { AudienceCatalogueField } from "@/lib/admin/audience";
+import type { AudienceCatalogueField, AudienceEligibility } from "@/lib/admin/audience";
 import type { PickerMember } from "./candidate-picker";
 
 const MAX_SEARCH_ROWS = 8;
@@ -28,12 +28,15 @@ const PREVIEW_DEBOUNCE_MS = 300;
 export function PublishPanel({
   jobId,
   catalogue,
+  eligibility,
   allMembers,
   published,
 }: {
   jobId: string;
   /** Every filterable profile criterion, from buildAudienceCatalogue(). */
   catalogue: AudienceCatalogueField[];
+  /** Who the pool holds and who it leaves out — stated in the panel, not implied. */
+  eligibility: AudienceEligibility | null;
   /** All active members, for the "add anyone" search (same list as the candidate picker). */
   allMembers: PickerMember[];
   /** Null while the job is a draft; otherwise the published summary. */
@@ -103,6 +106,8 @@ export function PublishPanel({
   }, [allMembers, audienceIds, extras, query]);
 
   const selectedCount = checked.size + extras.length;
+  /** Anything actually narrowing the pool — criteria chips or the experience select. */
+  const narrowed = Object.keys(criteria).length > 0 || exp !== "all";
 
   const active = catalogue.find((f) => f.key === activeKey) ?? null;
 
@@ -287,10 +292,24 @@ export function PublishPanel({
             <option value="no">ג׳וניוריות בלבד</option>
           </Select>
           <p className="text-[12px] text-ink-400 mt-2">
-            בלי סימון קריטריונים — כל החברות הפעילות נכללות.
+            בלי סימון קריטריונים נכללות כל הזמינות להשמה — הרשימה המלאה מופיעה למטה.
           </p>
         </div>
       </div>
+
+      {/* Who the pool actually holds. Stated always, not only when it's empty —
+          "בלי קריטריונים" is NOT "כל הקהילה", and the admin compares this
+          against /admin/members, which lists everyone with no gates at all. */}
+      {eligibility && (
+        <p className="text-[12px] text-ink-500 leading-relaxed bg-ink-50 border border-ink-200 rounded-md px-3 py-2">
+          קהל היעד נבנה מהחברות שזמינות להשמה: ג׳וניוריות פעילות או חינמיות שהשלימו את
+          הפרופיל — <b className="text-ink-900">{eligibility.eligible}</b> כרגע. לא נכללות:{" "}
+          {eligibility.notCompleted} שעדיין לא סיימו למלא את הפרופיל
+          {eligibility.paused > 0 ? `, ${eligibility.paused} בהשהיה` : ""}, וגם מנטוריות
+          וצוות ({eligibility.staff}). חברה שהקריטריונים סיננו החוצה אפשר להחזיר בשם דרך
+          החיפוש שלמטה.
+        </p>
+      )}
 
       {/* Active filters */}
       {chips.length > 0 && (
@@ -326,6 +345,13 @@ export function PublishPanel({
           <span className="font-display text-sm font-bold text-ink-1000">
             קהל היעד: {selectedCount} חברות נבחרו
           </span>
+          {pool !== null && audience !== null && (
+            <span className="text-[12px] text-ink-500">
+              {narrowed
+                ? `הקריטריונים התאימו ל־${audience.length} מתוך ${pool} הזמינות להשמה`
+                : `כל ${pool} הזמינות להשמה`}
+            </span>
+          )}
           {previewing && <Loader2 size={14} className="animate-spin text-ink-400" />}
         </div>
         {audience === null ? (
@@ -333,7 +359,7 @@ export function PublishPanel({
         ) : audience.length === 0 ? (
           <p className="text-ink-500 text-sm py-1">
             {pool === 0
-              ? "אין כרגע בקהילה ג׳וניוריות עם פרופיל מושלם — הקהל ייבנה כאן ברגע שיהיו. (גם חברות חינמיות נכללות.)"
+              ? "אין כרגע בקהילה ג׳וניוריות פעילות שהשלימו את הפרופיל — הקהל ייבנה כאן ברגע שיהיו. (גם חברות חינמיות נכללות.)"
               : "אין חברות שמתאימות לקריטריונים — אפשר להרחיב אותם או להוסיף ידנית למטה."}
           </p>
         ) : (
@@ -373,9 +399,16 @@ export function PublishPanel({
 
       {/* Add anyone */}
       <div>
-        <div className="text-xs font-semibold text-ink-700 mb-2">
+        <div className="text-xs font-semibold text-ink-700 mb-0.5">
           הוספת חברה נוספת (מעבר לקריטריונים)
         </div>
+        {/* Honest scope note: this search reads the SAME eligible pool, so it
+            can add back someone the criteria filtered out — but not a member
+            who hasn't finished her profile. */}
+        <p className="text-[12px] text-ink-400 mb-2">
+          החיפוש מציע את מי שזמינה להשמה וסוננה החוצה על ידי הקריטריונים. מי שעדיין לא
+          השלימה פרופיל לא תופיע כאן.
+        </p>
         {extras.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {extras.map((e) => (

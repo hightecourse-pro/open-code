@@ -5,7 +5,7 @@ import { getUser } from "@/lib/auth";
 import { Badge } from "@/components/ui";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { CvUploadForm } from "@/components/patterns/cv-upload-form";
-import { deleteCv } from "./actions";
+import { deleteCv, setDefaultCv } from "./actions";
 import type { CvLanguage } from "@/types/database";
 
 export const metadata: Metadata = { title: "קורות החיים שלך" };
@@ -20,10 +20,22 @@ export default async function CvPage() {
   const supabase = await createClient();
   const user = await getUser();
 
-  const { data: docs } = await supabase
+  // is_default arrives with supabase/_cv_default.sql — until it runs, the page
+  // still lists her files (without the marker) instead of erroring.
+  const withDefault = await supabase
     .from("cv_documents")
-    .select("id, label, language, file_path, file_name, created_at")
+    .select("id, label, language, file_path, file_name, created_at, is_default")
+    .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
+  const docs = withDefault.error
+    ? (
+        await supabase
+          .from("cv_documents")
+          .select("id, label, language, file_path, file_name, created_at")
+          .order("created_at", { ascending: false })
+      ).data?.map((d) => ({ ...d, is_default: false }))
+    : withDefault.data;
+  const canMarkDefault = !withDefault.error;
 
   // Signed URLs for downloads (private bucket).
   const signed = new Map<string, string>();
@@ -41,6 +53,7 @@ export default async function CvPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">קורות החיים שלך</h1>
         <p className="t-body-sm text-ink-700">
           שמרי כאן את הגרסאות שלך — עברית, אנגלית, או מותאמות למשרה ספציפית. הקבצים פרטיים ונגישים רק לך ולצוות.
+          {canMarkDefault && " הקובץ שסימנת כברירת מחדל הוא זה שיצורף אוטומטית להגשות שלך."}
         </p>
       </div>
 
@@ -63,6 +76,19 @@ export default async function CvPage() {
                     <div className="text-[11px] text-ink-500 truncate">{d.file_name}</div>
                   </div>
                   <Badge variant={lang.variant}>{lang.label}</Badge>
+                  {canMarkDefault &&
+                    (d.is_default ? (
+                      <Badge variant="mint">ברירת מחדל</Badge>
+                    ) : (
+                      <form action={setDefaultCv.bind(null, d.id)}>
+                        <button
+                          type="submit"
+                          className="text-[12px] font-semibold text-brand-purple hover:text-brand-pink-deep whitespace-nowrap cursor-pointer"
+                        >
+                          הפכי לברירת מחדל
+                        </button>
+                      </form>
+                    ))}
                   {signed.get(d.id) && (
                     <a
                       href={signed.get(d.id)}

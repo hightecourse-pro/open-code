@@ -34,8 +34,13 @@ function splitYm(ym: string): { month: string; year: string } {
   return { month, year };
 }
 
+// She picks the month and the year one at a time, and each pick is written back
+// through the serialized string — so collapsing a half-filled pair to "" would
+// erase the choice she just made and the Select would snap back to "חודש…".
+// A half value ("2024-" / "-03") round-trips through splitYm and is still
+// rejected by isValidYm, so validation stays exactly as strict.
 function joinYm(month: string, year: string): string {
-  return month && year ? `${year}-${month}` : "";
+  return month || year ? `${year}-${month}` : "";
 }
 
 export interface PeriodPickerProps {

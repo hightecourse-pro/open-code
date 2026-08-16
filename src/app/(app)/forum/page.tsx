@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { Button } from "@/components/ui";
 import { Composer } from "@/components/patterns/composer";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { ForumTopicRow, topicTitle, type ForumTopic } from "@/components/patterns/forum-topic-row";
@@ -27,10 +30,41 @@ type ProfileLite = {
   specialization: string | null;
 };
 
-export default async function ForumPage() {
+/** `%` and `_` are ilike wildcards — a member who types them means the characters. */
+function likePattern(needle: string): string {
+  return `%${needle.replace(/[\\%_]/g, "\\$&")}%`;
+}
+
+/** "נמצאו 7 נושאים" while searching, plain "7 נושאים" while browsing. */
+function countLabel(count: number, searching: boolean): string {
+  if (count === 0) return searching ? "לא נמצאו נושאים" : "אין עדיין נושאים";
+  if (count === 1) return searching ? "נמצא נושא אחד" : "נושא אחד";
+  return `${searching ? "נמצאו " : ""}${count} נושאים`;
+}
+
+/** Keep the other filter alive when she switches this one. */
+function forumHref(params: { q?: string; saved?: boolean }): string {
+  const search = new URLSearchParams();
+  if (params.saved) search.set("saved", "1");
+  if (params.q) search.set("q", params.q);
+  const qs = search.toString();
+  return qs ? `/forum?${qs}` : "/forum";
+}
+
+export default async function ForumPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; saved?: string }>;
+}) {
+  const { q, saved } = await searchParams;
+  const needle = (q ?? "").trim();
+
   const supabase = await createClient();
   const profile = await requireCommunityAccess();
   const canWrite = isSubscriber(profile);
+  // Saving a topic is a subscriber's action (RLS), so only she has a list.
+  const savedOnly = saved === "1" && canWrite;
+  const filtering = !!needle || savedOnly;
 
   // Jobs published specifically to this member (job_targets — RLS lets her
   // read her own rows). Shown as a prominent banner above the topic list.
@@ -78,13 +112,34 @@ export default async function ForumPage() {
     .slice(0, 6)
     .map((h) => ({ full_name: h.full_name }));
 
-  const { data: posts } = await supabase
+  // The topics she bookmarked (reactions kind='save') — the only place they
+  // are ever read back into a list.
+  let savedIds: string[] = [];
+  if (savedOnly) {
+    const { data: saves } = await supabase
+      .from("reactions")
+      .select("post_id")
+      .eq("profile_id", profile.id)
+      .eq("kind", "save");
+    savedIds = (saves ?? []).map((s) => s.post_id);
+  }
+
+  // Both filters narrow the query itself — applied after .limit(50) they would
+  // silently search inside the newest 50 topics instead of all of them.
+  let topicsQuery = supabase
     .from("posts")
     .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id")
-    .eq("kind", "forum")
-    .order("is_pinned", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(50);
+    .eq("kind", "forum");
+  if (needle) topicsQuery = topicsQuery.ilike("body", likePattern(needle));
+  if (savedOnly) topicsQuery = topicsQuery.in("id", savedIds);
+
+  const { data: posts } =
+    savedOnly && savedIds.length === 0
+      ? { data: [] }
+      : await topicsQuery
+          .order("is_pinned", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(50);
 
   const postIds = (posts ?? []).map((p) => p.id);
 
@@ -159,20 +214,79 @@ export default async function ForumPage() {
       <HiredBanner members={recentlyHired} />
 
       {canWrite ? (
-        <Composer kind="forum" />
+        // While she's searching or looking at what she saved, the box would
+        // just be noise on top of a list she came to read.
+        !filtering && <Composer kind="forum" />
       ) : (
         <UpgradeCard
-          title="את מוזמנת לקרוא הכול 💜"
-          body="כתיבה בפורום, תגובות והתייעצויות נפתחות עם מנוי — ואנחנו נשמח לשמוע גם אותך."
+          title="השיחות בפורום נפתחות עם מנוי 💜"
+          body="כאן חברות הקהילה מתייעצות, שואלות ומשתפות ידע. עם מנוי תוכלי לקרוא את כל השיחות — וגם להצטרף אליהן."
           cta="להצטרפות"
         />
       )}
 
+      {canWrite && (
+        <div className="bg-white border border-ink-200 rounded-[18px] p-4 shadow-sm flex flex-col gap-2.5">
+          <form className="flex items-center gap-2">
+            {savedOnly && <input type="hidden" name="saved" value="1" />}
+            <div className="relative flex-1">
+              <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-ink-400" />
+              <input
+                name="q"
+                defaultValue={needle}
+                autoComplete="off"
+                aria-label="חיפוש נושא בפורום"
+                placeholder="חיפוש לפי מילה בנושא או בתוכן…"
+                className="w-full text-sm border border-ink-300 rounded-md ps-9 pe-3 py-2.5 outline-none focus:border-brand-purple"
+              />
+            </div>
+            <Button type="submit" size="sm">
+              חיפוש
+            </Button>
+          </form>
+
+          <div className="flex gap-2 flex-wrap">
+            {[
+              { label: "כל הנושאים", href: forumHref({ q: needle }), on: !savedOnly },
+              { label: "הנושאים ששמרתי 🔖", href: forumHref({ q: needle, saved: true }), on: savedOnly },
+            ].map((chip) => (
+              <Link
+                key={chip.label}
+                href={chip.href}
+                className={
+                  chip.on
+                    ? "font-display font-semibold text-[13px] px-3.5 py-[7px] rounded-full border-[1.5px] border-transparent bg-brand-gradient text-white"
+                    : "font-display font-semibold text-[13px] px-3.5 py-[7px] rounded-full border-[1.5px] border-ink-200 bg-white text-ink-700 hover:border-brand-purple transition-colors"
+                }
+              >
+                {chip.label}
+              </Link>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap text-[12.5px] text-ink-500">
+            <span>{countLabel(topics.length, !!needle)}</span>
+            {needle && (
+              <Link
+                href={forumHref({ saved: savedOnly })}
+                className="font-semibold text-brand-purple hover:underline"
+              >
+                ניקוי החיפוש
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
+
       {topics.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          {canWrite
-            ? "הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?"
-            : "הפורום שקט עכשיו — בקרוב יהיה כאן מלא."}
+          {needle
+            ? "לא מצאנו נושא שמתאים לחיפוש — אולי לנסות מילה אחרת? 💜"
+            : savedOnly
+              ? "עוד לא שמרת נושאים. בכל שיחה יש כפתור שמירה 🔖 — מה שתשמרי יחכה לך כאן 💜"
+              : canWrite
+                ? "הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?"
+                : "השיחות של הקהילה מחכות כאן מאחורי המנוי — נשמח לפתוח לך אותן 💜"}
         </div>
       ) : (
         <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden divide-y divide-ink-100">

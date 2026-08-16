@@ -968,6 +968,8 @@ export interface Database {
           file_path: string;
           file_name: string | null;
           created_at: string;
+          /** The CV she marked as hers by default — one per member (partial unique index). */
+          is_default: boolean;
         };
         Insert: {
           id?: string;
@@ -977,6 +979,7 @@ export interface Database {
           file_path: string;
           file_name?: string | null;
           created_at?: string;
+          is_default?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["cv_documents"]["Insert"]>;
         Relationships: [];

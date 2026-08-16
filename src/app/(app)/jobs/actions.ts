@@ -27,7 +27,7 @@ export async function toggleSaveJob(jobId: string, save: boolean) {
  *
  * Optionally attaches a specific CV — that attachment is what the employer
  * downloads from the portal. With no explicit choice we attach the CV she
- * tailored for a job if she has one, falling back to her most recent Hebrew CV.
+ * marked as her default on /cv, falling back to her most recent Hebrew CV.
  */
 export async function applyToJob(
   jobId: string,
@@ -64,14 +64,26 @@ export async function applyToJob(
     if (!own) cvId = null;
   }
   if (!cvId) {
+    // Her marked default wins outright. The old heuristic preferred any
+    // language === "job" document — i.e. a CV she tailored for a DIFFERENT
+    // job — so it stays only as the pre-migration fallback.
+    const marked = await supabase
+      .from("cv_documents")
+      .select("id")
+      .eq("profile_id", user.id)
+      .eq("is_default", true)
+      .maybeSingle();
+    cvId = marked.error ? null : (marked.data?.id ?? null);
+  }
+  if (!cvId) {
     const { data: docs } = await supabase
       .from("cv_documents")
       .select("id, language, created_at")
       .eq("profile_id", user.id)
       .order("created_at", { ascending: false });
     const preferred =
-      (docs ?? []).find((d) => d.language === "job") ??
       (docs ?? []).find((d) => d.language === "he") ??
+      (docs ?? []).find((d) => d.language === "job") ??
       (docs ?? [])[0];
     cvId = preferred?.id ?? null;
   }

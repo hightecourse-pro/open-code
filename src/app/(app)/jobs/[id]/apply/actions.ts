@@ -22,8 +22,8 @@ const CV_TYPES = [
 
 /**
  * Submit an application to one of OUR jobs through the wizard: required
- * per-job answers + the built-in "fit" question, plus a CV — her main
- * (latest) document or a job-tailored upload.
+ * per-job answers + the built-in "fit" question, plus a CV — the document she
+ * marked as her default, or a job-tailored upload.
  */
 export async function submitApplication(
   jobId: string,
@@ -131,14 +131,26 @@ export async function submitApplication(
     if (docErr || !doc) return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
     cvId = doc.id;
   } else {
-    const { data: latest } = await supabase
+    // The CV she marked as default on /cv — never "whatever she uploaded last",
+    // which could be a CV she tailored for a different job. Pre-migration the
+    // column doesn't exist yet (42703), so newest-first stays the fallback.
+    const marked = await supabase
       .from("cv_documents")
       .select("id")
       .eq("profile_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
+      .eq("is_default", true)
       .maybeSingle();
-    cvId = latest?.id ?? null;
+    cvId = marked.error ? null : (marked.data?.id ?? null);
+    if (!cvId) {
+      const { data: latest } = await supabase
+        .from("cv_documents")
+        .select("id")
+        .eq("profile_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      cvId = latest?.id ?? null;
+    }
   }
 
   // An application is a CV in front of an employer — never let one through
