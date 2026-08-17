@@ -82,12 +82,7 @@ export default async function AdminConfigPage() {
               {shekels(plans.monthly.amountAgorot)} ₪
             </span>
           </div>
-          <div>
-            <span className="text-ink-500">שנתי: </span>
-            <span className="font-display font-bold text-ink-1000" dir="ltr">
-              {shekels(plans.annual.amountAgorot)} ₪
-            </span>
-          </div>
+          <div className="text-ink-400">מנוי שנתי אינו מוצע יותר.</div>
         </div>
       </div>
 

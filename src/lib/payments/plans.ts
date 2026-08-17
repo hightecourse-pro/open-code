@@ -47,7 +47,12 @@ export function buildPlans(pricing: Pricing): Record<SubscriptionPlan, Plan> {
   };
 }
 
+/**
+ * What we actually sell. The annual plan is no longer offered — asking a
+ * junior for a year up front is the wrong ask — but buildPlans still knows it
+ * so an older annual subscription keeps renewing and its callbacks keep
+ * resolving to a real price.
+ */
 export function planList(pricing: Pricing): Plan[] {
-  const plans = buildPlans(pricing);
-  return [plans.monthly, plans.annual];
+  return [buildPlans(pricing).monthly];
 }

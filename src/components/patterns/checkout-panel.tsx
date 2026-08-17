@@ -32,7 +32,8 @@ export function CheckoutPanel({ plans, configured, fieldsByPlan }: CheckoutPanel
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3">
+      {/* One plan today, but the grid still adapts if another is ever offered. */}
+      <div className={cn("grid gap-3", plans.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
         {plans.map((p) => {
           const active = plan === p.id;
           return (

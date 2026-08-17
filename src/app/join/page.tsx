@@ -80,7 +80,8 @@ export default async function JoinPage({
   // Paid tier, pending or paused → checkout. Pricing is admin-configurable.
   const pricing = await getPricing();
   const plansRec = buildPlans(pricing);
-  const plans = [plansRec.monthly, plansRec.annual];
+  // Monthly only — a year up front is not an ask we make of a junior.
+  const plans = [plansRec.monthly];
 
   const configured = isNedarimConfigured();
   let fieldsByPlan: Record<SubscriptionPlan, Record<string, string>> | undefined;

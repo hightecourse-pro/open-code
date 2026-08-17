@@ -98,20 +98,15 @@ export default async function Home({
             <h2 className="font-display text-[28px] font-black text-ink-1000 mt-1">דמי מנוי</h2>
             <p className="t-body text-ink-700 mt-1">מחיר אחד, כל הערך. אפשר לבטל בכל עת אחרי {pricing.minTermMonths} החודשים הראשונים.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="bg-white border-[1.5px] border-brand-purple rounded-[20px] p-6 shadow-glow-purple text-center">
+          {/* One plan, one card — centred rather than stretched, so a single
+              price doesn't read like half a table with the other half missing. */}
+          <div className="flex justify-center">
+            <div className="bg-white border-[1.5px] border-brand-purple rounded-[20px] p-6 shadow-glow-purple text-center w-full max-w-[320px]">
               <div className="font-display font-bold text-ink-1000">{plans.monthly.label}</div>
               <div className="font-display font-black text-[40px] text-ink-1000 my-2" dir="ltr">
                 {shekels(plans.monthly.amountAgorot)} ₪
               </div>
               <div className="t-body-sm text-ink-500">{plans.monthly.note}</div>
-            </div>
-            <div className="bg-white border border-ink-200 rounded-[20px] p-6 text-center">
-              <div className="font-display font-bold text-ink-1000">{plans.annual.label}</div>
-              <div className="font-display font-black text-[40px] text-ink-1000 my-2" dir="ltr">
-                {shekels(plans.annual.amountAgorot)} ₪
-              </div>
-              <div className="t-body-sm text-ink-500">{plans.annual.note}</div>
             </div>
           </div>
           <div className="text-center mt-8">

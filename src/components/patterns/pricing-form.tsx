@@ -25,7 +25,10 @@ export function PricingForm({ pricing }: { pricing: Pricing }) {
             defaultValue={pricing.monthlyAgorot / 100}
           />
         </Field>
-        <Field label="הנחה שנתית (%)" htmlFor="p-discount">
+        {/* Hidden, not deleted: the annual plan is no longer sold, so there is
+            nothing to discount — but the field still submits the stored value,
+            so saving pricing does not silently reset it to zero. */}
+        <Field label="הנחה שנתית (%)" htmlFor="p-discount" className="hidden">
           <Input
             id="p-discount"
             name="discount"
