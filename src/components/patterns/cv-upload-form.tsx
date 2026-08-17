@@ -19,12 +19,18 @@ export function CvUploadForm() {
   const { file, error: sizeError } = sel;
 
   // Clear the form after a successful upload.
+  //
+  // The dependency is the whole `state`, not `state.ok`: the action returns a
+  // fresh object every time, so its identity changes on each submission —
+  // whereas `state.ok` stays `true` from the second upload onwards, and React
+  // would skip this effect and leave the form filled. The guard below is what
+  // keeps a failed upload from clearing her work.
   useEffect(() => {
     if (!state.ok) return;
     formRef.current?.reset();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reset local UI after a completed upload
     setSel({ file: null, error: null });
-  }, [state.ok]);
+  }, [state]);
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] ?? null;
