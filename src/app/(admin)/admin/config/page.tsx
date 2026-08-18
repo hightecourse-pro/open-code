@@ -7,6 +7,7 @@ import { QuestionOptionsEditor } from "@/components/patterns/question-options-ed
 import { QuestionOrder } from "./question-order";
 import { PricingForm } from "@/components/patterns/pricing-form";
 import { getPricing } from "@/lib/payments/pricing";
+import { groupBySection } from "@/lib/profile-sections";
 import { buildPlans, shekels } from "@/lib/payments/plans";
 import type { ConfigTaxonomy, FieldType, TaxonomyKind } from "@/types/database";
 
@@ -90,12 +91,21 @@ export default async function AdminConfigPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">שאלות הפרופיל</h3>
         <p className="text-[12.5px] text-ink-500 mb-4">
-          השאלות שחברות ממלאות בפרופיל, לפי הסדר שבו הן מופיעות. כבי שאלה כדי להסתיר אותה בלי
-          למחוק, והזיזי אותה עם החיצים כדי לשנות את מיקומה. שימי לב לתוויות — לשאלה יכולים להיות
-          תנאי הצגה נוספים מלבד היותה פעילה.
+          השאלון מוצג לחברות כאשף בשלבים, והשאלות כאן מקובצות בדיוק לאותם שלבים ובאותו סדר — מה
+          שאת רואה כאן הוא מה שהן רואות. החיצים מזיזים שאלה בתוך השלב שלה. כבי שאלה כדי להסתיר
+          אותה בלי למחוק, ושימי לב לתוויות — לשאלה יכולים להיות תנאי הצגה נוספים מלבד היותה פעילה.
         </p>
-        <div className="flex flex-col">
-          {(questions ?? []).map((q, i) => {
+        <div className="flex flex-col gap-6">
+          {groupBySection(questions ?? []).map((section) => (
+            <div key={section.title} className="flex flex-col">
+              <div className="flex items-baseline gap-2 border-b-2 border-ink-200 pb-1.5">
+                <h4 className="font-display text-[15px] font-bold text-ink-1000">{section.title}</h4>
+                <span className="text-[11.5px] text-ink-400">
+                  {section.questions.length === 1 ? "שאלה אחת" : `${section.questions.length} שאלות`}
+                </span>
+              </div>
+              <p className="text-[11.5px] text-ink-500 mt-1 mb-1">{section.hint}</p>
+          {section.questions.map((q, i) => {
             // A follow-up question is asked only when its parent bool is "כן" —
             // so if the parent is switched off, the follow-up can never show up
             // even while it says "פעילה". Say that out loud instead of leaving
@@ -148,7 +158,7 @@ export default async function AdminConfigPage() {
                       </p>
                     )}
                   </div>
-                  <QuestionOrder id={q.id} index={i} total={(questions ?? []).length} />
+                  <QuestionOrder id={q.id} index={i} total={section.questions.length} />
                   {locked ? (
                     <span className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2 py-0.5 rounded-full bg-tint-mint text-[#1B7A4B]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#28A864]" />
@@ -162,6 +172,8 @@ export default async function AdminConfigPage() {
               </div>
             );
           })}
+            </div>
+          ))}
         </div>
       </div>
 

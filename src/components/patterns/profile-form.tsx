@@ -6,6 +6,7 @@ import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/compo
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import { FIELD_VALIDATORS } from "@/lib/validators";
+import { groupBySection } from "@/lib/profile-sections";
 import { CITIES } from "@/data/cities";
 import {
   DEFAULT_LANGUAGES,
@@ -49,40 +50,9 @@ const LONG_TEXT = new Set([
 ]);
 const isOtherVal = (v: string) => v === "other";
 
-// Ordered wizard sections. Questions are matched by key; anything unmatched
-// lands in a final "פרטים נוספים" step so admin-added questions still appear.
-const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
-  {
-    title: "קצת עלייך",
-    hint: "פרטי קשר בסיסיים — כדי שנכיר ונדע איך לחזור אלייך.",
-    keys: ["id_number", "phone", "region", "city", "street", "house_number", "marital_status", "prev_surname", "language_skills"],
-  },
-  {
-    title: "הרקע הלימודי",
-    hint: "איפה למדת ובמה התמחית — זה עוזר לנו להתאים לך קורסים ומשרות.",
-    keys: ["study_place", "coordinator_name", "certificate", "track_specialization", "unique_courses", "graduation_year"],
-  },
-  {
-    title: "הניסיון המקצועי שלך",
-    hint: "ספרי לנו על הניסיון — ככה נדע לאילו משרות לכוון בשבילך.",
-    keys: ["years_experience", "exp_role", "exp_tech", "exp_languages", "work_history", "practical_experience", "currently_working", "current_workplace", "work_description", "specific_job"],
-  },
-  {
-    title: "כישורים וכלים",
-    hint: "מה את יודעת לעשות בפועל — רק מה שבאמת התנסית בו, בלי לחץ 💜",
-    keys: ["dev_tech", "genai_known", "genai_practiced", "ai_tools_used", "github", "ai_project_links", "live_links", "ai_gaps"],
-  },
-  {
-    title: "פרקטיקום והשמה",
-    hint: "כמה העדפות שיעזרו לנו להציע לך בדיוק את ההזדמנויות הנכונות.",
-    keys: ["practicum_done", "practicum_employer", "practicum_period", "practicum_tech", "practicum_description", "practicum_placement", "remote_commute", "paid_placement"],
-  },
-  {
-    title: "עוד משהו?",
-    hint: "משהו שתרצי שנדע עלייך? כאן המקום 🙂",
-    keys: ["notes_for_us"],
-  },
-];
+// The wizard's steps live in @/lib/profile-sections so the configuration screen
+// can group by exactly the same rule — otherwise the admin reorders a flat list
+// that the member never sees in that order.
 
 export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {} }: ProfileFormProps) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
@@ -175,15 +145,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
 
   const sectionSteps = useMemo(() => {
     if (expChoice === null) return [];
-    const used = new Set<string>();
-    const steps = SECTIONS.map((s) => {
-      const qs = rest.filter((q) => s.keys.includes(q.key) && visible(q));
-      qs.forEach((q) => used.add(q.id));
-      return { title: s.title, hint: s.hint, questions: qs };
-    }).filter((s) => s.questions.length > 0);
-    const extra = rest.filter((q) => visible(q) && !used.has(q.id));
-    if (extra.length) steps.push({ title: "פרטים נוספים", hint: "עוד כמה פרטים קטנים.", questions: extra });
-    return steps;
+    return groupBySection(rest, visible);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expChoice, bools]);
 
