@@ -103,13 +103,42 @@ create policy "content_views_insert_own" on public.content_views for insert to a
 -- ============================================================================
 -- Storage: private 'cvs' bucket (members manage their own; admins read)
 -- ============================================================================
-insert into storage.buckets (id, name, public) values ('cvs', 'cvs', false)
-  on conflict (id) do nothing;
+-- storage.buckets has gained and lost columns across Storage versions, and a
+-- freshly provisioned project reports ACTIVE_HEALTHY while Storage is still
+-- initialising — an insert naming `public` failed on a new project for exactly
+-- that reason. So name only the portable columns and set the rest defensively.
+-- The size/MIME limits live here rather than in the dashboard, so both
+-- environments get them from the same source.
+do $$
+begin
+  insert into storage.buckets (id, name) values ('cvs', 'cvs')
+    on conflict (id) do nothing;
 
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'storage' and table_name = 'buckets' and column_name = 'public') then
+    update storage.buckets set public = false where id = 'cvs';
+  end if;
+
+  if exists (select 1 from information_schema.columns
+             where table_schema = 'storage' and table_name = 'buckets' and column_name = 'file_size_limit') then
+    update storage.buckets
+       set file_size_limit = 10485760,  -- 10 MB, same limit the upload form enforces
+           allowed_mime_types = array[
+             'application/pdf',
+             'application/msword',
+             'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+           ]
+     where id = 'cvs';
+  end if;
+end $$;
+
+drop policy if exists "cvs_owner_insert" on storage.objects;
 create policy "cvs_owner_insert" on storage.objects for insert to authenticated
   with check (bucket_id = 'cvs' and (storage.foldername(name))[1] = (select auth.uid())::text);
+drop policy if exists "cvs_owner_select" on storage.objects;
 create policy "cvs_owner_select" on storage.objects for select to authenticated
   using (bucket_id = 'cvs' and ((storage.foldername(name))[1] = (select auth.uid())::text or public.is_admin()));
+drop policy if exists "cvs_owner_delete" on storage.objects;
 create policy "cvs_owner_delete" on storage.objects for delete to authenticated
   using (bucket_id = 'cvs' and (storage.foldername(name))[1] = (select auth.uid())::text);
 
