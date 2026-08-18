@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, Rocket, Plus, X } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -243,6 +243,15 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       }
     }
     setErrors(errs);
+    // Take her to the first problem instead of leaving her to hunt for red
+    // text somewhere up a long step.
+    const firstBad = qs.find((q) => errs[q.id]);
+    if (firstBad) {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`q_${firstBad.id}`);
+        (el ?? alertRef.current)?.scrollIntoView({ behavior: "instant", block: "center" });
+      });
+    }
     return Object.keys(errs).length === 0;
   }
 
@@ -264,21 +273,26 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
     setErrors({});
     setStep(Math.min(cur + 1, totalSteps - 1));
-    toTop();
   }
   function back() {
     setErrors({});
     setStep(Math.max(0, cur - 1));
-    toTop();
   }
   /**
    * All the steps stay mounted and only toggle `hidden`, so the viewport keeps
    * the previous step's offset — after a long step she'd land mid-form instead
-   * of on the first field of the new one.
+   * of on the first field of the new one. Scrolling used to run synchronously
+   * inside next()/back(), i.e. BEFORE React committed the step swap: a smooth
+   * scroll started against the old tall layout, the document reflowed under it,
+   * and the animation visibly fought the clamp — the tester's "לא עובד חלק".
+   * Post-commit + instant lands cleanly at the top of the new step.
    */
-  function toTop() {
-    alertRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const prevStep = useRef(0);
+  useEffect(() => {
+    if (prevStep.current === cur) return;
+    prevStep.current = cur;
+    alertRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+  }, [cur]);
 
   const stepTitle = cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;
   const stepHint =
@@ -518,7 +532,26 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   }
 
   return (
-    <form ref={formRef} action={action} className="flex flex-col gap-5">
+    <form
+      ref={formRef}
+      // Manual submit, not action={action}: React 19 resets an uncontrolled
+      // form after a form-action completes, so a save that returned a
+      // validation error also wiped everything she had typed back to the
+      // stored defaults — "מילאתי ולא נשמר". Dispatching the same action inside
+      // startTransition keeps useActionState's pending/state behavior without
+      // the reset. Enter on an earlier step advances instead of submitting.
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (cur < totalSteps - 1 || expChoice === null) {
+          next();
+          return;
+        }
+        if (!validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
+        const fd = new FormData(e.currentTarget);
+        startTransition(() => action(fd));
+      }}
+      className="flex flex-col gap-5"
+    >
       <datalist id="oc-cities">
         {CITIES.map((c) => (
           <option key={c} value={c} />
@@ -634,18 +667,17 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           <span />
         )}
 
+        {/* Distinct keys, deliberately: without them React reuses one DOM node
+            for both buttons, and when next() advanced to the last step DURING
+            the click's dispatch, the node's type flipped to submit and the
+            browser fired the form action against a half-finished form —
+            skipping the final step's validation entirely (BUG-020B). */}
         {cur < totalSteps - 1 || expChoice === null ? (
-          <Button type="button" onClick={next}>
+          <Button key="next" type="button" onClick={next}>
             הבא <ChevronLeft size={16} />
           </Button>
         ) : (
-          <Button
-            type="submit"
-            disabled={pending}
-            onClick={(e) => {
-              if (!validateStep(sectionSteps[cur - 1]?.questions ?? [])) e.preventDefault();
-            }}
-          >
+          <Button key="submit" type="submit" disabled={pending}>
             {pending ? "שומר…" : "סיום ושמירה ✓"}
           </Button>
         )}
