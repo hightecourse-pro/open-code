@@ -105,6 +105,23 @@ export function PublishPanel({
       .slice(0, MAX_SEARCH_ROWS);
   }, [allMembers, audienceIds, extras, query]);
 
+  // The search used to fail in absolute silence: with no criteria the audience
+  // IS the whole eligible pool, so every name "already there" returned nothing,
+  // and a mentor/staff/incomplete-profile name returned nothing either — the
+  // admin typed and nothing happened at all. Name the reason instead.
+  const searchEmptyReason = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q || searchResults.length > 0) return null;
+    const nameMatch = (m: { full_name: string }) => m.full_name.toLowerCase().includes(q);
+    if ((audience ?? []).some((m) => nameMatch(m) && audienceIds.has(m.id))) {
+      return "היא כבר בקהל היעד — סמני אותה ברשימה שלמעלה.";
+    }
+    if (extras.some(nameMatch)) {
+      return "היא כבר נוספה ידנית — מופיעה בתגיות שלמעלה.";
+    }
+    return "לא נמצאה ברשימת הזמינות להשמה. מנטוריות, צוות, מושהות ומי שלא השלימה פרופיל אינן זמינות לפרסום משרות.";
+  }, [query, searchResults, audience, audienceIds, extras]);
+
   const selectedCount = checked.size + extras.length;
   /** Anything actually narrowing the pool — criteria chips or the experience select. */
   const narrowed = Object.keys(criteria).length > 0 || exp !== "all";
@@ -153,9 +170,12 @@ export function PublishPanel({
   }
 
   function onPublish() {
-    const ids = [...checked, ...extras.map((e) => e.id)];
+    const manualIds = extras.map((e) => e.id);
+    const ids = [...checked, ...manualIds];
     startPublish(async () => {
-      const res = await publishJob(jobId, ids);
+      // Hand-picked members are recorded as source 'manual', so the admin can
+      // later tell who matched the criteria and who she added by name.
+      const res = await publishJob(jobId, ids, manualIds);
       if (!res.ok) {
         setError(res.error ?? "הפרסום נכשל. נסי שוב.");
         return;
@@ -285,11 +305,11 @@ export function PublishPanel({
           )}
         </div>
         <div>
-          <div className="text-xs font-semibold text-ink-700 mb-2">ניסיון</div>
+          <div className="text-xs font-semibold text-ink-700 mb-2">סינון לפי ניסיון</div>
           <Select value={exp} onChange={(e) => setExp(e.target.value as "all" | "yes" | "no")}>
-            <option value="all">כולן</option>
-            <option value="yes">מנוסות בלבד</option>
-            <option value="no">ג׳וניוריות בלבד</option>
+            <option value="all">הכל</option>
+            <option value="yes">רק בעלות ניסיון</option>
+            <option value="no">רק ג׳וניוריות</option>
           </Select>
           <p className="text-[12px] text-ink-400 mt-2">
             בלי סימון קריטריונים נכללות כל הזמינות להשמה — הרשימה המלאה מופיעה למטה.
@@ -360,7 +380,11 @@ export function PublishPanel({
           <p className="text-ink-500 text-sm py-1">
             {pool === 0
               ? "אין כרגע בקהילה ג׳וניוריות פעילות שהשלימו את הפרופיל — הקהל ייבנה כאן ברגע שיהיו. (גם חברות חינמיות נכללות.)"
-              : "אין חברות שמתאימות לקריטריונים — אפשר להרחיב אותם או להוסיף ידנית למטה."}
+              : exp !== "all" && Object.keys(criteria).length === 0
+                ? exp === "yes"
+                  ? `אין כרגע בעלות ניסיון בקהל הזמין להשמה — כל ${pool} הזמינות הן בתחילת הדרך. סינון "הכל" יציג אותן.`
+                  : `אין כרגע ג׳וניוריות בתחילת הדרך בקהל הזמין להשמה — כל ${pool} הזמינות הן בעלות ניסיון. סינון "הכל" יציג אותן.`
+                : "אין חברות שמתאימות לקריטריונים — אפשר להרחיב אותם או להוסיף ידנית למטה."}
           </p>
         ) : (
           <div className="flex flex-col max-h-[320px] overflow-y-auto">
@@ -442,6 +466,11 @@ export function PublishPanel({
             className="ps-9"
           />
         </div>
+        {searchEmptyReason && (
+          <p className="text-[12.5px] text-ink-500 bg-ink-50 border border-ink-200 rounded-md px-3 py-2 mt-2">
+            {searchEmptyReason}
+          </p>
+        )}
         {searchResults.length > 0 && (
           <div className="flex flex-col border border-ink-200 rounded-md mt-2 divide-y divide-ink-100">
             {searchResults.map((m) => (

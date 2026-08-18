@@ -20,6 +20,7 @@ import { loadClientJob } from "@/lib/portal/jobs";
 import { decryptPassword } from "@/lib/portal/auth";
 import { getSiteUrl } from "@/lib/site";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { buildTechLabelMap, techKey } from "@/lib/tech-match";
 import type {
   ApplicationStatus,
   ClientCrmStatus,
@@ -628,10 +629,36 @@ function sanitizeJobQuestion(
   return { question, answer_type, options, required };
 }
 
+/**
+ * Free-typed tech tags settle to the taxonomy's label when recognized —
+ * "pyton" and "SQL..." were live on the board, and free text that matches
+ * nothing in the taxonomy is exactly what broke profile matching (BUG-007).
+ * Unrecognized tags stay as typed; matching canonicalizes anyway.
+ */
+async function normalizeTechTags(tags: string[]): Promise<string[]> {
+  if (tags.length === 0) return tags;
+  const { data } = await createAdminClient()
+    .from("config_taxonomies")
+    .select("value, label_he")
+    .eq("kind", "tech");
+  const labelByKey = buildTechLabelMap(data ?? []);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const tag of tags) {
+    const pretty = labelByKey.get(techKey(tag)) ?? tag;
+    const key = techKey(pretty);
+    if (seen.has(key)) continue; // "JS, javascript" collapses to one tag
+    seen.add(key);
+    out.push(pretty);
+  }
+  return out;
+}
+
 /** Post a new job to the board. */
 export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
   const fields = jobFields(formData);
+  fields.tech_tags = await normalizeTechTags(fields.tech_tags);
   const err = validateJob(fields);
   if (err) return { error: err };
 
@@ -722,7 +749,9 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
 /** Edit an existing job. */
 export async function editJob(jobId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
-  const f = withDerivedDescription(jobFields(formData));
+  const fields = jobFields(formData);
+  fields.tech_tags = await normalizeTechTags(fields.tech_tags);
+  const f = withDerivedDescription(fields);
   const err = validateJob(f);
   if (err) return { error: err };
   const supabase = await createClient();
@@ -1007,7 +1036,10 @@ function jobExcerpt(html: string | null, fallback: string, max = 200): string {
  */
 export async function publishJob(
   jobId: string,
-  profileIds: string[]
+  profileIds: string[],
+  /** Hand-picked additions ("מעבר לקריטריונים") — recorded as source 'manual'
+      so criteria-matched and hand-picked targets stay distinguishable. */
+  manualIds: string[] = []
 ): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number }> {
   await requireRole("admin");
   const admin = createAdminClient();
@@ -1022,8 +1054,13 @@ export async function publishJob(
   const ids = [...new Set(profileIds.filter(Boolean))];
   if (ids.length === 0) return { error: "בחרי לפחות חברה אחת לפרסום המשרה." };
 
+  const manual = new Set(manualIds);
   const { error: targetsError } = await admin.from("job_targets").upsert(
-    ids.map((profile_id) => ({ job_id: jobId, profile_id, source: "criteria" as const })),
+    ids.map((profile_id) => ({
+      job_id: jobId,
+      profile_id,
+      source: (manual.has(profile_id) ? "manual" : "criteria") as "manual" | "criteria",
+    })),
     { onConflict: "job_id,profile_id", ignoreDuplicates: true }
   );
   if (targetsError) {

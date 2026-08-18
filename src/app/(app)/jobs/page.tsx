@@ -4,6 +4,7 @@ import { Sparkles, Crown, Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
+import { techKey } from "@/lib/tech-match";
 import { Alert, Input } from "@/components/ui";
 import { JobCard } from "@/components/patterns/job-card";
 import {
@@ -166,13 +167,17 @@ export default async function JobsPage({
     (questions ?? []).filter((q) => q.taxonomy_kind === "tech").map((q) => q.id)
   );
   const labelByValue = new Map((techTax ?? []).map((t) => [t.value, t.label_he]));
+  // Both sides reduce to canonical keys (see lib/tech-match): job tags are
+  // free-typed by admins ("node", "JS", "SQL...", "pyton") while her skills are
+  // taxonomy values ("nodejs", "javascript", "sql", "python") — exact string
+  // comparison missed most real matches, which was BUG-007.
   const myTech = new Set<string>();
   const addSkill = (raw: string) => {
     const value = raw.trim();
     if (!value) return;
-    myTech.add(value.toLowerCase());
+    myTech.add(techKey(value));
     const label = labelByValue.get(value);
-    if (label) myTech.add(label.trim().toLowerCase());
+    if (label) myTech.add(techKey(label));
   };
   for (const a of myAnswers ?? []) {
     if (!techQuestionIds.has(a.question_id) || !Array.isArray(a.value)) continue;
@@ -190,7 +195,7 @@ export default async function JobsPage({
   const matchedTags = (job: Job) => {
     let tags = matchedCache.get(job.id);
     if (!tags) {
-      tags = job.tech_tags.filter((t) => myTech.has(t.trim().toLowerCase()));
+      tags = job.tech_tags.filter((t) => myTech.has(techKey(t)));
       matchedCache.set(job.id, tags);
     }
     return tags;
