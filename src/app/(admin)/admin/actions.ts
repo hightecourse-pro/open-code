@@ -462,7 +462,8 @@ export async function updatePricing(
   if (!Number.isFinite(annualDiscountPct) || annualDiscountPct < 0 || annualDiscountPct > 100) {
     return { error: "אחוז הנחה צריך להיות בין 0 ל-100." };
   }
-  if (!Number.isFinite(minTermMonths) || minTermMonths < 1) {
+  // 0 is a real choice — it means no commitment, and the join screen says so.
+  if (!Number.isFinite(minTermMonths) || minTermMonths < 0) {
     return { error: "מינימום חודשים לא תקין." };
   }
 
