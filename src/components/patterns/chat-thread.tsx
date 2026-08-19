@@ -63,6 +63,10 @@ export function ChatThread({
   const [sending, setSending] = useState<{ body: string; seen: number } | null>(null);
   const [failed, setFailed] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  // Whether she is reading the latest message or scrolled up into history.
+  // Starts true so a freshly opened thread lands on the newest message.
+  const atBottomRef = useRef(true);
   const inFlight = bubbles.some((b) => b.pending);
   // Delivered = the revalidated thread came back holding it. Read from the
   // messages we were just handed, never remembered — a remembered "sent" is
@@ -84,6 +88,15 @@ export function ChatThread({
     return () => clearTimeout(timer);
   }, [sending, awaiting, inFlight]);
 
+  // Follow the conversation down — on first open and whenever a message
+  // arrives while she is at the bottom. If she scrolled up to reread
+  // something, we stay exactly where she is; nothing yanks her back down.
+  const bubbleCount = bubbles.length;
+  useEffect(() => {
+    const el = listRef.current;
+    if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
+  }, [bubbleCount]);
+
   const last = bubbles[bubbles.length - 1];
   const iWrote = bubbles.some((b) => b.sender_id === meId);
   const status = !last
@@ -103,7 +116,14 @@ export function ChatThread({
         {status}
       </div>
 
-      <div className="flex-1 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40">
+      <div
+        ref={listRef}
+        onScroll={() => {
+          const el = listRef.current;
+          if (el) atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
+        }}
+        className="flex-1 min-h-0 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40"
+      >
         {bubbles.map((m) => {
           const mine = m.sender_id === meId;
           return (

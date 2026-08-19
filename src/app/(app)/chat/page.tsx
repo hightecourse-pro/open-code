@@ -138,9 +138,23 @@ export default async function ChatPage({
     <div className="flex flex-col gap-5">
       <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4 min-h-[480px]">
+      {/* Bounded to the viewport so the thread scrolls inside its own pane and
+          the composer stays on screen — the page itself never scrolls to chat.
+          On mobile the panes stack: the list keeps its natural height (capped),
+          the thread takes whatever is left. The constants are the measured
+          space above the grid (page padding + title) plus the bottom padding;
+          a free member also has the join banner overhead, taller where it
+          wraps on a narrow screen. */}
+      <div
+        className={cn(
+          "grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:grid-cols-[260px_1fr] gap-4 min-h-[420px]",
+          subscriber
+            ? "h-[calc(100dvh-120px)]"
+            : "h-[calc(100dvh-228px)] md:h-[calc(100dvh-186px)]"
+        )}
+      >
         {/* conversation list */}
-        <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm">
+        <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm min-h-0 max-h-[35dvh] md:max-h-none overflow-y-auto">
           {conversations && conversations.length > 0 ? (
             conversations.map((c) => {
               const other = otherMap.get(c.a_id === me.id ? c.b_id : c.a_id);
@@ -213,7 +227,7 @@ export default async function ChatPage({
         </div>
 
         {/* thread */}
-        <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm flex flex-col">
+        <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm flex flex-col min-h-0 overflow-hidden">
           {active && activeOther ? (
             <>
               <div className="flex items-center gap-2.5 p-3.5 border-b border-ink-100">

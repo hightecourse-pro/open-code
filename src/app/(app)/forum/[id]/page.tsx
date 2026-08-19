@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser, isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { PostCard, type FeedPost } from "@/components/patterns/post-card";
 import { topicTitle } from "@/components/patterns/forum-topic-row";
 import type { PostComment } from "@/components/patterns/post-interactions";
@@ -109,6 +110,10 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       </Link>
 
       <PostCard post={feedPost} canWrite={canWrite} defaultOpenComments />
+      {/* A conversation, not a page: replies from other members show up on
+          their own. Faster than the topic list — here she is actively waiting
+          for an answer. Typed-but-unsent text survives the refresh. */}
+      <AutoRefresh seconds={10} />
     </div>
   );
 }
