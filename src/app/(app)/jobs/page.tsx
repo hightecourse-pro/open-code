@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Sparkles, Crown, Search } from "lucide-react";
+import { Sparkles, Crown } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { techKey } from "@/lib/tech-match";
-import { Alert, Input } from "@/components/ui";
+import { Alert } from "@/components/ui";
 import { JobCard } from "@/components/patterns/job-card";
+import { JobsInstantList } from "@/components/patterns/jobs-instant-list";
 import {
   MyApplications,
   type MyApplicationItem,
@@ -32,17 +33,14 @@ export default async function JobsPage({
 }) {
   const { type, applied, q, fit } = await searchParams;
   const activeTab: JobSource = type === "open" ? "open" : "ours";
-  const needle = (q ?? "").trim().slice(0, 60);
-  // PostgREST reads or() as a comma/paren-separated list of filters, ilike
-  // treats % and _ as wildcards, and cs.{…} is an array literal — neutralize
-  // all of it before her text goes in, so a stray comma or brace can't turn
-  // into extra filter syntax.
-  const safeNeedle = needle.replace(/[,()%_\\*{}"]/g, " ").trim();
+  // The search is instant and client-side now (JobsInstantList) — nothing is
+  // written back to the URL. An incoming ?q= from an old link still lands in
+  // the box as its initial value, and the client filter takes it from there.
+  const initialQuery = (q ?? "").trim().slice(0, 60);
   const fitOnly = fit === "1";
-  /** Keeps the tab (and her search) on every link that leaves this screen. */
-  const boardHref = (params: { type?: JobSource; q?: string; fit?: boolean }) => {
+  /** Keeps the tab on every link that leaves this screen. */
+  const boardHref = (params: { type?: JobSource; fit?: boolean }) => {
     const sp = new URLSearchParams({ type: params.type ?? activeTab });
-    if (params.q) sp.set("q", params.q);
     if (params.fit) sp.set("fit", "1");
     return `/jobs?${sp.toString()}`;
   };
@@ -52,27 +50,9 @@ export default async function JobsPage({
   const profile = await requireCommunityAccess();
   const subscriber = isSubscriber(profile);
 
-  // Free-text search (?q=): title, technologies and the description — plus the
-  // company, but ONLY on the market tab. Matching an internal job by its
-  // client's name would let a member infer the confidential company by typing
-  // names and watching which jobs come back (the card hides it for a reason).
-  let jobsQuery = supabase.from("jobs").select("*").eq("source", activeTab).eq("status", "open");
-  if (safeNeedle) {
-    // description_html is searched as stored markup — almost every description
-    // lives there rather than in the plain column, so leaving it out would make
-    // the search miss the text she can see. (A latin tag name like "span" can
-    // therefore match; a Hebrew or technology needle can't.)
-    const clauses = [
-      `title.ilike.%${safeNeedle}%`,
-      `description.ilike.%${safeNeedle}%`,
-      `description_html.ilike.%${safeNeedle}%`,
-      // cs.{…} matches a whole array element: "reac" will not find the "react"
-      // tag, but the title/description clauses still can.
-      `tech_tags.cs.{${safeNeedle}}`,
-    ];
-    if (activeTab === "open") clauses.push(`company.ilike.%${safeNeedle}%`);
-    jobsQuery = jobsQuery.or(clauses.join(","));
-  }
+  // The whole open board of this tab loads here; searching filters it on the
+  // client as she types — no query round-trip, no URL writes.
+  const jobsQuery = supabase.from("jobs").select("*").eq("source", activeTab).eq("status", "open");
 
   const [
     { data: jobs },
@@ -276,7 +256,7 @@ export default async function JobsPage({
             </h2>
             <p className="text-[13px] text-ink-700 mb-2">
               פורסמו במיוחד לקבוצה מצומצמת של חברות שמתאימות להן — ואת אחת מהן.
-              {(needle || fitOnly) && " הן תמיד כאן, גם כשמסננים למטה."}
+              {fitOnly && " הן תמיד כאן, גם כשמסננים למטה."}
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {targetedJobs.map((job) => (
@@ -289,114 +269,86 @@ export default async function JobsPage({
 
       <MyApplications applications={myAppItems} submitted={submittedForHer} />
 
-      {/* A plain GET form — the search works without JS and keeps her tab. */}
-      <form method="get" action="/jobs" className="flex flex-wrap items-center gap-2.5">
-        <input type="hidden" name="type" value={activeTab} />
-        {fitOnly && <input type="hidden" name="fit" value="1" />}
-        <div className="relative flex-1 min-w-48">
-          <Search
-            size={14}
-            aria-hidden
-            className="absolute top-1/2 -translate-y-1/2 start-3 text-ink-400 pointer-events-none"
-          />
-          <Input
-            name="q"
-            type="search"
-            defaultValue={needle}
-            placeholder="חיפוש לפי תפקיד, טכנולוגיה או מילה מהתיאור…"
-            className="ps-9"
-            aria-label="חיפוש משרות"
-          />
-        </div>
-        <button
-          type="submit"
-          className="font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white cursor-pointer"
-        >
-          חיפוש
-        </button>
-        {needle && (
-          <a href={boardHref({ fit: fitOnly })} className="text-[13px] font-semibold text-brand-purple">
-            ניקוי
-          </a>
-        )}
-      </form>
-
-      {/* Opt-in only: the board never hides a job from her on its own. */}
-      <a
-        href={boardHref({ q: needle, fit: !fitOnly })}
-        className={
-          "self-start inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors " +
-          (fitOnly
-            ? "bg-brand-pink-deep border-brand-pink-deep text-white"
-            : "bg-white border-ink-200 text-ink-700 hover:border-brand-purple")
-        }
-      >
-        <Sparkles size={13} />
-        {fitOnly
-          ? "מציגות רק משרות עם הטכנולוגיות שלי — להצגת הכול"
-          : `רק משרות עם הטכנולוגיות שלי (${fitCount})`}
-      </a>
-
-      <div className="flex gap-2.5">
-        {TABS.map((tab) => {
-          const active = tab.id === activeTab;
-          return (
+      {/* Instant search over the loaded board — the cards, their ordering and
+          the empty states are all prepared here on the server; typing only
+          shows/hides them. The haystack includes the company ONLY on the
+          market tab: matching an internal job by its client's name would let
+          a member infer the confidential company by typing names and watching
+          which jobs come back (the card hides it for a reason). The styled
+          description is searched as its visible text — tags stripped — so a
+          latin tag name like "span" can no longer match markup. */}
+      <JobsInstantList
+        initialQuery={initialQuery}
+        fitOnly={fitOnly}
+        items={sortedJobs.map((job) => ({
+          id: job.id,
+          haystack: [
+            job.title,
+            job.description,
+            job.description_html ? job.description_html.replace(/<[^>]+>/g, " ") : "",
+            job.tech_tags.join(" "),
+            activeTab === "open" ? job.company : "",
+          ].join(" "),
+          node: <JobCard {...cardProps(job)} />,
+        }))}
+        controls={
+          <>
+            {/* Opt-in only: the board never hides a job from her on its own. */}
             <a
-              key={tab.id}
-              href={boardHref({ type: tab.id, q: needle, fit: fitOnly })}
+              href={boardHref({ fit: !fitOnly })}
               className={
-                "flex-1 rounded-md p-3.5 px-[18px] border-[1.5px] transition-all " +
-                (active
-                  ? "border-transparent bg-brand-gradient text-white shadow-glow-pink"
-                  : "border-ink-200 bg-white hover:border-brand-purple")
+                "self-start inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors " +
+                (fitOnly
+                  ? "bg-brand-pink-deep border-brand-pink-deep text-white"
+                  : "bg-white border-ink-200 text-ink-700 hover:border-brand-purple")
               }
             >
-              <div className="font-display font-bold text-[15px]">{tab.label}</div>
-              <div className={"text-xs mt-0.5 " + (active ? "opacity-85" : "text-ink-500")}>
-                {tab.desc}
-              </div>
+              <Sparkles size={13} />
+              {fitOnly
+                ? "מציגות רק משרות עם הטכנולוגיות שלי — להצגת הכול"
+                : `רק משרות עם הטכנולוגיות שלי (${fitCount})`}
             </a>
-          );
-        })}
-      </div>
 
-      {(needle || fitOnly) && sortedJobs.length > 0 && (
-        <p className="text-[13px] text-ink-700">
-          {sortedJobs.length === 1 ? "תוצאה אחת" : `${sortedJobs.length} תוצאות`}
-          {needle ? ` עבור “${needle}”` : ""}
-          {fitOnly ? " — רק משרות עם הטכנולוגיות שלך" : ""}.
-        </p>
-      )}
-
-      {sortedJobs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {sortedJobs.map((job) => (
-            <JobCard key={job.id} {...cardProps(job)} />
-          ))}
-        </div>
-      ) : (
-        <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          {needle ? (
-            <>
-              לא מצאנו משרות שמתאימות ל“{needle}” — אפשר לנסות מילה אחרת או{" "}
-              <a href={boardHref({ fit: fitOnly })} className="text-brand-purple font-semibold">
-                לנקות את החיפוש
-              </a>{" "}
-              💜
-            </>
-          ) : fitOnly ? (
-            <>
-              אין כרגע משרות עם הטכנולוגיות שסימנת בפרופיל.{" "}
-              <a href={boardHref({})} className="text-brand-purple font-semibold">
-                להצגת כל המשרות
-              </a>{" "}
-              💜
-            </>
-          ) : (
-            "אין כאן משרות כרגע — בקרוב נוסיף עוד 💜"
-          )}
-        </div>
-      )}
+            <div className="flex gap-2.5">
+              {TABS.map((tab) => {
+                const active = tab.id === activeTab;
+                return (
+                  <a
+                    key={tab.id}
+                    href={boardHref({ type: tab.id, fit: fitOnly })}
+                    className={
+                      "flex-1 rounded-md p-3.5 px-[18px] border-[1.5px] transition-all " +
+                      (active
+                        ? "border-transparent bg-brand-gradient text-white shadow-glow-pink"
+                        : "border-ink-200 bg-white hover:border-brand-purple")
+                    }
+                  >
+                    <div className="font-display font-bold text-[15px]">{tab.label}</div>
+                    <div className={"text-xs mt-0.5 " + (active ? "opacity-85" : "text-ink-500")}>
+                      {tab.desc}
+                    </div>
+                  </a>
+                );
+              })}
+            </div>
+          </>
+        }
+        emptyFallback={
+          <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
+            {fitOnly ? (
+              <>
+                אין כרגע משרות עם הטכנולוגיות שסימנת בפרופיל.{" "}
+                <a href={boardHref({})} className="text-brand-purple font-semibold">
+                  להצגת כל המשרות
+                </a>{" "}
+                💜
+              </>
+            ) : (
+              "אין כאן משרות כרגע — בקרוב נוסיף עוד 💜"
+            )}
+          </div>
+        }
+      />
     </div>
   );
 }

@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Search } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Button } from "@/components/ui";
 import { Composer } from "@/components/patterns/composer";
+import { ForumInstantList } from "@/components/patterns/forum-instant-list";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { ForumTopicRow, topicTitle, type ForumTopic } from "@/components/patterns/forum-topic-row";
 import { TargetedJobBanner, type TargetedJobLite } from "@/components/patterns/targeted-job-banner";
@@ -30,25 +29,9 @@ type ProfileLite = {
   specialization: string | null;
 };
 
-/** `%` and `_` are ilike wildcards — a member who types them means the characters. */
-function likePattern(needle: string): string {
-  return `%${needle.replace(/[\\%_]/g, "\\$&")}%`;
-}
-
-/** "נמצאו 7 נושאים" while searching, plain "7 נושאים" while browsing. */
-function countLabel(count: number, searching: boolean): string {
-  if (count === 0) return searching ? "לא נמצאו נושאים" : "אין עדיין נושאים";
-  if (count === 1) return searching ? "נמצא נושא אחד" : "נושא אחד";
-  return `${searching ? "נמצאו " : ""}${count} נושאים`;
-}
-
-/** Keep the other filter alive when she switches this one. */
-function forumHref(params: { q?: string; saved?: boolean }): string {
-  const search = new URLSearchParams();
-  if (params.saved) search.set("saved", "1");
-  if (params.q) search.set("q", params.q);
-  const qs = search.toString();
-  return qs ? `/forum?${qs}` : "/forum";
+/** The saved toggle is the only URL state left — search filters client-side. */
+function forumHref(params: { saved?: boolean }): string {
+  return params.saved ? "/forum?saved=1" : "/forum";
 }
 
 export default async function ForumPage({
@@ -57,14 +40,15 @@ export default async function ForumPage({
   searchParams: Promise<{ q?: string; saved?: string }>;
 }) {
   const { q, saved } = await searchParams;
-  const needle = (q ?? "").trim();
+  // The topic search is instant and client-side now (ForumInstantList) — an
+  // incoming ?q= from an old link still pre-fills the box.
+  const initialQuery = (q ?? "").trim();
 
   const supabase = await createClient();
   const profile = await requireCommunityAccess();
   const canWrite = isSubscriber(profile);
   // Saving a topic is a subscriber's action (RLS), so only she has a list.
   const savedOnly = saved === "1" && canWrite;
-  const filtering = !!needle || savedOnly;
 
   // Jobs published specifically to this member (job_targets — RLS lets her
   // read her own rows). Shown as a prominent banner above the topic list.
@@ -124,13 +108,15 @@ export default async function ForumPage({
     savedIds = (saves ?? []).map((s) => s.post_id);
   }
 
-  // Both filters narrow the query itself — applied after .limit(50) they would
-  // silently search inside the newest 50 topics instead of all of them.
+  // The saved filter narrows the query itself — applied after .limit(50) it
+  // would silently pick from the newest 50 topics instead of all of them.
+  // Free-text search is different by design: it runs client-side, instantly,
+  // over the topics that are loaded — i.e. over this capped list of 50, not
+  // the whole archive (ForumInstantList notes the same on its side).
   let topicsQuery = supabase
     .from("posts")
     .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id")
     .eq("kind", "forum");
-  if (needle) topicsQuery = topicsQuery.ilike("body", likePattern(needle));
   if (savedOnly) topicsQuery = topicsQuery.in("id", savedIds);
 
   const { data: posts } =
@@ -196,6 +182,9 @@ export default async function ForumPage({
     if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
     return new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime();
   });
+  // Full bodies for the client-side search — a topic row only carries its
+  // trimmed title, but she searches the whole text.
+  const bodyById = new Map((posts ?? []).map((p) => [p.id, p.body]));
 
   return (
     <div className="flex flex-col gap-5">
@@ -214,9 +203,10 @@ export default async function ForumPage({
       <HiredBanner members={recentlyHired} />
 
       {canWrite ? (
-        // While she's searching or looking at what she saved, the box would
-        // just be noise on top of a list she came to read.
-        !filtering && <Composer kind="forum" />
+        // While she's looking at what she saved, the box would just be noise
+        // on top of a list she came to read. (The instant search keeps it —
+        // hiding it under her fingers while she types would jolt the page.)
+        !savedOnly && <Composer kind="forum" />
       ) : (
         <UpgradeCard
           title="השיחות בפורום נפתחות עם מנוי 💜"
@@ -225,30 +215,17 @@ export default async function ForumPage({
         />
       )}
 
-      {canWrite && (
-        <div className="bg-white border border-ink-200 rounded-[18px] p-4 shadow-sm flex flex-col gap-2.5">
-          <form className="flex items-center gap-2">
-            {savedOnly && <input type="hidden" name="saved" value="1" />}
-            <div className="relative flex-1">
-              <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-ink-400" />
-              <input
-                name="q"
-                defaultValue={needle}
-                autoComplete="off"
-                aria-label="חיפוש נושא בפורום"
-                placeholder="חיפוש לפי מילה בנושא או בתוכן…"
-                className="w-full text-sm border border-ink-300 rounded-md ps-9 pe-3 py-2.5 outline-none focus:border-brand-purple"
-              />
-            </div>
-            <Button type="submit" size="sm">
-              חיפוש
-            </Button>
-          </form>
-
+      {/* Instant search over the loaded topics — rows and empty states are
+          prepared here; typing only shows/hides them, nothing navigates. */}
+      <ForumInstantList
+        canWrite={canWrite}
+        savedOnly={savedOnly}
+        initialQuery={initialQuery}
+        chips={
           <div className="flex gap-2 flex-wrap">
             {[
-              { label: "כל הנושאים", href: forumHref({ q: needle }), on: !savedOnly },
-              { label: "הנושאים ששמרתי 🔖", href: forumHref({ q: needle, saved: true }), on: savedOnly },
+              { label: "כל הנושאים", href: forumHref({}), on: !savedOnly },
+              { label: "הנושאים ששמרתי 🔖", href: forumHref({ saved: true }), on: savedOnly },
             ].map((chip) => (
               <Link
                 key={chip.label}
@@ -263,43 +240,15 @@ export default async function ForumPage({
               </Link>
             ))}
           </div>
-
-          <div className="flex items-center gap-3 flex-wrap text-[12.5px] text-ink-500">
-            <span>{countLabel(topics.length, !!needle)}</span>
-            {needle && (
-              <Link
-                href={forumHref({ saved: savedOnly })}
-                className="font-semibold text-brand-purple hover:underline"
-              >
-                ניקוי החיפוש
-              </Link>
-            )}
-          </div>
-        </div>
-      )}
-
-      {topics.length === 0 ? (
-        <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          {needle
-            ? "לא מצאנו נושא שמתאים לחיפוש — אולי לנסות מילה אחרת? 💜"
-            : savedOnly
-              ? "עוד לא שמרת נושאים. בכל שיחה יש כפתור שמירה 🔖 — מה שתשמרי יחכה לך כאן 💜"
-              : canWrite
-                ? "הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?"
-                : "השיחות של הקהילה מחכות כאן מאחורי המנוי — נשמח לפתוח לך אותן 💜"}
-        </div>
-      ) : (
-        <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden divide-y divide-ink-100">
-          <div className="flex items-center px-4 py-2.5 text-[11.5px] font-bold text-ink-400 uppercase tracking-wide bg-ink-50/60">
-            <span className="flex-1">נושא</span>
-            <span className="w-20 text-center">תגובות</span>
-            <span className="hidden md:block w-16 text-end">פעילות</span>
-          </div>
-          {topics.map((t) => (
-            <ForumTopicRow key={t.id} topic={t} />
-          ))}
-        </div>
-      )}
+        }
+        items={topics.map((t) => ({
+          id: t.id,
+          // She searches the whole body ("בנושא או בתוכן") — the visible row
+          // title is just its first line.
+          haystack: bodyById.get(t.id) ?? t.title,
+          node: <ForumTopicRow topic={t} />,
+        }))}
+      />
     </div>
   );
 }
