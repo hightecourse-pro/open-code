@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -21,7 +22,9 @@ type ProfileLite = {
   specialization: string | null;
 };
 
-async function loadPost(id: string) {
+// cache()d because generateMetadata and the page body both ask for the same
+// topic — one fetch per request instead of two.
+const loadPost = cache(async (id: string) => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("posts")
@@ -30,7 +33,7 @@ async function loadPost(id: string) {
     .eq("kind", "forum")
     .maybeSingle();
   return data;
-}
+});
 
 export async function generateMetadata({
   params,

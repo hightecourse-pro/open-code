@@ -1,27 +1,36 @@
+import { cache } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile, UserRole } from "@/types/database";
 
-/** The authenticated Supabase user, or null. Validates the token server-side. */
-export async function getUser() {
+/**
+ * The authenticated Supabase user, or null. Validates the token server-side.
+ *
+ * Wrapped in React's cache() so one request validates the token ONCE, no
+ * matter how many of layout / page / generateMetadata / helpers ask — each
+ * auth.getUser() here is a real network round trip to Supabase Auth.
+ */
+export const getUser = cache(async () => {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   return user;
-}
+});
 
-/** The current user's profile row (role, status, tier…), or null if signed out. */
-export async function getProfile(): Promise<Profile | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+/**
+ * The current user's profile row (role, status, tier…), or null if signed out.
+ * cache()d like getUser: the layout and the page it wraps share one profiles
+ * row per request instead of fetching it twice.
+ */
+export const getProfile = cache(async (): Promise<Profile | null> => {
+  const user = await getUser();
   if (!user) return null;
 
+  const supabase = await createClient();
   const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single();
   return data ?? null;
-}
+});
 
 /** Redirect to /login unless signed in. Returns the profile. */
 export async function requireProfile(): Promise<Profile> {

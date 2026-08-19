@@ -7,19 +7,19 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * Messages waiting for her — the same rule the daily digest counts by: in one
- * of her conversations, written by the other side, never read. RLS already
- * limits both queries to her own threads, so no service role is needed.
+ * of her conversations, written by the other side, never read.
+ *
+ * One head-only count, no explicit conversation filter: messages RLS
+ * (messages_select) already scopes every row to a conversation she is part
+ * of, so the old two-hop version (fetch her conversation ids, then count
+ * inside them) counted exactly the same set one round trip later. Verified
+ * against the live DB: both formulas agree for every profile (2026-08-19).
  */
 async function unreadMessageCount(profileId: string): Promise<number> {
   const supabase = await createClient();
-  const { data: conversations } = await supabase.from("conversations").select("id");
-  const ids = (conversations ?? []).map((c) => c.id);
-  if (ids.length === 0) return 0;
-
   const { count } = await supabase
     .from("messages")
     .select("id", { count: "exact", head: true })
-    .in("conversation_id", ids)
     .neq("sender_id", profileId)
     .is("read_at", null);
   return count ?? 0;

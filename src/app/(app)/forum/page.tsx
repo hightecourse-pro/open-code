@@ -50,88 +50,104 @@ export default async function ForumPage({
   // Saving a topic is a subscriber's action (RLS), so only she has a list.
   const savedOnly = saved === "1" && canWrite;
 
-  // Jobs published specifically to this member (job_targets — RLS lets her
-  // read her own rows). Shown as a prominent banner above the topic list.
-  let targetedJobs: TargetedJobLite[] = [];
-  const { data: myTargets } = await supabase
-    .from("job_targets")
-    .select("job_id")
-    .eq("profile_id", profile.id);
-  const targetIds = (myTargets ?? []).map((t) => t.job_id);
-  if (targetIds.length > 0) {
-    const { data: tJobs } = await supabase
-      .from("jobs")
-      .select("id, title, company")
-      .in("id", targetIds)
-      .eq("status", "open")
-      .eq("source", "ours")
-      .eq("pipeline_status", "published")
-      .order("published_at", { ascending: false });
-    targetedJobs = tJobs ?? [];
-  }
+  // Independent reads run as ONE parallel wave — the targeted-jobs banner, the
+  // hired banner and the topic list used to chain 4-5 sequential round trips
+  // before anything below could start.
+  const [targetedJobs, recentlyHired, posts] = await Promise.all([
+    // Jobs published specifically to this member (job_targets — RLS lets her
+    // read her own rows). Shown as a prominent banner above the topic list.
+    (async (): Promise<TargetedJobLite[]> => {
+      const { data: myTargets } = await supabase
+        .from("job_targets")
+        .select("job_id")
+        .eq("profile_id", profile.id);
+      const targetIds = (myTargets ?? []).map((t) => t.job_id);
+      if (targetIds.length === 0) return [];
+      const { data: tJobs } = await supabase
+        .from("jobs")
+        .select("id, title, company")
+        .in("id", targetIds)
+        .eq("status", "open")
+        .eq("source", "ours")
+        .eq("pipeline_status", "published")
+        .order("published_at", { ascending: false });
+      return tJobs ?? [];
+    })(),
 
-  // Women who recently started a job — the whole community celebrates. Two
-  // sources: members (profiles) and off-community placements (manual_hires,
-  // admin-only RLS → service role; banner names are public by design).
-  // Names only — workplace is never shown to other members.
-  const hiredSince = hiredCelebrationSince();
-  const [{ data: hiredMembers }, { data: manualHires }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("full_name, hired_at")
-      .eq("found_job", true)
-      .gte("hired_at", hiredSince)
-      .order("hired_at", { ascending: false })
-      .limit(6),
-    createAdminClient()
-      .from("manual_hires")
-      .select("full_name, hired_at")
-      .gte("hired_at", hiredSince)
-      .order("hired_at", { ascending: false })
-      .limit(6),
+    // Women who recently started a job — the whole community celebrates. Two
+    // sources: members (profiles) and off-community placements (manual_hires,
+    // admin-only RLS → service role; banner names are public by design).
+    // Names only — workplace is never shown to other members.
+    (async () => {
+      const hiredSince = hiredCelebrationSince();
+      const [{ data: hiredMembers }, { data: manualHires }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("full_name, hired_at")
+          .eq("found_job", true)
+          .gte("hired_at", hiredSince)
+          .order("hired_at", { ascending: false })
+          .limit(6),
+        createAdminClient()
+          .from("manual_hires")
+          .select("full_name, hired_at")
+          .gte("hired_at", hiredSince)
+          .order("hired_at", { ascending: false })
+          .limit(6),
+      ]);
+      return [...(hiredMembers ?? []), ...(manualHires ?? [])]
+        .filter((h) => !!h.hired_at)
+        .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
+        .slice(0, 6)
+        .map((h) => ({ full_name: h.full_name }));
+    })(),
+
+    // The topic list itself. The saved filter narrows the query — applied
+    // after .limit(50) it would silently pick from the newest 50 topics
+    // instead of all of them, so the bookmark ids (reactions kind='save', the
+    // only place they are ever read back into a list) resolve first inside
+    // this branch. Free-text search is different by design: it runs
+    // client-side, instantly, over the topics that are loaded — i.e. over
+    // this capped list of 50, not the whole archive (ForumInstantList notes
+    // the same on its side).
+    (async () => {
+      let savedIds: string[] = [];
+      if (savedOnly) {
+        const { data: saves } = await supabase
+          .from("reactions")
+          .select("post_id")
+          .eq("profile_id", profile.id)
+          .eq("kind", "save");
+        savedIds = (saves ?? []).map((s) => s.post_id);
+        if (savedIds.length === 0) return [];
+      }
+      let topicsQuery = supabase
+        .from("posts")
+        .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id")
+        .eq("kind", "forum");
+      if (savedOnly) topicsQuery = topicsQuery.in("id", savedIds);
+      const { data } = await topicsQuery
+        .order("is_pinned", { ascending: false })
+        .order("created_at", { ascending: false })
+        .limit(50);
+      return data ?? [];
+    })(),
   ]);
-  const recentlyHired = [...(hiredMembers ?? []), ...(manualHires ?? [])]
-    .filter((h) => !!h.hired_at)
-    .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
-    .slice(0, 6)
-    .map((h) => ({ full_name: h.full_name }));
 
-  // The topics she bookmarked (reactions kind='save') — the only place they
-  // are ever read back into a list.
-  let savedIds: string[] = [];
-  if (savedOnly) {
-    const { data: saves } = await supabase
-      .from("reactions")
-      .select("post_id")
-      .eq("profile_id", profile.id)
-      .eq("kind", "save");
-    savedIds = (saves ?? []).map((s) => s.post_id);
-  }
-
-  // The saved filter narrows the query itself — applied after .limit(50) it
-  // would silently pick from the newest 50 topics instead of all of them.
-  // Free-text search is different by design: it runs client-side, instantly,
-  // over the topics that are loaded — i.e. over this capped list of 50, not
-  // the whole archive (ForumInstantList notes the same on its side).
-  let topicsQuery = supabase
-    .from("posts")
-    .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id")
-    .eq("kind", "forum");
-  if (savedOnly) topicsQuery = topicsQuery.in("id", savedIds);
-
-  const { data: posts } =
-    savedOnly && savedIds.length === 0
-      ? { data: [] }
-      : await topicsQuery
-          .order("is_pinned", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(50);
-
-  const postIds = (posts ?? []).map((p) => p.id);
+  const postIds = posts.map((p) => p.id);
+  const authorIds = [...new Set(posts.map((p) => p.author_id))];
 
   // The list needs numbers, not content: reply count + last activity per
-  // topic, and like counts. The replies themselves load on the topic page.
-  const [{ data: commentMeta }, { data: reactions }] = await Promise.all([
+  // topic, like counts, and the author cards. The replies themselves load on
+  // the topic page.
+  //
+  // NOTE: PostgREST aggregates (post_id, id.count(), created_at.max() with a
+  // group-by) would count the replies server-side, but they are disabled on
+  // this Supabase project (PGRST123 — checked 2026-08-19), so we pull the two
+  // minimal columns and fold them here. At scale the real fix is a
+  // denormalized reply_count / last_reply_at on posts — a DB migration owned
+  // elsewhere.
+  const [{ data: commentMeta }, { data: reactions }, { data: authorRows }] = await Promise.all([
     postIds.length
       ? supabase
           .from("comments")
@@ -141,6 +157,12 @@ export default async function ForumPage({
       : Promise.resolve({ data: [] }),
     postIds.length
       ? supabase.from("reactions").select("post_id, kind").in("post_id", postIds).eq("kind", "like")
+      : Promise.resolve({ data: [] }),
+    authorIds.length
+      ? supabase
+          .from("profiles")
+          .select("id, full_name, avatar_initials, role, specialization")
+          .in("id", authorIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -153,18 +175,10 @@ export default async function ForumPage({
   const likeCount = new Map<string, number>();
   for (const r of reactions ?? []) likeCount.set(r.post_id, (likeCount.get(r.post_id) ?? 0) + 1);
 
-  const authorIds = [...new Set((posts ?? []).map((p) => p.author_id))];
-  let authors: ProfileLite[] = [];
-  if (authorIds.length) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, full_name, avatar_initials, role, specialization")
-      .in("id", authorIds);
-    authors = (data ?? []) as ProfileLite[];
-  }
+  const authors = (authorRows ?? []) as ProfileLite[];
   const authorMap = new Map(authors.map((a) => [a.id, a]));
 
-  const topics: ForumTopic[] = (posts ?? []).map((p) => ({
+  const topics: ForumTopic[] = posts.map((p) => ({
     id: p.id,
     title: topicTitle(p.body),
     intent: p.intent,
@@ -184,7 +198,7 @@ export default async function ForumPage({
   });
   // Full bodies for the client-side search — a topic row only carries its
   // trimmed title, but she searches the whole text.
-  const bodyById = new Map((posts ?? []).map((p) => [p.id, p.body]));
+  const bodyById = new Map(posts.map((p) => [p.id, p.body]));
 
   return (
     <div className="flex flex-col gap-5">
