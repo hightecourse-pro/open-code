@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, Rocket, Plus, X } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import { FIELD_VALIDATORS } from "@/lib/validators";
+import { groupBySection } from "@/lib/profile-sections";
 import { CITIES } from "@/data/cities";
 import {
   DEFAULT_LANGUAGES,
@@ -49,40 +50,9 @@ const LONG_TEXT = new Set([
 ]);
 const isOtherVal = (v: string) => v === "other";
 
-// Ordered wizard sections. Questions are matched by key; anything unmatched
-// lands in a final "פרטים נוספים" step so admin-added questions still appear.
-const SECTIONS: { title: string; hint: string; keys: string[] }[] = [
-  {
-    title: "קצת עלייך",
-    hint: "פרטי קשר בסיסיים — כדי שנכיר ונדע איך לחזור אלייך.",
-    keys: ["id_number", "phone", "region", "city", "street", "house_number", "marital_status", "prev_surname", "language_skills"],
-  },
-  {
-    title: "הרקע הלימודי",
-    hint: "איפה למדת ובמה התמחית — זה עוזר לנו להתאים לך קורסים ומשרות.",
-    keys: ["study_place", "coordinator_name", "certificate", "track_specialization", "unique_courses", "graduation_year"],
-  },
-  {
-    title: "הניסיון המקצועי שלך",
-    hint: "ספרי לנו על הניסיון — ככה נדע לאילו משרות לכוון בשבילך.",
-    keys: ["years_experience", "exp_role", "exp_tech", "exp_languages", "work_history", "practical_experience", "currently_working", "current_workplace", "work_description", "specific_job"],
-  },
-  {
-    title: "כישורים וכלים",
-    hint: "מה את יודעת לעשות בפועל — רק מה שבאמת התנסית בו, בלי לחץ 💜",
-    keys: ["dev_tech", "genai_known", "genai_practiced", "ai_tools_used", "github", "ai_project_links", "live_links", "ai_gaps"],
-  },
-  {
-    title: "פרקטיקום והשמה",
-    hint: "כמה העדפות שיעזרו לנו להציע לך בדיוק את ההזדמנויות הנכונות.",
-    keys: ["practicum_done", "practicum_employer", "practicum_period", "practicum_tech", "practicum_description", "practicum_placement", "remote_commute", "paid_placement"],
-  },
-  {
-    title: "עוד משהו?",
-    hint: "משהו שתרצי שנדע עלייך? כאן המקום 🙂",
-    keys: ["notes_for_us"],
-  },
-];
+// The wizard's steps live in @/lib/profile-sections so the configuration screen
+// can group by exactly the same rule — otherwise the admin reorders a flat list
+// that the member never sees in that order.
 
 export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {} }: ProfileFormProps) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
@@ -175,15 +145,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
 
   const sectionSteps = useMemo(() => {
     if (expChoice === null) return [];
-    const used = new Set<string>();
-    const steps = SECTIONS.map((s) => {
-      const qs = rest.filter((q) => s.keys.includes(q.key) && visible(q));
-      qs.forEach((q) => used.add(q.id));
-      return { title: s.title, hint: s.hint, questions: qs };
-    }).filter((s) => s.questions.length > 0);
-    const extra = rest.filter((q) => visible(q) && !used.has(q.id));
-    if (extra.length) steps.push({ title: "פרטים נוספים", hint: "עוד כמה פרטים קטנים.", questions: extra });
-    return steps;
+    return groupBySection(rest, visible);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [expChoice, bools]);
 
@@ -281,6 +243,15 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       }
     }
     setErrors(errs);
+    // Take her to the first problem instead of leaving her to hunt for red
+    // text somewhere up a long step.
+    const firstBad = qs.find((q) => errs[q.id]);
+    if (firstBad) {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`q_${firstBad.id}`);
+        (el ?? alertRef.current)?.scrollIntoView({ behavior: "instant", block: "center" });
+      });
+    }
     return Object.keys(errs).length === 0;
   }
 
@@ -302,21 +273,26 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
     setErrors({});
     setStep(Math.min(cur + 1, totalSteps - 1));
-    toTop();
   }
   function back() {
     setErrors({});
     setStep(Math.max(0, cur - 1));
-    toTop();
   }
   /**
    * All the steps stay mounted and only toggle `hidden`, so the viewport keeps
    * the previous step's offset — after a long step she'd land mid-form instead
-   * of on the first field of the new one.
+   * of on the first field of the new one. Scrolling used to run synchronously
+   * inside next()/back(), i.e. BEFORE React committed the step swap: a smooth
+   * scroll started against the old tall layout, the document reflowed under it,
+   * and the animation visibly fought the clamp — the tester's "לא עובד חלק".
+   * Post-commit + instant lands cleanly at the top of the new step.
    */
-  function toTop() {
-    alertRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const prevStep = useRef(0);
+  useEffect(() => {
+    if (prevStep.current === cur) return;
+    prevStep.current = cur;
+    alertRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+  }, [cur]);
 
   const stepTitle = cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;
   const stepHint =
@@ -556,7 +532,26 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   }
 
   return (
-    <form ref={formRef} action={action} className="flex flex-col gap-5">
+    <form
+      ref={formRef}
+      // Manual submit, not action={action}: React 19 resets an uncontrolled
+      // form after a form-action completes, so a save that returned a
+      // validation error also wiped everything she had typed back to the
+      // stored defaults — "מילאתי ולא נשמר". Dispatching the same action inside
+      // startTransition keeps useActionState's pending/state behavior without
+      // the reset. Enter on an earlier step advances instead of submitting.
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (cur < totalSteps - 1 || expChoice === null) {
+          next();
+          return;
+        }
+        if (!validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
+        const fd = new FormData(e.currentTarget);
+        startTransition(() => action(fd));
+      }}
+      className="flex flex-col gap-5"
+    >
       <datalist id="oc-cities">
         {CITIES.map((c) => (
           <option key={c} value={c} />
@@ -672,18 +667,17 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           <span />
         )}
 
+        {/* Distinct keys, deliberately: without them React reuses one DOM node
+            for both buttons, and when next() advanced to the last step DURING
+            the click's dispatch, the node's type flipped to submit and the
+            browser fired the form action against a half-finished form —
+            skipping the final step's validation entirely (BUG-020B). */}
         {cur < totalSteps - 1 || expChoice === null ? (
-          <Button type="button" onClick={next}>
+          <Button key="next" type="button" onClick={next}>
             הבא <ChevronLeft size={16} />
           </Button>
         ) : (
-          <Button
-            type="submit"
-            disabled={pending}
-            onClick={(e) => {
-              if (!validateStep(sectionSteps[cur - 1]?.questions ?? [])) e.preventDefault();
-            }}
-          >
+          <Button key="submit" type="submit" disabled={pending}>
             {pending ? "שומר…" : "סיום ושמירה ✓"}
           </Button>
         )}

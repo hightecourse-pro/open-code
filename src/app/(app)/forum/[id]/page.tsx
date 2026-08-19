@@ -1,9 +1,11 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser, isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { PostCard, type FeedPost } from "@/components/patterns/post-card";
 import { topicTitle } from "@/components/patterns/forum-topic-row";
 import type { PostComment } from "@/components/patterns/post-interactions";
@@ -20,7 +22,9 @@ type ProfileLite = {
   specialization: string | null;
 };
 
-async function loadPost(id: string) {
+// cache()d because generateMetadata and the page body both ask for the same
+// topic — one fetch per request instead of two.
+const loadPost = cache(async (id: string) => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("posts")
@@ -29,7 +33,7 @@ async function loadPost(id: string) {
     .eq("kind", "forum")
     .maybeSingle();
   return data;
-}
+});
 
 export async function generateMetadata({
   params,
@@ -109,6 +113,10 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       </Link>
 
       <PostCard post={feedPost} canWrite={canWrite} defaultOpenComments />
+      {/* A conversation, not a page: replies from other members show up on
+          their own. Faster than the topic list — here she is actively waiting
+          for an answer. Typed-but-unsent text survives the refresh. */}
+      <AutoRefresh seconds={10} />
     </div>
   );
 }

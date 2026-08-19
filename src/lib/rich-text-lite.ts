@@ -34,10 +34,18 @@ function escapeRe(ch: string): string {
 
 /** Split one line into styled tokens. Never nests — one level is plenty. */
 function tokenizeLine(line: string): TextToken[] {
+  // The Markdown habit dies hard — **מודגש** appears in real member posts.
+  // Fold it into our single-asterisk marker before tokenizing.
+  line = line.replace(/\*\*(\S(?:[^*]*\S)?)\*\*/g, "*$1*");
   for (const { char, kind } of MARKERS) {
     const c = escapeRe(char);
-    // marker, then content that neither starts nor ends with a space, then marker
-    const re = new RegExp(`(^|[\\s([{])${c}(\\S(?:[^${c}]*\\S)?)${c}(?=$|[\\s)\\]},.!?:;])`);
+    // A marker run counts when it does not sit mid-word: anything that is not
+    // a letter or digit may border it. The old whitelist ([\s([{ before,
+    // [\s)]},.!?:; after) silently rejected quotes, gershayim, dashes, maqaf
+    // and emoji — all common in real Hebrew posts — leaving raw markers
+    // published. Content still cannot start or end with whitespace, which
+    // protects 2*3*4 and snake_case_names.
+    const re = new RegExp(`(^|[^\\p{L}\\p{N}])${c}(\\S(?:[^${c}]*\\S)?)${c}(?=$|[^\\p{L}\\p{N}])`, "u");
     const m = line.match(re);
     if (m && m.index !== undefined) {
       const before = line.slice(0, m.index + m[1].length);

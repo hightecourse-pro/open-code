@@ -1,6 +1,8 @@
 // Email sender — posts to the Google Apps Script web app (see
 // scripts/google-apps-script/). The script does the actual sending through the
 // Workspace account. Server-only.
+import { emailGate } from "@/lib/email/resend";
+
 
 export interface Recipient {
   email: string;
@@ -30,6 +32,22 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendResult> {
   const url = process.env.APPS_SCRIPT_EMAIL_URL;
   const secret = process.env.APPS_SCRIPT_EMAIL_SECRET;
   if (!url || !secret) return { ok: false, error: "email_not_configured" };
+
+  // Same environment gate as the Resend path: outside production only
+  // allowlisted addresses, and the subject says where it came from.
+  const recipients = args.recipients ?? (args.to ? [{ email: args.to, name: args.name }] : []);
+  const gates = recipients.map((r) => ({ r, gate: emailGate(r.email) }));
+  const allowed = gates.filter((g) => g.gate.ok).map((g) => g.r);
+  if (allowed.length === 0) return { ok: false, error: "blocked_by_allowlist" };
+  if (allowed.length < recipients.length) {
+    args = args.recipients
+      ? { ...args, recipients: allowed }
+      : { ...args, to: allowed[0].email, name: allowed[0].name };
+  }
+  const firstGate = gates.find((g) => g.gate.ok)?.gate;
+  if (firstGate && firstGate.ok && firstGate.subjectPrefix) {
+    args = { ...args, subject: firstGate.subjectPrefix + args.subject };
+  }
 
   try {
     const res = await fetch(url, {

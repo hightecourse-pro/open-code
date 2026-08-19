@@ -1,3 +1,4 @@
+import { CollapsibleSection } from "@/components/patterns/collapsible-section";
 import type { ApplicationStatus } from "@/types/database";
 
 export interface MyApplicationItem {
@@ -60,6 +61,8 @@ function Row({
  * "המשרות שלי" — where each of her applications stands, plus jobs we submitted
  * her to proactively (job_candidates without an application of her own).
  * Server component: the page prepares the arrays; renders nothing when empty.
+ * The card folds away (and stays folded across visits) so a member with many
+ * applications still sees the board itself.
  */
 export function MyApplications({
   applications,
@@ -71,12 +74,12 @@ export function MyApplications({
   if (applications.length === 0 && submitted.length === 0) return null;
 
   return (
-    <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
-      <div>
-        <h2 className="font-display text-[19px] font-black text-ink-1000">המשרות שלי</h2>
-        <p className="text-[13px] text-ink-700">איפה כל מועמדות שלך עומדת — הכול במקום אחד.</p>
-      </div>
-
+    <CollapsibleSection
+      title="המשרות שלי"
+      subtitle="איפה כל מועמדות שלך עומדת — הכול במקום אחד."
+      count={applications.length + submitted.length}
+      storageKey="jobs:mine"
+    >
       {applications.length > 0 && (
         <div>
           <h3 className="font-display text-[14px] font-bold text-ink-900 mb-1">
@@ -102,6 +105,6 @@ export function MyApplications({
           </div>
         </div>
       )}
-    </section>
+    </CollapsibleSection>
   );
 }

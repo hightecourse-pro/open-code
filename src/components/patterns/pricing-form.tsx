@@ -40,12 +40,12 @@ export function PricingForm({ pricing }: { pricing: Pricing }) {
             defaultValue={pricing.annualDiscountPct}
           />
         </Field>
-        <Field label="מינימום חודשים" htmlFor="p-minterm">
+        <Field label="מינימום חודשים (0 = בלי התחייבות)" htmlFor="p-minterm">
           <Input
             id="p-minterm"
             name="minTerm"
             type="number"
-            min={1}
+            min={0}
             step={1}
             dir="ltr"
             defaultValue={pricing.minTermMonths}

@@ -3,17 +3,21 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
+import { groupBySection } from "@/lib/profile-sections";
 
 export type MoveQuestionState = { error?: string };
 
 /**
- * Move one profile question up or down. The order is what a member sees inside
- * each wizard section — and the order a hiring client reads the answers in.
+ * Move one profile question up or down **within its wizard step**.
  *
- * The seeded rows share sort_order values (several are 0), so a naive swap
- * between neighbours would be a silent no-op on a tie. The list is therefore
- * normalised to 0..n-1 first — relative order is preserved, and from then on
- * every swap is meaningful.
+ * The questionnaire is a sequence of titled steps and a question belongs to one
+ * by its key, so moving a question past the end of its step would not move it
+ * anywhere a member could see — the steps themselves are fixed. The swap is
+ * therefore confined to the step, which is also what the configuration screen
+ * now shows.
+ *
+ * Afterwards every row is renumbered along the flattened step order, so
+ * sort_order and the rendered order can never drift apart again.
  */
 export async function moveQuestion(
   id: string,
@@ -22,26 +26,29 @@ export async function moveQuestion(
   await requireRole("admin");
   const supabase = await createClient();
 
-  // Same ordering the configuration screen renders, so "up" means the row
-  // she actually sees above this one.
   const { data: rows, error: readError } = await supabase
     .from("config_questions")
-    .select("id, sort_order")
+    .select("id, key, sort_order")
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   if (readError) return { error: readError.message };
 
-  const list = rows ?? [];
-  const at = list.findIndex((q) => q.id === id);
+  const sections = groupBySection(rows ?? []);
+  const section = sections.find((s) => s.questions.some((q) => q.id === id));
+  if (!section) return {};
+
+  const at = section.questions.findIndex((q) => q.id === id);
   const to = direction === "up" ? at - 1 : at + 1;
-  if (at === -1 || to < 0 || to >= list.length) return {};
+  // Already at the edge of its step — there is nowhere inside it to go.
+  if (to < 0 || to >= section.questions.length) return {};
 
-  const [moved] = list.splice(at, 1);
-  list.splice(to, 0, moved);
+  const [moved] = section.questions.splice(at, 1);
+  section.questions.splice(to, 0, moved);
 
-  // Its new index IS its new sort_order; touch only the rows whose number
-  // actually changes (after the first normalisation that's just the two).
-  for (const [i, q] of list.entries()) {
+  // Its index in the flattened wizard IS its new sort_order; touch only the
+  // rows whose number actually changes.
+  const flat = sections.flatMap((s) => s.questions);
+  for (const [i, q] of flat.entries()) {
     if (q.sort_order === i) continue;
     const { error } = await supabase
       .from("config_questions")
@@ -51,5 +58,6 @@ export async function moveQuestion(
   }
 
   revalidatePath("/admin/config");
+  revalidatePath("/profile");
   return {};
 }

@@ -5,10 +5,13 @@
 // Writes e2e/.auth/portal-qa.json for e2e/portal-flow.spec.ts to consume.
 //   node --env-file=.env.local scripts/seed-portal-qa.mjs
 // Cleanup: node --env-file=.env.local scripts/seed-portal-qa.mjs --cleanup
+import { guardTarget } from "./_guard.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { createCipheriv, randomBytes, scryptSync } from "crypto";
 import fs from "fs";
 
+
+guardTarget();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sb = createClient(url, key, { auth: { persistSession: false } });

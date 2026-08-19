@@ -96,7 +96,12 @@ export default async function Home({
           <div className="text-center mb-8">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;מנוי/&gt;</span>
             <h2 className="font-display text-[28px] font-black text-ink-1000 mt-1">דמי מנוי</h2>
-            <p className="t-body text-ink-700 mt-1">מחיר אחד, כל הערך. אפשר לבטל בכל עת אחרי {pricing.minTermMonths} החודשים הראשונים.</p>
+            <p className="t-body text-ink-700 mt-1">
+              מחיר אחד, כל הערך.{" "}
+              {pricing.minTermMonths > 0
+                ? `אפשר לבטל בכל עת אחרי ${pricing.minTermMonths} החודשים הראשונים.`
+                : "אפשר לבטל בכל עת, בלי התחייבות."}
+            </p>
           </div>
           {/* One plan, one card — centred rather than stretched, so a single
               price doesn't read like half a table with the other half missing. */}

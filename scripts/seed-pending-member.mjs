@@ -1,8 +1,11 @@
 // Creates a confirmed member left at status=pending (paid tier), so you can
 // log in and reach the /join checkout without email confirmation.
 //   node --env-file=.env.local scripts/seed-pending-member.mjs
+import { guardTarget } from "./_guard.mjs";
 import { createClient } from "@supabase/supabase-js";
 
+
+guardTarget();
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });

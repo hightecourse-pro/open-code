@@ -31,7 +31,12 @@ create policy "content_links_select" on public.content_links for select to authe
   );
 
 -- The free-tier view carries the flag so the app can show "פתוח לכולן".
-create or replace view public.sessions_public
+-- 20260720160000 already created this view without open_to_all, and
+-- CREATE OR REPLACE VIEW can only append columns — inserting open_to_all before
+-- created_at fails with "cannot change name of view column". So drop first;
+-- the grant below re-establishes access.
+drop view if exists public.sessions_public;
+create view public.sessions_public
 with (security_invoker = false) as
   select id, title, topic, scheduled_at, status, is_published, recording_id,
          canceled_at, open_to_all, created_at, updated_at

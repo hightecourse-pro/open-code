@@ -26,7 +26,8 @@ import {
 import { Alert, Avatar, Badge, Button, type BadgeProps } from "@/components/ui";
 import { loadCandidates, type CandidateDetail, type CandidateField } from "@/lib/portal/candidates";
 import { favoriteIds } from "@/lib/portal/favorites";
-import { candidateSentToClient } from "@/lib/portal/jobs";
+import { candidateSentJobs, type SentCandidateJob } from "@/lib/portal/jobs";
+import { CandidateFeedback } from "@/components/portal/candidate-feedback";
 import { FavoriteButton } from "@/components/portal/favorite-button";
 import { portalClient, requirePortalClient } from "@/app/portal/session";
 
@@ -36,8 +37,12 @@ import { portalClient, requirePortalClient } from "@/app/portal/session";
  */
 const candidates = cache(loadCandidates);
 
-/** Same collapse for the sent-to-client gate: metadata + page check once. */
-const sentToClient = cache(candidateSentToClient);
+/**
+ * Same collapse for the sent-to-client jobs: metadata gate + page body read the
+ * list once. Non-empty ⇒ the candidate was SENT to this client, and each entry
+ * carries what the invite control needs (job + the client's saved feedback).
+ */
+const sentJobs = cache(candidateSentJobs);
 
 async function findCandidate(id: string): Promise<CandidateDetail | null> {
   const { candidates: all } = await candidates();
@@ -160,7 +165,7 @@ export async function generateMetadata({
   // Even a browser-tab title must not leak a name the client isn't allowed to
   // see — apply the same sent-to-client gate the page body applies.
   const client = await portalClient();
-  if (client && !client.can_search && !(await sentToClient(client.id, candidate.id))) {
+  if (client && !client.can_search && (await sentJobs(client.id, candidate.id)).length === 0) {
     return { title: "מועמדת" };
   }
   return { title: candidate.name };
@@ -182,8 +187,11 @@ export default async function CandidateProfilePage({
   if (!candidate) notFound();
 
   // Without free search, a client may only open candidates we sent to one of
-  // her jobs; anyone else must be indistinguishable from not existing.
-  if (!client.can_search && !(await sentToClient(client.id, candidate.id))) notFound();
+  // her jobs; anyone else must be indistinguishable from not existing. The same
+  // list also powers the invite-to-interview control in the side rail — for ANY
+  // client (free search included) the candidate was sent to.
+  const sent = await sentJobs(client.id, candidate.id);
+  if (!client.can_search && sent.length === 0) notFound();
 
   const favs = await favoriteIds(client.id);
   const groups = groupFields(candidate);
@@ -301,20 +309,32 @@ export default async function CandidateProfilePage({
               הפרופיל של {candidate.name} עוד בהשלמה — בינתיים, קורות החיים שלה כאן להורדה.
             </p>
           )}
+
+          {/* The rail collapses on narrow screens — same as the CV button, the
+              invite control gets a mobile home at the end of the profile. */}
+          {sent.length > 0 && (
+            <div className="lg:hidden print:hidden">
+              <InviteRail jobs={sent} candidate={candidate} />
+            </div>
+          )}
         </div>
 
         <aside className="hidden lg:sticky lg:top-24 lg:block print:hidden">
-          <div className="rounded-[18px] border border-ink-200 bg-white p-5 shadow-sm">
-            <h2 className="font-display text-base font-bold text-ink-1000">קורות חיים</h2>
-            <p className="t-caption mt-1.5">
-              הקובץ ש{candidate.name} שיתפה איתנו, מוכן להורדה.
-            </p>
-            <Button asChild variant="primary" size="md" className="mt-4 w-full">
-              <a href={cvHref}>
-                <Download size={17} />
-                הורדת קורות חיים
-              </a>
-            </Button>
+          <div className="flex flex-col gap-4">
+            <div className="rounded-[18px] border border-ink-200 bg-white p-5 shadow-sm">
+              <h2 className="font-display text-base font-bold text-ink-1000">קורות חיים</h2>
+              <p className="t-caption mt-1.5">
+                הקובץ ש{candidate.name} שיתפה איתנו, מוכן להורדה.
+              </p>
+              <Button asChild variant="primary" size="md" className="mt-4 w-full">
+                <a href={cvHref}>
+                  <Download size={17} />
+                  הורדת קורות חיים
+                </a>
+              </Button>
+            </div>
+
+            <InviteRail jobs={sent} candidate={candidate} />
           </div>
         </aside>
       </div>
@@ -329,6 +349,40 @@ export default async function CandidateProfilePage({
           </a>
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * The invite-to-interview control, right on the profile the client is reading —
+ * the exact CandidateFeedback the job pages use, one per job the candidate was
+ * sent on, so its state is shared with the job page and the team is notified.
+ * No contact details appear anywhere: the invite goes through us, by design.
+ */
+function InviteRail({
+  jobs,
+  candidate,
+}: {
+  jobs: SentCandidateJob[];
+  candidate: CandidateDetail;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {jobs.map((job) => (
+        <div key={job.jobId}>
+          <p className="t-caption flex items-center gap-1.5">
+            <Briefcase size={13} className="shrink-0 text-ink-500" />
+            <span className="truncate">{job.jobTitle}</span>
+          </p>
+          <CandidateFeedback
+            jobId={job.jobId}
+            profileId={candidate.id}
+            candidateName={candidate.name}
+            initialMarked={job.interviewMarked}
+            initialNote={job.clientNote}
+          />
+        </div>
+      ))}
     </div>
   );
 }

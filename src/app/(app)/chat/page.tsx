@@ -38,31 +38,92 @@ export default async function ChatPage({
     .select("id, a_id, b_id, last_message_at")
     .order("last_message_at", { ascending: false });
 
-  // Resolve the "other" participant for each conversation.
+  const active = (conversations ?? []).find((c) => c.id === activeId) ?? null;
   const otherIds = [...new Set((conversations ?? []).map((c) => (c.a_id === me.id ? c.b_id : c.a_id)))];
-  const { data: others } = otherIds.length
-    ? await supabase
-        .from("profiles")
-        .select("id, full_name, avatar_initials, role, status, specialization")
-        .in("id", otherIds)
-    : { data: [] };
-  const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
+  const conversationIds = (conversations ?? []).map((c) => c.id);
 
-  // Which of these women is the mentor an admin actually matched her with —
-  // otherwise her mentor looks like any other thread in the list. kind='general'
-  // only: an employment accompaniment is a placement companion, not the mentor
-  // this crown and the interview hint below are talking about.
-  const { data: assignments } = await supabase
-    .from("mentor_requests")
-    .select("assigned_mentor_id")
-    .eq("profile_id", me.id)
-    .eq("kind", "general")
-    .not("assigned_mentor_id", "is", null);
+  // Everything that only needs the conversation list runs as ONE parallel
+  // wave — this used to be 5 sequential round trips before first paint.
+  //
+  // The mark-read UPDATE rides in the same wave instead of blocking it:
+  // opening the thread reads it, via the service role because RLS doesn't let
+  // a recipient update a sender's rows — safe here since `active` came from
+  // the member's own conversation list. read_at drives both the mentor
+  // "first new message" email and the digest's unread count, so without it
+  // both fire forever. Because the unread query below runs concurrently with
+  // it, the thread she just opened may keep its unread dot for this one
+  // render — the next refresh clears it, a fair trade for not serializing a
+  // write before every paint.
+  const [
+    { data: others },
+    { data: assignments },
+    { data: newestMessages },
+    ,
+    { data: recentMessages },
+    { data: unreadRows },
+  ] = await Promise.all([
+    // Resolve the "other" participant for each conversation.
+    otherIds.length
+      ? supabase
+          .from("profiles")
+          .select("id, full_name, avatar_initials, role, status, specialization")
+          .in("id", otherIds)
+      : Promise.resolve({ data: [] }),
+    // Which of these women is the mentor an admin actually matched her with —
+    // otherwise her mentor looks like any other thread in the list. kind='general'
+    // only: an employment accompaniment is a placement companion, not the mentor
+    // this crown and the interview hint below are talking about.
+    supabase
+      .from("mentor_requests")
+      .select("assigned_mentor_id")
+      .eq("profile_id", me.id)
+      .eq("kind", "general")
+      .not("assigned_mentor_id", "is", null),
+    // The newest 200 only — a years-long thread must not decide how long the
+    // page blocks. Fetched newest-first so the LIMIT keeps the right end,
+    // reversed back to chronological below.
+    active
+      ? supabase
+          .from("messages")
+          .select("id, sender_id, body, created_at")
+          .eq("conversation_id", active.id)
+          .order("created_at", { ascending: false })
+          .limit(200)
+      : Promise.resolve({ data: [] }),
+    active
+      ? createAdminClient()
+          .from("messages")
+          .update({ read_at: new Date().toISOString() })
+          .eq("conversation_id", active.id)
+          .neq("sender_id", me.id)
+          .is("read_at", null)
+      : Promise.resolve(null),
+    // The list needs to say what happened, not just when: a preview per
+    // thread and which ones are still waiting for her. One window over the
+    // newest messages instead of a query per row — an older thread simply
+    // shows no preview.
+    conversationIds.length
+      ? supabase
+          .from("messages")
+          .select("conversation_id, sender_id, body, created_at")
+          .in("conversation_id", conversationIds)
+          .order("created_at", { ascending: false })
+          .limit(150)
+      : Promise.resolve({ data: [] }),
+    conversationIds.length
+      ? supabase
+          .from("messages")
+          .select("conversation_id")
+          .in("conversation_id", conversationIds)
+          .neq("sender_id", me.id)
+          .is("read_at", null)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
   const myMentorIds = new Set(
     (assignments ?? []).map((a) => a.assigned_mentor_id).filter((id): id is string => !!id)
   );
-
-  const active = (conversations ?? []).find((c) => c.id === activeId) ?? null;
   const activeOther = active ? otherMap.get(active.a_id === me.id ? active.b_id : active.a_id) : null;
 
   // Members talk to each other — that is what the directory is for. The only
@@ -72,50 +133,8 @@ export default async function ChatPage({
   const subscriber = isSubscriber(me);
   const canSend = subscriber && !!activeOther && activeOther.status === "active";
 
-  const { data: messages } = active
-    ? await supabase
-        .from("messages")
-        .select("id, sender_id, body, created_at")
-        .eq("conversation_id", active.id)
-        .order("created_at", { ascending: true })
-    : { data: [] };
-
-  // Opening the thread reads it: mark the other side's messages as read.
-  // Service role because RLS doesn't let a recipient update a sender's rows —
-  // safe here since `active` came from the member's own conversation list.
-  // read_at drives both the mentor "first new message" email and the digest's
-  // unread count, so without this both fire forever.
-  if (active) {
-    await createAdminClient()
-      .from("messages")
-      .update({ read_at: new Date().toISOString() })
-      .eq("conversation_id", active.id)
-      .neq("sender_id", me.id)
-      .is("read_at", null);
-  }
-
-  // The list needs to say what happened, not just when: a preview per thread
-  // and which ones are still waiting for her. Both run after the mark-read
-  // above, so the thread she just opened stops shouting at her.
-  const conversationIds = (conversations ?? []).map((c) => c.id);
-  const [{ data: recentMessages }, { data: unreadRows }] = conversationIds.length
-    ? await Promise.all([
-        // One window over the newest messages instead of a query per row — an
-        // older thread simply shows no preview.
-        supabase
-          .from("messages")
-          .select("conversation_id, sender_id, body, created_at")
-          .in("conversation_id", conversationIds)
-          .order("created_at", { ascending: false })
-          .limit(150),
-        supabase
-          .from("messages")
-          .select("conversation_id")
-          .in("conversation_id", conversationIds)
-          .neq("sender_id", me.id)
-          .is("read_at", null),
-      ])
-    : [{ data: [] }, { data: [] }];
+  // Chronological again for display (fetched newest-first for the LIMIT).
+  const messages = [...(newestMessages ?? [])].reverse();
 
   const lastMessage = new Map<string, { body: string; mine: boolean }>();
   for (const m of recentMessages ?? []) {
@@ -138,9 +157,23 @@ export default async function ChatPage({
     <div className="flex flex-col gap-5">
       <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-4 min-h-[480px]">
+      {/* Bounded to the viewport so the thread scrolls inside its own pane and
+          the composer stays on screen — the page itself never scrolls to chat.
+          On mobile the panes stack: the list keeps its natural height (capped),
+          the thread takes whatever is left. The constants are the measured
+          space above the grid (page padding + title) plus the bottom padding;
+          a free member also has the join banner overhead, taller where it
+          wraps on a narrow screen. */}
+      <div
+        className={cn(
+          "grid grid-cols-1 grid-rows-[auto_minmax(0,1fr)] md:grid-rows-[minmax(0,1fr)] md:grid-cols-[260px_1fr] gap-4 min-h-[420px]",
+          subscriber
+            ? "h-[calc(100dvh-120px)]"
+            : "h-[calc(100dvh-228px)] md:h-[calc(100dvh-186px)]"
+        )}
+      >
         {/* conversation list */}
-        <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm">
+        <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm min-h-0 max-h-[35dvh] md:max-h-none overflow-y-auto">
           {conversations && conversations.length > 0 ? (
             conversations.map((c) => {
               const other = otherMap.get(c.a_id === me.id ? c.b_id : c.a_id);
@@ -213,7 +246,7 @@ export default async function ChatPage({
         </div>
 
         {/* thread */}
-        <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm flex flex-col">
+        <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm flex flex-col min-h-0 overflow-hidden">
           {active && activeOther ? (
             <>
               <div className="flex items-center gap-2.5 p-3.5 border-b border-ink-100">
@@ -243,7 +276,7 @@ export default async function ChatPage({
               </div>
 
               <ChatThread
-                messages={messages ?? []}
+                messages={messages}
                 meId={me.id}
                 action={canSend ? sendMessage.bind(null, active.id) : undefined}
                 hint={

@@ -1,13 +1,16 @@
 // Promotes a user (by email) to admin + active.
 //   node --env-file=.env.local scripts/make-admin.mjs someone@example.com
+import { guardTarget } from "./_guard.mjs";
 import { createClient } from "@supabase/supabase-js";
 
+
+guardTarget();
 const email = process.argv[2] || "saraavi.ezra@gmail.com";
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
-const { data: list } = await sb.auth.admin.listUsers();
+const { data: list } = await sb.auth.admin.listUsers({ page: 1, perPage: 1000 });
 const user = list?.users.find((u) => u.email === email);
 if (!user) {
   console.log(`❌ no user with email ${email}`);

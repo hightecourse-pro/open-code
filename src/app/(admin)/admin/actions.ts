@@ -15,11 +15,13 @@ import {
   jobPublishedEmail,
 } from "@/lib/email/templates";
 import { queueRevokeAll } from "@/lib/drive-shares";
+import { activateSubscription } from "@/lib/payments/subscription";
 import { loadAudiencePools } from "@/lib/admin/audience";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { decryptPassword } from "@/lib/portal/auth";
 import { getSiteUrl } from "@/lib/site";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { buildTechLabelMap, techKey } from "@/lib/tech-match";
 import type {
   ApplicationStatus,
   ClientCrmStatus,
@@ -330,6 +332,53 @@ export async function saveInternalNotes(id: string, notes: string): Promise<CrmS
   return {};
 }
 
+/**
+ * רישום תשלום ידני — the fallback for a real charge whose CallBack never
+ * arrived (or arrived broken). Flipping the profile to active by hand creates
+ * a ghost: no subscription row, so she never expires and appears in no
+ * payment report. This goes through activateSubscription — the same single
+ * door the webhook uses — so a subscription AND a payment row are written,
+ * and if the CallBack shows up later the webhook's idempotency check finds
+ * the asmachta already recorded and skips it.
+ */
+export async function recordManualPayment(
+  profileId: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+  const transactionId = String(formData.get("asmachta") ?? "").trim();
+  const amountShekels = Number(formData.get("amount"));
+  if (!transactionId) {
+    return { error: "צריך את מספר האסמכתא מנדרים — בלעדיו אי אפשר לזהות את החיוב." };
+  }
+  if (!Number.isFinite(amountShekels) || amountShekels <= 0) {
+    return { error: "סכום לא תקין." };
+  }
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("payments")
+    .select("id")
+    .eq("provider_payment_id", transactionId)
+    .maybeSingle();
+  if (existing) {
+    return { error: "האסמכתא הזו כבר רשומה — התשלום נקלט, אין צורך לרשום שוב." };
+  }
+
+  await activateSubscription({
+    profileId,
+    plan: "monthly",
+    providerPaymentId: transactionId,
+    amountAgorot: Math.round(amountShekels * 100),
+    raw: { manual: true, recordedBy: "admin", at: new Date().toISOString() },
+  });
+
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
+  return {};
+}
+
 /** Approve / reject / pause a member. Admin-gated (action + RLS + role check). */
 export async function setMemberStatus(profileId: string, status: ProfileStatus) {
   await requireRole("admin");
@@ -462,7 +511,8 @@ export async function updatePricing(
   if (!Number.isFinite(annualDiscountPct) || annualDiscountPct < 0 || annualDiscountPct > 100) {
     return { error: "אחוז הנחה צריך להיות בין 0 ל-100." };
   }
-  if (!Number.isFinite(minTermMonths) || minTermMonths < 1) {
+  // 0 is a real choice — it means no commitment, and the join screen says so.
+  if (!Number.isFinite(minTermMonths) || minTermMonths < 0) {
     return { error: "מינימום חודשים לא תקין." };
   }
 
@@ -627,10 +677,36 @@ function sanitizeJobQuestion(
   return { question, answer_type, options, required };
 }
 
+/**
+ * Free-typed tech tags settle to the taxonomy's label when recognized —
+ * "pyton" and "SQL..." were live on the board, and free text that matches
+ * nothing in the taxonomy is exactly what broke profile matching (BUG-007).
+ * Unrecognized tags stay as typed; matching canonicalizes anyway.
+ */
+async function normalizeTechTags(tags: string[]): Promise<string[]> {
+  if (tags.length === 0) return tags;
+  const { data } = await createAdminClient()
+    .from("config_taxonomies")
+    .select("value, label_he")
+    .eq("kind", "tech");
+  const labelByKey = buildTechLabelMap(data ?? []);
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const tag of tags) {
+    const pretty = labelByKey.get(techKey(tag)) ?? tag;
+    const key = techKey(pretty);
+    if (seen.has(key)) continue; // "JS, javascript" collapses to one tag
+    seen.add(key);
+    out.push(pretty);
+  }
+  return out;
+}
+
 /** Post a new job to the board. */
 export async function createJob(_prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
   const fields = jobFields(formData);
+  fields.tech_tags = await normalizeTechTags(fields.tech_tags);
   const err = validateJob(fields);
   if (err) return { error: err };
 
@@ -721,7 +797,9 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
 /** Edit an existing job. */
 export async function editJob(jobId: string, _prev: FormState, formData: FormData): Promise<FormState> {
   await requireRole("admin");
-  const f = withDerivedDescription(jobFields(formData));
+  const fields = jobFields(formData);
+  fields.tech_tags = await normalizeTechTags(fields.tech_tags);
+  const f = withDerivedDescription(fields);
   const err = validateJob(f);
   if (err) return { error: err };
   const supabase = await createClient();
@@ -1006,7 +1084,10 @@ function jobExcerpt(html: string | null, fallback: string, max = 200): string {
  */
 export async function publishJob(
   jobId: string,
-  profileIds: string[]
+  profileIds: string[],
+  /** Hand-picked additions ("מעבר לקריטריונים") — recorded as source 'manual'
+      so criteria-matched and hand-picked targets stay distinguishable. */
+  manualIds: string[] = []
 ): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number }> {
   await requireRole("admin");
   const admin = createAdminClient();
@@ -1021,8 +1102,13 @@ export async function publishJob(
   const ids = [...new Set(profileIds.filter(Boolean))];
   if (ids.length === 0) return { error: "בחרי לפחות חברה אחת לפרסום המשרה." };
 
+  const manual = new Set(manualIds);
   const { error: targetsError } = await admin.from("job_targets").upsert(
-    ids.map((profile_id) => ({ job_id: jobId, profile_id, source: "criteria" as const })),
+    ids.map((profile_id) => ({
+      job_id: jobId,
+      profile_id,
+      source: (manual.has(profile_id) ? "manual" : "criteria") as "manual" | "criteria",
+    })),
     { onConflict: "job_id,profile_id", ignoreDuplicates: true }
   );
   if (targetsError) {

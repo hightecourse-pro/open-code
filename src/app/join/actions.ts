@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { isProductionEnv } from "@/lib/env";
 import { getUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isNedarimConfigured } from "@/lib/payments/nedarim";
@@ -31,7 +32,7 @@ export async function simulatePayment(plan: SubscriptionPlan): Promise<{ error?:
   // Hard-blocked in production regardless of env state: the real Nedarim
   // CallBack is the only thing that may activate a paid membership there.
   // Without this, a missing env var would let anyone self-activate for free.
-  if (process.env.NODE_ENV === "production" || isNedarimConfigured()) {
+  if (isProductionEnv() || process.env.NODE_ENV === "production" || isNedarimConfigured()) {
     return { error: "סימולציה זמינה רק בסביבת פיתוח (לפני חיבור נדרים פלוס)." };
   }
   const user = await getUser();

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { appEnv, isProductionEnv } from "@/lib/env";
 import { checkDriveAccess } from "@/lib/drive-api";
 import { processShareQueue } from "@/lib/drive-shares";
 
@@ -25,6 +26,13 @@ function authorized(request: Request): boolean {
 export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // The schedule ships in vercel.json, so a staging deployment gets it too —
+  // and this nightly run emails real people and pauses real subscriptions.
+  // Outside production it reports itself and does nothing.
+  if (!isProductionEnv()) {
+    return NextResponse.json({ skipped: "not_production", env: appEnv() });
   }
   // Surfaces *why* nothing happens (bad key, wrong service account, …) —
   // useful when testing the setup by hand.

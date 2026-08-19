@@ -14,6 +14,14 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    // An unconfirmed address used to get "wrong password" — so she retried
+    // passwords, hit reset flows, and filed bug reports. Name the real reason.
+    if (error.code === "email_not_confirmed") {
+      return {
+        error:
+          "הכתובת עוד לא אושרה — שלחנו לך מייל אישור בהרשמה. בדקי את התיבה (גם בספאם) 💌",
+      };
+    }
     return { error: "האימייל או הסיסמה לא נכונים. בואי ננסה שוב." };
   }
   redirect("/forum");

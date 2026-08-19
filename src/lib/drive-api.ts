@@ -14,6 +14,7 @@
 // exactly as before, and shares stay in the manual queue.
 
 import crypto from "crypto";
+import { isProductionEnv } from "@/lib/env";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const DRIVE = "https://www.googleapis.com/drive/v3";
@@ -101,6 +102,9 @@ async function driveFetch(path: string, init: RequestInit = {}): Promise<Respons
  * permission is left as-is.
  */
 export async function grantReadAccess(fileId: string, email: string): Promise<void> {
+  if (!isProductionEnv()) {
+    throw new Error("drive_write_blocked_outside_production");
+  }
   const body = JSON.stringify({ role: "reader", type: "user", emailAddress: email });
   const qs = "supportsAllDrives=true&sendNotificationEmail=false";
 
@@ -139,6 +143,9 @@ export async function grantReadAccess(fileId: string, email: string): Promise<vo
  * missing the match would silently leave access in place.
  */
 export async function revokeAccess(fileId: string, email: string): Promise<void> {
+  if (!isProductionEnv()) {
+    throw new Error("drive_write_blocked_outside_production");
+  }
   const needle = email.toLowerCase();
   let pageToken: string | undefined;
 

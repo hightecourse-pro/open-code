@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isResendConfigured, sendResendEmail } from "@/lib/email/resend";
 import { dailyDigestEmail } from "@/lib/email/templates";
@@ -27,6 +28,13 @@ function authorized(req: Request): boolean {
  */
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  // The schedule ships in vercel.json, so a staging deployment gets it too —
+  // and this nightly run emails real people and pauses real subscriptions.
+  // Outside production it reports itself and does nothing.
+  if (!isProductionEnv()) {
+    return NextResponse.json({ skipped: "not_production", env: appEnv() });
+  }
   if (!isResendConfigured()) return NextResponse.json({ error: "resend_not_configured" }, { status: 500 });
 
   const url = new URL(req.url);

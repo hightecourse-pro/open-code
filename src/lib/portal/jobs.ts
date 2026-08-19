@@ -78,25 +78,54 @@ export async function loadClientJobs(clientId: string): Promise<ClientJob[]> {
   }));
 }
 
+/** One client job on which a candidate was SENT, with the client's own feedback. */
+export interface SentCandidateJob {
+  jobId: string;
+  jobTitle: string;
+  interviewMarked: boolean;
+  clientNote: string | null;
+}
+
+/**
+ * The client's jobs on which we SENT this candidate — job_candidates rows on
+ * the client's jobs with sent_at stamped — each with the client's own feedback
+ * (interview mark + note), so the candidate page can offer the invite control
+ * right where the client is reading. An empty array is the same privacy gate
+ * candidateSentToClient enforces: never sent ⇒ nothing to show.
+ */
+export async function candidateSentJobs(
+  clientId: string,
+  profileId: string
+): Promise<SentCandidateJob[]> {
+  const admin = createAdminClient();
+  const { data: jobs } = await admin.from("jobs").select("id, title").eq("client_id", clientId);
+  if (!jobs?.length) return [];
+  const titleOf = new Map(jobs.map((j) => [j.id, j.title]));
+
+  const { data: rows } = await admin
+    .from("job_candidates")
+    .select("job_id, interview_marked, client_note, created_at")
+    .eq("profile_id", profileId)
+    .in("job_id", jobs.map((j) => j.id))
+    .not("sent_at", "is", null)
+    .order("created_at", { ascending: true });
+
+  return (rows ?? []).map((r) => ({
+    jobId: r.job_id,
+    jobTitle: titleOf.get(r.job_id) ?? "",
+    interviewMarked: r.interview_marked === true,
+    clientNote: r.client_note ?? null,
+  }));
+}
+
 /**
  * Whether we ever SENT this candidate to this client — a job_candidates row on
  * one of the client's jobs with sent_at stamped. This is the privacy gate for
  * clients without free search: any other candidate must look nonexistent.
  */
 export async function candidateSentToClient(clientId: string, profileId: string): Promise<boolean> {
-  const admin = createAdminClient();
-  const { data: jobs } = await admin.from("jobs").select("id").eq("client_id", clientId);
-  if (!jobs?.length) return false;
-
-  const { data: row } = await admin
-    .from("job_candidates")
-    .select("id")
-    .eq("profile_id", profileId)
-    .in("job_id", jobs.map((j) => j.id))
-    .not("sent_at", "is", null)
-    .limit(1)
-    .maybeSingle();
-  return !!row;
+  const sent = await candidateSentJobs(clientId, profileId);
+  return sent.length > 0;
 }
 
 /**

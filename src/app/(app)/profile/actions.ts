@@ -345,6 +345,11 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   const stored = new Map((storedRows ?? []).map((r) => [r.question_id, r.value]));
 
   const savedAt = new Date().toISOString();
+  // Every one of these used to be fired and forgotten. A failure — a policy, a
+  // constraint, a dropped connection — left the profile marked "completed" with
+  // the answers missing, and told her it had been saved. Nothing about that is
+  // recoverable after the fact, so a failure has to stop and say so.
+  const failures: string[] = [];
   for (const a of answered) {
     if (stored.has(a.question_id) && stableJson(stored.get(a.question_id)) === stableJson(a.value)) {
       continue; // unchanged — leave the row (and its updated_at) alone
@@ -358,11 +363,30 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       value: a.value,
       updated_at: savedAt,
     };
-    await supabase
+    const { error: saveError } = await supabase
       .from("profile_answers")
       .upsert(payload as Database["public"]["Tables"]["profile_answers"]["Insert"], {
         onConflict: "profile_id,question_id",
       });
+    if (saveError) failures.push(`${a.question_id}: ${saveError.message}`);
+  }
+
+  if (failures.length > 0) {
+    // Put the profile back the way it was, so she is not locked out of the
+    // questionnaire believing it is done while her answers are not stored.
+    if (firstCompletion) {
+      await supabase.from("profiles").update({ profile_completed: false }).eq("id", user.id);
+    }
+    console.error(
+      `[profile] ${failures.length}/${answered.length} answers failed to save for ${user.id}:`,
+      failures.slice(0, 5).join(" | ")
+    );
+    return {
+      error:
+        failures.length === answered.length
+          ? "לא הצלחנו לשמור את התשובות שלך. בבקשה נסי שוב — ואם זה חוזר, כתבי לנו ונטפל בזה."
+          : `חלק מהתשובות לא נשמרו (${failures.length} מתוך ${answered.length}). בבקשה נסי לשמור שוב.`,
+    };
   }
 
   revalidatePath("/profile");

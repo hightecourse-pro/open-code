@@ -11,7 +11,11 @@ function merge(value: unknown): Pricing {
     annualDiscountPct: Number.isFinite(Number(v.annualDiscountPct))
       ? Number(v.annualDiscountPct)
       : DEFAULT_PRICING.annualDiscountPct,
-    minTermMonths: Number(v.minTermMonths) || DEFAULT_PRICING.minTermMonths,
+    // `|| default` would quietly turn a deliberate 0 (no minimum term) back
+    // into the default — so test for a finite number, not for truthiness.
+    minTermMonths: Number.isFinite(Number(v.minTermMonths))
+      ? Math.max(0, Number(v.minTermMonths))
+      : DEFAULT_PRICING.minTermMonths,
   };
 }
 

@@ -25,6 +25,15 @@ export function shekels(agorot: number): string {
 }
 
 /** Derive the monthly + annual plans from the admin-set pricing. */
+/**
+ * How the commitment reads to a member. With no minimum term there is nothing
+ * to name, and "מינימום 0 חודשים" would be worse than saying nothing — so the
+ * reassuring half of the sentence is what she sees instead.
+ */
+export function termNote(minTermMonths: number): string {
+  return minTermMonths > 0 ? `מינימום ${minTermMonths} חודשים` : "אפשר לבטל בכל עת";
+}
+
 export function buildPlans(pricing: Pricing): Record<SubscriptionPlan, Plan> {
   const monthly = pricing.monthlyAgorot;
   const annual = Math.round(monthly * 12 * (1 - pricing.annualDiscountPct / 100));
@@ -35,7 +44,7 @@ export function buildPlans(pricing: Pricing): Record<SubscriptionPlan, Plan> {
       label: "מנוי חודשי",
       amountAgorot: monthly,
       periodMonths: 1,
-      note: `${shekels(monthly)} ₪ לחודש · מינימום ${pricing.minTermMonths} חודשים`,
+      note: `${shekels(monthly)} ₪ לחודש · ${termNote(pricing.minTermMonths)}`,
     },
     annual: {
       id: "annual",
