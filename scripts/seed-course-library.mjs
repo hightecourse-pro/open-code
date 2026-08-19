@@ -7,11 +7,14 @@
 // re-running replaces each seeded course's units and links.
 //
 // Usage: node scripts/seed-course-library.mjs
+import { guardTarget } from "./_guard.mjs";
 import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { createClient } from "@supabase/supabase-js";
 
+
+guardTarget();
 const HERE = dirname(fileURLToPath(import.meta.url));
 const env = Object.fromEntries(
   readFileSync(join(HERE, "..", ".env.local"), "utf8")

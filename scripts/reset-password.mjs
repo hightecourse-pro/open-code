@@ -1,7 +1,10 @@
 // Resets a user's password and confirms their email (admin).
 //   node --env-file=.env.local scripts/reset-password.mjs <email> <password>
+import { guardTarget } from "./_guard.mjs";
 import { createClient } from "@supabase/supabase-js";
 
+
+guardTarget();
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });

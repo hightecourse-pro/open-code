@@ -23,6 +23,7 @@
 // admin actions it by hand — exactly the behaviour before automation existed.
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isProductionEnv } from "@/lib/env";
 import { driveFileId } from "@/lib/drive";
 import {
   NotAGoogleAccountError,
@@ -362,6 +363,14 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
     gmailRequested: 0,
   };
   if (!result.configured) return result;
+  // One Google service account serves BOTH environments (owner decision), so
+  // the only thing between a staging test and a real member losing access to
+  // her course material is this gate. Outside production the queue is
+  // read-only: rows stay visible in /admin/shares, nothing reaches Google.
+  if (!isProductionEnv()) {
+    console.log("[drive] share queue untouched — not production");
+    return result;
+  }
 
   const admin = createAdminClient();
 

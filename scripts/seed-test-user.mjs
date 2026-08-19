@@ -1,8 +1,11 @@
 // Creates (or reuses) a test admin user and promotes her to active+admin.
 // Verifies the on_auth_user_created trigger and the guard-column fix.
 //   node --env-file=.env.local scripts/seed-test-user.mjs
+import { guardTarget } from "./_guard.mjs";
 import { createClient } from "@supabase/supabase-js";
 
+
+guardTarget();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sb = createClient(url, key, { auth: { persistSession: false } });

@@ -1,7 +1,10 @@
 // Creates (or reuses) the office admin user for testing, fully active + admin.
 //   node --env-file=.env.local scripts/create-office-admin.mjs
+import { guardTarget } from "./_guard.mjs";
 import { createClient } from "@supabase/supabase-js";
 
+
+guardTarget();
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const sb = createClient(url, key, { auth: { persistSession: false } });

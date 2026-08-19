@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deactivateSubscription } from "@/lib/payments/subscription";
 import { processShareQueue } from "@/lib/drive-shares";
@@ -27,6 +28,13 @@ function authorized(request: Request): boolean {
 export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // The schedule ships in vercel.json, so a staging deployment gets it too —
+  // and this nightly run emails real people and pauses real subscriptions.
+  // Outside production it reports itself and does nothing.
+  if (!isProductionEnv()) {
+    return NextResponse.json({ skipped: "not_production", env: appEnv() });
   }
   const dryRun = new URL(request.url).searchParams.get("dry") === "1";
 
