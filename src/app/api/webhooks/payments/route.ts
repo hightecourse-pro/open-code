@@ -152,9 +152,13 @@ export async function POST(req: Request) {
     record.outcome = outcome;
     console.warn("[webhook/payments] rejected:", outcome, record);
     await logEvent(record);
-    // "ignored_incomplete" is Nedarim's own noise (a failed card, a probe) —
-    // not a payment we lost, so it doesn't wake anyone.
-    if (outcome !== "ignored_incomplete" && outcome !== "duplicate_ignored") {
+    // "ignored_incomplete" from an UNAUTHENTICATED caller is internet noise.
+    // The same payload from Nedarim itself is a different animal: most likely
+    // a renewal callback that arrived without Param1/Param2 — a member whose
+    // card was charged while nothing was recorded, who will be silently paused
+    // 33 days later. That one wakes someone. Duplicates never do.
+    const authedIncomplete = outcome === "ignored_incomplete" && !!record.authedBy;
+    if ((outcome !== "ignored_incomplete" && outcome !== "duplicate_ignored") || authedIncomplete) {
       await alertAdmins(record);
     }
     return NextResponse.json({ error }, { status });

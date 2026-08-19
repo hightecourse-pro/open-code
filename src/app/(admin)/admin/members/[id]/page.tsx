@@ -9,6 +9,7 @@ import { Avatar, Badge } from "@/components/ui";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
+import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
 import {
   EmploymentMentorAssign,
   MemberEmploymentForm,
@@ -443,6 +444,16 @@ export default async function AdminMemberProfilePage({
           </div>
         </div>
         <MemberActions profileId={profile.id} status={profile.status} />
+      </div>
+
+      {/* Manual payment — the webhook-failed fallback. Kept next to the status
+          actions so "flip her to active by hand" has a correct alternative in
+          sight: this one creates the subscription and payment rows too. */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
+        <h3 className="font-display text-base font-bold flex items-center gap-1.5">
+          💳 רישום תשלום ידני
+        </h3>
+        <ManualPaymentForm profileId={profile.id} />
       </div>
 
       {/* Employment — admin-editable, incl. retroactive hired-via-us marking */}

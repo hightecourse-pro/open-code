@@ -15,6 +15,7 @@ import {
   jobPublishedEmail,
 } from "@/lib/email/templates";
 import { queueRevokeAll } from "@/lib/drive-shares";
+import { activateSubscription } from "@/lib/payments/subscription";
 import { loadAudiencePools } from "@/lib/admin/audience";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { decryptPassword } from "@/lib/portal/auth";
@@ -328,6 +329,53 @@ export async function saveInternalNotes(id: string, notes: string): Promise<CrmS
   revalidatePath("/admin/members");
   revalidatePath(`/admin/members/${id}`);
   if (error) return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
+  return {};
+}
+
+/**
+ * רישום תשלום ידני — the fallback for a real charge whose CallBack never
+ * arrived (or arrived broken). Flipping the profile to active by hand creates
+ * a ghost: no subscription row, so she never expires and appears in no
+ * payment report. This goes through activateSubscription — the same single
+ * door the webhook uses — so a subscription AND a payment row are written,
+ * and if the CallBack shows up later the webhook's idempotency check finds
+ * the asmachta already recorded and skips it.
+ */
+export async function recordManualPayment(
+  profileId: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+  const transactionId = String(formData.get("asmachta") ?? "").trim();
+  const amountShekels = Number(formData.get("amount"));
+  if (!transactionId) {
+    return { error: "צריך את מספר האסמכתא מנדרים — בלעדיו אי אפשר לזהות את החיוב." };
+  }
+  if (!Number.isFinite(amountShekels) || amountShekels <= 0) {
+    return { error: "סכום לא תקין." };
+  }
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("payments")
+    .select("id")
+    .eq("provider_payment_id", transactionId)
+    .maybeSingle();
+  if (existing) {
+    return { error: "האסמכתא הזו כבר רשומה — התשלום נקלט, אין צורך לרשום שוב." };
+  }
+
+  await activateSubscription({
+    profileId,
+    plan: "monthly",
+    providerPaymentId: transactionId,
+    amountAgorot: Math.round(amountShekels * 100),
+    raw: { manual: true, recordedBy: "admin", at: new Date().toISOString() },
+  });
+
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
   return {};
 }
 
