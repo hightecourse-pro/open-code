@@ -23,7 +23,8 @@ import {
   parseExperienceEntries,
   practicumPeriodLabel,
 } from "@/lib/experience-entries";
-import type { ConfigQuestion } from "@/types/database";
+import { groupBySection } from "@/lib/profile-sections";
+import type { ConfigQuestion, QuestionScope } from "@/types/database";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
 
@@ -348,10 +349,42 @@ export default async function AdminMemberProfilePage({
     return "—";
   }
 
-  const answered = (questions ?? []).filter((q) => {
+  function hasAnswer(q: ConfigQuestion): boolean {
     const v = answerMap.get(q.id);
     return !(v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0));
-  });
+  }
+
+  // Which questions does HER wizard actually show? Same rules as the member
+  // form: scope by role, the experience track, and bool parents (depends_on
+  // holds the parent question's key). Rendering only answered questions hid
+  // every newly activated question — staff had no way to see it on any member.
+  const scope: QuestionScope[] =
+    profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
+  const boolAnswerByKey = new Map<string, boolean>();
+  for (const q of questions ?? []) {
+    if (q.field_type === "bool") {
+      const v = answerMap.get(q.id);
+      if (typeof v === "boolean") boolAnswerByKey.set(q.key, v);
+    }
+  }
+  const gateAnswer = boolAnswerByKey.get("has_experience");
+  function inHerWizard(q: ConfigQuestion): boolean {
+    // The experience gate is structural — the wizard keeps it even when off.
+    if (!q.active && q.key !== "has_experience") return false;
+    if (!scope.includes(q.scope)) return false;
+    // Until she answers the gate, neither track is ruled out.
+    if (gateAnswer === true && q.intake_track === "junior") return false;
+    if (gateAnswer === false && q.intake_track === "experienced") return false;
+    if (q.depends_on && !boolAnswerByKey.get(q.depends_on)) return false;
+    return true;
+  }
+
+  // The full questionnaire in the wizard's steps and order: every active
+  // question in her scope (answered or not), plus inactive ones that still
+  // hold a stored answer — historical data stays visible.
+  const profileSections = groupBySection(questions ?? [], (q) => inHerWizard(q) || hasAnswer(q));
+  const totalShown = profileSections.reduce((n, s) => n + s.questions.length, 0);
+  const answeredCount = (questions ?? []).filter(hasAnswer).length;
 
   return (
     <div className="flex flex-col gap-5">
@@ -560,29 +593,48 @@ export default async function AdminMemberProfilePage({
           )}
         </div>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          כל מה שהיא מילאה בטופס ההצטרפות ובפרופיל ({answered.length} שדות).
+          כל השאלון שלה, לפי סדר הטופס — ענתה על {answeredCount} מתוך {totalShown} שדות.
         </p>
-        {answered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
-            {answered.map((q) => {
-              const edited = answerEditedAt.get(q.id);
-              return (
-                <div key={q.id} className="py-2.5 border-b border-ink-100">
-                  <div className="text-[11.5px] text-ink-500">
-                    {q.label_he}
-                    {edited && (
-                      <span className="text-[10.5px] text-ink-400"> · עודכן {DMY.format(edited)}</span>
-                    )}
-                  </div>
-                  <div className="text-[14px] text-ink-900 font-medium mt-0.5 break-words">
-                    {display(q)}
-                  </div>
+        {profileSections.length > 0 ? (
+          <div className="flex flex-col gap-5">
+            {profileSections.map((s) => (
+              <div key={s.title}>
+                <h4 className="font-display text-[13.5px] font-bold text-ink-1000 border-b border-ink-200 pb-1.5">
+                  {s.title}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6">
+                  {s.questions.map((q) => {
+                    const edited = answerEditedAt.get(q.id);
+                    return (
+                      <div key={q.id} className="py-2.5 border-b border-ink-100">
+                        <div className="text-[11.5px] text-ink-500">
+                          {q.label_he}
+                          {!q.active && (
+                            <span className="text-[10.5px] text-ink-400"> · שאלה לא פעילה</span>
+                          )}
+                          {edited && (
+                            <span className="text-[10.5px] text-ink-400">
+                              {" "}
+                              · עודכן {DMY.format(edited)}
+                            </span>
+                          )}
+                        </div>
+                        {hasAnswer(q) ? (
+                          <div className="text-[14px] text-ink-900 font-medium mt-0.5 break-words">
+                            {display(q)}
+                          </div>
+                        ) : (
+                          <div className="text-[13px] text-ink-400 mt-0.5">עדיין לא ענתה</div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         ) : (
-          <p className="text-ink-500 text-sm py-2">היא עדיין לא השלימה את הפרופיל.</p>
+          <p className="text-ink-500 text-sm py-2">עוד אין שאלות בשאלון.</p>
         )}
       </div>
     </div>

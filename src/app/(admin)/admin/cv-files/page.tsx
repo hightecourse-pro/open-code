@@ -18,7 +18,7 @@ export default async function AdminCvsPage() {
   const admin = createAdminClient();
   const { data: docs } = await admin
     .from("cv_documents")
-    .select("id, profile_id, label, language, file_path, file_name, created_at")
+    .select("id, profile_id, label, language, file_path, file_name, created_at, is_default")
     .order("created_at", { ascending: false });
 
   const supabase = await createClient();
@@ -42,7 +42,7 @@ export default async function AdminCvsPage() {
       const { data } = await admin.storage.from("cvs").createSignedUrls(paths, 3600);
       signed = data ?? [];
     } catch (err) {
-      console.error("[admin/cvs] signed URLs failed:", err);
+      console.error("[admin/cv-files] signed URLs failed:", err);
     }
   }
   const urlOf = new Map(signed.map((s) => [s.path, s.signedUrl]));
@@ -56,6 +56,7 @@ export default async function AdminCvsPage() {
     language: d.language,
     file_name: d.file_name,
     created_at: d.created_at,
+    is_default: d.is_default,
     download_url: urlOf.get(d.file_path) ?? null,
   }));
 
@@ -65,7 +66,8 @@ export default async function AdminCvsPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;קו&quot;ח/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">קורות חיים</h1>
         <p className="t-body-sm text-ink-500">
-          כל הקבצים שהחברות העלו — חיפוש, סינון לפי שפה והורדה בקליק. הקישורים תקפים לשעה.
+          כל הקבצים שהחברות העלו, מקובצים לפי חברה — חיפוש, סינון לפי שפה והורדה בקליק. הקישורים
+          תקפים לשעה.
         </p>
       </div>
 
