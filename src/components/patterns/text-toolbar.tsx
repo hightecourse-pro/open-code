@@ -63,8 +63,24 @@ export function TextToolbar({
     if (!el) return;
     const start = el.selectionStart ?? el.value.length;
     const end = el.selectionEnd ?? start;
-    const selected = el.value.slice(start, end) || placeholder;
-    const next = el.value.slice(0, start) + before + selected + after + el.value.slice(end);
+    const raw = el.value.slice(start, end);
+
+    // Mouse drags and double-click word selection routinely include the edge
+    // spaces, and the parser (correctly, WhatsApp-style) rejects markers whose
+    // content starts or ends with whitespace — so "*ראית *" published as raw
+    // markers and read as "the buttons don't work". Keep edge whitespace
+    // OUTSIDE the markers.
+    let lead = raw.match(/^\s*/)?.[0] ?? "";
+    let trail = raw.slice(lead.length).match(/\s*$/)?.[0] ?? "";
+    const rawCore = raw.slice(lead.length, raw.length - trail.length);
+    if (!rawCore) {
+      lead = raw;
+      trail = "";
+    }
+    const usedPlaceholder = !rawCore && after !== "";
+    const core = rawCore || placeholder;
+    const next =
+      el.value.slice(0, start) + lead + before + core + after + trail + el.value.slice(end);
 
     // Set through the native setter so React's onChange sees the new value.
     const setter = Object.getOwnPropertyDescriptor(
@@ -74,9 +90,16 @@ export function TextToolbar({
     setter?.call(el, next);
     el.dispatchEvent(new Event("input", { bubbles: true }));
 
-    const caret = start + before.length + selected.length;
+    const coreStart = start + lead.length + before.length;
     el.focus();
-    el.setSelectionRange(after ? caret : caret + after.length, caret);
+    if (usedPlaceholder) {
+      // Select the placeholder so typing replaces it — the parked-caret version
+      // produced "*טקסטמהשהיאהקלידה*" with the literal word published.
+      el.setSelectionRange(coreStart, coreStart + core.length);
+    } else {
+      const caret = coreStart + core.length + after.length + trail.length;
+      el.setSelectionRange(caret, caret);
+    }
   }
 
   const btn =
