@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { raiseAlert } from "@/lib/alerts";
 import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deactivateSubscription } from "@/lib/payments/subscription";
@@ -75,6 +76,23 @@ export async function GET(request: Request) {
     try {
       await deactivateSubscription(profileId);
       expiredCount++;
+      // A subscription that reached expiry+grace with no renewal recorded is
+      // exactly the case the owner asked to SEE: either she truly stopped
+      // paying, or a renewal callback never arrived while the card kept being
+      // charged. Both deserve a row in the alerts center, per member.
+      const { data: who } = await admin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", profileId)
+        .maybeSingle();
+      await raiseAlert({
+        kind: "subscription_expired",
+        severity: "warning",
+        title: `המנוי של ${who?.full_name ?? profileId} פג בלי חידוש — הועברה להשהיה`,
+        body: "לא נרשם תשלום מחדש אחרי תקופת החסד. אם היא כן חויבה בכרטיס — זה חידוש שלא דווח, וצריך לרשום אותו ידנית בדף שלה.",
+        context: { profileId },
+        dedupeKey: `sub-expired:${profileId}`,
+      });
     } catch (e) {
       console.error("[subscriptions] expire failed:", profileId, e);
     }

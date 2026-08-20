@@ -577,6 +577,36 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["app_settings"]["Insert"]>;
         Relationships: [];
       };
+      admin_alerts: {
+        Row: {
+          id: string;
+          kind: string;
+          severity: "critical" | "warning" | "info";
+          title: string;
+          body: string | null;
+          context: Json | null;
+          dedupe_key: string | null;
+          count: number;
+          created_at: string;
+          last_seen_at: string;
+          read_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          kind: string;
+          severity?: "critical" | "warning" | "info";
+          title: string;
+          body?: string | null;
+          context?: Json | null;
+          dedupe_key?: string | null;
+          count?: number;
+          created_at?: string;
+          last_seen_at?: string;
+          read_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["admin_alerts"]["Insert"]>;
+        Relationships: [];
+      };
       articles: {
         Row: {
           id: string;

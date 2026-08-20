@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { raiseAlert } from "@/lib/alerts";
 import { getNedarimConfig, parseNedarimCallback } from "@/lib/payments/nedarim";
 import { activateSubscription } from "@/lib/payments/subscription";
 import { buildPlans } from "@/lib/payments/plans";
@@ -159,6 +160,21 @@ export async function POST(req: Request) {
     // 33 days later. That one wakes someone. Duplicates never do.
     const authedIncomplete = outcome === "ignored_incomplete" && !!record.authedBy;
     if ((outcome !== "ignored_incomplete" && outcome !== "duplicate_ignored") || authedIncomplete) {
+      // The alerts center is the permanent record (no throttle — dedupe
+      // collapses repeats); email stays as a secondary ping, hourly-throttled.
+      const p = params as Record<string, string | undefined>;
+      await raiseAlert({
+        kind: authedIncomplete ? "payment_renewal_incomplete" : "payment_rejected",
+        severity: authedIncomplete || record.authedBy ? "critical" : "warning",
+        title: authedIncomplete
+          ? "חיוב מנדרים הגיע בלי זיהוי חברה — ייתכן חידוש שלא נרשם"
+          : `דיווח תשלום נדחה (${outcome})`,
+        body: authedIncomplete
+          ? `נדרים שלחו דיווח מאומת בלי Param1/Param2. אם זה חיוב חוזר של הוראת קבע — הכרטיס חויב ולא נרשם דבר. אסמכתא: ${p.ID ?? "?"}, סכום: ${p.Amount ?? "?"} ₪.`
+          : `סיבה: ${outcome} · אסמכתא: ${p.ID ?? "—"} · סכום: ${p.Amount ?? "—"} ₪ · מקור: ${String(record.ip ?? "?")}`,
+        context: record,
+        dedupeKey: `webhook:${outcome}:${p.ID ?? String(record.ip ?? "")}`,
+      });
       await alertAdmins(record);
     }
     return NextResponse.json({ error }, { status });

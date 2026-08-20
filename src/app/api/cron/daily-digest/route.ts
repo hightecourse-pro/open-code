@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { raiseAlert } from "@/lib/alerts";
 import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isResendConfigured, sendResendEmail } from "@/lib/email/resend";
@@ -155,6 +156,23 @@ export async function GET(req: Request) {
     if (r.ok) sent += 1;
   }
 
+  const failures = results.filter((r) => !r.ok);
+  if (failures.length > 0) {
+    // Blocked-by-allowlist is staging behaving correctly, not a delivery
+    // failure — only real send errors reach the alerts center.
+    const real = failures.filter((f) => f.error !== "blocked_by_allowlist");
+    if (real.length > 0) {
+      await raiseAlert({
+        kind: "digest_send_failed",
+        severity: "warning",
+        title: `${real.length} מיילים יומיים לא נשלחו`,
+        body: `דוגמה לשגיאה: ${real[0].error ?? "?"} — בדרך כלל מכסת Resend או מפתח שפג.`,
+        context: { failures: real.slice(0, 10) },
+        dedupeKey: "digest-send-failed",
+      });
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     dry,
@@ -163,6 +181,6 @@ export async function GET(req: Request) {
     candidates: recipients.length,
     nothingToSay,
     sent,
-    failures: results.filter((r) => !r.ok),
+    failures,
   });
 }
