@@ -1,6 +1,7 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { attachmentsFor } from "@/lib/attachments";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -71,9 +72,15 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     .in("id", authorIds);
   const authorMap = new Map(((authorRows ?? []) as ProfileLite[]).map((a) => [a.id, a]));
 
+  const [postAtt, commentAtt] = await Promise.all([
+    attachmentsFor("post", [post.id]),
+    attachmentsFor("comment", (comments ?? []).map((c) => c.id)),
+  ]);
+
   const topicComments: PostComment[] = (comments ?? []).map((c) => {
     const a = authorMap.get(c.author_id);
     return {
+      attachments: commentAtt.get(c.id),
       id: c.id,
       body: c.body,
       author_name: a?.full_name ?? "חברת קהילה",
@@ -100,6 +107,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     liked: !!user && rx.some((r) => r.kind === "like" && r.profile_id === user.id),
     saved: !!user && rx.some((r) => r.kind === "save" && r.profile_id === user.id),
     comments: topicComments,
+    attachments: postAtt.get(post.id),
   };
 
   return (

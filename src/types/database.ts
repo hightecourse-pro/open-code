@@ -577,6 +577,32 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["app_settings"]["Insert"]>;
         Relationships: [];
       };
+      attachments: {
+        Row: {
+          id: string;
+          profile_id: string;
+          context: "post" | "comment" | "message" | null;
+          context_id: string | null;
+          file_path: string;
+          file_name: string;
+          mime: string;
+          size_bytes: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          context?: "post" | "comment" | "message" | null;
+          context_id?: string | null;
+          file_path: string;
+          file_name: string;
+          mime: string;
+          size_bytes: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["attachments"]["Insert"]>;
+        Relationships: [];
+      };
       admin_alerts: {
         Row: {
           id: string;

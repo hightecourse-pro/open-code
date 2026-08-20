@@ -1,10 +1,13 @@
 import { Avatar, Badge } from "@/components/ui";
 import { timeAgo } from "@/lib/utils";
 import { PostBody } from "@/components/patterns/post-body";
+import { AttachmentList } from "@/components/patterns/attachment-list";
+import type { AttachmentView } from "@/lib/attachments";
 import { PostInteractions, type PostComment } from "@/components/patterns/post-interactions";
 import type { PostIntent, UserRole } from "@/types/database";
 
 export interface FeedPost {
+  attachments?: AttachmentView[];
   id: string;
   body: string;
   intent: PostIntent;
@@ -85,6 +88,7 @@ export function PostCard({
         createdAt={post.created_at}
         canEdit={post.mine === true}
       />
+      {post.attachments && <AttachmentList items={post.attachments} />}
 
       {post.tech_tags.length > 0 && (
         <div className="flex gap-1.5 mt-2.5 flex-wrap">

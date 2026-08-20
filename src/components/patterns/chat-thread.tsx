@@ -2,6 +2,8 @@
 
 import { useEffect, useOptimistic, useRef, useState, type ReactNode } from "react";
 import { MessageBody } from "@/components/patterns/rich-text";
+import { AttachmentList } from "@/components/patterns/attachment-list";
+import type { AttachmentView } from "@/lib/attachments";
 import type { RichEditorHandle } from "@/components/patterns/rich-text-editor";
 import { ChatComposer } from "@/components/patterns/chat-composer";
 import { cn, timeAgo } from "@/lib/utils";
@@ -11,6 +13,7 @@ export interface ThreadMessage {
   sender_id: string;
   body: string;
   created_at: string;
+  attachments?: AttachmentView[];
 }
 
 /** A message on screen — either from the server, or hers still on its way. */
@@ -160,6 +163,7 @@ export function ChatThread({
                   )}
                 >
                   <MessageBody body={m.body} invert={mine} />
+                  {m.attachments && <AttachmentList items={m.attachments} compact />}
                 </div>
               </div>
               <span

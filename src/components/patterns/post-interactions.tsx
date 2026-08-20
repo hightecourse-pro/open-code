@@ -7,9 +7,13 @@ import { cn, timeAgo } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
 import { CommentBody } from "@/components/patterns/comment-body";
 import { RichTextEditor, type RichEditorHandle } from "@/components/patterns/rich-text-editor";
+import { AttachmentPicker } from "@/components/patterns/attachment-picker";
+import { AttachmentList } from "@/components/patterns/attachment-list";
+import type { AttachmentView } from "@/lib/attachments";
 import { toggleReaction, addComment, reportContent } from "@/app/(app)/feed/actions";
 
 export interface PostComment {
+  attachments?: AttachmentView[];
   id: string;
   body: string;
   author_name: string;
@@ -48,6 +52,7 @@ export function PostInteractions({
   const [reported, setReported] = useState(false);
   const [, start] = useTransition();
   const replyRef = useRef<RichEditorHandle | null>(null);
+  const [replyEpoch, setReplyEpoch] = useState(0);
 
   function onLike() {
     setLike((s) => ({ on: !s.on, count: s.count + (s.on ? -1 : 1) }));
@@ -147,6 +152,7 @@ export function PostInteractions({
                   createdAt={c.created_at}
                   canEdit={c.mine === true}
                 />
+                {c.attachments && <AttachmentList items={c.attachments} compact />}
               </div>
             </div>
           ))}
@@ -154,12 +160,14 @@ export function PostInteractions({
           {canWrite ? (
             <form
               action={async (fd) => {
-                if (replyRef.current?.isEmpty()) return;
+                if (replyRef.current?.isEmpty() && !fd.get("attach_ids")) return;
                 await addComment(postId, fd);
                 replyRef.current?.clear();
+                setReplyEpoch((n) => n + 1);
               }}
               className="flex flex-col gap-1.5"
             >
+              <AttachmentPicker key={replyEpoch}>
               <div className="flex gap-2 items-end">
                 <RichTextEditor
                   name="body"
@@ -177,6 +185,7 @@ export function PostInteractions({
                   <Send size={16} />
                 </button>
               </div>
+              </AttachmentPicker>
             </form>
           ) : (
             <Link

@@ -2,6 +2,7 @@
 
 import { isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -131,13 +132,19 @@ export async function toggleReaction(postId: string, kind: ReactionKind): Promis
 /** Add a comment to a post. */
 export async function addComment(postId: string, formData: FormData): Promise<void> {
   const { body, plain } = normalizeBody(String(formData.get("body") ?? ""));
-  if (plain.length < 1) return;
+  const attachIds = attachmentIdsFrom(formData);
+  if (plain.length < 1 && attachIds.length === 0) return;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user || !(await canWrite())) return;
-  await supabase.from("comments").insert({ post_id: postId, author_id: user.id, body });
+  const { data: created } = await supabase
+    .from("comments")
+    .insert({ post_id: postId, author_id: user.id, body })
+    .select("id")
+    .single();
+  if (created) await linkAttachments(user.id, "comment", created.id, attachIds);
   revalidatePath("/forum");
   revalidatePath(`/forum/${postId}`);
 }
@@ -172,7 +179,8 @@ export async function createPost(
     : "knowledge";
   const kind: PostKind = String(formData.get("kind") ?? "feed") === "forum" ? "forum" : "feed";
 
-  if (plain.length < 2) return { error: "כתבי משהו קצר לפני ששולחים 🙂" };
+  const attachIds = attachmentIdsFrom(formData);
+  if (plain.length < 2 && attachIds.length === 0) return { error: "כתבי משהו קצר לפני ששולחים 🙂" };
   if (plain.length > 5000) return { error: "הפוסט ארוך מדי — עד 5,000 תווים. אפשר לפצל לכמה פוסטים 💜" };
 
   const supabase = await createClient();
@@ -182,11 +190,16 @@ export async function createPost(
   if (!user) redirect("/login");
   if (!(await canWrite())) return { error: UPGRADE_MSG };
 
-  const { error } = await supabase.from("posts").insert({ author_id: user.id, body, intent, kind });
+  const { data: createdPost, error } = await supabase
+    .from("posts")
+    .insert({ author_id: user.id, body, intent, kind })
+    .select("id")
+    .single();
 
   if (error) {
     return { error: "לא הצלחנו לפרסם כרגע. בואי ננסה שוב." };
   }
+  if (createdPost) await linkAttachments(user.id, "post", createdPost.id, attachIds);
 
   revalidatePath(kind === "forum" ? "/forum" : "/feed");
   return {};

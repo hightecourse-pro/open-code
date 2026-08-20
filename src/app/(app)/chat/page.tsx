@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { attachmentsFor } from "@/lib/attachments";
+import { isRichHtml } from "@/lib/rich-text-lite";
+import { htmlToPlainText } from "@/lib/rich-text";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber, requireProfile } from "@/lib/auth";
@@ -19,10 +22,12 @@ function roleWord(role: UserRole): string {
   return "חברת קהילה";
 }
 
-/** One line of the last thing said in a thread — markers and all, shortened. */
+/** One line of the last thing said in a thread — words only, shortened. */
 function previewText(body: string, mine: boolean): string {
-  const flat = body.replace(/\s+/g, " ").trim();
-  return `${mine ? "את: " : ""}${flat}`;
+  // New messages are editor HTML; the preview wants only the words.
+  const words = isRichHtml(body) ? htmlToPlainText(body) : body;
+  const flat = words.replace(/\s+/g, " ").trim();
+  return `${mine ? "את: " : ""}${flat || "📎 קובץ מצורף"}`;
 }
 
 export default async function ChatPage({
@@ -153,6 +158,14 @@ export default async function ChatPage({
   const activeSubtitle = activeOther
     ? [roleWord(activeOther.role), activeOther.specialization].filter(Boolean).join(" · ")
     : "";
+
+  // Files hanging on the visible messages — signed URLs minted here, so the
+  // client never holds a permanent address.
+  const messageAtt = await attachmentsFor("message", (messages ?? []).map((m) => m.id));
+  const messagesWithFiles = (messages ?? []).map((m) => ({
+    ...m,
+    attachments: messageAtt.get(m.id),
+  }));
 
   // Everyone she may open a conversation with — active members, not herself.
   // The same find-or-create action the directory uses handles the rest.
@@ -289,7 +302,7 @@ export default async function ChatPage({
               </div>
 
               <ChatThread
-                messages={messages}
+                messages={messagesWithFiles}
                 meId={me.id}
                 action={canSend ? sendMessage.bind(null, active.id) : undefined}
                 hint={

@@ -106,11 +106,33 @@ export async function GET(request: Request) {
     console.error("[subscriptions] drive sync failed:", e);
   }
 
+  // Attachment hygiene: files uploaded while composing but never sent stay
+  // UNLINKED (context_id null). A day is ample grace for a draft; after that
+  // the file and its row go. Bounded per run like everything else here.
+  let attachmentsSwept = 0;
+  try {
+    const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: orphans } = await admin
+      .from("attachments")
+      .select("id, file_path")
+      .is("context_id", null)
+      .lt("created_at", dayAgo)
+      .limit(100);
+    if (orphans?.length) {
+      await admin.storage.from("attachments").remove(orphans.map((o) => o.file_path));
+      await admin.from("attachments").delete().in("id", orphans.map((o) => o.id));
+      attachmentsSwept = orphans.length;
+    }
+  } catch (e) {
+    console.error("[subscriptions] attachment sweep failed:", e);
+  }
+
   // Bounded per run; the rest are picked up by tomorrow's run.
   return NextResponse.json({
     ok: true,
     expired: expiredCount,
     remaining: ids.length - expiredCount,
     drive,
+    attachmentsSwept,
   });
 }

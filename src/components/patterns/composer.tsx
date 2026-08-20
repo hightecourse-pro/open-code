@@ -6,6 +6,7 @@ import { MessageSquare } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { RichTextEditor, type RichEditorHandle } from "@/components/patterns/rich-text-editor";
+import { AttachmentPicker } from "@/components/patterns/attachment-picker";
 import { createPost, type ComposerState } from "@/app/(app)/feed/actions";
 import type { PostIntent } from "@/types/database";
 
@@ -18,6 +19,7 @@ const INTENTS: { value: PostIntent; label: string }[] = [
 export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
   const [intent, setIntent] = useState<PostIntent>("knowledge");
   const [published, setPublished] = useState(false);
+  const [attachEpoch, setAttachEpoch] = useState(0);
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const bodyRef = useRef<RichEditorHandle | null>(null);
@@ -27,6 +29,7 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
       if (!result.error) {
         formRef.current?.reset();
         bodyRef.current?.clear();
+        setAttachEpoch((n) => n + 1);
         setPublished(true);
         // createPost already revalidates this route; this is the belt to its
         // braces — a form cleared with nothing new on screen reads as "my post
@@ -55,12 +58,14 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
         <input type="hidden" name="intent" value={intent} />
         <input type="hidden" name="kind" value={kind} />
         <div onInput={() => published && setPublished(false)}>
-          <RichTextEditor
-            name="body"
-            editorRef={bodyRef}
-            placeholder="מה את רוצה לשתף עם הקהילה?"
-            tools={["bold", "italic", "strike", "ul", "ol", "link"]}
-          />
+          <AttachmentPicker key={attachEpoch}>
+            <RichTextEditor
+              name="body"
+              editorRef={bodyRef}
+              placeholder="מה את רוצה לשתף עם הקהילה?"
+              tools={["bold", "italic", "strike", "ul", "ol", "link"]}
+            />
+          </AttachmentPicker>
         </div>
 
         <div className="flex gap-2 mt-2.5 flex-wrap">
