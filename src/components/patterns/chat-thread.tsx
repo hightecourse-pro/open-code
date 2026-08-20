@@ -19,13 +19,33 @@ export interface ThreadMessage {
 /** A message on screen — either from the server, or hers still on its way. */
 type Bubble = ThreadMessage & { pending?: boolean };
 
-/** How many of my messages with exactly this text the server already returned. */
-function countMine(messages: ThreadMessage[], meId: string, body: string): number {
-  return messages.filter((m) => m.sender_id === meId && m.body === body).length;
+/**
+ * The words of a body, markup and whitespace flattened. Delivery detection
+ * compares WORDS, not raw strings — the server may sanitize or normalize the
+ * markup it stores, and a message that came back transformed is still the
+ * same delivered message. Raw equality here once branded a stored message
+ * "לא נשלחה" and handed it back to the member who had just sent it.
+ */
+function plainKey(body: string): string {
+  return body
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-/** The grace the server gets to hand the thread back with her message in it. */
-const DELIVERY_GRACE_MS = 2000;
+/** How many of my messages with these words the server already returned. */
+function countMine(messages: ThreadMessage[], meId: string, key: string): number {
+  return messages.filter((m) => m.sender_id === meId && plainKey(m.body) === key).length;
+}
+
+/**
+ * The grace the server gets to hand the thread back with her message in it.
+ * Generous on purpose: a cold serverless start plus a continent round trip
+ * can exceed a tight window, and a false "לא נשלחה" is worse than a slow
+ * confirmation.
+ */
+const DELIVERY_GRACE_MS = 6000;
 
 /**
  * The message list and the box under it. Her own message appears the moment
@@ -67,10 +87,16 @@ export function ChatThread({
   ]);
   // sendMessage hands nothing back, so the only honest proof a message went out
   // is it returning inside the revalidated thread.
-  const [sending, setSending] = useState<{ body: string; seen: number } | null>(null);
+  const [sending, setSending] = useState<{ body: string; key: string; seen: number } | null>(null);
   const [failed, setFailed] = useState(false);
   const composerRef = useRef<RichEditorHandle | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // The freshest thread the server handed us — the failure timer consults THIS
+  // at fire time instead of trusting a closure from seconds ago.
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   // Whether she is reading the latest message or scrolled up into history.
   // Starts true so a freshly opened thread lands on the newest message.
   const atBottomRef = useRef(true);
@@ -78,20 +104,25 @@ export function ChatThread({
   // Delivered = the revalidated thread came back holding it. Read from the
   // messages we were just handed, never remembered — a remembered "sent" is
   // exactly the lie this component must not tell.
-  const awaiting = !!sending && countMine(messages, meId, sending.body) <= sending.seen;
+  const awaiting = !!sending && countMine(messages, meId, sending.key) <= sending.seen;
 
   useEffect(() => {
     // The optimistic bubble is already gone; give the revalidated thread a
     // beat to arrive before telling her something went wrong.
     if (!sending || !awaiting || inFlight) return;
     const timer = setTimeout(() => {
+      // Last look before crying wolf: if the freshest thread holds the
+      // message, it was delivered — a race between the revalidated props and
+      // this timer must never turn a sent message into a failure banner.
+      const delivered = countMine(messagesRef.current, meId, sending.key) > sending.seen;
       setSending(null);
+      if (delivered) return;
       setFailed(true);
       composerRef.current?.setHtml(sending.body);
       composerRef.current?.focus();
     }, DELIVERY_GRACE_MS);
     return () => clearTimeout(timer);
-  }, [sending, awaiting, inFlight]);
+  }, [sending, awaiting, inFlight, meId]);
 
   // Follow the conversation down — on first open and whenever a message
   // arrives while she is at the bottom. If she scrolled up to reread
@@ -199,7 +230,8 @@ export function ChatThread({
               const body = String(formData.get("body") ?? "").trim();
               if (!body) return;
               setFailed(false);
-              setSending({ body, seen: countMine(messages, meId, body) });
+              const key = plainKey(body);
+              setSending({ body, key, seen: countMine(messages, meId, key) });
               addBubble(body);
               await action(formData);
             }}
