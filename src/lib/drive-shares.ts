@@ -24,6 +24,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isProductionEnv } from "@/lib/env";
+import { raiseAlert } from "@/lib/alerts";
 import { driveFileId } from "@/lib/drive";
 import {
   NotAGoogleAccountError,
@@ -487,5 +488,15 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
     }
   }
 
+  if (result.failed > 0) {
+    await raiseAlert({
+      kind: "drive_share_failed",
+      severity: "warning",
+      title: `${result.failed} שיתופי דרייב נכשלו בסבב האחרון`,
+      body: "התור ב'תור שיתופים' מציג את הפרטים; שגיאות חוזרות בדרך כלל אומרות שהמפתח של גוגל או ההרשאות על התיקייה השתנו.",
+      context: result,
+      dedupeKey: "drive-share-failed",
+    });
+  }
   return result;
 }

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   ArrowRight,
   BarChart3,
+  Bell,
   BookOpen,
   Briefcase,
   Building2,
@@ -45,8 +46,14 @@ const ITEMS: AdminNavItem[] = [
   { href: "/admin/moderation", label: "מודרציה", icon: Shield },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ alertsBadge = 0 }: { alertsBadge?: number }) {
   const pathname = usePathname();
+  // The alerts row sits first — it is the one item whose badge means
+  // "something needs you", not "here is a section".
+  const items: AdminNavItem[] = [
+    { href: "/admin/alerts", label: "התראות", icon: Bell, badge: alertsBadge > 0 ? alertsBadge : undefined },
+    ...ITEMS,
+  ];
 
   return (
     <nav className="bg-ink-1000 text-white p-4 pt-[22px] flex flex-col gap-1.5 sticky top-0 h-screen overflow-y-auto">
@@ -55,7 +62,7 @@ export function AdminSidebar() {
         <span className="font-mono text-[11px] opacity-60 block mt-0.5">admin</span>
       </div>
 
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         // Exact match for the dashboard root; prefix match for subsections.
         const active =
           item.href === "/admin"
