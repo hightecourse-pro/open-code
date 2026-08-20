@@ -81,6 +81,48 @@ export function parseRichText(body: string): TextToken[][] {
   return body.split("\n").map((line) => (line ? tokenizeLine(line) : []));
 }
 
+/**
+ * Does this body hold editor HTML rather than legacy marker text? The rich
+ * editor always produces element markup, and no legacy plain-text body starts
+ * with a tag — members had no way to type one that survived rendering.
+ */
+export function isRichHtml(body: string | null | undefined): boolean {
+  return /^\s*<(p|div|ul|ol|h3|b|strong|i|em|br|a|s|strike|del)\b/i.test(body ?? "");
+}
+
+const HTML_ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+const escHtml = (s: string) => s.replace(/[&<>"]/g, (c) => HTML_ESC[c]);
+
+/**
+ * Legacy marker text → the same HTML the rich editor produces. Used when a
+ * member edits an old post in the new editor: her stored "*חשוב*" seeds the
+ * editor as real bold instead of literal asterisks.
+ */
+export function legacyToHtml(body: string): string {
+  const TAG: Record<string, [string, string]> = {
+    bold: ["<b>", "</b>"],
+    italic: ["<i>", "</i>"],
+    strike: ["<s>", "</s>"],
+    code: ["<code>", "</code>"],
+  };
+  return parseRichText(body)
+    .map((line) =>
+      line.length === 0
+        ? "<p><br></p>"
+        : `<p>${line
+            .map((t) => {
+              if (t.kind === "link") {
+                const href = escHtml(t.href ?? t.text);
+                return `<a href="${href}">${escHtml(t.text)}</a>`;
+              }
+              const [open, close] = TAG[t.kind] ?? ["", ""];
+              return `${open}${escHtml(t.text)}${close}`;
+            })
+            .join("")}</p>`
+    )
+    .join("");
+}
+
 /** How long after posting a member may still fix her words. */
 export const EDIT_WINDOW_MS = 10 * 60 * 1000;
 

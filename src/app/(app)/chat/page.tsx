@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber, requireProfile } from "@/lib/auth";
 import { Avatar } from "@/components/ui";
 import { ChatThread } from "@/components/patterns/chat-thread";
+import { NewChatButton } from "@/components/patterns/new-chat-button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { sendMessage } from "./actions";
@@ -153,9 +154,21 @@ export default async function ChatPage({
     ? [roleWord(activeOther.role), activeOther.specialization].filter(Boolean).join(" · ")
     : "";
 
+  // Everyone she may open a conversation with — active members, not herself.
+  // The same find-or-create action the directory uses handles the rest.
+  const { data: chatables } = await supabase
+    .from("profiles")
+    .select("id, full_name, specialization, avatar_initials")
+    .eq("status", "active")
+    .neq("id", me.id)
+    .order("full_name", { ascending: true });
+
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
+        {subscriber && <NewChatButton members={chatables ?? []} />}
+      </div>
 
       {/* Bounded to the viewport so the thread scrolls inside its own pane and
           the composer stays on screen — the page itself never scrolls to chat.

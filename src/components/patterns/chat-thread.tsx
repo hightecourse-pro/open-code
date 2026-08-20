@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useOptimistic, useRef, useState, type ReactNode } from "react";
-import { RichText } from "@/components/patterns/rich-text";
+import { MessageBody } from "@/components/patterns/rich-text";
+import type { RichEditorHandle } from "@/components/patterns/rich-text-editor";
 import { ChatComposer } from "@/components/patterns/chat-composer";
 import { cn, timeAgo } from "@/lib/utils";
 
@@ -35,12 +36,15 @@ const DELIVERY_GRACE_MS = 2000;
 export function ChatThread({
   messages,
   meId,
+  otherName,
   action,
   hint,
   footer,
 }: {
   messages: ThreadMessage[];
   meId: string;
+  /** Her display name — feeds the avatar chip beside her bubbles. */
+  otherName?: string;
   /** Missing when she can't write in this thread — `footer` says why. */
   action?: (formData: FormData) => void | Promise<void>;
   /** One line above the box framing what this conversation is for. */
@@ -62,7 +66,7 @@ export function ChatThread({
   // is it returning inside the revalidated thread.
   const [sending, setSending] = useState<{ body: string; seen: number } | null>(null);
   const [failed, setFailed] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<RichEditorHandle | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // Whether she is reading the latest message or scrolled up into history.
   // Starts true so a freshly opened thread lands on the newest message.
@@ -80,10 +84,8 @@ export function ChatThread({
     const timer = setTimeout(() => {
       setSending(null);
       setFailed(true);
-      if (inputRef.current) {
-        inputRef.current.value = sending.body;
-        inputRef.current.focus();
-      }
+      composerRef.current?.setHtml(sending.body);
+      composerRef.current?.focus();
     }, DELIVERY_GRACE_MS);
     return () => clearTimeout(timer);
   }, [sending, awaiting, inFlight]);
@@ -124,28 +126,46 @@ export function ChatThread({
         }}
         className="flex-1 min-h-0 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40"
       >
-        {bubbles.map((m) => {
+        {bubbles.map((m, i) => {
           const mine = m.sender_id === meId;
+          // Her avatar chip marks the start of each of her runs — so even a
+          // fast back-and-forth reads unambiguously: my side, her side.
+          const runStart = !mine && bubbles[i - 1]?.sender_id !== m.sender_id;
           return (
             <div
               key={m.id}
               className={cn(
-                "flex flex-col max-w-[78%]",
+                "flex flex-col max-w-[70%]",
                 mine ? "self-end items-end" : "self-start items-start",
                 m.pending && "opacity-60"
               )}
             >
-              <div
-                className={cn(
-                  "px-3.5 py-2 text-sm leading-relaxed break-words",
-                  mine
-                    ? "bg-brand-gradient text-white rounded-2xl rounded-br-md [&_a]:text-white [&_a]:underline [&_code]:bg-white/25 [&_b]:text-white"
-                    : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
+              <div className={cn("flex items-end gap-1.5", !mine && "flex-row-reverse")}>
+                {runStart ? (
+                  <span
+                    aria-hidden
+                    className="w-6 h-6 rounded-full bg-tint-purple text-brand-purple text-[11px] font-bold flex items-center justify-center shrink-0 mb-0.5"
+                  >
+                    {(otherName ?? "").slice(0, 1) || "·"}
+                  </span>
+                ) : (
+                  !mine && <span className="w-6 shrink-0" aria-hidden />
                 )}
-              >
-                <RichText body={m.body} />
+                <div
+                  className={cn(
+                    "px-3.5 py-2 text-sm leading-relaxed break-words",
+                    mine
+                      ? "bg-brand-gradient text-white rounded-2xl rounded-br-md"
+                      : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
+                  )}
+                >
+                  <MessageBody body={m.body} invert={mine} />
+                </div>
               </div>
-              <span className="text-[10.5px] text-ink-400 mt-0.5 px-1" suppressHydrationWarning>
+              <span
+                className={cn("text-[10.5px] text-ink-400 mt-0.5 px-1", !mine && "me-[30px]")}
+                suppressHydrationWarning
+              >
                 {m.pending ? "נשלחת…" : timeAgo(m.created_at)}
               </span>
             </div>
@@ -170,7 +190,7 @@ export function ChatThread({
             <div className="px-3.5 pt-2.5 text-[12.5px] text-ink-500 leading-relaxed">{hint}</div>
           )}
           <ChatComposer
-            inputRef={inputRef}
+            editorRef={composerRef}
             action={async (formData) => {
               const body = String(formData.get("body") ?? "").trim();
               if (!body) return;

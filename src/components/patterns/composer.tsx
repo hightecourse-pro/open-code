@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageSquare } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { TextToolbar } from "@/components/patterns/text-toolbar";
+import { RichTextEditor, type RichEditorHandle } from "@/components/patterns/rich-text-editor";
 import { createPost, type ComposerState } from "@/app/(app)/feed/actions";
 import type { PostIntent } from "@/types/database";
 
@@ -20,12 +20,13 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
   const [published, setPublished] = useState(false);
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
-  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const bodyRef = useRef<RichEditorHandle | null>(null);
   const [state, action, pending] = useActionState<ComposerState, FormData>(
     async (prev, formData) => {
       const result = await createPost(prev, formData);
       if (!result.error) {
         formRef.current?.reset();
+        bodyRef.current?.clear();
         setPublished(true);
         // createPost already revalidates this route; this is the belt to its
         // braces — a form cleared with nothing new on screen reads as "my post
@@ -53,16 +54,14 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
       <form ref={formRef} action={action}>
         <input type="hidden" name="intent" value={intent} />
         <input type="hidden" name="kind" value={kind} />
-        <textarea
-          ref={bodyRef}
-          name="body"
-          rows={2}
-          placeholder="מה את רוצה לשתף עם הקהילה?"
-          onInput={() => published && setPublished(false)}
-          className="w-full border-none outline-none resize-none text-[15px] text-ink-900 py-1.5 placeholder:text-ink-400"
-        />
-
-        <TextToolbar targetRef={bodyRef} className="mt-1 mb-1" />
+        <div onInput={() => published && setPublished(false)}>
+          <RichTextEditor
+            name="body"
+            editorRef={bodyRef}
+            placeholder="מה את רוצה לשתף עם הקהילה?"
+            tools={["bold", "italic", "strike", "ul", "ol", "link"]}
+          />
+        </div>
 
         <div className="flex gap-2 mt-2.5 flex-wrap">
           {INTENTS.map((it) => (
