@@ -78,18 +78,31 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
     .trim();
 }
 
+// Google's free tier fails transiently all the time — 503 "model overloaded",
+// brief network blips. Without a quiet retry those surface to the member as an
+// alert she reads as a broken key, and her very next attempt works.
+const TRANSIENT_RETRY_DELAY_MS = 1200;
+
 async function generate(opts: GenerateOptions): Promise<string> {
   let lastError: unknown;
   let sawQuota = false;
-  for (const model of MODELS) {
-    try {
-      return await generateWithModel(model, opts);
-    } catch (e) {
-      // An invalid key fails the same way on every model — stop immediately.
-      if (e instanceof InvalidKeyError) throw e;
-      if (e instanceof QuotaError) sawQuota = true;
-      lastError = e;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    let sawTransient = false;
+    for (const model of MODELS) {
+      try {
+        return await generateWithModel(model, opts);
+      } catch (e) {
+        // An invalid key fails the same way on every model — stop immediately.
+        if (e instanceof InvalidKeyError) throw e;
+        if (e instanceof QuotaError) sawQuota = true;
+        else sawTransient = true;
+        lastError = e;
+      }
     }
+    // Quota-only failures are not retried: a per-minute 429 won't clear in a
+    // second, and hammering it spends more of the very quota that ran out.
+    if (!sawTransient || attempt > 0) break;
+    await new Promise((r) => setTimeout(r, TRANSIENT_RETRY_DELAY_MS));
   }
   if (sawQuota) throw new QuotaError("Gemini quota exhausted on all models");
   throw lastError instanceof Error ? lastError : new Error("Gemini failed");
@@ -103,7 +116,13 @@ export function geminiText(opts: GenerateOptions): Promise<string> {
 /** Structured JSON generation, validated/parsed against the caller's type. */
 export async function geminiJson<T>(opts: GenerateOptions & { jsonSchema: unknown }): Promise<T> {
   const raw = await generate(opts);
-  return JSON.parse(raw) as T;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    // A truncated or malformed JSON body is the model misbehaving, not the
+    // member's key — regenerate once before giving up.
+    return JSON.parse(await generate(opts)) as T;
+  }
 }
 
 /** Lightweight validity probe used when a member adds a key. */

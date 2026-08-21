@@ -157,6 +157,12 @@ export function ApplyForm({
       {/* CV choice */}
       <div className="flex flex-col gap-2">
         <span className="text-xs font-semibold text-ink-700">אילו קורות חיים לצרף?</span>
+        <p className="text-[12px] text-ink-500 -mt-1">
+          רגע לפני ששולחות — רוצה שה-AI יעבור על קורות החיים שלך?{" "}
+          <Link href="/ai/cv-checker" className="text-brand-purple font-semibold underline">
+            לבדיקה מהירה ←
+          </Link>
+        </p>
 
         {mainCv && (
           <label className={radioClass(cvMode === "main")}>

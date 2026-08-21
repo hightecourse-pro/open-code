@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
 import { hasUsableKey } from "@/lib/ai/keys";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { AiKeyBanner } from "@/components/patterns/ai-key-banner";
@@ -27,11 +28,23 @@ export default async function CvCheckerPage() {
     );
   }
 
+  // Her saved CVs feed the "no re-upload" path. The tool reads PDFs only, so
+  // Word documents are left out here rather than failing at analysis time.
+  const supabase = await createClient();
+  const { data: docs } = await supabase
+    .from("cv_documents")
+    .select("id, label, file_name, is_default")
+    .eq("profile_id", profile.id)
+    .order("created_at", { ascending: false });
+  const savedCvs = (docs ?? [])
+    .filter((d) => /\.pdf$/i.test(d.file_name ?? ""))
+    .map((d) => ({ id: d.id, label: d.label ?? d.file_name, isDefault: d.is_default === true }));
+
   const hasKey = await hasUsableKey();
   return (
     <div className="flex flex-col gap-5">
-      <AiKeyBanner hasKey={hasKey} />
-      <CvCheckerForm />
+      <AiKeyBanner hasKey={hasKey} next="/ai/cv-checker" />
+      <CvCheckerForm savedCvs={savedCvs} />
     </div>
   );
 }

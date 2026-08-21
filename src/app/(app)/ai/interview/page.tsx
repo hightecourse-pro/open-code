@@ -30,7 +30,7 @@ export default async function InterviewPage() {
   const hasKey = await hasUsableKey();
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
-      <AiKeyBanner hasKey={hasKey} />
+      <AiKeyBanner hasKey={hasKey} next="/ai/interview" />
       <InterviewSetup hasKey={hasKey} />
     </div>
   );

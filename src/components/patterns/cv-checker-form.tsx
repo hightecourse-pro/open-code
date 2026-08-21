@@ -1,11 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
-import { Check, Info, Lightbulb, TriangleAlert, X, Upload } from "lucide-react";
+import { useActionState, useState } from "react";
+import { Check, FileText, Info, Lightbulb, TriangleAlert, X, Upload } from "lucide-react";
 import Link from "next/link";
-import { Alert, Button, Field, ProgressRing, Textarea } from "@/components/ui";
+import { Alert, Button, Field, ProgressRing, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { runCvCheck, type CvState } from "@/app/(app)/ai/cv-checker/actions";
+
+export interface SavedCv {
+  id: string;
+  label: string;
+  isDefault: boolean;
+}
 
 const INSIGHT_STYLE = {
   good: { icon: Check, cls: "bg-tint-mint text-success", label: "חוזק" },
@@ -14,9 +20,18 @@ const INSIGHT_STYLE = {
   tip: { icon: Lightbulb, cls: "bg-tint-purple text-brand-purple", label: "טיפ" },
 } as const;
 
-export function CvCheckerForm() {
+export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
   const [state, action, pending] = useActionState<CvState, FormData>(runCvCheck, {});
   const analysis = state.analysis;
+  const hasSaved = savedCvs.length > 0;
+  // Her saved CV is the default path — the whole point is not re-uploading a
+  // file we already keep for her.
+  const [source, setSource] = useState<"saved" | "upload">(hasSaved ? "saved" : "upload");
+  const defaultDoc = savedCvs.find((d) => d.isDefault) ?? savedCvs[0];
+  const [fileName, setFileName] = useState<string | null>(null);
+  // "משהו השתבש" is a passing hiccup, not a key problem — sending her to the
+  // keys screen for it taught testers their key was broken when it wasn't.
+  const keyIssue = state.reason && state.reason !== "error";
 
   return (
     <>
@@ -24,7 +39,8 @@ export function CvCheckerForm() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;בודקת קו&quot;ח/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">בודקת קורות חיים</h1>
         <p className="t-body-sm text-ink-700">
-          העלי את קובץ ה-PDF של קורות החיים שלך — ונעבור עליהן יחד. אפשר גם להוסיף תיאור משרה לבדיקת התאמה.
+          נעבור יחד על קורות החיים שלך — אלה ששמורות אצלנו או קובץ PDF שתעלי. אפשר גם להוסיף תיאור
+          משרה לבדיקת התאמה.
         </p>
       </div>
 
@@ -32,23 +48,96 @@ export function CvCheckerForm() {
         {state.error && (
           <Alert variant={state.reason ? "warn" : "danger"}>
             {state.error}
-            {state.reason && (
-              <a href="/ai/keys" className="block mt-1 font-semibold text-brand-purple underline">
+            {keyIssue && (
+              <a href="/ai/keys?next=/ai/cv-checker" className="block mt-1 font-semibold text-brand-purple underline">
                 לניהול מפתחות ה-AI ←
               </a>
             )}
           </Alert>
         )}
-        <Field label="קובץ קורות החיים (PDF)" htmlFor="cv_file">
-          <label
-            htmlFor="cv_file"
-            className="flex items-center gap-3 border-2 border-dashed border-ink-300 rounded-md px-4 py-5 cursor-pointer hover:border-brand-purple transition-colors"
-          >
-            <Upload size={20} className="text-brand-purple shrink-0" />
-            <span className="text-sm text-ink-700">בחרי קובץ PDF להעלאה (עד 10MB)</span>
-          </label>
-          <input id="cv_file" name="cv_file" type="file" accept="application/pdf" required className="sr-only" />
-        </Field>
+
+        {hasSaved && (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-semibold text-ink-700">אילו קורות חיים נבדוק?</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                aria-pressed={source === "saved"}
+                onClick={() => setSource("saved")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-full border transition-colors",
+                  source === "saved"
+                    ? "bg-brand-gradient text-white border-transparent"
+                    : "bg-white text-ink-700 border-ink-200 hover:border-brand-purple"
+                )}
+              >
+                <FileText size={14} /> אלה ששמורות אצלנו
+              </button>
+              <button
+                type="button"
+                aria-pressed={source === "upload"}
+                onClick={() => setSource("upload")}
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-full border transition-colors",
+                  source === "upload"
+                    ? "bg-brand-gradient text-white border-transparent"
+                    : "bg-white text-ink-700 border-ink-200 hover:border-brand-purple"
+                )}
+              >
+                <Upload size={14} /> קובץ אחר מהמחשב
+              </button>
+            </div>
+          </div>
+        )}
+
+        {hasSaved && source === "saved" ? (
+          <Field label="קורות החיים מהפרופיל שלך" htmlFor="cv_doc_id">
+            <Select id="cv_doc_id" name="cv_doc_id" defaultValue={defaultDoc?.id}>
+              {savedCvs.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.label}
+                  {d.isDefault ? " · ברירת המחדל שלך" : ""}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        ) : (
+          <Field label="קובץ קורות החיים (PDF)" htmlFor="cv_file">
+            <label
+              htmlFor="cv_file"
+              className={cn(
+                "flex items-center gap-3 border-2 border-dashed rounded-md px-4 py-5 cursor-pointer transition-colors",
+                fileName
+                  ? "border-success bg-tint-mint/40"
+                  : "border-ink-300 hover:border-brand-purple"
+              )}
+            >
+              {fileName ? (
+                <>
+                  <Check size={20} className="text-success shrink-0" />
+                  <span className="text-sm text-ink-900 font-semibold" dir="ltr">
+                    {fileName}
+                  </span>
+                  <span className="text-xs text-ink-500">נבחר ✓ אפשר לבדוק</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={20} className="text-brand-purple shrink-0" />
+                  <span className="text-sm text-ink-700">בחרי קובץ PDF להעלאה (עד 10MB)</span>
+                </>
+              )}
+            </label>
+            <input
+              id="cv_file"
+              name="cv_file"
+              type="file"
+              accept="application/pdf"
+              required={!(hasSaved && source === "saved")}
+              className="sr-only"
+              onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+            />
+          </Field>
+        )}
         <p className="text-[12px] text-ink-500 -mt-2">
           רוצה לשמור גרסאות של קורות החיים? נהלי אותן ב
           <Link href="/cv" className="text-brand-purple font-semibold">
@@ -60,7 +149,7 @@ export function CvCheckerForm() {
           <Textarea id="job" name="job" rows={4} placeholder="הדביקי תיאור משרה ונבדוק יחד עד כמה את מתאימה…" />
         </Field>
         <Button type="submit" disabled={pending} className="w-fit" bracketed>
-          {pending ? "בודק את קורות החיים שלך…" : "בדיקת קורות חיים"}
+          {pending ? "בודקת את קורות החיים שלך…" : "בדיקת קורות חיים"}
         </Button>
       </form>
 
