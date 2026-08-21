@@ -1,0 +1,18 @@
+import { chromium } from "@playwright/test";
+const BASE = "https://open-code-psi.vercel.app";
+const SESSION = "eacb500f-9b4e-419b-8bd7-f5d024914047";
+const browser = await chromium.launch();
+const page = await browser.newPage();
+await page.goto(`${BASE}/login`);
+await page.fill('input[name="email"]', "admin.qa@opencode.test");
+await page.fill('input[name="password"]', "Nihul-Kehila-2026!vR7");
+await page.click('button[type="submit"]');
+await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+await page.goto(`${BASE}/ai/interview/${SESSION}`);
+await page.fill('input[name="answer"]', "בדיקת קישור חזרה");
+await page.click('button[type="submit"]:has-text("שליחה")');
+await page.waitForSelector('a[href*="next="]', { timeout: 25000 });
+const href = await page.locator('a[href*="next="]').last().getAttribute("href");
+console.log("href:", href);
+console.log("returns to session:", decodeURIComponent(href ?? "").includes(`next=/ai/interview/${SESSION}`) ? "✅" : "❌");
+await browser.close();

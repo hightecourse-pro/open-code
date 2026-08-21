@@ -77,20 +77,26 @@ export function InterviewThread({
     { id: "pending", role: "candidate", text },
   ]);
 
-  const [text, setText] = useState("");
   const [voice, setVoice] = useState(false);
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const recognitionRef = useRef<Recognition | null>(null);
   const spokenRef = useRef<string | null>(null);
   const lastSentRef = useRef("");
+  // Uncontrolled on purpose: a setState inside the form action is deferred to
+  // the end of the async transition (React 19), so a controlled box kept her
+  // words visible for the whole Gemini round-trip. The ref empties it the
+  // instant she sends — same trick as the community chat composer.
+  const inputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   // The box empties on send; a failed send puts her words back so she can
   // resend without retyping (unless she already started typing something new).
   useEffect(() => {
-    if (answer.error && lastSentRef.current) {
-      setText((prev) => prev || lastSentRef.current);
+    const el = inputRef.current;
+    if (answer.error && lastSentRef.current && el && !el.value) {
+      el.value = lastSentRef.current;
+      el.focus();
     }
   }, [answer]);
 
@@ -140,7 +146,8 @@ export function InterviewThread({
     rec.maxAlternatives = 1;
     rec.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
-      setText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      const el = inputRef.current;
+      if (el) el.value = el.value ? `${el.value} ${transcript}` : transcript;
     };
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);
@@ -238,16 +245,15 @@ export function InterviewThread({
               if (!sent) return;
               lastSentRef.current = sent;
               addPending(sent);
-              setText("");
+              if (inputRef.current) inputRef.current.value = "";
               answerAction(fd);
             }}
             className="flex gap-2"
           >
             <input
+              ref={inputRef}
               name="answer"
               autoComplete="off"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
               placeholder={listening ? "מקשיבה… דברי 🎙️" : "כתבי או דברי את התשובה שלך…"}
               className={cn(
                 "flex-1 px-3.5 py-3 rounded-md border text-sm outline-none focus:border-brand-purple",
