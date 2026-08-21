@@ -45,6 +45,25 @@ export default async function AuthenticatedLayout({
   // A free member reads the history she already has, so the count is hers too.
   const unreadCount = await unreadMessageCount(profile.id);
 
+  // She turned auto-renewal off but is still inside the paid period — a quiet
+  // standing reminder of the end date, with the way back one click away.
+  let cancelNotice: string | null = null;
+  if (subscriber && profile.role === "junior") {
+    const supabase = await createClient();
+    const { data: sub } = await supabase
+      .from("subscriptions")
+      .select("status, canceled_at, current_period_end")
+      .eq("profile_id", profile.id)
+      .maybeSingle();
+    if (sub?.status === "active" && sub.canceled_at && sub.current_period_end) {
+      cancelNotice = new Intl.DateTimeFormat("he-IL", {
+        day: "numeric",
+        month: "long",
+        timeZone: "Asia/Jerusalem",
+      }).format(new Date(sub.current_period_end));
+    }
+  }
+
   return (
     <AppShell
       user={{
@@ -52,10 +71,23 @@ export default async function AuthenticatedLayout({
         meta: meta || "חברת קהילה",
         initials: profile.avatar_initials || profile.full_name.slice(0, 1) || "ק",
         isAdmin: profile.role === "admin",
+        isMentor: profile.role === "mentor",
         isSubscriber: subscriber,
         unreadCount,
       }}
     >
+      {cancelNotice && (
+        <Link
+          href="/profile"
+          className="flex items-center gap-2.5 bg-tint-warm border border-[#F8D98C] rounded-md p-3 px-4 mb-5 text-[13.5px] text-[#8C5E0E] hover:border-[#E5A93C] transition-colors"
+        >
+          <span className="flex-1">
+            ביטלת את חידוש המנוי — הוא פעיל עד <b>{cancelNotice}</b>. התחרטת? אפשר להפעיל מחדש
+            בלחיצה.
+          </span>
+          <span className="font-display font-semibold whitespace-nowrap">לפרופיל ←</span>
+        </Link>
+      )}
       {!subscriber && (
         <Link
           href="/join"

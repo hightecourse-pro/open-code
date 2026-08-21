@@ -36,6 +36,17 @@ export async function submitApplication(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Mentors are here to give, not to job-hunt — the board is hidden from
+  // them, and a hand-typed URL stops here.
+  const { data: meRole } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (meRole?.role === "mentor") {
+    return { error: "לוח המשרות מיועד לחברות שמחפשות עבודה 💜" };
+  }
+
   // The job must be visible to her (RLS gates targeted jobs), ours and open.
   const { data: job } = await supabase
     .from("jobs")

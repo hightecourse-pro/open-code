@@ -4,8 +4,7 @@ import { notFound } from "next/navigation";
 import { Check, Sparkles, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, Button, ProgressRing } from "@/components/ui";
-import { cn } from "@/lib/utils";
-import { InterviewControls } from "@/components/patterns/interview-controls";
+import { InterviewThread } from "@/components/patterns/interview-thread";
 
 export const metadata: Metadata = { title: "ראיון" };
 
@@ -36,8 +35,6 @@ export default async function InterviewSessionPage({
   const done = session.status === "done";
   const strengths = (feedback?.strengths as string[] | undefined) ?? [];
   const improvements = (feedback?.improvements as string[] | undefined) ?? [];
-  const lastAgentText =
-    [...(turns ?? [])].reverse().find((t) => t.role === "agent")?.text ?? null;
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
@@ -51,32 +48,15 @@ export default async function InterviewSessionPage({
         </div>
       </div>
 
-      {/* transcript */}
-      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
-        {(turns ?? []).map((t) => (
-          <div
-            key={t.id}
-            className={cn(
-              "max-w-[85%] px-4 py-2.5 rounded-2xl text-[15px] leading-relaxed whitespace-pre-wrap",
-              t.role === "agent"
-                ? "self-start bg-ink-100 text-ink-900"
-                : "self-end bg-brand-gradient text-white"
-            )}
-          >
-            {t.text}
-          </div>
-        ))}
-        {(turns ?? []).length === 0 && (
-          <p className="text-ink-500 text-sm text-center py-4">הראיון מתחיל…</p>
-        )}
-      </div>
-
-      {!done && <InterviewControls sessionId={sessionId} lastAgentText={lastAgentText} />}
+      <InterviewThread sessionId={sessionId} turns={turns ?? []} done={done} />
 
       {done && !feedback && (
         <Alert variant="warn">
           לא הצלחנו להפיק משוב לראיון הזה — ייתכן שנגמרה מכסת המפתח.
-          <a href="/ai/keys" className="block mt-1 font-semibold text-brand-purple underline">
+          <a
+            href={`/ai/keys?next=/ai/interview/${sessionId}`}
+            className="block mt-1 font-semibold text-brand-purple underline"
+          >
             לניהול מפתחות ה-AI ←
           </a>
         </Alert>

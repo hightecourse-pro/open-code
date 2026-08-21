@@ -1,10 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { attachmentsFor } from "@/lib/attachments";
+import { isRichHtml } from "@/lib/rich-text-lite";
+import { htmlToPlainText } from "@/lib/rich-text";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber, requireProfile } from "@/lib/auth";
 import { Avatar } from "@/components/ui";
 import { ChatThread } from "@/components/patterns/chat-thread";
+import { NewChatButton } from "@/components/patterns/new-chat-button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { sendMessage } from "./actions";
@@ -18,10 +22,12 @@ function roleWord(role: UserRole): string {
   return "חברת קהילה";
 }
 
-/** One line of the last thing said in a thread — markers and all, shortened. */
+/** One line of the last thing said in a thread — words only, shortened. */
 function previewText(body: string, mine: boolean): string {
-  const flat = body.replace(/\s+/g, " ").trim();
-  return `${mine ? "את: " : ""}${flat}`;
+  // New messages are editor HTML; the preview wants only the words.
+  const words = isRichHtml(body) ? htmlToPlainText(body) : body;
+  const flat = words.replace(/\s+/g, " ").trim();
+  return `${mine ? "את: " : ""}${flat || "📎 קובץ מצורף"}`;
 }
 
 export default async function ChatPage({
@@ -153,9 +159,29 @@ export default async function ChatPage({
     ? [roleWord(activeOther.role), activeOther.specialization].filter(Boolean).join(" · ")
     : "";
 
+  // Files hanging on the visible messages — signed URLs minted here, so the
+  // client never holds a permanent address.
+  const messageAtt = await attachmentsFor("message", (messages ?? []).map((m) => m.id));
+  const messagesWithFiles = (messages ?? []).map((m) => ({
+    ...m,
+    attachments: messageAtt.get(m.id),
+  }));
+
+  // Everyone she may open a conversation with — active members, not herself.
+  // The same find-or-create action the directory uses handles the rest.
+  const { data: chatables } = await supabase
+    .from("profiles")
+    .select("id, full_name, specialization, avatar_initials")
+    .eq("status", "active")
+    .neq("id", me.id)
+    .order("full_name", { ascending: true });
+
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
+        {subscriber && <NewChatButton members={chatables ?? []} />}
+      </div>
 
       {/* Bounded to the viewport so the thread scrolls inside its own pane and
           the composer stays on screen — the page itself never scrolls to chat.
@@ -276,7 +302,7 @@ export default async function ChatPage({
               </div>
 
               <ChatThread
-                messages={messages}
+                messages={messagesWithFiles}
                 meId={me.id}
                 action={canSend ? sendMessage.bind(null, active.id) : undefined}
                 hint={

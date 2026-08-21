@@ -8,6 +8,7 @@ import { LoggedLink } from "@/components/patterns/logged-link";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { returnCourse } from "./actions";
+import { COURSE_DATE_HE, swapEligibleAt } from "@/lib/course-library";
 import type { ContentLink } from "@/types/database";
 
 export const metadata: Metadata = { title: "ספריית הקורסים" };
@@ -16,6 +17,22 @@ export default async function CoursesPage() {
   const supabase = await createClient();
   const user = await getUser();
   const profile = await requireCommunityAccess();
+  // The library is a junior benefit; mentors get sessions and recordings. The
+  // sidebar hides this tab for them — this covers a typed-in URL.
+  if (profile.role === "mentor") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div>
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;קורסים/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ספריית הקורסים</h1>
+        </div>
+        <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14.5px] text-ink-700 leading-relaxed">
+          ספריית הקורסים מיועדת לחברות הקהילה במסלול מנוי 💜 בתור מנטורית פתוחים לך הסשנים,
+          ההקלטות, הפורום והצ&apos;אט — ואם מתחשק לך קורס מסוים, כתבי לנו ונפתח אותו עבורך אישית.
+        </div>
+      </div>
+    );
+  }
   const subscriber = isSubscriber(profile);
 
   const [{ data: courses }, { data: active }] = await Promise.all([
@@ -23,7 +40,7 @@ export default async function CoursesPage() {
     user && subscriber
       ? supabase
           .from("enrollments")
-          .select("id, course_id, progress_pct, last_switch_month, studied, rating, feedback")
+          .select("id, course_id, progress_pct, last_switch_month, studied, rating, feedback, started_at, created_at")
           .eq("profile_id", user.id)
           .eq("status", "active")
           .maybeSingle()
@@ -31,6 +48,13 @@ export default async function CoursesPage() {
   ]);
 
   const activeCourse = active ? (courses ?? []).find((c) => c.id === active.course_id) : null;
+
+  // The library rule, printed instead of implied: when the rolling month since
+  // she took the current course hasn't passed, every other card carries the
+  // exact date her swap unlocks.
+  const eligibleAt = active ? swapEligibleAt(active.started_at ?? active.created_at) : null;
+  const swapReady = !eligibleAt || eligibleAt <= new Date();
+  const swapEligibleIso = eligibleAt && !swapReady ? eligibleAt.toISOString() : null;
 
   // Unit (קוביה) headers for every course — the cards show the year cycles.
   // Tolerates the table not existing yet (pre-migration deploys).
@@ -125,6 +149,11 @@ export default async function CoursesPage() {
               <div className="h-full bg-white rounded-full" style={{ width: `${active?.progress_pct ?? 0}%` }} />
             </div>
             <div className="text-xs opacity-85 mt-1.5">השלמת {active?.progress_pct ?? 0}% מהקורס</div>
+            <div className="text-xs opacity-85 mt-1">
+              {swapReady
+                ? "זכאות ההחלפה שלך פתוחה — אפשר לבחור קורס אחר מהספרייה 📚"
+                : `זכאות החלפת קורס: ${COURSE_DATE_HE.format(eligibleAt!)}`}
+            </div>
           </div>
           <div className="flex flex-col gap-2 sm:ms-auto">
             {/* Only once she really holds the Drive share — otherwise this
@@ -220,6 +249,7 @@ export default async function CoursesPage() {
               cycles={cycles}
               gifted={giftedIds.includes(course.id)}
               locked={!!activeCourse && activeCourse.id !== course.id}
+              swapEligibleAt={swapEligibleIso}
               needsSubscription={!subscriber}
             />
           );

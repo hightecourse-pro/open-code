@@ -1,5 +1,9 @@
 "use server";
 
+import { isRichHtml } from "@/lib/rich-text-lite";
+import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
+
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -24,9 +28,21 @@ async function canWrite(): Promise<boolean> {
  * enforced by RLS as well; the window is enforced here, against the row's own
  * created_at rather than anything the browser sends.
  */
+/**
+ * The composer sends editor HTML; legacy clients send plain text. HTML passes
+ * the sanitizing allowlist, and every length rule is measured on the words —
+ * markup must never eat a member's character budget.
+ */
+function normalizeBody(raw: string): { body: string; plain: string } {
+  const trimmed = raw.trim();
+  if (!isRichHtml(trimmed)) return { body: trimmed, plain: trimmed };
+  const body = sanitizeRichHtml(trimmed);
+  return { body, plain: htmlToPlainText(body).trim() };
+}
+
 export async function editPost(postId: string, formData: FormData): Promise<{ error?: string }> {
-  const body = String(formData.get("body") ?? "").trim();
-  if (!body) return { error: "אי אפשר להשאיר פוסט ריק." };
+  const { body, plain } = normalizeBody(String(formData.get("body") ?? ""));
+  if (!plain) return { error: "אי אפשר להשאיר פוסט ריק." };
   const supabase = await createClient();
   const {
     data: { user },
@@ -59,8 +75,8 @@ export async function editComment(
   commentId: string,
   formData: FormData
 ): Promise<{ error?: string }> {
-  const body = String(formData.get("body") ?? "").trim();
-  if (!body) return { error: "אי אפשר להשאיר תגובה ריקה." };
+  const { body, plain } = normalizeBody(String(formData.get("body") ?? ""));
+  if (!plain) return { error: "אי אפשר להשאיר תגובה ריקה." };
   const supabase = await createClient();
   const {
     data: { user },
@@ -115,14 +131,20 @@ export async function toggleReaction(postId: string, kind: ReactionKind): Promis
 
 /** Add a comment to a post. */
 export async function addComment(postId: string, formData: FormData): Promise<void> {
-  const body = String(formData.get("body") ?? "").trim();
-  if (body.length < 1) return;
+  const { body, plain } = normalizeBody(String(formData.get("body") ?? ""));
+  const attachIds = attachmentIdsFrom(formData);
+  if (plain.length < 1 && attachIds.length === 0) return;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user || !(await canWrite())) return;
-  await supabase.from("comments").insert({ post_id: postId, author_id: user.id, body });
+  const { data: created } = await supabase
+    .from("comments")
+    .insert({ post_id: postId, author_id: user.id, body })
+    .select("id")
+    .single();
+  if (created) await linkAttachments(user.id, "comment", created.id, attachIds);
   revalidatePath("/forum");
   revalidatePath(`/forum/${postId}`);
 }
@@ -150,15 +172,16 @@ export async function createPost(
   _prev: ComposerState,
   formData: FormData
 ): Promise<ComposerState> {
-  const body = String(formData.get("body") ?? "").trim();
+  const { body, plain } = normalizeBody(String(formData.get("body") ?? ""));
   const intentRaw = String(formData.get("intent") ?? "knowledge");
   const intent: PostIntent = INTENTS.includes(intentRaw as PostIntent)
     ? (intentRaw as PostIntent)
     : "knowledge";
   const kind: PostKind = String(formData.get("kind") ?? "feed") === "forum" ? "forum" : "feed";
 
-  if (body.length < 2) return { error: "כתבי משהו קצר לפני ששולחים 🙂" };
-  if (body.length > 5000) return { error: "הפוסט ארוך מדי — עד 5,000 תווים. אפשר לפצל לכמה פוסטים 💜" };
+  const attachIds = attachmentIdsFrom(formData);
+  if (plain.length < 2 && attachIds.length === 0) return { error: "כתבי משהו קצר לפני ששולחים 🙂" };
+  if (plain.length > 5000) return { error: "הפוסט ארוך מדי — עד 5,000 תווים. אפשר לפצל לכמה פוסטים 💜" };
 
   const supabase = await createClient();
   const {
@@ -167,11 +190,16 @@ export async function createPost(
   if (!user) redirect("/login");
   if (!(await canWrite())) return { error: UPGRADE_MSG };
 
-  const { error } = await supabase.from("posts").insert({ author_id: user.id, body, intent, kind });
+  const { data: createdPost, error } = await supabase
+    .from("posts")
+    .insert({ author_id: user.id, body, intent, kind })
+    .select("id")
+    .single();
 
   if (error) {
     return { error: "לא הצלחנו לפרסם כרגע. בואי ננסה שוב." };
   }
+  if (createdPost) await linkAttachments(user.id, "post", createdPost.id, attachIds);
 
   revalidatePath(kind === "forum" ? "/forum" : "/feed");
   return {};

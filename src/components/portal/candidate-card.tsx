@@ -35,6 +35,7 @@ export function CandidateCard({
           <div className="flex flex-wrap items-center gap-1.5">
             {candidate.region && <Badge variant="indigo">{candidate.region}</Badge>}
             {candidate.isExperienced && <Badge variant="mint">בעלת ניסיון</Badge>}
+            {candidate.isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
           </div>
 
           {candidate.headline.length > 0 && (

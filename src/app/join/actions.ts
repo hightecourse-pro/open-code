@@ -41,3 +41,48 @@ export async function simulatePayment(plan: SubscriptionPlan): Promise<{ error?:
   await activateSubscription({ profileId: user.id, plan });
   redirect("/forum");
 }
+
+/**
+ * "אני מגיעה בתור מנטורית" — switches her onto the free, approval-based track:
+ * role mentor + free tier, and the profile gate reopens so she fills the
+ * MENTOR questionnaire (shared answers she already gave stay pre-filled).
+ * Until an admin approves, she is a pending member like any other.
+ */
+export async function applyAsMentor(): Promise<void> {
+  const user = await getUser();
+  if (!user) redirect("/login");
+  const supabase = await createClient();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("status, role")
+    .eq("id", user.id)
+    .maybeSingle();
+  // Only a not-yet-active member may switch tracks — an active member asking
+  // to mentor goes through the admin (מינוי), not through self-serve.
+  if (!me || me.status === "active") redirect("/join");
+  await supabase
+    .from("profiles")
+    .update({ role: "mentor", member_tier: "free", profile_completed: false })
+    .eq("id", user.id);
+  // The (app) layout shows the mentor questionnaire while profile_completed
+  // is false — land her straight on it.
+  redirect("/forum");
+}
+
+/** She clicked the mentor track by mistake — back to the paid junior track. */
+export async function revertMentorApplication(): Promise<void> {
+  const user = await getUser();
+  if (!user) redirect("/login");
+  const supabase = await createClient();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("status, role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!me || me.status === "active" || me.role !== "mentor") redirect("/join");
+  await supabase
+    .from("profiles")
+    .update({ role: "junior", member_tier: "paid" })
+    .eq("id", user.id);
+  redirect("/join");
+}

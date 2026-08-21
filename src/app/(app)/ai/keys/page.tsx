@@ -22,9 +22,17 @@ const STEPS = [
   "הדביקי אותו בטופס למטה ושמרי. זהו! 💜",
 ];
 
-export default async function AiKeysPage() {
+export default async function AiKeysPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   // A key is only useful with the AI tools, which are part of the membership.
   await requireSubscription("ai");
+  // Where she came from (a tool page) — saving a key sends her straight back
+  // there. Internal paths only, so the param can never become an open redirect.
+  const sp = await searchParams;
+  const next = typeof sp.next === "string" && /^\/(?!\/)/.test(sp.next) ? sp.next : null;
   const keys = await listUserKeys();
   const hasActive = keys.some((k) => k.status === "active");
 
@@ -74,7 +82,7 @@ export default async function AiKeysPage() {
         <h2 className="font-display text-lg font-bold text-ink-1000 mb-3 flex items-center gap-2">
           <KeyRound size={18} className="text-brand-purple" /> הוספת מפתח
         </h2>
-        <AddKeyForm />
+        <AddKeyForm next={next} />
       </div>
 
       {/* existing keys */}

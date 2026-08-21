@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSubscriber } from "@/lib/auth";
 import { queueRevokes } from "@/lib/drive-shares";
 import { ensureAccess } from "@/lib/content-access";
+import { COURSE_DATE_HE as DATE_HE, swapEligibleAt } from "@/lib/course-library";
 
 function monthStart(): string {
   return new Date().toISOString().slice(0, 7) + "-01"; // YYYY-MM-01
@@ -13,7 +14,7 @@ function monthStart(): string {
 
 /**
  * Start (or switch to) a course. Library model: one active course at a time,
- * and you may switch at most once per calendar month.
+ * and you may take a new one once a month (rolling, from the previous take).
  */
 export async function startCourse(courseId: string): Promise<{ error?: string; ok?: boolean }> {
   const supabase = await createClient();
@@ -33,45 +34,53 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
   if (!me || !isSubscriber(me)) {
     return { error: "פתיחת קורס נפתחת עם מנוי לקהילה 💜" };
   }
+  if (me.role === "mentor") {
+    return { error: "ספריית הקורסים מיועדת לחברות הקהילה — למנטוריות פתוחים הסשנים וההקלטות 💜" };
+  }
   if (!course?.is_published) return { error: "הקורס הזה לא זמין כרגע." };
 
   const { data: active } = await supabase
     .from("enrollments")
-    .select("id, course_id, last_switch_month")
+    .select("id, course_id, started_at, created_at")
     .eq("profile_id", user.id)
     .eq("status", "active")
     .maybeSingle();
 
-  const thisMonth = monthStart();
+  const now = new Date();
 
   if (active) {
     if (active.course_id === courseId) return { ok: true };
-    if (active.last_switch_month && active.last_switch_month >= thisMonth) {
-      return { error: "אפשר להחליף קורס פעם בחודש. הקורס הנוכחי יישאר זמין עד החודש הבא 💜" };
+    const takenAt = active.started_at ?? active.created_at;
+    const eligibleAt = swapEligibleAt(takenAt);
+    if (eligibleAt > now) {
+      return {
+        error: `אפשר להחליף קורס פעם בחודש 💜 זכאות ההחלפה הבאה שלך: ${DATE_HE.format(eligibleAt)}.`,
+      };
     }
     await supabase
       .from("enrollments")
-      .update({ status: "returned", switched_at: new Date().toISOString() })
+      .update({ status: "returned", switched_at: now.toISOString() })
       .eq("id", active.id);
     // Switching away also ends access to the old course's material.
     await queueRevokes(user.id, "course", [active.course_id]);
   } else {
     // No active course — but "return then start" must not bypass the monthly
-    // limit. If any enrollment was already taken this month, only THAT course
-    // may be resumed until next month.
+    // limit. The rolling month counts from the most recent take, whatever its
+    // status now; only THAT course may be resumed early.
     const { data: latest } = await supabase
       .from("enrollments")
-      .select("course_id, last_switch_month")
+      .select("course_id, started_at, created_at")
       .eq("profile_id", user.id)
-      .order("last_switch_month", { ascending: false })
+      .order("started_at", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
-    if (
-      latest?.last_switch_month &&
-      latest.last_switch_month >= thisMonth &&
-      latest.course_id !== courseId
-    ) {
-      return { error: "אפשר לפתוח קורס חדש פעם בחודש 💜 תוכלי לחזור לקורס שהיה לך החודש, או לחכות לחודש הבא." };
+    if (latest && latest.course_id !== courseId) {
+      const eligibleAt = swapEligibleAt(latest.started_at ?? latest.created_at);
+      if (eligibleAt > now) {
+        return {
+          error: `אפשר לקחת קורס חדש פעם בחודש 💜 זכאות ההחלפה שלך: ${DATE_HE.format(eligibleAt)}. עד אז אפשר לחזור לקורס הקודם.`,
+        };
+      }
     }
   }
 
@@ -85,14 +94,15 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
   if (existing) {
     await supabase
       .from("enrollments")
-      .update({ status: "active", last_switch_month: thisMonth, started_at: new Date().toISOString() })
+      .update({ status: "active", last_switch_month: monthStart(), started_at: now.toISOString() })
       .eq("id", existing.id);
   } else {
     await supabase.from("enrollments").insert({
       profile_id: user.id,
       course_id: courseId,
       status: "active",
-      last_switch_month: thisMonth,
+      last_switch_month: monthStart(),
+      started_at: now.toISOString(),
     });
   }
 

@@ -16,12 +16,23 @@ const COVERS = [
   "bg-[linear-gradient(135deg,#913F80,#E0418D)]",
 ];
 
+const SWAP_DATE = new Intl.DateTimeFormat("he-IL", {
+  day: "numeric",
+  month: "long",
+  timeZone: "Asia/Jerusalem",
+});
+
 export interface CourseCardProps {
   course: Course;
   /** Year-cycle summary, e.g. "3 מחזורים · 2023–2025" (courses with units). */
   cycles?: string | null;
   /** True when the member already has a different active course (locked). */
   locked: boolean;
+  /**
+   * When she is NOT yet allowed to swap: the ISO date her next swap unlocks —
+   * printed on the card, per the owner's library rule. Null once eligible.
+   */
+  swapEligibleAt?: string | null;
   /** An admin opened this course for her personally — it isn't locked. */
   gifted?: boolean;
   /** True for a free member — the catalogue is visible, opening isn't. */
@@ -33,17 +44,24 @@ export function CourseCard({
   course,
   cycles,
   locked,
+  swapEligibleAt = null,
   gifted = false,
   needsSubscription = false,
 }: CourseCardProps) {
   const [pending, start] = useTransition();
   const cover = COVERS[(course.cover_variant - 1) % COVERS.length];
+  const swapReady = locked && !swapEligibleAt;
 
   function onStart() {
     start(async () => {
       const res = await startCourse(course.id);
       if (res?.error) alert(res.error);
     });
+  }
+
+  function onSwap() {
+    if (!confirm(`להחליף לקורס "${course.title}"? הגישה לקורס הנוכחי תיסגר — כמו החזרת ספר לספרייה 📚`)) return;
+    onStart();
   }
 
   return (
@@ -53,7 +71,7 @@ export function CourseCard({
         // line, whatever the title/category above it does.
         "bg-white border rounded-[18px] overflow-hidden h-full flex flex-col transition-[transform,box-shadow] duration-[220ms]",
         gifted ? "border-[#F3C6DD]" : "border-ink-200",
-        locked && !gifted ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-md"
+        locked && !gifted && !swapReady ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-md"
       )}
     >
       <div className={cn("h-[120px] shrink-0 relative flex items-center justify-center text-white font-mono text-5xl font-black", cover)}>
@@ -63,10 +81,13 @@ export function CourseCard({
             נפתח עבורך אישית 💜
           </div>
         )}
-        {locked && !gifted && (
-          <div className="absolute inset-0 bg-ink-1000/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1.5 text-white text-[13px] font-display font-semibold">
+        {locked && !gifted && !swapReady && (
+          <div className="absolute inset-0 bg-ink-1000/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 text-white text-[13px] font-display font-semibold text-center px-3">
             <Lock size={22} />
-            יש לך קורס פעיל אחר
+            זכאות החלפת קורס
+            <span className="text-[12px] font-normal opacity-90">
+              מ-{SWAP_DATE.format(new Date(swapEligibleAt!))}
+            </span>
           </div>
         )}
       </div>
@@ -103,6 +124,15 @@ export function CourseCard({
             </Link>
           ) : gifted ? (
             <div className="text-[12.5px] text-ink-500">החומרים שלו מחכים לך למעלה 💜</div>
+          ) : swapReady ? (
+            <button
+              type="button"
+              onClick={onSwap}
+              disabled={pending}
+              className="w-full font-display font-semibold text-[13px] py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors disabled:opacity-60"
+            >
+              {pending ? "מחליפה…" : "החלפה לקורס הזה 📚"}
+            </button>
           ) : (
             !locked && (
               <button

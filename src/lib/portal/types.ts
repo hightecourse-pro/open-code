@@ -29,6 +29,8 @@ export interface CandidateSummary {
   region: string | null;
   headline: string[];
   isExperienced: boolean;
+  /** Surfaced only when the recruiter explicitly toggled mentors on. */
+  isMentor?: boolean;
 }
 
 export interface CandidateDetail extends CandidateSummary {

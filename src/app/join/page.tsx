@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getProfile } from "@/lib/auth";
 import { signOut } from "../(auth)/actions";
+import { applyAsMentor, revertMentorApplication } from "./actions";
 import { Alert, Button, Logo } from "@/components/ui";
 import { CheckoutPanel } from "@/components/patterns/checkout-panel";
 import { buildTransactionFields, isNedarimConfigured } from "@/lib/payments/nedarim";
@@ -58,7 +59,18 @@ export default async function JoinPage({
 
   // Free tier (mentors) are approval-based; rejected members get a message.
   if (isMentorTier || profile.status === "rejected") {
-    const copy = MESSAGE[profile.status === "rejected" ? "rejected" : "pending"];
+    const rejected = profile.status === "rejected";
+    const copy = rejected
+      ? MESSAGE.rejected
+      : isMentorTier
+        ? {
+            variant: "info" as const,
+            title: "הבקשה שלך להצטרף כמנטורית אצלנו 👑",
+            body: profile.profile_completed
+              ? "אנחנו עוברות עליה באהבה — ברגע שתאושרי יגיע לך מייל, ומשם הכול פתוח. בינתיים את מוזמנת להסתובב בקהילה ולקרוא."
+              : "נשאר רק למלא את שאלון המנטוריות — ניכנס לקהילה והשאלון יופיע. אחרי שתסיימי, נעבור על הבקשה ונעדכן אותך במייל.",
+          }
+        : MESSAGE.pending;
     return (
       <Shell>
         <div>
@@ -68,6 +80,21 @@ export default async function JoinPage({
         <Alert variant={copy.variant} title={copy.title}>
           {copy.body}
         </Alert>
+        {isMentorTier && !rejected && !profile.profile_completed && (
+          <Link
+            href="/forum"
+            className="w-full inline-flex items-center justify-center font-display font-semibold text-[13.5px] py-2.5 rounded-md bg-brand-gradient text-white"
+          >
+            למילוי שאלון המנטוריות ←
+          </Link>
+        )}
+        {isMentorTier && !rejected && (
+          <form action={revertMentorApplication}>
+            <Button type="submit" variant="ghost" size="sm" className="w-full">
+              בעצם התכוונתי להצטרף כחברה במסלול מנוי
+            </Button>
+          </form>
+        )}
         <form action={signOut}>
           <Button type="submit" variant="ghost" className="w-full">
             יציאה
@@ -163,6 +190,24 @@ export default async function JoinPage({
       )}
 
       <CheckoutPanel plans={plans} configured={configured} fieldsByPlan={fieldsByPlan} />
+
+      {/* The mentor door: experienced women join to give, not to pay. */}
+      {!renewing && (
+        <div className="border border-[#EAD9A8] bg-tint-warm/60 rounded-md p-4 flex flex-col gap-2">
+          <div className="font-display font-bold text-[14.5px] text-ink-1000">
+            מגיעה בתור מנטורית? 👑
+          </div>
+          <p className="text-[13px] text-ink-700 leading-relaxed">
+            מפתחת מנוסה שרוצה לתרום לקהילה — מענה לשאלות, ליווי אישי, האקתונים? למנטוריות אין מנוי:
+            ממלאות שאלון קצר, ואנחנו מאשרות.
+          </p>
+          <form action={applyAsMentor}>
+            <Button type="submit" variant="secondary" size="sm">
+              הגשת בקשה למנטורית בקהילה
+            </Button>
+          </form>
+        </div>
+      )}
 
       {/* A free member is welcome inside — paying is what unlocks taking part. */}
       <Link

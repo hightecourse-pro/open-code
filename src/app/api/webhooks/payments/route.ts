@@ -118,7 +118,7 @@ function callerIp(req: Request): string {
   return (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
 }
 
-export async function POST(req: Request) {
+async function handleCallback(req: Request) {
   const cfg = getNedarimConfig();
   const url = new URL(req.url);
   const params: Record<string, string> = {};
@@ -274,3 +274,11 @@ export async function POST(req: Request) {
   await logEvent(record);
   return NextResponse.json({ ok: record.outcome === "activated" });
 }
+
+// Nedarim's docs don't commit to a method, and their portal-only documentation
+// can't be checked from here. A POST-only route answered GET with a bare 405 —
+// a callback delivered that way would vanish with no diagnostic row and no
+// alert, which is exactly the silent failure this route exists to prevent.
+// Both methods run the same authentication; the parser already reads the query
+// string, and body parsing quietly no-ops when there is none.
+export { handleCallback as GET, handleCallback as POST };

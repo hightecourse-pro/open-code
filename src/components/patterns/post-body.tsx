@@ -1,11 +1,11 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Pencil, X } from "lucide-react";
-import { RichText } from "@/components/patterns/rich-text";
-import { TextToolbar } from "@/components/patterns/text-toolbar";
+import { MessageBody } from "@/components/patterns/rich-text";
+import { RichTextEditor } from "@/components/patterns/rich-text-editor";
 import { editPost } from "@/app/(app)/feed/actions";
-import { editMinutesLeft, withinEditWindow } from "@/lib/rich-text-lite";
+import { editMinutesLeft, isRichHtml, legacyToHtml, withinEditWindow } from "@/lib/rich-text-lite";
 
 /**
  * A post's words — and, for the ten minutes after she wrote them, a quiet way
@@ -24,11 +24,9 @@ export function PostBody({
   canEdit: boolean;
 }) {
   const [editing, setEditing] = useState(false);
-  const [text, setText] = useState(body);
   const [shown, setShown] = useState(body);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const ref = useRef<HTMLTextAreaElement>(null);
 
   const open = canEdit && withinEditWindow(createdAt);
   const left = editMinutesLeft(createdAt);
@@ -36,14 +34,11 @@ export function PostBody({
   if (!editing) {
     return (
       <div className="group/body relative">
-        <RichText body={shown} className="text-[15px] leading-relaxed text-ink-900" />
+        <MessageBody body={shown} className="text-[15px] leading-relaxed text-ink-900" />
         {open && (
           <button
             type="button"
-            onClick={() => {
-              setText(shown);
-              setEditing(true);
-            }}
+            onClick={() => setEditing(true)}
             className="mt-1 inline-flex items-center gap-1 text-[12px] text-ink-400 hover:text-brand-purple transition-colors"
           >
             <Pencil size={12} /> עריכה
@@ -58,28 +53,27 @@ export function PostBody({
     <form
       action={(fd) =>
         start(async () => {
+          const next = String(fd.get("body") ?? "");
           const res = await editPost(postId, fd);
           if (res?.error) {
             setError(res.error);
             return;
           }
-          setShown(text);
+          setShown(next);
           setEditing(false);
           setError(null);
         })
       }
       className="flex flex-col gap-1.5"
     >
-      <textarea
-        ref={ref}
+      {/* A legacy post with markers seeds the editor as REAL formatting —
+          she edits bold text, not asterisk soup. */}
+      <RichTextEditor
         name="body"
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={Math.min(10, Math.max(3, text.split("\n").length + 1))}
-        className="w-full text-[15px] text-ink-900 border border-ink-300 rounded-lg p-2.5 outline-none focus:border-brand-purple resize-y"
+        tools={["bold", "italic", "strike", "ul", "ol", "link"]}
+        defaultValue={isRichHtml(shown) ? shown : legacyToHtml(shown)}
       />
       <div className="flex items-center gap-2 flex-wrap">
-        <TextToolbar targetRef={ref} />
         <button
           type="submit"
           disabled={pending}

@@ -25,7 +25,7 @@ import {
   parseExperienceEntries,
   practicumPeriodLabel,
 } from "@/lib/experience-entries";
-import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
+import type { ConfigQuestion, TaxonomyKind, UserRole } from "@/types/database";
 import type { CandidateDetail, CandidateField, CatalogueField, ExperienceEntryDisplay } from "./types";
 
 // Shapes and the pure filter live in their own modules so the client filter UI
@@ -237,11 +237,14 @@ function buildCatalogue(
 }
 
 /** Every listed candidate, with only employer-visible answers attached. */
-export async function loadCandidates(): Promise<{
+export async function loadCandidates(opts?: { includeMentors?: boolean }): Promise<{
   candidates: CandidateDetail[];
   questions: ConfigQuestion[];
   catalogue: CatalogueField[];
 }> {
+  // Mentors are not job-seekers: by default they simply don't exist in the
+  // portal. The owner's rule — they surface only behind an explicit toggle.
+  const roles: UserRole[] = opts?.includeMentors ? ["junior", "mentor"] : ["junior"];
   const admin = createAdminClient();
   // Taxonomies come through the service role like everything else here: the
   // portal visitor is not a Supabase user, and the cookie-bound client would
@@ -263,11 +266,11 @@ export async function loadCandidates(): Promise<{
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, status, profile_completed")
+    .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, status, profile_completed, role")
     .in("status", ["active", "pending"])
     .eq("profile_completed", true)
-    // Only job-seeking members — never admins or mentors.
-    .eq("role", "junior")
+    // Job-seeking members; never admins. Mentors only behind the toggle.
+    .in("role", roles)
     .order("full_name", { ascending: true });
 
   const listed = (profiles ?? []).filter((p) => p.portal_listed !== false);
@@ -328,6 +331,7 @@ export async function loadCandidates(): Promise<{
       region: showRegion ? p.region : null,
       bio: showBio ? p.bio : null,
       isExperienced: !!p.is_experienced,
+      isMentor: p.role === "mentor",
       headline,
       fields,
       links,

@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Sparkles, Rocket, Plus, X } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -49,6 +49,15 @@ const LONG_TEXT = new Set([
   "practicum_description",
 ]);
 const isOtherVal = (v: string) => v === "other";
+
+// Short related fields share a row instead of each taking a full one — the
+// tester's "אפשר לחבר לשורה אחת (רחוב, מס' בית, עיר)". Only consecutive
+// questions from one group are joined, so an admin reordering the form can
+// always split them again.
+const ROW_GROUPS: string[][] = [
+  ["city", "street", "house_number"],
+  ["id_number", "phone"],
+];
 
 // The wizard's steps live in @/lib/profile-sections so the configuration screen
 // can group by exactly the same rule — otherwise the admin reorders a flat list
@@ -531,6 +540,41 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     );
   }
 
+  // Render a step's questions, joining consecutive ROW_GROUPS members into a
+  // shared grid row (address trio, ID+phone pair).
+  function renderRows(qs: ConfigQuestion[]) {
+    const out: ReactNode[] = [];
+    for (let i = 0; i < qs.length; ) {
+      const grp = ROW_GROUPS.find((g) => g.includes(qs[i].key));
+      if (!grp) {
+        out.push(renderField(qs[i]));
+        i++;
+        continue;
+      }
+      const run: ConfigQuestion[] = [];
+      while (i < qs.length && grp.includes(qs[i].key)) {
+        run.push(qs[i]);
+        i++;
+      }
+      if (run.length === 1) {
+        out.push(renderField(run[0]));
+        continue;
+      }
+      out.push(
+        <div
+          key={`row-${run[0].id}`}
+          className={cn(
+            "grid grid-cols-1 gap-3",
+            run.length === 3 ? "sm:grid-cols-[1.2fr_1.2fr_0.7fr]" : "sm:grid-cols-2"
+          )}
+        >
+          {run.map(renderField)}
+        </div>
+      );
+    }
+    return out;
+  }
+
   return (
     <form
       ref={formRef}
@@ -653,7 +697,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       {/* section steps (all mounted so values submit; only current is shown) */}
       {sectionSteps.map((s, i) => (
         <div key={i} className={cn("flex flex-col gap-4", cur === i + 1 ? "" : "hidden")}>
-          {s.questions.map(renderField)}
+          {renderRows(s.questions)}
         </div>
       ))}
 

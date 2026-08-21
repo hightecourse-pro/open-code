@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { isRichHtml } from "@/lib/rich-text-lite";
+import { htmlToPlainText } from "@/lib/rich-text";
 import { MessageCircle, Heart, Pin } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { cn, timeAgo } from "@/lib/utils";
@@ -30,9 +32,11 @@ export interface ForumTopic {
   likeCount: number;
 }
 
-/** A topic's list title — the first line of the post, kept short. */
+/** A topic's list title — the first line of the post's words, kept short. */
 export function topicTitle(body: string, max = 90): string {
-  const first = body.split("\n").find((l) => l.trim().length > 0)?.trim() ?? "";
+  // Rich-editor posts store HTML; the title wants only the words.
+  const words = isRichHtml(body) ? htmlToPlainText(body) : body;
+  const first = words.split("\n").find((l) => l.trim().length > 0)?.trim() ?? "";
   return first.length > max ? `${first.slice(0, max - 1)}…` : first || "נושא בפורום";
 }
 

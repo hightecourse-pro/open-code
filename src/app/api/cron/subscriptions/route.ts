@@ -3,6 +3,8 @@ import { raiseAlert } from "@/lib/alerts";
 import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deactivateSubscription } from "@/lib/payments/subscription";
+import { sendResendEmail } from "@/lib/email/resend";
+import { subscriptionEndedEmail } from "@/lib/email/templates";
 import { processShareQueue } from "@/lib/drive-shares";
 
 /**
@@ -82,9 +84,20 @@ export async function GET(request: Request) {
       // charged. Both deserve a row in the alerts center, per member.
       const { data: who } = await admin
         .from("profiles")
-        .select("full_name")
+        .select("full_name, first_name")
         .eq("id", profileId)
         .maybeSingle();
+      // The ending-day email she was promised: what closed, and the way back.
+      try {
+        const { data: authUser } = await admin.auth.admin.getUserById(profileId);
+        const email = authUser?.user?.email;
+        if (email) {
+          const mail = subscriptionEndedEmail(who?.first_name ?? undefined);
+          await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+        }
+      } catch (e) {
+        console.error("[subscriptions] ended email failed:", profileId, e);
+      }
       await raiseAlert({
         kind: "subscription_expired",
         severity: "warning",
@@ -106,11 +119,33 @@ export async function GET(request: Request) {
     console.error("[subscriptions] drive sync failed:", e);
   }
 
+  // Attachment hygiene: files uploaded while composing but never sent stay
+  // UNLINKED (context_id null). A day is ample grace for a draft; after that
+  // the file and its row go. Bounded per run like everything else here.
+  let attachmentsSwept = 0;
+  try {
+    const dayAgo = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    const { data: orphans } = await admin
+      .from("attachments")
+      .select("id, file_path")
+      .is("context_id", null)
+      .lt("created_at", dayAgo)
+      .limit(100);
+    if (orphans?.length) {
+      await admin.storage.from("attachments").remove(orphans.map((o) => o.file_path));
+      await admin.from("attachments").delete().in("id", orphans.map((o) => o.id));
+      attachmentsSwept = orphans.length;
+    }
+  } catch (e) {
+    console.error("[subscriptions] attachment sweep failed:", e);
+  }
+
   // Bounded per run; the rest are picked up by tomorrow's run.
   return NextResponse.json({
     ok: true,
     expired: expiredCount,
     remaining: ids.length - expiredCount,
     drive,
+    attachmentsSwept,
   });
 }

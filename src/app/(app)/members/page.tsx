@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { MemberCard, type DirectoryMember } from "@/components/patterns/member-card";
 import { MembersInstantList } from "@/components/patterns/members-instant-list";
+import { mentorScores } from "@/lib/mentor-score";
 
 export const metadata: Metadata = { title: "המשתתפות שלנו" };
 
@@ -40,6 +41,9 @@ export default async function MembersPage({
   );
   const capped = members.length === MAX_RESULTS;
 
+  // Mentor scores are public — the directory card carries them.
+  const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -58,7 +62,7 @@ export default async function MembersPage({
         items={members.map((member) => ({
           id: member.id,
           haystack: [member.full_name, member.specialization ?? "", member.region ?? ""].join(" "),
-          node: <MemberCard member={member} canChat={canChat} />,
+          node: <MemberCard member={member} canChat={canChat} score={scores.get(member.id)?.score} />,
         }))}
       />
     </div>

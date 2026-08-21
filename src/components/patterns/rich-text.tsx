@@ -1,4 +1,39 @@
-import { parseRichText } from "@/lib/rich-text-lite";
+import { isRichHtml, parseRichText } from "@/lib/rich-text-lite";
+
+/**
+ * The one renderer for community bodies. New content is editor HTML
+ * (sanitized by the allowlist at save); anything older is legacy marker text
+ * and takes the token path. `invert` adapts colors to a dark bubble.
+ */
+export function MessageBody({
+  body,
+  className,
+  invert = false,
+}: {
+  body: string;
+  className?: string;
+  invert?: boolean;
+}) {
+  if (!isRichHtml(body)) return <RichText body={body} className={className} />;
+  return (
+    <div
+      className={[
+        className ?? "",
+        "break-words",
+        "[&_ul]:list-disc [&_ul]:ps-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:ps-5 [&_ol]:my-1",
+        "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-[1.05em] [&_h3]:mt-1.5 [&_h3]:mb-0.5",
+        "[&_p]:my-0.5 [&_p]:min-h-[1em]",
+        invert
+          ? "[&_a]:text-white [&_a]:underline [&_b]:text-white [&_strong]:text-white [&_code]:bg-white/25"
+          : "[&_a]:text-brand-purple [&_a]:underline [&_b]:text-ink-1000 [&_strong]:text-ink-1000 [&_code]:bg-ink-100",
+        "[&_code]:font-mono [&_code]:text-[0.92em] [&_code]:rounded [&_code]:px-1",
+      ].join(" ")}
+      // Sanitized against the allowlist in lib/rich-text at save time; the
+      // renderer trusts only what that gate let through.
+      dangerouslySetInnerHTML={{ __html: body }}
+    />
+  );
+}
 
 /**
  * Renders what a member wrote, with her light formatting applied. The body is

@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useOptimistic, useRef, useState, type ReactNode } from "react";
-import { RichText } from "@/components/patterns/rich-text";
+import { MessageBody } from "@/components/patterns/rich-text";
+import { AttachmentList } from "@/components/patterns/attachment-list";
+import type { AttachmentView } from "@/lib/attachments";
+import type { RichEditorHandle } from "@/components/patterns/rich-text-editor";
 import { ChatComposer } from "@/components/patterns/chat-composer";
 import { cn, timeAgo } from "@/lib/utils";
 
@@ -10,18 +13,39 @@ export interface ThreadMessage {
   sender_id: string;
   body: string;
   created_at: string;
+  attachments?: AttachmentView[];
 }
 
 /** A message on screen — either from the server, or hers still on its way. */
 type Bubble = ThreadMessage & { pending?: boolean };
 
-/** How many of my messages with exactly this text the server already returned. */
-function countMine(messages: ThreadMessage[], meId: string, body: string): number {
-  return messages.filter((m) => m.sender_id === meId && m.body === body).length;
+/**
+ * The words of a body, markup and whitespace flattened. Delivery detection
+ * compares WORDS, not raw strings — the server may sanitize or normalize the
+ * markup it stores, and a message that came back transformed is still the
+ * same delivered message. Raw equality here once branded a stored message
+ * "לא נשלחה" and handed it back to the member who had just sent it.
+ */
+function plainKey(body: string): string {
+  return body
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-/** The grace the server gets to hand the thread back with her message in it. */
-const DELIVERY_GRACE_MS = 2000;
+/** How many of my messages with these words the server already returned. */
+function countMine(messages: ThreadMessage[], meId: string, key: string): number {
+  return messages.filter((m) => m.sender_id === meId && plainKey(m.body) === key).length;
+}
+
+/**
+ * The grace the server gets to hand the thread back with her message in it.
+ * Generous on purpose: a cold serverless start plus a continent round trip
+ * can exceed a tight window, and a false "לא נשלחה" is worse than a slow
+ * confirmation.
+ */
+const DELIVERY_GRACE_MS = 6000;
 
 /**
  * The message list and the box under it. Her own message appears the moment
@@ -35,12 +59,15 @@ const DELIVERY_GRACE_MS = 2000;
 export function ChatThread({
   messages,
   meId,
+  otherName,
   action,
   hint,
   footer,
 }: {
   messages: ThreadMessage[];
   meId: string;
+  /** Her display name — feeds the avatar chip beside her bubbles. */
+  otherName?: string;
   /** Missing when she can't write in this thread — `footer` says why. */
   action?: (formData: FormData) => void | Promise<void>;
   /** One line above the box framing what this conversation is for. */
@@ -60,10 +87,16 @@ export function ChatThread({
   ]);
   // sendMessage hands nothing back, so the only honest proof a message went out
   // is it returning inside the revalidated thread.
-  const [sending, setSending] = useState<{ body: string; seen: number } | null>(null);
+  const [sending, setSending] = useState<{ body: string; key: string; seen: number } | null>(null);
   const [failed, setFailed] = useState(false);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const composerRef = useRef<RichEditorHandle | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // The freshest thread the server handed us — the failure timer consults THIS
+  // at fire time instead of trusting a closure from seconds ago.
+  const messagesRef = useRef(messages);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   // Whether she is reading the latest message or scrolled up into history.
   // Starts true so a freshly opened thread lands on the newest message.
   const atBottomRef = useRef(true);
@@ -71,22 +104,25 @@ export function ChatThread({
   // Delivered = the revalidated thread came back holding it. Read from the
   // messages we were just handed, never remembered — a remembered "sent" is
   // exactly the lie this component must not tell.
-  const awaiting = !!sending && countMine(messages, meId, sending.body) <= sending.seen;
+  const awaiting = !!sending && countMine(messages, meId, sending.key) <= sending.seen;
 
   useEffect(() => {
     // The optimistic bubble is already gone; give the revalidated thread a
     // beat to arrive before telling her something went wrong.
     if (!sending || !awaiting || inFlight) return;
     const timer = setTimeout(() => {
+      // Last look before crying wolf: if the freshest thread holds the
+      // message, it was delivered — a race between the revalidated props and
+      // this timer must never turn a sent message into a failure banner.
+      const delivered = countMine(messagesRef.current, meId, sending.key) > sending.seen;
       setSending(null);
+      if (delivered) return;
       setFailed(true);
-      if (inputRef.current) {
-        inputRef.current.value = sending.body;
-        inputRef.current.focus();
-      }
+      composerRef.current?.setHtml(sending.body);
+      composerRef.current?.focus();
     }, DELIVERY_GRACE_MS);
     return () => clearTimeout(timer);
-  }, [sending, awaiting, inFlight]);
+  }, [sending, awaiting, inFlight, meId]);
 
   // Follow the conversation down — on first open and whenever a message
   // arrives while she is at the bottom. If she scrolled up to reread
@@ -124,28 +160,47 @@ export function ChatThread({
         }}
         className="flex-1 min-h-0 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40"
       >
-        {bubbles.map((m) => {
+        {bubbles.map((m, i) => {
           const mine = m.sender_id === meId;
+          // Her avatar chip marks the start of each of her runs — so even a
+          // fast back-and-forth reads unambiguously: my side, her side.
+          const runStart = !mine && bubbles[i - 1]?.sender_id !== m.sender_id;
           return (
             <div
               key={m.id}
               className={cn(
-                "flex flex-col max-w-[78%]",
+                "flex flex-col max-w-[70%]",
                 mine ? "self-end items-end" : "self-start items-start",
                 m.pending && "opacity-60"
               )}
             >
-              <div
-                className={cn(
-                  "px-3.5 py-2 text-sm leading-relaxed break-words",
-                  mine
-                    ? "bg-brand-gradient text-white rounded-2xl rounded-br-md [&_a]:text-white [&_a]:underline [&_code]:bg-white/25 [&_b]:text-white"
-                    : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
+              <div className={cn("flex items-end gap-1.5", !mine && "flex-row-reverse")}>
+                {runStart ? (
+                  <span
+                    aria-hidden
+                    className="w-6 h-6 rounded-full bg-tint-purple text-brand-purple text-[11px] font-bold flex items-center justify-center shrink-0 mb-0.5"
+                  >
+                    {(otherName ?? "").slice(0, 1) || "·"}
+                  </span>
+                ) : (
+                  !mine && <span className="w-6 shrink-0" aria-hidden />
                 )}
-              >
-                <RichText body={m.body} />
+                <div
+                  className={cn(
+                    "px-3.5 py-2 text-sm leading-relaxed break-words",
+                    mine
+                      ? "bg-brand-gradient text-white rounded-2xl rounded-br-md"
+                      : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
+                  )}
+                >
+                  <MessageBody body={m.body} invert={mine} />
+                  {m.attachments && <AttachmentList items={m.attachments} compact />}
+                </div>
               </div>
-              <span className="text-[10.5px] text-ink-400 mt-0.5 px-1" suppressHydrationWarning>
+              <span
+                className={cn("text-[10.5px] text-ink-400 mt-0.5 px-1", !mine && "me-[30px]")}
+                suppressHydrationWarning
+              >
                 {m.pending ? "נשלחת…" : timeAgo(m.created_at)}
               </span>
             </div>
@@ -170,12 +225,13 @@ export function ChatThread({
             <div className="px-3.5 pt-2.5 text-[12.5px] text-ink-500 leading-relaxed">{hint}</div>
           )}
           <ChatComposer
-            inputRef={inputRef}
+            editorRef={composerRef}
             action={async (formData) => {
               const body = String(formData.get("body") ?? "").trim();
               if (!body) return;
               setFailed(false);
-              setSending({ body, seen: countMine(messages, meId, body) });
+              const key = plainKey(body);
+              setSending({ body, key, seen: countMine(messages, meId, key) });
               addBubble(body);
               await action(formData);
             }}

@@ -1,27 +1,29 @@
 "use client";
 
-import { useRef, type RefObject } from "react";
+import { useRef, useState, type RefObject } from "react";
 import { Button } from "@/components/ui";
-import { TextToolbar } from "@/components/patterns/text-toolbar";
+import { RichTextEditor, type RichEditorHandle } from "@/components/patterns/rich-text-editor";
+import { AttachmentPicker } from "@/components/patterns/attachment-picker";
 
 /**
- * The chat message box. Enter sends, Shift+Enter opens a new line — the
- * behaviour every messaging app has trained people to expect — and the
- * toolbar writes the same formatting markers the forum uses.
+ * The chat message box — the same rich editor the rest of the product uses,
+ * chat-sized: what she makes bold IS bold as she types, Enter sends,
+ * Shift+Enter opens a new line.
  *
- * `inputRef` lets the thread reach the box: when a send fails it puts her
+ * `editorRef` lets the thread reach the box: when a send fails it puts her
  * words back where she wrote them instead of losing them.
  */
 export function ChatComposer({
   action,
-  inputRef,
+  editorRef,
 }: {
   action: (formData: FormData) => void | Promise<void>;
-  inputRef?: RefObject<HTMLTextAreaElement | null>;
+  editorRef?: RefObject<RichEditorHandle | null>;
 }) {
-  const localRef = useRef<HTMLTextAreaElement>(null);
-  const ref = inputRef ?? localRef;
+  const localRef = useRef<RichEditorHandle | null>(null);
+  const ref = editorRef ?? localRef;
   const formRef = useRef<HTMLFormElement>(null);
+  const [attachEpoch, setAttachEpoch] = useState(0);
 
   return (
     <form
@@ -30,33 +32,29 @@ export function ChatComposer({
       // stay pending for the whole send, or the optimistic bubble in the
       // thread would vanish the instant it appeared.
       action={async (fd) => {
+        if (ref.current?.isEmpty() && !fd.get("attach_ids")) return;
         const sending = action(fd);
-        if (ref.current) ref.current.value = "";
+        ref.current?.clear();
+        setAttachEpoch((n) => n + 1);
         await sending;
       }}
       className="flex flex-col gap-1.5 p-3 border-t border-ink-100"
     >
-      <div className="flex gap-2 items-end">
-        <textarea
-          ref={ref}
-          name="body"
-          rows={1}
-          required
-          autoComplete="off"
-          placeholder="כתבי הודעה…"
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              formRef.current?.requestSubmit();
-            }
-          }}
-          className="flex-1 px-3.5 py-2.5 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple resize-none max-h-32"
-        />
-        <Button type="submit" size="sm">
-          שליחה
-        </Button>
-      </div>
-      <TextToolbar targetRef={ref} />
+      <AttachmentPicker key={attachEpoch}>
+        <div className="flex gap-2 items-end">
+          <RichTextEditor
+            name="body"
+            compact
+            submitOnEnter
+            placeholder="כתבי הודעה…"
+            tools={["bold", "italic", "strike", "link"]}
+            editorRef={ref}
+          />
+          <Button type="submit" size="sm" className="mb-9">
+            שליחה
+          </Button>
+        </div>
+      </AttachmentPicker>
     </form>
   );
 }

@@ -7,6 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, isSubscriber } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
 import { newMessageEmail } from "@/lib/email/templates";
+import { isRichHtml } from "@/lib/rich-text-lite";
+import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
 /** Find or create a 1:1 conversation with another member, then open it. */
 export async function startConversation(otherId: string) {
@@ -45,8 +48,14 @@ export async function startConversation(otherId: string) {
 }
 
 export async function sendMessage(conversationId: string, formData: FormData) {
-  const body = String(formData.get("body") ?? "").trim();
-  if (!body || body.length > 2000) return;
+  // The composer sends editor HTML; older clients (and tests) may still send
+  // plain text. HTML passes the same sanitizing allowlist job descriptions
+  // use, and every limit is measured on the words, not the markup.
+  const raw = String(formData.get("body") ?? "").trim();
+  const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : raw;
+  const plain = isRichHtml(raw) ? htmlToPlainText(body) : raw;
+  const attachIds = attachmentIdsFrom(formData);
+  if ((!plain.trim() && attachIds.length === 0) || plain.length > 2000 || body.length > 10000) return;
 
   const supabase = await createClient();
   const {
@@ -103,11 +112,16 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     isFirstNew = (count ?? 0) === 0;
   }
 
-  await supabase.from("messages").insert({
-    conversation_id: conversationId,
-    sender_id: user.id,
-    body,
-  });
+  const { data: sent } = await supabase
+    .from("messages")
+    .insert({
+      conversation_id: conversationId,
+      sender_id: user.id,
+      body,
+    })
+    .select("id")
+    .single();
+  if (sent) await linkAttachments(user.id, "message", sent.id, attachIds);
   // Service role: conversations has no RLS UPDATE policy, so the ordering
   // timestamp silently never moved. The sender was already validated above.
   await createAdminClient()

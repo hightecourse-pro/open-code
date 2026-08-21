@@ -97,7 +97,16 @@ export function MemberMeta({ member }: { member: DirectoryMember }) {
 }
 
 /** A member's card in the directory. Her name opens her full page. */
-export function MemberCard({ member, canChat }: { member: DirectoryMember; canChat: boolean }) {
+export function MemberCard({
+  member,
+  canChat,
+  score,
+}: {
+  member: DirectoryMember;
+  canChat: boolean;
+  /** Mentor score — public by design; only mentors carry one. */
+  score?: number;
+}) {
   const isMentor = member.role === "mentor";
 
   return (
@@ -116,7 +125,14 @@ export function MemberCard({ member, canChat }: { member: DirectoryMember; canCh
           >
             {member.full_name}
           </Link>
-          {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
+          <span className="flex items-center gap-1.5 flex-wrap">
+            {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
+            {isMentor && score != null && score > 0 && (
+              <span className="text-[11px] font-bold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] rounded-full px-2 py-0.5">
+                ⭐ {score} נק&#39;
+              </span>
+            )}
+          </span>
           <MemberMeta member={member} />
         </div>
       </div>

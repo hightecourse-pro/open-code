@@ -6,10 +6,14 @@ import { Heart, MessageCircle, Bookmark, Flag, Send, Lock } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
 import { CommentBody } from "@/components/patterns/comment-body";
-import { TextToolbar } from "@/components/patterns/text-toolbar";
+import { RichTextEditor, type RichEditorHandle } from "@/components/patterns/rich-text-editor";
+import { AttachmentPicker } from "@/components/patterns/attachment-picker";
+import { AttachmentList } from "@/components/patterns/attachment-list";
+import type { AttachmentView } from "@/lib/attachments";
 import { toggleReaction, addComment, reportContent } from "@/app/(app)/feed/actions";
 
 export interface PostComment {
+  attachments?: AttachmentView[];
   id: string;
   body: string;
   author_name: string;
@@ -47,7 +51,8 @@ export function PostInteractions({
   const [reporting, setReporting] = useState(false);
   const [reported, setReported] = useState(false);
   const [, start] = useTransition();
-  const replyRef = useRef<HTMLTextAreaElement>(null);
+  const replyRef = useRef<RichEditorHandle | null>(null);
+  const [replyEpoch, setReplyEpoch] = useState(0);
 
   function onLike() {
     setLike((s) => ({ on: !s.on, count: s.count + (s.on ? -1 : 1) }));
@@ -147,30 +152,40 @@ export function PostInteractions({
                   createdAt={c.created_at}
                   canEdit={c.mine === true}
                 />
+                {c.attachments && <AttachmentList items={c.attachments} compact />}
               </div>
             </div>
           ))}
 
           {canWrite ? (
-            <form action={addComment.bind(null, postId)} className="flex flex-col gap-1.5">
+            <form
+              action={async (fd) => {
+                if (replyRef.current?.isEmpty() && !fd.get("attach_ids")) return;
+                await addComment(postId, fd);
+                replyRef.current?.clear();
+                setReplyEpoch((n) => n + 1);
+              }}
+              className="flex flex-col gap-1.5"
+            >
+              <AttachmentPicker key={replyEpoch}>
               <div className="flex gap-2 items-end">
-                <textarea
-                  ref={replyRef}
+                <RichTextEditor
                   name="body"
-                  rows={1}
-                  required
+                  compact
+                  submitOnEnter
                   placeholder="הוסיפי תגובה…"
-                  className="flex-1 text-[13.5px] border border-ink-300 rounded-md px-3 py-2 outline-none focus:border-brand-purple resize-none"
+                  tools={["bold", "italic", "strike", "link"]}
+                  editorRef={replyRef}
                 />
                 <button
                   type="submit"
                   aria-label="שליחת תגובה"
-                  className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0"
+                  className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0 mb-9"
                 >
                   <Send size={16} />
                 </button>
               </div>
-              <TextToolbar targetRef={replyRef} />
+              </AttachmentPicker>
             </form>
           ) : (
             <Link

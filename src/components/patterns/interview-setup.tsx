@@ -31,8 +31,10 @@ export function InterviewSetup({ hasKey }: { hasKey: boolean }) {
         {state.error && (
           <Alert variant={state.reason ? "warn" : "danger"}>
             {state.error}
-            {state.reason && (
-              <a href="/ai/keys" className="block mt-1 font-semibold text-brand-purple underline">
+            {/* Only a real key problem points at the keys screen — a passing
+                "משהו השתבש" with that link reads as a broken key. */}
+            {state.reason && state.reason !== "error" && (
+              <a href="/ai/keys?next=/ai/interview" className="block mt-1 font-semibold text-brand-purple underline">
                 לניהול מפתחות ה-AI ←
               </a>
             )}

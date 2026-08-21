@@ -7,7 +7,11 @@ import { CandidateSearch } from "@/components/portal/candidate-search";
 
 export const metadata: Metadata = { title: "חיפוש מועמדות" };
 
-export default async function PortalSearchPage() {
+export default async function PortalSearchPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mentors?: string }>;
+}) {
   const client = await getPortalClient();
   if (!client) redirect("/portal/login");
 
@@ -15,10 +19,14 @@ export default async function PortalSearchPage() {
   // Free search is an explicit per-client grant.
   if (!client.can_search) redirect("/portal/jobs");
 
+  // Mentors are invisible here unless the recruiter explicitly flips the
+  // toggle — by default their data never even reaches this page.
+  const includeMentors = (await searchParams).mentors === "1";
+
   // loadCandidates() is the only door to candidate data: it filters to listed
   // profiles and to employer-visible answers, so nothing else needs to be
   // checked here. member_crm (VIP, internal notes) is never touched.
-  const { candidates, catalogue } = await loadCandidates();
+  const { candidates, catalogue } = await loadCandidates({ includeMentors });
   const favs = await favoriteIds(client.id);
 
   return (
@@ -36,6 +44,18 @@ export default async function PortalSearchPage() {
           סננו לפי פרמטרים, או כתבו במילים שלכם מי חסרה לכם בצוות.
         </p>
       </header>
+
+      <div className="-mt-2">
+        {includeMentors ? (
+          <a href="/portal" className="text-[12.5px] font-semibold text-brand-purple hover:underline">
+            👑 מוצגות גם מנטוריות — להסתרה
+          </a>
+        ) : (
+          <a href="/portal?mentors=1" className="text-[12.5px] text-ink-500 hover:text-brand-purple hover:underline">
+            סימון מיוחד: הצגת גם מנטוריות הקהילה 👑
+          </a>
+        )}
+      </div>
 
       <CandidateSearch candidates={candidates} catalogue={catalogue} favoriteIds={[...favs]} />
     </div>

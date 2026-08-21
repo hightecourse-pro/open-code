@@ -18,8 +18,73 @@ function KindBadge({ kind }: { kind: string }) {
   );
 }
 
-export default async function AdminMentorRequestsPage() {
+/**
+ * The matching aid: search every active junior by name, technology and years
+ * of experience — the answers a good mentor match hangs on. Reads answers with
+ * the user (admin) client; RLS lets admins read everything anyway.
+ */
+async function searchJuniors(q: string, tech: string, minYears: number) {
+  const supabase = await createClient();
+  const { data: juniors } = await supabase
+    .from("profiles")
+    .select("id, full_name, avatar_initials, specialization")
+    .eq("role", "junior")
+    .eq("status", "active")
+    .eq("profile_completed", true)
+    .order("full_name");
+  if (!juniors?.length) return [];
+
+  const { data: qs } = await supabase
+    .from("config_questions")
+    .select("id, key")
+    .in("key", ["years_experience", "dev_tech", "exp_tech", "tech_stack", "genai_practiced"]);
+  const keyOf = new Map((qs ?? []).map((r) => [r.id, r.key]));
+  const { data: answers } = await supabase
+    .from("profile_answers")
+    .select("profile_id, question_id, value")
+    .in("question_id", (qs ?? []).map((r) => r.id))
+    .in("profile_id", juniors.map((j) => j.id));
+
+  const techOf = new Map<string, Set<string>>();
+  const yearsOf = new Map<string, number>();
+  for (const a of answers ?? []) {
+    const key = keyOf.get(a.question_id);
+    if (key === "years_experience" && typeof a.value === "number") {
+      yearsOf.set(a.profile_id, a.value);
+    } else if (Array.isArray(a.value)) {
+      const s = techOf.get(a.profile_id) ?? new Set<string>();
+      for (const v of a.value as string[]) s.add(String(v));
+      techOf.set(a.profile_id, s);
+    }
+  }
+
+  const needle = q.trim();
+  return juniors
+    .filter((j) => {
+      if (needle && !`${j.full_name} ${j.specialization ?? ""}`.includes(needle)) return false;
+      if (tech && !techOf.get(j.id)?.has(tech)) return false;
+      if (minYears > 0 && (yearsOf.get(j.id) ?? 0) < minYears) return false;
+      return true;
+    })
+    .slice(0, 30)
+    .map((j) => ({
+      ...j,
+      years: yearsOf.get(j.id) ?? null,
+      tech: [...(techOf.get(j.id) ?? [])].slice(0, 5),
+    }));
+}
+
+export default async function AdminMentorRequestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ jq?: string; jtech?: string; jyears?: string }>;
+}) {
   await requireRole("admin");
+  const sp = await searchParams;
+  const jq = (sp.jq ?? "").trim();
+  const jtech = (sp.jtech ?? "").trim();
+  const jyears = Math.max(0, Number(sp.jyears) || 0);
+  const searching = !!(jq || jtech || jyears);
   const supabase = await createClient();
 
   const [{ data: requests }, { data: mentors }] = await Promise.all([
@@ -51,6 +116,12 @@ export default async function AdminMentorRequestsPage() {
 
   const open = (requests ?? []).filter((r) => r.status === "open");
   const handled = (requests ?? []).filter((r) => r.status !== "open");
+
+  const [juniorResults, { data: techTax }] = await Promise.all([
+    searching ? searchJuniors(jq, jtech, jyears) : Promise.resolve([]),
+    supabase.from("config_taxonomies").select("value, label_he").eq("kind", "tech").order("label_he"),
+  ]);
+  const techLabel = new Map((techTax ?? []).map((t) => [t.value, t.label_he]));
 
   return (
     <div className="flex flex-col gap-6">
@@ -131,6 +202,75 @@ export default async function AdminMentorRequestsPage() {
         ) : (
           <p className="text-ink-500 text-sm py-2">אין בקשות פתוחות כרגע 💜</p>
         )}
+      </div>
+
+      {/* The matching aid the owner asked for: find the right junior by the
+          things a match hangs on — name, technology, years. */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <h3 className="font-display text-base font-bold mb-1">חיפוש בין הג&#39;וניוריות</h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          לחיפוש התאמה למנטורית — לפי שם, טכנולוגיה ושנות ניסיון.
+        </p>
+        <form method="get" className="flex flex-wrap items-end gap-2 mb-3">
+          <input
+            name="jq"
+            defaultValue={jq}
+            placeholder="שם או תחום…"
+            className="px-3 py-2 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple w-44"
+          />
+          <select
+            name="jtech"
+            defaultValue={jtech}
+            className="px-3 py-2 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple bg-white"
+          >
+            <option value="">כל טכנולוגיה</option>
+            {(techTax ?? []).map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label_he}
+              </option>
+            ))}
+          </select>
+          <input
+            name="jyears"
+            type="number"
+            min={0}
+            defaultValue={jyears || ""}
+            placeholder="שנות ניסיון (מינ')"
+            className="px-3 py-2 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple w-40"
+          />
+          <Button type="submit" size="sm">חיפוש</Button>
+          {searching && (
+            <Link href="/admin/mentor-requests" className="text-[12.5px] text-ink-500 hover:underline">
+              ניקוי
+            </Link>
+          )}
+        </form>
+        {searching &&
+          (juniorResults.length > 0 ? (
+            <div className="flex flex-col">
+              {juniorResults.map((j) => (
+                <div key={j.id} className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0 flex-wrap">
+                  <Link
+                    href={`/admin/members/${j.id}`}
+                    className="font-medium text-ink-900 hover:text-brand-purple hover:underline"
+                  >
+                    {j.full_name}
+                  </Link>
+                  {j.specialization && <Badge variant="purple">{j.specialization}</Badge>}
+                  {j.years != null && <span className="text-[12px] text-ink-500">{j.years} שנות ניסיון</span>}
+                  <span className="flex gap-1 flex-wrap">
+                    {j.tech.map((t) => (
+                      <Badge key={t} variant="tech">
+                        {techLabel.get(t) ?? t}
+                      </Badge>
+                    ))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-ink-500 text-sm py-1">לא נמצאו תוצאות לחיפוש הזה.</p>
+          ))}
       </div>
 
       {handled.length > 0 && (

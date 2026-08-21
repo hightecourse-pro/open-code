@@ -35,7 +35,9 @@ import { portalClient, requirePortalClient } from "@/app/portal/session";
  * loadCandidates() is a whole-list read; cache() collapses the metadata pass
  * and the render pass into a single one per request.
  */
-const candidates = cache(loadCandidates);
+// includeMentors here: a mentor detail opened from the toggled-on list must
+// resolve; the default LIST stays junior-only (the toggle lives on /portal).
+const candidates = cache(() => loadCandidates({ includeMentors: true }));
 
 /**
  * Same collapse for the sent-to-client jobs: metadata gate + page body read the
