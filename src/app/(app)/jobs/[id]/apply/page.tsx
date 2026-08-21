@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireCommunityAccess } from "@/lib/auth";
@@ -51,6 +51,8 @@ async function loadCvDocs(
 export default async function ApplyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await requireCommunityAccess();
+  // Mentors don't apply — the board page explains why.
+  if (profile.role === "mentor") redirect("/jobs");
   const supabase = await createClient();
 
   // RLS decides visibility (targeted jobs only for their audience).

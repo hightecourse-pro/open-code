@@ -7,6 +7,8 @@ import { EmploymentCard } from "@/components/patterns/employment-card";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { PortalVisibility } from "@/components/patterns/portal-visibility";
+import { SubscriptionCard } from "@/components/patterns/subscription-card";
+import { getPricing } from "@/lib/payments/pricing";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { QuestionScope } from "@/types/database";
 
@@ -60,6 +62,16 @@ export default async function ProfilePage() {
   const answerMap: Record<string, unknown> = {};
   for (const a of answers ?? []) answerMap[a.question_id] = a.value;
 
+  // Her subscription row + today's price, for the "המנוי שלי" card.
+  const [{ data: subscription }, pricing] = await Promise.all([
+    supabase
+      .from("subscriptions")
+      .select("status, current_period_end, canceled_at")
+      .eq("profile_id", profile.id)
+      .maybeSingle(),
+    getPricing(),
+  ]);
+
   // Resolve the assigned mentor's name for the employment card.
   let employmentMentorName: string | null = null;
   if (employmentReq?.assigned_mentor_id) {
@@ -112,6 +124,17 @@ export default async function ProfilePage() {
         hiredViaUs={profile.hired_via_us}
         mentorName={employmentMentorName}
       />
+
+      {/* The subscription is a paid-track thing — mentors and staff never pay,
+          so showing them a renewal date would only confuse. */}
+      {profile.role === "junior" && profile.member_tier === "paid" && subscription && (
+        <SubscriptionCard
+          status={subscription.status}
+          periodEnd={subscription.current_period_end}
+          canceledAt={subscription.canceled_at}
+          priceShekels={Math.round(pricing.monthlyAgorot / 100)}
+        />
+      )}
 
       <PortalVisibility listed={profile.portal_listed !== false} />
 

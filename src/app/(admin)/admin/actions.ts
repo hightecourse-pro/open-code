@@ -13,6 +13,7 @@ import {
   candidateSubmittedEmail,
   jobCandidatesEmail,
   jobPublishedEmail,
+  mentorApprovedEmail,
 } from "@/lib/email/templates";
 import { queueRevokeAll } from "@/lib/drive-shares";
 import { activateSubscription } from "@/lib/payments/subscription";
@@ -1825,4 +1826,52 @@ export async function createSession(_prev: FormState, formData: FormData): Promi
   revalidatePath("/admin/sessions");
   revalidatePath("/events");
   return { ok: true };
+}
+
+// ------------------------------------------------------- mentor applications
+
+/**
+ * Approve a self-served mentor application: pending+mentor → active, and the
+ * promised email goes out. The free tier means no subscription row is ever
+ * created — nothing here will expire.
+ */
+export async function approveMentorApplication(profileId: string): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from("profiles")
+    .select("id, role, status, first_name, full_name")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!p || p.role !== "mentor" || p.status !== "pending") return;
+
+  await admin.from("profiles").update({ status: "active", member_tier: "free" }).eq("id", profileId);
+
+  try {
+    const { data: authUser } = await admin.auth.admin.getUserById(profileId);
+    const email = authUser?.user?.email;
+    if (email) {
+      const mail = mentorApprovedEmail(p.first_name ?? p.full_name?.split(" ")[0] ?? undefined);
+      await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+    }
+  } catch (e) {
+    console.error("[mentors] approval email failed:", profileId, e);
+  }
+
+  revalidatePath("/admin/mentors");
+  revalidatePath("/admin");
+}
+
+/** Decline a mentor application (no email — the admin usually writes to her). */
+export async function rejectMentorApplication(profileId: string): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from("profiles")
+    .select("id, role, status")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!p || p.role !== "mentor" || p.status !== "pending") return;
+  await admin.from("profiles").update({ status: "rejected" }).eq("id", profileId);
+  revalidatePath("/admin/mentors");
 }

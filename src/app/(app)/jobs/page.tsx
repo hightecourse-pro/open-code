@@ -48,6 +48,22 @@ export default async function JobsPage({
   const supabase = await createClient();
   const user = await getUser();
   const profile = await requireCommunityAccess();
+  // Mentors don't job-hunt here — the tab is hidden for them; this covers a
+  // typed-in URL with the same sentence the action uses.
+  if (profile.role === "mentor") {
+    return (
+      <div className="flex flex-col gap-4">
+        <div>
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;משרות/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">משרות</h1>
+        </div>
+        <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14.5px] text-ink-700 leading-relaxed">
+          לוח המשרות מיועד לחברות שמחפשות עבודה 💜 בתור מנטורית, המקום שלך הוא הפורום, הצ&apos;אט
+          והסשנים — ואם את מכירה משרה שמתאימה לחברות הקהילה, נשמח שתכתבי לנו.
+        </div>
+      </div>
+    );
+  }
   const subscriber = isSubscriber(profile);
 
   // The whole open board of this tab loads here; searching filters it on the

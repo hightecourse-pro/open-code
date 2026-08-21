@@ -67,11 +67,16 @@ export interface SidebarUser {
   meta: string;
   initials: string;
   isAdmin?: boolean;
+  /** Mentors contribute, they don't job-hunt or study — jobs + courses hide. */
+  isMentor?: boolean;
   /** Free members see paid destinations marked with a lock. */
   isSubscriber?: boolean;
   /** Chat messages waiting for her — shown as a badge on "צ'אטים". */
   unreadCount?: number;
 }
+
+/** Destinations that are not part of the mentor experience. */
+const NOT_FOR_MENTORS = new Set(["/jobs", "/courses"]);
 
 const DEFAULT_USER: SidebarUser = {
   name: "מאיה כהן",
@@ -97,7 +102,9 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
               {section.label}
             </div>
           )}
-          {section.items.map((item) => {
+          {section.items
+            .filter((item) => !(user.isMentor && NOT_FOR_MENTORS.has(item.href)))
+            .map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             const locked = item.paid && user.isSubscriber === false;

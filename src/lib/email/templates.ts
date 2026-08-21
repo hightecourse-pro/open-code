@@ -559,3 +559,99 @@ export function genericActionEmail(actionUrl: string): BuiltEmail {
     }),
   };
 }
+
+// ---------------------------------------------------------------- mentors
+
+/** Sent when an admin approves a mentor application. */
+export function mentorApprovedEmail(name?: string): BuiltEmail {
+  return {
+    subject: "אושרת כמנטורית בקוד פתוח 👑",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}ברוכה הבאה למנטוריות שלנו 👑`,
+      lines: [
+        "עברנו על הבקשה שלך — ואנחנו שמחות לצרף אותך לצוות המנטוריות של הקהילה 💜",
+        "מהרגע הזה הפרופיל שלך מסומן כמנטורית: תוכלי לענות בפורום, להתכתב עם חברות, להצטרף לסשנים — ולעשות בדיוק את ההבדל שבשבילו באת.",
+      ],
+      ctaText: "כניסה לקהילה",
+      ctaUrl: `${SITE}/forum`,
+      footnote: "תודה שאת בוחרת לתרום מהניסיון שלך. זה שווה המון 💜",
+    }),
+  };
+}
+
+// ---------------------------------------------------- subscription lifecycle
+
+/** Right after she cancels auto-renewal in the app. */
+export function subscriptionCanceledEmail(name: string | undefined, activeUntil: string): BuiltEmail {
+  return {
+    subject: "ביטלת את חידוש המנוי — את איתנו עד " + activeUntil,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}קיבלנו את הביטול 💜`,
+      lines: [
+        `המנוי שלך יישאר פעיל עד <b>${activeUntil}</b> — עד אז הכול נשאר פתוח בדיוק כמו היום.`,
+        "אחרי התאריך הזה הגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI תיסגר, אבל תמיד אפשר לחזור.",
+        "התחרטת? אפשר להפעיל את החידוש מחדש בלחיצה אחת מעמוד הפרופיל.",
+      ],
+      ctaText: "לעמוד הפרופיל שלי",
+      ctaUrl: `${SITE}/profile`,
+      footnote: "אם הביטול לא היה מכוון — כתבי לנו ונסדר הכול יחד.",
+    }),
+  };
+}
+
+/** The day the subscription actually ends (sent by the daily cron). */
+export function subscriptionEndedEmail(name: string | undefined): BuiltEmail {
+  return {
+    subject: "המנוי שלך בקוד פתוח הסתיים — נשמח לראות אותך חוזרת 💜",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}המנוי שלך הסתיים`,
+      lines: [
+        "תקופת המנוי שלך הגיעה לסיומה, והגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI הושהתה.",
+        "את עדיין חלק מהקהילה — אפשר להמשיך לקרוא ולהתעדכן, ולחדש מתי שמתאים לך.",
+      ],
+      ctaText: "לחידוש המנוי",
+      ctaUrl: `${SITE}/join`,
+      footnote: "יש שאלה על החיוב או על המנוי? כתבי לנו ונעזור.",
+    }),
+  };
+}
+
+// ------------------------------------------------------- session reminders
+
+const REMINDER_COPY: Record<string, (title: string, time: string) => { subject: string; heading: string; line: string }> = {
+  morning: (title, time) => ({
+    subject: `היום ב-${time}: ${title}`,
+    heading: "יש לנו סשן היום 🎉",
+    line: `<b>${title}</b> מתחיל היום בשעה <b>${time}</b> (שעון ישראל). שמרי לך את הזמן — נשמח לראות אותך.`,
+  }),
+  t30: (title, time) => ({
+    subject: `בעוד חצי שעה: ${title}`,
+    heading: "עוד חצי שעה מתחילים ⏰",
+    line: `<b>${title}</b> מתחיל ב-<b>${time}</b>. כדאי להכין קפה ולהתארגן 🙂`,
+  }),
+  start: (title) => ({
+    subject: `עכשיו מתחילים 💜 ${title}`,
+    heading: "אנחנו מתחילות ממש עכשיו 💜",
+    line: `<b>${title}</b> מתחיל ברגעים אלה — מחכות לך בפנים.`,
+  }),
+};
+
+/** One of the three session reminder emails (stage: morning / t30 / start). */
+export function sessionReminderEmail(
+  stage: "morning" | "t30" | "start",
+  title: string,
+  timeIL: string,
+  zoomUrl: string | null
+): BuiltEmail {
+  const c = REMINDER_COPY[stage](escapeHtml(title), timeIL);
+  return {
+    subject: c.subject,
+    html: renderEmail({
+      heading: c.heading,
+      lines: [c.line],
+      ctaText: zoomUrl ? "הצטרפות לזום" : "לפרטי הסשן",
+      ctaUrl: zoomUrl || `${SITE}/events`,
+      footnote: "התזכורות נשלחות למנויות הקהילה. נתראה שם 💜",
+    }),
+  };
+}

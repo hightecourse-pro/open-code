@@ -3,6 +3,8 @@ import { raiseAlert } from "@/lib/alerts";
 import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deactivateSubscription } from "@/lib/payments/subscription";
+import { sendResendEmail } from "@/lib/email/resend";
+import { subscriptionEndedEmail } from "@/lib/email/templates";
 import { processShareQueue } from "@/lib/drive-shares";
 
 /**
@@ -82,9 +84,20 @@ export async function GET(request: Request) {
       // charged. Both deserve a row in the alerts center, per member.
       const { data: who } = await admin
         .from("profiles")
-        .select("full_name")
+        .select("full_name, first_name")
         .eq("id", profileId)
         .maybeSingle();
+      // The ending-day email she was promised: what closed, and the way back.
+      try {
+        const { data: authUser } = await admin.auth.admin.getUserById(profileId);
+        const email = authUser?.user?.email;
+        if (email) {
+          const mail = subscriptionEndedEmail(who?.first_name ?? undefined);
+          await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+        }
+      } catch (e) {
+        console.error("[subscriptions] ended email failed:", profileId, e);
+      }
       await raiseAlert({
         kind: "subscription_expired",
         severity: "warning",
