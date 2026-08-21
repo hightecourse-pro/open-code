@@ -59,7 +59,11 @@ export function buildTransactionFields(
     PaymentType: "HK", // recurring standing order
     Currency: "1", // ILS
     Amount: (plan.amountAgorot / 100).toFixed(2),
-    Tashlumim: "1",
+    // For a standing order, Tashlumim is the NUMBER OF CHARGES — "1" made
+    // every order a single-payment one (the owner saw exactly that in the
+    // Nedarim console: "תשלום אחד ולא ללא הגבלה"). Empty = unlimited, which
+    // is what a monthly membership is.
+    Tashlumim: "",
     FirstName: party.fullName,
     LastName: "",
     Mail: party.email,
