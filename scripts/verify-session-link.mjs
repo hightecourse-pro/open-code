@@ -1,11 +1,12 @@
 import { chromium } from "@playwright/test";
+const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); process.exit(1); })();
 const BASE = "https://open-code-psi.vercel.app";
 const SESSION = "eacb500f-9b4e-419b-8bd7-f5d024914047";
 const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.goto(`${BASE}/login`);
 await page.fill('input[name="email"]', "admin.qa@opencode.test");
-await page.fill('input[name="password"]', "Nihul-Kehila-2026!vR7");
+await page.fill('input[name="password"]', requireEnv("QA_ADMIN_PASSWORD"));
 await page.click('button[type="submit"]');
 await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
 await page.goto(`${BASE}/ai/interview/${SESSION}`);

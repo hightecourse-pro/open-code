@@ -1,5 +1,6 @@
 // Real-browser verification of the morning sweep against deployed staging.
 import { chromium } from "@playwright/test";
+const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); process.exit(1); })();
 
 const BASE = "https://open-code-psi.vercel.app";
 const SHOTS = process.env.SHOTS_DIR || ".";
@@ -29,7 +30,7 @@ process.on("uncaughtException", (e) => {
 // login as the QA admin (a full member for these flows)
 await page.goto(`${BASE}/login`);
 await page.fill('input[name="email"]', "admin.qa@opencode.test");
-await page.fill('input[name="password"]', "Nihul-Kehila-2026!vR7");
+await page.fill('input[name="password"]', requireEnv("QA_ADMIN_PASSWORD"));
 await page.click('button[type="submit"]');
 await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
 
