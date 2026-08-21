@@ -130,7 +130,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             </h1>
             <span className="flex items-center gap-2 flex-wrap">
               {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
-              {isMentor && score && (
+              {isMentor && score && score.score > 0 && (
                 <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] rounded-full px-2.5 py-0.5">
                   <Star size={11} fill="currentColor" /> {score.score} נק&#39;
                 </span>
@@ -155,7 +155,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             {spotlight.workplace && (
               <div className="flex items-center gap-2 text-[13.5px] text-ink-800">
                 <Briefcase size={14} className="text-[#8C5E0E] shrink-0" />
-                עובדת ב<b>{spotlight.workplace}</b>
+                עובדת ב-<b>{spotlight.workplace}</b>
                 {spotlight.years != null && <> · {spotlight.years} שנות ניסיון</>}
               </div>
             )}
