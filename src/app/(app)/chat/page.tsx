@@ -11,7 +11,7 @@ import { ChatThread } from "@/components/patterns/chat-thread";
 import { NewChatButton } from "@/components/patterns/new-chat-button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
-import { sendMessage } from "./actions";
+import { sendMessage, startConversation } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
 
@@ -33,10 +33,17 @@ function previewText(body: string, mine: boolean): string {
 export default async function ChatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string }>;
+  searchParams: Promise<{ c?: string; with?: string }>;
 }) {
   const me = await requireProfile();
-  const { c: activeId } = await searchParams;
+  const { c: activeId, with: withId } = await searchParams;
+  // ?with={profileId}: a deep link that opens (or starts) the 1:1 with that
+  // member — lets other screens link INTO a conversation with a plain <a>
+  // (e.g. "שאלה על המשרה?" on the apply page, opened in a new tab so her
+  // half-filled form survives). startConversation redirects to ?c=….
+  if (withId && /^[0-9a-f-]{36}$/.test(withId) && withId !== me.id) {
+    await startConversation(withId);
+  }
   const supabase = await createClient();
 
   const { data: conversations } = await supabase

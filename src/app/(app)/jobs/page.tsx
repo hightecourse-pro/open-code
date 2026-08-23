@@ -26,22 +26,32 @@ const TABS: { id: JobSource; label: string; desc: string }[] = [
   { id: "open", label: "משרות פתוחות", desc: "מהשוק, לפי סדר ההתאמה שלך" },
 ];
 
+/** The PM's four clear views. `fit=1` from old links maps to "fit". */
+type BoardView = "all" | "fit" | "saved" | "mine";
+
 export default async function JobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ type?: string; applied?: string; q?: string; fit?: string }>;
+  searchParams: Promise<{ type?: string; applied?: string; q?: string; fit?: string; view?: string }>;
 }) {
-  const { type, applied, q, fit } = await searchParams;
+  const { type, applied, q, fit, view: viewRaw } = await searchParams;
   const activeTab: JobSource = type === "open" ? "open" : "ours";
   // The search is instant and client-side now (JobsInstantList) — nothing is
   // written back to the URL. An incoming ?q= from an old link still lands in
   // the box as its initial value, and the client filter takes it from there.
   const initialQuery = (q ?? "").trim().slice(0, 60);
-  const fitOnly = fit === "1";
-  /** Keeps the tab on every link that leaves this screen. */
-  const boardHref = (params: { type?: JobSource; fit?: boolean }) => {
+  const view: BoardView =
+    viewRaw === "fit" || viewRaw === "saved" || viewRaw === "mine"
+      ? viewRaw
+      : fit === "1"
+        ? "fit"
+        : "all";
+  const fitOnly = view === "fit";
+  /** Keeps the view+tab on every link that leaves this screen. */
+  const boardHref = (params: { type?: JobSource; view?: BoardView }) => {
     const sp = new URLSearchParams({ type: params.type ?? activeTab });
-    if (params.fit) sp.set("fit", "1");
+    const v = params.view ?? view;
+    if (v !== "all") sp.set("view", v);
     return `/jobs?${sp.toString()}`;
   };
 
@@ -82,7 +92,7 @@ export default async function JobsPage({
     jobsQuery.order("created_at", { ascending: false }),
     user ? supabase.from("saved_jobs").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
     user
-      ? supabase.from("applications").select("job_id, status").eq("applicant_id", user.id)
+      ? supabase.from("applications").select("job_id, status, created_at").eq("applicant_id", user.id)
       : Promise.resolve({ data: [] }),
     user
       ? supabase.from("profile_answers").select("question_id, value").eq("profile_id", user.id)
@@ -99,6 +109,7 @@ export default async function JobsPage({
 
   const savedIds = new Set((saved ?? []).map((s) => s.job_id));
   const appStatusByJob = new Map((myApplications ?? []).map((a) => [a.job_id, a.status]));
+  const appliedAtByJob = new Map((myApplications ?? []).map((a) => [a.job_id, a.created_at]));
 
   // Jobs published specifically to this member — shown in their own top section.
   const targetIds = (myTargets ?? []).map((t) => t.job_id);
@@ -128,28 +139,44 @@ export default async function JobsPage({
       .from("job_candidates")
       .select("job_id")
       .eq("profile_id", user.id);
+    const candSet = new Set((candRows ?? []).map((c) => c.job_id));
     const appRows = (myApplications ?? []).filter((a) => a.status !== "draft");
     const appliedJobIds = new Set((myApplications ?? []).map((a) => a.job_id));
-    const candJobIds = [...new Set((candRows ?? []).map((c) => c.job_id))].filter(
-      (id) => !appliedJobIds.has(id)
-    );
+    const candJobIds = [...candSet].filter((id) => !appliedJobIds.has(id));
     const lookupIds = [...new Set([...appRows.map((a) => a.job_id), ...candJobIds])];
     if (lookupIds.length > 0) {
+      // status too: a job that closed since she applied is reflected, not
+      // silently frozen — the PM's "האם משוקף כשהמשרה אוישה".
       const { data: jobRows } = await adminClient
         .from("jobs")
-        .select("id, title, company")
+        .select("id, title, company, status")
         .in("id", lookupIds);
       const jobOf = new Map((jobRows ?? []).map((j) => [j.id, j]));
+      // "הוגשה ללקוח" is a FACT, not a status guess: a job_candidates row means
+      // her CV physically went out; the pipeline statuses that imply it count
+      // too, so an admin skipping a step never hides the handoff from her.
+      const FORWARDED: string[] = ["sent", "interview", "exam", "hired"];
       myAppItems = appRows.flatMap((a) => {
         const j = jobOf.get(a.job_id);
-        return j ? [{ jobId: a.job_id, title: j.title, company: j.company, status: a.status }] : [];
+        if (!j) return [];
+        return [{
+          jobId: a.job_id,
+          title: j.title,
+          company: j.company,
+          status: a.status,
+          appliedAt: a.created_at ?? null,
+          forwarded: candSet.has(a.job_id) || FORWARDED.includes(a.status),
+          jobClosed: j.status !== "open",
+        }];
       });
       submittedForHer = candJobIds.flatMap((id) => {
         const j = jobOf.get(id);
-        return j ? [{ jobId: id, title: j.title, company: j.company }] : [];
+        return j ? [{ jobId: id, title: j.title, company: j.company, jobClosed: j.status !== "open" }] : [];
       });
     }
   }
+  const mineCount =
+    myAppItems.filter((a) => a.status !== "draft").length + submittedForHer.length;
 
   // The member's tech stack, normalized for matching: answers store taxonomy
   // values (e.g. "react") while admins type job tags in free text — so match on
@@ -197,11 +224,19 @@ export default async function JobsPage({
     return tags;
   };
 
-  // Profile-based ordering: best-matching jobs first, then newest. Jobs already
-  // shown in the targeted section stay out of the main list. Nothing is hidden
-  // unless she asked for it with ?fit=1.
-  const boardJobs = (jobs ?? []).filter((j) => !targetedSet.has(j.id));
-  const sortedJobs = (fitOnly ? boardJobs.filter((j) => matchedTags(j).length > 0) : boardJobs)
+  // Profile-based ordering: best-matching jobs first, then newest. Jobs she
+  // already applied to leave the board entirely — they live in "ההגשות שלי"
+  // (the PM's "כפילות על משרות שהגשתי"). Targeted jobs keep their own section.
+  const boardJobs = (jobs ?? []).filter(
+    (j) => !targetedSet.has(j.id) && !appStatusByJob.has(j.id)
+  );
+  const viewJobs =
+    view === "fit"
+      ? boardJobs.filter((j) => matchedTags(j).length > 0)
+      : view === "saved"
+        ? boardJobs.filter((j) => savedIds.has(j.id))
+        : boardJobs;
+  const sortedJobs = viewJobs
     .slice()
     .sort((a, b) => {
       const diff = matchedTags(b).length - matchedTags(a).length;
@@ -209,26 +244,53 @@ export default async function JobsPage({
       return a.created_at < b.created_at ? 1 : -1;
     });
   const fitCount = boardJobs.filter((j) => matchedTags(j).length > 0).length;
+  const savedCount = boardJobs.filter((j) => savedIds.has(j.id)).length;
+
+  // The filter selects' values, straight from what is actually on this tab.
+  const facetCount = new Map<string, number>();
+  for (const j of boardJobs) for (const t of j.tech_tags) facetCount.set(t, (facetCount.get(t) ?? 0) + 1);
+  const facets = {
+    tech: [...facetCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20).map(([t]) => t),
+    locations: [...new Set(boardJobs.map((j) => j.location).filter((l): l is string => !!l))].sort((a, b) =>
+      a.localeCompare(b, "he")
+    ),
+    employments: (
+      [
+        ["full", "משרה מלאה"],
+        ["part", "חלקית"],
+        ["student", "סטודנטית"],
+        ["freelance", "פרילנס"],
+      ] as const
+    )
+      .filter(([v]) => boardJobs.some((j) => j.employment_type === v))
+      .map(([value, label]) => ({ value, label })),
+  };
 
   const cardProps = (job: Job) => ({
     job,
     saved: savedIds.has(job.id),
     applied: appStatusByJob.has(job.id),
     applicationStatus: appStatusByJob.get(job.id) ?? null,
+    appliedAt: appliedAtByJob.get(job.id) ?? null,
     myTech: [...myTech],
     matchedTags: matchedTags(job),
     subscriber,
   });
 
+  const VIEWS: { id: BoardView; label: string }[] = [
+    { id: "all", label: "כל המשרות" },
+    { id: "fit", label: `מתאימות לי (${fitCount})` },
+    { id: "saved", label: `נשמרו (${savedCount})` },
+    { id: "mine", label: `ההגשות שלי (${mineCount})` },
+  ];
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-4">
       <AutoRefresh />
-      <div>
-        <span className="font-mono text-xs text-brand-pink-deep">&lt;משרות/&gt;</span>
-        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">משרות שמתאימות לך</h1>
-        <p className="t-body-sm text-ink-700">
-          כל המשרות כאן — מסודרות לפי ההתאמה שלך, הכי מתאימות למעלה.
-        </p>
+      {/* Compact top (the PM's ask): one row of identity, one quiet info line. */}
+      <div className="flex items-baseline gap-2.5 flex-wrap">
+        <h1 className="font-display text-[24px] font-black text-ink-1000">משרות</h1>
+        <span className="text-[13px] text-ink-500">מסודרות לפי ההתאמה שלך — הכי מתאימות למעלה</span>
       </div>
 
       {applied === "1" && (
@@ -237,134 +299,134 @@ export default async function JobsPage({
         </Alert>
       )}
 
-      <div className="flex gap-2.5 items-center bg-tint-indigo border border-[#C9D2F0] rounded-md p-3 px-4 text-[13.5px] text-ink-700">
-        <Sparkles size={18} className="text-brand-indigo shrink-0" />
-        <span>
-          ההתאמה נמדדת לפי הטכנולוגיות שסימנת בפרופיל וההתמחות שלך, מול הטכנולוגיות שהמשרה
-          מבקשת — ולכן כדאי שהפרופיל יהיה מדויק.{" "}
-          <a href="/profile" className="text-brand-purple font-semibold">
-            עדכון הפרופיל
-          </a>
-        </span>
-      </div>
-
-      {/* The priority policy is stated plainly — to free members and to all. */}
-      <div className="flex gap-2.5 items-start bg-tint-warm border border-[#F0DCA8] rounded-md p-3 px-4 text-[13.5px] text-[#8C5E0E]">
-        <Crown size={17} className="shrink-0 mt-0.5" />
-        <span className="flex-1">
-          <b className="font-display">עדיפות למנויות הקהילה.</b>{" "}
-          {subscriber
-            ? "המשרות שלנו מוצעות קודם כול לחברות עם מנוי פעיל — כלומר גם לך 💜"
-            : "המשרות שלנו מוצעות קודם כול לחברות עם מנוי פעיל. את מוזמנת להגיש, ומנוי מקפיץ אותך לראש הרשימה."}
-        </span>
+      {/* One merged note instead of two banner boxes. */}
+      <p className="text-[12.5px] text-ink-500 flex items-center gap-1.5 flex-wrap -mt-1">
+        <Sparkles size={13} className="text-brand-indigo shrink-0" />
+        ההתאמה מחושבת מהטכנולוגיות וההתמחות שבפרופיל שלך —{" "}
+        <a href="/profile" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
+          עדכון הפרופיל
+        </a>
+        <span className="text-ink-300">·</span>
+        <Crown size={12} className="text-[#B8860B] shrink-0" />
+        עדיפות למנויות הקהילה
         {!subscriber && (
-          <Link href="/join" className="font-semibold whitespace-nowrap hover:underline">
-            לשדרוג ←
+          <Link href="/join" className="text-brand-purple font-semibold hover:underline">
+            — לשדרוג ←
           </Link>
         )}
-      </div>
+      </p>
 
-      {targetedJobs.length > 0 && (
-        <section className="rounded-[20px] p-[2px] bg-brand-gradient shadow-glow-pink">
-          <div className="rounded-[18px] bg-white p-4 flex flex-col gap-1">
-            <h2 className="font-display text-[19px] font-black text-ink-1000">
-              משרות בשבילך מקוד פתוח 💜
-            </h2>
-            <p className="text-[13px] text-ink-700 mb-2">
-              פורסמו במיוחד לקבוצה מצומצמת של חברות שמתאימות להן — ואת אחת מהן.
-              {fitOnly && " הן תמיד כאן, גם כשמסננים למטה."}
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {targetedJobs.map((job) => (
-                <JobCard key={job.id} {...cardProps(job)} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      <MyApplications applications={myAppItems} submitted={submittedForHer} />
-
-      {/* Instant search over the loaded board — the cards, their ordering and
-          the empty states are all prepared here on the server; typing only
-          shows/hides them. The haystack includes the company ONLY on the
-          market tab: matching an internal job by its client's name would let
-          a member infer the confidential company by typing names and watching
-          which jobs come back (the card hides it for a reason). The styled
-          description is searched as its visible text — tags stripped — so a
-          latin tag name like "span" can no longer match markup. */}
-      <JobsInstantList
-        initialQuery={initialQuery}
-        fitOnly={fitOnly}
-        items={sortedJobs.map((job) => ({
-          id: job.id,
-          haystack: [
-            job.title,
-            job.description,
-            job.description_html ? job.description_html.replace(/<[^>]+>/g, " ") : "",
-            job.tech_tags.join(" "),
-            activeTab === "open" ? job.company : "",
-          ].join(" "),
-          node: <JobCard {...cardProps(job)} />,
-        }))}
-        controls={
-          <>
-            {/* Opt-in only: the board never hides a job from her on its own. */}
+      {/* The PM's four clear views — always visible, one row. */}
+      <div className="flex gap-1.5 flex-wrap">
+        {VIEWS.map((v) => {
+          const active = v.id === view;
+          return (
             <a
-              href={boardHref({ fit: !fitOnly })}
+              key={v.id}
+              href={boardHref({ view: v.id })}
               className={
-                "self-start inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors " +
-                (fitOnly
-                  ? "bg-brand-pink-deep border-brand-pink-deep text-white"
+                "rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors " +
+                (active
+                  ? "bg-brand-gradient border-transparent text-white shadow-glow-pink"
                   : "bg-white border-ink-200 text-ink-700 hover:border-brand-purple")
               }
             >
-              <Sparkles size={13} />
-              {fitOnly
-                ? "מציגות רק משרות עם הטכנולוגיות שלי — להצגת הכול"
-                : `רק משרות עם הטכנולוגיות שלי (${fitCount})`}
+              {v.label}
             </a>
+          );
+        })}
+      </div>
 
-            <div className="flex gap-2.5">
-              {TABS.map((tab) => {
-                const active = tab.id === activeTab;
-                return (
-                  <a
-                    key={tab.id}
-                    href={boardHref({ type: tab.id, fit: fitOnly })}
-                    className={
-                      "flex-1 rounded-md p-3.5 px-[18px] border-[1.5px] transition-all " +
-                      (active
-                        ? "border-transparent bg-brand-gradient text-white shadow-glow-pink"
-                        : "border-ink-200 bg-white hover:border-brand-purple")
-                    }
-                  >
-                    <div className="font-display font-bold text-[15px]">{tab.label}</div>
-                    <div className={"text-xs mt-0.5 " + (active ? "opacity-85" : "text-ink-500")}>
-                      {tab.desc}
+      {view === "mine" ? (
+        <MyApplications applications={myAppItems} submitted={submittedForHer} />
+      ) : (
+        <>
+          {targetedJobs.length > 0 && (
+            <section className="rounded-[18px] p-[2px] bg-brand-gradient shadow-glow-pink">
+              <div className="rounded-[16px] bg-white p-3.5 flex flex-col gap-1">
+                <h2 className="font-display text-[16px] font-black text-ink-1000">
+                  משרות בשבילך מקוד פתוח 💜
+                  <span className="text-[12px] font-normal text-ink-500 ms-2">
+                    פורסמו לקבוצה מצומצמת שמתאימה — ואת בפנים
+                  </span>
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+                  {targetedJobs.map((job) => (
+                    <div key={job.id} className="h-full">
+                      <JobCard {...cardProps(job)} />
                     </div>
-                  </a>
-                );
-              })}
-            </div>
-          </>
-        }
-        emptyFallback={
-          <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-            {fitOnly ? (
-              <>
-                אין כרגע משרות עם הטכנולוגיות שסימנת בפרופיל.{" "}
-                <a href={boardHref({})} className="text-brand-purple font-semibold">
-                  להצגת כל המשרות
-                </a>{" "}
-                💜
-              </>
-            ) : (
-              "אין כאן משרות כרגע — בקרוב נוסיף עוד 💜"
-            )}
-          </div>
-        }
-      />
+                  ))}
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* Instant search + the PM's structured filters over the loaded
+              board. The haystack includes the company ONLY on the market tab:
+              matching an internal job by its client's name would let a member
+              infer the confidential company. */}
+          <JobsInstantList
+            initialQuery={initialQuery}
+            fitOnly={fitOnly}
+            facets={facets}
+            items={sortedJobs.map((job) => ({
+              id: job.id,
+              haystack: [
+                job.title,
+                job.description,
+                job.description_html ? job.description_html.replace(/<[^>]+>/g, " ") : "",
+                job.tech_tags.join(" "),
+                activeTab === "open" ? job.company : "",
+              ].join(" "),
+              tech: job.tech_tags,
+              location: job.location,
+              employment: job.employment_type,
+              node: <JobCard {...cardProps(job)} />,
+            }))}
+            controls={
+              <div className="flex gap-1.5">
+                {TABS.map((tab) => {
+                  const active = tab.id === activeTab;
+                  return (
+                    <a
+                      key={tab.id}
+                      href={boardHref({ type: tab.id })}
+                      title={tab.desc}
+                      className={
+                        "rounded-md px-3.5 py-1.5 text-[12.5px] font-semibold border-[1.5px] transition-all " +
+                        (active
+                          ? "border-transparent bg-ink-1000 text-white"
+                          : "border-ink-200 bg-white text-ink-700 hover:border-brand-purple")
+                      }
+                    >
+                      {tab.label}
+                    </a>
+                  );
+                })}
+              </div>
+            }
+            emptyFallback={
+              <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700 text-sm">
+                {view === "fit" ? (
+                  <>
+                    אין כרגע משרות פתוחות עם הטכנולוגיות שסימנת בפרופיל.{" "}
+                    <a href={boardHref({ view: "all" })} className="text-brand-purple font-semibold">
+                      לכל המשרות
+                    </a>{" "}
+                    💜
+                  </>
+                ) : view === "saved" ? (
+                  <>
+                    עוד לא שמרת משרות — סימנייה 🔖 על כרטיס שומרת אותו כאן.
+                  </>
+                ) : (
+                  "אין כאן משרות כרגע — בקרוב נוסיף עוד 💜"
+                )}
+              </div>
+            }
+          />
+        </>
+      )}
     </div>
   );
 }

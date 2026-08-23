@@ -63,7 +63,7 @@ export function ApplyForm({
         <Sparkles size={18} className="text-brand-indigo shrink-0 mt-0.5" />
         <span>
           רגע לפני — כדאי לוודא שהפרופיל שלך מעודכן, כי הוא חלק ממה שנציג עלייך.{" "}
-          <Link href="/profile" className="text-brand-purple font-semibold">
+          <Link href="/profile" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
             לעדכון הפרופיל
           </Link>
         </span>
@@ -159,7 +159,7 @@ export function ApplyForm({
         <span className="text-xs font-semibold text-ink-700">אילו קורות חיים לצרף?</span>
         <p className="text-[12px] text-ink-500 -mt-1">
           רגע לפני ששולחות — רוצה שה-AI יעבור על קורות החיים שלך?{" "}
-          <Link href="/ai/cv-checker" className="text-brand-purple font-semibold underline">
+          <Link href="/ai/cv-checker" target="_blank" rel="noopener" className="text-brand-purple font-semibold underline">
             לבדיקה מהירה ←
           </Link>
         </p>
@@ -184,7 +184,7 @@ export function ApplyForm({
                 {!defaultCv && (
                   <>
                     {" · "}
-                    <Link href="/cv" className="text-brand-purple font-semibold">
+                    <Link href="/cv" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
                       לבחירת ברירת מחדל
                     </Link>
                   </>

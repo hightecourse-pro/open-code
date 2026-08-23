@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireCommunityAccess } from "@/lib/auth";
 import { Alert } from "@/components/ui";
@@ -63,7 +63,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
     .maybeSingle();
   if (!job || job.source !== "ours" || job.status !== "open") notFound();
 
-  const [{ data: questions }, cvDocs, { data: existing }] = await Promise.all([
+  const [{ data: questions }, cvDocs, { data: existing }, { data: teamContact }] = await Promise.all([
     supabase
       .from("job_questions")
       .select("id, question, sort_order, required, answer_type, options")
@@ -77,7 +77,18 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
       .eq("job_id", id)
       .eq("applicant_id", profile.id)
       .maybeSingle(),
+    // "שאלה על המשרה?" opens a chat with the team instead of an email thread
+    // (PM: לייתר את המיילים). The longest-standing admin answers.
+    supabase
+      .from("profiles")
+      .select("id")
+      .eq("role", "admin")
+      .eq("status", "active")
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
   ]);
+  const teamContactId = teamContact?.id ?? null;
 
   return (
     <div className="flex flex-col gap-5 max-w-[640px]">
@@ -90,11 +101,21 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
 
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;הגשה/&gt;</span>
+        {/* The client's identity stays internal — she applies to the role, and
+            the board already said the job is ours; once is enough (PM note). */}
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">
           הגשת מועמדות: {job.title}
         </h1>
-        {/* The client's identity stays internal — she applies to the role. */}
-        <p className="t-body-sm text-ink-700">משרה בלעדית דרך קוד פתוח 💜</p>
+        {teamContactId && (
+          <a
+            href={`/chat?with=${teamContactId}`}
+            target="_blank"
+            rel="noopener"
+            className="inline-flex items-center gap-1.5 mt-1 text-[13px] font-semibold text-brand-purple hover:underline"
+          >
+            <MessageCircle size={13} /> יש לך שאלה על המשרה? כתבי לנו בצ&apos;אט
+          </a>
+        )}
       </div>
 
       {/* The requirements exactly as the admin styled them (sanitized at save

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles, Crown } from "lucide-react";
+import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles, Crown, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui";
-import { cn } from "@/lib/utils";
+import { cn, timeAgo } from "@/lib/utils";
 import { applyToJob, toggleSaveJob } from "@/app/(app)/jobs/actions";
 import type { ApplicationStatus, EmploymentType, Job } from "@/types/database";
 
@@ -43,6 +43,8 @@ export interface JobCardProps {
   applied: boolean;
   /** The member's application status for this job (null if she hasn't applied). */
   applicationStatus?: ApplicationStatus | null;
+  /** When she applied — the PM asked for the date to be visible. */
+  appliedAt?: string | null;
   /** Member's tech stack, lowercase, for match highlighting. */
   myTech?: string[];
   /** The job's tags she actually shares — named on the badge, never just counted. */
@@ -51,11 +53,24 @@ export interface JobCardProps {
   subscriber?: boolean;
 }
 
+const APPLIED_DATE = new Intl.DateTimeFormat("he-IL", {
+  day: "numeric",
+  month: "numeric",
+  timeZone: "Asia/Jerusalem",
+});
+
+/**
+ * One job on the board. Compact by design (the PM's feedback): a fixed
+ * three-line description with an ellipsis keeps every card the same height in
+ * the grid; the full text lives one click away on the apply screen (ours) or
+ * expands in place (market jobs, which have no other screen).
+ */
 export function JobCard({
   job,
   saved,
   applied,
   applicationStatus = null,
+  appliedAt = null,
   myTech = [],
   matchedTags = [],
   subscriber = true,
@@ -63,34 +78,11 @@ export function JobCard({
   const [isSaved, setSaved] = useState(saved);
   const [hasApplied, setApplied] = useState(applied);
   const [applyError, setApplyError] = useState<string | null>(null);
-  // The description is clamped on the card; "עוד" opens it in place, because a
-  // market job has no other screen where the full text exists.
   const [expanded, setExpanded] = useState(false);
-  const [clamped, setClamped] = useState(false);
-  const bodyRef = useRef<HTMLDivElement | null>(null);
   const [, start] = useTransition();
   const logo = LOGO_GRADIENTS[(job.logo_variant - 1) % LOGO_GRADIENTS.length];
   const techSet = new Set(myTech);
-
-  // Show the affordance only when text is really cut off — measured once per
-  // mount and on resize (the clamp depends on the column width).
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (!el) return;
-    const measure = () => setClamped(el.scrollHeight > el.clientHeight + 1);
-    measure();
-    let timer: ReturnType<typeof setTimeout>;
-    const onResize = () => {
-      clearTimeout(timer);
-      timer = setTimeout(measure, 150);
-    };
-    window.addEventListener("resize", onResize);
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener("resize", onResize);
-    };
-    // Re-measured when she expands: collapsing back must restore the button.
-  }, [expanded]);
+  const publishedAt = job.published_at ?? job.created_at;
 
   function onSave() {
     const next = !isSaved;
@@ -111,47 +103,24 @@ export function JobCard({
   }
 
   return (
-    <article className="bg-white border border-ink-200 rounded-[18px] p-5 flex flex-col transition-[transform,box-shadow] duration-[220ms] hover:-translate-y-0.5 hover:shadow-md hover:border-brand-pink">
-      <div className="flex items-center gap-2 mb-3">
-        <Badge variant={job.source === "ours" ? "pink" : "tech"}>
-          {job.source === "ours" ? "משרה שלנו" : "משרה פתוחה"}
-        </Badge>
-        {matchedTags.length > 0 && (
-          <Badge variant="mint" title={`הטכנולוגיות המשותפות: ${matchedTags.join(", ")}`}>
-            <Sparkles size={11} className="inline me-1" />
-            מתאימה לפרופיל שלך ·{" "}
-            {matchedTags.length === 1
-              ? "טכנולוגיה משותפת אחת"
-              : `${matchedTags.length} טכנולוגיות משותפות`}
-          </Badge>
-        )}
-      </div>
-
-      <div className="flex gap-3 items-start mb-3">
+    <article className="bg-white border border-ink-200 rounded-[16px] p-4 flex flex-col h-full transition-[transform,box-shadow] duration-[220ms] hover:-translate-y-0.5 hover:shadow-md hover:border-brand-pink">
+      <div className="flex gap-2.5 items-start">
         <div
           className={cn(
-            "w-[52px] h-[52px] rounded-[13px] shrink-0 flex items-center justify-center text-white font-display font-black text-xl",
+            "w-[42px] h-[42px] rounded-[11px] shrink-0 flex items-center justify-center text-white font-display font-black text-lg",
             logo
           )}
         >
           {job.source === "ours" ? "ק" : job.company.slice(0, 1)}
         </div>
         <div className="flex-1 min-w-0">
-          {/* The client behind an internal job is confidential — members see
-              only the role and its requirements. */}
-          <div className="text-[12.5px] text-ink-500">
-            {job.source === "ours" ? "משרה בלעדית · קוד פתוח" : job.company}
+          {/* One source line, once: the client behind an internal job is
+              confidential — the role stands alone. */}
+          <div className="text-[11.5px] text-ink-500">
+            {job.source === "ours" ? "בלעדית · קוד פתוח" : job.company}
           </div>
-          <div className="font-display text-[17px] font-bold text-ink-1000">{job.title}</div>
-          <div className="flex gap-3 text-xs text-ink-500 flex-wrap mt-1.5">
-            {job.location && (
-              <span className="inline-flex items-center gap-1">
-                <MapPin size={12} /> {job.location}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1">
-              <Briefcase size={12} /> {EMPLOYMENT[job.employment_type]}
-            </span>
+          <div className="font-display text-[16px] font-bold text-ink-1000 leading-snug truncate">
+            {job.title}
           </div>
         </div>
         <button
@@ -159,50 +128,72 @@ export function JobCard({
           onClick={onSave}
           aria-label={isSaved ? "הסרת שמירה" : "שמירה"}
           className={cn(
-            "w-[30px] h-[30px] rounded-full flex items-center justify-center shrink-0 border transition-colors",
+            "w-[28px] h-[28px] rounded-full flex items-center justify-center shrink-0 border transition-colors",
             isSaved
               ? "bg-brand-gradient border-transparent text-white"
               : "bg-ink-50 border-ink-200 text-ink-500 hover:text-brand-pink-deep"
           )}
         >
-          <Bookmark size={13} fill={isSaved ? "currentColor" : "none"} />
+          <Bookmark size={12} fill={isSaved ? "currentColor" : "none"} />
         </button>
       </div>
 
+      <div className="flex gap-2.5 text-[11.5px] text-ink-500 flex-wrap mt-1.5">
+        {job.location && (
+          <span className="inline-flex items-center gap-1">
+            <MapPin size={11} /> {job.location}
+          </span>
+        )}
+        <span className="inline-flex items-center gap-1">
+          <Briefcase size={11} /> {EMPLOYMENT[job.employment_type]}
+        </span>
+        {/* Automatic — from the moment it went live. */}
+        <span className="inline-flex items-center gap-1" suppressHydrationWarning>
+          <CalendarDays size={11} /> פורסמה {timeAgo(publishedAt)}
+        </span>
+      </div>
+
+      {/* WHY it fits her, by name — personalization she can verify. */}
+      {matchedTags.length > 0 && (
+        <div className="inline-flex items-center gap-1 text-[12px] font-semibold text-success mt-1.5">
+          <Sparkles size={12} className="shrink-0" />
+          <span className="truncate">
+            מתאימה לך · {matchedTags.slice(0, 3).join(" · ")}
+            {matchedTags.length > 3 ? ` +${matchedTags.length - 3}` : ""}
+          </span>
+        </div>
+      )}
+
       {(job.description_html || job.description) && (
-        <div className="mb-3">
+        <div className="mt-2">
           {job.description_html ? (
-            // The admin's styled requirements (sanitized at save by the
-            // allowlist in lib/rich-text) — shown as she composed them.
             <div
-              ref={bodyRef}
               dir="rtl"
               className={[
-                "text-[13.5px] text-ink-700 leading-relaxed",
-                expanded ? "" : "line-clamp-4",
+                "text-[13px] text-ink-700 leading-relaxed",
+                expanded ? "" : "line-clamp-3",
                 "[&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5",
-                "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-[14px] [&_h3]:text-brand-purple",
-                "[&_a]:text-brand-purple [&_a]:underline [&_p]:my-1 [&_b]:text-ink-1000 [&_strong]:text-ink-1000",
+                "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-[13.5px] [&_h3]:text-brand-purple",
+                "[&_a]:text-brand-purple [&_a]:underline [&_p]:my-0.5 [&_b]:text-ink-1000 [&_strong]:text-ink-1000",
               ].join(" ")}
               dangerouslySetInnerHTML={{ __html: job.description_html }}
             />
           ) : (
             <div
-              ref={bodyRef}
               className={cn(
-                "text-[13.5px] text-ink-700 leading-relaxed whitespace-pre-line",
-                !expanded && "line-clamp-4"
+                "text-[13px] text-ink-700 leading-relaxed whitespace-pre-line",
+                !expanded && "line-clamp-3"
               )}
             >
               {job.description}
             </div>
           )}
-          {(clamped || expanded) && (
+          {job.source === "open" && (
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
               aria-expanded={expanded}
-              className="mt-1 font-semibold text-[12.5px] text-brand-purple hover:text-brand-pink-deep cursor-pointer"
+              className="mt-0.5 font-semibold text-[12px] text-brand-purple hover:text-brand-pink-deep cursor-pointer"
             >
               {expanded ? "פחות" : "עוד ←"}
             </button>
@@ -211,43 +202,50 @@ export function JobCard({
       )}
 
       {job.tech_tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
-          {job.tech_tags.map((tag) => (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {job.tech_tags.slice(0, 6).map((tag) => (
             <Badge key={tag} variant={techSet.has(tag.trim().toLowerCase()) ? "mint" : "tech"}>
               {tag}
             </Badge>
           ))}
-        </div>
-      )}
-
-      {!subscriber && job.source === "ours" && (
-        <div className="flex items-center gap-1.5 text-[12px] text-[#8C5E0E] bg-tint-warm border border-[#F0DCA8] rounded-md px-2.5 py-1.5 mb-3">
-          <Crown size={12} className="shrink-0" />
-          עדיפות למנויות הקהילה
+          {job.tech_tags.length > 6 && (
+            <span className="text-[11px] text-ink-400 self-center">+{job.tech_tags.length - 6}</span>
+          )}
         </div>
       )}
 
       {applyError && (
-        <div className="text-[12.5px] text-danger bg-danger-bg border border-[#F5C6C0] rounded-md px-2.5 py-1.5 mb-3">
+        <div className="text-[12.5px] text-danger bg-danger-bg border border-[#F5C6C0] rounded-md px-2.5 py-1.5 mt-2">
           {applyError}
         </div>
       )}
 
-      <div className="flex items-center gap-2.5 pt-3 border-t border-ink-100 mt-auto">
+      <div className="flex items-center gap-2 pt-2.5 border-t border-ink-100 mt-auto">
+        {!subscriber && job.source === "ours" && !hasApplied && (
+          <span className="inline-flex items-center gap-1 text-[11px] text-[#8C5E0E]">
+            <Crown size={11} /> עדיפות למנויות
+          </span>
+        )}
         {hasApplied ? (
           <span
             className={cn(
-              "inline-flex items-center gap-1.5 text-[13px] font-semibold",
+              "inline-flex items-center gap-1.5 text-[12.5px] font-semibold",
               applicationStatus ? APP_STATUS[applicationStatus].cls : "text-success"
             )}
           >
-            <Check size={14} /> {applicationStatus ? APP_STATUS[applicationStatus].label : "הגשת"}
+            <Check size={13} />
+            {applicationStatus ? APP_STATUS[applicationStatus].label : "הגשת"}
+            {appliedAt && (
+              <span className="font-normal text-ink-400" suppressHydrationWarning>
+                · {APPLIED_DATE.format(new Date(appliedAt))}
+              </span>
+            )}
           </span>
         ) : job.source === "ours" ? (
           // Our jobs go through the application wizard (questions + CV choice).
           <Link
             href={`/jobs/${job.id}/apply`}
-            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white"
+            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[12.5px] px-3.5 py-1.5 rounded-md bg-brand-gradient text-white"
           >
             הגשת מועמדות
           </Link>
@@ -256,15 +254,15 @@ export function JobCard({
             href={job.external_url}
             target="_blank"
             rel="noopener noreferrer"
-            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple"
+            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[12.5px] px-3.5 py-1.5 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple"
           >
-            להגשה <ExternalLink size={13} />
+            להגשה <ExternalLink size={12} />
           </a>
         ) : (
           <button
             type="button"
             onClick={onApply}
-            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white"
+            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[12.5px] px-3.5 py-1.5 rounded-md bg-brand-gradient text-white"
           >
             הגשת מועמדות
           </button>
