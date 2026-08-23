@@ -7,7 +7,7 @@ import { CourseContent } from "@/components/patterns/course-content";
 import { LoggedLink } from "@/components/patterns/logged-link";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
-import { returnCourse } from "./actions";
+import { CollapsibleSection } from "@/components/patterns/collapsible-section";
 import { COURSE_DATE_HE, swapEligibleAt } from "@/lib/course-library";
 import type { ContentLink } from "@/types/database";
 
@@ -35,7 +35,7 @@ export default async function CoursesPage() {
   }
   const subscriber = isSubscriber(profile);
 
-  const [{ data: courses }, { data: active }] = await Promise.all([
+  const [{ data: courses }, { data: active }, { data: latestTake }] = await Promise.all([
     supabase.from("courses").select("*").eq("is_published", true).order("created_at", { ascending: true }),
     user && subscriber
       ? supabase
@@ -45,16 +45,31 @@ export default async function CoursesPage() {
           .eq("status", "active")
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    // The most recent take of ANY status: after a return the rolling month
+    // still runs — without this, every card looked open and only the click
+    // revealed the refusal (the PM's "התנהגות לא תקינה").
+    user && subscriber
+      ? supabase
+          .from("enrollments")
+          .select("course_id, started_at, created_at")
+          .eq("profile_id", user.id)
+          .order("started_at", { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
 
   const activeCourse = active ? (courses ?? []).find((c) => c.id === active.course_id) : null;
 
-  // The library rule, printed instead of implied: when the rolling month since
-  // she took the current course hasn't passed, every other card carries the
-  // exact date her swap unlocks.
-  const eligibleAt = active ? swapEligibleAt(active.started_at ?? active.created_at) : null;
+  // The library rule, printed instead of implied: the rolling month runs from
+  // her latest take (active OR returned), and every locked card carries the
+  // exact date the next swap unlocks.
+  const takenRef = active ?? latestTake;
+  const eligibleAt = takenRef ? swapEligibleAt(takenRef.started_at ?? takenRef.created_at) : null;
   const swapReady = !eligibleAt || eligibleAt <= new Date();
   const swapEligibleIso = eligibleAt && !swapReady ? eligibleAt.toISOString() : null;
+  // The one course she may still re-open inside a locked month (her last take).
+  const resumableId = !activeCourse && !swapReady ? (latestTake?.course_id ?? null) : null;
 
   // Unit (קוביה) headers for every course — the cards show the year cycles.
   // Tolerates the table not existing yet (pre-migration deploys).
@@ -121,6 +136,32 @@ export default async function CoursesPage() {
     giftedLinks = data ?? [];
   }
 
+  const courseCards = (courses ?? []).map((course) => {
+    const units = unitsByCourse.get(course.id) ?? [];
+    const years = [...new Set(units.map((u) => u.year).filter(Boolean))] as number[];
+    // "שנות קורס", not "מחזורים" — the PM's wording call.
+    const courseYears = years.length
+      ? `שנות הקורס: ${years.length > 1 ? `${Math.min(...years)}–${Math.max(...years)}` : years[0]}`
+      : null;
+    return (
+      <CourseCard
+        key={course.id}
+        course={course}
+        cycles={courseYears}
+        syllabus={units.map((u) => ({ name: u.name, year: u.year }))}
+        gifted={giftedIds.includes(course.id)}
+        isActive={activeCourse?.id === course.id}
+        locked={
+          (!!activeCourse && activeCourse.id !== course.id) ||
+          (!activeCourse && !swapReady && resumableId !== course.id)
+        }
+        resume={resumableId === course.id}
+        swapEligibleAt={swapEligibleIso}
+        needsSubscription={!subscriber}
+      />
+    );
+  });
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -170,14 +211,9 @@ export default async function CoursesPage() {
                 המשיכי לקורס
               </LoggedLink>
             )}
-            <form action={returnCourse}>
-              <button
-                type="submit"
-                className="w-full font-display font-semibold text-[13.5px] px-[18px] py-2.5 rounded-md bg-white/[0.18] text-white backdrop-blur"
-              >
-                החזרת קורס
-              </button>
-            </form>
+            {/* "החזרת קורס" is gone from here on the PM's feedback: returning
+                mid-month closed her access without unlocking a new pick — pure
+                confusion. Swapping at the eligibility date covers the flow. */}
           </div>
         </div>
       )}
@@ -227,34 +263,32 @@ export default async function CoursesPage() {
         <Info size={18} className="text-brand-purple shrink-0 mt-0.5" />
         <span>
           <b className="font-display text-brand-purple">איך זה עובד:</b> את בוחרת קורס אחד ולומדת בקצב שלך.
-          בכל חודש אפשר להחליף לקורס אחר — הקורס הקודם ייסגר והחדש ייפתח.
+          חודש אחרי הבחירה נפתחת זכאות החלפה — הקורס הקודם ייסגר והחדש ייפתח, כמו בספרייה.
         </span>
       </div>
 
-      <h2 className="font-display text-lg font-bold text-ink-1000">כל הקורסים</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {(courses ?? []).map((course) => {
-          const units = unitsByCourse.get(course.id) ?? [];
-          const years = [...new Set(units.map((u) => u.year).filter(Boolean))] as number[];
-          const cycles =
-            units.length > 1
-              ? `${units.length} מחזורים${years.length ? ` · ${Math.min(...years)}–${Math.max(...years)}` : ""}`
-              : years.length
-                ? `מחזור ${years[0]}`
-                : null;
-          return (
-            <CourseCard
-              key={course.id}
-              course={course}
-              cycles={cycles}
-              gifted={giftedIds.includes(course.id)}
-              locked={!!activeCourse && activeCourse.id !== course.id}
-              swapEligibleAt={swapEligibleIso}
-              needsSubscription={!subscriber}
-            />
-          );
-        })}
-      </div>
+      {/* With a course underway, the full catalogue is next month's business —
+          folded away instead of scrolling under her feet (PM feedback). */}
+      {activeCourse ? (
+        <CollapsibleSection
+          title="כל הקורסים בספרייה"
+          subtitle={
+            swapReady
+              ? "זכאות ההחלפה שלך פתוחה — אפשר לבחור קורס אחר."
+              : `להחלפה הבאה — הזכאות נפתחת ב-${COURSE_DATE_HE.format(eligibleAt!)}.`
+          }
+          count={(courses ?? []).length}
+          storageKey="courses:catalogue"
+          defaultOpen={false}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{courseCards}</div>
+        </CollapsibleSection>
+      ) : (
+        <>
+          <h2 className="font-display text-lg font-bold text-ink-1000">כל הקורסים</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{courseCards}</div>
+        </>
+      )}
     </div>
   );
 }

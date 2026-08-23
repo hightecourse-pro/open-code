@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Lock, Sparkles } from "lucide-react";
+import { BookOpenText, CheckCircle2, ChevronDown, Lock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { startCourse } from "@/app/(app)/courses/actions";
 import type { Course } from "@/types/database";
@@ -24,10 +24,16 @@ const SWAP_DATE = new Intl.DateTimeFormat("he-IL", {
 
 export interface CourseCardProps {
   course: Course;
-  /** Year-cycle summary, e.g. "3 מחזורים · 2023–2025" (courses with units). */
+  /** Year summary, e.g. "שנות הקורס: 2023–2025" (courses with units). */
   cycles?: string | null;
-  /** True when the member already has a different active course (locked). */
+  /** Unit names+years — the "מה לומדים" syllabus peek (PM feedback). */
+  syllabus?: { name: string; year: number | null }[];
+  /** This is HER course this month — marked, never buttoned. */
+  isActive?: boolean;
+  /** True when another course (or a still-running month) blocks this one. */
   locked: boolean;
+  /** Inside a locked month, her last take may be re-opened. */
+  resume?: boolean;
   /**
    * When she is NOT yet allowed to swap: the ISO date her next swap unlocks —
    * printed on the card, per the owner's library rule. Null once eligible.
@@ -43,12 +49,16 @@ export interface CourseCardProps {
 export function CourseCard({
   course,
   cycles,
+  syllabus = [],
+  isActive = false,
   locked,
+  resume = false,
   swapEligibleAt = null,
   gifted = false,
   needsSubscription = false,
 }: CourseCardProps) {
   const [pending, start] = useTransition();
+  const [showSyllabus, setShowSyllabus] = useState(false);
   const cover = COVERS[(course.cover_variant - 1) % COVERS.length];
   const swapReady = locked && !swapEligibleAt;
 
@@ -70,23 +80,35 @@ export function CourseCard({
         // h-full + flex column so every CTA in the grid row lands on the same
         // line, whatever the title/category above it does.
         "bg-white border rounded-[18px] overflow-hidden h-full flex flex-col transition-[transform,box-shadow] duration-[220ms]",
-        gifted ? "border-[#F3C6DD]" : "border-ink-200",
-        locked && !gifted && !swapReady ? "opacity-60" : "hover:-translate-y-0.5 hover:shadow-md"
+        isActive
+          ? "border-brand-pink-deep shadow-glow-pink"
+          : gifted
+            ? "border-[#F3C6DD]"
+            : "border-ink-200",
+        locked && !gifted && !swapReady ? "opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"
       )}
     >
-      <div className={cn("h-[120px] shrink-0 relative flex items-center justify-center text-white font-mono text-5xl font-black", cover)}>
-        {course.title.slice(0, 1)}
-        {gifted && (
+      {/* The course NAME on the cover — a lone letter said nothing (PM). */}
+      <div className={cn("h-[104px] shrink-0 relative flex items-center justify-center px-4 text-center", cover)}>
+        <span className="text-white font-display font-black text-[19px] leading-snug line-clamp-2 drop-shadow-sm">
+          {course.title}
+        </span>
+        {isActive && (
+          <div className="absolute inset-x-0 bottom-0 bg-white/92 text-brand-pink-deep text-[12px] font-display font-bold py-1 text-center flex items-center justify-center gap-1">
+            <CheckCircle2 size={13} /> הקורס שלך החודש
+          </div>
+        )}
+        {gifted && !isActive && (
           <div className="absolute inset-x-0 bottom-0 bg-white/92 text-brand-pink-deep text-[12px] font-display font-semibold py-1 text-center">
             נפתח עבורך אישית 💜
           </div>
         )}
         {locked && !gifted && !swapReady && (
           <div className="absolute inset-0 bg-ink-1000/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 text-white text-[13px] font-display font-semibold text-center px-3">
-            <Lock size={22} />
-            זכאות החלפת קורס
+            <Lock size={20} />
+            נעול להחודש
             <span className="text-[12px] font-normal opacity-90">
-              מ-{SWAP_DATE.format(new Date(swapEligibleAt!))}
+              זכאות החלפה מ-{SWAP_DATE.format(new Date(swapEligibleAt!))}
             </span>
           </div>
         )}
@@ -95,27 +117,46 @@ export function CourseCard({
         {course.category && (
           <div className="font-mono text-[11px] text-brand-pink-deep mb-1">{course.category}</div>
         )}
-        <div className="font-display font-bold text-[15.5px] text-ink-1000 leading-tight mb-1">
-          {course.title}
-        </div>
         <div className="text-[12.5px] text-ink-500 flex gap-2.5 flex-wrap">
           <span>{course.lessons_count} שיעורים</span>
-          {cycles ? (
-            <>
-              <span>·</span>
-              <span>{cycles}</span>
-            </>
-          ) : (
-            <>
-              <span>·</span>
-              <span>{course.duration_hours} שעות</span>
-            </>
-          )}
+          <span>·</span>
+          {cycles ? <span>{cycles}</span> : <span>{course.duration_hours} שעות</span>}
         </div>
+
+        {/* Syllabus peek — what's actually inside, before she commits. */}
+        {syllabus.length > 0 && (
+          <div className="mt-2">
+            <button
+              type="button"
+              onClick={() => setShowSyllabus((v) => !v)}
+              aria-expanded={showSyllabus}
+              className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple cursor-pointer"
+            >
+              <BookOpenText size={13} /> מה לומדים בקורס?
+              <ChevronDown size={13} className={cn("transition-transform", showSyllabus && "rotate-180")} />
+            </button>
+            {showSyllabus && (
+              <ul className="mt-1.5 flex flex-col gap-1 text-[12.5px] text-ink-700">
+                {syllabus.map((u, i) => (
+                  <li key={i} className="flex gap-1.5">
+                    <span className="text-brand-pink-deep">•</span>
+                    {u.name}
+                    {u.year ? <span className="text-ink-400">({u.year})</span> : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
         {/* mt-auto on the wrapper (not on the CTA itself, whose own py-* would
             win the merge) is what lines the buttons up across the grid row. */}
         <div className="mt-auto pt-3">
-          {needsSubscription ? (
+          {isActive ? (
+            <div className="w-full text-center font-display font-bold text-[13px] py-2 rounded-md bg-tint-pink text-brand-pink-deep flex items-center justify-center gap-1.5">
+              <CheckCircle2 size={14} /> את לומדת אותו עכשיו — החומרים למעלה
+            </div>
+          ) : needsSubscription ? (
             <Link
               href="/join"
               className="w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors"
@@ -124,6 +165,15 @@ export function CourseCard({
             </Link>
           ) : gifted ? (
             <div className="text-[12.5px] text-ink-500">החומרים שלו מחכים לך למעלה 💜</div>
+          ) : resume ? (
+            <button
+              type="button"
+              onClick={onStart}
+              disabled={pending}
+              className="w-full font-display font-semibold text-[13px] py-2 rounded-md bg-brand-gradient text-white disabled:opacity-60"
+            >
+              {pending ? "פותח…" : "חזרה לקורס הזה 📚"}
+            </button>
           ) : swapReady ? (
             <button
               type="button"

@@ -15,7 +15,7 @@ await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 25000 
 await page.goto(`${BASE}/jobs`);
 await page.waitForLoadState("networkidle");
 
-const appliedCard = page.locator('article:has-text("הוגשה ✓")');
+const appliedCard = page.locator('article:has-text("הוגשה לקוד פתוח ✓")');
 const count = await appliedCard.count();
 console.log("cards with applied pill:", count);
 if (count > 0) {
