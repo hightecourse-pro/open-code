@@ -104,12 +104,11 @@ export function CourseCard({
           </div>
         )}
         {locked && !gifted && !swapReady && (
-          <div className="absolute inset-0 bg-ink-1000/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-1 text-white text-[13px] font-display font-semibold text-center px-3">
-            <Lock size={20} />
-            נעול להחודש
-            <span className="text-[12px] font-normal opacity-90">
-              זכאות החלפה מ-{SWAP_DATE.format(new Date(swapEligibleAt!))}
-            </span>
+          // A bottom strip, not a full veil — the course name must stay
+          // readable even while the month is locked.
+          <div className="absolute inset-x-0 bottom-0 bg-ink-1000/75 text-white text-[11.5px] font-display font-semibold py-1 px-2 flex items-center justify-center gap-1.5">
+            <Lock size={11} className="shrink-0" />
+            נעול להחודש · זכאות החלפה מ-{SWAP_DATE.format(new Date(swapEligibleAt!))}
           </div>
         )}
       </div>
