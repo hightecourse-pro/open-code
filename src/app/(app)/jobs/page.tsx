@@ -225,11 +225,10 @@ export default async function JobsPage({
   };
 
   // Profile-based ordering: best-matching jobs first, then newest. Jobs she
-  // already applied to leave the board entirely — they live in "ההגשות שלי"
-  // (the PM's "כפילות על משרות שהגשתי"). Targeted jobs keep their own section.
-  const boardJobs = (jobs ?? []).filter(
-    (j) => !targetedSet.has(j.id) && !appStatusByJob.has(j.id)
-  );
+  // applied to STAY on the board, marked with their status (the owner's call:
+  // an indication beats a disappearance) — the old duplication is gone anyway
+  // now that "ההגשות שלי" is its own view. Targeted jobs keep their section.
+  const boardJobs = (jobs ?? []).filter((j) => !targetedSet.has(j.id));
   const viewJobs =
     view === "fit"
       ? boardJobs.filter((j) => matchedTags(j).length > 0)

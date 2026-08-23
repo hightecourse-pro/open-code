@@ -30,6 +30,22 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; cls: string }> = {
   waitlisted: { label: "התקדמנו בינתיים עם מועמדות אחרות 💜", cls: "text-ink-500" },
 };
 
+// The scannable version of the status — a small pill at the top of the card,
+// so an applied job is unmistakable without reading the footer.
+const APP_STATUS_SHORT: Record<ApplicationStatus, string> = {
+  draft: "טיוטה",
+  submitted: "הוגשה ✓",
+  in_review: "בבדיקה 👀",
+  accepted: "התקבלת 🎉",
+  rejected: "לא התקדם",
+  sent: "אצל המעסיק 🤞",
+  interview: "ראיון 🎯",
+  exam: "מבחן ✍️",
+  hired: "גויסת 🎉",
+  declined: "לא התקדם",
+  waitlisted: "בהמתנה",
+};
+
 const LOGO_GRADIENTS = [
   "bg-[linear-gradient(135deg,#E0418D,#913F80)]",
   "bg-[linear-gradient(135deg,#6B3D99,#464CA0)]",
@@ -116,8 +132,13 @@ export function JobCard({
         <div className="flex-1 min-w-0">
           {/* One source line, once: the client behind an internal job is
               confidential — the role stands alone. */}
-          <div className="text-[11.5px] text-ink-500">
-            {job.source === "ours" ? "בלעדית · קוד פתוח" : job.company}
+          <div className="text-[11.5px] text-ink-500 flex items-center gap-1.5">
+            <span className="truncate">{job.source === "ours" ? "בלעדית · קוד פתוח" : job.company}</span>
+            {hasApplied && (
+              <span className="inline-flex items-center shrink-0 rounded-full bg-tint-mint text-success px-2 py-px text-[10.5px] font-bold">
+                {applicationStatus ? APP_STATUS_SHORT[applicationStatus] : "הוגשה ✓"}
+              </span>
+            )}
           </div>
           <div className="font-display text-[16px] font-bold text-ink-1000 leading-snug truncate">
             {job.title}
