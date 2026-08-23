@@ -24,7 +24,7 @@ export interface MySubmittedItem {
 // Warm member-facing pills, one per pipeline stage.
 const STATUS_PILL: Record<ApplicationStatus, { label: string; cls: string }> = {
   draft: { label: "טיוטה", cls: "bg-ink-100 text-ink-700" },
-  submitted: { label: "הוגשה 💜", cls: "bg-tint-purple text-brand-purple" },
+  submitted: { label: "הוגשה לקוד פתוח 💜", cls: "bg-tint-purple text-brand-purple" },
   in_review: { label: "בבדיקה אצלנו 👀", cls: "bg-tint-indigo text-brand-indigo" },
   accepted: { label: "התקבלת! 🎉", cls: "bg-tint-mint text-success" },
   rejected: { label: "לא התקדם הפעם 💪", cls: "bg-ink-100 text-ink-700" },

@@ -34,7 +34,7 @@ const APP_STATUS: Record<ApplicationStatus, { label: string; cls: string }> = {
 // so an applied job is unmistakable without reading the footer.
 const APP_STATUS_SHORT: Record<ApplicationStatus, string> = {
   draft: "טיוטה",
-  submitted: "הוגשה ✓",
+  submitted: "הוגשה לקוד פתוח ✓",
   in_review: "בבדיקה 👀",
   accepted: "התקבלת 🎉",
   rejected: "לא התקדם",
@@ -136,7 +136,7 @@ export function JobCard({
             <span className="truncate">{job.source === "ours" ? "בלעדית · קוד פתוח" : job.company}</span>
             {hasApplied && (
               <span className="inline-flex items-center shrink-0 rounded-full bg-tint-mint text-success px-2 py-px text-[10.5px] font-bold">
-                {applicationStatus ? APP_STATUS_SHORT[applicationStatus] : "הוגשה ✓"}
+                {applicationStatus ? APP_STATUS_SHORT[applicationStatus] : "הוגשה לקוד פתוח ✓"}
               </span>
             )}
           </div>
