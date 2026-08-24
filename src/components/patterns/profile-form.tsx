@@ -708,19 +708,19 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
 
         {/* The mentor door, right at the first step (PM: offer it on first
             entry). Switches her to the free approval track and reloads this
-            wizard with the mentor questionnaire. */}
+            wizard as the mentor questionnaire. NOT a nested <form> — HTML
+            drops an inner form silently, which made this button dead. */}
         {allowMentorTrack && (
-          <form action={applyAsMentor} className="mt-1">
-            <button
-              type="submit"
-              className="w-full text-start rounded-[14px] border border-[#EAD9A8] bg-tint-warm/60 p-4 transition-all hover:border-[#E5A93C]"
-            >
-              <div className="font-display font-bold text-ink-1000">מגיעה בתור מנטורית? 👑</div>
-              <div className="text-[12.5px] text-ink-500 mt-0.5">
-                מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. לחיצה תחליף לשאלון מנטוריות קצר.
-              </div>
-            </button>
-          </form>
+          <button
+            type="button"
+            onClick={() => startTransition(() => applyAsMentor())}
+            className="w-full text-start rounded-[14px] border border-[#EAD9A8] bg-tint-warm/60 p-4 mt-1 transition-all hover:border-[#E5A93C] cursor-pointer"
+          >
+            <div className="font-display font-bold text-ink-1000">מגיעה בתור מנטורית? 👑</div>
+            <div className="text-[12.5px] text-ink-500 mt-0.5">
+              מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. לחיצה תחליף לשאלון מנטוריות קצר.
+            </div>
+          </button>
         )}
       </div>
 
