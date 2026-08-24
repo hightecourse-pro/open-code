@@ -37,6 +37,8 @@ export interface ProfileFormProps {
   questions: ConfigQuestion[];
   answers: Record<string, unknown>; // question_id -> value
   taxonomyOptions?: Partial<Record<TaxonomyKind, Option[]>>;
+  /** She has no CV yet — the final step collects one, required (PM rule). */
+  requireCv?: boolean;
 }
 
 const LONG_TEXT = new Set([
@@ -63,10 +65,12 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {} }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false }: ProfileFormProps) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
+  const [cvFileName, setCvFileName] = useState<string | null>(null);
+  const [cvError, setCvError] = useState(false);
 
   // A server-side save error must be seen — scroll it into view.
   useEffect(() => {
@@ -592,6 +596,12 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
         }
         if (!validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
         const fd = new FormData(e.currentTarget);
+        // The CV gate, client-side too: the server refuses without one, but the
+        // red frame here beats a round trip.
+        if (requireCv && !(fd.get("cv_file") instanceof File && (fd.get("cv_file") as File).size > 0)) {
+          setCvError(true);
+          return;
+        }
         startTransition(() => action(fd));
       }}
       className="flex flex-col gap-5"
@@ -700,6 +710,51 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           {renderRows(s.questions)}
         </div>
       ))}
+
+      {/* At least one CV is part of a complete profile (PM rule). Mounted with
+          the form so the file submits; visible only on the final step. */}
+      {requireCv && (
+        <div className={cn("flex flex-col gap-1.5", cur === totalSteps - 1 && expChoice !== null ? "" : "hidden")}>
+          <span className="text-xs font-semibold text-ink-700">
+            קורות חיים (חובה — לפחות קובץ אחד)
+          </span>
+          <label
+            htmlFor="profile_cv_file"
+            className={cn(
+              "flex items-center gap-3 border-2 border-dashed rounded-md px-4 py-4 cursor-pointer transition-colors",
+              cvFileName
+                ? "border-[#A7E3C6] bg-tint-mint"
+                : cvError
+                  ? "border-danger bg-danger-bg"
+                  : "border-ink-300 hover:border-brand-purple"
+            )}
+          >
+            <span className="text-sm text-ink-700">
+              {cvFileName ? (
+                <>
+                  <b dir="ltr">{cvFileName}</b> · נבחר ✓
+                </>
+              ) : (
+                "בחרי קובץ PDF או Word — זה מה שנציג למעסיקים"
+              )}
+            </span>
+          </label>
+          <input
+            id="profile_cv_file"
+            name="cv_file"
+            type="file"
+            accept=".pdf,.doc,.docx"
+            className="sr-only"
+            onChange={(e) => {
+              setCvFileName(e.target.files?.[0]?.name ?? null);
+              setCvError(false);
+            }}
+          />
+          {cvError && (
+            <span className="text-danger text-xs">בלי קורות חיים אי אפשר לסיים — העלי קובץ אחד 🙂</span>
+          )}
+        </div>
+      )}
 
       {/* navigation */}
       <div className="flex items-center justify-between pt-2 border-t border-ink-100">

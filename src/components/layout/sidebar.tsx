@@ -6,6 +6,7 @@ import {
   BookOpen,
   Briefcase,
   Calendar,
+  CreditCard,
   Crown,
   FileCheck2,
   FileText,
@@ -31,16 +32,18 @@ import { signOut } from "@/app/(auth)/actions";
 type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number; paid?: boolean };
 type NavSection = { label?: string; items: NavItem[] };
 
+// Order per the PM (2026-08-24): forum, members, jobs, live events, courses,
+// recordings — articles close the section.
 const SECTIONS: NavSection[] = [
   {
     items: [
       { href: "/forum", label: "פורום הקהילה", icon: MessageSquare },
       { href: "/members", label: "המשתתפות שלנו", icon: Users },
-      { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
-      { href: "/events", label: "אירועים ומיטאפים", icon: Calendar },
       { href: "/jobs", label: "משרות", icon: Briefcase },
+      { href: "/events", label: "אירועים וסשנים LIVE", icon: Calendar },
       { href: "/courses", label: "ספריית קורסים", icon: GraduationCap, paid: true },
       { href: "/recordings", label: "הקלטות סשנים", icon: Play, paid: true },
+      { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
     ],
   },
   {
@@ -55,6 +58,7 @@ const SECTIONS: NavSection[] = [
     label: "אישי",
     items: [
       { href: "/profile", label: "הפרופיל שלי", icon: User },
+      { href: "/subscription", label: "המנוי שלי", icon: CreditCard },
       { href: "/cv", label: "קורות החיים שלי", icon: FileText },
       { href: "/mentor", label: "המנטוריות שלי", icon: Crown },
       { href: "/chat", label: "צ'אטים", icon: MessageCircle, paid: true },
@@ -76,7 +80,7 @@ export interface SidebarUser {
 }
 
 /** Destinations that are not part of the mentor experience. */
-const NOT_FOR_MENTORS = new Set(["/jobs", "/courses"]);
+const NOT_FOR_MENTORS = new Set(["/jobs", "/courses", "/subscription"]);
 
 const DEFAULT_USER: SidebarUser = {
   name: "מאיה כהן",

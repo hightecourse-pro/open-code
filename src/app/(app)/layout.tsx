@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/layout";
+import { MemberRequestWidget } from "@/components/patterns/member-request-widget";
 import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
+import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 
@@ -45,6 +47,29 @@ export default async function AuthenticatedLayout({
   // A free member reads the history she already has, so the count is hers too.
   const unreadCount = await unreadMessageCount(profile.id);
 
+  // "היית איתנו בסשן?" — for a week after a session ends, until she answers.
+  // The newest unanswered one; active members only.
+  let feedbackSession: { id: string; title: string } | null = null;
+  if (profile.status === "active") {
+    const supabase = await createClient();
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
+    const [{ data: ended }, { data: answered }] = await Promise.all([
+      supabase
+        .from("sessions")
+        .select("id, title")
+        .eq("is_published", true)
+        .is("canceled_at", null)
+        .gte("scheduled_at", weekAgo)
+        .lt("scheduled_at", now.toISOString())
+        .order("scheduled_at", { ascending: false })
+        .limit(5),
+      supabase.from("session_feedback").select("session_id").eq("profile_id", profile.id),
+    ]);
+    const done = new Set((answered ?? []).map((a) => a.session_id));
+    feedbackSession = (ended ?? []).find((s) => !done.has(s.id)) ?? null;
+  }
+
   // She turned auto-renewal off but is still inside the paid period — a quiet
   // standing reminder of the end date, with the way back one click away.
   let cancelNotice: string | null = null;
@@ -76,6 +101,9 @@ export default async function AuthenticatedLayout({
         unreadCount,
       }}
     >
+      {feedbackSession && (
+        <SessionFeedbackBanner sessionId={feedbackSession.id} sessionTitle={feedbackSession.title} />
+      )}
       {cancelNotice && (
         <Link
           href="/profile"
@@ -103,6 +131,9 @@ export default async function AuthenticatedLayout({
         </Link>
       )}
       {children}
+      {/* The floating message-to-the-team widget (PM ask) — the reply lands
+          back in her chat. */}
+      <MemberRequestWidget />
     </AppShell>
   );
 }

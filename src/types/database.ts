@@ -603,6 +603,56 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["attachments"]["Insert"]>;
         Relationships: [];
       };
+      session_feedback: {
+        Row: {
+          session_id: string;
+          profile_id: string;
+          attended: boolean;
+          content_rating: number | null;
+          practical_rating: number | null;
+          clarity_rating: number | null;
+          speaker_rating: number | null;
+          comment: string | null;
+          created_at: string;
+        };
+        Insert: {
+          session_id: string;
+          profile_id: string;
+          attended: boolean;
+          content_rating?: number | null;
+          practical_rating?: number | null;
+          clarity_rating?: number | null;
+          speaker_rating?: number | null;
+          comment?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["session_feedback"]["Insert"]>;
+        Relationships: [];
+      };
+      member_requests: {
+        Row: {
+          id: string;
+          profile_id: string;
+          subject: string;
+          body: string;
+          status: "open" | "handled";
+          handled_at: string | null;
+          handled_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          subject: string;
+          body: string;
+          status?: "open" | "handled";
+          handled_at?: string | null;
+          handled_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["member_requests"]["Insert"]>;
+        Relationships: [];
+      };
       session_reminders: {
         Row: {
           session_id: string;

@@ -11,8 +11,8 @@ const COVERS = [
   "bg-[linear-gradient(135deg,#E0418D,#913F80)]",
   "bg-[linear-gradient(135deg,#6B3D99,#464CA0)]",
   "bg-[linear-gradient(135deg,#1F1E3F,#464CA0)]",
-  "bg-[linear-gradient(135deg,#36C57B,#28A864)]",
-  "bg-[linear-gradient(135deg,#FFB85C,#E5A93C)]",
+  "bg-[linear-gradient(135deg,#464CA0,#6B3D99)]",
+  "bg-[linear-gradient(135deg,#E0418D,#464CA0)]",
   "bg-[linear-gradient(135deg,#913F80,#E0418D)]",
 ];
 

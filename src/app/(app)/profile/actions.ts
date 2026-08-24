@@ -322,6 +322,38 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     return { error: `כמעט סיימנו 🙂 נשארו כמה שדות חובה: ${missing.slice(0, 6).join(", ")}` };
   }
 
+  // The PM's rule: a member profile is not complete without at least one CV.
+  // A file handed in with the wizard lands in her documents like any other
+  // upload; mentors and staff are exempt — they don't job-hunt.
+  if (before?.role !== "admin" && before?.role !== "mentor") {
+    const { count: cvCount } = await supabase
+      .from("cv_documents")
+      .select("id", { count: "exact", head: true })
+      .eq("profile_id", user.id);
+    if ((cvCount ?? 0) === 0) {
+      const cvFile = formData.get("cv_file");
+      if (!(cvFile instanceof File) || cvFile.size === 0) {
+        return { error: "כמעט סיימנו 🙂 חסר רק קובץ קורות חיים — העלי אחד בשלב האחרון של השאלון." };
+      }
+      if (cvFile.size > 10 * 1024 * 1024) return { error: "קובץ קורות החיים גדול מדי — עד 10MB." };
+      if (!/\.(pdf|docx?)$/i.test(cvFile.name)) {
+        return { error: "קורות חיים אפשר להעלות רק כ-PDF או Word (doc/docx)." };
+      }
+      const safeName = cvFile.name.replace(/[^\w.\-]+/g, "_");
+      const path = `${user.id}/${Date.now()}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from("cvs")
+        .upload(path, cvFile, { contentType: cvFile.type || "application/octet-stream", upsert: false });
+      if (upErr) return { error: "העלאת קורות החיים נכשלה. נסי שוב." };
+      const row = { profile_id: user.id, label: cvFile.name, language: "he" as const, file_path: path, file_name: cvFile.name };
+      // Her first document becomes the default; pre-migration DBs lack the
+      // column (42703) — retry without it, same as /cv does.
+      let { error: docErr } = await supabase.from("cv_documents").insert({ ...row, is_default: true });
+      if (docErr) ({ error: docErr } = await supabase.from("cv_documents").insert(row));
+      if (docErr) return { error: "קורות החיים עלו אבל לא נשמרו. נסי שוב." };
+    }
+  }
+
   await supabase
     .from("profiles")
     .update({

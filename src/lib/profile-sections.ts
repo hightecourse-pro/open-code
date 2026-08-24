@@ -39,11 +39,14 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
     ],
   },
   {
-    title: "הניסיון המקצועי שלך",
-    hint: "ספרי לנו על הניסיון — ככה נדע לאילו משרות לכוון בשבילך.",
+    title: "ההתנסות והניסיון שלך",
+    // Practicum/bootcamp ARE hands-on experience (PM call) — they live here,
+    // not in a separate step.
+    hint: "ניסיון מהתעשייה, פרקטיקום ובוטקאמפ — ככה נדע לאילו משרות לכוון בשבילך.",
     keys: [
       "years_experience", "exp_role", "exp_tech", "exp_languages", "work_history",
-      "practical_experience", "currently_working", "current_workplace",
+      "practical_experience", "practicum_done", "practicum_employer", "practicum_period",
+      "practicum_tech", "practicum_description", "currently_working", "current_workplace",
       "work_description", "specific_job",
     ],
   },
@@ -56,12 +59,9 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
     ],
   },
   {
-    title: "פרקטיקום והשמה",
+    title: "העדפות השמה",
     hint: "כמה העדפות שיעזרו לנו להציע לך בדיוק את ההזדמנויות הנכונות.",
-    keys: [
-      "practicum_done", "practicum_employer", "practicum_period", "practicum_tech",
-      "practicum_description", "practicum_placement", "remote_commute", "paid_placement",
-    ],
+    keys: ["job_offer_types", "practicum_placement", "remote_commute", "paid_placement"],
   },
   {
     title: "עוד משהו?",

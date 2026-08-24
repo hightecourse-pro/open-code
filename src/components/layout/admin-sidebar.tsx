@@ -14,6 +14,7 @@ import {
   Crown,
   FileText,
   HeartHandshake,
+  Inbox,
   KeyRound,
   LayoutDashboard,
   Library,
@@ -30,6 +31,7 @@ type AdminNavItem = { href: string; label: string; icon: LucideIcon; badge?: num
 const ITEMS: AdminNavItem[] = [
   { href: "/admin", label: "דשבורד", icon: LayoutDashboard },
   { href: "/admin/members", label: "חברות", icon: Users },
+  { href: "/admin/requests", label: "בקשות מהחברות", icon: Inbox },
   { href: "/admin/cv-files", label: "קורות חיים", icon: FileText },
   { href: "/admin/mentors", label: "מנטוריות", icon: Crown },
   { href: "/admin/mentor-requests", label: "בקשות למנטורית", icon: HeartHandshake },

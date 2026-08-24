@@ -1875,3 +1875,61 @@ export async function rejectMentorApplication(profileId: string): Promise<void> 
   await admin.from("profiles").update({ status: "rejected" }).eq("id", profileId);
   revalidatePath("/admin/mentors");
 }
+
+// --------------------------------------------------------- member requests
+
+/**
+ * Answer a member's request from the floating widget: the reply lands in her
+ * CHAT (from the acting admin), and the request is marked handled. No emails.
+ */
+export async function replyToMemberRequest(
+  requestId: string,
+  formData: FormData
+): Promise<void> {
+  const me = await requireRole("admin");
+  const reply = String(formData.get("reply") ?? "").trim().slice(0, 4000);
+  const admin = createAdminClient();
+  const { data: req } = await admin
+    .from("member_requests")
+    .select("id, profile_id, subject, status")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!req || req.status !== "open") return;
+
+  if (reply) {
+    // Find-or-create the 1:1 with the member, then drop the reply in.
+    const [a_id, b_id] = [me.id, req.profile_id].sort();
+    const { data: existing } = await admin
+      .from("conversations")
+      .select("id")
+      .eq("a_id", a_id)
+      .eq("b_id", b_id)
+      .maybeSingle();
+    let convId = existing?.id;
+    if (!convId) {
+      const { data: created } = await admin
+        .from("conversations")
+        .insert({ a_id, b_id })
+        .select("id")
+        .single();
+      convId = created?.id;
+    }
+    if (convId) {
+      await admin.from("messages").insert({
+        conversation_id: convId,
+        sender_id: me.id,
+        body: `לגבי הבקשה שלך "${req.subject}": ${reply}`,
+      });
+      await admin
+        .from("conversations")
+        .update({ last_message_at: new Date().toISOString() })
+        .eq("id", convId);
+    }
+  }
+
+  await admin
+    .from("member_requests")
+    .update({ status: "handled", handled_at: new Date().toISOString(), handled_by: me.id })
+    .eq("id", requestId);
+  revalidatePath("/admin/requests");
+}

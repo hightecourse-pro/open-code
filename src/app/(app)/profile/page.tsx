@@ -7,8 +7,7 @@ import { EmploymentCard } from "@/components/patterns/employment-card";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { PortalVisibility } from "@/components/patterns/portal-visibility";
-import { SubscriptionCard } from "@/components/patterns/subscription-card";
-import { getPricing } from "@/lib/payments/pricing";
+import { Pencil } from "lucide-react";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { QuestionScope } from "@/types/database";
 
@@ -62,15 +61,13 @@ export default async function ProfilePage() {
   const answerMap: Record<string, unknown> = {};
   for (const a of answers ?? []) answerMap[a.question_id] = a.value;
 
-  // Her subscription row + today's price, for the "המנוי שלי" card.
-  const [{ data: subscription }, pricing] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select("status, current_period_end, canceled_at")
-      .eq("profile_id", profile.id)
-      .maybeSingle(),
-    getPricing(),
-  ]);
+  // At least one CV is part of a complete junior profile (PM rule) — the
+  // wizard collects one when she has none.
+  const { count: cvCount } = await supabase
+    .from("cv_documents")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", profile.id);
+  const requireCv = profile.role === "junior" && (cvCount ?? 0) === 0;
 
   // Resolve the assigned mentor's name for the employment card.
   let employmentMentorName: string | null = null;
@@ -106,15 +103,24 @@ export default async function ProfilePage() {
         </div>
       </div>
 
-      <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm">
-        <h2 className="font-display text-lg font-bold text-ink-1000 mb-1">פרטי הפרופיל</h2>
-        <p className="t-body-sm text-ink-500 mb-4">המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות.</p>
+      <div className="bg-white border-2 border-[#DDC9EC] rounded-[18px] p-6 shadow-sm">
+        {/* An explicit frame + how-to line: the wizard mid-page read as
+            "where do I actually edit?" (PM feedback). */}
+        <h2 className="font-display text-lg font-bold text-ink-1000 mb-1 flex items-center gap-2">
+          <Pencil size={17} className="text-brand-purple" /> כאן מעדכנים את הפרופיל
+        </h2>
+        <p className="t-body-sm text-ink-500 mb-4">
+          עוברים שלב-שלב עם &quot;הבא&quot;, משנים מה שרוצים, ובשלב האחרון לוחצות{" "}
+          <b>&quot;סיום ושמירה&quot;</b> — שום דבר לא נשמר לפני זה. המידע עוזר לנו להתאים לך
+          משרות, קורסים ומנטוריות.
+        </p>
         <ProfileForm
           firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}
           lastName={profile.last_name ?? profile.full_name?.split(" ").slice(1).join(" ") ?? ""}
           questions={questions ?? []}
           answers={answerMap}
           taxonomyOptions={taxonomyOptions}
+          requireCv={requireCv}
         />
       </div>
 
@@ -125,16 +131,7 @@ export default async function ProfilePage() {
         mentorName={employmentMentorName}
       />
 
-      {/* The subscription is a paid-track thing — mentors and staff never pay,
-          so showing them a renewal date would only confuse. */}
-      {profile.role === "junior" && profile.member_tier === "paid" && subscription && (
-        <SubscriptionCard
-          status={subscription.status}
-          periodEnd={subscription.current_period_end}
-          canceledAt={subscription.canceled_at}
-          priceShekels={Math.round(pricing.monthlyAgorot / 100)}
-        />
-      )}
+      {/* "המנוי שלי" moved to its own page (PM) — /subscription in the menu. */}
 
       <PortalVisibility listed={profile.portal_listed !== false} />
 

@@ -50,7 +50,7 @@ const LOGO_GRADIENTS = [
   "bg-[linear-gradient(135deg,#E0418D,#913F80)]",
   "bg-[linear-gradient(135deg,#6B3D99,#464CA0)]",
   "bg-[linear-gradient(135deg,#1F1E3F,#464CA0)]",
-  "bg-[linear-gradient(135deg,#36C57B,#28A864)]",
+  "bg-[linear-gradient(135deg,#913F80,#E0418D)]",
 ];
 
 export interface JobCardProps {
@@ -130,16 +130,19 @@ export function JobCard({
           {job.source === "ours" ? "ק" : job.company.slice(0, 1)}
         </div>
         <div className="flex-1 min-w-0">
-          {/* One source line, once: the client behind an internal job is
-              confidential — the role stands alone. */}
-          <div className="text-[11.5px] text-ink-500 flex items-center gap-1.5">
-            <span className="truncate">{job.source === "ours" ? "בלעדית · קוד פתוח" : job.company}</span>
-            {hasApplied && (
-              <span className="inline-flex items-center shrink-0 rounded-full bg-tint-mint text-success px-2 py-px text-[10.5px] font-bold">
-                {applicationStatus ? APP_STATUS_SHORT[applicationStatus] : "הוגשה לקוד פתוח ✓"}
-              </span>
-            )}
-          </div>
+          {/* Market jobs name their company; ours say nothing — the ק logo and
+              the tab already said it (PM: the repeated "בלעדית" was noise).
+              The client behind an internal job stays confidential either way. */}
+          {(job.source !== "ours" || hasApplied) && (
+            <div className="text-[11.5px] text-ink-500 flex items-center gap-1.5">
+              {job.source !== "ours" && <span className="truncate">{job.company}</span>}
+              {hasApplied && (
+                <span className="inline-flex items-center shrink-0 rounded-full bg-tint-mint text-success px-2 py-px text-[10.5px] font-bold">
+                  {applicationStatus ? APP_STATUS_SHORT[applicationStatus] : "הוגשה לקוד פתוח ✓"}
+                </span>
+              )}
+            </div>
+          )}
           <div className="font-display text-[16px] font-bold text-ink-1000 leading-snug truncate">
             {job.title}
           </div>

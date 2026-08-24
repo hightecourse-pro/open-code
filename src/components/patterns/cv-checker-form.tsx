@@ -140,7 +140,7 @@ export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
         )}
         <p className="text-[12px] text-ink-500 -mt-2">
           רוצה לשמור גרסאות של קורות החיים? נהלי אותן ב
-          <Link href="/cv" className="text-brand-purple font-semibold">
+          <Link href="/cv" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
             {" "}ניהול קורות החיים
           </Link>
           .
