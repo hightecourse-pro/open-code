@@ -40,6 +40,7 @@ export async function GET() {
       EMAIL_ALLOWLIST: has("EMAIL_ALLOWLIST"),
       GOOGLE_SERVICE_ACCOUNT_EMAIL: has("GOOGLE_SERVICE_ACCOUNT_EMAIL"),
       GOOGLE_PRIVATE_KEY: has("GOOGLE_PRIVATE_KEY"),
+      ALLOW_DRIVE_OUTSIDE_PRODUCTION: has("ALLOW_DRIVE_OUTSIDE_PRODUCTION"),
     },
     // The rollups an owner actually reads: money, mail, drive, cron.
     nedarimConfigured: has("NEDARIM_MOSAD_ID") && has("NEDARIM_API_VALID"),
