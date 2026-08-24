@@ -94,18 +94,32 @@ export interface ParsedCallback {
 
 /** Parse the server-to-server CallBack POST from Nedarim. */
 export function parseNedarimCallback(params: Record<string, string>): ParsedCallback {
-  const status = (params.Status ?? params.status ?? "").toLowerCase();
+  const statusRaw = params.Status ?? params.status;
+  const status = (statusRaw ?? "").toLowerCase();
   const planRaw = params.Param2 ?? null;
   const plan: SubscriptionPlan | null =
     planRaw === "monthly" || planRaw === "annual" ? planRaw : null;
   const amount = params.Amount ? Math.round(parseFloat(params.Amount) * 100) : null;
 
+  const txId = params.TransactionId ?? params.transactionId ?? params.ID ?? null;
+  // הקמת הוראת קבע events carry KevaId instead of a transaction id — observed
+  // live 2026-08-24. Prefixed so a keva row can never collide with a charge.
+  const kevaId = params.KevaId?.trim() || null;
+
   return {
-    ok: status === "ok" || status === "success" || params.Status === "1",
+    // The account-level webhooks (עדכוני עסקאות / הקמת הוראת קבע) fire on
+    // SUCCESS only and carry NO Status field at all — its absence on a call
+    // that names a transaction or keva IS the success signal (observed live).
+    // Refusals arrive on the separate declines webhook WITH status fields,
+    // and anything carrying a non-ok status stays not-ok.
+    ok:
+      status === "ok" ||
+      status === "success" ||
+      params.Status === "1" ||
+      (statusRaw === undefined && !!(txId ?? kevaId)),
     profileId: params.Param1 ?? null,
     plan,
-    // Nedarim's iframe callback uses "ID" for the transaction id.
-    transactionId: params.TransactionId ?? params.transactionId ?? params.ID ?? null,
+    transactionId: txId ?? (kevaId ? `keva-${kevaId}` : null),
     amountAgorot: Number.isFinite(amount) ? amount : null,
   };
 }
