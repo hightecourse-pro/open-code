@@ -534,6 +534,34 @@ export async function updatePricing(
   return { ok: true };
 }
 
+/**
+ * Word the four session-feedback rating questions (the PM: the admin decides
+ * what each session's feedback asks). Empty input falls back to the default
+ * wording — the slots themselves are fixed DB columns.
+ */
+export async function updateFeedbackLabels(
+  _prev: PricingState,
+  formData: FormData
+): Promise<PricingState> {
+  await requireRole("admin");
+
+  const value: Record<string, string> = {};
+  for (const name of ["content", "practical", "clarity", "speaker"]) {
+    const label = String(formData.get(name) ?? "").trim();
+    if (label) value[name] = label.slice(0, 80);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("app_settings")
+    .upsert({ key: "session_feedback_labels", value }, { onConflict: "key" });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/config");
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export type FormState = { ok?: boolean; error?: string };
 
 const EMPLOYMENT: EmploymentType[] = ["full", "part", "student", "freelance"];
@@ -1821,6 +1849,8 @@ export async function createSession(_prev: FormState, formData: FormData): Promi
     topic: String(formData.get("topic") ?? "") || null,
     scheduled_at: new Date(scheduledAt).toISOString(),
     zoom_url: String(formData.get("zoom_url") ?? "") || null,
+    syllabus_url: String(formData.get("syllabus_url") ?? "").trim() || null,
+    materials_url: String(formData.get("materials_url") ?? "").trim() || null,
   });
   if (error) return { error: error.message };
   revalidatePath("/admin/sessions");

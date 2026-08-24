@@ -12,6 +12,7 @@ import {
   deleteCourse,
   deleteSessionContent,
   setSessionOpenToAll,
+  updateSessionFiles,
 } from "./actions";
 import type { ContentLink, CourseUnit } from "@/types/database";
 
@@ -21,7 +22,7 @@ export default async function AdminContentPage() {
   const supabase = await createClient();
   const [{ data: courses }, { data: sessions }, { data: links }, { data: units }] = await Promise.all([
     supabase.from("courses").select("*").order("created_at", { ascending: false }),
-    supabase.from("sessions").select("id, title, topic, scheduled_at, open_to_all").order("scheduled_at", { ascending: false }),
+    supabase.from("sessions").select("id, title, topic, scheduled_at, open_to_all, syllabus_url, materials_url").order("scheduled_at", { ascending: false }),
     supabase.from("content_links").select("*").order("sort_order", { ascending: true }),
     supabase.from("course_units").select("*").order("sort_order", { ascending: true }),
   ]);
@@ -170,6 +171,32 @@ export default async function AdminContentPage() {
                   ? "כל המשתתפות מקבלות את ההקלטה — גם החינמיות. לחיצה תחזיר אותו למנויות בלבד."
                   : "לחיצה תפתח את ההקלטה לכל הקהילה."}
               </span>
+            </form>
+            {/* Downloadable handouts — what the members' events screen offers. */}
+            <form
+              action={updateSessionFiles.bind(null, s.id)}
+              className="flex flex-wrap items-center gap-2 mb-3"
+            >
+              <input
+                name="syllabus_url"
+                dir="ltr"
+                placeholder="קישור לסילבוס (לכל הקהילה)"
+                defaultValue={s.syllabus_url ?? ""}
+                className="flex-1 min-w-[180px] text-[12.5px] border border-ink-300 rounded-md px-3 py-1.5"
+              />
+              <input
+                name="materials_url"
+                dir="ltr"
+                placeholder="קישור לחומרים (למנויות)"
+                defaultValue={s.materials_url ?? ""}
+                className="flex-1 min-w-[180px] text-[12.5px] border border-ink-300 rounded-md px-3 py-1.5"
+              />
+              <button
+                type="submit"
+                className="text-[12.5px] font-semibold text-brand-purple border border-brand-purple rounded-md px-3 py-1.5 hover:bg-tint-purple"
+              >
+                שמירת קבצים
+              </button>
             </form>
             <ContentLinksEditor ownerType="session" ownerId={s.id} links={linksByOwner.get(`session:${s.id}`) ?? []} />
           </div>

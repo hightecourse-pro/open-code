@@ -32,8 +32,8 @@ import { signOut } from "@/app/(auth)/actions";
 type NavItem = { href: string; label: string; icon: LucideIcon; badge?: number; paid?: boolean };
 type NavSection = { label?: string; items: NavItem[] };
 
-// Order per the PM (2026-08-24): forum, members, jobs, live events, courses,
-// recordings — articles close the section.
+// Order per the PM (2026-08-24): forum, members, jobs, live events, then the
+// recordings right under the events they came from; articles close the section.
 const SECTIONS: NavSection[] = [
   {
     items: [
@@ -41,8 +41,8 @@ const SECTIONS: NavSection[] = [
       { href: "/members", label: "המשתתפות שלנו", icon: Users },
       { href: "/jobs", label: "משרות", icon: Briefcase },
       { href: "/events", label: "אירועים וסשנים LIVE", icon: Calendar },
-      { href: "/courses", label: "ספריית קורסים", icon: GraduationCap, paid: true },
       { href: "/recordings", label: "הקלטות סשנים", icon: Play, paid: true },
+      { href: "/courses", label: "ספריית קורסים", icon: GraduationCap, paid: true },
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
     ],
   },
@@ -58,10 +58,10 @@ const SECTIONS: NavSection[] = [
     label: "אישי",
     items: [
       { href: "/profile", label: "הפרופיל שלי", icon: User },
+      { href: "/chat", label: "צ'אטים", icon: MessageCircle, paid: true },
       { href: "/subscription", label: "המנוי שלי", icon: CreditCard },
       { href: "/cv", label: "קורות החיים שלי", icon: FileText },
       { href: "/mentor", label: "המנטוריות שלי", icon: Crown },
-      { href: "/chat", label: "צ'אטים", icon: MessageCircle, paid: true },
     ],
   },
 ];
@@ -94,15 +94,15 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-white border-e border-ink-200 p-[18px] pt-[22px] flex flex-col gap-1.5 sticky top-0 h-screen overflow-y-auto">
-      <Link href="/forum" className="px-2 mb-2.5 block w-fit" aria-label="קוד פתוח">
-        <Logo width={140} />
+    <nav className="bg-white border-e border-ink-200 p-[14px] pt-4 flex flex-col gap-1 sticky top-0 h-screen overflow-y-auto">
+      <Link href="/forum" className="px-2 mb-1.5 block w-fit" aria-label="קוד פתוח">
+        <Logo width={128} />
       </Link>
 
       {SECTIONS.map((section, i) => (
-        <div key={section.label ?? i} className="flex flex-col gap-1.5">
+        <div key={section.label ?? i} className="flex flex-col gap-0.5">
           {section.label && (
-            <div className="text-[11px] text-ink-500 tracking-[0.06em] uppercase font-semibold px-2 mt-3 mb-0.5">
+            <div className="text-[11px] text-ink-500 tracking-[0.06em] uppercase font-semibold px-2 mt-2 mb-0.5">
               {section.label}
             </div>
           )}
@@ -123,7 +123,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
                 aria-current={active ? "page" : undefined}
                 title={locked ? "נפתח עם מנוי" : undefined}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-[9px] rounded-xl text-[14.5px] font-medium transition-colors",
+                  "flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[13.5px] font-medium transition-colors",
                   active
                     ? "bg-brand-gradient text-white shadow-glow-pink"
                     : locked
@@ -131,7 +131,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
                       : "text-ink-700 hover:bg-ink-100 hover:text-ink-900"
                 )}
               >
-                <Icon size={18} className="shrink-0" />
+                <Icon size={16} className="shrink-0" />
                 <span>{item.label}</span>
                 {(locked || badge) && (
                   <span className="ms-auto flex items-center gap-1.5">
@@ -166,7 +166,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
       {user.isSubscriber === false && (
         <Link
           href="/join"
-          className="mt-auto flex items-center gap-2.5 px-3 py-[9px] rounded-xl text-[14px] font-semibold bg-brand-gradient-soft border border-[#DDC9EC] text-ink-900 hover:border-brand-purple transition-colors"
+          className="mt-auto flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[13.5px] font-semibold bg-brand-gradient-soft border border-[#DDC9EC] text-ink-900 hover:border-brand-purple transition-colors"
         >
           <Sparkles size={17} className="shrink-0 text-brand-pink-deep" />
           <span>שדרוג למנוי מלא</span>
@@ -178,7 +178,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
           href="/admin"
           aria-current={pathname.startsWith("/admin") ? "page" : undefined}
           className={cn(
-            "mt-auto flex items-center gap-2.5 px-3 py-[9px] rounded-xl text-[14.5px] font-semibold transition-colors",
+            "mt-auto flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[13.5px] font-semibold transition-colors",
             pathname.startsWith("/admin")
               ? "bg-ink-1000 text-white"
               : "bg-ink-100 text-ink-900 hover:bg-ink-200"

@@ -49,6 +49,12 @@ export function AdminCreateSession() {
         <Field label="קישור Zoom" htmlFor="s-zoom">
           <Input id="s-zoom" name="zoom_url" dir="ltr" placeholder="https://zoom.us/…" />
         </Field>
+        <Field label="סילבוס להורדה (רשות)" htmlFor="s-syllabus">
+          <Input id="s-syllabus" name="syllabus_url" dir="ltr" placeholder="https://… או /syllabus-2026.pdf" />
+        </Field>
+        <Field label="חומרים להורדה (רשות, למנויות)" htmlFor="s-materials">
+          <Input id="s-materials" name="materials_url" dir="ltr" placeholder="https://drive.google.com/…" />
+        </Field>
       </div>
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "מוסיף…" : "הוספת סשן"}

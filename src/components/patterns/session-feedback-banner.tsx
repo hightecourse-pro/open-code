@@ -6,12 +6,16 @@ import { Alert, Button, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { submitSessionFeedback } from "@/app/(app)/session-feedback/actions";
 
-const ASPECTS = [
+// The four rating slots are fixed columns in session_feedback; their LABELS
+// are the admin's to word (הגדרות → שאלות המשוב) — these are the defaults.
+export const DEFAULT_ASPECTS = [
   { name: "content", label: "התוכן עצמו" },
   { name: "practical", label: "כמה זה מעשי" },
   { name: "clarity", label: "כמה זה היה מובן" },
   { name: "speaker", label: "המרצה" },
-] as const;
+];
+
+export type FeedbackAspect = { name: string; label: string };
 
 function StarRow({
   value,
@@ -59,9 +63,15 @@ function StarRow({
 export function SessionFeedbackBanner({
   sessionId,
   sessionTitle,
+  sessionDate,
+  aspects = DEFAULT_ASPECTS,
 }: {
   sessionId: string;
   sessionTitle: string;
+  /** Pre-formatted (Israel time) — so it's clear WHICH session this asks about. */
+  sessionDate?: string;
+  /** Admin-worded rating labels; falls back to the defaults. */
+  aspects?: FeedbackAspect[];
 }) {
   const [open, setOpen] = useState(false);
   const [gone, setGone] = useState(false);
@@ -93,7 +103,9 @@ export function SessionFeedbackBanner({
     <div className="bg-brand-gradient-soft border border-[#DDC9EC] rounded-md p-4 mb-5 flex flex-col gap-3">
       <div className="flex items-center gap-2 flex-wrap">
         <span className="text-[14px] text-ink-900 flex-1">
-          היית איתנו בסשן <b>&quot;{sessionTitle}&quot;</b>? דעתך חשובה לנו 💜
+          היית איתנו בסשן <b>&quot;{sessionTitle}&quot;</b>
+          {sessionDate ? <span className="text-ink-500"> ({sessionDate})</span> : null}? דעתך
+          חשובה לנו 💜
         </span>
         {!open && (
           <span className="flex gap-2">
@@ -125,13 +137,13 @@ export function SessionFeedbackBanner({
       {open && (
         <form
           action={(fd) => {
-            for (const a of ASPECTS) fd.set(a.name, String(ratings[a.name] ?? ""));
+            for (const a of aspects) fd.set(a.name, String(ratings[a.name] ?? ""));
             submit(true, fd);
           }}
           className="flex flex-col gap-2"
         >
           {error && <Alert variant="danger">{error}</Alert>}
-          {ASPECTS.map((a) => (
+          {aspects.map((a) => (
             <StarRow
               key={a.name}
               label={a.label}

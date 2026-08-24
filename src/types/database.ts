@@ -960,6 +960,9 @@ export interface Database {
           canceled_at: string | null;
           /** Recording open to the whole community, free tier included. */
           open_to_all: boolean;
+          /** Downloadable handouts — plain URLs the admin pastes. */
+          syllabus_url: string | null;
+          materials_url: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -973,6 +976,8 @@ export interface Database {
           recording_id?: string | null;
           open_to_all?: boolean;
           canceled_at?: string | null;
+          syllabus_url?: string | null;
+          materials_url?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["sessions"]["Insert"]>;
         Relationships: [];
@@ -1221,7 +1226,10 @@ export interface Database {
        * nothing to leak even straight from the API.
        */
       sessions_public: {
-        Row: Omit<Database["public"]["Tables"]["sessions"]["Row"], "zoom_url" | "leader_id">;
+        Row: Omit<
+          Database["public"]["Tables"]["sessions"]["Row"],
+          "zoom_url" | "leader_id" | "materials_url"
+        >;
         Insert: never;
         Update: never;
         Relationships: [];

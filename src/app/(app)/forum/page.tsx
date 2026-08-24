@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { Composer } from "@/components/patterns/composer";
 import { ForumInstantList } from "@/components/patterns/forum-instant-list";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { ForumTopicRow, topicTitle, type ForumTopic } from "@/components/patterns/forum-topic-row";
 import { TargetedJobBanner, type TargetedJobLite } from "@/components/patterns/targeted-job-banner";
-import { HiredBanner } from "@/components/patterns/hired-banner";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import type { UserRole } from "@/types/database";
@@ -15,11 +13,6 @@ import type { UserRole } from "@/types/database";
 export const metadata: Metadata = { title: "פורום" };
 // Always fresh — a new topic shows without a manual refresh.
 export const dynamic = "force-dynamic";
-
-/** ISO cutoff for the hired-celebration window — the last 60 days. */
-function hiredCelebrationSince(): string {
-  return new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-}
 
 type ProfileLite = {
   id: string;
@@ -50,10 +43,10 @@ export default async function ForumPage({
   // Saving a topic is a subscriber's action (RLS), so only she has a list.
   const savedOnly = saved === "1" && canWrite;
 
-  // Independent reads run as ONE parallel wave — the targeted-jobs banner, the
-  // hired banner and the topic list used to chain 4-5 sequential round trips
-  // before anything below could start.
-  const [targetedJobs, recentlyHired, posts] = await Promise.all([
+  // Independent reads run as ONE parallel wave — the targeted-jobs banner and
+  // the topic list used to chain round trips before anything below could
+  // start. (The hired celebration floats app-wide now — see the layout.)
+  const [targetedJobs, posts] = await Promise.all([
     // Jobs published specifically to this member (job_targets — RLS lets her
     // read her own rows). Shown as a prominent banner above the topic list.
     (async (): Promise<TargetedJobLite[]> => {
@@ -72,34 +65,6 @@ export default async function ForumPage({
         .eq("pipeline_status", "published")
         .order("published_at", { ascending: false });
       return tJobs ?? [];
-    })(),
-
-    // Women who recently started a job — the whole community celebrates. Two
-    // sources: members (profiles) and off-community placements (manual_hires,
-    // admin-only RLS → service role; banner names are public by design).
-    // Names only — workplace is never shown to other members.
-    (async () => {
-      const hiredSince = hiredCelebrationSince();
-      const [{ data: hiredMembers }, { data: manualHires }] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("full_name, hired_at")
-          .eq("found_job", true)
-          .gte("hired_at", hiredSince)
-          .order("hired_at", { ascending: false })
-          .limit(6),
-        createAdminClient()
-          .from("manual_hires")
-          .select("full_name, hired_at")
-          .gte("hired_at", hiredSince)
-          .order("hired_at", { ascending: false })
-          .limit(6),
-      ]);
-      return [...(hiredMembers ?? []), ...(manualHires ?? [])]
-        .filter((h) => !!h.hired_at)
-        .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
-        .slice(0, 6)
-        .map((h) => ({ full_name: h.full_name }));
     })(),
 
     // The topic list itself. The saved filter narrows the query — applied
@@ -214,14 +179,7 @@ export default async function ForumPage({
 
       <TargetedJobBanner jobs={targetedJobs} />
 
-      <HiredBanner members={recentlyHired} />
-
-      {canWrite ? (
-        // While she's looking at what she saved, the box would just be noise
-        // on top of a list she came to read. (The instant search keeps it —
-        // hiding it under her fingers while she types would jolt the page.)
-        !savedOnly && <Composer kind="forum" />
-      ) : (
+      {!canWrite && (
         <UpgradeCard
           title="השיחות בפורום נפתחות עם מנוי 💜"
           body="כאן חברות הקהילה מתייעצות, שואלות ומשתפות ידע. עם מנוי תוכלי לקרוא את כל השיחות — וגם להצטרף אליהן."
@@ -230,11 +188,15 @@ export default async function ForumPage({
       )}
 
       {/* Instant search over the loaded topics — rows and empty states are
-          prepared here; typing only shows/hides them, nothing navigates. */}
+          prepared here; typing only shows/hides them, nothing navigates.
+          The composer rides in the belowSearch slot (PM: search on top,
+          "פתחי פוסט" under it), and the saved view drops it — noise on top
+          of a list she came to read. */}
       <ForumInstantList
         canWrite={canWrite}
         savedOnly={savedOnly}
         initialQuery={initialQuery}
+        belowSearch={canWrite && !savedOnly ? <Composer kind="forum" /> : undefined}
         chips={
           <div className="flex gap-2 flex-wrap">
             {[

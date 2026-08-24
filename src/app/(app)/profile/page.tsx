@@ -7,7 +7,8 @@ import { EmploymentCard } from "@/components/patterns/employment-card";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { PortalVisibility } from "@/components/patterns/portal-visibility";
-import { Pencil } from "lucide-react";
+import Link from "next/link";
+import { Eye, Pencil } from "lucide-react";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import type { QuestionScope } from "@/types/database";
 
@@ -134,6 +135,21 @@ export default async function ProfilePage() {
       {/* "המנוי שלי" moved to its own page (PM) — /subscription in the menu. */}
 
       <PortalVisibility listed={profile.portal_listed !== false} />
+
+      {/* The mirror: exactly what a recruiter sees on the portal (PM ask). */}
+      <Link
+        href="/profile/preview"
+        className="flex items-center gap-2.5 bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm hover:border-brand-purple transition-colors"
+      >
+        <Eye size={17} className="text-brand-purple shrink-0" />
+        <span className="flex-1 text-[13.5px] text-ink-900">
+          <b className="font-display">איך אני נראית למגייסות?</b>
+          <span className="text-ink-500"> — תצוגה מקדימה של הפרופיל שלך כפי שהוא מוצג בפורטל המעסיקים.</span>
+        </span>
+        <span className="font-display font-semibold text-brand-purple text-[13px] whitespace-nowrap">
+          לתצוגה ←
+        </span>
+      </Link>
 
       <DriveEmailForm
         current={priv?.drive_email ?? null}

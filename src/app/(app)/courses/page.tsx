@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Info, Play, Gift } from "lucide-react";
+import { FileDown, Info, Play, Gift } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
 import { CourseCard } from "@/components/patterns/course-card";
@@ -164,10 +164,21 @@ export default async function CoursesPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <span className="font-mono text-xs text-brand-pink-deep">&lt;קורסים/&gt;</span>
-        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ספריית הקורסים</h1>
-        <p className="t-body-sm text-ink-700">קורס פעיל אחד בכל פעם — כמו ספרייה. אפשר להחליף פעם בחודש.</p>
+      <div className="flex items-start gap-3 flex-wrap">
+        <div className="flex-1 min-w-[220px]">
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;קורסים/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ספריית הקורסים</h1>
+          <p className="t-body-sm text-ink-700">קורס פעיל אחד בכל פעם — כמו ספרייה. אפשר להחליף פעם בחודש.</p>
+        </div>
+        {/* The full 2026 syllabus — what each course in the library covers. */}
+        <a
+          href="/syllabus-2026.pdf"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors mt-1"
+        >
+          <FileDown size={14} /> הורדת הסילבוס המלא (PDF)
+        </a>
       </div>
 
       {!subscriber && (

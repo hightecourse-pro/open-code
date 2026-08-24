@@ -135,6 +135,25 @@ export async function setSessionOpenToAll(id: string, open: boolean): Promise<vo
   revalidatePath("/recordings");
 }
 
+/**
+ * The session's downloadable handouts — a syllabus (visible to the whole
+ * community) and a materials link (subscribers). Pasted URLs; clearing a
+ * field takes the button away on the events screen.
+ */
+export async function updateSessionFiles(id: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("sessions")
+    .update({
+      syllabus_url: String(formData.get("syllabus_url") ?? "").trim() || null,
+      materials_url: String(formData.get("materials_url") ?? "").trim() || null,
+    })
+    .eq("id", id);
+  revalidatePath("/admin/content");
+  revalidatePath("/events");
+}
+
 export async function deleteSessionContent(id: string): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();

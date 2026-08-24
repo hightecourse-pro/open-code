@@ -1,11 +1,46 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
 import { AppShell } from "@/components/layout";
+import { HiredBanner, type HiredMember } from "@/components/patterns/hired-banner";
 import { MemberRequestWidget } from "@/components/patterns/member-request-widget";
 import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+/**
+ * Women who recently started a job — the whole community celebrates, on every
+ * screen (the PM: floating, not buried in the forum). Two sources: members
+ * (profiles) and off-community placements (manual_hires, admin-only RLS →
+ * service role; banner names are public by design). Names only — a member's
+ * workplace is never shown to other members.
+ */
+async function recentlyHired(): Promise<HiredMember[]> {
+  const hiredSince = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+  const supabase = await createClient();
+  const [{ data: hiredMembers }, { data: manualHires }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("full_name, hired_at")
+      .eq("found_job", true)
+      .gte("hired_at", hiredSince)
+      .order("hired_at", { ascending: false })
+      .limit(6),
+    createAdminClient()
+      .from("manual_hires")
+      .select("full_name, hired_at")
+      .gte("hired_at", hiredSince)
+      .order("hired_at", { ascending: false })
+      .limit(6),
+  ]);
+  return [...(hiredMembers ?? []), ...(manualHires ?? [])]
+    .filter((h) => !!h.hired_at)
+    .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
+    .slice(0, 6)
+    .map((h) => ({ full_name: h.full_name }));
+}
 
 /**
  * Messages waiting for her — the same rule the daily digest counts by: in one
@@ -48,20 +83,24 @@ export default async function AuthenticatedLayout({
   const unreadCount = await unreadMessageCount(profile.id);
 
   // "היית איתנו בסשן?" — for a week after a session ends, until she answers.
-  // The newest unanswered one; active members only.
-  let feedbackSession: { id: string; title: string } | null = null;
+  // The newest unanswered one; active members only. Title AND date ride along
+  // (the PM: it must be obvious WHICH session is being asked about).
+  let feedbackSession: { id: string; title: string; scheduled_at: string } | null = null;
   if (profile.status === "active") {
     const supabase = await createClient();
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
+    // Two hours of grace: a session that STARTED but hasn't ended is live,
+    // and "היית איתנו?" while she's still inside it would be absurd.
+    const endedEdge = new Date(now.getTime() - 2 * 3600 * 1000).toISOString();
     const [{ data: ended }, { data: answered }] = await Promise.all([
       supabase
         .from("sessions")
-        .select("id, title")
+        .select("id, title, scheduled_at")
         .eq("is_published", true)
         .is("canceled_at", null)
         .gte("scheduled_at", weekAgo)
-        .lt("scheduled_at", now.toISOString())
+        .lt("scheduled_at", endedEdge)
         .order("scheduled_at", { ascending: false })
         .limit(5),
       supabase.from("session_feedback").select("session_id").eq("profile_id", profile.id),
@@ -69,6 +108,12 @@ export default async function AuthenticatedLayout({
     const done = new Set((answered ?? []).map((a) => a.session_id));
     feedbackSession = (ended ?? []).find((s) => !done.has(s.id)) ?? null;
   }
+  // The admin-worded rating questions + the celebration names — only fetched
+  // when someone will actually see them.
+  const [feedbackAspects, hired] = await Promise.all([
+    feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
+    recentlyHired(),
+  ]);
 
   // She turned auto-renewal off but is still inside the paid period — a quiet
   // standing reminder of the end date, with the way back one click away.
@@ -102,7 +147,16 @@ export default async function AuthenticatedLayout({
       }}
     >
       {feedbackSession && (
-        <SessionFeedbackBanner sessionId={feedbackSession.id} sessionTitle={feedbackSession.title} />
+        <SessionFeedbackBanner
+          sessionId={feedbackSession.id}
+          sessionTitle={feedbackSession.title}
+          sessionDate={new Intl.DateTimeFormat("he-IL", {
+            day: "numeric",
+            month: "numeric",
+            timeZone: "Asia/Jerusalem",
+          }).format(new Date(feedbackSession.scheduled_at))}
+          aspects={feedbackAspects}
+        />
       )}
       {cancelNotice && (
         <Link
@@ -134,6 +188,8 @@ export default async function AuthenticatedLayout({
       {/* The floating message-to-the-team widget (PM ask) — the reply lands
           back in her chat. */}
       <MemberRequestWidget />
+      {/* The hired celebration — floating, minimizable, on every screen. */}
+      <HiredBanner members={hired} />
     </AppShell>
   );
 }

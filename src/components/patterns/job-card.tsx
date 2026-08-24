@@ -46,13 +46,6 @@ const APP_STATUS_SHORT: Record<ApplicationStatus, string> = {
   waitlisted: "בהמתנה",
 };
 
-const LOGO_GRADIENTS = [
-  "bg-[linear-gradient(135deg,#E0418D,#913F80)]",
-  "bg-[linear-gradient(135deg,#6B3D99,#464CA0)]",
-  "bg-[linear-gradient(135deg,#1F1E3F,#464CA0)]",
-  "bg-[linear-gradient(135deg,#913F80,#E0418D)]",
-];
-
 export interface JobCardProps {
   job: Job;
   saved: boolean;
@@ -67,6 +60,11 @@ export interface JobCardProps {
   matchedTags?: string[];
   /** Free members may apply, but the board says subscribers come first. */
   subscriber?: boolean;
+  /**
+   * In "מתאימות לי" the non-matching jobs stay visible but can't be applied
+   * to — the PM wants the difference between the views to be felt.
+   */
+  ineligible?: boolean;
 }
 
 const APPLIED_DATE = new Intl.DateTimeFormat("he-IL", {
@@ -90,13 +88,13 @@ export function JobCard({
   myTech = [],
   matchedTags = [],
   subscriber = true,
+  ineligible = false,
 }: JobCardProps) {
   const [isSaved, setSaved] = useState(saved);
   const [hasApplied, setApplied] = useState(applied);
   const [applyError, setApplyError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [, start] = useTransition();
-  const logo = LOGO_GRADIENTS[(job.logo_variant - 1) % LOGO_GRADIENTS.length];
   const techSet = new Set(myTech);
   const publishedAt = job.published_at ?? job.created_at;
 
@@ -119,19 +117,19 @@ export function JobCard({
   }
 
   return (
-    <article className="bg-white border border-ink-200 rounded-[16px] p-4 flex flex-col h-full transition-[transform,box-shadow] duration-[220ms] hover:-translate-y-0.5 hover:shadow-md hover:border-brand-pink">
+    <article
+      className={cn(
+        "bg-white border border-ink-200 rounded-[16px] p-4 flex flex-col h-full transition-[transform,box-shadow] duration-[220ms]",
+        ineligible
+          ? "opacity-65 saturate-[0.6]"
+          : "hover:-translate-y-0.5 hover:shadow-md hover:border-brand-pink"
+      )}
+    >
       <div className="flex gap-2.5 items-start">
-        <div
-          className={cn(
-            "w-[42px] h-[42px] rounded-[11px] shrink-0 flex items-center justify-center text-white font-display font-black text-lg",
-            logo
-          )}
-        >
-          {job.source === "ours" ? "ק" : job.company.slice(0, 1)}
-        </div>
         <div className="flex-1 min-w-0">
-          {/* Market jobs name their company; ours say nothing — the ק logo and
-              the tab already said it (PM: the repeated "בלעדית" was noise).
+          {/* Market jobs name their company; ours say nothing — the tab
+              already said it (PM: the repeated "בלעדית" was noise, and the
+              letter square carried no information at all).
               The client behind an internal job stays confidential either way. */}
           {(job.source !== "ours" || hasApplied) && (
             <div className="text-[11.5px] text-ink-500 flex items-center gap-1.5">
@@ -264,6 +262,11 @@ export function JobCard({
                 · {APPLIED_DATE.format(new Date(appliedAt))}
               </span>
             )}
+          </span>
+        ) : ineligible ? (
+          // The apply door is closed here on purpose — say why, plainly.
+          <span className="text-[12px] text-ink-500 leading-snug">
+            לא ניתן להגיש — הפרופיל שלך לא תואם את הקריטריונים שהמשרה מבקשת
           </span>
         ) : job.source === "ours" ? (
           // Our jobs go through the application wizard (questions + CV choice).

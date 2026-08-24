@@ -21,6 +21,7 @@ export function ForumInstantList({
   savedOnly,
   canWrite,
   initialQuery = "",
+  belowSearch,
 }: {
   items: InstantItem[];
   /** The "כל הנושאים / ששמרתי" chips — server-rendered links. */
@@ -29,6 +30,12 @@ export function ForumInstantList({
   /** Free members get no search card — only the (gated) list below. */
   canWrite: boolean;
   initialQuery?: string;
+  /**
+   * Rendered between the search card and the rows — the composer lives here
+   * (the PM: search first, then "פתחי פוסט"), and hides while she searches so
+   * the results stay under her eyes.
+   */
+  belowSearch?: ReactNode;
 }) {
   const [needle, setNeedle] = useState(initialQuery);
   const filtered = useInstantFilter(items, needle, (item) => item.haystack);
@@ -59,6 +66,8 @@ export function ForumInstantList({
           </div>
         </div>
       )}
+
+      {!searching && belowSearch}
 
       {filtered.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">

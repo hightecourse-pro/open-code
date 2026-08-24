@@ -229,12 +229,11 @@ export default async function JobsPage({
   // an indication beats a disappearance) — the old duplication is gone anyway
   // now that "ההגשות שלי" is its own view. Targeted jobs keep their section.
   const boardJobs = (jobs ?? []).filter((j) => !targetedSet.has(j.id));
+  // "מתאימות לי" no longer hides the rest of the board — the PM's point was
+  // that the two views looked identical. The non-matching jobs stay, dimmed
+  // and un-appliable, so the difference between the views is visible.
   const viewJobs =
-    view === "fit"
-      ? boardJobs.filter((j) => matchedTags(j).length > 0)
-      : view === "saved"
-        ? boardJobs.filter((j) => savedIds.has(j.id))
-        : boardJobs;
+    view === "saved" ? boardJobs.filter((j) => savedIds.has(j.id)) : boardJobs;
   const sortedJobs = viewJobs
     .slice()
     .sort((a, b) => {
@@ -274,6 +273,9 @@ export default async function JobsPage({
     myTech: [...myTech],
     matchedTags: matchedTags(job),
     subscriber,
+    // Only the fit view closes the apply door on non-matching jobs; the full
+    // board keeps every job open.
+    ineligible: view === "fit" && matchedTags(job).length === 0,
   });
 
   const VIEWS: { id: BoardView; label: string }[] = [
@@ -335,6 +337,13 @@ export default async function JobsPage({
           );
         })}
       </div>
+
+      {view === "fit" && (
+        <p className="text-[12.5px] text-ink-500 -mt-1.5">
+          המשרות שמתאימות לפרופיל שלך מודגשות למעלה; השאר מוצגות מעומעמות — בלי אפשרות הגשה, כי הן
+          מבקשות קריטריונים אחרים.
+        </p>
+      )}
 
       {view === "mine" ? (
         <MyApplications applications={myAppItems} submitted={submittedForHer} />

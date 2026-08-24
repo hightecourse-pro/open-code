@@ -6,7 +6,9 @@ import { TaxonomyManager } from "@/components/patterns/taxonomy-manager";
 import { QuestionOptionsEditor } from "@/components/patterns/question-options-editor";
 import { QuestionOrder } from "./question-order";
 import { PricingForm } from "@/components/patterns/pricing-form";
+import { FeedbackQuestionsForm } from "@/components/patterns/feedback-questions-form";
 import { getPricing } from "@/lib/payments/pricing";
+import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { groupBySection } from "@/lib/profile-sections";
 import { buildPlans, shekels } from "@/lib/payments/plans";
 import type { ConfigTaxonomy, FieldType, TaxonomyKind } from "@/types/database";
@@ -33,7 +35,7 @@ const KIND_LABEL: Record<TaxonomyKind, string> = {
 export default async function AdminConfigPage() {
   const supabase = await createClient();
 
-  const [{ data: questions }, { data: taxonomies }, pricing] = await Promise.all([
+  const [{ data: questions }, { data: taxonomies }, pricing, feedbackAspects] = await Promise.all([
     supabase
       .from("config_questions")
       .select("*")
@@ -47,6 +49,7 @@ export default async function AdminConfigPage() {
       .order("kind", { ascending: true })
       .order("sort_order", { ascending: true }),
     getPricing(),
+    getFeedbackAspects(),
   ]);
 
   const plans = buildPlans(pricing);
@@ -85,6 +88,15 @@ export default async function AdminConfigPage() {
           </div>
           <div className="text-ink-400">מנוי שנתי אינו מוצע יותר.</div>
         </div>
+      </div>
+
+      {/* Session feedback wording */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <h3 className="font-display text-base font-bold mb-1">שאלות המשוב על סשן</h3>
+        <p className="text-[12.5px] text-ink-500 mb-4">
+          מה שואלים חברה שהייתה בסשן — ארבע שאלות דירוג, בניסוח שלך.
+        </p>
+        <FeedbackQuestionsForm aspects={feedbackAspects} />
       </div>
 
       {/* Profile questions */}
