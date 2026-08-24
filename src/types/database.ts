@@ -603,6 +603,38 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["attachments"]["Insert"]>;
         Relationships: [];
       };
+      external_payments: {
+        Row: {
+          id: string;
+          email: string | null;
+          phone: string | null;
+          zeout: string | null;
+          client_name: string | null;
+          provider_payment_id: string;
+          amount_agorot: number | null;
+          plan: string;
+          raw: Json | null;
+          claimed_by: string | null;
+          claimed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email?: string | null;
+          phone?: string | null;
+          zeout?: string | null;
+          client_name?: string | null;
+          provider_payment_id: string;
+          amount_agorot?: number | null;
+          plan?: string;
+          raw?: Json | null;
+          claimed_by?: string | null;
+          claimed_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["external_payments"]["Insert"]>;
+        Relationships: [];
+      };
       session_feedback: {
         Row: {
           session_id: string;

@@ -3,6 +3,7 @@ import { isProductionEnv } from "@/lib/env";
 import { raiseAlert } from "@/lib/alerts";
 import { getNedarimConfig, parseNedarimCallback } from "@/lib/payments/nedarim";
 import { activateSubscription } from "@/lib/payments/subscription";
+import { handleExternalPayment } from "@/lib/payments/external";
 import { buildPlans } from "@/lib/payments/plans";
 import { getPricingAdmin } from "@/lib/payments/pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -211,11 +212,29 @@ async function handleCallback(req: Request) {
   const cb = parseNedarimCallback(params);
   record.parsed = cb as unknown as Record<string, unknown>;
 
-  if (!cb.ok || !cb.profileId || !cb.plan) {
+  if (!cb.ok) {
     return reject("ignored_incomplete", 200, "ignored");
   }
   if (!cb.transactionId) {
     return reject("missing_transaction_id", 400, "missing transaction id");
+  }
+  // A successful, authenticated payment with no Param1 — money taken OUTSIDE
+  // the app (a direct Nedarim link, a manual charge). Match it to a member by
+  // email and activate, or remember it so her future signup claims it — the
+  // owner's "צריך לזהות ולשמור כדי שאם היא תיכנס נדע שהיא שילמה".
+  if (!cb.profileId || !cb.plan) {
+    try {
+      record.outcome = await handleExternalPayment(params, {
+        transactionId: cb.transactionId,
+        plan: cb.plan,
+        amountAgorot: cb.amountAgorot,
+      });
+      await logEvent(record);
+      return NextResponse.json({ ok: true, external: true });
+    } catch (e) {
+      record.externalError = String(e);
+      return reject("external_payment_failed", 500, "external payment handling failed");
+    }
   }
 
   // 3. The amount is recorded as charged, and flagged when it doesn't match

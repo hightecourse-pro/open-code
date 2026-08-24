@@ -19,8 +19,9 @@ await page.waitForLoadState("networkidle");
 console.log("gate step shows mentor door:", (await page.locator("text=מגיעה בתור מנטורית? 👑").count()) === 1 ? "✅" : "❌");
 await page.screenshot({ path: `${SHOTS}/flow-2-gate-mentor.png` });
 await page.locator('button:has-text("מגיעה בתור מנטורית?")').click();
-await page.waitForLoadState("networkidle");
-await page.waitForTimeout(1500);
+// The switch is a full server round trip + RSC refresh — wait for the junior
+// gate to actually leave the tree.
+await page.waitForSelector('text=אני בתחילת הדרך', { state: "detached", timeout: 20000 }).catch(() => {});
 const mentorScope = (await page.locator("text=אני בתחילת הדרך").count()) === 0;
 console.log("clicking switches to the mentor questionnaire:", mentorScope ? "✅ (junior gate gone)" : "❌");
 await page.screenshot({ path: `${SHOTS}/flow-3-mentor-wizard.png` });

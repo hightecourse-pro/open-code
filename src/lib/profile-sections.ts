@@ -25,8 +25,10 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
   {
     title: "קצת עלייך",
     hint: "פרטי קשר בסיסיים — כדי שנכיר ונדע איך לחזור אלייך.",
+    // specialization/coordinator_email/bio used to dangle in the leftover
+    // "פרטים נוספים" step (the PM's "מיותר, יש קודם") — homed here and below.
     keys: [
-      "id_number", "phone", "region", "city", "street", "house_number",
+      "specialization", "id_number", "phone", "region", "city", "street", "house_number",
       "marital_status", "prev_surname", "language_skills",
     ],
   },
@@ -34,8 +36,8 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
     title: "הרקע הלימודי",
     hint: "איפה למדת ובמה התמחית — זה עוזר לנו להתאים לך קורסים ומשרות.",
     keys: [
-      "study_place", "coordinator_name", "certificate", "track_specialization",
-      "unique_courses", "graduation_year",
+      "study_place", "coordinator_name", "coordinator_email", "certificate",
+      "track_specialization", "unique_courses", "graduation_year",
     ],
   },
   {
@@ -66,7 +68,7 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
   {
     title: "עוד משהו?",
     hint: "משהו שתרצי שנדע עלייך? כאן המקום 🙂",
-    keys: ["notes_for_us"],
+    keys: ["bio", "notes_for_us"],
   },
 ];
 

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { getProfile } from "@/lib/auth";
 import { signOut } from "../(auth)/actions";
 import { applyAsMentor, revertMentorApplication } from "./actions";
+import { claimExternalPaymentsFor } from "@/lib/payments/external";
 import { Alert, Button, Logo } from "@/components/ui";
 import { CheckoutPanel } from "@/components/patterns/checkout-panel";
 import { buildTransactionFields, isNedarimConfigured } from "@/lib/payments/nedarim";
@@ -54,6 +55,24 @@ export default async function JoinPage({
   const profile = await getProfile();
   if (!profile) redirect("/login");
   if (profile.status === "active") redirect("/forum");
+
+  // She may have paid OUTSIDE the app (a direct Nedarim link) before signing
+  // up — the payment waits in external_payments under her email. Claiming it
+  // here means the checkout screen simply never asks a woman who already paid.
+  {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    try {
+      if (await claimExternalPaymentsFor(profile.id, user?.email)) redirect("/forum");
+    } catch (e) {
+      // redirect() throws by design — let it through; log anything else.
+      if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+      console.error("[join] external claim failed:", e);
+    }
+  }
 
   const isMentorTier = profile.member_tier === "free";
 

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { claimExternalPaymentsFor } from "@/lib/payments/external";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
@@ -426,6 +427,13 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   // pay, or apply as a mentor (the PM's call): /join offers both. A member
   // who is already active just lands in the community.
   if (firstCompletion) {
+    // She may have already paid OUTSIDE the app (a direct Nedarim link) —
+    // claim that payment by her email before deciding where she lands.
+    try {
+      await claimExternalPaymentsFor(user.id, user.email);
+    } catch (e) {
+      console.error("[profile] external payment claim failed:", e);
+    }
     const { data: after } = await supabase
       .from("profiles")
       .select("status")
