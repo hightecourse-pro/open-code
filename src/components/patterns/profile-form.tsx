@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Sparkles, Rocket, Plus, X } from "lucide-rea
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
+import { applyAsMentor } from "@/app/join/actions";
 import { FIELD_VALIDATORS } from "@/lib/validators";
 import { groupBySection } from "@/lib/profile-sections";
 import { CITIES } from "@/data/cities";
@@ -39,6 +40,8 @@ export interface ProfileFormProps {
   taxonomyOptions?: Partial<Record<TaxonomyKind, Option[]>>;
   /** She has no CV yet — the final step collects one, required (PM rule). */
   requireCv?: boolean;
+  /** First-time signup may switch to the mentor track from the gate step. */
+  allowMentorTrack?: boolean;
 }
 
 const LONG_TEXT = new Set([
@@ -65,7 +68,7 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, allowMentorTrack = false }: ProfileFormProps) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
@@ -701,6 +704,23 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             {expChoice === true && <input type="hidden" name={`q_${gate.id}`} value="on" />}
             {gateError && <span className="text-danger text-xs">בחרי אחת מהאפשרויות כדי להמשיך 🙂</span>}
           </div>
+        )}
+
+        {/* The mentor door, right at the first step (PM: offer it on first
+            entry). Switches her to the free approval track and reloads this
+            wizard with the mentor questionnaire. */}
+        {allowMentorTrack && (
+          <form action={applyAsMentor} className="mt-1">
+            <button
+              type="submit"
+              className="w-full text-start rounded-[14px] border border-[#EAD9A8] bg-tint-warm/60 p-4 transition-all hover:border-[#E5A93C]"
+            >
+              <div className="font-display font-bold text-ink-1000">מגיעה בתור מנטורית? 👑</div>
+              <div className="text-[12.5px] text-ink-500 mt-0.5">
+                מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. לחיצה תחליף לשאלון מנטוריות קצר.
+              </div>
+            </button>
+          </form>
         )}
       </div>
 

@@ -422,8 +422,17 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   }
 
   revalidatePath("/profile");
-  // On first completion, drop the onboarding gate and land in the community.
-  if (firstCompletion) redirect("/forum");
+  // On first completion, the natural next step is the membership decision —
+  // pay, or apply as a mentor (the PM's call): /join offers both. A member
+  // who is already active just lands in the community.
+  if (firstCompletion) {
+    const { data: after } = await supabase
+      .from("profiles")
+      .select("status")
+      .eq("id", user.id)
+      .maybeSingle();
+    redirect(after?.status === "active" ? "/forum" : "/join");
+  }
   return { ok: true };
 }
 

@@ -189,6 +189,20 @@ export default async function JoinPage({
         </Alert>
       )}
 
+      {/* What the membership actually opens — the owner's list, stated before
+          the price asks anything. */}
+      <div className="bg-tint-purple/60 border border-[#DDC9EC] rounded-md p-4">
+        <div className="font-display font-bold text-[14px] text-ink-1000 mb-1.5">מה מקבלים במנוי?</div>
+        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-[13px] text-ink-700">
+          <li>✓ כניסה לסשנים החיים</li>
+          <li>✓ צפייה בהקלטות</li>
+          <li>✓ ספריית הקורסים של הייטקורס</li>
+          <li>✓ השתתפות בהאקתונים</li>
+          <li>✓ עדיפות בהגשה למשרות</li>
+          <li>✓ צ&apos;אט, מנטוריות וכלי AI</li>
+        </ul>
+      </div>
+
       <CheckoutPanel plans={plans} configured={configured} fieldsByPlan={fieldsByPlan} />
 
       {/* The mentor door: experienced women join to give, not to pay. */}

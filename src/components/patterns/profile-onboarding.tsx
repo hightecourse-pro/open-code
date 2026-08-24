@@ -61,6 +61,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           answers={answerMap}
           taxonomyOptions={taxonomyOptions}
           requireCv={requireCv}
+          allowMentorTrack={profile.role === "junior" && profile.status !== "active"}
         />
       </div>
     </div>
