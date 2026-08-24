@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isProductionEnv } from "@/lib/env";
 import { raiseAlert } from "@/lib/alerts";
 import { getNedarimConfig, parseNedarimCallback } from "@/lib/payments/nedarim";
 import { activateSubscription } from "@/lib/payments/subscription";
@@ -254,7 +255,34 @@ async function handleCallback(req: Request) {
     .select("id")
     .eq("id", cb.profileId)
     .maybeSingle();
-  if (!member) return reject("unknown_member", 400, "unknown member");
+  if (!member) {
+    // One Nedarim account serves both environments, and the account-level
+    // CallBack can point at only one URL — production. A payment made on
+    // STAGING therefore lands here carrying a Param1 production has never
+    // heard of. Before crying "unknown member", hand the call to staging
+    // once — it will recognize its own member and activate her there.
+    const fwdUrl = process.env.STAGING_WEBHOOK_URL;
+    const fwdKey = process.env.STAGING_FORWARD_KEY;
+    if (isProductionEnv() && fwdUrl && fwdKey) {
+      try {
+        const res = await fetch(`${fwdUrl}?key=${encodeURIComponent(fwdKey)}`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(params),
+        });
+        const data = (await res.json().catch(() => null)) as { ok?: boolean } | null;
+        if (res.ok && data?.ok) {
+          record.outcome = "forwarded_to_staging";
+          await logEvent(record);
+          return NextResponse.json({ ok: true, forwarded: true });
+        }
+        record.stagingForward = { status: res.status, body: data };
+      } catch (e) {
+        record.stagingForward = { error: String(e) };
+      }
+    }
+    return reject("unknown_member", 400, "unknown member");
+  }
 
   try {
     await activateSubscription({
