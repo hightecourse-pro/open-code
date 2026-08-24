@@ -99,6 +99,8 @@ export default async function AuthenticatedLayout({
         .select("id, title, scheduled_at")
         .eq("is_published", true)
         .is("canceled_at", null)
+        // An admin-marked live session is still running — never ask about it.
+        .neq("status", "live")
         .gte("scheduled_at", weekAgo)
         .lt("scheduled_at", endedEdge)
         .order("scheduled_at", { ascending: false })

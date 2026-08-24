@@ -92,13 +92,21 @@ export default async function EventsPage() {
 
   // A finished session moves off this screen (it lives in the recordings page);
   // a canceled one still shows (as "בוטל") for 24h, then disappears.
-  const upcoming = (upcomingRaw ?? []).filter(
-    (s) => s.status !== "done" && (!s.canceled_at || new Date(s.canceled_at).getTime() > cutoff)
-  );
-  const isLive = (s: { scheduled_at: string; canceled_at: string | null }) =>
-    !s.canceled_at && new Date(s.scheduled_at).getTime() <= now.getTime();
+  // A session the admin marked `live` stays live past the 2h window — a long
+  // hackathon evening ends when she marks it done, not when the clock says so.
+  const stillLive = (past ?? []).filter((s) => s.status === "live" && !s.canceled_at);
+  const upcoming = [
+    ...stillLive,
+    ...(upcomingRaw ?? []).filter(
+      (s) => s.status !== "done" && (!s.canceled_at || new Date(s.canceled_at).getTime() > cutoff)
+    ),
+  ];
+  const isLive = (s: { scheduled_at: string; canceled_at: string | null; status: string }) =>
+    !s.canceled_at &&
+    s.status !== "done" &&
+    (s.status === "live" || new Date(s.scheduled_at).getTime() <= now.getTime());
 
-  const pastShown = (past ?? []).filter((s) => !s.canceled_at);
+  const pastShown = (past ?? []).filter((s) => !s.canceled_at && s.status !== "live");
   // "הועבר + כניסה מההקלטות": the link shows only when a recording actually
   // exists for that session — a dead "להקלטה" teaches her not to click it.
   const recTable = subscriber ? "recordings" : "recordings_public";
@@ -222,6 +230,12 @@ export default async function EventsPage() {
                 <div className="text-ink-400 text-xs font-mono w-20 shrink-0">{fmtIsraelDate(s.scheduled_at, { day: "numeric", month: "short" })}</div>
                 <div className="font-medium text-ink-900 flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                   <span>{s.title}</span>
+                  {/* The topic carries the lecturer's name — it belongs here too. */}
+                  {s.topic && (
+                    <span className="inline-block text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-tint-purple text-brand-purple">
+                      {s.topic}
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-1 text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-tint-mint text-success">
                     <Check size={10} /> הועבר
                   </span>
