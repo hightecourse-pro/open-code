@@ -35,6 +35,9 @@ export function ChatComposer({
         if (ref.current?.isEmpty() && !fd.get("attach_ids")) return;
         const sending = action(fd);
         ref.current?.clear();
+        // Straight back to typing — losing focus after every send made a
+        // fast conversation feel like a form (tester feedback).
+        ref.current?.focus();
         setAttachEpoch((n) => n + 1);
         await sending;
       }}

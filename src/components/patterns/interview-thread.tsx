@@ -14,7 +14,7 @@ export interface InterviewTurn {
 
 // Minimal typing for the Web Speech API (not in the TS DOM lib).
 interface SpeechResultEvent {
-  results: { 0: { 0: { transcript: string } } };
+  results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
 }
 interface Recognition {
   lang: string;
@@ -142,12 +142,17 @@ export function InterviewThread({
     }
     const rec = new Ctor();
     rec.lang = "he-IL";
-    rec.interimResults = false;
+    // Interim results stream into the box as she speaks — waiting for the
+    // final transcript read as "the mic isn't working" (tester feedback).
+    rec.interimResults = true;
     rec.maxAlternatives = 1;
+    const base = inputRef.current?.value ?? "";
     rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
       const el = inputRef.current;
-      if (el) el.value = el.value ? `${el.value} ${transcript}` : transcript;
+      if (!el) return;
+      let spoken = "";
+      for (let i = 0; i < e.results.length; i++) spoken += e.results[i][0].transcript;
+      el.value = base ? `${base} ${spoken}` : spoken;
     };
     rec.onend = () => setListening(false);
     rec.onerror = () => setListening(false);

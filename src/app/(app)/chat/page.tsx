@@ -11,6 +11,7 @@ import { ChatThread } from "@/components/patterns/chat-thread";
 import { NewChatButton } from "@/components/patterns/new-chat-button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
+import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { sendMessage, startConversation } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
@@ -185,6 +186,10 @@ export default async function ChatPage({
 
   return (
     <div className="flex flex-col gap-5">
+      {/* A conversation, not a page: her side is optimistic already; the other
+          side arrives on its own now. Also clears the unread badge shortly
+          after a thread is opened (the refresh re-renders the layout count). */}
+      <AutoRefresh seconds={6} />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
         {subscriber && <NewChatButton members={chatables ?? []} />}

@@ -18,6 +18,7 @@ export interface MemberRow {
   status: ProfileStatus;
   specialization: string | null;
   region: string | null;
+  is_experienced?: boolean;
   is_vip: boolean;
   vip_reason: string | null;
   internal_notes: string | null;
@@ -345,7 +346,7 @@ export function MembersTable({
                 <td className="p-2 border-b border-ink-100 text-ink-500 whitespace-nowrap">
                   {new Date(m.created_at).toLocaleDateString("he-IL")}
                 </td>
-                <td className="p-2 border-b border-ink-100"><RoleTag role={m.role} /></td>
+                <td className="p-2 border-b border-ink-100"><RoleTag role={m.role} experienced={m.is_experienced === true} /></td>
                 <td className="p-2 border-b border-ink-100"><StatusPill status={m.status} /></td>
                 <td className="p-2 border-b border-ink-100">
                   <MemberCrm id={m.id} isVip={m.is_vip} vipReason={m.vip_reason} notes={m.internal_notes} />

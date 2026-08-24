@@ -1,4 +1,5 @@
 import { isRichHtml, parseRichText } from "@/lib/rich-text-lite";
+import { sanitizeRichHtml } from "@/lib/rich-text";
 
 /**
  * The one renderer for community bodies. New content is editor HTML
@@ -28,9 +29,10 @@ export function MessageBody({
           : "[&_a]:text-brand-purple [&_a]:underline [&_b]:text-ink-1000 [&_strong]:text-ink-1000 [&_code]:bg-ink-100",
         "[&_code]:font-mono [&_code]:text-[0.92em] [&_code]:rounded [&_code]:px-1",
       ].join(" ")}
-      // Sanitized against the allowlist in lib/rich-text at save time; the
-      // renderer trusts only what that gate let through.
-      dangerouslySetInnerHTML={{ __html: body }}
+      // Sanitized at save AND here at render: bodies stored while detection
+      // was start-anchored bypassed the save gate, so the renderer must never
+      // trust the stored string alone.
+      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(body) }}
     />
   );
 }

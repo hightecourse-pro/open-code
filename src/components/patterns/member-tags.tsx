@@ -23,11 +23,15 @@ const ROLE: Record<UserRole, { label: string; cls: string }> = {
   admin: { label: "צוות", cls: "bg-ink-1000 text-white" },
 };
 
-export function RoleTag({ role }: { role: UserRole }) {
+export function RoleTag({ role, experienced = false }: { role: UserRole; experienced?: boolean }) {
   const r = ROLE[role];
+  // An experienced member is still role=junior in the data — but showing her
+  // as plain "ג'וניורית" misled the admin (tester finding). The tag says both.
+  const label = role === "junior" && experienced ? "בעלת ניסיון" : r.label;
+  const cls = role === "junior" && experienced ? "bg-tint-purple text-brand-purple" : r.cls;
   return (
-    <span className={cn("inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap", r.cls)}>
-      {r.label}
+    <span className={cn("inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold whitespace-nowrap", cls)}>
+      {label}
     </span>
   );
 }

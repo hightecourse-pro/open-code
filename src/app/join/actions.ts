@@ -60,7 +60,12 @@ export async function applyAsMentor(): Promise<void> {
   // Only a not-yet-active member may switch tracks — an active member asking
   // to mentor goes through the admin (מינוי), not through self-serve.
   if (!me || me.status === "active") redirect("/join");
-  await supabase
+  // Service role, deliberately: the profiles guard trigger silently reverts
+  // role/tier changes from a member's own context — which left applicants as
+  // free JUNIORS facing the junior questionnaire (the tester's bug). The
+  // action itself is the gate: her own row, pre-active only, fixed values.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  await createAdminClient()
     .from("profiles")
     .update({ role: "mentor", member_tier: "free", profile_completed: false })
     .eq("id", user.id);
@@ -80,7 +85,9 @@ export async function revertMentorApplication(): Promise<void> {
     .eq("id", user.id)
     .maybeSingle();
   if (!me || me.status === "active" || me.role !== "mentor") redirect("/join");
-  await supabase
+  // Same trigger story as applyAsMentor — the revert must also bypass it.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  await createAdminClient()
     .from("profiles")
     .update({ role: "junior", member_tier: "paid" })
     .eq("id", user.id);

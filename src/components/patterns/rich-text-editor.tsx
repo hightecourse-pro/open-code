@@ -1,10 +1,16 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode, type RefObject } from "react";
-import { Bold, Heading3, Italic, Link2, List, ListOrdered, Strikethrough } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import { Bold, Heading3, Italic, Link2, List, ListOrdered, Smile, Strikethrough } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type ToolAction = "bold" | "italic" | "strike" | "ul" | "ol" | "h3" | "link";
+
+/** The quick palette — the emojis the community actually writes with. */
+const EMOJIS = [
+  "💜", "🙂", "😄", "🎉", "🙏", "👍", "💪", "🔥",
+  "✨", "🤗", "😅", "🤔", "👏", "❤️", "🚀", "☕",
+];
 
 /** The thread/composer's imperative handle — restore-on-failure, clear-on-send. */
 export interface RichEditorHandle {
@@ -53,6 +59,7 @@ export function RichTextEditor({
   const areaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const seededRef = useRef(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
 
   function seed(node: HTMLDivElement | null) {
     areaRef.current = node;
@@ -138,7 +145,7 @@ export function RichTextEditor({
   const toolbar = (
     <div
       className={cn(
-        "flex items-center gap-0.5 px-1.5 py-1",
+        "relative flex items-center gap-0.5 px-1.5 py-1",
         compact ? "border-t border-ink-100" : "border-b border-ink-200"
       )}
     >
@@ -157,6 +164,41 @@ export function RichTextEditor({
           {ALL_TOOLS[t].icon}
         </button>
       ))}
+      {/* Emoji palette (PM ask) — inserted at the caret like typed text. */}
+      <button
+        type="button"
+        title="אימוג'י"
+        aria-label="אימוג'י"
+        aria-expanded={emojiOpen}
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={() => setEmojiOpen((v) => !v)}
+        className="p-1.5 rounded-[6px] text-ink-500 hover:text-brand-purple hover:bg-tint-purple transition-colors cursor-pointer"
+      >
+        <Smile size={14} />
+      </button>
+      {emojiOpen && (
+        <div
+          className={cn(
+            "absolute start-1 z-20 bg-white border border-ink-200 rounded-md shadow-md p-1.5 grid grid-cols-8 gap-0.5",
+            compact ? "bottom-full mb-1" : "top-full mt-1"
+          )}
+        >
+          {EMOJIS.map((e) => (
+            <button
+              key={e}
+              type="button"
+              onMouseDown={(ev) => ev.preventDefault()}
+              onClick={() => {
+                exec("insertText", e);
+                setEmojiOpen(false);
+              }}
+              className="w-7 h-7 rounded hover:bg-tint-purple text-[16px] leading-none cursor-pointer"
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 

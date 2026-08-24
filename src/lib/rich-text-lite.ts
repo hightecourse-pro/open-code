@@ -87,7 +87,11 @@ export function parseRichText(body: string): TextToken[][] {
  * with a tag — members had no way to type one that survived rendering.
  */
 export function isRichHtml(body: string | null | undefined): boolean {
-  return /^\s*<(p|div|ul|ol|h3|b|strong|i|em|br|a|s|strike|del)\b/i.test(body ?? "");
+  // Anywhere, not only at the start: the editor can emit a bare text node
+  // first ("שלום <b>עולם</b>"), and the start-anchored test branded exactly
+  // those messages "legacy" — so their tags rendered as literal text (the
+  // tester's raw-HTML bug). Legacy marker text never contains real tags.
+  return /<(p|div|ul|ol|li|h3|b|strong|i|em|br|a|s|strike|del|code)(\s|\/?>)/i.test(body ?? "");
 }
 
 const HTML_ESC: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };

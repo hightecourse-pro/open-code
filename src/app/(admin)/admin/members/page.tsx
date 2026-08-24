@@ -179,6 +179,7 @@ export default async function AdminMembersPage() {
       full_name: m.full_name,
       avatar_initials: m.avatar_initials,
       role: m.role,
+      is_experienced: m.is_experienced === true,
       status: m.status,
       specialization: m.specialization,
       region: m.region,
