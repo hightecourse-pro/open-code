@@ -149,9 +149,13 @@ export default async function JobsPage({
       // silently frozen — the PM's "האם משוקף כשהמשרה אוישה".
       const { data: jobRows } = await adminClient
         .from("jobs")
-        .select("id, title, company, status")
+        .select("id, title, company, status, pipeline_status")
         .in("id", lookupIds);
       const jobOf = new Map((jobRows ?? []).map((j) => [j.id, j]));
+      // Honest closure wording: filled and closed-without-hire are different
+      // endings, and "אוישה" on a job nobody got would be a small lie.
+      const closedLabelOf = (j: { status: string; pipeline_status: string }) =>
+        j.status === "open" ? null : j.pipeline_status === "hired" ? "המשרה אוישה" : "המשרה נסגרה";
       // "הוגשה ללקוח" is a FACT, not a status guess: a job_candidates row means
       // her CV physically went out; the pipeline statuses that imply it count
       // too, so an admin skipping a step never hides the handoff from her.
@@ -166,12 +170,12 @@ export default async function JobsPage({
           status: a.status,
           appliedAt: a.created_at ?? null,
           forwarded: candSet.has(a.job_id) || FORWARDED.includes(a.status),
-          jobClosed: j.status !== "open",
+          closedLabel: closedLabelOf(j),
         }];
       });
       submittedForHer = candJobIds.flatMap((id) => {
         const j = jobOf.get(id);
-        return j ? [{ jobId: id, title: j.title, company: j.company, jobClosed: j.status !== "open" }] : [];
+        return j ? [{ jobId: id, title: j.title, company: j.company, closedLabel: closedLabelOf(j) }] : [];
       });
     }
   }

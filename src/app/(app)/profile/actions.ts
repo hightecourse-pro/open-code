@@ -422,6 +422,44 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     };
   }
 
+  // Denormalize the two card-facing answers into profiles: the members list,
+  // the sidebar meta and the portal all read profiles.specialization/region
+  // directly — and until now nothing in the questionnaire ever wrote them, so
+  // a member could answer both and still show an empty card. Stored as the
+  // Hebrew label (that's what every reader displays as-is).
+  {
+    const qByKey = new Map((questions ?? []).map((q) => [q.key, q]));
+    const answeredIds = new Set(answered.map((a) => a.question_id));
+    const wants = (["specialization", "region"] as const).filter((key) => {
+      const q = qByKey.get(key);
+      return !!q && answeredIds.has(q.id);
+    });
+    if (wants.length > 0) {
+      const [{ data: optRows }, { data: taxRows }] = await Promise.all([
+        supabase.from("config_questions").select("key, options").in("key", [...wants]),
+        supabase
+          .from("config_taxonomies")
+          .select("kind, value, label_he")
+          .in("kind", ["specialization", "region"]),
+      ]);
+      const labelOf = (key: string): string | null => {
+        const q = qByKey.get(key);
+        const raw = answered.find((a) => a.question_id === q!.id)?.value;
+        const value = typeof raw === "string" ? raw.trim() : "";
+        if (!value) return null;
+        const opts = (optRows ?? []).find((r) => r.key === key)?.options;
+        const fromOpt = Array.isArray(opts)
+          ? (opts as { value?: string; label?: string }[]).find((o) => o?.value === value)?.label
+          : undefined;
+        const fromTax = (taxRows ?? []).find((t) => t.kind === key && t.value === value)?.label_he;
+        return fromOpt ?? fromTax ?? value;
+      };
+      const patch: { specialization?: string | null; region?: string | null } = {};
+      for (const key of wants) patch[key] = labelOf(key);
+      await supabase.from("profiles").update(patch).eq("id", user.id);
+    }
+  }
+
   revalidatePath("/profile");
   // On first completion, the natural next step is the membership decision —
   // pay, or apply as a mentor (the PM's call): /join offers both. A member

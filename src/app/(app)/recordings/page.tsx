@@ -104,7 +104,7 @@ export default async function RecordingsPage() {
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;הקלטות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הקלטות סשנים</h1>
-        <p className="t-body-sm text-ink-700">כל הסשנים השבועיים — זמינים לצפייה מתי שנוח לך.</p>
+        <p className="t-body-sm text-ink-700">כל הסשנים הדו-שבועיים — זמינים לצפייה מתי שנוח לך.</p>
       </div>
 
       {!paysForSessions && (

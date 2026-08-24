@@ -122,6 +122,10 @@ export async function withUserKey<T>(run: (apiKey: string) => Promise<T>): Promi
       await markKeyStatus(key.id, "invalid", "מפתח לא תקין");
       return { ok: false, reason: "invalid" };
     }
+    // The generic branch used to swallow the cause entirely — when every model
+    // in the chain 404s (Google retiring a generation) nothing anywhere said
+    // why. Now the logs do.
+    console.error("[ai] call failed with member key:", e instanceof Error ? e.message : e);
     return { ok: false, reason: "error" };
   }
 }

@@ -6,11 +6,12 @@
 export class QuotaError extends Error {}
 export class InvalidKeyError extends Error {}
 
-// Try newest-first: Google retires old models (gemini-2.0-flash's free quota
-// was zeroed out), so a single hard-coded model starts failing with 429/404
-// for every member. Fall through the chain on quota/not-found and only give
-// up if every model failed.
-const MODELS = ["gemini-flash-latest", "gemini-2.5-flash", "gemini-2.0-flash"];
+// Try newest-first: Google retires old models (gemini-2.0-flash shut down
+// 1/6/2026; the 2.5 line is on its way out for 16/10/2026 — the AI tools
+// went dark when the whole old chain died), so a single hard-coded model
+// starts failing with 429/404 for every member. Fall through the chain on
+// quota/not-found and only give up if every model failed.
+const MODELS = ["gemini-flash-latest", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export type GeminiRole = "user" | "model";

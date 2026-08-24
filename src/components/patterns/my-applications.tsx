@@ -10,15 +10,19 @@ export interface MyApplicationItem {
   appliedAt: string | null;
   /** The truth about the client handoff: her CV physically went out. */
   forwarded: boolean;
-  /** The job closed/filled since — reflected instead of silence. */
-  jobClosed: boolean;
+  /**
+   * The job closed since — "המשרה אוישה" when someone was hired, "המשרה
+   * נסגרה" otherwise; null while it's open. A closed job's application always
+   * files under הסתיימו, whatever its own status says.
+   */
+  closedLabel: string | null;
 }
 
 export interface MySubmittedItem {
   jobId: string;
   title: string;
   company: string;
-  jobClosed: boolean;
+  closedLabel: string | null;
 }
 
 // Warm member-facing pills, one per pipeline stage.
@@ -50,12 +54,12 @@ function Row({
   title,
   pill,
   appliedAt,
-  jobClosed,
+  closedLabel,
 }: {
   title: string;
   pill: { label: string; cls: string };
   appliedAt?: string | null;
-  jobClosed?: boolean;
+  closedLabel?: string | null;
 }) {
   return (
     <div className="flex items-center gap-2.5 py-2 border-b border-ink-100 last:border-b-0 flex-wrap">
@@ -67,9 +71,9 @@ function Row({
           </span>
         )}
       </div>
-      {jobClosed && (
+      {closedLabel && (
         <span className="inline-flex items-center px-2.5 py-[3px] rounded-full text-[11px] font-semibold bg-ink-100 text-ink-500">
-          המשרה אוישה
+          {closedLabel}
         </span>
       )}
       <span
@@ -125,9 +129,15 @@ export function MyApplications({
     );
   }
 
-  const forwarded = visible.filter((a) => a.forwarded && !DONE.includes(a.status));
-  const inProgress = visible.filter((a) => !a.forwarded && !DONE.includes(a.status));
-  const done = visible.filter((a) => DONE.includes(a.status));
+  // A closed job ends the story no matter what the application's own status
+  // froze at — leaving it under "בבדיקה" reads as a promise nobody will keep.
+  const ended = (a: MyApplicationItem) => DONE.includes(a.status) || !!a.closedLabel;
+  const forwarded = visible.filter((a) => a.forwarded && !ended(a));
+  const inProgress = visible.filter((a) => !a.forwarded && !ended(a));
+  const done = visible.filter(ended);
+  const submittedOpen = submitted.filter((s) => !s.closedLabel);
+  const submittedClosed = submitted.filter((s) => !!s.closedLabel);
+  const proactivePill = { label: "הגשנו אותך ביוזמתנו ✨", cls: "bg-tint-pink text-brand-pink-deep" };
 
   return (
     <div className="flex flex-col gap-3">
@@ -138,35 +148,33 @@ export function MyApplications({
           hint="הצוות עובר על כל הגשה אישית ובוחר את המתאימות ביותר לכל משרה — לא כל הגשה מועברת ללקוח, וברגע שהמועמדות שלך עוברת תראי את זה כאן."
         >
           {inProgress.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} jobClosed={a.jobClosed} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} />
           ))}
         </Group>
       )}
 
-      {(forwarded.length > 0 || submitted.length > 0) && (
+      {(forwarded.length > 0 || submittedOpen.length > 0) && (
         <Group
           icon={Send}
-          title={`הוגשו ללקוח (${forwarded.length + submitted.length})`}
+          title={`הוגשו ללקוח (${forwarded.length + submittedOpen.length})`}
           hint="קורות החיים שלך אצל המעסיק — נעדכן אותך בכל צעד."
         >
           {forwarded.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} jobClosed={a.jobClosed} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} />
           ))}
-          {submitted.map((s) => (
-            <Row
-              key={s.jobId}
-              title={s.title}
-              pill={{ label: "הגשנו אותך ביוזמתנו ✨", cls: "bg-tint-pink text-brand-pink-deep" }}
-              jobClosed={s.jobClosed}
-            />
+          {submittedOpen.map((s) => (
+            <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} />
           ))}
         </Group>
       )}
 
-      {done.length > 0 && (
-        <Group icon={HeartHandshake} title={`הסתיימו (${done.length})`}>
+      {(done.length > 0 || submittedClosed.length > 0) && (
+        <Group icon={HeartHandshake} title={`הסתיימו (${done.length + submittedClosed.length})`}>
           {done.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} jobClosed={a.jobClosed} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} />
+          ))}
+          {submittedClosed.map((s) => (
+            <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} />
           ))}
         </Group>
       )}

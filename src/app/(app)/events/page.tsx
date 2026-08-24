@@ -123,7 +123,7 @@ export default async function EventsPage() {
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;אירועים/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">אירועים וסשנים</h1>
-        <p className="t-body-sm text-ink-700">סשנים שבועיים, מיטאפים וסדנאות. נשמח לראות אותך 💜</p>
+        <p className="t-body-sm text-ink-700">סשנים אחת לשבועיים, מיטאפים וסדנאות. נשמח לראות אותך 💜</p>
       </div>
 
       {!subscriber && (
