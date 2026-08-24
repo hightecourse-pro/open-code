@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Button } from "@/components/ui";
 import { RichTextEditor, type RichEditorHandle } from "@/components/patterns/rich-text-editor";
 import { AttachmentPicker } from "@/components/patterns/attachment-picker";
@@ -25,6 +25,15 @@ export function ChatComposer({
   const formRef = useRef<HTMLFormElement>(null);
   const [attachEpoch, setAttachEpoch] = useState(0);
 
+  // Straight back to typing after every send (tester feedback): the epoch
+  // bump REMOUNTS the picker+editor to reset the attachment chips, and that
+  // remount lands at the END of the send transition — after any focus() made
+  // inside the action. Only an effect keyed on the epoch runs after the new
+  // editor exists.
+  useEffect(() => {
+    if (attachEpoch > 0) ref.current?.focus();
+  }, [attachEpoch, ref]);
+
   return (
     <form
       ref={formRef}
@@ -35,14 +44,9 @@ export function ChatComposer({
         if (ref.current?.isEmpty() && !fd.get("attach_ids")) return;
         const sending = action(fd);
         ref.current?.clear();
-        // Straight back to typing — losing focus after every send made a
-        // fast conversation feel like a form (tester feedback). Twice: now,
-        // and again after the server revalidation settles (which re-renders
-        // the tree and can steal the caret).
         ref.current?.focus();
         setAttachEpoch((n) => n + 1);
         await sending;
-        ref.current?.focus();
       }}
       className="flex flex-col gap-1.5 p-3 border-t border-ink-100"
     >

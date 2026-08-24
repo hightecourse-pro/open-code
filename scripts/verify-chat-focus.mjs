@@ -1,0 +1,28 @@
+import { chromium } from "@playwright/test";
+const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); process.exit(1); })();
+const PASS = requireEnv("VERIFY_FIXTURE_PASSWORD");
+const BASE = "https://open-code-psi.vercel.app";
+const browser = await chromium.launch();
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+await page.goto(`${BASE}/login`);
+await page.fill('input[name="email"]', "sub.test@opencode.test");
+await page.fill('input[name="password"]', PASS);
+await page.click('button[type="submit"]');
+await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 25000 });
+await page.goto(`${BASE}/chat`);
+await page.waitForLoadState("networkidle");
+const thread = page.locator('a[href*="/chat?c="]').first();
+await thread.click();
+await page.waitForLoadState("networkidle");
+const editor = page.locator('[contenteditable="true"]');
+await editor.click();
+await editor.type("בדיקת פוקוס");
+await editor.press("Enter");
+await page.waitForTimeout(3000);
+const focused = await page.evaluate(() => document.activeElement?.getAttribute("contenteditable") === "true");
+console.log("composer keeps focus after send:", focused ? "✅" : "❌");
+// type immediately without clicking — should land in the box
+await page.keyboard.type("ממשיכה בלי קליק");
+const text = await editor.textContent();
+console.log("typing continues without a click:", text?.includes("ממשיכה") ? "✅" : "❌");
+await browser.close();
