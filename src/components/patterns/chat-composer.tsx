@@ -36,10 +36,13 @@ export function ChatComposer({
         const sending = action(fd);
         ref.current?.clear();
         // Straight back to typing — losing focus after every send made a
-        // fast conversation feel like a form (tester feedback).
+        // fast conversation feel like a form (tester feedback). Twice: now,
+        // and again after the server revalidation settles (which re-renders
+        // the tree and can steal the caret).
         ref.current?.focus();
         setAttachEpoch((n) => n + 1);
         await sending;
+        ref.current?.focus();
       }}
       className="flex flex-col gap-1.5 p-3 border-t border-ink-100"
     >
