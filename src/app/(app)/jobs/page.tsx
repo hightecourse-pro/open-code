@@ -274,8 +274,9 @@ export default async function JobsPage({
     matchedTags: matchedTags(job),
     subscriber,
     // Only the fit view closes the apply door on non-matching jobs; the full
-    // board keeps every job open.
-    ineligible: view === "fit" && matchedTags(job).length === 0,
+    // board keeps every job open. A job she already applied to is never
+    // dimmed — she's in its process, disabled styling would read as a rejection.
+    ineligible: view === "fit" && matchedTags(job).length === 0 && !appStatusByJob.has(job.id),
   });
 
   const VIEWS: { id: BoardView; label: string }[] = [
