@@ -23,7 +23,7 @@
 // admin actions it by hand — exactly the behaviour before automation existed.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isProductionEnv } from "@/lib/env";
+import { driveAutomationAllowed } from "@/lib/env";
 import { raiseAlert } from "@/lib/alerts";
 import { driveFileId } from "@/lib/drive";
 import {
@@ -368,8 +368,8 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
   // the only thing between a staging test and a real member losing access to
   // her course material is this gate. Outside production the queue is
   // read-only: rows stay visible in /admin/shares, nothing reaches Google.
-  if (!isProductionEnv()) {
-    console.log("[drive] share queue untouched — not production");
+  if (!driveAutomationAllowed()) {
+    console.log("[drive] share queue untouched — drive automation off here");
     return result;
   }
 

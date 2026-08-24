@@ -14,7 +14,7 @@
 // instead of to a broken page.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isProductionEnv } from "@/lib/env";
+import { driveAutomationAllowed } from "@/lib/env";
 import { isSubscriber } from "@/lib/auth";
 import {
   NotAGoogleAccountError,
@@ -158,11 +158,12 @@ export async function ensureAccess(
   // 4. No Google credentials — the admin shares by hand from /admin/shares.
   if (!isDriveAutomationConfigured()) return { ok: false, reason: "queued" };
 
-  // 4b. Outside production nothing touches Google — the same service account
-  //     holds the REAL course folders in both environments (owner decision),
-  //     so a staging click must stop at the queue row it just wrote. She sees
-  //     "the request was recorded", which is exactly the truth.
-  if (!isProductionEnv()) return { ok: false, reason: "queued" };
+  // 4b. Only environments explicitly allowed touch Google — the same service
+  //     account holds the REAL course folders everywhere (owner decision).
+  //     Staging is currently allowed via ALLOW_DRIVE_OUTSIDE_PRODUCTION (the
+  //     owner accepts the risk: testers aren't community members); anywhere
+  //     else the click stops at the queue row it just wrote.
+  if (!driveAutomationAllowed()) return { ok: false, reason: "queued" };
 
   // 5. Where to share it.
   const email = await emailOf(profileId);
