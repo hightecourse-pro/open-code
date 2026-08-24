@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isProductionEnv } from "@/lib/env";
 import { getUser } from "@/lib/auth";
@@ -71,6 +72,9 @@ export async function applyAsMentor(): Promise<void> {
     .eq("id", user.id);
   // The (app) layout shows the mentor questionnaire while profile_completed
   // is false — land her straight on it.
+  // Same-route redirects are soft no-ops without this — the wizard must
+  // re-render with the mentor scope.
+  revalidatePath("/", "layout");
   redirect("/forum");
 }
 
@@ -91,5 +95,6 @@ export async function revertMentorApplication(): Promise<void> {
     .from("profiles")
     .update({ role: "junior", member_tier: "paid" })
     .eq("id", user.id);
+  revalidatePath("/", "layout");
   redirect("/join");
 }
