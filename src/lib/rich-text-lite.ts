@@ -76,9 +76,28 @@ function tokenizeLine(line: string): TextToken[] {
   return out;
 }
 
+/**
+ * The rich editor can emit a TAGLESS body that still carries HTML entities —
+ * a trailing space becomes "&nbsp;" — and such a body takes the plain-text
+ * path, where the entity used to show up literally in the bubble. Decoded
+ * text is rendered as React text (auto-escaped), so "&lt;" becoming "<" is
+ * display, not markup.
+ */
+export function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#0?39;/g, "'")
+    .replace(/&amp;/gi, "&");
+}
+
 /** Body text → lines of styled tokens, ready to render. */
 export function parseRichText(body: string): TextToken[][] {
-  return body.split("\n").map((line) => (line ? tokenizeLine(line) : []));
+  return decodeHtmlEntities(body)
+    .split("\n")
+    .map((line) => (line ? tokenizeLine(line) : []));
 }
 
 /**

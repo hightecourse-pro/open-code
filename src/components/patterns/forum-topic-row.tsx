@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { isRichHtml } from "@/lib/rich-text-lite";
+import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText } from "@/lib/rich-text";
 import { MessageCircle, Heart, Pin } from "lucide-react";
 import { Avatar } from "@/components/ui";
@@ -34,8 +34,9 @@ export interface ForumTopic {
 
 /** A topic's list title — the first line of the post's words, kept short. */
 export function topicTitle(body: string, max = 90): string {
-  // Rich-editor posts store HTML; the title wants only the words.
-  const words = isRichHtml(body) ? htmlToPlainText(body) : body;
+  // Rich-editor posts store HTML; the title wants only the words. A tagless
+  // body can still carry entities (&nbsp;) — decode those too.
+  const words = isRichHtml(body) ? htmlToPlainText(body) : decodeHtmlEntities(body);
   const first = words.split("\n").find((l) => l.trim().length > 0)?.trim() ?? "";
   return first.length > max ? `${first.slice(0, max - 1)}…` : first || "נושא בפורום";
 }
