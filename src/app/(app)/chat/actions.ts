@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, isSubscriber } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
 import { newMessageEmail } from "@/lib/email/templates";
-import { isRichHtml } from "@/lib/rich-text-lite";
+import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
@@ -52,8 +52,10 @@ export async function sendMessage(conversationId: string, formData: FormData) {
   // plain text. HTML passes the same sanitizing allowlist job descriptions
   // use, and every limit is measured on the words, not the markup.
   const raw = String(formData.get("body") ?? "").trim();
-  const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : raw;
-  const plain = isRichHtml(raw) ? htmlToPlainText(body) : raw;
+  // A TAGLESS editor body can still carry entities ("&nbsp;") — store it
+  // decoded so the plain path never shows entity codes in a bubble.
+  const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : decodeHtmlEntities(raw);
+  const plain = isRichHtml(raw) ? htmlToPlainText(body) : body;
   const attachIds = attachmentIdsFrom(formData);
   if ((!plain.trim() && attachIds.length === 0) || plain.length > 2000 || body.length > 10000) return;
 

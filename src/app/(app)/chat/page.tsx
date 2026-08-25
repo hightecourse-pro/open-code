@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { attachmentsFor } from "@/lib/attachments";
-import { isRichHtml } from "@/lib/rich-text-lite";
+import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText } from "@/lib/rich-text";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -25,8 +25,9 @@ function roleWord(role: UserRole): string {
 
 /** One line of the last thing said in a thread — words only, shortened. */
 function previewText(body: string, mine: boolean): string {
-  // New messages are editor HTML; the preview wants only the words.
-  const words = isRichHtml(body) ? htmlToPlainText(body) : body;
+  // New messages are editor HTML; the preview wants only the words. Tagless
+  // bodies can still carry entities (&nbsp;) — decode those too.
+  const words = isRichHtml(body) ? htmlToPlainText(body) : decodeHtmlEntities(body);
   const flat = words.replace(/\s+/g, " ").trim();
   return `${mine ? "את: " : ""}${flat || "📎 קובץ מצורף"}`;
 }

@@ -1,6 +1,6 @@
 "use server";
 
-import { isRichHtml } from "@/lib/rich-text-lite";
+import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
@@ -35,7 +35,12 @@ async function canWrite(): Promise<boolean> {
  */
 function normalizeBody(raw: string): { body: string; plain: string } {
   const trimmed = raw.trim();
-  if (!isRichHtml(trimmed)) return { body: trimmed, plain: trimmed };
+  if (!isRichHtml(trimmed)) {
+    // Tagless editor output can still carry entities ("&nbsp;") — store it
+    // decoded so plain-path renderers never show entity codes.
+    const decoded = decodeHtmlEntities(trimmed);
+    return { body: decoded, plain: decoded };
+  }
   const body = sanitizeRichHtml(trimmed);
   return { body, plain: htmlToPlainText(body).trim() };
 }
