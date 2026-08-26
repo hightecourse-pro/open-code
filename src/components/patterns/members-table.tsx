@@ -88,13 +88,16 @@ export function MembersTable({
   members,
   filterDefs = [],
   answersByMember = {},
+  initialStatus = "",
 }: {
   members: MemberRow[];
   filterDefs?: FilterDef[];
   answersByMember?: Record<string, Record<string, unknown>>;
+  /** Pre-applied status filter — the dashboard cubes deep-link with it. */
+  initialStatus?: string;
 }) {
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(initialStatus);
   const [vip, setVip] = useState(false);
   const [finderOpen, setFinderOpen] = useState(false);
   const [active, setActive] = useState<ActiveFilter[]>([]);

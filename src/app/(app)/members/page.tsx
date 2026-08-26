@@ -44,6 +44,20 @@ export default async function MembersPage({
   // Mentor scores are public — the directory card carries them.
   const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
 
+  // Who is a paying subscriber — the owner's call (2026-08-26): the directory
+  // marks מנויות. The tier isn't in the public view, so it's resolved here
+  // with the service role and reaches the client as a boolean per card only.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { data: tiers } = await createAdminClient()
+    .from("profiles")
+    .select("id, role, status, member_tier")
+    .in("id", members.map((m) => m.id));
+  const subscriberIds = new Set(
+    (tiers ?? [])
+      .filter((t) => t.role === "junior" && t.status === "active" && t.member_tier === "paid")
+      .map((t) => t.id)
+  );
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -62,7 +76,14 @@ export default async function MembersPage({
         items={members.map((member) => ({
           id: member.id,
           haystack: [member.full_name, member.specialization ?? "", member.region ?? ""].join(" "),
-          node: <MemberCard member={member} canChat={canChat} score={scores.get(member.id)?.score} />,
+          node: (
+            <MemberCard
+              member={member}
+              canChat={canChat}
+              score={scores.get(member.id)?.score}
+              subscriber={subscriberIds.has(member.id)}
+            />
+          ),
         }))}
       />
     </div>

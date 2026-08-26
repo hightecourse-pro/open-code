@@ -28,10 +28,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // The schedule ships in vercel.json, so a staging deployment gets it too —
-  // and this nightly run emails real people and pauses real subscriptions.
-  // Outside production it reports itself and does nothing.
-  if (!isProductionEnv()) {
+  // The schedule ships in vercel.json, so a staging deployment gets it too.
+  // Staging runs when an EMAIL_ALLOWLIST is set — the Drive calls themselves
+  // are separately gated by driveAutomationAllowed().
+  if (!isProductionEnv() && !process.env.EMAIL_ALLOWLIST) {
     return NextResponse.json({ skipped: "not_production", env: appEnv() });
   }
   // Surfaces *why* nothing happens (bad key, wrong service account, …) —

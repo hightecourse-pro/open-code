@@ -1016,6 +1016,8 @@ export interface AudienceFilters {
   criteria?: Record<string, string[]>;
   /** true = experienced only, false = juniors only, undefined = everyone. */
   experienced?: boolean;
+  /** Also offer the job to mentors (senior roles) — per-job admin decision. */
+  includeMentors?: boolean;
 }
 
 export interface AudienceMember {
@@ -1047,7 +1049,9 @@ export async function previewAudience(
   const { data: job } = await admin.from("jobs").select("id").eq("id", jobId).maybeSingle();
   if (!job) return { error: "המשרה לא נמצאה." };
 
-  const { members: eligible, pools } = await loadAudiencePools();
+  const { members: eligible, pools } = await loadAudiencePools(undefined, {
+    includeMentors: filters.includeMentors === true,
+  });
 
   let members = eligible;
   if (typeof filters.experienced === "boolean") {

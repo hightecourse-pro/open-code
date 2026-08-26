@@ -33,10 +33,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  // The schedule ships in vercel.json, so a staging deployment gets it too —
-  // and this nightly run emails real people and pauses real subscriptions.
-  // Outside production it reports itself and does nothing.
-  if (!isProductionEnv()) {
+  // The schedule ships in vercel.json, so a staging deployment gets it too.
+  // Staging runs ONLY when an EMAIL_ALLOWLIST is set: every recipient is
+  // gated by emailGate (real members' addresses stay unreachable), and this
+  // run also drains the Drive share queue — skipping it left staging course
+  // shares stuck on pending for days.
+  if (!isProductionEnv() && !process.env.EMAIL_ALLOWLIST) {
     return NextResponse.json({ skipped: "not_production", env: appEnv() });
   }
   const dryRun = new URL(request.url).searchParams.get("dry") === "1";

@@ -49,6 +49,7 @@ export function PublishPanel({
   const [activeKey, setActiveKey] = useState(catalogue[0]?.key ?? "");
   const [valueQuery, setValueQuery] = useState("");
   const [exp, setExp] = useState<"all" | "yes" | "no">("all");
+  const [incMentors, setIncMentors] = useState(false);
   const [audience, setAudience] = useState<AudienceMember[] | null>(null);
   // The community-wide eligible pool (before criteria) — for honest empty states.
   const [pool, setPool] = useState<number | null>(null);
@@ -71,6 +72,7 @@ export function PublishPanel({
         const res = await previewAudience(jobId, {
           criteria,
           experienced: exp === "all" ? undefined : exp === "yes",
+          includeMentors: incMentors,
         });
         if (!res.members) {
           setError(res.error ?? "טעינת הקהל נכשלה. נסי שוב.");
@@ -87,7 +89,7 @@ export function PublishPanel({
       });
     }, PREVIEW_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [isDraft, jobId, criteria, exp, startPreview]);
+  }, [isDraft, jobId, criteria, exp, incMentors, startPreview]);
 
   const audienceIds = useMemo(() => new Set((audience ?? []).map((m) => m.id)), [audience]);
 
@@ -311,6 +313,16 @@ export function PublishPanel({
             <option value="yes">רק בעלות ניסיון</option>
             <option value="no">רק ג׳וניוריות</option>
           </Select>
+          {/* Senior roles reach mentors too — but only when the admin says so. */}
+          <label className="flex items-center gap-2 mt-3 text-[13px] text-ink-900 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={incMentors}
+              onChange={(e) => setIncMentors(e.target.checked)}
+              className="accent-brand-purple"
+            />
+            לכלול גם מנטוריות (משרות לבעלות ניסיון)
+          </label>
           <p className="text-[12px] text-ink-400 mt-2">
             בלי סימון קריטריונים נכללות כל הזמינות להשמה — הרשימה המלאה מופיעה למטה.
           </p>

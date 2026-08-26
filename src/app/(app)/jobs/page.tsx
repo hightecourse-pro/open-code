@@ -58,22 +58,9 @@ export default async function JobsPage({
   const supabase = await createClient();
   const user = await getUser();
   const profile = await requireCommunityAccess();
-  // Mentors don't job-hunt here — the tab is hidden for them; this covers a
-  // typed-in URL with the same sentence the action uses.
-  if (profile.role === "mentor") {
-    return (
-      <div className="flex flex-col gap-4">
-        <div>
-          <span className="font-mono text-xs text-brand-pink-deep">&lt;משרות/&gt;</span>
-          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">משרות</h1>
-        </div>
-        <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14.5px] text-ink-700 leading-relaxed">
-          לוח המשרות מיועד לחברות שמחפשות עבודה 💜 בתור מנטורית, המקום שלך הוא הפורום, הצ&apos;אט
-          והסשנים — ואם את מכירה משרה שמתאימה לחברות הקהילה, נשמח שתכתבי לנו.
-        </div>
-      </div>
-    );
-  }
+  // Mentors see the board too (2026-08-26): senior roles get published to
+  // them per-job from the admin's publish panel, and they may apply like
+  // anyone. (They used to be turned away here.)
   const subscriber = isSubscriber(profile);
 
   // The whole open board of this tab loads here; searching filters it on the
@@ -125,6 +112,8 @@ export default async function JobsPage({
       .order("published_at", { ascending: false });
     targetedJobs = tJobs ?? [];
   }
+  // An applied targeted job moves wholly into "ההגשות שלי".
+  targetedJobs = targetedJobs.filter((j) => !appStatusByJob.has(j.id));
   const targetedSet = new Set(targetedJobs.map((j) => j.id));
 
   // "המשרות שלי": where each of her applications stands, plus jobs the admin
@@ -228,11 +217,13 @@ export default async function JobsPage({
     return tags;
   };
 
-  // Profile-based ordering: best-matching jobs first, then newest. Jobs she
-  // applied to STAY on the board, marked with their status (the owner's call:
-  // an indication beats a disappearance) — the old duplication is gone anyway
-  // now that "ההגשות שלי" is its own view. Targeted jobs keep their section.
-  const boardJobs = (jobs ?? []).filter((j) => !targetedSet.has(j.id));
+  // Profile-based ordering: best-matching jobs first, then newest. A job she
+  // applied to LEAVES the board (tester round 2026-08-26 — it lives in
+  // "ההגשות שלי" with its status; on the board it was duplication). The
+  // targeted section drops it for the same reason.
+  const boardJobs = (jobs ?? []).filter(
+    (j) => !targetedSet.has(j.id) && !appStatusByJob.has(j.id)
+  );
   // "מתאימות לי" no longer hides the rest of the board — the PM's point was
   // that the two views looked identical. The non-matching jobs stay, dimmed
   // and un-appliable, so the difference between the views is visible.

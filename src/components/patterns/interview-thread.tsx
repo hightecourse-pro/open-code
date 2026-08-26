@@ -80,6 +80,13 @@ export function InterviewThread({
   const [voice, setVoice] = useState(false);
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
+  // Edge's speech engine (Azure) ignores he-IL and transcribes Hebrew speech
+  // as English words (tester report) — the API exists, so `supported` can't
+  // catch it. Warn and point at Chrome, where he-IL actually works.
+  const [hebrewUnreliable, setHebrewUnreliable] = useState(false);
+  useEffect(() => {
+    if (/Edg\//.test(navigator.userAgent)) setHebrewUnreliable(true);
+  }, []);
   const recognitionRef = useRef<Recognition | null>(null);
   const spokenRef = useRef<string | null>(null);
   const lastSentRef = useRef("");
@@ -242,6 +249,11 @@ export function InterviewThread({
               </button>
             )}
             {!supported && <span className="text-[12px] text-ink-500">הדפדפן לא תומך בקול — נסי Chrome</span>}
+            {supported && hebrewUnreliable && (
+              <span className="text-[12px] text-[#8C5E0E]">
+                ב-Edge זיהוי הדיבור לא מבין עברית כמו שצריך — בכרום זה עובד מצוין 🎙️
+              </span>
+            )}
           </div>
 
           <form

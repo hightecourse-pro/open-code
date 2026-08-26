@@ -99,7 +99,7 @@ interface AudienceData {
 }
 
 /** The eligible-audience profile query, or an id-scoped one (no gates). */
-function profilesQuery(profileIds?: string[]) {
+function profilesQuery(profileIds?: string[], includeMentors = false) {
   const base = createAdminClient()
     .from("profiles")
     .select("id, full_name, specialization, region, is_experienced, status");
@@ -111,7 +111,10 @@ function profilesQuery(profileIds?: string[]) {
       // Placement reaches free members too (user decision 2026-07-29): pending =
       // browsing free member, active = paying. Only paused/rejected stay out.
       .in("status", ["active", "pending"])
-      .eq("role", "junior")
+      // Mentors join the pool only when the admin asks (2026-08-26): senior
+      // roles do come through the community, but reaching mentors is a
+      // per-job decision, never the default.
+      .in("role", includeMentors ? ["junior", "mentor"] : ["junior"])
       .eq("profile_completed", true)
       .order("full_name", { ascending: true })
   );
@@ -120,12 +123,12 @@ function profilesQuery(profileIds?: string[]) {
 /** PostgREST caps a plain select at 1000 rows — page until the pool is whole. */
 const PAGE = 1000;
 
-async function fetchAllProfiles(profileIds?: string[]) {
+async function fetchAllProfiles(profileIds?: string[], includeMentors = false) {
   const out: AudienceData["members"] = [];
   for (let from = 0; ; from += PAGE) {
     // .order("id") on top of the name ordering keeps the pages disjoint even
     // when two members share a full name.
-    const { data } = await profilesQuery(profileIds)
+    const { data } = await profilesQuery(profileIds, includeMentors)
       .order("id", { ascending: true })
       .range(from, from + PAGE - 1);
     out.push(...((data ?? []) as AudienceData["members"]));
@@ -187,10 +190,10 @@ export async function loadAudienceEligibility(): Promise<AudienceEligibility> {
  * With `profileIds` the member set is scoped purely to those ids, WITHOUT the
  * eligibility gates above.
  */
-async function loadAudienceData(profileIds?: string[]): Promise<AudienceData> {
+async function loadAudienceData(profileIds?: string[], includeMentors = false): Promise<AudienceData> {
   const admin = createAdminClient();
   const [members, questions, taxonomies] = await Promise.all([
-    fetchAllProfiles(profileIds),
+    fetchAllProfiles(profileIds, includeMentors),
     loadQuestions(),
     getTaxonomyOptions(),
   ]);
@@ -328,8 +331,11 @@ export async function buildAudienceCatalogue(
  * case-insensitive matching against catalogue values. previewAudience filters
  * on these so the panel's chips and the matching can never drift apart.
  */
-export async function loadAudiencePools(profileIds?: string[]): Promise<AudiencePools> {
-  const { members, valuePools } = await loadAudienceData(profileIds);
+export async function loadAudiencePools(
+  profileIds?: string[],
+  opts?: { includeMentors?: boolean }
+): Promise<AudiencePools> {
+  const { members, valuePools } = await loadAudienceData(profileIds, opts?.includeMentors ?? false);
 
   const pools = new Map<string, Map<string, string[]>>();
   const shaped = members.map((m) => {

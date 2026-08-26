@@ -7,8 +7,9 @@ import type { UserRole } from "@/types/database";
 
 /**
  * One member as the rest of the community sees her — exactly the columns of
- * the `members_directory` view. No status, no tier: a member must never be
- * able to tell who pays.
+ * the `members_directory` view. Status/tier stay out of the view; the ONE
+ * exception is the boolean "מנויה" badge, resolved server-side (the owner's
+ * call, 2026-08-26).
  */
 export interface DirectoryMember {
   id: string;
@@ -101,11 +102,14 @@ export function MemberCard({
   member,
   canChat,
   score,
+  subscriber = false,
 }: {
   member: DirectoryMember;
   canChat: boolean;
   /** Mentor score — public by design; only mentors carry one. */
   score?: number;
+  /** Paying member — shown as a badge (the owner's call, 2026-08-26). */
+  subscriber?: boolean;
 }) {
   const isMentor = member.role === "mentor";
 
@@ -127,6 +131,7 @@ export function MemberCard({
           </Link>
           <span className="flex items-center gap-1.5 flex-wrap">
             {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
+            {subscriber && <Badge variant="purple">מנויה 💜</Badge>}
             {isMentor && score != null && score > 0 && (
               <span className="text-[11px] font-bold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] rounded-full px-2 py-0.5">
                 ⭐ {score} נק&#39;

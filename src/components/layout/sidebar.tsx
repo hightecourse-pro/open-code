@@ -79,8 +79,9 @@ export interface SidebarUser {
   unreadCount?: number;
 }
 
-/** Destinations that are not part of the mentor experience. */
-const NOT_FOR_MENTORS = new Set(["/jobs", "/courses", "/subscription"]);
+/** Destinations that are not part of the mentor experience. Jobs ARE (senior
+ * roles get published to mentors per-job); courses open by mentor points. */
+const NOT_FOR_MENTORS = new Set(["/courses", "/subscription"]);
 
 const DEFAULT_USER: SidebarUser = {
   name: "מאיה כהן",

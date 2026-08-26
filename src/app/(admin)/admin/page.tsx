@@ -16,11 +16,13 @@ export default async function AdminDashboardPage() {
     supabase.from("posts").select("*", { count: "exact", head: true }),
   ]);
 
+  // Each cube IS its filter (the tester's ask) — clicking lands on the list
+  // it counts, already narrowed.
   const stats = [
-    { label: "חברות פעילות", value: active.count ?? 0 },
-    { label: "ממתינות לאישור", value: pending.count ?? 0 },
-    { label: "מנטוריות", value: mentors.count ?? 0 },
-    { label: "פוסטים בקהילה", value: posts.count ?? 0 },
+    { label: "חברות פעילות", value: active.count ?? 0, href: "/admin/members?status=active" },
+    { label: "ממתינות לאישור", value: pending.count ?? 0, href: "/admin/members?status=pending" },
+    { label: "מנטוריות", value: mentors.count ?? 0, href: "/admin/mentors" },
+    { label: "פוסטים בקהילה", value: posts.count ?? 0, href: "/forum" },
   ];
 
   const { data: pendingMembers } = await supabase
@@ -39,12 +41,16 @@ export default async function AdminDashboardPage() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         {stats.map((s) => (
-          <div key={s.label} className="bg-white border border-ink-200 rounded-2xl p-4 px-[18px]">
+          <Link
+            key={s.label}
+            href={s.href}
+            className="bg-white border border-ink-200 rounded-2xl p-4 px-[18px] hover:border-brand-purple hover:shadow-sm transition-all"
+          >
             <div className="text-xs text-ink-500 tracking-[0.04em] uppercase font-semibold">
               {s.label}
             </div>
             <div className="font-display font-black text-[28px] text-ink-1000 mt-1">{s.value}</div>
-          </div>
+          </Link>
         ))}
       </div>
 

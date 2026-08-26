@@ -52,7 +52,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
   const { id } = await params;
   const profile = await requireCommunityAccess();
   // Mentors don't apply — the board page explains why.
-  if (profile.role === "mentor") redirect("/jobs");
+  // Mentors may apply too (2026-08-26) — senior jobs are published to them.
   const supabase = await createClient();
 
   // RLS decides visibility (targeted jobs only for their audience).

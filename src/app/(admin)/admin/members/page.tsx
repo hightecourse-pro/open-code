@@ -39,7 +39,16 @@ async function fetchAllAnswers(): Promise<AnswerRow[]> {
   return out;
 }
 
-export default async function AdminMembersPage() {
+export default async function AdminMembersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  // The dashboard cubes deep-link here pre-filtered (?status=active/pending).
+  const { status: statusParam } = await searchParams;
+  const initialStatus = ["active", "pending", "paused", "rejected"].includes(statusParam ?? "")
+    ? statusParam!
+    : "";
   // The (admin) layout gates too — this is defense-in-depth for a page that
   // serializes every member's answers into the client payload.
   await requireRole("admin");
@@ -201,7 +210,12 @@ export default async function AdminMembersPage() {
         </p>
       </div>
 
-      <MembersTable members={rows} filterDefs={filterDefs} answersByMember={answersByMember} />
+      <MembersTable
+        members={rows}
+        filterDefs={filterDefs}
+        answersByMember={answersByMember}
+        initialStatus={initialStatus}
+      />
 
       <ManualHiresCard
         hires={(manualHires ?? []) as ManualHireRow[]}

@@ -7,9 +7,12 @@ import { EmploymentCard } from "@/components/patterns/employment-card";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { PortalVisibility } from "@/components/patterns/portal-visibility";
+import { requestMentorRole } from "./actions";
+import { MENTOR_REQUEST_SUBJECT } from "@/lib/mentor-request";
 import Link from "next/link";
 import { Eye, Pencil } from "lucide-react";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
+import { mentorScores } from "@/lib/mentor-score";
 import type { QuestionScope } from "@/types/database";
 
 export const metadata: Metadata = { title: "הפרופיל שלי" };
@@ -58,6 +61,25 @@ export default async function ProfilePage() {
       .maybeSingle(),
     getTaxonomyOptions(),
   ]);
+
+  // A mentor's own score — with what the points are worth (400 = course gift).
+  const myScore =
+    profile.role === "mentor"
+      ? (await mentorScores([profile.id])).get(profile.id) ?? null
+      : null;
+
+  // Is her mentor request already sitting with the team?
+  const { data: mentorReq } =
+    profile.role === "junior" && profile.is_experienced
+      ? await supabase
+          .from("member_requests")
+          .select("id")
+          .eq("profile_id", profile.id)
+          .eq("subject", MENTOR_REQUEST_SUBJECT)
+          .eq("status", "open")
+          .maybeSingle()
+      : { data: null };
+  const mentorRequestOpen = !!mentorReq;
 
   const answerMap: Record<string, unknown> = {};
   for (const a of answers ?? []) answerMap[a.question_id] = a.value;
@@ -135,6 +157,55 @@ export default async function ProfilePage() {
       {/* "המנוי שלי" moved to its own page (PM) — /subscription in the menu. */}
 
       <PortalVisibility listed={profile.portal_listed !== false} />
+
+      {/* A mentor's points — and what they're worth (the owner, 2026-08-26:
+          400 points = a course from the library, as a gift). */}
+      {profile.role === "mentor" && (
+        <div className="border border-[#EAD9A8] bg-tint-warm/60 rounded-[16px] p-4 flex items-center gap-4 flex-wrap">
+          <div className="font-display font-black text-[26px] text-[#8C5E0E] shrink-0">
+            ⭐ {myScore?.score ?? 0} נק&#39;
+          </div>
+          <div className="flex-1 min-w-[220px] text-[13px] text-ink-700 leading-relaxed">
+            <b className="text-ink-1000">הנקודות שלך שוות קורס 🎁</b> — ב-400 נקודות מגיע לך קורס
+            מתנה מספריית הקורסים של הייטקורס. צוברים על כל תשובה בפורום ועל כל ליווי אישי
+            {myScore
+              ? ` (עד עכשיו: ${myScore.answers} תשובות ו-${myScore.assignments} ליוויים).`
+              : "."}
+            {(myScore?.score ?? 0) >= 400 && " הגעת! כתבי לנו ונפתח לך את הקורס שבחרת 💜"}
+          </div>
+        </div>
+      )}
+
+      {/* Experienced members may ask to become mentors right here (the
+          owner's ask 2026-08-26) — a request to the team, not a self-serve
+          switch: she keeps her paid membership until someone approves. */}
+      {profile.role === "junior" && profile.is_experienced && (
+        <div className="border border-[#EAD9A8] bg-tint-warm/60 rounded-[16px] p-4 flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-[220px]">
+            <div className="font-display font-bold text-[14.5px] text-ink-1000">
+              רוצה להצטרף כמנטורית? 👑
+            </div>
+            <p className="text-[13px] text-ink-700 mt-0.5">
+              בתור בעלת ניסיון את מוזמנת לתרום לקהילה — מענה לשאלות, ליווי אישי והאקתונים. נעבור
+              על הבקשה ונחזור אלייך.
+            </p>
+          </div>
+          {mentorRequestOpen ? (
+            <span className="text-[13px] font-semibold text-[#8C5E0E]">
+              הבקשה שלך אצלנו — נעדכן אותך ממש בקרוב 💜
+            </span>
+          ) : (
+            <form action={requestMentorRole}>
+              <button
+                type="submit"
+                className="font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-white text-[#8C5E0E] border-[1.5px] border-[#E5A93C] hover:bg-tint-warm transition-colors"
+              >
+                הגשת בקשה למנטורית
+              </button>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* The mirror: exactly what a recruiter sees on the portal (PM ask). */}
       <Link

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { raiseAlert } from "@/lib/alerts";
 import { claimExternalPaymentsFor } from "@/lib/payments/external";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -17,6 +18,7 @@ import {
   type ExperienceEntry,
 } from "@/lib/experience-entries";
 import { repointSharesToNewEmail } from "@/lib/drive-shares";
+import { MENTOR_REQUEST_SUBJECT } from "@/lib/mentor-request";
 import type { Database, Json, QuestionScope } from "@/types/database";
 
 export type ProfileState = { ok?: boolean; error?: string };
@@ -497,4 +499,49 @@ function stableJson(v: unknown): string {
   const o = v as Record<string, unknown>;
   const keys = Object.keys(o).filter((k) => o[k] !== undefined).sort();
   return `{${keys.map((k) => `${JSON.stringify(k)}:${stableJson(o[k])}`).join(",")}}`;
+}
+
+/**
+ * An experienced member asks to become a mentor, from her profile (the
+ * owner's ask, 2026-08-26 — until now the door existed only on first entry).
+ * Deliberately a REQUEST to the team, not a self-serve track switch: she is
+ * an active paying member, and flipping her tier automatically would cut her
+ * off from everything she pays for before anyone approved anything.
+ */
+export async function requestMentorRole(): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  // One open request at a time — the button becomes "הבקשה אצלנו" meanwhile.
+  const { data: open } = await supabase
+    .from("member_requests")
+    .select("id")
+    .eq("profile_id", user.id)
+    .eq("subject", MENTOR_REQUEST_SUBJECT)
+    .eq("status", "open")
+    .maybeSingle();
+  if (open) return;
+
+  const { data: who } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+  await supabase.from("member_requests").insert({
+    profile_id: user.id,
+    subject: MENTOR_REQUEST_SUBJECT,
+    body: "ביקשה להצטרף למסלול המנטוריות מתוך עמוד הפרופיל (בעלת ניסיון).",
+  });
+  await raiseAlert({
+    kind: "member_request",
+    severity: "info",
+    title: `${who?.full_name ?? "חברה"} מבקשת להצטרף כמנטורית`,
+    body: "הבקשה הוגשה מעמוד הפרופיל — מחכה להחלטה במסך הבקשות.",
+    context: { profileId: user.id },
+    dedupeKey: `mentor-request:${user.id}`,
+  });
+  revalidatePath("/profile");
 }

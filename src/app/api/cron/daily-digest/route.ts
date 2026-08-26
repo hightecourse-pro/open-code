@@ -30,10 +30,12 @@ function authorized(req: Request): boolean {
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  // The schedule ships in vercel.json, so a staging deployment gets it too —
-  // and this nightly run emails real people and pauses real subscriptions.
-  // Outside production it reports itself and does nothing.
-  if (!isProductionEnv()) {
+  // The schedule ships in vercel.json, so a staging deployment gets it too.
+  // Staging runs ONLY when an EMAIL_ALLOWLIST is set: every recipient is
+  // gated by emailGate (real members' addresses stay unreachable), and the
+  // testers DO need the digests to behave — skipping everything outside
+  // production made "המיילים הפסיקו" a permanent state on staging.
+  if (!isProductionEnv() && !process.env.EMAIL_ALLOWLIST) {
     return NextResponse.json({ skipped: "not_production", env: appEnv() });
   }
   if (!isResendConfigured()) return NextResponse.json({ error: "resend_not_configured" }, { status: 500 });
