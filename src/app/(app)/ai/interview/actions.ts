@@ -166,3 +166,52 @@ export async function finishInterview(
   revalidatePath(`/ai/interview/${sessionId}`);
   return {};
 }
+
+export type TranscribeState = { text?: string; error?: string; reason?: AiReason };
+
+/**
+ * Transcribe a recorded voice answer with Gemini (the member's own key).
+ * The browsers' built-in speech engines proved unreliable for Hebrew (the
+ * tester got English words in Chrome AND Edge) — so the mic now records
+ * audio and Gemini, which handles Hebrew well, does the transcription.
+ */
+export async function transcribeAnswer(formData: FormData): Promise<TranscribeState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  const me = await getProfile();
+  if (!me || !isSubscriber(me)) {
+    return { error: "סימולטור הראיונות נפתח עם מנוי לקהילה 💜" };
+  }
+
+  const audio = formData.get("audio");
+  const mime = String(formData.get("mime") ?? "audio/webm");
+  if (!(audio instanceof File) || audio.size === 0) return { error: "לא הוקלט קול — נסי שוב." };
+  // ~90 seconds of opus comfortably; a runaway recording must not blow the
+  // request or the token budget.
+  if (audio.size > 4 * 1024 * 1024) return { error: "ההקלטה ארוכה מדי — עד כדקה וחצי 🙂" };
+  const base64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
+
+  const { geminiText } = await import("@/lib/ai/gemini");
+  const res = await withUserKey((apiKey) =>
+    geminiText({
+      apiKey,
+      system:
+        "את מתמללת תשובה מוקלטת של מועמדת בראיון עבודה. תמללי במדויק את מה שנאמר, בעברית (מונחים טכניים באנגלית נשארים באנגלית). החזירי אך ורק את התמלול — בלי הערות, בלי מרכאות.",
+      contents: [
+        {
+          role: "user",
+          text: "תמללי את ההקלטה.",
+          inlineData: { mimeType: mime, data: base64 },
+        },
+      ],
+      maxOutputTokens: 800,
+    })
+  );
+  if (!res.ok) return { reason: res.reason, error: REASON_MSG[res.reason] };
+  const text = res.data.trim();
+  if (!text) return { error: "לא הצלחנו לשמוע — נסי להקליט שוב קרוב יותר למיקרופון." };
+  return { text };
+}

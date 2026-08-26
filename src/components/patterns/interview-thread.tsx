@@ -4,37 +4,17 @@ import { useActionState, useEffect, useOptimistic, useRef, useState } from "reac
 import { Mic, Volume2 } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { finishInterview, sendAnswer, type TurnState } from "@/app/(app)/ai/interview/actions";
+import {
+  finishInterview,
+  sendAnswer,
+  transcribeAnswer,
+  type TurnState,
+} from "@/app/(app)/ai/interview/actions";
 
 export interface InterviewTurn {
   id: string | number;
   role: string;
   text: string;
-}
-
-// Minimal typing for the Web Speech API (not in the TS DOM lib).
-interface SpeechResultEvent {
-  results: ArrayLike<{ 0: { transcript: string }; isFinal: boolean }>;
-}
-interface Recognition {
-  lang: string;
-  interimResults: boolean;
-  maxAlternatives: number;
-  start(): void;
-  stop(): void;
-  onresult: (e: SpeechResultEvent) => void;
-  onend: () => void;
-  onerror: () => void;
-}
-type RecognitionCtor = new () => Recognition;
-
-function getRecognitionCtor(): RecognitionCtor | null {
-  if (typeof window === "undefined") return null;
-  const w = window as unknown as {
-    SpeechRecognition?: RecognitionCtor;
-    webkitSpeechRecognition?: RecognitionCtor;
-  };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
 function speak(text: string) {
@@ -80,14 +60,10 @@ export function InterviewThread({
   const [voice, setVoice] = useState(false);
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
-  // Edge's speech engine (Azure) ignores he-IL and transcribes Hebrew speech
-  // as English words (tester report) — the API exists, so `supported` can't
-  // catch it. Warn and point at Chrome, where he-IL actually works.
-  const [hebrewUnreliable, setHebrewUnreliable] = useState(false);
-  useEffect(() => {
-    if (/Edg\//.test(navigator.userAgent)) setHebrewUnreliable(true);
-  }, []);
-  const recognitionRef = useRef<Recognition | null>(null);
+  // "מקשיבה" → "מתמללת" → text lands in the box.
+  const [transcribing, setTranscribing] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
   const spokenRef = useRef<string | null>(null);
   const lastSentRef = useRef("");
   // Uncontrolled on purpose: a setState inside the form action is deferred to
@@ -137,35 +113,67 @@ export function InterviewThread({
     setVoice(next);
   }
 
-  function toggleListen() {
+  // Record → transcribe with Gemini. The browsers' built-in SpeechRecognition
+  // turned Hebrew into English words for the tester in Chrome AND Edge — so
+  // the mic records real audio and the same Gemini key that runs the
+  // interview does the transcription (it handles Hebrew properly).
+  async function toggleListen() {
     if (listening) {
-      recognitionRef.current?.stop();
+      recorderRef.current?.stop();
       return;
     }
-    const Ctor = getRecognitionCtor();
-    if (!Ctor) {
+    setVoiceError(null);
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !window.MediaRecorder) {
       setSupported(false);
       return;
     }
-    const rec = new Ctor();
-    rec.lang = "he-IL";
-    // Interim results stream into the box as she speaks — waiting for the
-    // final transcript read as "the mic isn't working" (tester feedback).
-    rec.interimResults = true;
-    rec.maxAlternatives = 1;
-    const base = inputRef.current?.value ?? "";
-    rec.onresult = (e) => {
-      const el = inputRef.current;
-      if (!el) return;
-      let spoken = "";
-      for (let i = 0; i < e.results.length; i++) spoken += e.results[i][0].transcript;
-      el.value = base ? `${base} ${spoken}` : spoken;
+    let stream: MediaStream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setVoiceError("צריך לאשר גישה למיקרופון כדי להקליט 🎙️");
+      return;
+    }
+    const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      ? "audio/webm;codecs=opus"
+      : MediaRecorder.isTypeSupported("audio/mp4")
+        ? "audio/mp4"
+        : "";
+    const recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
+    const chunks: Blob[] = [];
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
     };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
-    recognitionRef.current = rec;
+    recorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      setListening(false);
+      const blob = new Blob(chunks, { type: recorder.mimeType || "audio/webm" });
+      if (blob.size === 0) return;
+      setTranscribing(true);
+      const fd = new FormData();
+      fd.set("audio", new File([blob], "answer", { type: blob.type }));
+      fd.set("mime", (blob.type || "audio/webm").split(";")[0]);
+      const base = inputRef.current?.value ?? "";
+      void transcribeAnswer(fd)
+        .then((res) => {
+          if (res.text) {
+            const el = inputRef.current;
+            if (el) {
+              el.value = base ? `${base} ${res.text}` : res.text;
+              el.focus();
+            }
+          } else if (res.error) setVoiceError(res.error);
+        })
+        .catch(() => setVoiceError("התמלול נכשל — נסי שוב."))
+        .finally(() => setTranscribing(false));
+    };
+    recorderRef.current = recorder;
     setListening(true);
-    rec.start();
+    recorder.start();
+    // Backstop: never record past 90 seconds.
+    setTimeout(() => {
+      if (recorder.state === "recording") recorder.stop();
+    }, 90_000);
   }
 
   const error = answer.error || finish.error;
@@ -248,12 +256,9 @@ export function InterviewThread({
                 השמעת השאלה שוב
               </button>
             )}
-            {!supported && <span className="text-[12px] text-ink-500">הדפדפן לא תומך בקול — נסי Chrome</span>}
-            {supported && hebrewUnreliable && (
-              <span className="text-[12px] text-[#8C5E0E]">
-                ב-Edge זיהוי הדיבור לא מבין עברית כמו שצריך — בכרום זה עובד מצוין 🎙️
-              </span>
-            )}
+            {!supported && <span className="text-[12px] text-ink-500">הדפדפן לא תומך בהקלטה — נסי Chrome</span>}
+            {transcribing && <span className="text-[12px] text-brand-purple font-semibold">מתמללת… ✨</span>}
+            {voiceError && <span className="text-[12px] text-danger">{voiceError}</span>}
           </div>
 
           <form
@@ -271,7 +276,13 @@ export function InterviewThread({
               ref={inputRef}
               name="answer"
               autoComplete="off"
-              placeholder={listening ? "מקשיבה… דברי 🎙️" : "כתבי או דברי את התשובה שלך…"}
+              placeholder={
+                listening
+                  ? "מקליטה… דברי, ולחצי שוב על המיקרופון לסיום 🎙️"
+                  : transcribing
+                    ? "מתמללת את מה שאמרת…"
+                    : "כתבי או הקליטי את התשובה שלך…"
+              }
               className={cn(
                 "flex-1 px-3.5 py-3 rounded-md border text-sm outline-none focus:border-brand-purple",
                 listening ? "border-brand-pink bg-tint-pink/40" : "border-ink-300"
