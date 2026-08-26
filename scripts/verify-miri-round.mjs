@@ -27,11 +27,12 @@ async function login(page, email, pass) {
   ok("members: מנויה badge shows", (await page.locator("text=מנויה 💜").count()) > 0);
   await page.screenshot({ path: `${SHOTS}/miri-members.png` });
 
-  // Applied job must be OFF the board and ONLY in ההגשות שלי.
+  // Applied job must be OFF the board and ONLY in ההגשות שלי. Two distinct
+  // jobs share this title — she applied to ONE, so exactly one card remains.
   await page.goto(`${BASE}/jobs`);
   await page.waitForLoadState("networkidle");
-  const board = (await page.textContent("body")) ?? "";
-  ok("board: applied job gone", !board.includes("Junior Frontend Developer"));
+  const jfdCards = await page.locator('article:has-text("Junior Frontend Developer")').count();
+  ok(`board: applied twin gone (1 of 2 remains, saw ${jfdCards})`, jfdCards === 1);
   await page.goto(`${BASE}/jobs?view=mine`);
   await page.waitForLoadState("networkidle");
   ok("mine: applied job listed", ((await page.textContent("body")) ?? "").includes("Junior Frontend Developer"));
