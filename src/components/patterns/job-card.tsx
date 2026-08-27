@@ -277,14 +277,26 @@ export function JobCard({
             הגשת מועמדות
           </Link>
         ) : job.source === "open" && job.external_url ? (
-          <a
-            href={job.external_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[12.5px] px-3.5 py-1.5 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple"
-          >
-            להגשה <ExternalLink size={12} />
-          </a>
+          <span className="ms-auto inline-flex items-center gap-2">
+            {/* She applies on the employer's site — this button records it
+                with us, so it shows in "ההגשות שלי" and in the admin lists. */}
+            <button
+              type="button"
+              onClick={onApply}
+              className="inline-flex items-center gap-1 text-[12px] font-semibold text-ink-500 hover:text-brand-purple cursor-pointer"
+              title="הגשת דרך האתר החיצוני? סמני וזה יירשם אצלנו"
+            >
+              הגשתי ✓
+            </button>
+            <a
+              href={job.external_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 font-display font-semibold text-[12.5px] px-3.5 py-1.5 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple"
+            >
+              להגשה <ExternalLink size={12} />
+            </a>
+          </span>
         ) : (
           <button
             type="button"

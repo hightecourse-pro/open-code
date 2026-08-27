@@ -450,10 +450,19 @@ export function candidateSubmittedEmail(
 export function applicationPipelineEmail(
   name: string | undefined,
   jobTitle: string,
-  status: "interview" | "exam" | "hired" | "declined"
+  status: "sent" | "interview" | "exam" | "hired" | "declined"
 ): BuiltEmail {
   const title = escapeHtml(jobTitle);
   const per = {
+    sent: {
+      subject: `המועמדות שלך הוגשה למעסיק 🤞 · ${jobTitle}`,
+      heading: "המועמדות שלך אצל המעסיק 🤞",
+      lines: [
+        `עדכון טוב — הגשנו את המועמדות שלך למשרת <b>${title}</b> למעסיק.`,
+        "ברגע שתהיה התקדמות נעדכן אותך מיד. בינתיים — מחזיקות אצבעות 💜",
+      ],
+      cta: true,
+    },
     interview: {
       subject: `זומנת לראיון! 🎉 · ${jobTitle}`,
       heading: "זומנת לראיון! 🎉",

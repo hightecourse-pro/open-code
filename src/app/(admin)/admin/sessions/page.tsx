@@ -1,21 +1,52 @@
 import type { Metadata } from "next";
-import { Check, Trash2, Ban } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Badge } from "@/components/ui";
 import { AdminCreateSession } from "@/components/patterns/admin-create-session";
-import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
-import { cancelSession, deleteSession, markSessionDone } from "../actions";
-import { SessionTimeEditor } from "./session-time-editor";
+import { AdminSessionsList, type AdminSessionRow } from "./admin-sessions-list";
 
 export const metadata: Metadata = { title: "ניהול סשנים" };
 
 export default async function AdminSessionsPage() {
   const supabase = await createClient();
-  const { data: sessions } = await supabase
-    .from("sessions")
-    // select * so it stays backward-safe before the canceled_at column exists.
-    .select("*")
-    .order("scheduled_at", { ascending: false });
+  const [{ data: sessions }, { data: recordings }] = await Promise.all([
+    supabase.from("sessions").select("*").order("scheduled_at", { ascending: false }),
+    supabase.from("recordings").select("session_id, video_url"),
+  ]);
+
+  // Distinct members who opened each session's content — the "participants"
+  // number the PM asked to see on past sessions.
+  const ids = (sessions ?? []).map((s) => s.id);
+  const viewsBySession = new Map<string, Set<string>>();
+  if (ids.length > 0) {
+    const { data: views } = await supabase
+      .from("content_views")
+      .select("owner_id, profile_id")
+      .eq("owner_type", "session")
+      .in("owner_id", ids);
+    for (const v of views ?? []) {
+      if (!v.owner_id) continue;
+      const set = viewsBySession.get(v.owner_id) ?? new Set<string>();
+      set.add(v.profile_id);
+      viewsBySession.set(v.owner_id, set);
+    }
+  }
+  const recBySession = new Map(
+    (recordings ?? []).filter((r) => r.session_id).map((r) => [r.session_id as string, r.video_url])
+  );
+
+  const rows: AdminSessionRow[] = (sessions ?? []).map((s) => ({
+    id: s.id,
+    title: s.title,
+    topic: s.topic,
+    scheduled_at: s.scheduled_at,
+    status: s.status,
+    canceled_at: s.canceled_at,
+    zoom_url: s.zoom_url,
+    syllabus_url: s.syllabus_url ?? null,
+    materials_url: s.materials_url ?? null,
+    duration_minutes: s.duration_minutes ?? null,
+    views: viewsBySession.get(s.id)?.size ?? 0,
+    recordingUrl: recBySession.get(s.id) ?? null,
+  }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -28,55 +59,14 @@ export default async function AdminSessionsPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-3">הוספת סשן</h3>
         <AdminCreateSession />
+        <p className="text-[12.5px] text-ink-500 mt-3 bg-ink-50 border border-ink-200 rounded-md px-3 py-2">
+          מה קורה אחרי ההוספה? הסשן מופיע מיד במסך האירועים של החברות, והתזכורות נשלחות
+          אוטומטית במייל למנויות: בבוקר יום הסשן, חצי שעה לפני, וברגע שהוא מתחיל. מייל הכרזה
+          מיידי לא נשלח.
+        </p>
       </div>
 
-      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-3">כל הסשנים ({sessions?.length ?? 0})</h3>
-        <div className="flex flex-col">
-          {(sessions ?? []).map((s) => (
-            <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0">
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-ink-900 truncate">{s.title}</div>
-                <SessionTimeEditor sessionId={s.id} scheduledAt={s.scheduled_at} />
-              </div>
-              {s.topic && <Badge variant="purple">{s.topic}</Badge>}
-              {s.canceled_at ? (
-                <Badge variant="pink">בוטל</Badge>
-              ) : (
-                <Badge variant={s.status === "done" ? "tech" : "mint"}>
-                  {s.status === "done" ? "הסתיים" : s.status === "live" ? "מתקיים" : "מתוכנן"}
-                </Badge>
-              )}
-              {!s.canceled_at && s.status !== "done" && (
-                <>
-                  <form action={markSessionDone.bind(null, s.id)}>
-                    <button type="submit" className="text-ink-400 hover:text-[#1B7A4B] p-1.5" title="סימון כ'הסתיים'">
-                      <Check size={15} />
-                    </button>
-                  </form>
-                  <ConfirmActionButton
-                    action={cancelSession.bind(null, s.id)}
-                    message="לבטל את הסשן? הוא יסומן כ'בוטל' ויוסתר מהחברות אחרי 24 שעות."
-                    title="ביטול סשן"
-                    className="text-ink-400 hover:text-brand-pink-deep p-1.5"
-                  >
-                    <Ban size={15} />
-                  </ConfirmActionButton>
-                </>
-              )}
-              <ConfirmActionButton
-                action={deleteSession.bind(null, s.id)}
-                message="למחוק את הסשן לצמיתות? הפעולה אינה ניתנת לביטול."
-                title="מחיקת סשן"
-                className="text-ink-400 hover:text-danger p-1.5"
-              >
-                <Trash2 size={15} />
-              </ConfirmActionButton>
-            </div>
-          ))}
-          {(sessions ?? []).length === 0 && <p className="text-ink-500 text-sm py-4">אין סשנים עדיין.</p>}
-        </div>
-      </div>
+      <AdminSessionsList sessions={rows} />
     </div>
   );
 }

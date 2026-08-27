@@ -885,6 +885,18 @@ export function ReviewCenter({
                         <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-bold text-ink-700">
                           {STATUS_LABEL[status] ?? status}
                         </span>
+                        {/* One-click "we submitted her" — with or without a
+                            portal client (the PM couldn't find where). */}
+                        {(status === "submitted" || status === "in_review") && (
+                          <button
+                            type="button"
+                            onClick={() => applyPipeline(a, "sent")}
+                            className="ms-1.5 rounded-full border border-brand-purple/40 px-2 py-0.5 text-[10.5px] font-bold text-brand-purple hover:bg-tint-purple cursor-pointer"
+                            title="סימון שהגשנו אותה למעסיק — עובר להוגשה ללקוח"
+                          >
+                            הוגשה ✓
+                          </button>
+                        )}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
                         {mark ? (

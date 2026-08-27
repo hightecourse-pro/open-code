@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ContentOpenStat } from "@/types/database";
+import { CoursesStatsTable, SessionsStatsTable } from "./stats-tables";
 
 export const metadata: Metadata = { title: "אנליטיקת למידה" };
 
@@ -123,6 +124,18 @@ export default async function AdminAnalyticsPage() {
       last: s.opens?.last ?? null,
     }));
 
+  // ── the summary FIRST (the PM), the detail after ──────────────────────────
+  const allLearners = new Set(stats.map((s) => s.profile_id));
+  const totalOpens = stats.reduce((n, s) => n + s.opens, 0);
+  const topCourse = [...courseStats].sort((a, b) => b.views - a.views)[0];
+  const topSession = [...sessionStats].sort((a, b) => b.views - a.views)[0];
+  const summary = [
+    { label: "לומדות פעילות", value: allLearners.size },
+    { label: "סה״כ כניסות לתוכן", value: totalOpens },
+    { label: "הקורס הנצפה ביותר", value: topCourse && topCourse.views > 0 ? topCourse.title : "—" },
+    { label: "הסשן הנצפה ביותר", value: topSession ? topSession.title : "—" },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -132,6 +145,17 @@ export default async function AdminAnalyticsPage() {
           מי נכנסה לאיזה תוכן ומתי — קורסים והקלטות סשנים כאחד. הדירוגים והמשובים מתמלאים כשחברה
           מסמנת שלמדה קורס ומשאירה משוב במסך הקורס.
         </p>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        {summary.map((s) => (
+          <div key={s.label} className="bg-white border border-ink-200 rounded-2xl p-4 px-[18px]">
+            <div className="text-xs text-ink-500 tracking-[0.04em] uppercase font-semibold">{s.label}</div>
+            <div className="font-display font-black text-[20px] text-ink-1000 mt-1 truncate" title={String(s.value)}>
+              {s.value}
+            </div>
+          </div>
+        ))}
       </div>
 
       {!logReady && (
@@ -148,32 +172,7 @@ export default async function AdminAnalyticsPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm overflow-x-auto">
         <h3 className="font-display text-base font-bold mb-3">קורסים</h3>
         {courseStats.length > 0 ? (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-ink-500 text-xs text-right border-b border-ink-100">
-                <th className="py-2 font-semibold">קורס</th>
-                <th className="py-2 font-semibold">נרשמו</th>
-                <th className="py-2 font-semibold">סיימו</th>
-                <th className="py-2 font-semibold">דירוג ממוצע</th>
-                <th className="py-2 font-semibold">כמה חברות</th>
-                <th className="py-2 font-semibold">סה״כ כניסות</th>
-                <th className="py-2 font-semibold">כניסה אחרונה</th>
-              </tr>
-            </thead>
-            <tbody>
-              {courseStats.map((s) => (
-                <tr key={s.id} className="border-b border-ink-100 last:border-b-0">
-                  <td className="py-2.5 font-medium text-ink-900">{s.title}</td>
-                  <td className="py-2.5">{s.enrollments}</td>
-                  <td className="py-2.5">{s.studied}</td>
-                  <td className="py-2.5">{s.avgRating != null ? `${s.avgRating.toFixed(1)} ⭐` : "—"}</td>
-                  <td className="py-2.5">{s.members || "—"}</td>
-                  <td className="py-2.5">{s.views}</td>
-                  <td className="py-2.5 text-ink-500">{dmy(s.last)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <CoursesStatsTable rows={courseStats} />
         ) : (
           <p className="text-ink-500 text-sm py-4">אין עדיין קורסים. הוסיפי קורסים בניהול הקורסים.</p>
         )}
@@ -186,30 +185,7 @@ export default async function AdminAnalyticsPage() {
           כל סשן שנכנסו אליו לפחות פעם אחת. 40 כניסות של חברה אחת זה לא 40 של ארבעים.
         </p>
         {sessionStats.length > 0 ? (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-ink-500 text-xs text-right border-b border-ink-100">
-                <th className="py-2 font-semibold">סשן</th>
-                <th className="py-2 font-semibold">תאריך הסשן</th>
-                <th className="py-2 font-semibold">כמה חברות נכנסו</th>
-                <th className="py-2 font-semibold">סה״כ כניסות</th>
-                <th className="py-2 font-semibold">כניסה אחרונה</th>
-                <th className="py-2 font-semibold">פתוח לכולן</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sessionStats.map((s) => (
-                <tr key={s.id} className="border-b border-ink-100 last:border-b-0">
-                  <td className="py-2.5 font-medium text-ink-900">{s.title}</td>
-                  <td className="py-2.5 text-ink-500">{dmy(s.scheduledAt)}</td>
-                  <td className="py-2.5">{s.members}</td>
-                  <td className="py-2.5">{s.views}</td>
-                  <td className="py-2.5 text-ink-500">{dmy(s.last)}</td>
-                  <td className="py-2.5">{s.openToAll ? "כן" : "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <SessionsStatsTable rows={sessionStats} />
         ) : (
           <p className="text-ink-500 text-sm py-4">
             עדיין אף אחת לא נכנסה להקלטה. ברגע שמישהי תצפה, זה יופיע כאן 💜

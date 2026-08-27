@@ -737,20 +737,25 @@ export interface Database {
           title: string;
           excerpt: string | null;
           url: string | null;
+          /** Rich in-app content (sanitizeArticleHtml) — the alternative to url. */
+          body_html: string | null;
           category: string | null;
           author_name: string | null;
           is_published: boolean;
           created_at: string;
+          updated_at: string | null;
         };
         Insert: {
           id?: string;
           title: string;
           excerpt?: string | null;
           url?: string | null;
+          body_html?: string | null;
           category?: string | null;
           author_name?: string | null;
           is_published?: boolean;
           created_at?: string;
+          updated_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["articles"]["Insert"]>;
         Relationships: [];
@@ -963,6 +968,8 @@ export interface Database {
           /** Downloadable handouts — plain URLs the admin pastes. */
           syllabus_url: string | null;
           materials_url: string | null;
+          /** Planned length, minutes — shown in admin and on the events screen. */
+          duration_minutes: number | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -978,6 +985,7 @@ export interface Database {
           canceled_at?: string | null;
           syllabus_url?: string | null;
           materials_url?: string | null;
+          duration_minutes?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["sessions"]["Insert"]>;
         Relationships: [];

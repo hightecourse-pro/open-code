@@ -218,6 +218,19 @@ export async function deleteContentLink(id: string): Promise<void> {
   revalidatePath("/courses");
 }
 
+/** Bulk-mark pending shares as done — all of them or a checked subset. */
+export async function markSharesShared(ids: string[]): Promise<void> {
+  await requireRole("admin");
+  const clean = [...new Set(ids.filter(Boolean))].slice(0, 500);
+  if (clean.length === 0) return;
+  const supabase = await createClient();
+  await supabase
+    .from("content_shares")
+    .update({ status: "shared", shared_at: new Date().toISOString() })
+    .in("id", clean);
+  revalidatePath("/admin/shares");
+}
+
 /** Mark a personal Drive share as actioned (shared / revoked) in the queue. */
 export async function markShareStatus(id: string, status: Exclude<ShareStatus, "pending">): Promise<void> {
   await requireRole("admin");

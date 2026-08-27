@@ -23,7 +23,7 @@ export default async function AdminJobsPage({
   const { data: jobs } = await supabase
     .from("jobs")
     .select(
-      "id, company, title, source, employment_type, location, tech_tags, external_url, description, description_html, status, client_id, job_kind, practicum_percent, pipeline_status, created_at"
+      "id, company, title, source, employment_type, location, tech_tags, external_url, description, description_html, status, client_id, job_kind, practicum_percent, pipeline_status, created_at, published_at"
     )
     .order("created_at", { ascending: false });
 

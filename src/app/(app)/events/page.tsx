@@ -182,6 +182,9 @@ export default async function EventsPage() {
                     <span className="inline-flex items-center gap-1.5">
                       <Calendar size={12} /> {fmtIsraelDate(s.scheduled_at)} · {fmtIsraelTime(s.scheduled_at)} (שעון ישראל)
                     </span>
+                    {s.duration_minutes ? (
+                      <span className="inline-flex items-center gap-1">🕐 {s.duration_minutes} דקות</span>
+                    ) : null}
                     <SessionFiles
                       syllabus={s.syllabus_url ?? null}
                       materials={materialsUrl(s)}

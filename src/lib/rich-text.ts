@@ -82,6 +82,50 @@ export function sanitizeRichHtml(html: string): string {
   return textOnly ? result : "";
 }
 
+/** Extract a safe http(s) src from a raw attribute string, or null. */
+function safeSrc(attrs: string): string | null {
+  const m = /src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(attrs);
+  const raw = (m?.[1] ?? m?.[2] ?? m?.[3] ?? "").trim();
+  if (!/^https?:\/\//i.test(raw)) return null;
+  return raw.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Video embeds may come only from these players. */
+const EMBED_HOSTS = /^https:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com)\/embed\/|^https:\/\/player\.vimeo\.com\/video\//i;
+
+/**
+ * The ARTICLE sanitizer: everything sanitizeRichHtml allows, plus images
+ * (img[src] over https) and video embeds (iframe from YouTube/Vimeo only),
+ * and h2 for article structure. Admin-authored content only — members never
+ * reach this path.
+ */
+export function sanitizeArticleHtml(html: string): string {
+  if (!html) return "";
+  // Rescue the allowed iframes BEFORE the generic pass drops them.
+  const embeds: string[] = [];
+  const src = html.replace(/<iframe\b([^>]*)>[\s\S]*?<\/iframe\s*>/gi, (_all, attrs: string) => {
+    const s = safeSrc(attrs);
+    if (!s || !EMBED_HOSTS.test(s.replace(/&amp;/g, "&"))) return "";
+    embeds.push(
+      `<span class="rt-video"><iframe src="${s}" loading="lazy" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe></span>`
+    );
+    return `@@EMBED${embeds.length - 1}@@`;
+  });
+  // Images: swap to placeholders too, so the base pass can't mangle them.
+  const images: string[] = [];
+  const withImgs = src.replace(/<img\b([^>]*)\/?>/gi, (_all, attrs: string) => {
+    const s = safeSrc(attrs);
+    if (!s) return "";
+    images.push(`<img src="${s}" loading="lazy" alt="" />`);
+    return `@@IMG${images.length - 1}@@`;
+  });
+  // h2 → h3 (one article heading level, brand-styled).
+  const base = sanitizeRichHtml(withImgs.replace(/<(\/?)h2\b/gi, "<$1h3"));
+  return base
+    .replace(/@@EMBED(\d+)@@/g, (_m, i) => embeds[Number(i)] ?? "")
+    .replace(/@@IMG(\d+)@@/g, (_m, i) => images[Number(i)] ?? "");
+}
+
 /**
  * The plain-text mirror of rich HTML: line breaks preserved, formatting
  * dropped. Used for emails and anywhere the styled version can't render —

@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Bold, Heading3, Italic, Link2, List, ListOrdered, Smile, Strikethrough } from "lucide-react";
+import { Bold, Heading3, Image as ImageIcon, Italic, Link2, List, ListOrdered, Smile, Strikethrough, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ToolAction = "bold" | "italic" | "strike" | "ul" | "ol" | "h3" | "link";
+type ToolAction = "bold" | "italic" | "strike" | "ul" | "ol" | "h3" | "link" | "image" | "video";
 
 /** The quick palette — the emojis the community actually writes with. */
 const EMOJIS = [
@@ -130,7 +130,35 @@ export function RichTextEditor({
     ol: { title: "רשימה ממוספרת", icon: <ListOrdered size={14} /> },
     h3: { title: "כותרת", icon: <Heading3 size={14} /> },
     link: { title: "קישור", icon: <Link2 size={14} /> },
+    image: { title: "תמונה (קישור)", icon: <ImageIcon size={14} /> },
+    video: { title: "סרטון YouTube", icon: <Video size={14} /> },
   };
+
+  function insertImage() {
+    const raw = window.prompt("כתובת התמונה (https://…)");
+    const url = raw?.trim();
+    if (!url || !/^https?:\/\//i.test(url)) return;
+    exec("insertImage", url);
+  }
+
+  function insertVideo() {
+    const raw = window.prompt("קישור לסרטון YouTube");
+    const url = raw?.trim();
+    if (!url) return;
+    // Accept youtu.be/<id>, youtube.com/watch?v=<id> or a ready /embed/ URL.
+    const id =
+      /youtu\.be\/([\w-]{6,})/.exec(url)?.[1] ??
+      /[?&]v=([\w-]{6,})/.exec(url)?.[1] ??
+      /youtube(?:-nocookie)?\.com\/embed\/([\w-]{6,})/.exec(url)?.[1];
+    if (!id) {
+      window.alert("לא זיהיתי קישור YouTube — נסי להעתיק את הקישור המלא של הסרטון.");
+      return;
+    }
+    exec(
+      "insertHTML",
+      `<iframe src="https://www.youtube-nocookie.com/embed/${id}"></iframe><p><br/></p>`
+    );
+  }
 
   function runTool(action: ToolAction) {
     if (action === "bold") exec("bold");
@@ -139,6 +167,8 @@ export function RichTextEditor({
     else if (action === "ul") exec("insertUnorderedList");
     else if (action === "ol") exec("insertOrderedList");
     else if (action === "h3") toggleHeading();
+    else if (action === "image") insertImage();
+    else if (action === "video") insertVideo();
     else insertLink();
   }
 

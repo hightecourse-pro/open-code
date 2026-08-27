@@ -860,6 +860,21 @@ export async function setJobStatus(jobId: string, open: boolean): Promise<void> 
   revalidatePath("/jobs");
 }
 
+/** Bulk close/reopen/delete — the PM's checkbox actions on several jobs. */
+export async function bulkJobs(jobIds: string[], op: "close" | "open" | "delete"): Promise<void> {
+  await requireRole("admin");
+  const ids = [...new Set(jobIds.filter(Boolean))].slice(0, 200);
+  if (ids.length === 0) return;
+  const supabase = await createClient();
+  if (op === "delete") {
+    await supabase.from("jobs").delete().in("id", ids);
+  } else {
+    await supabase.from("jobs").update({ status: op === "open" ? "open" : "closed" }).in("id", ids);
+  }
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
+}
+
 /** Delete a job permanently. */
 export async function deleteJob(jobId: string): Promise<void> {
   await requireRole("admin");
@@ -1545,9 +1560,11 @@ export async function setApplicationMarkBulk(
   return { ok: true };
 }
 
-export type PipelineStatus = "interview" | "exam" | "hired" | "declined";
+export type PipelineStatus = "sent" | "interview" | "exam" | "hired" | "declined";
 
-const PIPELINE_STATUSES: PipelineStatus[] = ["interview", "exam", "hired", "declined"];
+// "sent" = we submitted her to the employer — with or without a portal
+// client (the PM's quick "הוגשה ✓"). The rest move her along the pipeline.
+const PIPELINE_STATUSES: PipelineStatus[] = ["sent", "interview", "exam", "hired", "declined"];
 
 /**
  * Move an application along the client pipeline (ראיון/מבחן/גויסה/בפעם הבאה)
@@ -1855,6 +1872,10 @@ export async function createSession(_prev: FormState, formData: FormData): Promi
     zoom_url: String(formData.get("zoom_url") ?? "") || null,
     syllabus_url: String(formData.get("syllabus_url") ?? "").trim() || null,
     materials_url: String(formData.get("materials_url") ?? "").trim() || null,
+    duration_minutes: (() => {
+      const n = Number(formData.get("duration_minutes"));
+      return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
+    })(),
   });
   if (error) return { error: error.message };
   revalidatePath("/admin/sessions");

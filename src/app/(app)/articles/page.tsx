@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { BookOpen, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui";
@@ -10,7 +11,7 @@ export default async function ArticlesPage() {
   const supabase = await createClient();
   const { data: articles } = await supabase
     .from("articles")
-    .select("id, title, excerpt, url, category, author_name, created_at")
+    .select("id, title, excerpt, url, body_html, category, author_name, created_at")
     .eq("is_published", true)
     .order("created_at", { ascending: false });
 
@@ -25,13 +26,8 @@ export default async function ArticlesPage() {
       {articles && articles.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {articles.map((a) => {
-            const Wrapper = a.url ? "a" : "div";
-            return (
-              <Wrapper
-                key={a.id}
-                {...(a.url ? { href: a.url, target: "_blank", rel: "noopener noreferrer" } : {})}
-                className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-2 hover:shadow-md transition-shadow"
-              >
+            const card = (
+              <>
                 <div className="flex items-center gap-2">
                   {a.category && <Badge variant="purple">{a.category}</Badge>}
                   {a.url && <ExternalLink size={14} className="text-ink-400 ms-auto" />}
@@ -41,7 +37,28 @@ export default async function ArticlesPage() {
                 <div className="text-[11px] text-ink-400 mt-1">
                   {[a.author_name, timeAgo(a.created_at)].filter(Boolean).join(" · ")}
                 </div>
-              </Wrapper>
+              </>
+            );
+            const cls =
+              "bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-2 hover:shadow-md transition-shadow";
+            // A link out opens the external article; in-app content opens its
+            // own page here; neither → a plain card.
+            if (a.url)
+              return (
+                <a key={a.id} href={a.url} target="_blank" rel="noopener noreferrer" className={cls}>
+                  {card}
+                </a>
+              );
+            if (a.body_html)
+              return (
+                <Link key={a.id} href={`/articles/${a.id}`} className={cls}>
+                  {card}
+                </Link>
+              );
+            return (
+              <div key={a.id} className={cls}>
+                {card}
+              </div>
             );
           })}
         </div>

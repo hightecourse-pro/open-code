@@ -5,9 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { Badge, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { isDriveAutomationConfigured } from "@/lib/drive-api";
-import { markShareStatus, dismissShare, syncDriveNow } from "../content/actions";
+import { dismissShare, syncDriveNow } from "../content/actions";
 import { removeShare } from "./actions";
 import { ManualShareForm } from "./manual-share-form";
+import { PendingShares } from "./pending-shares";
+import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 
 export const metadata: Metadata = { title: "תור שיתופים" };
 
@@ -193,25 +195,15 @@ export default async function AdminSharesPage({
         <h3 className="font-display text-base font-bold mb-3 flex items-center gap-2">
           <Share2 size={16} className="text-brand-pink-deep" /> לשתף ({pending.length})
         </h3>
-        {pending.length > 0 ? (
-          <div className="flex flex-col">
-            {pending.map((s) => (
-              <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0">
-                <UserCheck size={16} className="text-brand-purple" />
-                <span className="font-medium text-ink-900">{nameOf.get(s.profile_id) ?? "—"}</span>
-                <Badge variant={s.owner_type === "course" ? "pink" : "purple"}>
-                  {s.owner_type === "course" ? "קורס" : "סשן"}
-                </Badge>
-                <span className="text-ink-700 text-sm">{titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—"}</span>
-                <form action={markShareStatus.bind(null, s.id, "shared")} className="ms-auto">
-                  <Button type="submit" size="sm">סימון כבוצע ✓</Button>
-                </form>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-ink-500 text-sm">אין שיתופים ממתינים 💜</p>
-        )}
+        <PendingShares
+          rows={pending.map((s) => ({
+            id: s.id,
+            memberName: nameOf.get(s.profile_id) ?? "—",
+            ownerType: s.owner_type,
+            contentTitle: titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—",
+            since: dmy(s.created_at) ?? "—",
+          }))}
+        />
       </section>
 
       {/* ---------- Manual share — an extra course for one member ---------- */}
@@ -332,14 +324,14 @@ export default async function AdminSharesPage({
                           {dmy(firstOpenOf.get(`${r.profile_id}:${r.owner_type}:${r.owner_id}`) ?? null)}
                         </span>
                       )}
-                      <form action={removeShare.bind(null, r.id)} className="ms-auto">
-                        <button
-                          type="submit"
-                          className="text-[11.5px] text-ink-400 hover:text-danger transition-colors"
-                        >
-                          ביטול שיתוף
-                        </button>
-                      </form>
+                      <ConfirmActionButton
+                        action={removeShare.bind(null, r.id)}
+                        message={`לבטל את השיתוף של "${byContent ? r.memberName : r.contentTitle}"? הגישה שלה לתוכן תוסר.`}
+                        title="ביטול שיתוף"
+                        className="ms-auto text-[11.5px] text-ink-400 hover:text-danger transition-colors"
+                      >
+                        ביטול שיתוף
+                      </ConfirmActionButton>
                     </li>
                   ))}
                 </ul>
@@ -360,9 +352,14 @@ export default async function AdminSharesPage({
                   {s.owner_type === "course" ? "קורס" : "סשן"}
                 </Badge>
                 <span className="text-ink-700 text-sm">{titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—"}</span>
-                <form action={dismissShare.bind(null, s.id)} className="ms-auto">
-                  <Button type="submit" variant="ghost" size="sm">סימון כבוטל</Button>
-                </form>
+                <ConfirmActionButton
+                  action={dismissShare.bind(null, s.id)}
+                  message={`לסמן שהשיתוף של ${nameOf.get(s.profile_id) ?? "החברה"} בוטל בדרייב? השורה תוסר מהרשימה.`}
+                  title="סימון כבוטל"
+                  className="ms-auto text-[12.5px] font-semibold text-ink-500 hover:text-danger px-2 py-1"
+                >
+                  סימון כבוטל
+                </ConfirmActionButton>
               </div>
             ))}
           </div>
