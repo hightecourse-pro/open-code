@@ -85,7 +85,8 @@ await page.fill("#ar-title", "מאמר בדיקה ADMIN4");
 await page.fill("#ar-cat", "בדיקות");
 await page.locator('[contenteditable="true"]').fill("זהו תוכן מאמר הבדיקה — פסקה ראשונה.");
 await page.click('button:has-text("שמירה כטיוטה")');
-await page.waitForLoadState("networkidle");
+// onDone closes the form only after the server action finished — reload then.
+await page.waitForSelector("#ar-title", { state: "detached", timeout: 20000 });
 await page.reload();
 await page.waitForLoadState("networkidle");
 ok(
@@ -105,6 +106,7 @@ await page.waitForTimeout(600);
   await m.waitForLoadState("networkidle");
   ok("member articles: published card", (await m.locator("text=מאמר בדיקה ADMIN4").count()) > 0);
   await m.locator('a:has-text("מאמר בדיקה ADMIN4")').first().click();
+  await m.waitForURL(/\/articles\/[\w-]+/, { timeout: 20000 });
   await m.waitForLoadState("networkidle");
   ok("member article page: body renders", ((await m.textContent("body")) ?? "").includes("פסקה ראשונה"));
   await m.screenshot({ path: `${SHOTS}/admin4-article.png` });
