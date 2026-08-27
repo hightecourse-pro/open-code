@@ -36,7 +36,10 @@ import type { Json } from "@/types/database";
  * ever refused as ip_not_allowed, the rejection email carries the address to
  * add.
  */
-const KNOWN_NEDARIM_IPS = ["18.194.219.73"];
+// Every address a real Nedarim webhook has been SEEN from. They rotate AWS
+// servers — an unknown one no longer loses the payment (it lands flagged in
+// external_payments); add it here once confirmed to restore auto-activation.
+const KNOWN_NEDARIM_IPS = ["18.194.219.73", "18.196.146.117"];
 
 /** Best-effort diagnostic. Keeps the last call AND the last rejection. */
 async function logEvent(value: Record<string, unknown>) {
@@ -195,6 +198,33 @@ async function handleCallback(req: Request) {
   const secretOk = !!secret && !!providedKey && constantEquals(providedKey, secret);
 
   if (!fromNedarim && !secretOk) {
+    // Nedarim rotates its webhook servers (18.194.219.73 one day,
+    // 18.196.146.117 the next) — an unknown IP is more often THEM than an
+    // attacker, and a real payment must never be dropped on the floor. So:
+    // a payload that carries OUR mosad number and a transaction id is stored
+    // as an external payment flagged needs_review — it activates nobody
+    // until the admin confirms it against the Nedarim console. Everything
+    // else is still rejected outright.
+    const mosadHere = params.MosadNumber ?? params.Mosad ?? "";
+    const cbHere = parseNedarimCallback(params);
+    if (mosadHere && mosadHere === cfg.mosadId && cbHere.ok && cbHere.transactionId) {
+      try {
+        record.outcome = await handleExternalPayment(
+          params,
+          {
+            transactionId: cbHere.transactionId,
+            plan: cbHere.plan,
+            amountAgorot: cbHere.amountAgorot,
+          },
+          { needsReview: true, callerIp: callerIp(req) }
+        );
+      } catch (e) {
+        record.outcome = "external_unverified_failed";
+        record.error = String(e);
+      }
+      await logEvent(record);
+      return NextResponse.json({ ok: true, outcome: record.outcome });
+    }
     return reject(
       providedKey ? "bad_secret" : "unauthenticated_caller",
       401,

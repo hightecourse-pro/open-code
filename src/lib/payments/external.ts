@@ -26,13 +26,22 @@ async function userIdByEmail(email: string): Promise<string | null> {
  */
 export async function handleExternalPayment(
   params: Record<string, string>,
-  tx: { transactionId: string; plan: SubscriptionPlan | null; amountAgorot: number | null }
-): Promise<"external_matched_activated" | "external_stored" | "external_duplicate"> {
+  tx: { transactionId: string; plan: SubscriptionPlan | null; amountAgorot: number | null },
+  /**
+   * needsReview: the caller could NOT be authenticated (an unrecognized IP —
+   * usually Nedarim on a new server, conceivably not). The payment is stored
+   * but must not activate anyone until the admin confirms it.
+   */
+  opts?: { needsReview?: boolean; callerIp?: string }
+): Promise<
+  "external_matched_activated" | "external_stored" | "external_stored_unverified" | "external_duplicate"
+> {
   const admin = createAdminClient();
   const email = params.Mail?.trim().toLowerCase() || null;
   const name = params.ClientName?.trim() || null;
+  const needsReview = opts?.needsReview === true;
 
-  if (email) {
+  if (email && !needsReview) {
     const profileId = await userIdByEmail(email);
     if (profileId) {
       await activateSubscription({
@@ -63,11 +72,23 @@ export async function handleExternalPayment(
     amount_agorot: tx.amountAgorot,
     plan: tx.plan ?? "monthly",
     raw: params as unknown as Json,
+    needs_review: needsReview,
   });
   if (error) {
     // unique(provider_payment_id) — a replayed webhook is already recorded.
     if (error.message.includes("duplicate")) return "external_duplicate";
     throw error;
+  }
+  if (needsReview) {
+    await raiseAlert({
+      kind: "external_payment_unverified",
+      severity: "warning",
+      title: `תשלום ממקור לא מזוהה ממתין לאישור: ${name ?? email ?? "ללא שם"} · ${(tx.amountAgorot ?? 0) / 100} ₪`,
+      body: `הקריאה הגיעה מכתובת שאינה ברשימת נדרים המוכרות (${opts?.callerIp ?? "?"}). התשלום נשמר אבל לא יפעיל אף אחת — אשרי אותו במסך התשלומים החיצוניים אחרי הצלבה מול קונסולת נדרים. אסמכתא: ${tx.transactionId}.`,
+      context: { transactionId: tx.transactionId, callerIp: opts?.callerIp },
+      dedupeKey: `ext-pay:${tx.transactionId}`,
+    });
+    return "external_stored_unverified";
   }
   await raiseAlert({
     kind: "external_payment_stored",
@@ -92,6 +113,8 @@ export async function claimExternalPaymentsFor(profileId: string, email: string 
     .from("external_payments")
     .select("id, provider_payment_id, plan, amount_agorot, raw")
     .is("claimed_at", null)
+    // Unverified rows never auto-activate — the admin confirms them first.
+    .eq("needs_review", false)
     .ilike("email", email.trim());
   if (!rows?.length) return false;
 

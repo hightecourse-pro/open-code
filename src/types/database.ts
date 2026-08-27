@@ -616,10 +616,13 @@ export interface Database {
           raw: Json | null;
           claimed_by: string | null;
           claimed_at: string | null;
+          /** Arrived from an unrecognized caller — admin must confirm first. */
+          needs_review: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
+          needs_review?: boolean;
           email?: string | null;
           phone?: string | null;
           zeout?: string | null;
