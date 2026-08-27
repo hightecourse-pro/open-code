@@ -429,7 +429,11 @@ export async function setMemberRole(profileId: string, role: UserRole) {
 }
 
 /** Add a tag/value to a taxonomy list (technologies, regions, specializations…). */
-export async function addTaxonomy(kind: TaxonomyKind, labelHe: string): Promise<void> {
+export async function addTaxonomy(
+  kind: TaxonomyKind,
+  labelHe: string,
+  groupHe?: string
+): Promise<void> {
   await requireRole("admin");
   const label = labelHe.trim();
   if (!label) return;
@@ -437,7 +441,22 @@ export async function addTaxonomy(kind: TaxonomyKind, labelHe: string): Promise<
   const ascii = label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   const value = ascii || `v${Math.random().toString(36).slice(2, 8)}`;
   const supabase = await createClient();
-  await supabase.from("config_taxonomies").insert({ kind, value, label_he: label });
+  // Land at the end of the group (or the whole list) so the new chip shows
+  // where it was added, not at a random spot.
+  const { data: last } = await supabase
+    .from("config_taxonomies")
+    .select("sort_order")
+    .eq("kind", kind)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  await supabase.from("config_taxonomies").insert({
+    kind,
+    value,
+    label_he: label,
+    group_he: groupHe?.trim() || null,
+    sort_order: (last?.sort_order ?? 0) + 1,
+  });
   revalidatePath("/admin/config");
 }
 

@@ -489,6 +489,8 @@ export interface Database {
           kind: TaxonomyKind;
           value: string;
           label_he: string;
+          /** Group heading (e.g. "פרונטאנד") — techs render grouped by it. */
+          group_he: string | null;
           sort_order: number;
           active: boolean;
           created_at: string;
@@ -498,6 +500,7 @@ export interface Database {
           kind: TaxonomyKind;
           value: string;
           label_he: string;
+          group_he?: string | null;
           sort_order?: number;
           active?: boolean;
           created_at?: string;

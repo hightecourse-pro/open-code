@@ -30,7 +30,7 @@ import { ExperienceListEditor } from "@/components/patterns/experience-list-edit
 import { PeriodPicker } from "@/components/patterns/period-picker";
 import type { ConfigQuestion, TaxonomyKind } from "@/types/database";
 
-type Option = { value: string; label: string };
+type Option = { value: string; label: string; group?: string | null };
 
 export interface ProfileFormProps {
   firstName: string;
@@ -459,38 +459,54 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (q.field_type === "multiselect" || q.field_type === "tags") {
       // Chip toggles (the portal-search pattern) — friendlier than a checkbox
       // wall; the selection submits via hidden inputs in the same array format.
+      // Options that carry a group (the tech list) render under group
+      // headings — 58 flat chips were a wall nobody could scan.
       const selected = multiVals[q.id] ?? [];
       const isOther = selected.includes("other");
+      const grouped = list.some((o) => o.group);
+      const groups: { name: string | null; items: Option[] }[] = [];
+      for (const o of list) {
+        const name = grouped ? (o.group ?? "עוד") : null;
+        const g = groups.find((x) => x.name === name);
+        if (g) g.items.push(o);
+        else groups.push({ name, items: [o] });
+      }
+      const chip = (o: Option) => {
+        const on = selected.includes(o.value);
+        return (
+          <button
+            key={o.value}
+            type="button"
+            aria-pressed={on}
+            onClick={() =>
+              setMultiVals((s) => ({
+                ...s,
+                [q.id]: on ? selected.filter((v) => v !== o.value) : [...selected, o.value],
+              }))
+            }
+            className={cn(
+              "inline-flex items-center px-3 py-[5px] rounded-full text-xs font-semibold",
+              "transition-colors duration-150 border cursor-pointer",
+              on
+                ? "bg-brand-pink-deep text-white border-brand-pink-deep"
+                : "bg-ink-0 text-ink-700 border-ink-200 hover:border-brand-purple"
+            )}
+          >
+            {o.label}
+          </button>
+        );
+      };
       return (
         <Field key={q.id} label={q.label_he} error={err}>
-          <div className="flex flex-wrap gap-2 pt-1" role="group" aria-label={q.label_he}>
-            {list.map((o) => {
-              const on = selected.includes(o.value);
-              return (
-                <button
-                  key={o.value}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() =>
-                    setMultiVals((s) => ({
-                      ...s,
-                      [q.id]: on
-                        ? selected.filter((v) => v !== o.value)
-                        : [...selected, o.value],
-                    }))
-                  }
-                  className={cn(
-                    "inline-flex items-center px-3 py-[5px] rounded-full text-xs font-semibold",
-                    "transition-colors duration-150 border cursor-pointer",
-                    on
-                      ? "bg-brand-pink-deep text-white border-brand-pink-deep"
-                      : "bg-ink-0 text-ink-700 border-ink-200 hover:border-brand-purple"
-                  )}
-                >
-                  {o.label}
-                </button>
-              );
-            })}
+          <div className="flex flex-col gap-2.5 pt-1" role="group" aria-label={q.label_he}>
+            {groups.map((g) => (
+              <div key={g.name ?? "_"}>
+                {g.name && (
+                  <div className="text-[11.5px] font-bold text-ink-500 mb-1.5">{g.name}</div>
+                )}
+                <div className="flex flex-wrap gap-2">{g.items.map(chip)}</div>
+              </div>
+            ))}
           </div>
           {selected.map((v) => (
             <input key={v} type="hidden" name={key} value={v} />

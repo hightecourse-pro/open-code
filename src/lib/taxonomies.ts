@@ -3,20 +3,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, TaxonomyKind } from "@/types/database";
 
-export type TaxonomyOption = { value: string; label: string };
+export type TaxonomyOption = { value: string; label: string; group?: string | null };
 
 async function readTaxonomies(
   supabase: SupabaseClient<Database>
 ): Promise<Partial<Record<TaxonomyKind, TaxonomyOption[]>>> {
   const { data } = await supabase
     .from("config_taxonomies")
-    .select("kind, value, label_he")
+    .select("kind, value, label_he, group_he")
     .eq("active", true)
     .order("sort_order", { ascending: true });
 
   const out: Partial<Record<TaxonomyKind, TaxonomyOption[]>> = {};
   for (const t of data ?? []) {
-    (out[t.kind] ??= []).push({ value: t.value, label: t.label_he });
+    (out[t.kind] ??= []).push({ value: t.value, label: t.label_he, group: t.group_he ?? null });
   }
   return out;
 }
