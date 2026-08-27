@@ -316,16 +316,18 @@ function sourceHost(url: string | null): string {
  * publish date, link, one remove button. No pipeline, no lock, no
  * submissions: market jobs are a bulletin board, not a recruitment process.
  */
-function MarketTable({
-  rows,
+function SortTH({
+  k,
   sort,
   onSort,
+  children,
 }: {
-  rows: AdminJob[];
+  k: SortKey;
   sort: { key: SortKey; dir: 1 | -1 };
   onSort: (key: SortKey) => void;
+  children: React.ReactNode;
 }) {
-  const TH = ({ k, children }: { k: SortKey; children: React.ReactNode }) => (
+  return (
     <th
       onClick={() => onSort(k)}
       className="text-start px-3 py-2 text-[11.5px] font-bold text-ink-500 uppercase cursor-pointer select-none hover:text-brand-purple whitespace-nowrap"
@@ -335,16 +337,27 @@ function MarketTable({
       {sort.key === k && <span className="ms-1">{sort.dir === -1 ? "↓" : "↑"}</span>}
     </th>
   );
+}
+
+function MarketTable({
+  rows,
+  sort,
+  onSort,
+}: {
+  rows: AdminJob[];
+  sort: { key: SortKey; dir: 1 | -1 };
+  onSort: (key: SortKey) => void;
+}) {
   return (
     <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-x-auto">
       <table className="w-full text-[13.5px]">
         <thead className="bg-ink-50/60">
           <tr>
-            <TH k="title">משרה</TH>
-            <TH k="company">חברה</TH>
-            <TH k="location">מיקום</TH>
+            <SortTH k="title" sort={sort} onSort={onSort}>משרה</SortTH>
+            <SortTH k="company" sort={sort} onSort={onSort}>חברה</SortTH>
+            <SortTH k="location" sort={sort} onSort={onSort}>מיקום</SortTH>
             <th className="text-start px-3 py-2 text-[11.5px] font-bold text-ink-500 uppercase">מקור</th>
-            <TH k="date">פורסמה</TH>
+            <SortTH k="date" sort={sort} onSort={onSort}>פורסמה</SortTH>
             <th className="px-3 py-2" />
             <th className="px-3 py-2" />
           </tr>
@@ -357,7 +370,10 @@ function MarketTable({
               <td className="px-3 py-2.5 text-ink-700">{j.location ?? "—"}</td>
               <td className="px-3 py-2.5 text-ink-500" dir="ltr">{sourceHost(j.external_url)}</td>
               <td className="px-3 py-2.5 text-ink-700 tabular-nums">
-                {DATE_HE.format(new Date(j.published_at ?? j.created_at ?? Date.now()))}
+                {(() => {
+                  const d = j.published_at ?? j.created_at;
+                  return d ? DATE_HE.format(new Date(d)) : "—";
+                })()}
               </td>
               <td className="px-3 py-2.5">
                 {j.external_url && (

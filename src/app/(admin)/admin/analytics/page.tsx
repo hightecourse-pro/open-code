@@ -6,14 +6,6 @@ import { CoursesStatsTable, SessionsStatsTable } from "./stats-tables";
 
 export const metadata: Metadata = { title: "אנליטיקת למידה" };
 
-// DD.MM.YYYY — how dates read everywhere else in the admin.
-const DMY = new Intl.DateTimeFormat("he-IL", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  timeZone: "Asia/Jerusalem",
-});
-const dmy = (iso: string | null | undefined) => (iso ? DMY.format(new Date(iso)) : "—");
 
 export default async function AdminAnalyticsPage() {
   const supabase = await createClient();

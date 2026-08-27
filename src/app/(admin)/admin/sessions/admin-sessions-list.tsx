@@ -186,7 +186,8 @@ function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
 export function AdminSessionsList({ sessions }: { sessions: AdminSessionRow[] }) {
   const [q, setQ] = useState("");
   const [pastOpen, setPastOpen] = useState(true);
-  const now = Date.now();
+  // Captured once per mount — render must stay pure (react-hooks/purity).
+  const [now] = useState(() => Date.now());
 
   const filtered = useMemo(() => {
     const needle = q.trim();

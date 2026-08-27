@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useState, useSyncExternalStore } from "react";
 import { Minus } from "lucide-react";
 
 export interface HiredMember {
@@ -27,22 +27,32 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
     .join(", ");
 
   const storageKey = `hired-banner-min:${names}`;
-  // Start minimized on both server and client render, then read the stored
-  // choice in an effect — reading localStorage during render would make the
-  // first client render disagree with the server one.
-  const [minimized, setMinimized] = useState(true);
-  useEffect(() => {
-    try {
-      setMinimized(localStorage.getItem(storageKey) === "1");
-    } catch {
-      setMinimized(false);
-    }
-  }, [storageKey]);
+  // localStorage through useSyncExternalStore: the server snapshot says
+  // "minimized", the client snapshot reads the real choice, and React
+  // reconciles after hydration — no setState-in-effect cascade.
+  const subscribe = useCallback((cb: () => void) => {
+    window.addEventListener("storage", cb);
+    return () => window.removeEventListener("storage", cb);
+  }, []);
+  const storedMin = useSyncExternalStore(
+    subscribe,
+    () => {
+      try {
+        return localStorage.getItem(storageKey) === "1";
+      } catch {
+        return false;
+      }
+    },
+    () => true
+  );
+  // Her click this session wins over what storage said at load.
+  const [override, setOverride] = useState<boolean | null>(null);
+  const minimized = override ?? storedMin;
 
   if (members.length === 0) return null;
 
   function toggle(next: boolean) {
-    setMinimized(next);
+    setOverride(next);
     try {
       localStorage.setItem(storageKey, next ? "1" : "0");
     } catch {

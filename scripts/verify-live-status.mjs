@@ -18,7 +18,6 @@ await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 25000 
 
 await page.goto(`${BASE}/events`);
 await page.waitForLoadState("networkidle");
-const card = page.locator("div", { hasText: "בדיקת לייב ממושך" }).first();
 ok("long-live session in upcoming with LIVE badge",
   (await page.locator('text=בדיקת לייב ממושך').count()) > 0 && (await page.locator("text=LIVE עכשיו").count()) > 0);
 ok("lecturer topic visible", (await page.locator("text=מרצה: בודקת").count()) > 0);
