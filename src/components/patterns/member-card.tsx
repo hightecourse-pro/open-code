@@ -130,6 +130,11 @@ export function MemberCard({
             {member.full_name}
           </Link>
           <span className="flex items-center gap-1.5 flex-wrap">
+            {member.role === "admin" && (
+              <span className="bg-ink-1000 text-white px-2 py-px rounded-full text-[10.5px] font-bold">
+                צוות קוד פתוח
+              </span>
+            )}
             {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
             {subscriber && <Badge variant="purple">מנויה 💜</Badge>}
             {isMentor && score != null && score > 0 && (

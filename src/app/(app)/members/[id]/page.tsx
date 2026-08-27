@@ -129,6 +129,11 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
               {member.full_name}
             </h1>
             <span className="flex items-center gap-2 flex-wrap">
+              {member.role === "admin" && (
+                <span className="bg-ink-1000 text-white px-2.5 py-0.5 rounded-full text-[11px] font-bold">
+                  צוות קוד פתוח
+                </span>
+              )}
               {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
               {isMentor && score && score.score > 0 && (
                 <span className="inline-flex items-center gap-1 text-[12px] font-bold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] rounded-full px-2.5 py-0.5">

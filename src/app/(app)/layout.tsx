@@ -117,6 +117,33 @@ export default async function AuthenticatedLayout({
     recentlyHired(),
   ]);
 
+  // Her recent team requests — the widget shows their status and WHO answered.
+  const myRequests = await (async () => {
+    const supabase = await createClient();
+    const { data: reqs } = await supabase
+      .from("member_requests")
+      .select("id, subject, status, created_at, handled_at, handled_by")
+      .eq("profile_id", profile.id)
+      .order("created_at", { ascending: false })
+      .limit(5);
+    if (!reqs?.length) return [];
+    const adminIds = [...new Set(reqs.map((r) => r.handled_by).filter((v): v is string => !!v))];
+    const { data: admins } = adminIds.length
+      ? await supabase.from("profiles").select("id, first_name, full_name").in("id", adminIds)
+      : { data: [] };
+    const nameOf = new Map(
+      (admins ?? []).map((a) => [a.id, a.first_name || a.full_name?.split(" ")[0] || "הצוות"])
+    );
+    return reqs.map((r) => ({
+      id: r.id,
+      subject: r.subject,
+      status: r.status,
+      created_at: r.created_at,
+      handled_at: r.handled_at,
+      handledByName: r.handled_by ? (nameOf.get(r.handled_by) ?? null) : null,
+    }));
+  })();
+
   // She turned auto-renewal off but is still inside the paid period — a quiet
   // standing reminder of the end date, with the way back one click away.
   let cancelNotice: string | null = null;
@@ -189,7 +216,7 @@ export default async function AuthenticatedLayout({
       {children}
       {/* The floating message-to-the-team widget (PM ask) — the reply lands
           back in her chat. */}
-      <MemberRequestWidget />
+      <MemberRequestWidget requests={myRequests} />
       {/* The hired celebration — floating, minimizable, on every screen. */}
       <HiredBanner members={hired} />
     </AppShell>

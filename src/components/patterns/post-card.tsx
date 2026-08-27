@@ -65,7 +65,7 @@ export function PostCard({
             {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
             {isStaff && (
               <span className="bg-ink-1000 text-white px-2 py-px rounded-full text-[10.5px] font-bold">
-                צוות
+                צוות קוד פתוח
               </span>
             )}
           </div>
