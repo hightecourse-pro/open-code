@@ -56,6 +56,8 @@ export default async function ProfilePage() {
       .eq("profile_id", profile.id)
       .eq("kind", "employment")
       .not("assigned_mentor_id", "is", null)
+      // Only an assignment the mentor ACCEPTED is presented to the member.
+      .not("mentor_accepted_at", "is", null)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),

@@ -90,7 +90,7 @@ export default async function AdminMentorRequestsPage({
   const [{ data: requests }, { data: mentors }] = await Promise.all([
     supabase
       .from("mentor_requests")
-      .select("id, profile_id, reason, note, status, kind, assigned_mentor_id, created_at")
+      .select("id, profile_id, reason, note, status, kind, assigned_mentor_id, mentor_accepted_at, created_at")
       .order("status", { ascending: true })
       .order("created_at", { ascending: false }),
     supabase
@@ -293,6 +293,11 @@ export default async function AdminMentorRequestsPage({
                   {assigned && (
                     <span className="text-[12px] font-semibold text-[#8C5E0E]">
                       👑 {assigned.full_name}
+                      {r.mentor_accepted_at ? (
+                        <span className="text-success"> · אישרה ✓</span>
+                      ) : (
+                        <span className="text-brand-pink-deep"> · ממתין לאישור שלה</span>
+                      )}
                     </span>
                   )}
                   <span className="text-[11px] text-ink-500">{timeAgo(r.created_at)}</span>

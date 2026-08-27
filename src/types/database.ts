@@ -129,6 +129,8 @@ export interface Database {
           status: string; // 'open' | 'handled'
           kind: "general" | "employment";
           assigned_mentor_id: string | null;
+          /** Stamped when the MENTOR accepts — only then the member sees her. */
+          mentor_accepted_at: string | null;
           created_at: string;
           handled_at: string | null;
         };
@@ -140,6 +142,7 @@ export interface Database {
           status?: string;
           kind?: "general" | "employment";
           assigned_mentor_id?: string | null;
+          mentor_accepted_at?: string | null;
           created_at?: string;
           handled_at?: string | null;
         };
@@ -662,6 +665,26 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["session_feedback"]["Insert"]>;
+        Relationships: [];
+      };
+      mentor_bonus_points: {
+        Row: {
+          id: string;
+          mentor_id: string;
+          points: number;
+          reason: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mentor_id: string;
+          points: number;
+          reason?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["mentor_bonus_points"]["Insert"]>;
         Relationships: [];
       };
       member_requests: {

@@ -7,6 +7,7 @@ import { QuestionOptionsEditor } from "@/components/patterns/question-options-ed
 import { QuestionOrder } from "./question-order";
 import { PricingForm } from "@/components/patterns/pricing-form";
 import { FeedbackQuestionsForm } from "@/components/patterns/feedback-questions-form";
+import { setMentorPoolNotice } from "../actions";
 import { getPricing } from "@/lib/payments/pricing";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { groupBySection } from "@/lib/profile-sections";
@@ -52,6 +53,13 @@ export default async function AdminConfigPage() {
     getFeedbackAspects(),
   ]);
 
+  const { data: poolRow } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "mentor_pool_notice")
+    .maybeSingle();
+  const mentorPoolNoticeOn = (poolRow?.value as { on?: boolean } | null)?.on === true;
+
   const plans = buildPlans(pricing);
 
   // group taxonomies by kind
@@ -88,6 +96,28 @@ export default async function AdminConfigPage() {
           </div>
           <div className="text-ink-400">מנוי שנתי אינו מוצע יותר.</div>
         </div>
+      </div>
+
+      {/* Mentor-pool notice toggle */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <h3 className="font-display text-base font-bold mb-1">הודעת &quot;מאגר המנטוריות בבנייה&quot;</h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          מוצגת לחברות במסך המנטוריות: המענה לבקשת ליווי עשוי לקחת קצת זמן. כשהמאגר מוכן — מכבות
+          כאן בלחיצה.
+        </p>
+        <form action={setMentorPoolNotice.bind(null, !mentorPoolNoticeOn)}>
+          <button
+            type="submit"
+            className={
+              "inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold border transition-colors cursor-pointer " +
+              (mentorPoolNoticeOn
+                ? "bg-tint-mint border-[#A7E3C6] text-[#1B7A4B]"
+                : "bg-ink-50 border-ink-200 text-ink-500 hover:border-brand-purple")
+            }
+          >
+            {mentorPoolNoticeOn ? "ההודעה מוצגת עכשיו — לחיצה תכבה" : "ההודעה כבויה — לחיצה תדליק"}
+          </button>
+        </form>
       </div>
 
       {/* Session feedback wording */}

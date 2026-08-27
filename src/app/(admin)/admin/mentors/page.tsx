@@ -3,6 +3,9 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, Badge, Button } from "@/components/ui";
 import { ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { mentorReasonLabel } from "@/lib/mentor-requests";
+import { MentorAdminRow } from "./mentor-admin-row";
 import {
   approveMentorApplication,
   rejectMentorApplication,
@@ -37,7 +40,47 @@ export default async function AdminMentorsPage() {
       .limit(50),
   ]);
 
-  const scores = await mentorScores((mentors ?? []).map((m) => m.id));
+  const mentorIds = (mentors ?? []).map((m) => m.id);
+  const scores = await mentorScores(mentorIds);
+
+  // Per-mentor accompaniment history + the bonus ledger (the PM's ask).
+  const admin = createAdminClient();
+  const [{ data: historyRows }, { data: bonusRows }, { data: historyMembers }] = await Promise.all([
+    mentorIds.length
+      ? admin
+          .from("mentor_requests")
+          .select("id, profile_id, assigned_mentor_id, reason, kind, created_at, mentor_accepted_at")
+          .in("assigned_mentor_id", mentorIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    mentorIds.length
+      ? admin
+          .from("mentor_bonus_points")
+          .select("mentor_id, points, reason, created_at")
+          .in("mentor_id", mentorIds)
+          .order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] }),
+    Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+  ]);
+  const memberIds = [...new Set((historyRows ?? []).map((h) => h.profile_id))];
+  const { data: memberNames } = memberIds.length
+    ? await admin.from("profiles").select("id, full_name").in("id", memberIds)
+    : { data: historyMembers };
+  const memberNameOf = new Map((memberNames ?? []).map((m) => [m.id, m.full_name]));
+  const historyOf = (mentorId: string) =>
+    (historyRows ?? [])
+      .filter((h) => h.assigned_mentor_id === mentorId)
+      .map((h) => ({
+        id: h.id,
+        memberName: memberNameOf.get(h.profile_id) ?? "חברת קהילה",
+        purpose: h.kind === "employment" ? "ליווי בחודשי עבודה ראשונים" : mentorReasonLabel(h.reason),
+        assignedAt: h.created_at,
+        acceptedAt: h.mentor_accepted_at,
+      }));
+  const bonusesOf = (mentorId: string) =>
+    (bonusRows ?? [])
+      .filter((b) => b.mentor_id === mentorId)
+      .map((b) => ({ points: b.points, reason: b.reason, at: b.created_at }));
 
   return (
     <div className="flex flex-col gap-6">
@@ -90,29 +133,15 @@ export default async function AdminMentorsPage() {
         </p>
         {mentors && mentors.length > 0 ? (
           <div className="flex flex-col">
-            {mentors.map((m) => {
-              const s = scores.get(m.id);
-              return (
-                <div key={m.id} className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0 flex-wrap">
-                  <Avatar size="sm" tone="gold" crown initials={m.avatar_initials || m.full_name.slice(0, 1)} />
-                  <div className="flex-1 min-w-0">
-                    <Link
-                      href={`/admin/members/${m.id}`}
-                      className="font-medium text-ink-900 truncate hover:text-brand-purple hover:underline"
-                    >
-                      {m.full_name}
-                    </Link>
-                    <div className="text-[11.5px] text-ink-500">
-                      ⭐ {s?.score ?? 0} נק&#39; — {s?.answers ?? 0} תשובות בפורום · {s?.assignments ?? 0} הצמדות
-                    </div>
-                  </div>
-                  {m.specialization && <Badge variant="purple">{m.specialization}</Badge>}
-                  <form action={setMemberRoleAction.bind(null, m.id, "junior")}>
-                    <Button type="submit" variant="ghost" size="sm">ביטול המינוי</Button>
-                  </form>
-                </div>
-              );
-            })}
+            {mentors.map((m) => (
+              <MentorAdminRow
+                key={m.id}
+                mentor={m}
+                score={scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0 }}
+                history={historyOf(m.id)}
+                bonuses={bonusesOf(m.id)}
+              />
+            ))}
           </div>
         ) : (
           <p className="text-ink-500 text-sm">עדיין אין מנטוריות. בחרי חברה פעילה מהרשימה למטה.</p>

@@ -14,7 +14,9 @@ import {
   jobCandidatesEmail,
   jobPublishedEmail,
   mentorApprovedEmail,
+  mentorAssignmentInviteEmail,
 } from "@/lib/email/templates";
+import { mentorReasonLabel } from "@/lib/mentor-requests";
 import { queueRevokeAll } from "@/lib/drive-shares";
 import { activateSubscription } from "@/lib/payments/subscription";
 import { loadAudiencePools } from "@/lib/admin/audience";
@@ -114,33 +116,51 @@ export async function assignMentorToRequest(requestId: string, formData: FormDat
       assigned_mentor_id: mentorId,
       status: "handled",
       handled_at: new Date().toISOString(),
+      // The MENTOR must accept before the member sees her (owner's flow).
+      mentor_accepted_at: null,
     })
     .eq("id", requestId);
   if (error) return;
 
-  // Best-effort: a failed email never rolls back the assignment.
-  try {
-    const [{ data: member }, { data: mentor }] = await Promise.all([
-      supabase.from("profiles").select("first_name, full_name").eq("id", req.profile_id).maybeSingle(),
-      supabase.from("profiles").select("full_name").eq("id", mentorId).maybeSingle(),
-    ]);
-    const admin = createAdminClient();
-    const { data: authUser } = await admin.auth.admin.getUserById(req.profile_id);
-    const email = authUser?.user?.email;
-    if (email) {
-      const built = assignedMentorEmail(
-        member?.first_name || member?.full_name || undefined,
-        mentor?.full_name || "מנטורית מהקהילה"
-      );
-      const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
-      if (!sent.ok) console.error("[assign mentor email] send failed:", sent.error);
-    }
-  } catch (e) {
-    console.error("[assign mentor email] failed:", e);
-  }
+  await inviteMentorToAssignment(requestId);
 
   revalidatePath("/admin/mentor-requests");
   revalidatePath("/mentor");
+}
+
+/**
+ * Email the assigned MENTOR: who was matched to her and for what purpose —
+ * with the acceptance ask. Best-effort; never rolls back the assignment.
+ */
+async function inviteMentorToAssignment(requestId: string): Promise<void> {
+  try {
+    const admin = createAdminClient();
+    const { data: req } = await admin
+      .from("mentor_requests")
+      .select("id, profile_id, assigned_mentor_id, reason, note, kind")
+      .eq("id", requestId)
+      .maybeSingle();
+    if (!req?.assigned_mentor_id) return;
+    const [{ data: member }, { data: mentor }, { data: mentorAuth }] = await Promise.all([
+      admin.from("profiles").select("full_name").eq("id", req.profile_id).maybeSingle(),
+      admin.from("profiles").select("first_name, full_name").eq("id", req.assigned_mentor_id).maybeSingle(),
+      admin.auth.admin.getUserById(req.assigned_mentor_id),
+    ]);
+    const email = mentorAuth?.user?.email;
+    if (!email) return;
+    const purpose =
+      req.kind === "employment" ? "ליווי בחודשי עבודה ראשונים" : mentorReasonLabel(req.reason);
+    const built = mentorAssignmentInviteEmail(
+      mentor?.first_name || mentor?.full_name?.split(" ")[0] || undefined,
+      member?.full_name || "חברת קהילה",
+      purpose,
+      req.note ?? null
+    );
+    const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+    if (!sent.ok) console.error("[mentor invite email] send failed:", sent.error);
+  } catch (e) {
+    console.error("[mentor invite email] failed:", e);
+  }
 }
 
 /**
@@ -171,41 +191,34 @@ export async function assignEmploymentMentor(
     .limit(1)
     .maybeSingle();
 
-  const { error } = existing
+  const inserted = existing
     ? await supabase
         .from("mentor_requests")
-        .update({ assigned_mentor_id: mentorId, status: "handled", handled_at: now })
+        .update({
+          assigned_mentor_id: mentorId,
+          status: "handled",
+          handled_at: now,
+          mentor_accepted_at: null,
+        })
         .eq("id", existing.id)
-    : await supabase.from("mentor_requests").insert({
-        profile_id: profileId,
-        kind: "employment",
-        reason: "first_months",
-        status: "handled",
-        assigned_mentor_id: mentorId,
-        handled_at: now,
-      });
-  if (error) return { error: "השיוך נכשל. רענני את הדף ונסי שוב." };
+        .select("id")
+        .maybeSingle()
+    : await supabase
+        .from("mentor_requests")
+        .insert({
+          profile_id: profileId,
+          kind: "employment",
+          reason: "first_months",
+          status: "handled",
+          assigned_mentor_id: mentorId,
+          handled_at: now,
+        })
+        .select("id")
+        .maybeSingle();
+  if (inserted.error || !inserted.data) return { error: "השיוך נכשל. רענני את הדף ונסי שוב." };
 
-  // Best-effort: a failed email never rolls back the assignment.
-  try {
-    const [{ data: member }, { data: mentor }] = await Promise.all([
-      supabase.from("profiles").select("first_name, full_name").eq("id", profileId).maybeSingle(),
-      supabase.from("profiles").select("full_name").eq("id", mentorId).maybeSingle(),
-    ]);
-    const admin = createAdminClient();
-    const { data: authUser } = await admin.auth.admin.getUserById(profileId);
-    const email = authUser?.user?.email;
-    if (email) {
-      const built = assignedMentorEmail(
-        member?.first_name || member?.full_name || undefined,
-        mentor?.full_name || "מנטורית מהקהילה"
-      );
-      const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
-      if (!sent.ok) console.error("[assign employment mentor email] send failed:", sent.error);
-    }
-  } catch (e) {
-    console.error("[assign employment mentor email] failed:", e);
-  }
+  // The mentor gets the invite — the member hears about it when she accepts.
+  await inviteMentorToAssignment(inserted.data.id);
 
   revalidatePath(`/admin/members/${profileId}`);
   revalidatePath("/profile");
@@ -560,6 +573,20 @@ export async function updateFeedbackLabels(
   revalidatePath("/admin/config");
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/**
+ * The "מאגר המנטוריות עוד בבנייה" notice on the member's mentor screen —
+ * on while the pool is small, off with one click when it's ready.
+ */
+export async function setMentorPoolNotice(on: boolean): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("app_settings")
+    .upsert({ key: "mentor_pool_notice", value: { on } }, { onConflict: "key" });
+  revalidatePath("/admin/config");
+  revalidatePath("/mentor");
 }
 
 export type FormState = { ok?: boolean; error?: string };

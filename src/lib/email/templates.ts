@@ -336,6 +336,32 @@ export function mentorRequestEmail(
 }
 
 /** Tell a member which mentor will accompany her, with a link to the chat. */
+/**
+ * To the MENTOR: a member was matched to her, for a stated purpose — she has
+ * to ACCEPT before the member sees her (the owner's flow, 2026-08-27).
+ */
+export function mentorAssignmentInviteEmail(
+  mentorName: string | undefined,
+  memberName: string,
+  purposeLabel: string,
+  note: string | null
+): BuiltEmail {
+  return {
+    subject: "צוותה לך מנטית — מחכה לאישור שלך 👑",
+    html: renderEmail({
+      heading: "צוותה לך מנטית 👑",
+      lines: [
+        `${mentorName ? `היי ${escapeHtml(mentorName)}, ` : ""}שמחות לספר ששיבצנו אלייך את <b>${escapeHtml(memberName)}</b>.`,
+        `הצורך: <b>${escapeHtml(purposeLabel)}</b>.${note ? ` במילים שלה: "${escapeHtml(note)}"` : ""}`,
+        "כדי שהליווי יתחיל צריך את האישור שלך — היא תראה אותך רק אחרי שתאשרי. אם זה לא מתאים כרגע, אפשר גם לוותר ונשבץ מישהי אחרת.",
+      ],
+      ctaText: "לאישור השיבוץ",
+      ctaUrl: `${SITE}/mentor`,
+      footnote: "תודה שאת חלק מזה 💜",
+    }),
+  };
+}
+
 export function assignedMentorEmail(
   memberName: string | undefined,
   mentorName: string

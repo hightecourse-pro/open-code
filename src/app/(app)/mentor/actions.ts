@@ -1,11 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { raiseAlert } from "@/lib/alerts";
 import { getProfile, isSubscriber } from "@/lib/auth";
 import { sendResendEmail } from "@/lib/email/resend";
-import { mentorRequestEmail } from "@/lib/email/templates";
+import { assignedMentorEmail, mentorRequestEmail } from "@/lib/email/templates";
 import { MENTOR_REQUEST_REASONS, mentorReasonLabel } from "@/lib/mentor-requests";
 
 export type MentorRequestState = { ok?: boolean; error?: string };
@@ -83,4 +85,108 @@ export async function requestMentor(
   revalidatePath("/mentor");
   revalidatePath("/admin/mentor-requests");
   return { ok: true };
+}
+
+/**
+ * The MENTOR accepts an assignment made to her. Only now the member sees her
+ * (and gets the "צוותה לך מנטורית" email) — the owner's flow: assignment
+ * starts as an invitation, never as a fact.
+ */
+export async function acceptMentorAssignment(requestId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const admin = createAdminClient();
+  const { data: req } = await admin
+    .from("mentor_requests")
+    .select("id, profile_id, assigned_mentor_id, mentor_accepted_at")
+    .eq("id", requestId)
+    .maybeSingle();
+  // Only HER assignment, and only once.
+  if (!req || req.assigned_mentor_id !== user.id || req.mentor_accepted_at) return;
+
+  await admin
+    .from("mentor_requests")
+    .update({ mentor_accepted_at: new Date().toISOString() })
+    .eq("id", requestId);
+
+  // Now — and only now — the member hears who accompanies her.
+  try {
+    const [{ data: member }, { data: mentor }, { data: memberAuth }] = await Promise.all([
+      admin.from("profiles").select("first_name, full_name").eq("id", req.profile_id).maybeSingle(),
+      admin.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+      admin.auth.admin.getUserById(req.profile_id),
+    ]);
+    const email = memberAuth?.user?.email;
+    if (email) {
+      const built = assignedMentorEmail(
+        member?.first_name || member?.full_name || undefined,
+        mentor?.full_name || "מנטורית מהקהילה"
+      );
+      const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+      if (!sent.ok) console.error("[mentor accept email] send failed:", sent.error);
+    }
+  } catch (e) {
+    console.error("[mentor accept email] failed:", e);
+  }
+
+  await raiseAlert({
+    kind: "mentor_assignment_accepted",
+    severity: "info",
+    title: "מנטורית אישרה שיבוץ 👑",
+    body: "השיבוץ אושר — המנטית רואה אותה מעכשיו וקיבלה מייל.",
+    context: { requestId, mentorId: user.id },
+    dedupeKey: `mentor-accept:${requestId}`,
+  });
+
+  revalidatePath("/mentor");
+  revalidatePath("/profile");
+  revalidatePath("/admin/mentor-requests");
+}
+
+/**
+ * The mentor passes on an assignment: it goes back to the open queue with no
+ * mentor, and the admin is alerted to pick someone else. The member never
+ * saw the assignment, so nothing breaks for her.
+ */
+export async function declineMentorAssignment(requestId: string): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const admin = createAdminClient();
+  const { data: req } = await admin
+    .from("mentor_requests")
+    .select("id, assigned_mentor_id, mentor_accepted_at")
+    .eq("id", requestId)
+    .maybeSingle();
+  if (!req || req.assigned_mentor_id !== user.id || req.mentor_accepted_at) return;
+
+  const { data: mentor } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  await admin
+    .from("mentor_requests")
+    .update({ assigned_mentor_id: null, status: "open", handled_at: null })
+    .eq("id", requestId);
+
+  await raiseAlert({
+    kind: "mentor_assignment_declined",
+    severity: "warning",
+    title: `${mentor?.full_name ?? "מנטורית"} ויתרה על שיבוץ — צריך לשבץ מישהי אחרת`,
+    body: "הבקשה חזרה לתור הפתוח במסך בקשות למנטורית.",
+    context: { requestId, mentorId: user.id },
+    dedupeKey: `mentor-decline:${requestId}:${Date.now()}`,
+  });
+
+  revalidatePath("/mentor");
+  revalidatePath("/admin/mentor-requests");
 }
