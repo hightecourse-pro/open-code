@@ -15,6 +15,8 @@ const badgeVariants = cva(
         warm: "bg-tint-warm text-crown-gold border border-crown-gold-soft",
         mentor: "bg-[linear-gradient(95deg,#FFD166,#E5A93C)] text-[#5A3D00]",
         tech: "bg-ink-100 text-ink-700 border border-ink-200",
+        /** Quiet neutral for non-error states (טיוטה, הסתיים) — no decorations. */
+        gray: "bg-ink-100 text-ink-600 border border-ink-200",
       },
     },
     defaultVariants: { variant: "purple" },

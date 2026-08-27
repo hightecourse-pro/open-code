@@ -52,7 +52,7 @@ export function ArticlesAdminList({
             )}
           </div>
         </div>
-        <Badge variant={a.is_published ? "mint" : "tech"}>{a.is_published ? "מפורסם" : "טיוטה"}</Badge>
+        <Badge variant={a.is_published ? "mint" : "gray"}>{a.is_published ? "מפורסם" : "טיוטה"}</Badge>
         <Button size="sm" variant="secondary" onClick={() => void setArticlePublished(a.id, !a.is_published)}>
           {a.is_published ? "החזרה לטיוטה" : "פרסום"}
         </Button>

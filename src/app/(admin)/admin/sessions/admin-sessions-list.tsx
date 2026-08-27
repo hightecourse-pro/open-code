@@ -32,8 +32,8 @@ function isPast(s: AdminSessionRow, now: number): boolean {
 }
 
 function StatusBadge({ s }: { s: AdminSessionRow }) {
-  if (s.canceled_at) return <Badge variant="tech">בוטל</Badge>;
-  if (s.status === "done") return <Badge variant="tech">הסתיים</Badge>;
+  if (s.canceled_at) return <Badge variant="gray">בוטל</Badge>;
+  if (s.status === "done") return <Badge variant="gray">הסתיים</Badge>;
   if (s.status === "live") return <Badge variant="pink">🔴 מתקיים</Badge>;
   return <Badge variant="mint">מתוכנן</Badge>;
 }

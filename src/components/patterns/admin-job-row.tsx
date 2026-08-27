@@ -64,14 +64,14 @@ const KIND_LABEL = Object.fromEntries(JOB_KIND_OPTIONS.map((k) => [k.value, k.la
 // gradient stays for the one genuinely happy ending.
 const PIPELINE: Record<
   JobPipelineStatus,
-  { label: string; variant: "tech" | "mint" | "indigo" | "warm" | "grad" | "pink" }
+  { label: string; variant: "gray" | "mint" | "indigo" | "warm" | "grad" | "pink" }
 > = {
-  draft: { label: "לא פורסם", variant: "tech" },
+  draft: { label: "לא פורסם", variant: "gray" },
   published: { label: "פורסם", variant: "mint" },
   candidates_sent: { label: "נשלחו מועמדות", variant: "indigo" },
   interviews: { label: "ראיונות", variant: "warm" },
   hired: { label: "גויס", variant: "grad" },
-  closed_no_hire: { label: "נסגר ללא גיוס", variant: "tech" },
+  closed_no_hire: { label: "נסגר ללא גיוס", variant: "gray" },
 };
 
 const DATE_HE = new Intl.DateTimeFormat("he-IL", {
