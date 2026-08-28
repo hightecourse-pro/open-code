@@ -93,6 +93,121 @@ export async function setMentorRequestStatus(id: string, status: "open" | "handl
 }
 
 /**
+ * Reopen a handled request WITH a documented reason (Shira: no reopen without
+ * why). Clears the existing assignment — the assigned mentor's invite dies
+ * with it, which the confirm dialog says out loud.
+ */
+export async function reopenMentorRequest(id: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  if (!reason) return; // the UI requires it; the server won't act without it
+  const supabase = await createClient();
+  await supabase
+    .from("mentor_requests")
+    .update({
+      status: "open",
+      handled_at: null,
+      assigned_mentor_id: null,
+      mentor_accepted_at: null,
+      reopen_reason: reason,
+      reopened_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  revalidatePath("/admin/mentor-requests");
+  revalidatePath("/mentor");
+}
+
+/** Mark a mentor temporarily unavailable / available again, with a log line. */
+export async function setMentorAvailability(
+  mentorId: string,
+  available: boolean,
+  reason?: string
+): Promise<void> {
+  const me = await requireRole("admin");
+  const admin = createAdminClient();
+  await admin.from("profiles").update({ mentor_available: available }).eq("id", mentorId);
+  await admin.from("mentor_admin_log").insert({
+    mentor_id: mentorId,
+    action: available ? "available" : "unavailable",
+    reason: reason?.trim().slice(0, 300) || null,
+    created_by: me.id,
+  });
+  revalidatePath("/admin/mentors");
+  revalidatePath("/admin/mentor-requests");
+}
+
+/**
+ * Cancel a mentor's appointment — reason required, logged, and every member
+ * she actively accompanies is emailed and her request reopened for a new
+ * match. (Shira: no cancel without a reason and without telling the members.)
+ */
+export async function cancelMentorRole(mentorId: string, formData: FormData): Promise<void> {
+  const me = await requireRole("admin");
+  const reason = String(formData.get("reason") ?? "").trim().slice(0, 300);
+  if (!reason) return;
+  const admin = createAdminClient();
+
+  const { data: mentor } = await admin
+    .from("profiles")
+    .select("id, full_name")
+    .eq("id", mentorId)
+    .maybeSingle();
+  if (!mentor) return;
+
+  // Active accompaniments: assigned to her and accepted (the member SEES her).
+  const { data: active } = await admin
+    .from("mentor_requests")
+    .select("id, profile_id")
+    .eq("assigned_mentor_id", mentorId)
+    .eq("status", "handled")
+    .not("mentor_accepted_at", "is", null);
+
+  for (const req of active ?? []) {
+    await admin
+      .from("mentor_requests")
+      .update({
+        status: "open",
+        handled_at: null,
+        assigned_mentor_id: null,
+        mentor_accepted_at: null,
+        reopen_reason: `המנטורית ${mentor.full_name} סיימה את תפקידה`,
+        reopened_at: new Date().toISOString(),
+      })
+      .eq("id", req.id);
+    try {
+      const { data: authUser } = await admin.auth.admin.getUserById(req.profile_id);
+      const to = authUser?.user?.email;
+      if (to) {
+        const { data: memberRow } = await admin
+          .from("profiles")
+          .select("first_name, full_name")
+          .eq("id", req.profile_id)
+          .maybeSingle();
+        const first = memberRow?.first_name || memberRow?.full_name?.split(" ")[0] || "";
+        await sendResendEmail({
+          to,
+          subject: "עדכון על הליווי שלך בקוד פתוח 💜",
+          html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7"><p>היי ${first},</p><p>${mentor.full_name} מסיימת את תפקידה כמנטורית בקהילה, ולכן הליווי איתה נעצר. הבקשה שלך חזרה אלינו — אנחנו כבר מחפשות לך מנטורית חדשה ונעדכן אותך ברגע שנשבץ 💜</p><p>צוות קוד פתוח</p></div>`,
+        });
+      }
+    } catch (e) {
+      console.error("[mentors] cancel email failed:", e);
+    }
+  }
+
+  await admin.from("mentor_admin_log").insert({
+    mentor_id: mentorId,
+    action: "role_cancelled",
+    reason,
+    created_by: me.id,
+  });
+  await admin.from("profiles").update({ role: "junior", mentor_available: true }).eq("id", mentorId);
+  revalidatePath("/admin/mentors");
+  revalidatePath("/admin/mentor-requests");
+  revalidatePath("/mentor");
+}
+
+/**
  * Assign a mentor to a member's request: marks it handled with the mentor
  * recorded, and tells the member who will accompany her (best-effort email).
  */

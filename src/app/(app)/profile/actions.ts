@@ -341,10 +341,11 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     return { error: `כמעט סיימנו 🙂 נשארו כמה שדות חובה: ${missing.slice(0, 6).join(", ")}` };
   }
 
-  // The PM's rule: a member profile is not complete without at least one CV.
-  // A file handed in with the wizard lands in her documents like any other
-  // upload; mentors and staff are exempt — they don't job-hunt.
-  if (before?.role !== "admin" && before?.role !== "mentor") {
+  // A member profile is not complete without at least one CV. A file handed
+  // in with the wizard lands in her documents like any other upload. Mentors
+  // included since 2026-08-28 (Shira — the team reviews a mentor's CV in her
+  // application); only staff accounts are exempt.
+  if (before?.role !== "admin") {
     const { count: cvCount } = await supabase
       .from("cv_documents")
       .select("id", { count: "exact", head: true })

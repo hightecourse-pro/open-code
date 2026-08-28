@@ -175,7 +175,14 @@ export async function declineMentorAssignment(requestId: string): Promise<void> 
 
   await admin
     .from("mentor_requests")
-    .update({ assigned_mentor_id: null, status: "open", handled_at: null })
+    .update({
+      assigned_mentor_id: null,
+      status: "open",
+      handled_at: null,
+      // Visible on the admin requests screen — a decline is no longer silent.
+      reopen_reason: `המנטורית ${mentor?.full_name ?? ""} סירבה לליווי`.trim(),
+      reopened_at: new Date().toISOString(),
+    })
     .eq("id", requestId);
 
   await raiseAlert({

@@ -15,13 +15,14 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
 
-  // The PM's rule: a junior profile is complete only with at least one CV —
-  // the wizard collects one on the final step when she has none.
+  // A profile is complete only with at least one CV — the wizard collects one
+  // on the final step when she has none. Mentors included (Shira 2026-08-28):
+  // the team wants to see a mentor's CV in her application too.
   const { count: cvCount } = await supabase
     .from("cv_documents")
     .select("id", { count: "exact", head: true })
     .eq("profile_id", profile.id);
-  const requireCv = profile.role !== "mentor" && (cvCount ?? 0) === 0;
+  const requireCv = (cvCount ?? 0) === 0;
 
   const [{ data: questions }, { data: answers }, taxonomyOptions] = await Promise.all([
     supabase

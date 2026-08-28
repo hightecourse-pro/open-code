@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar, Badge, Button } from "@/components/ui";
 import { ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
-import { MentorAdminRow } from "./mentor-admin-row";
+import { MentorsList, type MentorRowData } from "./mentor-admin-row";
 import {
   approveMentorApplication,
   rejectMentorApplication,
@@ -13,13 +14,14 @@ import {
 } from "../actions";
 
 export const metadata: Metadata = { title: "ניהול מנטוריות" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminMentorsPage() {
   const supabase = await createClient();
   const [{ data: mentors }, { data: pendingApps }, { data: candidates }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, avatar_initials, specialization")
+      .select("id, full_name, avatar_initials, specialization, created_at, mentor_available")
       .eq("role", "mentor")
       .eq("status", "active")
       .order("full_name"),
@@ -43,33 +45,67 @@ export default async function AdminMentorsPage() {
   const mentorIds = (mentors ?? []).map((m) => m.id);
   const scores = await mentorScores(mentorIds);
 
-  // Per-mentor accompaniment history + the bonus ledger (the PM's ask).
+  // Per-mentor accompaniment history + bonus ledger + admin log + CV links.
   const admin = createAdminClient();
-  const [{ data: historyRows }, { data: bonusRows }, { data: historyMembers }] = await Promise.all([
-    mentorIds.length
-      ? admin
-          .from("mentor_requests")
-          .select("id, profile_id, assigned_mentor_id, reason, kind, created_at, mentor_accepted_at")
-          .in("assigned_mentor_id", mentorIds)
-          .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] }),
-    mentorIds.length
-      ? admin
-          .from("mentor_bonus_points")
-          .select("mentor_id, points, reason, created_at")
-          .in("mentor_id", mentorIds)
-          .order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] }),
-    Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
-  ]);
+  const pendingIds = (pendingApps ?? []).map((p) => p.id);
+  const cvOwnerIds = [...new Set([...mentorIds, ...pendingIds])];
+  const [{ data: historyRows }, { data: bonusRows }, { data: logRows }, { data: cvDocs }] =
+    await Promise.all([
+      mentorIds.length
+        ? admin
+            .from("mentor_requests")
+            .select("id, profile_id, assigned_mentor_id, reason, kind, created_at, mentor_accepted_at, status")
+            .in("assigned_mentor_id", mentorIds)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      mentorIds.length
+        ? admin
+            .from("mentor_bonus_points")
+            .select("mentor_id, points, reason, created_at")
+            .in("mentor_id", mentorIds)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      mentorIds.length
+        ? admin
+            .from("mentor_admin_log")
+            .select("mentor_id, action, reason, created_at")
+            .in("mentor_id", mentorIds)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+      cvOwnerIds.length
+        ? admin
+            .from("cv_documents")
+            .select("profile_id, file_path, is_default, created_at")
+            .in("profile_id", cvOwnerIds)
+            .order("is_default", { ascending: false })
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] }),
+    ]);
+
   const memberIds = [...new Set((historyRows ?? []).map((h) => h.profile_id))];
   const { data: memberNames } = memberIds.length
     ? await admin.from("profiles").select("id, full_name").in("id", memberIds)
-    : { data: historyMembers };
+    : { data: [] as { id: string; full_name: string }[] };
   const memberNameOf = new Map((memberNames ?? []).map((m) => [m.id, m.full_name]));
-  const historyOf = (mentorId: string) =>
-    (historyRows ?? [])
-      .filter((h) => h.assigned_mentor_id === mentorId)
+
+  // One CV per owner (default first), resolved to short-lived signed links.
+  const cvPathOf = new Map<string, string>();
+  for (const d of cvDocs ?? []) {
+    if (!cvPathOf.has(d.profile_id)) cvPathOf.set(d.profile_id, d.file_path);
+  }
+  const cvPaths = [...new Set(cvPathOf.values())];
+  const { data: cvSigned } = cvPaths.length
+    ? await admin.storage.from("cvs").createSignedUrls(cvPaths, 3600)
+    : { data: [] };
+  const cvUrlOfPath = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
+  const cvUrlOf = (pid: string) => {
+    const p = cvPathOf.get(pid);
+    return p ? (cvUrlOfPath.get(p) ?? null) : null;
+  };
+
+  const rows: MentorRowData[] = (mentors ?? []).map((m) => {
+    const history = (historyRows ?? [])
+      .filter((h) => h.assigned_mentor_id === m.id)
       .map((h) => ({
         id: h.id,
         memberName: memberNameOf.get(h.profile_id) ?? "חברת קהילה",
@@ -77,10 +113,28 @@ export default async function AdminMentorsPage() {
         assignedAt: h.created_at,
         acceptedAt: h.mentor_accepted_at,
       }));
-  const bonusesOf = (mentorId: string) =>
-    (bonusRows ?? [])
-      .filter((b) => b.mentor_id === mentorId)
-      .map((b) => ({ points: b.points, reason: b.reason, at: b.created_at }));
+    const activeLoad = (historyRows ?? []).filter(
+      (h) => h.assigned_mentor_id === m.id && h.status === "handled" && h.mentor_accepted_at
+    ).length;
+    return {
+      id: m.id,
+      full_name: m.full_name,
+      avatar_initials: m.avatar_initials,
+      specialization: m.specialization,
+      created_at: m.created_at,
+      mentor_available: m.mentor_available !== false,
+      activeLoad,
+      cvUrl: cvUrlOf(m.id),
+      score: scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0 },
+      history,
+      bonuses: (bonusRows ?? [])
+        .filter((b) => b.mentor_id === m.id)
+        .map((b) => ({ points: b.points, reason: b.reason, at: b.created_at })),
+      log: (logRows ?? [])
+        .filter((l) => l.mentor_id === m.id)
+        .map((l) => ({ action: l.action, reason: l.reason, at: l.created_at })),
+    };
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -113,6 +167,18 @@ export default async function AdminMentorsPage() {
                   </div>
                 </div>
                 {p.specialization && <Badge variant="purple">{p.specialization}</Badge>}
+                {cvUrlOf(p.id) ? (
+                  <a
+                    href={cvUrlOf(p.id)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"
+                  >
+                    <FileText size={13} /> קו&quot;ח
+                  </a>
+                ) : (
+                  <span className="text-[11.5px] text-ink-400">עוד לא העלתה קו&quot;ח</span>
+                )}
                 <form action={approveMentorApplication.bind(null, p.id)}>
                   <Button type="submit" size="sm">אישור 👑</Button>
                 </form>
@@ -129,20 +195,10 @@ export default async function AdminMentorsPage() {
         <h3 className="font-display text-base font-bold mb-1">מנטוריות פעילות ({mentors?.length ?? 0})</h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
           הניקוד גלוי לכל הקהילה: {ANSWER_POINTS} נק&#39; על תשובה בפורום · {ASSIGNMENT_POINTS} נק&#39; על
-          הצמדה לחברה. כאן רואים גם ממה הוא מורכב.
+          ליווי שאושר · ובונוסים ידניים על תרומה (סשנים, האקתונים…).
         </p>
-        {mentors && mentors.length > 0 ? (
-          <div className="flex flex-col">
-            {mentors.map((m) => (
-              <MentorAdminRow
-                key={m.id}
-                mentor={m}
-                score={scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0 }}
-                history={historyOf(m.id)}
-                bonuses={bonusesOf(m.id)}
-              />
-            ))}
-          </div>
+        {rows.length > 0 ? (
+          <MentorsList mentors={rows} />
         ) : (
           <p className="text-ink-500 text-sm">עדיין אין מנטוריות. בחרי חברה פעילה מהרשימה למטה.</p>
         )}

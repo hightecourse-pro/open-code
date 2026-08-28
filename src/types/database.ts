@@ -93,6 +93,8 @@ export interface Database {
           found_job: boolean;
           hired_via_us: boolean;
           hired_at: string | null;
+          /** Mentors only: temporarily unavailable for new accompaniments. */
+          mentor_available: boolean;
         } & Timestamps;
         Insert: {
           id: string;
@@ -116,6 +118,7 @@ export interface Database {
           found_job?: boolean;
           hired_via_us?: boolean;
           hired_at?: string | null;
+          mentor_available?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -133,6 +136,9 @@ export interface Database {
           mentor_accepted_at: string | null;
           created_at: string;
           handled_at: string | null;
+          /** Why a handled request was reopened (incl. "המנטורית סירבה"). */
+          reopen_reason: string | null;
+          reopened_at: string | null;
         };
         Insert: {
           id?: string;
@@ -145,8 +151,30 @@ export interface Database {
           mentor_accepted_at?: string | null;
           created_at?: string;
           handled_at?: string | null;
+          reopen_reason?: string | null;
+          reopened_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["mentor_requests"]["Insert"]>;
+        Relationships: [];
+      };
+      mentor_admin_log: {
+        Row: {
+          id: string;
+          mentor_id: string;
+          action: string;
+          reason: string | null;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          mentor_id: string;
+          action: string;
+          reason?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["mentor_admin_log"]["Insert"]>;
         Relationships: [];
       };
       /** Employer-portal clients — companies, not community members. */
