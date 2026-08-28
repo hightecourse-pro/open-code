@@ -818,6 +818,8 @@ export interface Database {
           pipeline_status: JobPipelineStatus;
           description_html: string | null;
           published_at: string | null;
+          /** Internal note for the team reviewing this job's applicants. */
+          team_note: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -841,6 +843,7 @@ export interface Database {
           pipeline_status?: JobPipelineStatus;
           description_html?: string | null;
           published_at?: string | null;
+          team_note?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["jobs"]["Insert"]>;
         Relationships: [];

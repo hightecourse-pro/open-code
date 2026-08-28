@@ -169,6 +169,16 @@ export function AdminJobRow({
         )}
       </Badge>
 
+      {/* A draft's next step is publishing — offer it right on the row. */}
+      {job.pipeline_status === "draft" && (
+        <Link
+          href={`/admin/jobs/${job.id}?tab=publish`}
+          className="shrink-0 rounded-md bg-brand-gradient px-2.5 py-1 text-[11.5px] font-bold text-white"
+        >
+          לפרסום ←
+        </Link>
+      )}
+
       {appCounts && appCounts.total > 0 && (
         <Link
           href={`/admin/jobs/${job.id}?tab=review`}

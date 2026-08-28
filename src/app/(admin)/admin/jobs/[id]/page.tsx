@@ -75,7 +75,7 @@ export default async function AdminJobPage({
   const { data: job } = await admin
     .from("jobs")
     .select(
-      "id, title, company, client_id, source, employment_type, location, tech_tags, external_url, description_html, status, job_kind, practicum_percent, pipeline_status, published_at"
+      "id, title, company, client_id, source, employment_type, location, tech_tags, external_url, description_html, status, job_kind, practicum_percent, pipeline_status, published_at, team_note"
     )
     .eq("id", id)
     .maybeSingle();
@@ -201,10 +201,20 @@ export default async function AdminJobPage({
   // VIP flags from the admin-only member_crm table — an internal triage aid
   // that stays on this admin surface, never in the portal or member views.
   const { data: crmRows } = applicantIds.length
-    ? await admin.from("member_crm").select("profile_id, is_vip").in("profile_id", applicantIds)
-    : { data: [] as { profile_id: string; is_vip: boolean }[] };
+    ? await admin
+        .from("member_crm")
+        .select("profile_id, is_vip, internal_notes")
+        .in("profile_id", applicantIds)
+    : { data: [] as { profile_id: string; is_vip: boolean; internal_notes: string | null }[] };
   const vipSet = new Set(
     (crmRows ?? []).filter((c) => c.is_vip === true).map((c) => c.profile_id)
+  );
+  // The team's general note about a member (from her page) follows her into
+  // every application she submits — Shira's "ישתקף עליה במסך הגשות".
+  const crmNoteOf = new Map(
+    (crmRows ?? []).flatMap((c) =>
+      c.internal_notes?.trim() ? [[c.profile_id, c.internal_notes] as const] : []
+    )
   );
 
   // The review center's criteria engine, scoped to THE APPLICANTS (no
@@ -297,6 +307,7 @@ export default async function AdminJobPage({
       clientFeedback: feedbackOf.get(a.applicant_id) ?? null,
       isSubscriber: p?.status === "active",
       isVip: vipSet.has(a.applicant_id),
+      crmNote: crmNoteOf.get(a.applicant_id) ?? null,
     };
   });
 
@@ -468,6 +479,8 @@ export default async function AdminJobPage({
       </p>
       <ReviewCenter
         jobId={job.id}
+        jobTitle={job.title}
+        teamNote={job.team_note ?? null}
         applications={reviewApplications}
         questions={questionItems.map((q) => ({ id: q.id, question: q.question }))}
         criteriaCatalogue={applicantCatalogue}

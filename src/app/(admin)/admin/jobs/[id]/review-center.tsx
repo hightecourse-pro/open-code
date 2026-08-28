@@ -61,6 +61,8 @@ export interface ReviewApplication {
   isSubscriber: boolean;
   /** VIP from the admin-only member_crm — internal indication only. */
   isVip: boolean;
+  /** The team's general internal note about her (member_crm) — admin-only. */
+  crmNote: string | null;
 }
 
 // -------------------------------------------------------------------- labels
@@ -174,12 +176,17 @@ function MemberFlair({ app, starClass }: { app: ReviewApplication; starClass?: s
  */
 export function ReviewCenter({
   jobId,
+  jobTitle,
+  teamNote,
   applications,
   questions,
   criteriaCatalogue,
   criteriaPools,
 }: {
   jobId: string;
+  jobTitle: string;
+  /** The per-job internal note for whoever reviews applicants. */
+  teamNote: string | null;
   applications: ReviewApplication[];
   questions: ReviewQuestion[];
   /** Profile-parameter palette scoped to the applicants (no dead chips). */
@@ -190,6 +197,8 @@ export function ReviewCenter({
   const [query, setQuery] = useState("");
   const [markFilter, setMarkFilter] = useState<"all" | "none" | AdminMark>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  // מנויות / VIP one-click filters (Shira: clear counts + easy filtering).
+  const [tierFilter, setTierFilter] = useState<"all" | "subscribers" | "vip">("all");
   // Profile-parameter criteria: question key → selected values. Selections
   // accumulate across parameters, like the publish panel.
   const [criteria, setCriteria] = useState<Record<string, string[]>>({});
@@ -251,6 +260,8 @@ export function ReviewCenter({
       notFit,
       approved,
       sentToClient,
+      subscribers: applications.filter((a) => a.isSubscriber).length,
+      vips: applications.filter((a) => a.isVip).length,
     };
   }, [applications, markOf, statusOf]);
 
@@ -275,6 +286,8 @@ export function ReviewCenter({
       if (markFilter === "none" && m !== null) return false;
       if (markFilter !== "all" && markFilter !== "none" && m !== markFilter) return false;
       if (statusFilter !== "all" && statusOf(a) !== statusFilter) return false;
+      if (tierFilter === "subscribers" && !a.isSubscriber) return false;
+      if (tierFilter === "vip" && !a.isVip) return false;
       if (wanted.length > 0) {
         const mine = criteriaPools[a.applicantId] ?? {};
         for (const c of wanted) {
@@ -294,6 +307,7 @@ export function ReviewCenter({
     criteriaPools,
     markFilter,
     statusFilter,
+    tierFilter,
     notFitVisible,
     markOf,
     statusOf,
@@ -525,7 +539,7 @@ export function ReviewCenter({
           </div>
         </div>
         {/* The tiles double as one-click filters (click again to clear). */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
           <Stat
             label="הגישו"
             value={counts.total}
@@ -576,8 +590,25 @@ export function ReviewCenter({
             }}
             className="border-[#DDC9EC] bg-tint-purple text-brand-purple"
           />
+          <Stat
+            label="מנויות"
+            value={counts.subscribers}
+            active={tierFilter === "subscribers"}
+            onClick={() => setTierFilter((v) => (v === "subscribers" ? "all" : "subscribers"))}
+            className="border-[#F3C6DD] bg-tint-pink text-brand-pink-deep"
+          />
+          <Stat
+            label="VIP ⭐"
+            value={counts.vips}
+            active={tierFilter === "vip"}
+            onClick={() => setTierFilter((v) => (v === "vip" ? "all" : "vip"))}
+            className="border-[#E5C55C] bg-tint-warm text-[#8C5E0E]"
+          />
         </div>
       </div>
+
+      {/* Per-job note for whoever reviews — travels with the job, not a member. */}
+      <TeamNoteBox jobId={jobId} initial={teamNote} />
 
       {/* --------------------------------------------------------- filters */}
       <div className="flex flex-wrap items-center gap-2">
@@ -629,6 +660,14 @@ export function ReviewCenter({
             </span>
           }
         />
+        <button
+          type="button"
+          onClick={() => exportCsv(filtered, questions, statusOf, markOf, jobTitle)}
+          className="inline-flex items-center gap-1 rounded-full border border-ink-200 bg-ink-0 px-2.5 py-1 text-[12px] font-semibold text-ink-600 hover:text-brand-purple hover:border-brand-purple cursor-pointer"
+          title="ייצוא הרשימה המסוננת לאקסל"
+        >
+          ייצוא לאקסל ({filtered.length})
+        </button>
         {/* view toggle — רשימה / טבלה */}
         <div
           className="ms-auto flex items-center gap-1"
@@ -1075,6 +1114,13 @@ export function ReviewCenter({
               </div>
             </div>
 
+            {/* The team's general note about her (from her member page). */}
+            {selected.crmNote && (
+              <p className="text-[13px] text-ink-700 bg-tint-warm border border-[#F0DCA8] rounded-md px-3 py-2 whitespace-pre-wrap">
+                <b className="text-[#8C5E0E]">הערה פנימית עליה (ממסך החברות):</b> {selected.crmNote}
+              </p>
+            )}
+
             {/* client feedback (from the portal) */}
             {selected.clientFeedback &&
               (selected.clientFeedback.interviewMarked || selected.clientFeedback.clientNote) && (
@@ -1277,4 +1323,97 @@ export function ReviewCenter({
       )}
     </div>
   );
+}
+
+// ------------------------------------------------------------- team note box
+
+/**
+ * The per-job internal note ("בדקנו מול הלקוח ש…") — for whoever reviews the
+ * applicants of THIS job. Saved on blur/button, never shown outside admin.
+ */
+function TeamNoteBox({ jobId, initial }: { jobId: string; initial: string | null }) {
+  const [note, setNote] = useState(initial ?? "");
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const dirty = note !== (initial ?? "") && savedAt === null;
+
+  return (
+    <div className="rounded-[14px] border border-[#F0DCA8] bg-tint-warm/50 p-3.5 flex flex-col gap-2">
+      <div className="text-[12.5px] font-bold text-[#8C5E0E]">
+        הערה שלנו למשרה הזו (פנימית — לצוות שעובר על ההגשות)
+      </div>
+      <Textarea
+        value={note}
+        onChange={(e) => {
+          setNote(e.target.value);
+          setSavedAt(null);
+        }}
+        rows={2}
+        placeholder="למשל: הלקוח מחפש דווקא ניסיון בצד לקוח, לשים לב לפרויקטים אמיתיים…"
+        className="bg-white"
+      />
+      <div className="flex items-center gap-2.5">
+        <Button
+          type="button"
+          size="sm"
+          disabled={pending || !dirty}
+          onClick={() =>
+            start(async () => {
+              const { setJobTeamNote } = await import("@/app/(admin)/admin/actions");
+              await setJobTeamNote(jobId, note);
+              setSavedAt("now");
+            })
+          }
+        >
+          {pending ? "שומרת…" : "שמירת ההערה"}
+        </Button>
+        {savedAt && <span className="text-[12px] font-semibold text-success">נשמר ✓</span>}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- csv export
+
+/** The filtered applicant list, as an Excel-friendly CSV (BOM + CRLF). */
+function exportCsv(
+  list: ReviewApplication[],
+  questions: ReviewQuestion[],
+  statusOf: (a: ReviewApplication) => string,
+  markOf: (a: ReviewApplication) => AdminMark | null,
+  jobTitle: string
+) {
+  const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const header = [
+    "שם",
+    "התמחות",
+    "אזור",
+    "מנויה",
+    "VIP",
+    "סטטוס",
+    "סימון פנימי",
+    "הוגשה בתאריך",
+    "למה מתאימה",
+    ...questions.map((q) => q.question),
+  ];
+  const rows = list.map((a) => [
+    a.profile?.fullName ?? "",
+    a.profile?.specialization ?? "",
+    a.profile?.region ?? "",
+    a.isSubscriber ? "כן" : "לא",
+    a.isVip ? "כן" : "לא",
+    STATUS_LABEL[statusOf(a)] ?? statusOf(a),
+    markOf(a) ? MARK_LABEL[markOf(a)!] : "",
+    fmtDate(a.submittedAt),
+    answerText(a.answers["fit"] ?? ""),
+    ...questions.map((q) => answerText(a.answers[q.id] ?? "")),
+  ]);
+  const csv =
+    "\uFEFF" + [header, ...rows].map((r) => r.map(esc).join(",")).join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `applicants-${jobTitle.replace(/[^\w\u0590-\u05FF-]+/g, "_")}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
 }

@@ -1290,6 +1290,17 @@ export async function reopenJobPublish(jobId: string): Promise<void> {
 // ------------------------------------------------------- portal job candidates
 
 /** Curate a candidate onto a client's job (shown to the client in the portal). */
+/** The per-job internal note for whoever reviews its applicants. */
+export async function setJobTeamNote(jobId: string, note: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("jobs")
+    .update({ team_note: note.trim().slice(0, 2000) || null })
+    .eq("id", jobId);
+  revalidatePath(`/admin/jobs/${jobId}`);
+}
+
 export async function addJobCandidate(jobId: string, profileId: string): Promise<void> {
   const me = await requireRole("admin");
   const supabase = await createClient();
