@@ -84,7 +84,7 @@ export async function handleExternalPayment(
       kind: "external_payment_unverified",
       severity: "warning",
       title: `תשלום ממקור לא מזוהה ממתין לאישור: ${name ?? email ?? "ללא שם"} · ${(tx.amountAgorot ?? 0) / 100} ₪`,
-      body: `הקריאה הגיעה מכתובת שאינה ברשימת נדרים המוכרות (${opts?.callerIp ?? "?"}). התשלום נשמר אבל לא יפעיל אף אחת — אשרי אותו במסך התשלומים החיצוניים אחרי הצלבה מול קונסולת נדרים. אסמכתא: ${tx.transactionId}.`,
+      body: `הדיווח הגיע ממקור שהמערכת לא מזהה כנדרים, אז התשלום נשמר אבל לא יפעיל אף אחת. אשרי אותו במסך התשלומים אחרי הצלבה מול קונסולת נדרים. אסמכתא: ${tx.transactionId}.`,
       context: { transactionId: tx.transactionId, callerIp: opts?.callerIp },
       dedupeKey: `ext-pay:${tx.transactionId}`,
     });

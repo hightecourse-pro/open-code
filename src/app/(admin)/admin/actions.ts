@@ -1988,6 +1988,10 @@ export async function replyToMemberRequest(
 ): Promise<void> {
   const me = await requireRole("admin");
   const reply = String(formData.get("reply") ?? "").trim().slice(0, 4000);
+  // An explicit "handle without answering" — never an accidental empty send.
+  const skipReply = formData.get("skip_reply") === "1";
+  if (!reply && !skipReply) return;
+  const handledByName = String(formData.get("handled_by_name") ?? "").trim().slice(0, 60) || null;
   const admin = createAdminClient();
   const { data: req } = await admin
     .from("member_requests")
@@ -2029,7 +2033,48 @@ export async function replyToMemberRequest(
 
   await admin
     .from("member_requests")
-    .update({ status: "handled", handled_at: new Date().toISOString(), handled_by: me.id })
+    .update({
+      status: "handled",
+      handled_at: new Date().toISOString(),
+      handled_by: me.id,
+      handled_by_name: handledByName,
+      reply: reply || null,
+    })
     .eq("id", requestId);
+  revalidatePath("/admin/requests");
+}
+
+/**
+ * The inbox's two preset lists — who is on the team, and the canned replies
+ * for recurring questions. Both live in app_settings so every admin sees the
+ * same lists.
+ */
+export async function saveInboxSettings(formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const names = String(formData.get("team_names") ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .slice(0, 20);
+  const canned: { title: string; body: string }[] = [];
+  try {
+    const parsed = JSON.parse(String(formData.get("canned_replies") ?? "[]"));
+    if (Array.isArray(parsed)) {
+      for (const c of parsed.slice(0, 30)) {
+        const title = String(c?.title ?? "").trim().slice(0, 80);
+        const body = String(c?.body ?? "").trim().slice(0, 2000);
+        if (title && body) canned.push({ title, body });
+      }
+    }
+  } catch {
+    // Malformed canned list — keep the names update, drop the bad list.
+  }
+  await admin
+    .from("app_settings")
+    .upsert({ key: "team_names", value: { names } as never }, { onConflict: "key" });
+  await admin
+    .from("app_settings")
+    .upsert({ key: "canned_replies", value: { items: canned } as never }, { onConflict: "key" });
   revalidatePath("/admin/requests");
 }

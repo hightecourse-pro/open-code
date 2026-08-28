@@ -699,6 +699,8 @@ export interface Database {
           status: "open" | "handled";
           handled_at: string | null;
           handled_by: string | null;
+          handled_by_name: string | null;
+          reply: string | null;
           created_at: string;
         };
         Insert: {
@@ -709,6 +711,8 @@ export interface Database {
           status?: "open" | "handled";
           handled_at?: string | null;
           handled_by?: string | null;
+          handled_by_name?: string | null;
+          reply?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["member_requests"]["Insert"]>;

@@ -168,15 +168,30 @@ async function handleCallback(req: Request) {
       // The alerts center is the permanent record (no throttle — dedupe
       // collapses repeats); email stays as a secondary ping, hourly-throttled.
       const p = params as Record<string, string | undefined>;
+      // Written for the admin who reads it, not for the developer who debugs
+      // it (Shira): plain Hebrew, no IP addresses, no empty placeholder values.
+      // The technical record still travels in `context` for whoever digs.
+      const OUTCOME_HE: Record<string, string> = {
+        not_configured: "המערכת קיבלה דיווח תשלום לפני שהוגדרו פרטי נדרים.",
+        unrecognized_mosad: "הדיווח נשא מספר מוסד שאינו שלנו — כנראה ניסיון זדוני או טעות של גורם אחר. לא נקלט כסף.",
+        missing_transaction_id: "הדיווח הגיע בלי מספר אסמכתא, אז אי אפשר לרשום אותו. אם מישהי שילמה עכשיו — כדאי להצליב מול קונסולת נדרים.",
+        external_payment_failed: "תשלום שנעשה מחוץ לאתר לא הצליח להישמר אצלנו. שווה לבדוק במסך התשלומים אם הוא מופיע, ואם לא — להצליב מול קונסולת נדרים.",
+        non_positive_amount: "הדיווח הגיע בלי סכום, אז לא נרשם. אם מישהי שילמה עכשיו — כדאי להצליב מול קונסולת נדרים.",
+        unknown_member: "התשלום מפנה לחברה שלא קיימת אצלנו — ייתכן חשבון שנמחק. הכסף נגבה בנדרים אבל לא הופעל מנוי.",
+      };
+      const details = [
+        p.ID ? `אסמכתא: ${p.ID}` : null,
+        p.Amount ? `סכום: ${p.Amount} ₪` : null,
+      ].filter(Boolean).join(" · ");
       await raiseAlert({
         kind: authedIncomplete ? "payment_renewal_incomplete" : "payment_rejected",
         severity: authedIncomplete || record.authedBy ? "critical" : "warning",
         title: authedIncomplete
           ? "חיוב מנדרים הגיע בלי זיהוי חברה — ייתכן חידוש שלא נרשם"
-          : `דיווח תשלום נדחה (${outcome})`,
+          : "דיווח תשלום מנדרים לא נקלט",
         body: authedIncomplete
-          ? `נדרים שלחו דיווח מאומת בלי Param1/Param2. אם זה חיוב חוזר של הוראת קבע — הכרטיס חויב ולא נרשם דבר. אסמכתא: ${p.ID ?? "?"}, סכום: ${p.Amount ?? "?"} ₪.`
-          : `סיבה: ${outcome} · אסמכתא: ${p.ID ?? "—"} · סכום: ${p.Amount ?? "—"} ₪ · מקור: ${String(record.ip ?? "?")}`,
+          ? `נדרים שלחו דיווח מאומת בלי לציין איזו חברה שילמה. אם זה חיוב חוזר של הוראת קבע — הכרטיס חויב ואצלנו לא נרשם דבר.${details ? " " + details + "." : ""}`
+          : `${OUTCOME_HE[outcome] ?? "הדיווח לא תאם את מה שהמערכת מצפה לו ולכן לא נרשם."}${details ? " " + details + "." : ""}`,
         context: record,
         dedupeKey: `webhook:${outcome}:${p.ID ?? String(record.ip ?? "")}`,
       });

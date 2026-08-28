@@ -1,48 +1,38 @@
 import type { Metadata } from "next";
 import { BellRing } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { Badge } from "@/components/ui";
-import { MarkAllReadButton, MarkReadButton } from "@/components/patterns/alert-row-actions";
+import { MarkAllReadButton } from "@/components/patterns/alert-row-actions";
+import { AlertsList, type AlertItem } from "@/components/patterns/alerts-list";
 
 export const metadata: Metadata = { title: "התראות" };
 export const dynamic = "force-dynamic";
-
-const SEVERITY: Record<string, { label: string; variant: "pink" | "warm" | "tech" }> = {
-  critical: { label: "קריטי", variant: "pink" },
-  warning: { label: "אזהרה", variant: "warm" },
-  info: { label: "מידע", variant: "tech" },
-};
-
-const WHEN = new Intl.DateTimeFormat("he-IL", {
-  day: "2-digit",
-  month: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "Asia/Jerusalem",
-});
 
 export default async function AdminAlertsPage() {
   const supabase = await createClient();
   const { data: alerts } = await supabase
     .from("admin_alerts")
-    .select("*")
+    .select("id, kind, severity, title, body, count, read_at, last_seen_at, dedupe_key, context")
     .order("last_seen_at", { ascending: false })
-    .limit(200);
+    .limit(500);
 
   const unread = (alerts ?? []).filter((a) => !a.read_at);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <div className="flex items-end justify-between flex-wrap gap-3">
         <div>
           <span className="font-mono text-xs text-brand-pink-deep">&lt;alerts/&gt;</span>
           <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">התראות</h1>
           <p className="t-body-sm text-ink-500">
-            כל מה שהמערכת רוצה שתדעי — תשלומים שנדחו, מנויים שפגו בלי חידוש, שיתופים
-            שנכשלו. נשאר כאן גם אחרי שהמייל נעלם בתיבה.
+            מה שדורש טיפול מסודר למעלה, עם כפתור שלוקח אותך ישר לשם. ברירת המחדל מציגה רק
+            מה שעוד לא נקרא — התראה שסומנה יורדת מהרשימה.
           </p>
         </div>
-        {unread.length > 0 && <MarkAllReadButton />}
+        {unread.length > 0 && (
+          <div className="bg-white border border-ink-200 rounded-md px-3.5 py-2 shadow-sm">
+            <MarkAllReadButton />
+          </div>
+        )}
       </div>
 
       {(alerts ?? []).length === 0 ? (
@@ -54,46 +44,7 @@ export default async function AdminAlertsPage() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {(alerts ?? []).map((a) => {
-            const sev = SEVERITY[a.severity] ?? SEVERITY.info;
-            return (
-              <div
-                key={a.id}
-                className={
-                  "bg-white border rounded-[14px] p-4 flex flex-col gap-1.5 " +
-                  (a.read_at
-                    ? "border-ink-200 opacity-70"
-                    : a.severity === "critical"
-                      ? "border-brand-pink-deep border-[1.5px] shadow-sm"
-                      : "border-ink-200 shadow-sm")
-                }
-              >
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Badge variant={sev.variant}>{sev.label}</Badge>
-                  {!a.read_at && (
-                    <span className="w-2 h-2 rounded-full bg-brand-pink-deep" aria-label="לא נקראה" />
-                  )}
-                  <span className="font-display font-bold text-ink-1000 text-[15px]">{a.title}</span>
-                  {a.count > 1 && (
-                    <span className="text-[11.5px] font-mono text-ink-500 bg-ink-50 border border-ink-200 rounded-full px-2">
-                      ×{a.count}
-                    </span>
-                  )}
-                  <span className="ms-auto text-[12px] text-ink-400" dir="ltr">
-                    {WHEN.format(new Date(a.last_seen_at))}
-                  </span>
-                </div>
-                {a.body && <p className="t-body-sm text-ink-700">{a.body}</p>}
-                {!a.read_at && (
-                  <div className="pt-1">
-                    <MarkReadButton id={a.id} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        <AlertsList alerts={(alerts ?? []) as AlertItem[]} />
       )}
     </div>
   );
