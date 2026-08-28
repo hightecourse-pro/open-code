@@ -115,10 +115,13 @@ export function AlertsList({ alerts }: { alerts: AlertItem[] }) {
     if (needle) {
       list = list.filter((a) => `${a.title} ${a.body ?? ""}`.includes(needle));
     }
-    // Priority: what needs handling first — critical, then warnings, then info;
-    // newest first inside each band.
+    // Newest day first; INSIDE each day what needs handling floats up —
+    // critical, then warnings, then info. Day headers stay contiguous this way.
     const rank = (a: AlertItem) => (a.severity === "critical" ? 0 : a.severity === "warning" ? 1 : 2);
+    const dayKey = (a: AlertItem) => a.last_seen_at.slice(0, 10);
     return list.slice().sort((a, b) => {
+      const day = dayKey(b).localeCompare(dayKey(a));
+      if (day !== 0) return day;
       const d = rank(a) - rank(b);
       if (d !== 0) return d;
       return a.last_seen_at < b.last_seen_at ? 1 : -1;
