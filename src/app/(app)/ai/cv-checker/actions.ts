@@ -37,12 +37,14 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
 
   let base64: string;
   if (docId) {
-    // A CV she already keeps with us — fetched with HER client, so RLS is what
-    // proves the document is hers before the service role touches storage.
+    // A CV she already keeps with us. profile_id is checked explicitly, not
+    // left to RLS — an admin's RLS reads every document, and the service role
+    // is about to touch storage on the strength of this row being hers.
     const { data: doc } = await supabase
       .from("cv_documents")
       .select("id, file_path, file_name")
       .eq("id", docId)
+      .eq("profile_id", user.id)
       .maybeSingle();
     if (!doc) {
       return { error: "לא מצאנו את קורות החיים ששמורות אצלנו — נסי לבחור שוב או להעלות קובץ." };

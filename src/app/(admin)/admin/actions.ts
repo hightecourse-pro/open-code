@@ -9,7 +9,6 @@ import { sendResendEmail } from "@/lib/email/resend";
 import {
   applicationPipelineEmail,
   applicationStatusEmail,
-  assignedMentorEmail,
   candidateSubmittedEmail,
   jobCandidatesEmail,
   jobPublishedEmail,

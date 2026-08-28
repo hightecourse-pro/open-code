@@ -139,8 +139,12 @@ export async function deleteCv(id: string): Promise<void> {
       .maybeSingle();
     filePath = plain?.file_path;
   }
-  if (filePath) await supabase.storage.from("cvs").remove([filePath]);
-  await supabase.from("cv_documents").delete().eq("id", id);
+  // Not hers → nothing to delete. Without this (and the profile_id on the
+  // delete) an admin, whose RLS reaches every row, could remove another
+  // member's document by id.
+  if (!filePath) return;
+  await supabase.storage.from("cvs").remove([filePath]);
+  await supabase.from("cv_documents").delete().eq("id", id).eq("profile_id", user.id);
 
   // Deleting the default must not leave her without one — the newest survivor
   // takes over, which is exactly what the apply flow would have fallen back to.

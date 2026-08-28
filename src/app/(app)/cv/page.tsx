@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { Download, FileText, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser } from "@/lib/auth";
@@ -20,11 +21,17 @@ export default async function CvPage() {
   const supabase = await createClient();
   const user = await getUser();
 
+  if (!user) redirect("/login");
+
+  // Filtered to her own rows explicitly, not just via RLS — an admin's RLS
+  // grants read on everyone's documents, which put the whole community's CVs
+  // (each with its owner's default badge) on this personal screen.
   // is_default arrives with supabase/_cv_default.sql — until it runs, the page
   // still lists her files (without the marker) instead of erroring.
   const withDefault = await supabase
     .from("cv_documents")
     .select("id, label, language, file_path, file_name, created_at, is_default")
+    .eq("profile_id", user.id)
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
   const docs = withDefault.error
@@ -32,6 +39,7 @@ export default async function CvPage() {
         await supabase
           .from("cv_documents")
           .select("id, label, language, file_path, file_name, created_at")
+          .eq("profile_id", user.id)
           .order("created_at", { ascending: false })
       ).data?.map((d) => ({ ...d, is_default: false }))
     : withDefault.data;
@@ -43,8 +51,6 @@ export default async function CvPage() {
     const { data } = await supabase.storage.from("cvs").createSignedUrl(d.file_path, 3600);
     if (data?.signedUrl) signed.set(d.id, data.signedUrl);
   }
-
-  void user; // (RLS scopes the query to the current member.)
 
   return (
     <div className="flex flex-col gap-5">

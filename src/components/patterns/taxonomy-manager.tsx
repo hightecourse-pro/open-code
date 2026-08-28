@@ -52,7 +52,9 @@ export function TaxonomyManager({
     if (!id.startsWith("temp-")) start(() => void removeTaxonomy(id));
   }
 
-  const Chips = ({ rows, group }: { rows: ConfigTaxonomy[]; group: string | null }) => (
+  // A render helper, not a component — a component born inside render would
+  // remount (and drop the add-box focus) on every keystroke.
+  const renderChips = (rows: ConfigTaxonomy[], group: string | null) => (
     <div className="flex flex-wrap items-center gap-1.5">
       {rows.map((t) => (
         <span key={t.id} className="inline-flex items-center gap-1">
@@ -98,7 +100,7 @@ export function TaxonomyManager({
         <div className="text-[11px] text-ink-500 tracking-[0.04em] uppercase font-semibold mb-2">
           {label}
         </div>
-        <Chips rows={list} group={null} />
+        {renderChips(list, null)}
       </div>
     );
   }
@@ -123,7 +125,7 @@ export function TaxonomyManager({
             {g.name && (
               <div className="text-[12px] font-bold text-brand-purple mb-1.5">{g.name}</div>
             )}
-            <Chips rows={g.rows} group={g.name} />
+            {renderChips(g.rows, g.name)}
           </div>
         ))}
 
