@@ -24,6 +24,8 @@ console.log(title ? "✅ course title shown" : "❌ title missing");
 console.log(swap ? "✅ swap-eligibility date shown" : "❌ swap date missing");
 
 const card = page.locator('text="הקורסים שלה"').first();
-await card.scrollIntoViewIfNeeded().catch(() => {});
+const box = await card.boundingBox().catch(() => null);
+if (box) await page.evaluate((y) => window.scrollTo(0, y - 80), box.y);
+await page.waitForTimeout(300);
 await page.screenshot({ path: `${SHOTS}/course-card-admin.png` });
 await browser.close();
