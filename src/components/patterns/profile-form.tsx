@@ -822,6 +822,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
         </div>
       )}
 
+      {/* Consent notice — plain text by the owner's decision (2026-08-28): no
+          checkbox; registering IS the consent (spam-law wise, stated up front). */}
+      {cur === totalSteps - 1 && expChoice !== null && (
+        <p className="text-[12px] text-ink-500 -mb-1">
+          ברישום לקהילה אני מאשרת לקבל דיוורים ומשרות מקוד פתוח.
+        </p>
+      )}
+
       {/* navigation */}
       <div className="flex items-center justify-between pt-2 border-t border-ink-100">
         {cur > 0 ? (
