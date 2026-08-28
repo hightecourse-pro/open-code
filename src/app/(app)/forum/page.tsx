@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Composer } from "@/components/patterns/composer";
+import { ComposerFold } from "@/components/patterns/composer-fold";
 import { ForumInstantList } from "@/components/patterns/forum-instant-list";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { ForumTopicRow, topicTitle, type ForumTopic } from "@/components/patterns/forum-topic-row";
@@ -196,7 +196,7 @@ export default async function ForumPage({
         canWrite={canWrite}
         savedOnly={savedOnly}
         initialQuery={initialQuery}
-        belowSearch={canWrite && !savedOnly ? <Composer kind="forum" /> : undefined}
+        belowSearch={canWrite && !savedOnly ? <ComposerFold kind="forum" /> : undefined}
         chips={
           <div className="flex gap-2 flex-wrap">
             {[
