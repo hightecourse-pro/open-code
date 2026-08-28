@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Briefcase, Download, FileText, Mail, PlayCircle, StickyNote } from "lucide-react";
+import { ArrowRight, BookOpen, Briefcase, Download, FileText, Mail, PlayCircle, StickyNote } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
@@ -25,6 +25,7 @@ import {
   practicumPeriodLabel,
 } from "@/lib/experience-entries";
 import { groupBySection } from "@/lib/profile-sections";
+import { swapEligibleAt } from "@/lib/course-library";
 import type { ConfigQuestion, QuestionScope } from "@/types/database";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
@@ -232,12 +233,10 @@ export default async function AdminMemberProfilePage({
       watchedSessionIds.length
         ? supabase.from("sessions").select("id, title").in("id", watchedSessionIds)
         : Promise.resolve({ data: [] }),
-      watched.length
-        ? supabase
-            .from("content_shares")
-            .select("owner_type, owner_id, status")
-            .eq("profile_id", id)
-        : Promise.resolve({ data: [] }),
+      supabase
+        .from("content_shares")
+        .select("owner_type, owner_id, status, granted_manually")
+        .eq("profile_id", id),
     ]);
   const contentTitleOf = new Map<string, string>([
     ...(watchedCourses ?? []).map((c) => [`course:${c.id}`, c.title] as [string, string]),
@@ -246,6 +245,37 @@ export default async function AdminMemberProfilePage({
   const shareStatusOf = new Map(
     (herShares ?? []).map((s) => [`${s.owner_type}:${s.owner_id}`, s.status])
   );
+
+  // ---- Her courses ---------------------------------------------------------
+  // Enrollments are owner-only under RLS → service role. The active take is
+  // the one thing the admin looks for first, so it renders apart and loud.
+  const { data: enrollRows } = await adminClient
+    .from("enrollments")
+    .select("course_id, status, progress_pct, started_at, created_at, switched_at, rating")
+    .eq("profile_id", id)
+    .order("started_at", { ascending: false, nullsFirst: false });
+  const enrollments = enrollRows ?? [];
+  const activeEnrollment = enrollments.find((e) => e.status === "active") ?? null;
+  const pastEnrollments = enrollments.filter((e) => e.status !== "active");
+  const courseEligibleAt = activeEnrollment
+    ? swapEligibleAt(activeEnrollment.started_at ?? activeEnrollment.created_at)
+    : null;
+
+  // Courses the team opened for her personally — on top of the library swap.
+  const giftedCourseShares = (herShares ?? []).filter(
+    (s) => s.owner_type === "course" && s.granted_manually && s.status !== "revoked"
+  );
+
+  const courseIdsNeedingTitle = [
+    ...new Set([
+      ...enrollments.map((e) => e.course_id),
+      ...giftedCourseShares.map((s) => s.owner_id),
+    ]),
+  ].filter((cid) => !contentTitleOf.has(`course:${cid}`));
+  const { data: extraCourses } = courseIdsNeedingTitle.length
+    ? await supabase.from("courses").select("id, title").in("id", courseIdsNeedingTitle)
+    : { data: [] };
+  for (const c of extraCourses ?? []) contentTitleOf.set(`course:${c.id}`, c.title);
 
   const answerMap = new Map((answers ?? []).map((a) => [a.question_id, a.value]));
 
@@ -524,6 +554,107 @@ export default async function AdminMemberProfilePage({
           </div>
         ) : (
           <p className="text-ink-500 text-sm">היא עדיין לא העלתה קורות חיים.</p>
+        )}
+      </div>
+
+      {/* Her courses — the active one stands apart from everything else */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+          <BookOpen size={16} className="text-brand-purple" /> הקורסים שלה
+        </h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          קורס פעיל אחד בכל פעם, כמו ספרייה — ההחלפה נפתחת חודש אחרי הבחירה.
+        </p>
+
+        {activeEnrollment ? (
+          <div className="bg-brand-gradient rounded-[14px] p-[1.5px] mb-3">
+            <div className="bg-white rounded-[12.5px] p-4 flex items-center gap-4 flex-wrap">
+              <div className="flex-1 min-w-[220px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="mint">הקורס הפעיל שלה</Badge>
+                  <span className="font-display text-[17px] font-black text-ink-1000">
+                    {contentTitleOf.get(`course:${activeEnrollment.course_id}`) ?? "—"}
+                  </span>
+                </div>
+                <div className="text-[12.5px] text-ink-500 mt-1.5">
+                  בחרה אותו ב-
+                  {DMY.format(new Date(activeEnrollment.started_at ?? activeEnrollment.created_at))}
+                  {" · "}
+                  {courseEligibleAt && courseEligibleAt <= new Date()
+                    ? "זכאות ההחלפה שלה פתוחה"
+                    : `זכאות החלפה מ-${DMY.format(courseEligibleAt!)}`}
+                </div>
+                <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden max-w-[260px] mt-2">
+                  <div
+                    className="h-full bg-brand-gradient rounded-full"
+                    style={{ width: `${activeEnrollment.progress_pct ?? 0}%` }}
+                  />
+                </div>
+                <div className="text-[11.5px] text-ink-500 mt-1">
+                  סימנה {activeEnrollment.progress_pct ?? 0}% מהקורס
+                </div>
+              </div>
+              <div className="shrink-0">
+                {(() => {
+                  const st = shareStatusOf.get(`course:${activeEnrollment.course_id}`);
+                  return st === "shared" ? (
+                    <Badge variant="mint">הדרייב פתוח לה</Badge>
+                  ) : st === "pending" ? (
+                    <Badge variant="gray">שיתוף הדרייב ממתין</Badge>
+                  ) : (
+                    <Badge variant="gray">עוד לא נכנסה לקורס</Badge>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        ) : pastEnrollments.length > 0 || giftedCourseShares.length > 0 ? (
+          <p className="text-ink-500 text-sm mb-3">אין לה קורס פעיל כרגע.</p>
+        ) : null}
+
+        {pastEnrollments.length > 0 && (
+          <div className="mb-1">
+            <div className="text-[12px] font-semibold text-ink-500 mb-1.5">קורסים קודמים</div>
+            <div className="flex flex-col">
+              {pastEnrollments.map((e, i) => (
+                <div
+                  key={`${e.course_id}-${i}`}
+                  className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0 flex-wrap"
+                >
+                  <span className="font-medium text-ink-900">
+                    {contentTitleOf.get(`course:${e.course_id}`) ?? "—"}
+                  </span>
+                  <span className="text-[12px] text-ink-500">
+                    {DMY.format(new Date(e.started_at ?? e.created_at))}
+                    {e.switched_at ? ` – ${DMY.format(new Date(e.switched_at))}` : ""}
+                  </span>
+                  {e.rating != null && (
+                    <span className="text-[12px] text-ink-500">דירגה {e.rating}/5</span>
+                  )}
+                  <Badge variant="gray">הוחזר לספרייה</Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {giftedCourseShares.length > 0 && (
+          <div>
+            <div className="text-[12px] font-semibold text-ink-500 mb-1.5">
+              נפתחו עבורה אישית (מעבר לספרייה)
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {giftedCourseShares.map((s) => (
+                <Badge key={s.owner_id} variant="pink">
+                  {contentTitleOf.get(`course:${s.owner_id}`) ?? "—"}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!activeEnrollment && pastEnrollments.length === 0 && giftedCourseShares.length === 0 && (
+          <p className="text-ink-500 text-sm">היא עדיין לא בחרה קורס מהספרייה.</p>
         )}
       </div>
 
