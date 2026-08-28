@@ -11,6 +11,7 @@ import { setMentorPoolNotice } from "../actions";
 import { getPricing } from "@/lib/payments/pricing";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { groupBySection } from "@/lib/profile-sections";
+import { Collapsible } from "@/components/patterns/collapsible";
 import { buildPlans, shekels } from "@/lib/payments/plans";
 import type { ConfigTaxonomy, FieldType, TaxonomyKind } from "@/types/database";
 
@@ -82,7 +83,7 @@ export default async function AdminConfigPage() {
 
       {/* Membership pricing */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">דמי מנוי</h3>
+        <Collapsible title="דמי מנוי" defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-4">
           המחיר שחברות חדשות רואות במסך ההצטרפות. המסלול השנתי מחושב אוטומטית לפי ההנחה.
         </p>
@@ -96,11 +97,12 @@ export default async function AdminConfigPage() {
           </div>
           <div className="text-ink-400">מנוי שנתי אינו מוצע יותר.</div>
         </div>
+        </Collapsible>
       </div>
 
       {/* Mentor-pool notice toggle */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">הודעת &quot;מאגר המנטוריות בבנייה&quot;</h3>
+        <Collapsible title='הודעת "מאגר המנטוריות בבנייה"' defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-3">
           מוצגת לחברות במסך המנטוריות: המענה לבקשת ליווי עשוי לקחת קצת זמן. כשהמאגר מוכן — מכבות
           כאן בלחיצה.
@@ -118,20 +120,22 @@ export default async function AdminConfigPage() {
             {mentorPoolNoticeOn ? "ההודעה מוצגת עכשיו — לחיצה תכבה" : "ההודעה כבויה — לחיצה תדליק"}
           </button>
         </form>
+        </Collapsible>
       </div>
 
       {/* Session feedback wording */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">שאלות המשוב על סשן</h3>
+        <Collapsible title="שאלות המשוב על סשן" defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-4">
           מה שואלים חברה שהייתה בסשן — ארבע שאלות דירוג, בניסוח שלך.
         </p>
         <FeedbackQuestionsForm aspects={feedbackAspects} />
+        </Collapsible>
       </div>
 
       {/* Profile questions */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">שאלות הפרופיל</h3>
+        <Collapsible title="שאלות הפרופיל" defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-4">
           השאלון מוצג לחברות כאשף בשלבים, והשאלות כאן מקובצות בדיוק לאותם שלבים ובאותו סדר — מה
           שאת רואה כאן הוא מה שהן רואות. החיצים מזיזים שאלה בתוך השלב שלה. כבי שאלה כדי להסתיר
@@ -217,11 +221,12 @@ export default async function AdminConfigPage() {
             </div>
           ))}
         </div>
+        </Collapsible>
       </div>
 
       {/* Taxonomies */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">רשימות וערכים</h3>
+        <Collapsible title="רשימות וערכים" defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-4">
           טכנולוגיות, אזורים, תחומים וקטגוריות הזמינים בכל המוצר.
         </p>
@@ -237,6 +242,7 @@ export default async function AdminConfigPage() {
             )
           )}
         </div>
+        </Collapsible>
       </div>
     </div>
   );

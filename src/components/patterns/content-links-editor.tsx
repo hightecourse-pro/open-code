@@ -1,5 +1,5 @@
-import { Trash2, Video, FolderOpen } from "lucide-react";
-import { addContentLink, deleteContentLink } from "@/app/(admin)/admin/content/actions";
+import { addContentLink } from "@/app/(admin)/admin/content/actions";
+import { ContentLinksBulkList } from "@/components/patterns/content-links-bulk";
 import type { ContentLink, ContentOwner } from "@/types/database";
 
 /**
@@ -22,33 +22,7 @@ export function ContentLinksEditor({
   return (
     <div className="flex flex-col gap-2">
       {links.length > 0 ? (
-        <ul className="flex flex-col divide-y divide-ink-100">
-          {links.map((l) => (
-            <li key={l.id} className="flex items-center gap-2 py-1.5">
-              {l.kind === "video" ? (
-                <Video size={15} className="text-brand-pink-deep shrink-0" />
-              ) : (
-                <FolderOpen size={15} className="text-brand-purple shrink-0" />
-              )}
-              <a
-                href={l.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[13px] text-ink-900 hover:text-brand-purple truncate"
-              >
-                {l.title}
-              </a>
-              <span className="text-[10.5px] text-ink-400 shrink-0">
-                {l.kind === "video" ? "סרטון (צפייה בלבד)" : "תיקיית חומרים"}
-              </span>
-              <form action={deleteContentLink.bind(null, l.id)} className="ms-auto shrink-0">
-                <button type="submit" className="text-ink-400 hover:text-danger" title="מחיקה">
-                  <Trash2 size={14} />
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
+        <ContentLinksBulkList links={links} />
       ) : (
         <p className="text-[12px] text-ink-400">אין עדיין קישורים.</p>
       )}

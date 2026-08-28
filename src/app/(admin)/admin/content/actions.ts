@@ -218,6 +218,17 @@ export async function deleteContentLink(id: string): Promise<void> {
   revalidatePath("/courses");
 }
 
+/** Delete a checked subset of a course/session's links in one motion. */
+export async function bulkDeleteContentLinks(ids: string[]): Promise<void> {
+  await requireRole("admin");
+  const clean = [...new Set(ids.filter(Boolean))].slice(0, 200);
+  if (clean.length === 0) return;
+  const supabase = await createClient();
+  await supabase.from("content_links").delete().in("id", clean);
+  revalidatePath("/admin/content");
+  revalidatePath("/courses");
+}
+
 /** Bulk-mark pending shares as done — all of them or a checked subset. */
 export async function markSharesShared(ids: string[]): Promise<void> {
   await requireRole("admin");

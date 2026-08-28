@@ -84,23 +84,24 @@ export default async function AdminContentPage() {
           </button>
         </form>
 
-        <Collapsible title="כל הקורסים" count={courses?.length ?? 0}>
-          {(courses ?? []).map((c) => (
-            <div key={c.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="font-display font-bold text-ink-1000">{c.title}</div>
-                {c.category && <span className="text-[11px] text-ink-400">{c.category}</span>}
+        {/* Every course folds closed by default (Shira) — the header line
+            still says what's inside, and deletion stays visible. */}
+        {(courses ?? []).map((c) => (
+          <div key={c.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
+            <Collapsible
+              title={`${c.title}${c.category ? ` · ${c.category}` : ""} (${c.lessons_count} שיעורים${
+                (unitsByCourse.get(c.id)?.length ?? 0) > 0
+                  ? `, ${unitsByCourse.get(c.id)!.length} קוביות`
+                  : ""
+              })`}
+              defaultOpen={false}
+            >
+              <div className="flex items-center">
                 <form action={deleteCourse.bind(null, c.id)} className="ms-auto">
                   <button type="submit" className="text-ink-400 hover:text-danger flex items-center gap-1 text-xs">
                     <Trash2 size={14} /> מחיקת קורס
                   </button>
                 </form>
-              </div>
-              <div className="text-[11px] text-ink-500 mb-3">
-                {c.lessons_count} שיעורים
-                {(unitsByCourse.get(c.id)?.length ?? 0) > 0
-                  ? ` · ${unitsByCourse.get(c.id)!.length} קוביות`
-                  : ` · ${c.duration_hours} שעות`}
               </div>
               <CourseUnitsEditor
                 courseId={c.id}
@@ -108,10 +109,10 @@ export default async function AdminContentPage() {
                 linksByUnit={linksByUnit}
                 unassigned={(linksByOwner.get(`course:${c.id}`) ?? []).filter((l) => !l.unit_id)}
               />
-            </div>
-          ))}
-          {(courses ?? []).length === 0 && <p className="text-ink-500 text-sm">אין קורסים עדיין — הוסיפי את הראשון 💜</p>}
-        </Collapsible>
+            </Collapsible>
+          </div>
+        ))}
+        {(courses ?? []).length === 0 && <p className="text-ink-500 text-sm">אין קורסים עדיין — הוסיפי את הראשון 💜</p>}
       </section>
 
       {/* ---------- Sessions ---------- */}
@@ -133,9 +134,12 @@ export default async function AdminContentPage() {
 
         {(sessions ?? []).map((s) => (
           <div key={s.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
+            <Collapsible
+              title={`${s.title}${s.topic ? ` · ${s.topic}` : ""}`}
+              count={(linksByOwner.get(`session:${s.id}`) ?? []).length}
+              defaultOpen={false}
+            >
             <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <div className="font-display font-bold text-ink-1000">{s.title}</div>
-              {s.topic && <span className="text-[11px] text-ink-400">{s.topic}</span>}
               <form action={deleteSessionContent.bind(null, s.id)} className="ms-auto">
                 <button type="submit" className="text-ink-400 hover:text-danger flex items-center gap-1 text-xs">
                   <Trash2 size={14} /> מחיקת סשן
@@ -199,6 +203,7 @@ export default async function AdminContentPage() {
               </button>
             </form>
             <ContentLinksEditor ownerType="session" ownerId={s.id} links={linksByOwner.get(`session:${s.id}`) ?? []} />
+            </Collapsible>
           </div>
         ))}
         {(sessions ?? []).length === 0 && <p className="text-ink-500 text-sm">אין סשנים עדיין.</p>}

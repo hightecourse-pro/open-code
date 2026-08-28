@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { AdminCreateSession } from "@/components/patterns/admin-create-session";
+import { Collapsible } from "@/components/patterns/collapsible";
 import { AdminSessionsList, type AdminSessionRow } from "./admin-sessions-list";
 
 export const metadata: Metadata = { title: "ניהול סשנים" };
@@ -56,14 +57,16 @@ export default async function AdminSessionsPage() {
         <p className="t-body-sm text-ink-700">כל השעות כאן — ובכל מה שהחברות רואות — הן שעון ישראל.</p>
       </div>
 
+      {/* Closed by default (Shira) — a button opens the creation form. */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-3">הוספת סשן</h3>
-        <AdminCreateSession />
-        <p className="text-[12.5px] text-ink-500 mt-3 bg-ink-50 border border-ink-200 rounded-md px-3 py-2">
-          מה קורה אחרי ההוספה? הסשן מופיע מיד במסך האירועים של החברות, והתזכורות נשלחות
-          אוטומטית במייל למנויות: בבוקר יום הסשן, חצי שעה לפני, וברגע שהוא מתחיל. מייל הכרזה
-          מיידי לא נשלח.
-        </p>
+        <Collapsible title="➕ סשן חדש" defaultOpen={false}>
+          <AdminCreateSession />
+          <p className="text-[12.5px] text-ink-500 bg-ink-50 border border-ink-200 rounded-md px-3 py-2">
+            מה קורה אחרי ההוספה? הסשן מופיע מיד במסך האירועים של החברות, והתזכורות נשלחות
+            אוטומטית במייל למנויות: בבוקר יום הסשן, חצי שעה לפני, וברגע שהוא מתחיל. מייל הכרזה
+            מיידי לא נשלח.
+          </p>
+        </Collapsible>
       </div>
 
       <AdminSessionsList sessions={rows} />
