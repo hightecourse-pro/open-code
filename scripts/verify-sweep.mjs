@@ -36,6 +36,9 @@ await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 
 
 // 1. upload a CV at /cv so the checker has a saved document
 await page.goto(`${BASE}/cv`);
+// Hydration must finish before the file-change event, or React never sees it
+// and the submit button stays on "קודם בחרי קובץ".
+await page.waitForLoadState("networkidle");
 await page.locator("#file").setInputFiles({ name: "qa-sweep-cv.pdf", mimeType: "application/pdf", buffer: PDF });
 await page.locator('button:has-text("שמירת הקובץ")').click();
 await page.waitForSelector("text=הקובץ נשמר", { timeout: 20000 });
@@ -74,8 +77,10 @@ const typingNow = (await page.locator("text=המראיינת מקלידה").coun
 ok("answer bubble appears instantly", bubbleNow);
 ok("typing indicator appears", typingNow);
 await page.screenshot({ path: `${SHOTS}/sweep-4-interview-optimistic.png` });
-await page.waitForSelector('a[href*="/ai/keys"]', { timeout: 25000 });
-const sessHref = await page.locator('a[href*="/ai/keys"]').last().getAttribute("href");
+// Match ONLY the alert's link (it carries ?next=) — the sidebar's plain
+// /ai/keys item also exists on the page.
+await page.waitForSelector('a[href*="next="]', { timeout: 25000 });
+const sessHref = await page.locator('a[href*="next="]').last().getAttribute("href");
 ok("key alert returns to session", decodeURIComponent(sessHref ?? "").includes(`next=/ai/interview/${SESSION}`));
 const restored = await page.locator('input[name="answer"]').inputValue();
 ok("failed answer restored to box", restored.includes("מוטיבציה"));

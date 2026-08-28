@@ -76,11 +76,14 @@ await member.screenshot({ path: `${SHOTS}/mentor-visible.png` });
 // ── 6: admin history + bonus ─────────────────────────────────────────────────
 await admin.goto(`${BASE}/admin/mentors`);
 await admin.waitForLoadState("networkidle");
-await admin.locator('button:has-text("היסטוריית ליוויים")').first().click();
+// The list holds real mentors too — anchor everything to OUR fixture's card,
+// not to whichever mentor happens to render first.
+const mentorCard = admin.locator("div.bg-white").filter({ hasText: "מנטורית בדיקה" }).first();
+await mentorCard.locator('button:has-text("היסטוריית ליוויים")').first().click();
 await admin.waitForTimeout(300);
-const adminBody = (await admin.textContent("body")) ?? "";
-ok("admin: history row with אישרה", adminBody.includes("אישרה"));
-await admin.locator('button:has-text("בונוס")').first().click();
+const cardText = (await mentorCard.textContent()) ?? "";
+ok("admin: history row with אישרה", cardText.includes("אישרה"));
+await mentorCard.locator('button:has-text("בונוס")').first().click();
 await admin.fill('input[name="points"]', "50");
 await admin.fill('input[name="reason"]', "בדיקת בונוס");
 await admin.locator('button:has-text("הוספת בונוס")').click();

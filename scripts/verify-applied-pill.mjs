@@ -1,4 +1,7 @@
-// The applied job must be back on the board, with its status pill.
+// Current board contract (tester round 2026-08-26): a job she applied to
+// LEAVES the board and lives in "ההגשות שלי" with its status pill. (This
+// script used to assert the opposite — the 2026-08-25 behavior.)
+// Run AFTER verify-jobs-redesign, which creates the application.
 import { chromium } from "@playwright/test";
 const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); process.exit(1); })();
 const PASS = requireEnv("VERIFY_FIXTURE_PASSWORD");
@@ -12,16 +15,26 @@ await page.fill('input[name="email"]', "sub.test@opencode.test");
 await page.fill('input[name="password"]', PASS);
 await page.click('button[type="submit"]');
 await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 25000 });
+
+// Her applications live in the mine view, each with a status pill.
+await page.goto(`${BASE}/jobs?view=mine`);
+await page.waitForLoadState("networkidle");
+const mineText = (await page.textContent("body")) ?? "";
+const appliedTitles = ["Junior Frontend Developer"].filter((t) => mineText.includes(t));
+if (!appliedTitles.length) {
+  console.log("❌ no applications in ההגשות שלי — run verify-jobs-redesign first (it applies)");
+  await browser.close();
+  process.exit(1);
+}
+const hasPill = /הוגשה לקוד פתוח|בבדיקה אצלנו|התקבלת|לא התקדם/.test(mineText);
+console.log(hasPill ? "✅ mine view shows the application with a status pill" : "❌ status pill missing in mine view");
+await page.screenshot({ path: `${SHOTS}/jobs-5-applied-pill.png`, fullPage: true });
+
+// And the same job is OFF the board — it would be duplication.
 await page.goto(`${BASE}/jobs`);
 await page.waitForLoadState("networkidle");
-
-const appliedCard = page.locator('article:has-text("הוגשה לקוד פתוח ✓")');
-const count = await appliedCard.count();
-console.log("cards with applied pill:", count);
-if (count > 0) {
-  const txt = await appliedCard.first().innerText();
-  console.log("card mentions status+date:", /הגשת — נעדכן/.test(txt) && /·/.test(txt) ? "✅" : "partial", "| has apply button:", /הגשת מועמדות/.test(txt) ? "❌ should not" : "✅ none");
-  await appliedCard.first().screenshot({ path: `${SHOTS}/jobs-5-applied-pill.png` });
-}
-console.log(count > 0 ? "✅ applied job visible on the board with its status" : "❌ not found");
+const boardTitles = await page.locator("article .font-display").allTextContents();
+const dup = boardTitles.some((t) => appliedTitles.some((a) => t.includes(a)));
+console.log(!dup ? "✅ applied job left the board (lives only in ההגשות שלי)" : "❌ applied job still on the board");
 await browser.close();
+process.exit(hasPill && !dup ? 0 : 1);

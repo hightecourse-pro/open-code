@@ -37,7 +37,8 @@ async function login(page, email, pass) {
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   await login(page, "sub.test@opencode.test", FIXTURE_PASS);
 
-  await page.goto(`${BASE}/profile`);
+  // The card moved to its own /subscription screen (PM round 3).
+  await page.goto(`${BASE}/subscription`);
   await page.waitForLoadState("networkidle");
   ok("subscription card shown", (await page.locator("text=המנוי שלי").count()) > 0);
   ok("renewal date shown", (await page.locator("text=מתחדש אוטומטית ב-").count()) > 0);
@@ -55,7 +56,7 @@ async function login(page, email, pass) {
     || (await page.locator("text=ביטלת את החידוש").count()) > 0);
   await page.screenshot({ path: `${SHOTS}/mm-3-cancel-banner.png` });
 
-  await page.goto(`${BASE}/profile`);
+  await page.goto(`${BASE}/subscription`);
   await page.locator('button:has-text("התחרטתי")').click();
   await page.waitForSelector("text=מתחדש אוטומטית ב-", { timeout: 20000 });
   ok("resume restores renewal", true);
@@ -69,7 +70,14 @@ async function login(page, email, pass) {
     await page.waitForSelector("text=הקורס הפעיל שלך", { timeout: 25000 });
   }
   ok("active hero shows swap date", (await page.locator("text=זכאות החלפת קורס:").count()) > 0);
-  ok("locked cards show swap date", (await page.locator("text=זכאות החלפת קורס").count()) > 1);
+  // The catalogue folded behind a section (PM feedback) — open it first.
+  const fold = page.locator('button:has-text("כל הקורסים בספרייה")').first();
+  if (await fold.count()) await fold.click().catch(() => {});
+  await page.waitForTimeout(400);
+  ok(
+    "swap eligibility date printed (fold or cards)",
+    (await page.locator("text=זכאות ההחלפה").count()) + (await page.locator("text=זכאות החלפת קורס").count()) > 1
+  );
   await page.screenshot({ path: `${SHOTS}/mm-4-course-dates.png`, fullPage: true });
   await page.close();
 }
@@ -86,7 +94,13 @@ async function login(page, email, pass) {
   await page.waitForTimeout(4000);
   await page.goto(`${BASE}/admin/mentors`);
   await page.waitForLoadState("networkidle");
-  ok("applicant approved (queue gone)", (await page.locator("text=בקשות הצטרפות כמנטורית").count()) === 0);
+  // Only OUR applicant must leave the queue — other pending applicants (e.g.
+  // the gate script's checkout.probe) may legitimately be waiting there.
+  const queueSection = page.locator("section, div").filter({ hasText: "בקשות הצטרפות כמנטורית" }).last();
+  const stillQueued = (await queueSection.count())
+    ? ((await queueSection.textContent()) ?? "").includes("מנטורית בדיקה")
+    : false;
+  ok("applicant approved (left the queue)", !stillQueued);
   ok("score breakdown line shown", (await page.locator("text=תשובות בפורום").count()) > 0);
 
   await page.goto(`${BASE}/admin/mentor-requests?jyears=0&jq=`);
@@ -103,14 +117,17 @@ async function login(page, email, pass) {
   await login(page, "mentor.test@opencode.test", FIXTURE_PASS);
   await page.goto(`${BASE}/forum`);
   await page.waitForLoadState("networkidle");
+  // Mentors GET the jobs board since 2026-08-26 (senior roles are published
+  // to them); the course library stays a junior benefit.
   const jobsLink = await page.locator('aside a[href="/jobs"], nav a[href="/jobs"]').count();
   const coursesLink = await page.locator('aside a[href="/courses"], nav a[href="/courses"]').count();
-  ok("sidebar hides jobs for mentor", jobsLink === 0);
+  ok("sidebar shows jobs for mentor", jobsLink > 0);
   ok("sidebar hides courses for mentor", coursesLink === 0);
   await page.screenshot({ path: `${SHOTS}/mm-7-mentor-sidebar.png` });
 
   await page.goto(`${BASE}/jobs`);
-  ok("jobs page shows mentor note", (await page.locator("text=לוח המשרות מיועד לחברות").count()) > 0);
+  await page.waitForLoadState("networkidle");
+  ok("jobs board opens for mentor", (await page.locator("text=משרות").count()) > 0);
   await page.goto(`${BASE}/courses`);
   ok("courses page shows mentor note", (await page.locator("text=ספריית הקורסים מיועדת לחברות").count()) > 0);
   await page.close();

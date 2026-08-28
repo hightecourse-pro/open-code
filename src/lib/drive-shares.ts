@@ -336,17 +336,29 @@ async function requestGmail(profileId: string): Promise<boolean> {
 
 /** Drive object ids for a course/session, skipping links that aren't Drive URLs. */
 export async function fileIdsFor(ownerType: ContentOwner, ownerId: string): Promise<string[]> {
+  return (await linksFor(ownerType, ownerId)).driveIds;
+}
+
+/**
+ * The owner's links split into Drive ids and a total count — the queue needs
+ * both, because "no Drive links yet" and "the links exist but live on YouTube"
+ * call for opposite treatments.
+ */
+export async function linksFor(
+  ownerType: ContentOwner,
+  ownerId: string
+): Promise<{ driveIds: string[]; totalLinks: number }> {
   const { data } = await createAdminClient()
     .from("content_links")
     .select("url")
     .eq("owner_type", ownerType)
     .eq("owner_id", ownerId);
-  const ids: string[] = [];
+  const driveIds: string[] = [];
   for (const l of data ?? []) {
     const id = driveFileId(l.url);
-    if (id) ids.push(id);
+    if (id) driveIds.push(id);
   }
-  return ids;
+  return { driveIds, totalLinks: (data ?? []).length };
 }
 
 /**
@@ -415,7 +427,7 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
 
   // Resolve each member's email and each owner's file list once per batch.
   const emails = new Map<string, string | null>();
-  const files = new Map<string, string[]>();
+  const files = new Map<string, { driveIds: string[]; totalLinks: number }>();
   // Members whose address Drive rejected — asked for a Gmail once per batch.
   const askedForGmail = new Set<string>();
 
@@ -434,10 +446,28 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
     }
 
     const key = `${row.owner_type}:${row.owner_id}`;
-    if (!files.has(key)) files.set(key, await fileIdsFor(row.owner_type, row.owner_id));
-    const ids = files.get(key) ?? [];
+    if (!files.has(key)) files.set(key, await linksFor(row.owner_type, row.owner_id));
+    const { driveIds: ids, totalLinks } = files.get(key) ?? { driveIds: [], totalLinks: 0 };
     if (ids.length === 0) {
-      // No Drive links (yet) — nothing to do, leave the row for later.
+      // Content whose links live entirely off Drive (a YouTube recording) has
+      // nothing to grant — the URL itself is the access. Mark such grants done
+      // instead of leaving them "pending" forever in the admin queue (two real
+      // members sat there for a day over a YouTube-only session). Content with
+      // NO links yet keeps waiting — its Drive folder may still be coming.
+      if (row.status === "pending" && totalLinks > 0) {
+        await admin
+          .from("content_shares")
+          .update({ status: "shared", shared_at: new Date().toISOString() })
+          .eq("id", row.id);
+        result.granted++;
+        continue;
+      }
+      // A revoke with nothing on Drive is already fully undone.
+      if (row.status === "revoked") {
+        await admin.from("content_shares").delete().eq("id", row.id);
+        result.revoked++;
+        continue;
+      }
       result.skipped++;
       continue;
     }

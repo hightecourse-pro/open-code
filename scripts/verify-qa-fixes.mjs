@@ -26,7 +26,11 @@ async function login(page, email, pass) {
   await page.goto(`${BASE}/join`);
   await page.waitForLoadState("networkidle");
   await page.locator('button:has-text("הגשת בקשה למנטורית בקהילה")').click();
+  // The server action redirects to /forum, where the gate reopens as the
+  // mentor questionnaire — wait for the actual navigation, not load state.
+  await page.waitForURL((u) => u.pathname.startsWith("/forum"), { timeout: 25000 });
   await page.waitForLoadState("networkidle");
+  await page.waitForSelector("text=הפרופיל שלך", { timeout: 15000 }).catch(() => {});
   // She should now face the MENTOR questionnaire — its questions, not the junior's.
   const mentorQ = (await page.locator("text=במה תרצי לתרום").count()) > 0 ||
     (await page.locator("text=איפה את עובדת היום").count()) > 0;
