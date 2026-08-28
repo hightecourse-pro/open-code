@@ -5,6 +5,10 @@
 
 export class QuotaError extends Error {}
 export class InvalidKeyError extends Error {}
+// The model returned no usable text — almost always the newer flash models
+// spending the whole output budget on internal "thinking" and hitting
+// MAX_TOKENS before writing the answer. Transient: retried like a 503.
+export class EmptyResponseError extends Error {}
 
 // Try newest-first: Google retires old models (gemini-2.0-flash shut down
 // 1/6/2026; the 2.5 line is on its way out for 16/10/2026 — the AI tools
@@ -45,7 +49,18 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
     generationConfig: {
       maxOutputTokens: opts.maxOutputTokens ?? 2048,
       ...(opts.jsonSchema
-        ? { responseMimeType: "application/json", responseSchema: opts.jsonSchema }
+        ? {
+            responseMimeType: "application/json",
+            responseSchema: opts.jsonSchema,
+            // Gemini 3.x flash "thinks" by default, and thinking tokens are
+            // drawn from maxOutputTokens — so a structured-JSON call could burn
+            // the whole budget thinking and return an empty body (finishReason
+            // MAX_TOKENS). That surfaced to members as "משהו השתבש" on every CV
+            // check while their key was fine. Structured extraction/scoring
+            // doesn't need the scratchpad, so turn it off and leave the budget
+            // for the answer.
+            thinkingConfig: { thinkingBudget: 0 },
+          }
         : {}),
     },
   };
@@ -63,7 +78,11 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
   if (res.status === 429) throw new QuotaError("Gemini quota exhausted");
   if (res.status === 400 || res.status === 403) {
     const text = await res.text();
-    if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED|invalid/i.test(text)) {
+    // Match only genuine key/permission failures. A bare /invalid/ used to be
+    // here and swallowed request-shape 400s ("Invalid JSON payload", "Invalid
+    // value at responseSchema") as bad-key errors — flagging a working key and
+    // hiding the real cause.
+    if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED|API_KEY_SERVICE_BLOCKED/i.test(text)) {
       throw new InvalidKeyError("Gemini key invalid");
     }
     throw new Error(`Gemini ${res.status}: ${text.slice(0, 160)}`);
@@ -71,12 +90,22 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
   if (!res.ok) throw new Error(`Gemini ${res.status}`);
 
   const data = (await res.json()) as {
-    candidates?: { content?: { parts?: { text?: string }[] } }[];
+    candidates?: { content?: { parts?: { text?: string }[] }; finishReason?: string }[];
   };
-  return (data.candidates?.[0]?.content?.parts ?? [])
+  const candidate = data.candidates?.[0];
+  const text = (candidate?.content?.parts ?? [])
     .map((p) => p.text ?? "")
     .join("")
     .trim();
+  // An empty body is a real failure, not an empty answer — returning "" here
+  // let JSON.parse blow up two layers away with no clue why. Name it so the
+  // chain can fall through to the next model and the logs say what happened.
+  if (!text) {
+    throw new EmptyResponseError(
+      `Gemini ${model} returned no text (finishReason=${candidate?.finishReason ?? "unknown"})`
+    );
+  }
+  return text;
 }
 
 // Google's free tier fails transiently all the time — 503 "model overloaded",

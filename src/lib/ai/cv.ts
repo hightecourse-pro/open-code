@@ -64,7 +64,7 @@ export async function analyzeCv(
     system: SYSTEM,
     contents: [{ role: "user", text: user }],
     jsonSchema: SCHEMA,
-    maxOutputTokens: 2048,
+    maxOutputTokens: 4096,
   });
 }
 
