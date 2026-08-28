@@ -45,6 +45,8 @@ async function mentorSpotlight(profileId: string) {
     ["answers", "מענה לשאלות מקצועיות"],
     ["mental", "ליווי מנטלי והתנהלות בעבודה חדשה"],
     ["hackathon", "ליווי פרויקט בהאקתון"],
+    ["interview_prep", "הכנה לראיונות עבודה"],
+    ["first_months", "ליווי בחודשי עבודה ראשונים"],
   ]);
 
   const rawTech = val("mentor_tech");

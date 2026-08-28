@@ -188,13 +188,29 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   }
   const hasExperience = boolByKey.get("has_experience") ?? false;
 
+  // Select-value dependencies ("key=value"): the parent select's submitted
+  // value decides whether the follow-up is considered at all.
+  const selectValueByKey = new Map<string, string>();
+  for (const q of questions ?? []) {
+    if (q.field_type === "select") {
+      selectValueByKey.set(q.key, String(formData.get(`q_${q.id}`) ?? ""));
+    }
+  }
+
   for (const q of questions ?? []) {
     const key = `q_${q.id}`;
     // Skip questions hidden by the experience track — don't require/store them.
     if (q.intake_track === "junior" && hasExperience) continue;
     if (q.intake_track === "experienced" && !hasExperience) continue;
-    // Skip conditional follow-ups whose parent bool is off — don't require them.
-    if (q.depends_on && !boolByKey.get(q.depends_on)) continue;
+    // Skip conditional follow-ups whose parent is off — don't require them.
+    if (q.depends_on) {
+      if (q.depends_on.includes("=")) {
+        const [pk, pv] = q.depends_on.split("=");
+        if (selectValueByKey.get(pk) !== pv) continue;
+      } else if (!boolByKey.get(q.depends_on)) {
+        continue;
+      }
+    }
 
     let value: Json;
     let empty = false;

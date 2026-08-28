@@ -120,6 +120,24 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   const [selOther, setSelOther] = useState(initSelOther);
   const [multiVals, setMultiVals] = useState(initMultiVals);
 
+  // Select-value dependencies: depends_on may be "key=value" (e.g. the
+  // where-do-you-work follow-up shows only for "עובדת בהייטק"). Only parent
+  // selects are tracked in state — the rest stay uncontrolled.
+  const selectParentKeys = new Set(
+    rest
+      .map((q) => q.depends_on)
+      .filter((d): d is string => !!d && d.includes("="))
+      .map((d) => d.split("=")[0])
+  );
+  const initSelVals: Record<string, string> = {};
+  for (const q of rest) {
+    if (q.field_type === "select" && selectParentKeys.has(q.key)) {
+      const cur = answers[q.id];
+      initSelVals[q.key] = typeof cur === "string" ? cur : "";
+    }
+  }
+  const [selVals, setSelVals] = useState(initSelVals);
+
   // Language-skills matrix: saved rows first, then any default language not
   // answered yet (with an empty level = "not stored").
   const langQ = rest.find((q) => q.key === LANGUAGE_SKILLS_KEY);
@@ -155,7 +173,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (expChoice === null) return false;
     if (q.intake_track === "junior" && hasExperience) return false;
     if (q.intake_track === "experienced" && !hasExperience) return false;
-    if (q.depends_on && !bools[q.depends_on]) return false;
+    if (q.depends_on) {
+      if (q.depends_on.includes("=")) {
+        const [pk, pv] = q.depends_on.split("=");
+        if (selVals[pk] !== pv) return false;
+      } else if (!bools[q.depends_on]) {
+        return false;
+      }
+    }
     return true;
   }
 
@@ -163,7 +188,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (expChoice === null) return [];
     return groupBySection(rest, visible);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [expChoice, bools]);
+  }, [expChoice, bools, selVals]);
 
   const totalSteps = 1 + sectionSteps.length;
   const cur = Math.min(step, totalSteps - 1);
@@ -440,7 +465,12 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             id={key}
             name={key}
             defaultValue={isOther ? "other" : typeof current === "string" ? current : ""}
-            onChange={(e) => setSelOther((s) => ({ ...s, [q.id]: e.target.value === "other" }))}
+            onChange={(e) => {
+              setSelOther((s) => ({ ...s, [q.id]: e.target.value === "other" }));
+              if (selectParentKeys.has(q.key)) {
+                setSelVals((s) => ({ ...s, [q.key]: e.target.value }));
+              }
+            }}
           >
             <option value="">בחרי…</option>
             {list.map((o) => (
