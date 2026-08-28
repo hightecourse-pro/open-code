@@ -7,9 +7,9 @@ import { AdminCvTable, type AdminCvRow } from "@/components/patterns/admin-cv-ta
 export const metadata: Metadata = { title: "קורות חיים" };
 
 /**
- * Staff browser for every CV in the community: search by member, filter by
- * language, download in one click (signed URLs, valid for an hour). Files
- * stay in the private `cvs` bucket — this page is the convenient window.
+ * Staff browser for every CV in the community: search by member, separate
+ * language/type filters, preview + download (signed URLs, valid for an hour),
+ * bulk download, and job-tailored files linking to their job.
  */
 export default async function AdminCvsPage() {
   await requireRole("admin");
@@ -31,6 +31,24 @@ export default async function AdminCvsPage() {
     : { data: [] };
   const memberOf = new Map((members ?? []).map((m) => [m.id, m]));
 
+  // A job-tailored file was born inside an application — resolve which job,
+  // so the row can link to it (Shira: "קובץ מותאם למשרה לא מקשר למשרה").
+  const docIds = (docs ?? []).map((d) => d.id);
+  const { data: appRows } = docIds.length
+    ? await admin
+        .from("applications")
+        .select("cv_document_id, job_id")
+        .in("cv_document_id", docIds)
+    : { data: [] };
+  const jobIds = [...new Set((appRows ?? []).map((a) => a.job_id))];
+  const { data: jobRows } = jobIds.length
+    ? await admin.from("jobs").select("id, title").in("id", jobIds)
+    : { data: [] };
+  const jobTitleOf = new Map((jobRows ?? []).map((j) => [j.id, j.title]));
+  const jobOfDoc = new Map(
+    (appRows ?? []).flatMap((a) => (a.cv_document_id ? [[a.cv_document_id, a.job_id] as const] : []))
+  );
+
   // One batched call for all download links. Storage rethrows anything that
   // isn't a StorageError (a network hiccup, a missing service-role key), which
   // would crash the whole screen — the list of files is the point here, the
@@ -47,18 +65,23 @@ export default async function AdminCvsPage() {
   }
   const urlOf = new Map(signed.map((s) => [s.path, s.signedUrl]));
 
-  const rows: AdminCvRow[] = (docs ?? []).map((d) => ({
-    id: d.id,
-    profile_id: d.profile_id,
-    member_name: memberOf.get(d.profile_id)?.full_name ?? "חברת קהילה",
-    specialization: memberOf.get(d.profile_id)?.specialization ?? null,
-    label: d.label,
-    language: d.language,
-    file_name: d.file_name,
-    created_at: d.created_at,
-    is_default: d.is_default,
-    download_url: urlOf.get(d.file_path) ?? null,
-  }));
+  const rows: AdminCvRow[] = (docs ?? []).map((d) => {
+    const jobId = jobOfDoc.get(d.id) ?? null;
+    return {
+      id: d.id,
+      profile_id: d.profile_id,
+      member_name: memberOf.get(d.profile_id)?.full_name ?? "חברת קהילה",
+      specialization: memberOf.get(d.profile_id)?.specialization ?? null,
+      label: d.label,
+      language: d.language,
+      file_name: d.file_name,
+      created_at: d.created_at,
+      is_default: d.is_default,
+      download_url: urlOf.get(d.file_path) ?? null,
+      job_id: jobId,
+      job_title: jobId ? (jobTitleOf.get(jobId) ?? null) : null,
+    };
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -66,8 +89,8 @@ export default async function AdminCvsPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;קו&quot;ח/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">קורות חיים</h1>
         <p className="t-body-sm text-ink-500">
-          כל הקבצים שהחברות העלו, מקובצים לפי חברה — חיפוש, סינון לפי שפה והורדה בקליק. הקישורים
-          תקפים לשעה.
+          כל הקבצים שהחברות העלו, מקובצים לפי חברה — חיפוש, סינון, תצוגה מקדימה, הורדה בודדת
+          או מרוכזת. הקישורים תקפים לשעה.
         </p>
       </div>
 
