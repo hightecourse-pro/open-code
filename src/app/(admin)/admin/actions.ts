@@ -1419,6 +1419,73 @@ export async function reopenJobPublish(jobId: string): Promise<void> {
 // ------------------------------------------------------- portal job candidates
 
 /** Curate a candidate onto a client's job (shown to the client in the portal). */
+export interface MemberFilterInput {
+  defId: string;
+  type: "choice" | "text" | "language";
+  values: string[];
+  text: string;
+}
+
+/**
+ * The candidate finder's matching, moved server-side (2026-08-29): each
+ * criterion resolves to member ids in SQL; AND across criteria happens here.
+ * The old model preloaded every profile_answers row into the browser — at
+ * 3,000 members that was ~90k rows per page view.
+ */
+export async function evaluateMemberFilters(filters: MemberFilterInput[]): Promise<string[]> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  let matched: Set<string> | null = null;
+
+  for (const f of filters.slice(0, 12)) {
+    let ids: string[] = [];
+    if (f.type === "text") {
+      const needle = f.text.trim().slice(0, 80);
+      if (!needle) continue;
+      const { data } = await admin.rpc("match_answer_text", {
+        p_question: f.defId,
+        p_needle: needle,
+      });
+      ids = ((data ?? []) as { profile_id: string }[]).map((r) => r.profile_id);
+    } else if (f.type === "language") {
+      const wanted = f.values.filter(Boolean);
+      if (wanted.length === 0) continue;
+      // One question's rows only (bounded by member count) — the lang/level
+      // pairs live inside a jsonb array of objects, parsed here.
+      const { data } = await admin
+        .from("profile_answers")
+        .select("profile_id, value")
+        .eq("question_id", f.defId);
+      const { parseLangSkills } = await import("@/lib/language-skills");
+      ids = (data ?? [])
+        .filter((a) => {
+          const skills = parseLangSkills(a.value);
+          return wanted.some((sel) => {
+            const sep = sel.lastIndexOf("::");
+            const lang = sel.slice(0, sep);
+            const level = sel.slice(sep + 2);
+            return skills.some((s) => s.lang === lang && (level === "*" || s.level === level));
+          });
+        })
+        .map((a) => a.profile_id);
+    } else {
+      const wanted = f.values.filter(Boolean).slice(0, 40);
+      if (wanted.length === 0) continue;
+      const { data } = await admin.rpc("match_answer_ids", {
+        p_question: f.defId,
+        p_values: wanted,
+      });
+      ids = ((data ?? []) as { profile_id: string }[]).map((r) => r.profile_id);
+    }
+    const set = new Set(ids);
+    matched =
+      matched === null ? set : new Set([...(matched as Set<string>)].filter((id) => set.has(id)));
+    if (matched.size === 0) break;
+  }
+
+  return matched === null ? [] : [...matched].slice(0, 5000);
+}
+
 /** The per-job internal note for whoever reviews its applicants. */
 export async function setJobTeamNote(jobId: string, note: string): Promise<void> {
   await requireRole("admin");

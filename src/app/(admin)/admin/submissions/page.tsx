@@ -64,23 +64,26 @@ export default async function AdminSubmissionsPage() {
           .in("profile_id", profileIds)
           .in("question_id", answerIds)
       : { data: [] };
+  const answerMap = new Map(
+    (answers ?? []).map((a) => [`${a.profile_id}:${a.question_id}`, a.value])
+  );
   const answerOf = (pid: string, key: string): string => {
     const qid = qIdOf.get(key);
-    const v = (answers ?? []).find((a) => a.profile_id === pid && a.question_id === qid)?.value;
+    const v = qid ? answerMap.get(`${pid}:${qid}`) : undefined;
     if (v == null) return "";
     return Array.isArray(v) ? v.join(", ") : String(v);
   };
 
-  // Emails via the auth admin API — bounded by the unique profile list.
-  const emailOf = new Map<string, string>();
-  for (const pid of profileIds) {
-    try {
-      const { data } = await admin.auth.admin.getUserById(pid);
-      if (data?.user?.email) emailOf.set(pid, data.user.email);
-    } catch {
-      // best-effort — the row still renders without an email
-    }
-  }
+  // Emails in ONE set-based call — the getUserById loop was seconds of
+  // sequential auth API calls at a few hundred submissions.
+  const { data: emailRows } = profileIds.length
+    ? await admin.rpc("member_emails", { p_ids: profileIds })
+    : { data: [] };
+  const emailOf = new Map(
+    ((emailRows ?? []) as { id: string; email: string | null }[])
+      .filter((r): r is { id: string; email: string } => !!r.email)
+      .map((r) => [r.id, r.email])
+  );
 
   const items: SubmissionRow[] = rows.map((a) => {
     const p = profileOf.get(a.applicant_id);

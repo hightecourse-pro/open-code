@@ -1471,6 +1471,14 @@ export interface Database {
         Args: Record<string, never>;
         Returns: { active_learners: number; total_opens: number }[];
       };
+      match_answer_ids: {
+        Args: { p_question: string; p_values: string[] };
+        Returns: { profile_id: string }[];
+      };
+      match_answer_text: {
+        Args: { p_question: string; p_needle: string };
+        Returns: { profile_id: string }[];
+      };
       search_juniors: {
         Args: { p_q: string; p_tech: string; p_min_years: number; p_limit?: number };
         Returns: {

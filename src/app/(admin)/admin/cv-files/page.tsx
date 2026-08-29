@@ -16,10 +16,13 @@ export default async function AdminCvsPage() {
 
   // cv_documents is owner-only under RLS — staff browse via the service role.
   const admin = createAdminClient();
+  // Bounded: the newest 1200 documents (well past today's community). Links
+  // are signed ON CLICK by /admin/cv-files/sign — not en masse per page view.
   const { data: docs } = await admin
     .from("cv_documents")
     .select("id, profile_id, label, language, file_path, file_name, created_at, is_default")
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .limit(1200);
 
   const supabase = await createClient();
   const memberIds = [...new Set((docs ?? []).map((d) => d.profile_id))];
@@ -49,22 +52,6 @@ export default async function AdminCvsPage() {
     (appRows ?? []).flatMap((a) => (a.cv_document_id ? [[a.cv_document_id, a.job_id] as const] : []))
   );
 
-  // One batched call for all download links. Storage rethrows anything that
-  // isn't a StorageError (a network hiccup, a missing service-role key), which
-  // would crash the whole screen — the list of files is the point here, the
-  // links are a convenience, so a failure only costs the "הורדה" buttons.
-  const paths = (docs ?? []).map((d) => d.file_path);
-  let signed: { path: string | null; signedUrl: string | null }[] = [];
-  if (paths.length) {
-    try {
-      const { data } = await admin.storage.from("cvs").createSignedUrls(paths, 3600);
-      signed = data ?? [];
-    } catch (err) {
-      console.error("[admin/cv-files] signed URLs failed:", err);
-    }
-  }
-  const urlOf = new Map(signed.map((s) => [s.path, s.signedUrl]));
-
   const rows: AdminCvRow[] = (docs ?? []).map((d) => {
     const jobId = jobOfDoc.get(d.id) ?? null;
     return {
@@ -77,7 +64,6 @@ export default async function AdminCvsPage() {
       file_name: d.file_name,
       created_at: d.created_at,
       is_default: d.is_default,
-      download_url: urlOf.get(d.file_path) ?? null,
       job_id: jobId,
       job_title: jobId ? (jobTitleOf.get(jobId) ?? null) : null,
     };

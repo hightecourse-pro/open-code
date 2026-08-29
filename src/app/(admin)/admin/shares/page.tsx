@@ -97,9 +97,15 @@ export default async function AdminSharesPage({
   // When she first walked in. Under "access on attempt" that date IS the
   // explanation of why the share exists. Null before the log migration runs —
   // the column then simply doesn't render.
-  const { data: openStats } = await supabase
-    .from("content_open_stats")
-    .select("profile_id, owner_type, owner_id, first_open");
+  // Scoped to the members actually rendered — the un-scoped view aggregated
+  // (and shipped) member×content rows for the whole community.
+  const shareProfileIds = [...new Set(shares.map((s) => s.profile_id))];
+  const { data: openStats } = shareProfileIds.length
+    ? await supabase
+        .from("content_open_stats")
+        .select("profile_id, owner_type, owner_id, first_open")
+        .in("profile_id", shareProfileIds)
+    : { data: [] };
   const firstOpenOf = new Map(
     (openStats ?? []).map((r) => [`${r.profile_id}:${r.owner_type}:${r.owner_id}`, r.first_open])
   );
@@ -148,7 +154,8 @@ export default async function AdminSharesPage({
       .from("profiles")
       .select("id, full_name")
       .in("status", ["active", "pending"])
-      .order("full_name", { ascending: true }),
+      .order("full_name", { ascending: true })
+      .limit(300),
     supabase.from("courses").select("id, title").eq("is_published", true).order("title"),
     supabase.from("sessions").select("id, title").order("scheduled_at", { ascending: false }).limit(60),
   ]);

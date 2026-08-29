@@ -190,7 +190,32 @@ export async function loadAudienceEligibility(): Promise<AudienceEligibility> {
  * With `profileIds` the member set is scoped purely to those ids, WITHOUT the
  * eligibility gates above.
  */
+// The publish panel fires a full-community load on every debounced criteria
+// change — a burst of identical heavy scans. Memoized per warm instance for a
+// short window: within one composing session the pool barely changes.
+const communityScanCache = new Map<string, { at: number; promise: Promise<AudienceData> }>();
+const COMMUNITY_SCAN_TTL_MS = 120_000;
+
 async function loadAudienceData(profileIds?: string[], includeMentors = false): Promise<AudienceData> {
+  if (!profileIds || profileIds.length === 0) {
+    const key = includeMentors ? "with-mentors" : "juniors";
+    const now = Date.now();
+    const hit = communityScanCache.get(key);
+    if (!hit || now - hit.at > COMMUNITY_SCAN_TTL_MS) {
+      communityScanCache.set(key, {
+        at: now,
+        promise: loadAudienceDataUncached(undefined, includeMentors),
+      });
+    }
+    return communityScanCache.get(key)!.promise;
+  }
+  return loadAudienceDataUncached(profileIds, includeMentors);
+}
+
+async function loadAudienceDataUncached(
+  profileIds?: string[],
+  includeMentors = false
+): Promise<AudienceData> {
   const admin = createAdminClient();
   const [members, questions, taxonomies] = await Promise.all([
     fetchAllProfiles(profileIds, includeMentors),
@@ -203,20 +228,26 @@ async function loadAudienceData(profileIds?: string[], includeMentors = false): 
 
   const answers: { profile_id: string; question_id: string; value: unknown }[] = [];
   if (members.length > 0) {
+    // A community-wide scope drops the .in() entirely — inlining thousands of
+    // UUIDs into the querystring breaks URL limits long before the data does;
+    // the member-set intersection happens on the loop below via memberSet.
+    const scopeIds = profileIds && profileIds.length > 0 ? members.map((m) => m.id) : null;
     for (let from = 0; ; from += PAGE) {
-      const { data } = await admin
+      let pageQuery = admin
         .from("profile_answers")
         .select("profile_id, question_id, value")
-        .in("profile_id", members.map((m) => m.id))
         // Without a stable order the pages overlap and a member silently loses
         // the answer a criterion needs (same ordering as fetchAllAnswers).
         .order("profile_id", { ascending: true })
         .order("question_id", { ascending: true })
         .range(from, from + PAGE - 1);
+      if (scopeIds) pageQuery = pageQuery.in("profile_id", scopeIds);
+      const { data } = await pageQuery;
       answers.push(...((data ?? []) as typeof answers));
       if (!data || data.length < PAGE) break;
     }
   }
+  const memberSet = new Set(members.map((m) => m.id));
 
   const valuePools = new Map<string, Map<string, string[]>>();
   const add = (profileId: string, key: string, values: string[]) => {
@@ -239,6 +270,7 @@ async function loadAudienceData(profileIds?: string[], includeMentors = false): 
   }
 
   for (const a of answers) {
+    if (!memberSet.has(a.profile_id)) continue; // outside the eligible set
     const q = questionOf.get(a.question_id);
     if (!q) continue; // an inactive or non-junior question
     add(a.profile_id, q.key, answerValues(q, a.value, labelMapOf.get(q.id) ?? new Map()));

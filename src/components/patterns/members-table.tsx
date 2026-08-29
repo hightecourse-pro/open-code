@@ -1,13 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, X, StickyNote, UserRound, Target, Star } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
-import { parseLangSkills } from "@/lib/language-skills";
+import { evaluateMemberFilters } from "@/app/(admin)/admin/actions";
 import type { ProfileStatus, UserRole } from "@/types/database";
 
 export interface MemberRow {
@@ -44,55 +44,13 @@ const STATUSES: { value: string; label: string }[] = [
   { value: "rejected", label: "נדחו" },
 ];
 
-/** Does this member match one active filter? (values OR-ed within a filter) */
-function matchesFilter(
-  f: ActiveFilter,
-  def: FilterDef,
-  answer: unknown
-): boolean {
-  if (def.type === "text") {
-    const needle = f.text.trim().toLowerCase();
-    if (!needle) return true;
-    const hay = Array.isArray(answer)
-      ? answer.map(String).join(" ")
-      : typeof answer === "string"
-        ? answer
-        : "";
-    return hay.toLowerCase().includes(needle);
-  }
-
-  if (f.values.length === 0) return true;
-
-  if (def.type === "language") {
-    const skills = parseLangSkills(answer);
-    return f.values.some((sel) => {
-      const sep = sel.lastIndexOf("::");
-      const lang = sel.slice(0, sep);
-      const level = sel.slice(sep + 2);
-      return skills.some((s) => s.lang === lang && (level === "*" || s.level === level));
-    });
-  }
-
-  // Generic choice: normalize the member's answer to a string list.
-  const memberVals = Array.isArray(answer)
-    ? answer.map(String)
-    : typeof answer === "boolean" || typeof answer === "number"
-      ? [String(answer)]
-      : typeof answer === "string" && answer
-        ? [answer]
-        : [];
-  return f.values.some((sel) => memberVals.includes(sel));
-}
-
 export function MembersTable({
   members,
   filterDefs = [],
-  answersByMember = {},
   initialStatus = "",
 }: {
   members: MemberRow[];
   filterDefs?: FilterDef[];
-  answersByMember?: Record<string, Record<string, unknown>>;
   /** Pre-applied status filter — the dashboard cubes deep-link with it. */
   initialStatus?: string;
 }) {
@@ -134,6 +92,47 @@ export function MembersTable({
   const effective = active.filter((f) => f.values.length > 0 || f.text.trim().length > 0);
   const finding = effective.length > 0;
 
+  // The criteria are matched on the SERVER (SQL over profile_answers) — the
+  // browser no longer holds every member's every answer. Debounced per change.
+  const [matchIds, setMatchIds] = useState<Set<string> | null>(null);
+  const [matching, setMatching] = useState(false);
+  const effectiveKey = JSON.stringify(
+    effective.map((f) => ({ d: f.defId, v: [...f.values].sort(), t: f.text.trim() }))
+  );
+  useEffect(() => {
+    let alive = true;
+    const t = setTimeout(async () => {
+      if (effectiveKey === "[]") {
+        setMatchIds(null);
+        setMatching(false);
+        return;
+      }
+      setMatching(true);
+      try {
+        const parsed = JSON.parse(effectiveKey) as { d: string; v: string[]; t: string }[];
+        const ids = await evaluateMemberFilters(
+          parsed.map((f) => ({
+            defId: f.d,
+            type: (filterDefs.find((x) => x.id === f.d)?.type ?? "choice") as
+              | "choice"
+              | "text"
+              | "language",
+            values: f.v,
+            text: f.t,
+          }))
+        );
+        if (alive) setMatchIds(new Set(ids));
+      } finally {
+        if (alive) setMatching(false);
+      }
+    }, 300);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [effectiveKey]);
+
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return members
@@ -144,13 +143,9 @@ export function MembersTable({
           const hay = `${m.full_name} ${m.specialization ?? ""} ${m.region ?? ""}`.toLowerCase();
           if (!hay.includes(needle)) return false;
         }
-        // Candidate finder: every active parameter must match (AND across
-        // parameters, OR within one parameter's selections).
-        for (const f of effective) {
-          const def = defOf.get(f.defId);
-          if (!def) continue;
-          if (!matchesFilter(f, def, answersByMember[m.id]?.[f.defId])) return false;
-        }
+        // Candidate finder: the server returned the ids that match ALL the
+        // active criteria; while it thinks, nothing is filtered out yet.
+        if (finding && matchIds && !matchIds.has(m.id)) return false;
         return true;
       })
       .sort((a, b) => {
@@ -158,7 +153,7 @@ export function MembersTable({
         if (finding && a.is_vip !== b.is_vip) return a.is_vip ? -1 : 1;
         return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
       });
-  }, [members, q, status, vip, effective, defOf, answersByMember, finding]);
+  }, [members, q, status, vip, matchIds, finding]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -212,7 +207,9 @@ export function MembersTable({
             {finding && <span className="font-mono text-[11px]">({effective.length})</span>}
           </button>
         )}
-        <span className="text-[12px] text-ink-500 ms-auto">{rows.length} תוצאות</span>
+        <span className="text-[12px] text-ink-500 ms-auto">
+          {finding && matching ? "מסננת…" : `${rows.length} תוצאות`}
+        </span>
       </div>
 
       {/* candidate finder: filter by ANY profile parameter, multi-select */}

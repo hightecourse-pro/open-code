@@ -41,54 +41,23 @@ function KindBadge({ kind }: { kind: string }) {
  * the user (admin) client; RLS lets admins read everything anyway.
  */
 async function searchJuniors(q: string, tech: string, minYears: number) {
-  const supabase = await createClient();
-  const { data: juniors } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_initials, specialization")
-    .eq("role", "junior")
-    .eq("status", "active")
-    .eq("profile_completed", true)
-    .order("full_name");
-  if (!juniors?.length) return [];
-
-  const { data: qs } = await supabase
-    .from("config_questions")
-    .select("id, key")
-    .in("key", ["years_experience", "dev_tech", "exp_tech", "tech_stack", "genai_practiced"]);
-  const keyOf = new Map((qs ?? []).map((r) => [r.id, r.key]));
-  const { data: answers } = await supabase
-    .from("profile_answers")
-    .select("profile_id, question_id, value")
-    .in("question_id", (qs ?? []).map((r) => r.id))
-    .in("profile_id", juniors.map((j) => j.id));
-
-  const techOf = new Map<string, Set<string>>();
-  const yearsOf = new Map<string, number>();
-  for (const a of answers ?? []) {
-    const key = keyOf.get(a.question_id);
-    if (key === "years_experience" && typeof a.value === "number") {
-      yearsOf.set(a.profile_id, a.value);
-    } else if (Array.isArray(a.value)) {
-      const s = techOf.get(a.profile_id) ?? new Set<string>();
-      for (const v of a.value as string[]) s.add(String(v));
-      techOf.set(a.profile_id, s);
-    }
-  }
-
-  const needle = q.trim();
-  return juniors
-    .filter((j) => {
-      if (needle && !`${j.full_name} ${j.specialization ?? ""}`.includes(needle)) return false;
-      if (tech && !techOf.get(j.id)?.has(tech)) return false;
-      if (minYears > 0 && (yearsOf.get(j.id) ?? 0) < minYears) return false;
-      return true;
-    })
-    .slice(0, 30)
-    .map((j) => ({
-      ...j,
-      years: yearsOf.get(j.id) ?? null,
-      tech: [...(techOf.get(j.id) ?? [])].slice(0, 5),
-    }));
+  // Pushed into SQL (search_juniors RPC): the old version loaded EVERY active
+  // junior and EVERY tech/years answer just to filter 30 rows in JS.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const { data } = await createAdminClient().rpc("search_juniors", {
+    p_q: q,
+    p_tech: tech,
+    p_min_years: minYears,
+    p_limit: 30,
+  });
+  return (data ?? []).map((j) => ({
+    id: j.id,
+    full_name: j.full_name,
+    avatar_initials: j.avatar_initials,
+    specialization: j.specialization,
+    years: j.years,
+    tech: (j.tech ?? []).slice(0, 5),
+  }));
 }
 
 export default async function AdminMentorRequestsPage({

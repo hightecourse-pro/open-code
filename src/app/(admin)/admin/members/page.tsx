@@ -15,25 +15,32 @@ import {
   langLevelLabel,
   parseLangSkills,
 } from "@/lib/language-skills";
+import type { Database } from "@/types/database";
 
 export const metadata: Metadata = { title: "ניהול חברות" };
 
 type Opt = { value: string; label: string };
-type AnswerRow = { profile_id: string; question_id: string; value: unknown };
+type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
-/** Every answer row, paginated past PostgREST's silent 1000-row cap. */
-async function fetchAllAnswers(): Promise<AnswerRow[]> {
-  const admin = createAdminClient();
-  const out: AnswerRow[] = [];
+/**
+ * Every member, paged past PostgREST's silent 1000-row cap — at 3,000 members
+ * an un-ranged select quietly showed only the newest 1000 and made the rest
+ * unfindable. Profile rows are small; the answers no longer ride along at all
+ * (the candidate finder matches them in SQL, on demand).
+ */
+async function fetchAllProfiles(): Promise<ProfileRow[]> {
+  const supabase = await createClient();
+  const out: ProfileRow[] = [];
   const PAGE = 1000;
   for (let from = 0; ; from += PAGE) {
-    const { data } = await admin
-      .from("profile_answers")
-      .select("profile_id, question_id, value")
-      .order("profile_id", { ascending: true })
-      .order("question_id", { ascending: true })
+    const { data } = await supabase
+      .from("profiles")
+      .select(
+        "id, full_name, avatar_initials, role, status, specialization, region, is_experienced, is_vip, internal_notes, created_at"
+      )
+      .order("created_at", { ascending: false })
       .range(from, from + PAGE - 1);
-    out.push(...((data ?? []) as AnswerRow[]));
+    out.push(...((data ?? []) as unknown as ProfileRow[]));
     if (!data || data.length < PAGE) break;
   }
   return out;
@@ -49,52 +56,43 @@ export default async function AdminMembersPage({
   const initialStatus = ["active", "pending", "paused", "rejected"].includes(statusParam ?? "")
     ? statusParam!
     : "";
-  // The (admin) layout gates too — this is defense-in-depth for a page that
-  // serializes every member's answers into the client payload.
   await requireRole("admin");
   const supabase = await createClient();
+  const admin = createAdminClient();
 
-  const [
-    { data: members },
-    { data: questions },
-    { data: crm },
-    { data: manualHires },
-    answers,
-    taxonomyOptions,
-  ] = await Promise.all([
-    supabase.from("profiles").select("*").order("created_at", { ascending: false }),
-    supabase
-      .from("config_questions")
-      .select("*")
-      .eq("active", true)
-      .order("sort_order", { ascending: true }),
-    // VIP + notes live in the admin-only member_crm table (empty pre-migration).
-    supabase.from("member_crm").select("profile_id, is_vip, vip_reason, internal_notes"),
-    // Off-community placements for the forum banner (admin-only table).
-    supabase
-      .from("manual_hires")
-      .select("id, full_name, hired_at")
-      .order("hired_at", { ascending: false }),
-    fetchAllAnswers(),
-    getTaxonomyOptions(),
-  ]);
+  const [members, { data: questions }, { data: crm }, { data: manualHires }, taxonomyOptions] =
+    await Promise.all([
+      fetchAllProfiles(),
+      supabase
+        .from("config_questions")
+        .select("*")
+        .eq("active", true)
+        .order("sort_order", { ascending: true }),
+      // VIP + notes live in the admin-only member_crm table (empty pre-migration).
+      supabase.from("member_crm").select("profile_id, is_vip, vip_reason, internal_notes"),
+      // Off-community placements for the forum banner (admin-only table).
+      supabase
+        .from("manual_hires")
+        .select("id, full_name, hired_at")
+        .order("hired_at", { ascending: false }),
+      getTaxonomyOptions(),
+    ]);
 
   const crmOf = new Map((crm ?? []).map((c) => [c.profile_id, c]));
 
-  // question_id → member answers, grouped per member for client-side filtering.
-  const answersByMember: Record<string, Record<string, unknown>> = {};
-  for (const a of answers ?? []) {
-    (answersByMember[a.profile_id] ??= {})[a.question_id] = a.value;
-  }
-
-  // Build a filter definition for every profile parameter.
+  // Filter definitions come from the CONFIGURED options (taxonomies + the
+  // question's own options). The one data-driven definition left is the
+  // language chips — a single bounded query on that single question.
   const filterDefs: FilterDef[] = [];
   for (const q of questions ?? []) {
     if (q.key === LANGUAGE_SKILLS_KEY) {
-      // Chips per language seen in the data: "any level" + each specific level.
+      const { data: langAnswers } = await admin
+        .from("profile_answers")
+        .select("value")
+        .eq("question_id", q.id)
+        .limit(5000);
       const byLang = new Map<string, Set<string>>();
-      for (const a of answers ?? []) {
-        if (a.question_id !== q.id) continue;
+      for (const a of langAnswers ?? []) {
         for (const s of parseLangSkills(a.value)) {
           let levels = byLang.get(s.lang);
           if (!levels) {
@@ -104,7 +102,6 @@ export default async function AdminMembersPage({
           levels.add(s.level);
         }
       }
-      // Stable chip order: languages alphabetically, levels native→fluent→rw.
       const levelOrder = new Map(LANG_LEVELS.map((l, i) => [l.value, i]));
       const options: Opt[] = [];
       for (const [lang, levels] of [...byLang.entries()].sort((a, b) =>
@@ -141,47 +138,18 @@ export default async function AdminMembersPage({
         : Array.isArray(q.options)
           ? (q.options as unknown as Opt[])
           : [];
-      const known = new Set(defined.map((o) => o.value));
-      // Free-text values ("אחר") found in real answers become chips too.
-      const free = new Set<string>();
-      for (const a of answers ?? []) {
-        if (a.question_id !== q.id) continue;
-        const vals = Array.isArray(a.value) ? a.value : [a.value];
-        for (const v of vals) {
-          if (typeof v === "string" && v && !known.has(v) && v !== "other") free.add(v);
-        }
-      }
-      const options = [
-        ...defined.filter((o) => o.value !== "other"),
-        ...[...free].map((v) => ({ value: v, label: v })),
-      ];
+      const options = defined.filter((o) => o.value !== "other");
       if (options.length > 0) {
         filterDefs.push({ id: q.id, label: q.label_he, type: "choice", options });
       }
       continue;
     }
 
-    if (q.field_type === "number") {
-      const seen = new Set<number>();
-      for (const a of answers ?? []) {
-        if (a.question_id === q.id && typeof a.value === "number") seen.add(a.value);
-      }
-      if (seen.size > 0) {
-        filterDefs.push({
-          id: q.id,
-          label: q.label_he,
-          type: "choice",
-          options: [...seen].sort((x, y) => x - y).map((n) => ({ value: String(n), label: String(n) })),
-        });
-      }
-      continue;
-    }
-
-    // Free-text fields filter by "contains".
+    // Numbers and free-text fields filter by "contains" — evaluated in SQL.
     filterDefs.push({ id: q.id, label: q.label_he, type: "text", options: [] });
   }
 
-  const rows: MemberRow[] = (members ?? []).map((m) => {
+  const rows: MemberRow[] = members.map((m) => {
     const c = crmOf.get(m.id);
     return {
       id: m.id,
@@ -210,12 +178,7 @@ export default async function AdminMembersPage({
         </p>
       </div>
 
-      <MembersTable
-        members={rows}
-        filterDefs={filterDefs}
-        answersByMember={answersByMember}
-        initialStatus={initialStatus}
-      />
+      <MembersTable members={rows} filterDefs={filterDefs} initialStatus={initialStatus} />
 
       <ManualHiresCard
         hires={(manualHires ?? []) as ManualHireRow[]}

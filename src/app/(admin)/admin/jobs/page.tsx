@@ -39,13 +39,12 @@ export default async function AdminJobsPage({
   }));
 
   // Applications are managed inside each job's מועמדות tab — here we only
-  // surface per-job counts (total + fresh submissions) on the rows.
-  const { data: applications } = await supabase.from("applications").select("job_id, status");
+  // surface per-job counts, aggregated in the database (the raw-rows fetch
+  // silently truncated at 1000 applications).
+  const { data: countRows } = await createAdminClient().rpc("job_app_counts");
   const appCounts: Record<string, JobAppCounts> = {};
-  for (const a of applications ?? []) {
-    const counts = (appCounts[a.job_id] ??= { total: 0, newCount: 0 });
-    counts.total += 1;
-    if (a.status === "submitted") counts.newCount += 1;
+  for (const r of countRows ?? []) {
+    appCounts[r.job_id] = { total: Number(r.total), newCount: Number(r.new_count) };
   }
 
   return (

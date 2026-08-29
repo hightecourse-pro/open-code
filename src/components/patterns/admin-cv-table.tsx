@@ -26,7 +26,6 @@ export interface AdminCvRow {
   file_name: string | null;
   created_at: string;
   is_default: boolean;
-  download_url: string | null;
   job_id: string | null;
   job_title: string | null;
 }
@@ -153,14 +152,14 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
   const safePage = Math.min(page, pages - 1);
   const pageGroups = shown.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
-  const selectedRows = rows.filter((r) => selected[r.id] && r.download_url);
+  const selectedRows = rows.filter((r) => selected[r.id]);
 
   // Sequential hidden-anchor clicks: each signed URL carries ?download=, so
   // the browser saves instead of navigating. A small gap keeps it reliable.
   async function bulkDownload() {
     setBulkBusy(true);
     for (const r of selectedRows) {
-      const url = `${r.download_url}&download=${encodeURIComponent(r.file_name ?? "cv")}`;
+      const url = `/admin/cv-files/sign?id=${r.id}&download=1`;
       const a = document.createElement("a");
       a.href = url;
       a.rel = "noopener";
@@ -410,27 +409,23 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
                       {head ? DMY.format(new Date(g.latest)) : null}
                     </td>
                     <td className="p-2 border-b border-ink-100">
-                      {r.download_url ? (
-                        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                          <a
-                            href={r.download_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="תצוגה מקדימה בכרטיסייה חדשה"
-                            className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple border border-brand-purple/40 rounded-md px-2.5 py-1.5 hover:bg-tint-purple"
-                          >
-                            <Eye size={13} /> תצוגה
-                          </a>
-                          <a
-                            href={`${r.download_url}&download=${encodeURIComponent(r.file_name ?? "cv")}`}
-                            className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-brand-gradient rounded-md px-2.5 py-1.5"
-                          >
-                            <Download size={13} /> הורדה
-                          </a>
-                        </span>
-                      ) : (
-                        <span className="text-[12px] text-ink-400">לא זמין</span>
-                      )}
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+                        <a
+                          href={`/admin/cv-files/sign?id=${r.id}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title="תצוגה מקדימה בכרטיסייה חדשה"
+                          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple border border-brand-purple/40 rounded-md px-2.5 py-1.5 hover:bg-tint-purple"
+                        >
+                          <Eye size={13} /> תצוגה
+                        </a>
+                        <a
+                          href={`/admin/cv-files/sign?id=${r.id}&download=1`}
+                          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-brand-gradient rounded-md px-2.5 py-1.5"
+                        >
+                          <Download size={13} /> הורדה
+                        </a>
+                      </span>
                     </td>
                   </tr>
                 );

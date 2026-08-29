@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { ContentOpenStat } from "@/types/database";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { CoursesStatsTable, SessionsStatsTable } from "./stats-tables";
 
 export const metadata: Metadata = { title: "אנליטיקת למידה" };
@@ -19,55 +19,21 @@ export default async function AdminAnalyticsPage() {
       .order("scheduled_at", { ascending: false }),
   ]);
 
-  // Entries, already rolled up per member × content by the database view.
-  // Before supabase/_content_access_log.sql runs the view doesn't exist — the
-  // screen then falls back to the old link-level count for courses and says so.
-  const { data: statRows, error: statsErr } = await supabase
-    .from("content_open_stats")
-    .select("profile_id, owner_type, owner_id, opens, first_open, last_open");
-  const logReady = !statsErr;
-  let stats: ContentOpenStat[] = statRows ?? [];
+  // Totals aggregated in the DATABASE (2026-08-29): content_views grows with
+  // every open forever — shipping member×content rows to this page stopped
+  // scaling (and silently truncated at 1000 rows).
+  const adminClient = createAdminClient();
+  const [{ data: ownerTotals }, { data: summaryRows }] = await Promise.all([
+    adminClient.rpc("analytics_owner_totals"),
+    adminClient.rpc("analytics_summary"),
+  ]);
 
-  if (!logReady) {
-    const [{ data: links }, { data: views }] = await Promise.all([
-      supabase.from("content_links").select("id, owner_id, owner_type"),
-      supabase.from("content_views").select("link_id, profile_id, created_at"),
-    ]);
-    const linkOwner = new Map((links ?? []).map((l) => [l.id, l]));
-    const acc = new Map<string, ContentOpenStat>();
-    for (const v of views ?? []) {
-      const owner = v.link_id ? linkOwner.get(v.link_id) : null;
-      if (!owner) continue;
-      const key = `${v.profile_id}:${owner.owner_type}:${owner.owner_id}`;
-      const row = acc.get(key);
-      if (row) {
-        row.opens += 1;
-        if (v.created_at < row.first_open) row.first_open = v.created_at;
-        if (v.created_at > row.last_open) row.last_open = v.created_at;
-      } else {
-        acc.set(key, {
-          profile_id: v.profile_id,
-          owner_type: owner.owner_type,
-          owner_id: owner.owner_id,
-          opens: 1,
-          first_open: v.created_at,
-          last_open: v.created_at,
-        });
-      }
-    }
-    stats = [...acc.values()];
-  }
-
-  /** owner_id → { opens, members, last } for one kind of content. */
+  /** owner_id → totals for one kind of content, straight from the aggregate. */
   function rollup(ownerType: "course" | "session") {
-    const out = new Map<string, { opens: number; members: Set<string>; last: string }>();
-    for (const s of stats) {
-      if (s.owner_type !== ownerType) continue;
-      const cur = out.get(s.owner_id) ?? { opens: 0, members: new Set<string>(), last: "" };
-      cur.opens += s.opens;
-      cur.members.add(s.profile_id);
-      if (s.last_open > cur.last) cur.last = s.last_open;
-      out.set(s.owner_id, cur);
+    const out = new Map<string, { opens: number; members: number; last: string | null }>();
+    for (const r of ownerTotals ?? []) {
+      if (r.owner_type !== ownerType) continue;
+      out.set(r.owner_id, { opens: Number(r.opens), members: Number(r.uniques), last: r.last_open });
     }
     return out;
   }
@@ -96,7 +62,7 @@ export default async function AdminAnalyticsPage() {
       studied: es.filter((e) => e.studied).length,
       avgRating: avg,
       views: opens?.opens ?? 0,
-      members: opens?.members.size ?? 0,
+      members: opens?.members ?? 0,
       last: opens?.last ?? null,
     };
   });
@@ -112,17 +78,18 @@ export default async function AdminAnalyticsPage() {
       scheduledAt: s.scheduled_at,
       openToAll: s.open_to_all,
       views: s.opens?.opens ?? 0,
-      members: s.opens?.members.size ?? 0,
+      members: s.opens?.members ?? 0,
       last: s.opens?.last ?? null,
     }));
 
   // ── the summary FIRST (the PM), the detail after ──────────────────────────
-  const allLearners = new Set(stats.map((s) => s.profile_id));
-  const totalOpens = stats.reduce((n, s) => n + s.opens, 0);
+  const summaryRow = (summaryRows ?? [])[0];
+  const allLearnersCount = Number(summaryRow?.active_learners ?? 0);
+  const totalOpens = Number(summaryRow?.total_opens ?? 0);
   const topCourse = [...courseStats].sort((a, b) => b.views - a.views)[0];
   const topSession = [...sessionStats].sort((a, b) => b.views - a.views)[0];
   const summary = [
-    { label: "לומדות פעילות", value: allLearners.size },
+    { label: "לומדות פעילות", value: allLearnersCount },
     { label: "סה״כ כניסות לתוכן", value: totalOpens },
     { label: "הקורס הנצפה ביותר", value: topCourse && topCourse.views > 0 ? topCourse.title : "—" },
     { label: "הסשן הנצפה ביותר", value: topSession ? topSession.title : "—" },
@@ -150,16 +117,6 @@ export default async function AdminAnalyticsPage() {
         ))}
       </div>
 
-      {!logReady && (
-        <div className="bg-tint-warm border border-[#F0DCA8] rounded-md p-3.5 px-4 text-[13.5px] text-[#8C5E0E]">
-          <b className="font-display">התיעוד המלא עוד לא פעיל.</b> כאן רואים בינתיים רק צפיות
-          בסרטוני קורסים, לפי קישור. אחרי הרצת{" "}
-          <span className="font-mono text-[12px]" dir="ltr">
-            supabase/_content_access_log.sql
-          </span>{" "}
-          ייכנסו לכאן גם הכניסות להקלטות הסשנים וגם &quot;כמה חברות&quot;.
-        </div>
-      )}
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm overflow-x-auto">
         <h3 className="font-display text-base font-bold mb-3">קורסים</h3>

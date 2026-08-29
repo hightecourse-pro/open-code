@@ -403,16 +403,16 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
 
   // Two plain queries rather than one clever combined filter: grants skip the
   // members we're waiting on, revokes always run (they need no Google account).
-  let pendingQuery = admin
+  // The blocked set is filtered in JS after an over-fetch: inlining hundreds
+  // of UUIDs into a NOT IN querystring approaches URL/header limits at scale.
+  const blockedSet = new Set(blocked);
+  const pendingQuery = admin
     .from("content_shares")
     .select(COLS)
     .eq("status", "pending");
-  if (blocked.length > 0) {
-    pendingQuery = pendingQuery.not("profile_id", "in", `(${blocked.join(",")})`);
-  }
 
-  const [{ data: pendingRows }, { data: revokedRows }] = await Promise.all([
-    pendingQuery.order("created_at", { ascending: true }).limit(limit),
+  const [{ data: pendingRowsRaw }, { data: revokedRows }] = await Promise.all([
+    pendingQuery.order("created_at", { ascending: true }).limit(limit + blocked.length),
     admin
       .from("content_shares")
       .select(COLS)
@@ -421,8 +421,9 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
       .limit(limit),
   ]);
 
+  const pendingRows = (pendingRowsRaw ?? []).filter((r) => !blockedSet.has(r.profile_id));
   // Revokes first — losing access should never wait behind a backlog of grants.
-  const rows = [...(revokedRows ?? []), ...(pendingRows ?? [])].slice(0, limit);
+  const rows = [...(revokedRows ?? []), ...pendingRows].slice(0, limit);
   if (rows.length === 0) return result;
 
   // Resolve each member's email and each owner's file list once per batch.
@@ -431,7 +432,12 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
   // Members whose address Drive rejected — asked for a Gmail once per batch.
   const askedForGmail = new Set<string>();
 
+  // Budget by Google API calls, not rows: one course can hold 10 Drive links,
+  // so 60 rows could mean 600+ sequential Drive calls — past any time limit.
+  const DRIVE_CALL_BUDGET = 120;
+  let driveCalls = 0;
   for (const row of rows) {
+    if (driveCalls >= DRIVE_CALL_BUDGET) break; // next run continues the queue
     // Her address already failed earlier in this batch — skip her remaining
     // GRANTS (revokes need no valid Google account, so they still run).
     if (row.status === "pending" && askedForGmail.has(row.profile_id)) {
@@ -481,9 +487,15 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
         // Re-pointing to a new address: take the old one off first, so a
         // changed Gmail never leaves an orphaned permission behind.
         if (grantedTo && grantedTo.toLowerCase() !== email.toLowerCase()) {
-          for (const fileId of ids) await revokeAccess(fileId, grantedTo);
+          for (const fileId of ids) {
+            await revokeAccess(fileId, grantedTo);
+            driveCalls++;
+          }
         }
-        for (const fileId of ids) await grantReadAccess(fileId, email);
+        for (const fileId of ids) {
+          await grantReadAccess(fileId, email);
+          driveCalls++;
+        }
         await admin
           .from("content_shares")
           .update({
@@ -494,7 +506,10 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
           .eq("id", row.id);
         result.granted++;
       } else {
-        for (const fileId of ids) await revokeAccess(fileId, grantedTo ?? email);
+        for (const fileId of ids) {
+          await revokeAccess(fileId, grantedTo ?? email);
+          driveCalls++;
+        }
         // Fully undone → the audit row has served its purpose.
         await admin.from("content_shares").delete().eq("id", row.id);
         result.revoked++;
