@@ -34,7 +34,10 @@ await page.screenshot({ path: `${SHOTS}/jobs-5-applied-pill.png`, fullPage: true
 await page.goto(`${BASE}/jobs`);
 await page.waitForLoadState("networkidle");
 const boardTitles = await page.locator("article .font-display").allTextContents();
-const dup = boardTitles.some((t) => appliedTitles.some((a) => t.includes(a)));
-console.log(!dup ? "✅ applied job left the board (lives only in ההגשות שלי)" : "❌ applied job still on the board");
+// Staging holds a TWIN job with the same title — count, don't text-match:
+// after applying, at most one JFD card (the twin) may remain.
+const jfd = boardTitles.filter((t) => t.includes("Junior Frontend Developer")).length;
+console.log(jfd <= 1 ? `✅ applied job left the board (${jfd} twin card remains)` : "❌ applied job still on the board");
+const dup = jfd > 1;
 await browser.close();
 process.exit(hasPill && !dup ? 0 : 1);

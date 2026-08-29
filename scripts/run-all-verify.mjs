@@ -7,6 +7,7 @@ const SKIP = new Set([
   "verify-prod-demo.mjs", // prod + needs SHIRA/GRTH passwords
   "verify-prod-pm4.mjs", // prod
   "verify-prod-public.mjs", // prod (run separately, read-only)
+  "verify-shira-prod-smoke.mjs", // prod + needs SHIRA_PASSWORD
 ]);
 const only = process.argv[2] ? new RegExp(process.argv[2]) : null;
 const scripts = readdirSync("scripts")

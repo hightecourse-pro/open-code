@@ -40,7 +40,10 @@ await login(admin, "admin.qa@opencode.test", ADMIN_PASS);
 await admin.goto(`${BASE}/admin/mentor-requests`);
 await admin.waitForLoadState("networkidle");
 const reqRow = admin.locator('div:has-text("מנויה בדיקה")').locator("select").first();
-await reqRow.selectOption({ label: "מנטורית בדיקה" });
+// Option labels carry field+load now ("מנטורית בדיקה · פולסטאק · פנויה") —
+// resolve the option by contained text and select by value.
+const mentorOpt = reqRow.locator("option", { hasText: "מנטורית בדיקה" }).first();
+await reqRow.selectOption((await mentorOpt.getAttribute("value")) ?? "");
 await admin.locator('button:has-text("שיוך מנטורית")').first().click();
 await admin.waitForTimeout(2000);
 await admin.reload();

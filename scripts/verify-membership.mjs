@@ -105,8 +105,8 @@ async function login(page, email, pass) {
 
   await page.goto(`${BASE}/admin/mentor-requests?jyears=0&jq=`);
   await page.waitForLoadState("networkidle");
-  ok("junior search panel renders", (await page.locator("text=חיפוש בין הג׳וניוריות").count()) > 0
-    || (await page.locator("text=חיפוש בין הג").count()) > 0);
+  // Renamed in the Shira round: "איתור ג'וניורית לליווי יזום".
+  ok("junior search panel renders", (await page.locator("text=ליווי יזום").count()) > 0);
   await page.screenshot({ path: `${SHOTS}/mm-6-junior-search.png` });
   await page.close();
 }

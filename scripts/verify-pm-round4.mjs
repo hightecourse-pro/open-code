@@ -36,9 +36,10 @@ async function login(page, email, pass) {
   const navBox = await page.locator("nav").boundingBox();
   ok("menu: fits without scroll (~900px)", !!navBox && navBox.height <= 900);
 
-  // 7: search above the composer
+  // 7: search above the composer — which folds behind a button now, so the
+  // measured element is the "פתיחת פוסט חדש" button (same slot).
   const searchBox = await page.locator('input[placeholder*="חיפוש לפי מילה"]').boundingBox();
-  const composerBox = await page.locator("form textarea, [contenteditable=true]").first().boundingBox();
+  const composerBox = await page.locator('button:has-text("פתיחת פוסט חדש")').first().boundingBox();
   ok("forum: search above composer", !!searchBox && !!composerBox && searchBox.y < composerBox.y);
 
   // 6: floating hired banner (fixture 'בדיקת חגיגה') — chip or expanded card
@@ -127,10 +128,16 @@ async function login(page, email, pass) {
   await page.goto(`${BASE}/admin/config`);
   await page.waitForLoadState("networkidle");
   ok("admin: feedback questions section", (await page.locator("text=שאלות המשוב על סשן").count()) > 0);
+  // Settings fold closed by default since the Shira round — open the topic.
+  await page.locator('button:has-text("שאלות המשוב על סשן")').click();
+  await page.waitForTimeout(250);
   ok("admin: custom label loaded", (await page.locator('input[name="content"]').inputValue()) === "איכות ההדגמות");
 
   await page.goto(`${BASE}/admin/content`);
   await page.waitForLoadState("networkidle");
+  // Session cards fold closed since the Shira round — open the first one.
+  await page.locator("section:has(form) button:has(svg.-rotate-90)").last().click().catch(() => {});
+  await page.waitForTimeout(300);
   ok("admin content: syllabus input", (await page.locator('input[name="syllabus_url"]').count()) > 0);
   ok("admin content: materials input", (await page.locator('input[name="materials_url"]').count()) > 0);
   await page.screenshot({ path: `${SHOTS}/pm4-6-admin-content.png` });

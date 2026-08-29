@@ -26,11 +26,19 @@ ok("benefits: hightecourse library", (await page.locator("text=ספריית הק
 ok("benefits: hackathons", (await page.locator("text=השתתפות בהאקתונים").count()) === 1);
 await page.screenshot({ path: `${SHOTS}/flow-1-join-benefits.png` });
 
-// the mentor card on the ONBOARDING gate (simulate: set profile_completed=false is DB work;
-// instead check the edit wizard at /profile does NOT show it — onboarding-only prop)
-await page.goto(`${BASE}/profile`);
-await page.waitForLoadState("networkidle");
-ok("mentor card absent in edit mode", (await page.locator("text=מגיעה בתור מנטורית? 👑").count()) === 0);
+// The mentor door is ONBOARDING-only: assert it never shows in the edit
+// wizard of a completed, ACTIVE member (sub.test — checkout.probe's canonical
+// state is now the un-finished gate, where the door rightly DOES show).
+const edit = await browser.newPage({ viewport: { width: 1280, height: 1200 } });
+await edit.goto(`${BASE}/login`);
+await edit.fill('input[name="email"]', "sub.test@opencode.test");
+await edit.fill('input[name="password"]', PASS);
+await edit.click('button[type="submit"]');
+await edit.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 25000 });
+await edit.goto(`${BASE}/profile`);
+await edit.waitForLoadState("networkidle");
+ok("mentor card absent in edit mode", (await edit.locator("text=מגיעה בתור מנטורית? 👑").count()) === 0);
+await edit.close();
 
 await browser.close();
 console.log(results.join("\n"));

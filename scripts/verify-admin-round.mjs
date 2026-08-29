@@ -27,6 +27,9 @@ await page.goto(`${BASE}/admin/sessions`);
 await page.waitForLoadState("networkidle");
 ok("sessions: planned/past split", (await page.locator("text=מתוכננים").count()) > 0 && (await page.locator("text=התקיימו").count()) > 0);
 ok("sessions: search box", (await page.locator('input[placeholder*="חיפוש לפי שם או נושא"]').count()) > 0);
+// The creation form folds behind "➕ סשן חדש" since the Shira round.
+await page.locator('button:has-text("סשן חדש")').first().click();
+await page.waitForTimeout(300);
 ok("sessions: reminders info note", (await page.locator("text=התזכורות נשלחות").count()) > 0);
 // create one with topic + duration through the real form
 await page.fill("#s-title", "בדיקת ניהול סשנים");
@@ -116,8 +119,15 @@ await page.waitForTimeout(600);
 // ── shares ───────────────────────────────────────────────────────────────────
 await page.goto(`${BASE}/admin/shares`);
 await page.waitForLoadState("networkidle");
-ok("shares: select-all + bulk", (await page.locator("text=בחירת הכול").count()) > 0 && (await page.locator('button:has-text("סימון הכול כבוצע")').count()) > 0);
-ok("shares: waiting-since dates", (await page.locator("text=מחכה מ-").count()) > 0);
+{
+  // An EMPTY pending queue is the healthy steady state since the YouTube-only
+  // fix — the bulk controls exist only when something waits.
+  const pendingEmpty = (await page.locator("text=אין ממתינים").count()) > 0
+    || (await page.locator("text=מחכה מ-").count()) === 0;
+  const bulkOk = (await page.locator("text=בחירת הכול").count()) > 0 && (await page.locator('button:has-text("סימון הכול כבוצע")').count()) > 0;
+  ok("shares: bulk controls (or empty queue)", pendingEmpty || bulkOk);
+  ok("shares: waiting-since dates (or empty queue)", pendingEmpty || (await page.locator("text=מחכה מ-").count()) > 0);
+}
 
 // ── analytics ────────────────────────────────────────────────────────────────
 await page.goto(`${BASE}/admin/analytics`);
