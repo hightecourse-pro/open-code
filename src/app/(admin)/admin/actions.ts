@@ -1296,7 +1296,7 @@ export async function publishJob(
   /** Hand-picked additions ("מעבר לקריטריונים") — recorded as source 'manual'
       so criteria-matched and hand-picked targets stay distinguishable. */
   manualIds: string[] = []
-): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number }> {
+): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number; queued?: number }> {
   await requireRole("admin");
   const admin = createAdminClient();
 
@@ -1336,49 +1336,63 @@ export async function publishJob(
     .eq("id", jobId);
   if (jobError) return { error: "עדכון סטטוס המשרה נכשל. נסי שוב." };
 
-  // Email only targets that never got the announcement.
+  // Email only targets that never got the announcement. A small audience is
+  // mailed right here (publishing feels instant); anything bigger is left on
+  // the queue for the 10-minute notifications cron — a serverless action must
+  // never loop thousands of sends (it gets killed mid-loop and nobody knows).
+  const INLINE_LIMIT = 25;
   const { data: pending } = await admin
     .from("job_targets")
     .select("profile_id")
     .eq("job_id", jobId)
     .is("emailed_at", null);
   const toEmail = (pending ?? []).map((t) => t.profile_id);
+  const inline = toEmail.slice(0, INLINE_LIMIT);
+  const queued = Math.max(0, toEmail.length - inline.length);
 
-  const { data: named } = toEmail.length
-    ? await admin.from("profiles").select("id, first_name, full_name").in("id", toEmail)
-    : { data: [] as { id: string; first_name: string | null; full_name: string }[] };
-  const nameOf = new Map((named ?? []).map((p) => [p.id, p]));
-
-  const excerpt = jobExcerpt(job.description_html, job.description);
-  const applyUrl = `${getSiteUrl()}/jobs`;
   let sent = 0;
   let failed = 0;
-  for (const profileId of toEmail) {
-    try {
-      const { data: authUser } = await admin.auth.admin.getUserById(profileId);
-      const email = authUser?.user?.email;
-      if (!email) {
+  if (inline.length > 0) {
+    const [{ data: named }, { data: emailRows }] = await Promise.all([
+      admin.from("profiles").select("id, first_name, full_name").in("id", inline),
+      admin.rpc("member_emails", { p_ids: inline }),
+    ]);
+    const nameOf = new Map((named ?? []).map((p) => [p.id, p]));
+    const emailOf = new Map(
+      ((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email])
+    );
+    const excerpt = jobExcerpt(job.description_html, job.description);
+    const applyUrl = `${getSiteUrl()}/jobs`;
+    const delivered: string[] = [];
+    for (const profileId of inline) {
+      try {
+        const email = emailOf.get(profileId);
+        if (!email) {
+          failed++;
+          continue;
+        }
+        const p = nameOf.get(profileId);
+        const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
+        const built = jobPublishedEmail(name, job.title, excerpt, applyUrl);
+        const result = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+        if (result.ok) {
+          sent++;
+          delivered.push(profileId);
+        } else {
+          failed++;
+          console.error("[publish job email] send failed:", result.error);
+        }
+      } catch (e) {
         failed++;
-        continue;
+        console.error("[publish job email] failed:", e);
       }
-      const p = nameOf.get(profileId);
-      const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
-      const built = jobPublishedEmail(name, job.title, excerpt, applyUrl);
-      const result = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
-      if (result.ok) {
-        sent++;
-        await admin
-          .from("job_targets")
-          .update({ emailed_at: new Date().toISOString() })
-          .eq("job_id", jobId)
-          .eq("profile_id", profileId);
-      } else {
-        failed++;
-        console.error("[publish job email] send failed:", result.error);
-      }
-    } catch (e) {
-      failed++;
-      console.error("[publish job email] failed:", e);
+    }
+    if (delivered.length > 0) {
+      await admin
+        .from("job_targets")
+        .update({ emailed_at: new Date().toISOString() })
+        .eq("job_id", jobId)
+        .in("profile_id", delivered);
     }
   }
 
@@ -1386,7 +1400,7 @@ export async function publishJob(
   revalidatePath(`/admin/jobs/${jobId}`);
   revalidatePath("/jobs");
   revalidatePath("/forum");
-  return { ok: true, sent, failed };
+  return { ok: true, sent, failed, queued };
 }
 
 /**

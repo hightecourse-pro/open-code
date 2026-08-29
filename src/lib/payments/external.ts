@@ -8,16 +8,14 @@ import { raiseAlert } from "@/lib/alerts";
 import { activateSubscription } from "./subscription";
 import type { Json, SubscriptionPlan } from "@/types/database";
 
-/** Find an auth user id by email (small community — paged lookup is fine). */
+/**
+ * Find an auth user id by email — one indexed SQL lookup (the old paged
+ * listUsers scan serialized every auth record and sat in the webhook hot path).
+ */
 async function userIdByEmail(email: string): Promise<string | null> {
   const admin = createAdminClient();
-  for (let page = 1; page <= 5; page++) {
-    const { data } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
-    const hit = data?.users?.find((u) => u.email?.toLowerCase() === email);
-    if (hit) return hit.id;
-    if (!data || data.users.length < 1000) break;
-  }
-  return null;
+  const { data } = await admin.rpc("auth_user_id_by_email", { p_email: email });
+  return (data as string | null) ?? null;
 }
 
 /**
@@ -115,7 +113,10 @@ export async function claimExternalPaymentsFor(profileId: string, email: string 
     .is("claimed_at", null)
     // Unverified rows never auto-activate — the admin confirms them first.
     .eq("needs_review", false)
-    .ilike("email", email.trim());
+    // Emails are lowercased on insert — exact match rides the partial index
+    // (ilike could never use it, and wildcards in a pasted email would match
+    // more than intended).
+    .eq("email", email.trim().toLowerCase());
   if (!rows?.length) return false;
 
   for (const row of rows) {

@@ -75,6 +75,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ dryRun: true, graceDays: GRACE_DAYS, backlog: count ?? 0, thisRun: ids.length });
   }
 
+  // Names and emails for the whole batch in two set-based calls — the loop
+  // used to make three round trips per expired member.
+  const [{ data: whoRows }, { data: emailRows }] = ids.length
+    ? await Promise.all([
+        admin.from("profiles").select("id, full_name, first_name").in("id", ids),
+        admin.rpc("member_emails", { p_ids: ids }),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const whoOf = new Map((whoRows ?? []).map((p) => [p.id, p]));
+  const emailOf = new Map(
+    ((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email])
+  );
+
   let expiredCount = 0;
   for (const profileId of ids) {
     try {
@@ -84,15 +97,10 @@ export async function GET(request: Request) {
       // exactly the case the owner asked to SEE: either she truly stopped
       // paying, or a renewal callback never arrived while the card kept being
       // charged. Both deserve a row in the alerts center, per member.
-      const { data: who } = await admin
-        .from("profiles")
-        .select("full_name, first_name")
-        .eq("id", profileId)
-        .maybeSingle();
+      const who = whoOf.get(profileId);
       // The ending-day email she was promised: what closed, and the way back.
       try {
-        const { data: authUser } = await admin.auth.admin.getUserById(profileId);
-        const email = authUser?.user?.email;
+        const email = emailOf.get(profileId);
         if (email) {
           const mail = subscriptionEndedEmail(who?.first_name ?? undefined);
           await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });

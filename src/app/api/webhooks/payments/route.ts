@@ -93,11 +93,12 @@ async function alertAdmins(record: Record<string, unknown>) {
            את המנוי ידנית.</p>
       </div>`;
     const { data: admins } = await admin.from("profiles").select("id").eq("role", "admin");
-    for (const a of admins ?? []) {
-      const { data: authUser } = await admin.auth.admin.getUserById(a.id);
-      const email = authUser?.user?.email;
-      if (!email) continue;
-      await sendResendEmail({ to: email, subject: "⚠️ תשלום נדחה בשער התשלומים", html });
+    const { data: emailRows } = (admins ?? []).length
+      ? await admin.rpc("member_emails", { p_ids: (admins ?? []).map((a) => a.id) })
+      : { data: [] };
+    for (const r of (emailRows ?? []) as { id: string; email: string | null }[]) {
+      if (!r.email) continue;
+      await sendResendEmail({ to: r.email, subject: "⚠️ תשלום נדחה בשער התשלומים", html });
     }
   } catch (e) {
     console.error("[webhook/payments] alert failed", String(e));
@@ -239,6 +240,14 @@ async function handleCallback(req: Request) {
       }
       await logEvent(record);
       return NextResponse.json({ ok: true, outcome: record.outcome });
+    }
+    // Plain internet noise — no auth, no key, not even our mosad number.
+    // A public endpoint gets probed constantly; giving every scanner hit 5-7
+    // DB writes (logEvent + alert + admin email) turns noise into load on the
+    // same database the members use. A quiet 401 is all it earns.
+    if (!providedKey && !mosadHere) {
+      console.warn("[webhook/payments] scanner noise ignored:", callerIp(req));
+      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
     }
     return reject(
       providedKey ? "bad_secret" : "unauthenticated_caller",
