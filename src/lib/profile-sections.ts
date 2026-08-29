@@ -56,7 +56,7 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
     title: "כישורים וכלים",
     hint: "מה את יודעת לעשות בפועל — רק מה שבאמת התנסית בו, בלי לחץ 💜",
     keys: [
-      "dev_tech", "genai_known", "genai_practiced", "ai_tools_used", "github",
+      "dev_tech", "genai_known", "genai_practiced", "ai_tools_used", "mentor_tech", "github",
       "ai_project_links", "live_links", "ai_gaps",
     ],
   },

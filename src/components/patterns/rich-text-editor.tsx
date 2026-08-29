@@ -135,10 +135,25 @@ export function RichTextEditor({
   };
 
   function insertImage() {
-    const raw = window.prompt("כתובת התמונה (https://…)");
-    const url = raw?.trim();
-    if (!url || !/^https?:\/\//i.test(url)) return;
-    exec("insertImage", url);
+    // A local file, like she expects: read as a data URI so it previews
+    // instantly; the article save hosts it in storage and swaps the URL.
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/png,image/jpeg,image/gif,image/webp";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        window.alert("התמונה גדולה מדי — עד 5MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") exec("insertImage", reader.result);
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
   }
 
   function insertVideo() {

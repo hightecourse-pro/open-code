@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Check, Sparkles, TrendingUp } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Alert, Button, ProgressRing } from "@/components/ui";
@@ -8,7 +8,14 @@ import { InterviewThread } from "@/components/patterns/interview-thread";
 
 export const metadata: Metadata = { title: "ראיון" };
 
-export default async function InterviewSessionPage({
+// The simulator is temporarily offline (2026-08-29) — old session links land
+// on the "בקרוב" screen. The live page below is untouched; bringing the
+// simulator back = swapping the default export back to it.
+export default async function InterviewSessionPage() {
+  redirect("/ai/interview");
+}
+
+async function LiveInterviewSessionPage({
   params,
 }: {
   params: Promise<{ sessionId: string }>;
@@ -111,3 +118,5 @@ export default async function InterviewSessionPage({
     </div>
   );
 }
+
+void LiveInterviewSessionPage; // kept whole for the comeback

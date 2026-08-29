@@ -195,8 +195,7 @@ export default async function MentorPage() {
         <div className="flex items-start gap-2.5 bg-tint-purple/60 border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-900">
           <Hourglass size={17} className="text-brand-purple shrink-0 mt-0.5" />
           <span>
-            אנחנו עדיין בונות את מאגר המנטוריות שלנו 💜 אפשר כבר לשלוח בקשה — רק דעי שהמענה עשוי
-            לקחת קצת יותר זמן מהרגיל. מבטיחות לחזור אלייך ברגע שיש התאמה!
+            מאגר המנטוריות שלנו בבנייה — בקרוב כאן בשבילך 💜
           </span>
         </div>
       )}
