@@ -95,6 +95,8 @@ export interface Database {
           hired_at: string | null;
           /** Mentors only: temporarily unavailable for new accompaniments. */
           mentor_available: boolean;
+          /** Digest fairness stamp — the morning window serves oldest first. */
+          digest_last_sent_at: string | null;
         } & Timestamps;
         Insert: {
           id: string;
@@ -119,6 +121,7 @@ export interface Database {
           hired_via_us?: boolean;
           hired_at?: string | null;
           mentor_available?: boolean;
+          digest_last_sent_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];
@@ -565,6 +568,10 @@ export interface Database {
           status: PostStatus;
           /** Set when the author fixed her words inside the edit window. */
           edited_at: string | null;
+          /** Trigger-maintained counters — the list never recounts raw rows. */
+          reply_count: number;
+          like_count: number;
+          last_reply_at: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -760,6 +767,25 @@ export interface Database {
           recipients?: number;
         };
         Update: Partial<Database["public"]["Tables"]["session_reminders"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Per-recipient reminder queue — drained in bounded batches by the tick. */
+      session_reminder_queue: {
+        Row: {
+          session_id: string;
+          stage: string;
+          profile_id: string;
+          sent_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          session_id: string;
+          stage: string;
+          profile_id: string;
+          sent_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["session_reminder_queue"]["Insert"]>;
         Relationships: [];
       };
       admin_alerts: {
@@ -1413,6 +1439,49 @@ export interface Database {
       bump_ai_key_usage: { Args: { p_key: string; p_error?: boolean }; Returns: undefined };
       in_conversation: { Args: { conv: string }; Returns: boolean };
       owns_interview: { Args: { sess: string }; Returns: boolean };
+      /** Scale foundations (2026-08-29) — service-role only. */
+      member_emails: {
+        Args: { p_ids: string[] };
+        Returns: { id: string; email: string | null }[];
+      };
+      auth_user_id_by_email: { Args: { p_email: string }; Returns: string | null };
+      digest_unread_counts: {
+        Args: Record<string, never>;
+        Returns: { recipient: string; unread: number; senders: string[] }[];
+      };
+      job_app_counts: {
+        Args: Record<string, never>;
+        Returns: { job_id: string; total: number; new_count: number }[];
+      };
+      mentor_answer_counts: {
+        Args: { p_ids: string[] };
+        Returns: { author_id: string; answers: number }[];
+      };
+      analytics_owner_totals: {
+        Args: Record<string, never>;
+        Returns: {
+          owner_type: string;
+          owner_id: string;
+          opens: number;
+          uniques: number;
+          last_open: string | null;
+        }[];
+      };
+      analytics_summary: {
+        Args: Record<string, never>;
+        Returns: { active_learners: number; total_opens: number }[];
+      };
+      search_juniors: {
+        Args: { p_q: string; p_tech: string; p_min_years: number; p_limit?: number };
+        Returns: {
+          id: string;
+          full_name: string;
+          avatar_initials: string | null;
+          specialization: string | null;
+          years: number | null;
+          tech: string[];
+        }[];
+      };
     };
     Enums: {
       user_role: UserRole;
