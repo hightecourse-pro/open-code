@@ -25,11 +25,10 @@ export async function mentorScores(ids: string[]): Promise<Map<string, MentorSco
   for (const id of ids) out.set(id, { answers: 0, assignments: 0, bonus: 0, score: 0 });
 
   const admin = createAdminClient();
-  const [{ data: comments }, { data: assignments }, { data: bonuses }] = await Promise.all([
-    admin
-      .from("comments")
-      .select("author_id, posts!inner(author_id)")
-      .in("author_id", ids),
+  const [{ data: answerCounts }, { data: assignments }, { data: bonuses }] = await Promise.all([
+    // One SQL aggregate — this used to fetch every comment a mentor ever
+    // wrote (with a join) just to count it, on every directory render.
+    admin.rpc("mentor_answer_counts", { p_ids: ids }),
     admin
       .from("mentor_requests")
       .select("assigned_mentor_id")
@@ -39,10 +38,9 @@ export async function mentorScores(ids: string[]): Promise<Map<string, MentorSco
     admin.from("mentor_bonus_points").select("mentor_id, points").in("mentor_id", ids),
   ]);
 
-  for (const c of (comments ?? []) as unknown as { author_id: string; posts: { author_id: string } }[]) {
-    if (c.posts?.author_id === c.author_id) continue;
-    const s = out.get(c.author_id);
-    if (s) s.answers++;
+  for (const row of (answerCounts ?? []) as { author_id: string; answers: number }[]) {
+    const s = out.get(row.author_id);
+    if (s) s.answers = Number(row.answers);
   }
   for (const a of assignments ?? []) {
     const s = a.assigned_mentor_id ? out.get(a.assigned_mentor_id) : undefined;

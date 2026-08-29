@@ -29,7 +29,7 @@ const loadPost = cache(async (id: string) => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("posts")
-    .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, edited_at, author_id")
+    .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, edited_at, author_id, like_count")
     .eq("id", id)
     .eq("kind", "forum")
     .maybeSingle();
@@ -56,13 +56,25 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
   const post = await loadPost(id);
   if (!post) notFound();
 
-  const [{ data: reactions }, { data: comments }, { data: railRows }] = await Promise.all([
-    supabase.from("reactions").select("post_id, profile_id, kind").eq("post_id", post.id),
+  // A hot topic at scale can hold hundreds of long replies — cap the load to
+  // the newest 200 (rendered oldest-first) instead of shipping the archive on
+  // every 20-second refresh. Reactions: only HER two rows + the trigger-kept
+  // like_count on the post — never every reaction row.
+  const COMMENTS_CAP = 200;
+  const [{ data: myReactions }, { data: commentsDesc }, { data: railRows }] = await Promise.all([
+    user
+      ? supabase
+          .from("reactions")
+          .select("kind")
+          .eq("post_id", post.id)
+          .eq("profile_id", user.id)
+      : Promise.resolve({ data: [] }),
     supabase
       .from("comments")
       .select("id, post_id, body, author_id, created_at, edited_at")
       .eq("post_id", post.id)
-      .order("created_at", { ascending: true }),
+      .order("created_at", { ascending: false })
+      .limit(COMMENTS_CAP),
     // The PM's side layout: while she reads one conversation, the rest of the
     // forum stays one click away in a rail beside it (wide screens only).
     supabase
@@ -74,6 +86,8 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       .limit(20),
   ]);
 
+  const comments = (commentsDesc ?? []).slice().reverse();
+  const truncated = (commentsDesc ?? []).length === COMMENTS_CAP;
   const authorIds = [...new Set([post.author_id, ...(comments ?? []).map((c) => c.author_id)])];
   const { data: authorRows } = await supabase
     .from("profiles")
@@ -100,7 +114,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     };
   });
 
-  const rx = reactions ?? [];
+  const mine = new Set((myReactions ?? []).map((r) => r.kind));
   const feedPost: FeedPost = {
     id: post.id,
     body: post.body,
@@ -112,9 +126,9 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     edited_at: post.edited_at,
     mine: !!user && post.author_id === user.id,
     author: authorMap.get(post.author_id) ?? null,
-    likeCount: rx.filter((r) => r.kind === "like").length,
-    liked: !!user && rx.some((r) => r.kind === "like" && r.profile_id === user.id),
-    saved: !!user && rx.some((r) => r.kind === "save" && r.profile_id === user.id),
+    likeCount: post.like_count ?? 0,
+    liked: mine.has("like"),
+    saved: mine.has("save"),
     comments: topicComments,
     attachments: postAtt.get(post.id),
   };
@@ -161,12 +175,17 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
           </div>
         </aside>
 
+        {truncated && (
+          <p className="text-[12px] text-ink-500 bg-ink-50 border border-ink-200 rounded-md px-3 py-2">
+            שיחה ארוכה במיוחד — מוצגות {COMMENTS_CAP} התגובות האחרונות.
+          </p>
+        )}
         <PostCard post={feedPost} canWrite={canWrite} defaultOpenComments />
       </div>
       {/* A conversation, not a page: replies from other members show up on
           their own. Faster than the topic list — here she is actively waiting
           for an answer. Typed-but-unsent text survives the refresh. */}
-      <AutoRefresh seconds={10} />
+      <AutoRefresh seconds={20} />
     </div>
   );
 }

@@ -56,10 +56,20 @@ export function MembersInstantList({
       </div>
 
       {filtered.length === 0 ? (
-        <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
+        <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700 flex flex-col gap-2">
           {searching
-            ? "לא מצאנו משתתפת שמתאימה לחיפוש — אולי לנסות שם אחר, תחום או אזור? 💜"
+            ? "לא מצאנו משתתפת שמתאימה לחיפוש בין המשתתפות שנטענו 💜"
             : "רשימת המשתתפות עוד מתמלאת — בקרוב תמצאי כאן את כל מי שאיתנו 💜"}
+          {searching && capped && (
+            // The instant filter only sees the loaded page; the whole
+            // community is one server search away.
+            <a
+              href={`/members?q=${encodeURIComponent(needle.trim())}`}
+              className="font-semibold text-brand-purple hover:underline w-fit"
+            >
+              חיפוש בכל הקהילה ←
+            </a>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

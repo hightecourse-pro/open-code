@@ -29,12 +29,22 @@ export default async function MembersPage({
   // filters it client-side as she types (MembersInstantList) — instant, no
   // URL writes. That means the search only sees the loaded rows; today's
   // community fits well inside the cap.
-  const { data } = await supabase
+  // A ?q= runs the search on the SERVER over the whole community — the
+  // instant client filter only sees the loaded page, and past a few hundred
+  // members that page stops covering everyone (the ~93%-invisible problem).
+  const serverNeedle = (q ?? "").trim().slice(0, 60);
+  let directoryQuery = supabase
     .from("members_directory")
     .select("id, full_name, first_name, avatar_initials, specialization, region, role, bio, created_at")
     .neq("id", me.id)
     .order("full_name", { ascending: true })
     .limit(MAX_RESULTS);
+  if (serverNeedle) {
+    directoryQuery = directoryQuery.or(
+      `full_name.ilike.%${serverNeedle}%,specialization.ilike.%${serverNeedle}%,region.ilike.%${serverNeedle}%`
+    );
+  }
+  const { data } = await directoryQuery;
   // Hebrew alphabetical — the database collation isn't necessarily Hebrew-aware.
   const members: DirectoryMember[] = (data ?? []).sort((a, b) =>
     a.full_name.localeCompare(b.full_name, "he")

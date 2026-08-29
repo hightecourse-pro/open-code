@@ -88,7 +88,7 @@ export default async function ForumPage({
       }
       let topicsQuery = supabase
         .from("posts")
-        .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id")
+        .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id, reply_count, like_count, last_reply_at")
         .eq("kind", "forum");
       if (savedOnly) topicsQuery = topicsQuery.in("id", savedIds);
       const { data } = await topicsQuery
@@ -99,46 +99,18 @@ export default async function ForumPage({
     })(),
   ]);
 
-  const postIds = posts.map((p) => p.id);
   const authorIds = [...new Set(posts.map((p) => p.author_id))];
 
-  // The list needs numbers, not content: reply count + last activity per
-  // topic, like counts, and the author cards. The replies themselves load on
-  // the topic page.
-  //
-  // NOTE: PostgREST aggregates (post_id, id.count(), created_at.max() with a
-  // group-by) would count the replies server-side, but they are disabled on
-  // this Supabase project (PGRST123 — checked 2026-08-19), so we pull the two
-  // minimal columns and fold them here. At scale the real fix is a
-  // denormalized reply_count / last_reply_at on posts — a DB migration owned
-  // elsewhere.
-  const [{ data: commentMeta }, { data: reactions }, { data: authorRows }] = await Promise.all([
-    postIds.length
-      ? supabase
-          .from("comments")
-          .select("post_id, created_at")
-          .in("post_id", postIds)
-          .order("created_at", { ascending: true })
-      : Promise.resolve({ data: [] }),
-    postIds.length
-      ? supabase.from("reactions").select("post_id, kind").in("post_id", postIds).eq("kind", "like")
-      : Promise.resolve({ data: [] }),
-    authorIds.length
-      ? supabase
-          .from("profiles")
-          .select("id, full_name, avatar_initials, role, specialization")
-          .in("id", authorIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const replyCount = new Map<string, number>();
-  const lastReplyAt = new Map<string, string>();
-  for (const c of commentMeta ?? []) {
-    replyCount.set(c.post_id, (replyCount.get(c.post_id) ?? 0) + 1);
-    lastReplyAt.set(c.post_id, c.created_at); // ascending order → ends on the newest
-  }
-  const likeCount = new Map<string, number>();
-  for (const r of reactions ?? []) likeCount.set(r.post_id, (likeCount.get(r.post_id) ?? 0) + 1);
+  // The list needs numbers, not content — and since 2026-08-29 the numbers
+  // live ON the post (reply_count / like_count / last_reply_at, maintained by
+  // triggers). No more fetching every comment and reaction row of 50 topics
+  // just to count them (that fetch silently truncated at 1000 rows).
+  const { data: authorRows } = authorIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_initials, role, specialization")
+        .in("id", authorIds)
+    : { data: [] };
 
   const authors = (authorRows ?? []) as ProfileLite[];
   const authorMap = new Map(authors.map((a) => [a.id, a]));
@@ -151,23 +123,24 @@ export default async function ForumPage({
     is_official: p.is_official,
     is_pinned: p.is_pinned,
     created_at: p.created_at,
-    last_activity_at: lastReplyAt.get(p.id) ?? p.created_at,
+    last_activity_at: p.last_reply_at ?? p.created_at,
     author: authorMap.get(p.author_id) ?? null,
-    replyCount: replyCount.get(p.id) ?? 0,
-    likeCount: likeCount.get(p.id) ?? 0,
+    replyCount: p.reply_count ?? 0,
+    likeCount: p.like_count ?? 0,
   }));
   // Pinned stay on top; inside each group the freshest conversation wins.
   topics.sort((a, b) => {
     if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
     return new Date(b.last_activity_at).getTime() - new Date(a.last_activity_at).getTime();
   });
-  // Full bodies for the client-side search — a topic row only carries its
-  // trimmed title, but she searches the whole text.
-  const bodyById = new Map(posts.map((p) => [p.id, p.body]));
+  // Search haystack: title + the opening of the body. Shipping every full
+  // body (up to 5,000 chars each) doubled the page for text nobody sees —
+  // the opening covers the overwhelming majority of real matches.
+  const bodyById = new Map(posts.map((p) => [p.id, p.body.slice(0, 300)]));
 
   return (
     <div className="flex flex-col gap-5">
-      <AutoRefresh seconds={12} />
+      <AutoRefresh seconds={30} />
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;פורום/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הפורום</h1>

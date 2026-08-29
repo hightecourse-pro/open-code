@@ -158,3 +158,35 @@ export async function sendMessage(conversationId: string, formData: FormData) {
 
   revalidatePath("/chat");
 }
+
+export interface ChatMemberHit {
+  id: string;
+  full_name: string;
+  specialization: string | null;
+  avatar_initials: string | null;
+}
+
+/**
+ * The new-chat picker's search — a bounded server lookup instead of shipping
+ * the whole community directory into the client (it grows with every member).
+ */
+export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+  const needle = q.trim().slice(0, 60);
+  let query = supabase
+    .from("profiles")
+    .select("id, full_name, specialization, avatar_initials")
+    .eq("status", "active")
+    .neq("id", user.id)
+    .order("full_name", { ascending: true })
+    .limit(8);
+  if (needle) {
+    query = query.or(`full_name.ilike.%${needle}%,specialization.ilike.%${needle}%`);
+  }
+  const { data } = await query;
+  return data ?? [];
+}

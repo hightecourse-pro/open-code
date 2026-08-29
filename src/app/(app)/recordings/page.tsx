@@ -43,13 +43,15 @@ export default async function RecordingsPage() {
     supabase
       .from(subscriber ? "recordings" : "recordings_public")
       .select("*")
-      .order("published_at", { ascending: false }),
+      .order("published_at", { ascending: false })
+      .limit(60),
     supabase
       .from(subscriber ? "sessions" : "sessions_public")
       .select("*")
       .eq("status", "done")
       .eq("is_published", true)
-      .order("scheduled_at", { ascending: false }),
+      .order("scheduled_at", { ascending: false })
+      .limit(60),
     // What she has ALREADY opened. Those sessions skip the gate entirely —
     // it costs her one press per session, ever.
     user

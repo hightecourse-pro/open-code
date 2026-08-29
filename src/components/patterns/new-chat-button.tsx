@@ -1,38 +1,43 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { MessageCirclePlus, X } from "lucide-react";
 import { Avatar } from "@/components/ui";
-import { startConversation } from "@/app/(app)/chat/actions";
-
-export interface NewChatMember {
-  id: string;
-  full_name: string;
-  specialization: string | null;
-  avatar_initials: string | null;
-}
+import {
+  searchChatMembers,
+  startConversation,
+  type ChatMemberHit,
+} from "@/app/(app)/chat/actions";
 
 /**
- * Start a conversation without leaving the chat screen. Until now the only
- * door was a member's profile in the directory — from here it is: button,
- * type a name, pick her, and the existing find-or-create action opens the
- * thread (an existing conversation is reused, never duplicated).
+ * Start a conversation without leaving the chat screen: button, type a name,
+ * pick her — the existing find-or-create action opens the thread. Members are
+ * looked up on the SERVER per keystroke (debounced) instead of shipping the
+ * whole community directory to the browser on every chat render.
  */
-export function NewChatButton({ members }: { members: NewChatMember[] }) {
+export function NewChatButton() {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
+  const [hits, setHits] = useState<ChatMemberHit[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const visible = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    if (!needle) return members.slice(0, 8);
-    return members
-      .filter(
-        (m) =>
-          m.full_name.toLowerCase().includes(needle) ||
-          (m.specialization ?? "").toLowerCase().includes(needle)
-      )
-      .slice(0, 8);
-  }, [members, q]);
+  useEffect(() => {
+    if (!open) return;
+    let alive = true;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const rows = await searchChatMembers(q);
+        if (alive) setHits(rows);
+      } finally {
+        if (alive) setLoading(false);
+      }
+    }, 300);
+    return () => {
+      alive = false;
+      clearTimeout(t);
+    };
+  }, [open, q]);
 
   return (
     <div className="relative">
@@ -59,7 +64,7 @@ export function NewChatButton({ members }: { members: NewChatMember[] }) {
             className="w-full text-[13px] border border-ink-300 rounded-md px-3 py-2 outline-none focus:border-brand-purple"
           />
           <div className="flex flex-col max-h-64 overflow-y-auto">
-            {visible.map((m) => (
+            {hits.map((m) => (
               <form key={m.id} action={startConversation.bind(null, m.id)}>
                 <button
                   type="submit"
@@ -80,10 +85,13 @@ export function NewChatButton({ members }: { members: NewChatMember[] }) {
                 </button>
               </form>
             ))}
-            {visible.length === 0 && (
+            {!loading && hits.length === 0 && (
               <p className="text-[12.5px] text-ink-500 px-2 py-3 text-center">
                 לא מצאנו — נסי שם אחר 🙂
               </p>
+            )}
+            {loading && hits.length === 0 && (
+              <p className="text-[12.5px] text-ink-400 px-2 py-3 text-center">מחפשת…</p>
             )}
           </div>
         </div>

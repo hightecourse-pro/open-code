@@ -65,7 +65,16 @@ export default async function JobsPage({
 
   // The whole open board of this tab loads here; searching filters it on the
   // client as she types — no query round-trip, no URL writes.
-  const jobsQuery = supabase.from("jobs").select("*").eq("source", activeTab).eq("status", "open");
+  // Explicit columns and a hard cap — select("*") dragged every full job text
+  // (twice, with the haystack) into a page that refreshes on a timer.
+  const JOB_CARD_COLUMNS =
+    "id, company, title, source, location, region, employment_type, description, description_html, tech_tags, external_url, logo_variant, status, created_at, job_kind, practicum_percent, pipeline_status, published_at";
+  const jobsQuery = supabase
+    .from("jobs")
+    .select(JOB_CARD_COLUMNS)
+    .eq("source", activeTab)
+    .eq("status", "open")
+    .limit(150);
 
   const [
     { data: jobs },
@@ -76,7 +85,9 @@ export default async function JobsPage({
     { data: questions },
     { data: myTargets },
   ] = await Promise.all([
-    jobsQuery.order("created_at", { ascending: false }),
+    // Cast: the card renders only these columns; the omitted admin-side fields
+    // (target_criteria, posted_by, is_visible…) never reach the member UI.
+    jobsQuery.order("created_at", { ascending: false }) as unknown as Promise<{ data: Job[] | null }>,
     user ? supabase.from("saved_jobs").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
     user
       ? supabase.from("applications").select("job_id, status, created_at").eq("applicant_id", user.id)
@@ -377,8 +388,8 @@ export default async function JobsPage({
               id: job.id,
               haystack: [
                 job.title,
-                job.description,
-                job.description_html ? job.description_html.replace(/<[^>]+>/g, " ") : "",
+                // The opening covers real searches; full text doubled the page.
+                job.description.slice(0, 300),
                 job.tech_tags.join(" "),
                 activeTab === "open" ? job.company : "",
               ].join(" "),

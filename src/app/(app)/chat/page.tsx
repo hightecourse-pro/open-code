@@ -176,24 +176,15 @@ export default async function ChatPage({
     attachments: messageAtt.get(m.id),
   }));
 
-  // Everyone she may open a conversation with — active members, not herself.
-  // The same find-or-create action the directory uses handles the rest.
-  const { data: chatables } = await supabase
-    .from("profiles")
-    .select("id, full_name, specialization, avatar_initials")
-    .eq("status", "active")
-    .neq("id", me.id)
-    .order("full_name", { ascending: true });
-
   return (
     <div className="flex flex-col gap-5">
       {/* A conversation, not a page: her side is optimistic already; the other
           side arrives on its own now. Also clears the unread badge shortly
           after a thread is opened (the refresh re-renders the layout count). */}
-      <AutoRefresh seconds={6} />
+      <AutoRefresh seconds={15} />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
-        {subscriber && <NewChatButton members={chatables ?? []} />}
+        {subscriber && <NewChatButton />}
       </div>
 
       {/* Bounded to the viewport so the thread scrolls inside its own pane and
