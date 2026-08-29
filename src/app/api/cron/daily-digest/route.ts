@@ -9,10 +9,11 @@ import { isRestDay } from "@/lib/hebrew-calendar";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Bounded batch per run. The cron fires every 15 minutes through the morning
-// window (vercel.json), so thousands of members drain across the runs —
-// ordered by digest_last_sent_at, oldest first, stamped as processed. Nobody
-// is ever starved by a fixed daily cap again.
+// Bounded batch per run. pg_cron ticks this route every 15 minutes through
+// the morning window (Vercel Hobby crons are daily-only — vercel.json keeps a
+// single daily tick as a safety), so thousands of members drain across the
+// runs — ordered by digest_last_sent_at, oldest first, stamped as processed.
+// Nobody is ever starved by a fixed daily cap again.
 const BATCH = 150;
 
 function authorized(req: Request): boolean {
