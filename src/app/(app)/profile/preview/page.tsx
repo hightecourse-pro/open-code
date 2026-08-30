@@ -32,36 +32,10 @@ type Icon = React.ComponentType<{ size?: number; className?: string }>;
 // read like the page it previews.
 const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: string[] }[] = [
   {
-    title: "מיומנויות טכניות",
-    icon: Code2,
-    tone: "tech",
-    keys: ["dev_tech", "tech_stack", "exp_tech", "exp_languages", "language_skills"],
-  },
-  {
     title: "ניסיון תעסוקתי",
     icon: Briefcase,
     tone: "purple",
-    keys: [
-      "work_history",
-      "years_experience",
-      "exp_role",
-      "currently_working",
-      "current_workplace",
-      "work_description",
-      "specific_job",
-    ],
-  },
-  {
-    title: "בינה מלאכותית",
-    icon: Sparkles,
-    tone: "pink",
-    keys: ["genai_known", "genai_practiced", "ai_tools_used", "ai_gaps"],
-  },
-  {
-    title: "הכשרה ולימודים",
-    icon: GraduationCap,
-    tone: "indigo",
-    keys: ["study_place", "track_specialization", "certificate", "unique_courses", "graduation_year"],
+    keys: ["work_history", "years_experience", "exp_role", "current_workplace", "work_description"],
   },
   {
     title: "התנסות מעשית",
@@ -71,16 +45,35 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
       "practical_experience",
       "practicum_done",
       "practicum_employer",
+      "practicum_period",
       "practicum_tech",
       "practicum_description",
       "practicum_placement",
     ],
   },
   {
+    title: "מיומנויות טכניות",
+    icon: Code2,
+    tone: "tech",
+    keys: ["dev_tech", "exp_tech", "language_skills"],
+  },
+  {
+    title: "בינה מלאכותית",
+    icon: Sparkles,
+    tone: "pink",
+    keys: ["genai_practiced", "ai_tools_used"],
+  },
+  {
+    title: "הכשרה ולימודים",
+    icon: GraduationCap,
+    tone: "indigo",
+    keys: ["study_place", "track_specialization", "certificate", "unique_courses", "graduation_year"],
+  },
+  {
     title: "זמינות והעדפות",
     icon: Compass,
     tone: "purple",
-    keys: ["remote_commute", "paid_placement"],
+    keys: ["remote_commute", "practicum_placement", "job_offer_types"],
   },
 ];
 
@@ -134,8 +127,9 @@ export default async function ProfilePreviewPage() {
       <div className="flex items-center gap-2.5 bg-tint-purple/60 border border-[#DDC9EC] rounded-md p-3 px-4 text-[13.5px] text-ink-900">
         <Eye size={16} className="text-brand-purple shrink-0" />
         <span>
-          <b>תצוגה מקדימה:</b> ככה בדיוק נראה הפרופיל שלך למגייסות בפורטל המעסיקים — רק שדות
-          שסומנו כגלויים למעסיק. אצלן מופיע גם כפתור להורדת קורות החיים שלך.
+          <b>תצוגה מקדימה:</b> ככה בדיוק רואות אותך המגייסות בפורטל המעסיקים — הפרופיל המלא
+          שלך, בנוי להחליף את קורות החיים. פרטי הקשר שלך לא מוצגים (הפנייה עוברת דרכנו),
+          ואצלן מופיע גם כפתור להורדת קורות החיים.
         </span>
       </div>
 

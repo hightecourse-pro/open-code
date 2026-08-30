@@ -36,23 +36,13 @@ export interface ButtonProps
     VariantProps<typeof buttonVariants> {
   /** Render as a child element (e.g. an <a>) while keeping button styles. */
   asChild?: boolean;
-  /** Wrap the label in the </…> code-bracket motif (matches button text color). */
+  /**
+   * RETIRED (the owner, 2026-08-30): the </…> code motif stays on headings
+   * and screens, but on buttons it read as noise — and bidi kept flipping it.
+   * The prop is still accepted so existing call sites compile; it renders
+   * nothing.
+   */
   bracketed?: boolean;
-}
-
-// The `</…>` code motif around a button label. dir="ltr" keeps the bracket
-// glyphs from being bidi-scrambled inside RTL text ("</" was rendering as
-// "/<"), and the margins keep them from crowding the label.
-function bracket(glyph: string, side: "start" | "end") {
-  return (
-    <span
-      aria-hidden
-      dir="ltr"
-      className={cn("font-mono text-[0.8em] opacity-80", side === "start" ? "me-1.5" : "ms-1.5")}
-    >
-      {glyph}
-    </span>
-  );
 }
 
 export function Button({
@@ -60,6 +50,7 @@ export function Button({
   variant,
   size,
   asChild = false,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   bracketed = false,
   children,
   ...props
@@ -67,35 +58,9 @@ export function Button({
   const Comp = asChild ? Slot : "button";
   const classes = cn(buttonVariants({ variant, size }), className);
 
-  // asChild + bracketed: inject the brackets INSIDE the child element (e.g.
-  // the <Link>), so the anchor itself gets the button styles and the whole
-  // button stays clickable — Slot must receive exactly one element child.
-  if (asChild && bracketed && React.isValidElement(children)) {
-    const el = children as React.ReactElement<{ children?: React.ReactNode }>;
-    return (
-      <Comp className={classes} {...props}>
-        {React.cloneElement(
-          el,
-          undefined,
-          bracket("</", "start"),
-          el.props.children,
-          bracket(">", "end")
-        )}
-      </Comp>
-    );
-  }
-
   return (
     <Comp className={classes} {...props}>
-      {bracketed ? (
-        <>
-          {bracket("</", "start")}
-          {children}
-          {bracket(">", "end")}
-        </>
-      ) : (
-        children
-      )}
+      {children}
     </Comp>
   );
 }

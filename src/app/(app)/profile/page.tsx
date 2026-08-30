@@ -152,12 +152,15 @@ export default async function ProfilePage() {
         />
       </div>
 
-      <EmploymentCard
-        foundJob={profile.found_job}
-        workplace={priv?.workplace ?? null}
-        hiredViaUs={profile.hired_via_us}
-        mentorName={employmentMentorName}
-      />
+      {/* Mentors contribute — they don't report job-hunting status (30/8). */}
+      {profile.role !== "mentor" && (
+        <EmploymentCard
+          foundJob={profile.found_job}
+          workplace={priv?.workplace ?? null}
+          hiredViaUs={profile.hired_via_us}
+          mentorName={employmentMentorName}
+        />
+      )}
 
       {/* "המנוי שלי" moved to its own page (PM) — /subscription in the menu. */}
 

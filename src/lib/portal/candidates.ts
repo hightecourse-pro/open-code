@@ -66,11 +66,24 @@ const PORTAL_LABELS: Record<string, string> = {
   currently_working: "עובדת כיום",
   work_description: "תיאור התפקיד והעשייה",
   bio: "היכרות קצרה",
+  github: "GitHub",
+  language_skills: "שפות",
+  study_place: "מוסד לימודים",
+  track_specialization: "התמחות",
+  graduation_year: "שנת סיום",
+  certificate: "תעודה",
+  unique_courses: "קורסים ייחודיים",
+  job_offer_types: "משרות שמתאימות לה",
+  current_workplace: "מקום עבודה נוכחי / אחרון",
 };
 
 /** The label a portal client sees for a question. */
 function portalLabel(q: ConfigQuestion): string {
-  return PORTAL_LABELS[q.key] ?? q.label_he;
+  const mapped = PORTAL_LABELS[q.key];
+  if (mapped) return mapped;
+  // The member-facing label may carry FORM hints ("(שורה לכל קישור)") — the
+  // display is not a form (the owner, 30/8), so parenthetical hints drop.
+  return q.label_he.replace(/\s*\((?:שורה לכל קישור|אופציונלי[^)]*|רשות[^)]*)\)/g, "").trim();
 }
 
 function extractUrls(text: string): string[] {
