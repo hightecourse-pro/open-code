@@ -1,8 +1,22 @@
 // Staging check: a session with status='live' that STARTED 5 HOURS AGO must
 // still show as live (badge, top list), never as "עברו", and must not raise
-// the feedback banner. Fixture topic: LIVE-verify (cleaned by the caller).
+// the feedback banner. SELF-SEEDING (2026-08-30): the fixture session is
+// created here and removed at the end — no external seed step.
+// Run with: node --env-file=.env.local scripts/verify-live-status.mjs
 import { chromium } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 const PASS = process.env.VERIFY_FIXTURE_PASSWORD ?? (() => { console.error("set VERIFY_FIXTURE_PASSWORD"); process.exit(1); })();
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+await sb.from("sessions").delete().eq("title", "בדיקת לייב ממושך");
+const { error: seedErr } = await sb.from("sessions").insert({
+  title: "בדיקת לייב ממושך",
+  topic: "מרצה: בודקת",
+  scheduled_at: new Date(Date.now() - 5 * 3600e3).toISOString(),
+  is_published: true,
+  open_to_all: true,
+  status: "live",
+});
+if (seedErr) { console.error("seed failed:", seedErr.message); process.exit(1); }
 const BASE = "https://open-code-psi.vercel.app";
 const results = [];
 const ok = (n, p) => results.push(`${p ? "✅" : "❌"} ${n}`);

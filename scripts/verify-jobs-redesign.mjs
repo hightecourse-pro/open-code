@@ -72,9 +72,16 @@ await page.waitForURL((u) => u.searchParams.get("applied") === "1", { timeout: 3
 ok("application submitted", true);
 
 // 5. dedup + the mine view groups
+// The fixtures hold JFD TWINS (two open jobs with this title) — only the one
+// she applied to leaves the board, so the assertion is per-card link, not
+// per-title.
 await page.waitForLoadState("networkidle");
-const cardTitles = await page.locator("article .font-display.text-\\[16px\\]").allTextContents();
-ok("applied job left the board", !cardTitles.some((t) => t.includes("Junior Frontend Developer")));
+const appliedCardGone =
+  (await page
+    .locator('article:has-text("Junior Frontend Developer")')
+    .filter({ has: page.locator('a[href="/jobs/266739e7-e977-4504-bfc1-d537d3f736cc/apply"]') })
+    .count()) === 0;
+ok("applied job left the board", appliedCardGone);
 await page.goto(`${BASE}/jobs?view=mine`);
 await page.waitForLoadState("networkidle");
 ok("mine view: בבדיקה group", (await page.locator("text=אצלנו בבדיקה").count()) > 0);
