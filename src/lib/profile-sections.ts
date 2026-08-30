@@ -47,7 +47,7 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
     hint: "ניסיון מהתעשייה, פרקטיקום ובוטקאמפ — ככה נדע לאילו משרות לכוון בשבילך.",
     keys: [
       "years_experience", "exp_role", "exp_tech", "exp_languages", "work_history",
-      "practical_experience", "practicum_done", "practicum_employer", "practicum_period",
+      "practical_experience", "practicum_done", "practicum_kind", "practicum_employer", "practicum_period",
       "practicum_tech", "practicum_description", "currently_working", "current_workplace",
       "work_description", "specific_job", "current_employment", "current_employment_place",
     ],
