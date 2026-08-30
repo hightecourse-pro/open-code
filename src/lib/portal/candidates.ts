@@ -137,8 +137,13 @@ function toDisplay(
   }
   // Experience lists → rich entries: headline + tech chips + free description.
   if (EXPERIENCE_KEYS.has(q.key)) {
+    // Newest first (the owner, 31/8: "המשרות תמיד מהתאריך הנוכחי ומטה") —
+    // the current place leads, then by end date, then by start date.
+    const sortKey = (e: { start: string; end: string; current?: boolean }) =>
+      e.current ? "9999-99" : e.end === "current" ? "9998-99" : e.end || e.start || "";
     const entries: ExperienceEntryDisplay[] = parseExperienceEntries(raw)
       .filter((e) => e.place)
+      .sort((a, b) => sortKey(b).localeCompare(sortKey(a)))
       .map((e) => ({
         headline: [
           e.role,
@@ -316,6 +321,15 @@ export async function loadCandidates(opts?: {
   const labelsFor = labelResolverFrom(taxonomies);
   // Experience entries carry tech taxonomy VALUES — resolve them to labels.
   const techLabels = new Map((taxonomies.tech ?? []).map((o) => [o.value, o.label]));
+  // GenAI options live inline on their question, not in the tech taxonomy —
+  // entry techs may reference them (the editors offer both lists since 31/8).
+  {
+    const genaiQ = questions.find((q) => q.key === "genai_practiced");
+    const opts = Array.isArray(genaiQ?.options)
+      ? (genaiQ.options as unknown as { value: string; label: string }[])
+      : [];
+    for (const o of opts) if (!techLabels.has(o.value)) techLabels.set(o.value, o.label);
+  }
   const techGroups = new Map(
     (taxonomies.tech ?? []).filter((o) => o.group).map((o) => [o.value, o.group as string])
   );

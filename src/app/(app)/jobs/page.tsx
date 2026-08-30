@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { techKey } from "@/lib/tech-match";
+import { EXPERIENCE_KEYS, parseExperienceEntries } from "@/lib/experience-entries";
 import { Alert } from "@/components/ui";
 import { JobCard } from "@/components/patterns/job-card";
 import { JobsInstantList } from "@/components/patterns/jobs-instant-list";
@@ -101,7 +102,7 @@ export default async function JobsPage({
       .from("config_taxonomies")
       .select("value, label_he")
       .in("kind", ["tech", "specialization"]),
-    supabase.from("config_questions").select("id, taxonomy_kind").eq("active", true),
+    supabase.from("config_questions").select("id, key, taxonomy_kind, options").eq("active", true),
     user ? supabase.from("job_targets").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
   ]);
 
@@ -214,10 +215,42 @@ export default async function JobsPage({
     const label = labelByValue.get(value);
     if (label) myTech.add(techKey(label));
   };
+  // GenAI tools she actually practiced count as skills too (the owner, 31/8) —
+  // their options are inline on the question, so map value→label locally.
+  const genaiQ = (questions ?? []).find((q) => q.key === "genai_practiced");
+  const genaiLabel = new Map(
+    (Array.isArray(genaiQ?.options) ? (genaiQ.options as { value: string; label: string }[]) : []).map(
+      (o) => [o.value, o.label]
+    )
+  );
+  // Experience-list questions carry per-entry tech arrays — for an
+  // experienced member that IS her skill list (the owner, 31/8: "שיחפש
+  // בניסיון את כל מה שסימנו כניסיון").
+  const experienceQuestionIds = new Set(
+    (questions ?? []).filter((q) => EXPERIENCE_KEYS.has(q.key)).map((q) => q.id)
+  );
+  const genaiQuestionId = genaiQ?.id ?? null;
   for (const a of myAnswers ?? []) {
-    if (!techQuestionIds.has(a.question_id) || !Array.isArray(a.value)) continue;
-    for (const v of a.value as unknown[]) {
-      if (typeof v === "string") addSkill(v);
+    if (techQuestionIds.has(a.question_id) && Array.isArray(a.value)) {
+      for (const v of a.value as unknown[]) {
+        if (typeof v === "string") addSkill(v);
+      }
+      continue;
+    }
+    if (a.question_id === genaiQuestionId && Array.isArray(a.value)) {
+      for (const v of a.value as unknown[]) {
+        if (typeof v === "string") {
+          addSkill(v);
+          const label = genaiLabel.get(v);
+          if (label) addSkill(label);
+        }
+      }
+      continue;
+    }
+    if (experienceQuestionIds.has(a.question_id)) {
+      for (const e of parseExperienceEntries(a.value)) {
+        for (const t of e.tech) addSkill(t);
+      }
     }
   }
   // Her specialization is a genuine second signal — it may hold a taxonomy

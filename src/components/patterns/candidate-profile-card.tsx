@@ -86,6 +86,10 @@ const NOT_FOR_EMPLOYERS = new Set([
   "job_offer_types",
   "specific_job",
   "paid_placement",
+  // The employment sequence itself carries these (the owner, 31/8: "מיותר").
+  "years_experience",
+  "exp_role",
+  "currently_working",
 ]);
 
 function isHeaderField(field: CandidateField, candidate: CandidateDetail): boolean {
@@ -125,17 +129,44 @@ function groupWeight(items: CandidateField[]): number {
 }
 
 /**
- * Weighted spans need enough cards to fill rows; a SPARSE profile (the owner,
- * 31/8: "אם חסר נתונים זה לא יפה ולא סימטרי") switches to symmetric spans so
- * one or two cards still compose a full, balanced row.
+ * Row-packed spans: every xl row totals exactly 12 columns, so the bento can
+ * never leave a card stranded beside a hole (the owner, 31/8: "הכשרה
+ * ולימודים תקוע"). Base spans come from content weight; the last card of
+ * each row stretches to close it.
  */
-function spanClass(weight: number, totalCards: number): string {
-  if (totalCards <= 1) return "md:col-span-6 xl:col-span-12";
-  if (totalCards === 2) return "md:col-span-3 xl:col-span-6";
-  if (totalCards === 3) return "md:col-span-2 xl:col-span-4";
-  if (weight >= 6) return "md:col-span-6 xl:col-span-7";
-  if (weight >= 3) return "md:col-span-3 xl:col-span-5";
-  return "md:col-span-3 xl:col-span-4";
+function packSpans(weights: number[]): number[] {
+  const total = weights.length;
+  const base = weights.map((w) => {
+    if (total <= 1) return 12;
+    if (total === 2) return 6;
+    if (total === 3) return 4;
+    return w >= 6 ? 7 : w >= 3 ? 5 : 4;
+  });
+  const spans = [...base];
+  let rowStart = 0;
+  let acc = 0;
+  for (let i = 0; i < spans.length; i++) {
+    if (acc + spans[i] > 12) {
+      spans[i - 1] += 12 - acc; // stretch the row's last card to the edge
+      rowStart = i;
+      acc = 0;
+    }
+    acc += spans[i];
+  }
+  if (acc > 0 && acc < 12) spans[spans.length - 1] += 12 - acc;
+  void rowStart;
+  return spans;
+}
+
+// Tailwind needs literal class names — a static lookup instead of template
+// interpolation (which the compiler would never see).
+const XL_SPAN: Record<number, string> = {
+  4: "xl:col-span-4", 5: "xl:col-span-5", 6: "xl:col-span-6", 7: "xl:col-span-7",
+  8: "xl:col-span-8", 9: "xl:col-span-9", 10: "xl:col-span-10", 11: "xl:col-span-11", 12: "xl:col-span-12",
+};
+function spanClasses(xl: number): string {
+  const md = xl >= 7 ? "md:col-span-6" : "md:col-span-3";
+  return `${md} ${XL_SPAN[Math.min(12, Math.max(4, xl))] ?? "xl:col-span-6"}`;
 }
 
 const TONE_BUBBLE: Record<string, string> = {
@@ -165,7 +196,14 @@ export function CandidateProfileCard({
   headerExtra?: React.ReactNode;
 }) {
   const groups = groupFields(candidate);
-  const totalCards = groups.length + (candidate.links.length > 0 ? 1 : 0);
+  const hasLinks = candidate.links.length > 0;
+  const cardWeights = [
+    ...(hasLinks ? [candidate.links.length > 2 ? 6 : 3] : []),
+    ...groups.map((g) => groupWeight(g.items)),
+  ];
+  const packed = packSpans(cardWeights);
+  const linksSpan = hasLinks ? packed[0] : 0;
+  const groupSpans = hasLinks ? packed.slice(1) : packed;
   return (
     <div className="flex flex-col gap-4">
       {/* ------------------------------------------------------- hero card */}
@@ -229,7 +267,7 @@ export function CandidateProfileCard({
           <section
             className={cn(
               "rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 break-inside-avoid",
-              spanClass(candidate.links.length > 2 ? 6 : 3, totalCards)
+              spanClasses(linksSpan)
             )}
           >
             <h2 className="font-display mb-1 flex items-center gap-2.5 text-[16px] font-bold text-ink-1000">
@@ -242,7 +280,7 @@ export function CandidateProfileCard({
             <ul
               className={cn(
                 "grid gap-2.5 grid-cols-1",
-                candidate.links.length > 2 && "xl:grid-cols-2"
+                linksSpan >= 8 && candidate.links.length > 2 && "xl:grid-cols-2"
               )}
             >
               {candidate.links.map((link) => (
@@ -274,14 +312,13 @@ export function CandidateProfileCard({
           </section>
         )}
 
-        {groups.map((group) => {
-          const weight = groupWeight(group.items);
+        {groups.map((group, gi) => {
           return (
             <section
               key={group.title}
               className={cn(
                 "rounded-[18px] border border-ink-200 bg-white p-5 shadow-sm break-inside-avoid print:shadow-none",
-                spanClass(weight, totalCards)
+                spanClasses(groupSpans[gi] ?? 6)
               )}
             >
               <h2 className="font-display mb-4 flex items-center gap-2.5 text-[16px] font-bold text-ink-1000">

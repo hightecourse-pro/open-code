@@ -58,6 +58,8 @@ export interface ReviewApplication {
   profile: ReviewProfileSummary | null;
   curated: boolean;
   clientFeedback: { interviewMarked: boolean; clientNote: string | null } | null;
+  /** צוות / מנטורית — overrides the מנויה pill for staff accounts (31/8). */
+  memberLabel?: "team" | "mentor" | null;
   /** מנויה (profiles.status === "active") — internal indication only. */
   isSubscriber: boolean;
   /** VIP from the admin-only member_crm — internal indication only. */
@@ -209,11 +211,19 @@ function MemberFlair({ app, starClass }: { app: ReviewApplication; starClass?: s
           ⭐
         </span>
       )}
-      {app.isSubscriber && (
+      {app.memberLabel === "team" ? (
+        <span className="shrink-0 rounded-full bg-ink-1000 px-1.5 py-0.5 text-[10px] font-bold text-white">
+          צוות
+        </span>
+      ) : app.memberLabel === "mentor" ? (
+        <span className="shrink-0 rounded-full bg-tint-warm px-1.5 py-0.5 text-[10px] font-bold text-[#8C5E0E]">
+          👑 מנטורית
+        </span>
+      ) : app.isSubscriber ? (
         <span className="shrink-0 rounded-full bg-tint-pink px-1.5 py-0.5 text-[10px] font-bold text-brand-pink-deep">
           מנויה
         </span>
-      )}
+      ) : null}
     </>
   );
 }

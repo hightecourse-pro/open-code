@@ -328,10 +328,11 @@ export default async function AdminJobPage({
         : null,
       curated: curatedSet.has(a.applicant_id),
       clientFeedback: feedbackOf.get(a.applicant_id) ?? null,
-      // "מנויה" = actually paying (or a mentor/admin) — a manually-activated
-      // profile with no live subscription must not read as one (2026-08-30).
-      isSubscriber:
-        p?.status === "active" && (p.member_tier === "paid" || p.role === "mentor" || p.role === "admin"),
+      // "מנויה" = a PAYING member. Staff and mentors get their own labels
+      // instead (the owner, 31/8: "אנחנו צוות!") and stay out of the מנויות
+      // counter.
+      isSubscriber: p?.status === "active" && p.member_tier === "paid" && p.role === "junior",
+      memberLabel: p?.role === "admin" ? ("team" as const) : p?.role === "mentor" ? ("mentor" as const) : null,
       isVip: vipSet.has(a.applicant_id),
       crmNote: crmNoteOf.get(a.applicant_id) ?? null,
       adminNote: noteOf.get(a.id) ?? null,

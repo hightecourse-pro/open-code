@@ -392,7 +392,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             name={key}
             variant={isPractical ? "practical" : "work"}
             initial={parseExperienceEntries(current)}
-            techOptions={taxonomyOptions.tech ?? []}
+            // The tech chips offer the taxonomy PLUS the GenAI list (the
+            // owner, 31/8) — practiced AI work is experience like any other.
+            techOptions={[
+              ...(taxonomyOptions.tech ?? []),
+              ...opts(rest.find((x) => x.key === "genai_practiced") ?? q).filter(
+                (o) => !(taxonomyOptions.tech ?? []).some((t) => t.value === o.value)
+              ),
+            ]}
             roleOptions={isPractical ? [] : opts(rest.find((x) => x.key === "exp_role") ?? q)}
             error={!!err}
           />
