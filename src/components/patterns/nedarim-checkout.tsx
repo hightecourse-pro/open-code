@@ -37,6 +37,12 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(420);
   const [status, setStatus] = useState<Status>("idle");
+  // Captured once per mount — render stays pure (lint: no Date.now() inline).
+  const [renewal] = useState(() =>
+    new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long", timeZone: "Asia/Jerusalem" }).format(
+      new Date(Date.now() + 30 * 24 * 3600 * 1000)
+    )
+  );
   const [error, setError] = useState<string | null>(null);
   const [activationTimedOut, setActivationTimedOut] = useState(false);
   // Nedarim rejects transactions without a phone, and the owner's report needs
@@ -130,11 +136,6 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
     // OUR renewal date, said out loud — the Nedarim receipt sometimes prints
     // a confusing "NextDate" from their fixed keva day (e.g. a past 28/08 on
     // a 30/08 signup); the membership month is what we honor.
-    const renewal = new Intl.DateTimeFormat("he-IL", {
-      day: "numeric",
-      month: "long",
-      timeZone: "Asia/Jerusalem",
-    }).format(new Date(Date.now() + 30 * 24 * 3600 * 1000));
     return (
       <Alert variant="success" title="התשלום התקבל! 💜">
         {activationTimedOut ? (

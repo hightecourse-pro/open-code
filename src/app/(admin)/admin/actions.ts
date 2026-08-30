@@ -13,6 +13,7 @@ import {
   jobCandidatesEmail,
   jobPublishedEmail,
   mentorApprovedEmail,
+  teamRepliedEmail,
   mentorAssignmentInviteEmail,
 } from "@/lib/email/templates";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
@@ -2291,6 +2292,24 @@ export async function replyToMemberRequest(
         .from("conversations")
         .update({ last_message_at: new Date().toISOString() })
         .eq("id", convId);
+      // The reply lands in chat directly (not through the chat action), so
+      // the "someone wrote to you" nudge is sent here (30/8: "נוטיפיקציות
+      // כשיש תשובה מהצוות"). The chat badge lights up on its own.
+      try {
+        const { data: ru } = await admin.auth.admin.getUserById(req.profile_id);
+        const email = ru?.user?.email;
+        if (email) {
+          const { data: rp } = await admin
+            .from("profiles")
+            .select("first_name, full_name")
+            .eq("id", req.profile_id)
+            .maybeSingle();
+          const built = teamRepliedEmail(req.subject, rp?.first_name || rp?.full_name?.split(" ")[0] || undefined);
+          await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+        }
+      } catch (e) {
+        console.error("[requests] reply email failed:", requestId, e);
+      }
     }
   }
 

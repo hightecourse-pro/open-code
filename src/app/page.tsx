@@ -73,12 +73,12 @@ export default async function Home({
             <h2 className="font-display text-[28px] font-black text-ink-1000 mt-1">הכול במנוי אחד</h2>
             <p className="t-body text-ink-700 mt-1">כל מה שאת צריכה כדי לפרוץ לעולם הפיתוח — במקום אחד.</p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {FEATURES.map((f) => {
               const Icon = f.icon;
               return (
-                <div key={f.title} className="bg-ink-50 border border-ink-200 rounded-[18px] p-5">
-                  <div className="w-11 h-11 rounded-md bg-brand-gradient text-white flex items-center justify-center mb-3">
+                <div key={f.title} className="bg-ink-50 border border-ink-200 rounded-[16px] p-4">
+                  <div className="w-9 h-9 rounded-md bg-brand-gradient text-white flex items-center justify-center mb-2.5">
                     <Icon size={20} />
                   </div>
                   <h3 className="font-display font-bold text-ink-1000 text-[16px]">{f.title}</h3>

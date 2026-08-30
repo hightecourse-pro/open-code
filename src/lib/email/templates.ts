@@ -144,6 +144,22 @@ export function newMessageEmail(fromName: string): BuiltEmail {
   };
 }
 
+/** The team answered her request — the reply waits in her chat (30/8). */
+export function teamRepliedEmail(requestSubject: string, name?: string): BuiltEmail {
+  return {
+    subject: "הצוות ענה לך · קוד פתוח",
+    html: renderEmail({
+      heading: "יש לך תשובה מהצוות 💜",
+      lines: [
+        name ? `היי ${escapeHtml(name)},` : "היי,",
+        `ענינו על הפנייה שלך <b>"${escapeHtml(requestSubject)}"</b> — התשובה מחכה לך בצ'אט.`,
+      ],
+      ctaText: "לתשובה בצ'אט",
+      ctaUrl: `${SITE}/chat`,
+    }),
+  };
+}
+
 export interface DigestData {
   name?: string;
   unreadCount: number;

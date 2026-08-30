@@ -199,6 +199,39 @@ export default async function CoursesPage() {
         />
       )}
 
+      <div className="flex gap-2.5 items-start bg-tint-purple border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-700">
+        <Info size={18} className="text-brand-purple shrink-0 mt-0.5" />
+        <span>
+          <b className="font-display text-brand-purple">איך זה עובד:</b> את בוחרת קורס אחד ולומדת בקצב שלך.
+          חודש אחרי הבחירה נפתחת זכאות החלפה — הקורס הקודם ייסגר והחדש ייפתח, כמו בספרייה.
+        </span>
+      </div>
+
+      {/* With a course underway, the full catalogue is next month's business —
+          folded away instead of scrolling under her feet (PM feedback). */}
+      {activeCourse ? (
+        <div id="course-catalogue" className="scroll-mt-4">
+        <CollapsibleSection
+          title="כל הקורסים בספרייה"
+          subtitle={
+            swapReady
+              ? "זכאות ההחלפה שלך פתוחה — אפשר לבחור קורס אחר."
+              : `להחלפה הבאה — הזכאות נפתחת ב-${COURSE_DATE_HE.format(eligibleAt!)}.`
+          }
+          count={(courses ?? []).length}
+          storageKey="courses:catalogue"
+          defaultOpen={false}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{courseCards}</div>
+        </CollapsibleSection>
+        </div>
+      ) : (
+        <>
+          <h2 className="font-display text-lg font-bold text-ink-1000">כל הקורסים</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{courseCards}</div>
+        </>
+      )}
+
       {activeCourse && (
         <div className="relative overflow-hidden bg-brand-gradient rounded-[22px] p-6 text-white shadow-glow-pink flex flex-col sm:flex-row gap-5 items-start sm:items-center">
           <div className="w-[120px] h-[80px] rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/25">
@@ -288,38 +321,9 @@ export default async function CoursesPage() {
         );
       })}
 
-      <div className="flex gap-2.5 items-start bg-tint-purple border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-700">
-        <Info size={18} className="text-brand-purple shrink-0 mt-0.5" />
-        <span>
-          <b className="font-display text-brand-purple">איך זה עובד:</b> את בוחרת קורס אחד ולומדת בקצב שלך.
-          חודש אחרי הבחירה נפתחת זכאות החלפה — הקורס הקודם ייסגר והחדש ייפתח, כמו בספרייה.
-        </span>
-      </div>
 
-      {/* With a course underway, the full catalogue is next month's business —
-          folded away instead of scrolling under her feet (PM feedback). */}
-      {activeCourse ? (
-        <div id="course-catalogue" className="scroll-mt-4">
-        <CollapsibleSection
-          title="כל הקורסים בספרייה"
-          subtitle={
-            swapReady
-              ? "זכאות ההחלפה שלך פתוחה — אפשר לבחור קורס אחר."
-              : `להחלפה הבאה — הזכאות נפתחת ב-${COURSE_DATE_HE.format(eligibleAt!)}.`
-          }
-          count={(courses ?? []).length}
-          storageKey="courses:catalogue"
-          defaultOpen={false}
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{courseCards}</div>
-        </CollapsibleSection>
-        </div>
-      ) : (
-        <>
-          <h2 className="font-display text-lg font-bold text-ink-1000">כל הקורסים</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{courseCards}</div>
-        </>
-      )}
+
+
     </div>
   );
 }

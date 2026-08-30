@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Video, FolderOpen, ExternalLink, Check, Star, CalendarDays } from "lucide-react";
+import { Video, FolderOpen, ExternalLink, Check, ChevronDown, Star, CalendarDays } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { driveEmbedUrl } from "@/lib/drive";
 import { setStudied, saveCourseFeedback } from "@/app/(app)/courses/actions";
@@ -48,6 +48,17 @@ export function CourseContent({
   const [stars, setStars] = useState(rating ?? 0);
   const [text, setText] = useState(feedback ?? "");
   const [saved, setSaved] = useState(false);
+  // Lessons arrive COLLAPSED (the owner, 30/8: "ההקלטות יהיו מכווצות לפי
+  // שיעורים עם אופציה לפתוח") — the iframe loads only when a lesson opens,
+  // which also stops a 7-lesson course loading 7 Drive players at once.
+  const [openVideos, setOpenVideos] = useState<Set<string>>(() => new Set());
+  const toggleVideo = (id: string) =>
+    setOpenVideos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   // The form is open until feedback exists; after sending it folds into a
   // compact thank-you line (with an edit option).
   const [fbOpen, setFbOpen] = useState(rating == null);
@@ -66,11 +77,23 @@ export function CourseContent({
 
   function videoBlock(v: ContentLink) {
     const embed = driveEmbedUrl(v.url);
+    const isOpen = openVideos.has(v.id);
     return (
       <div key={v.id} className="bg-white border border-ink-200 rounded-[16px] overflow-hidden shadow-sm">
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-ink-100">
-          <Video size={15} className="text-brand-pink-deep" />
-          <span className="font-display font-semibold text-sm text-ink-1000">{v.title}</span>
+        <div className={cn("flex items-center gap-2 px-4 py-2.5", isOpen && "border-b border-ink-100")}>
+          <button
+            type="button"
+            onClick={() => toggleVideo(v.id)}
+            aria-expanded={isOpen}
+            className="flex items-center gap-2 flex-1 min-w-0 text-start cursor-pointer"
+          >
+            <Video size={15} className="text-brand-pink-deep shrink-0" />
+            <span className="font-display font-semibold text-sm text-ink-1000 truncate">{v.title}</span>
+            <ChevronDown
+              size={15}
+              className={cn("text-ink-400 transition-transform shrink-0", isOpen && "rotate-180")}
+            />
+          </button>
           <a
             href={v.url}
             target="_blank"
@@ -85,12 +108,12 @@ export function CourseContent({
                 })
               )
             }
-            className="ms-auto inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-brand-purple"
+            className="ms-auto inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-brand-purple shrink-0"
           >
             פתחי בדרייב <ExternalLink size={12} />
           </a>
         </div>
-        {embed ? (
+        {!isOpen ? null : embed ? (
           <iframe
             src={embed}
             title={v.title}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
 import { createMemberRequest } from "@/app/(app)/requests/actions";
@@ -32,6 +32,18 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // Anywhere in the app can open this widget with a ready-made subject —
+  // "יש לך שאלה על המשרה?" on the apply screen dispatches it (30/8).
+  const [subjectPrefill, setSubjectPrefill] = useState("");
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      setSubjectPrefill((e as CustomEvent<{ subject?: string }>).detail?.subject ?? "");
+      setSent(false);
+      setOpen(true);
+    };
+    window.addEventListener("oc:open-request", onOpen);
+    return () => window.removeEventListener("oc:open-request", onOpen);
+  }, []);
   // A request answered in the last week — worth a nudge on the button.
   // (now is captured once per mount — render must stay pure.)
   const [now] = useState(() => Date.now());
@@ -75,7 +87,7 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
             >
               {error && <Alert variant="danger">{error}</Alert>}
               <Field label="נושא" htmlFor="req-subject">
-                <Input id="req-subject" name="subject" required maxLength={120} placeholder="על מה מדובר?" />
+                <Input key={subjectPrefill} id="req-subject" name="subject" required maxLength={120} placeholder="על מה מדובר?" defaultValue={subjectPrefill} />
               </Field>
               <Field label="מה תרצי לספר לנו?" htmlFor="req-body">
                 <Textarea id="req-body" name="body" required rows={3} placeholder="בקשה, שאלה, רעיון — הכול מתקבל 💜" />

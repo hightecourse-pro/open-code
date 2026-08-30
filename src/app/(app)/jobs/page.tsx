@@ -258,12 +258,15 @@ export default async function JobsPage({
   const fitCount = boardJobs.filter((j) => matchedTags(j).length > 0).length;
   const savedCount = boardJobs.filter((j) => savedIds.has(j.id)).length;
 
-  // The filter selects' values, straight from what is actually on this tab.
+  // The filter selects' values, from EVERYTHING filterable on this tab — the
+  // targeted section included (30/8: with every job published to her
+  // personally, boardJobs alone left the dropdowns empty).
+  const facetSource = [...boardJobs, ...targetedJobs];
   const facetCount = new Map<string, number>();
-  for (const j of boardJobs) for (const t of j.tech_tags) facetCount.set(t, (facetCount.get(t) ?? 0) + 1);
+  for (const j of facetSource) for (const t of j.tech_tags) facetCount.set(t, (facetCount.get(t) ?? 0) + 1);
   const facets = {
     tech: [...facetCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20).map(([t]) => t),
-    locations: [...new Set(boardJobs.map((j) => j.location).filter((l): l is string => !!l))].sort((a, b) =>
+    locations: [...new Set(facetSource.map((j) => j.location).filter((l): l is string => !!l))].sort((a, b) =>
       a.localeCompare(b, "he")
     ),
     employments: (
@@ -274,7 +277,7 @@ export default async function JobsPage({
         ["freelance", "פרילנס"],
       ] as const
     )
-      .filter(([v]) => boardJobs.some((j) => j.employment_type === v))
+      .filter(([v]) => facetSource.some((j) => j.employment_type === v))
       .map(([value, label]) => ({ value, label })),
   };
 

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, MessageCircle } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { requireCommunityAccess } from "@/lib/auth";
 import { Alert } from "@/components/ui";
 import { ApplyForm, type ApplyCvDoc } from "./apply-form";
+import { AskTeamAboutJob } from "@/components/patterns/ask-team-about-job";
 
 export const metadata: Metadata = { title: "הגשת מועמדות" };
 // The job's questions and open/closed state must always be fresh.
@@ -63,7 +64,9 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
     .maybeSingle();
   if (!job || job.source !== "ours" || job.status !== "open") notFound();
 
-  const [{ data: questions }, cvDocs, { data: existing }, { data: teamContact }] = await Promise.all([
+  // "שאלה על המשרה?" opens the request-to-the-team widget (30/8) — no
+  // admin-contact lookup needed anymore.
+  const [{ data: questions }, cvDocs, { data: existing }] = await Promise.all([
     supabase
       .from("job_questions")
       .select("id, question, sort_order, required, answer_type, options")
@@ -77,18 +80,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
       .eq("job_id", id)
       .eq("applicant_id", profile.id)
       .maybeSingle(),
-    // "שאלה על המשרה?" opens a chat with the team instead of an email thread
-    // (PM: לייתר את המיילים). The longest-standing admin answers.
-    supabase
-      .from("profiles")
-      .select("id")
-      .eq("role", "admin")
-      .eq("status", "active")
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle(),
   ]);
-  const teamContactId = teamContact?.id ?? null;
 
   return (
     <div className="flex flex-col gap-5 max-w-[640px]">
@@ -106,16 +98,9 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">
           הגשת מועמדות: {job.title}
         </h1>
-        {teamContactId && (
-          <a
-            href={`/chat?with=${teamContactId}`}
-            target="_blank"
-            rel="noopener"
-            className="inline-flex items-center gap-1.5 mt-1 text-[13px] font-semibold text-brand-purple hover:underline"
-          >
-            <MessageCircle size={13} /> יש לך שאלה על המשרה? כתבי לנו בצ&apos;אט
-          </a>
-        )}
+        {/* Opens the request-to-the-team widget prefilled with the job (the
+            owner, 30/8) — the question lands in פניות לצוות, not in a chat. */}
+        <AskTeamAboutJob jobTitle={job.title} />
       </div>
 
       {/* The requirements exactly as the admin styled them (sanitized at save
