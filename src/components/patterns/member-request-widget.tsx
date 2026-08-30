@@ -148,6 +148,19 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
         </div>
       )}
 
+      {/* Launch-period nudge (the owner, 30/8): the community is in test
+          drive — a found bug belongs HERE, says the bouncing arrow. */}
+      {!open && (
+        <div className="flex flex-col items-center gap-0 pointer-events-none select-none">
+          <span className="bg-white border border-[#DDC9EC] text-ink-900 text-[12px] font-semibold rounded-full px-3.5 py-1.5 shadow-md text-center max-w-[240px]">
+            הקהילה בהרצה 🚀 מצאת באג? זה הסימן לדווח לנו
+          </span>
+          <span aria-hidden className="animate-bounce text-brand-pink-deep text-[20px] leading-none mt-0.5">
+            ⬇
+          </span>
+        </div>
+      )}
+
       {/* An UNSEEN answer announces itself — a label + pulse, not a quiet ✓
           (the owner, 30/8: "צריך להיות נוטיפיקציה גם באתר לא רק במייל"). */}
       {unseenAnswer && !open && (
