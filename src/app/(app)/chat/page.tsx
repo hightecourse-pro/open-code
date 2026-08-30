@@ -327,6 +327,7 @@ export default async function ChatPage({
               <ChatThread
                 messages={messagesWithFiles}
                 meId={me.id}
+                otherName={activeOther?.full_name ?? undefined}
                 action={canSend ? sendMessage.bind(null, active.id) : undefined}
                 hint={
                   activeIsMyMentor
