@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, X, StickyNote, UserRound, Target, Star } from "lucide-react";
+import { Search, X, StickyNote, UserRound, Target, Star, Eye } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { MemberActions } from "@/components/patterns/member-actions";
@@ -322,6 +322,13 @@ export function MembersTable({
                     >
                       {m.full_name || "—"}
                       <UserRound size={12} className="text-ink-400" />
+                    </a>
+                    <a
+                      href={`/admin/members/${m.id}/profile`}
+                      title="הפרופיל המלא — כמו שמגייסת רואה"
+                      className="text-ink-400 hover:text-brand-purple"
+                    >
+                      <Eye size={13} />
                     </a>
                     {m.is_vip && (
                       <span

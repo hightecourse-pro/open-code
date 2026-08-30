@@ -6,7 +6,9 @@ import {
   FlaskConical,
   GraduationCap,
   Info,
+  Mail,
   MapPin,
+  Phone,
   Sparkles,
 } from "lucide-react";
 import { Avatar, Badge, type BadgeProps } from "@/components/ui";
@@ -190,10 +192,17 @@ function prettyUrl(url: string): string {
 export function CandidateProfileCard({
   candidate,
   headerExtra,
+  teamContact,
 }: {
   candidate: CandidateDetail;
   /** Page-specific control in the header corner (e.g. the portal's favorite star). */
   headerExtra?: React.ReactNode;
+  /**
+   * TEAM-ONLY contact details (the owner, 31/8). Passed exclusively by the
+   * admin member-profile page — the portal and the member preview never
+   * provide it, so nothing here can leak to a client.
+   */
+  teamContact?: { phone?: string | null; email?: string | null };
 }) {
   const groups = groupFields(candidate);
   const hasLinks = candidate.links.length > 0;
@@ -245,6 +254,30 @@ export function CandidateProfileCard({
                 </span>
               )}
             </div>
+            {teamContact && (teamContact.phone || teamContact.email) && (
+              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                {teamContact.phone && (
+                  <a
+                    href={`tel:${teamContact.phone}`}
+                    dir="ltr"
+                    className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-900 hover:text-brand-purple"
+                  >
+                    <Phone size={14} className="text-brand-purple" />
+                    {teamContact.phone}
+                  </a>
+                )}
+                {teamContact.email && (
+                  <a
+                    href={`mailto:${teamContact.email}`}
+                    dir="ltr"
+                    className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-900 hover:text-brand-purple"
+                  >
+                    <Mail size={14} className="text-brand-purple" />
+                    {teamContact.email}
+                  </a>
+                )}
+              </div>
+            )}
             {candidate.bio && (
               <MessageBody body={candidate.bio} className="t-body mt-4 max-w-[68ch] whitespace-pre-line text-ink-900" />
             )}
