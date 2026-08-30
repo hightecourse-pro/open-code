@@ -78,9 +78,9 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
   }
 
   return (
-    <div className="fixed bottom-4 end-4 z-40 flex flex-col items-end gap-2" dir="rtl">
+    <div className="fixed bottom-4 end-4 z-40 flex flex-col items-end gap-2 pointer-events-none" dir="rtl">
       {open && (
-        <div className="w-[320px] max-w-[calc(100vw-2rem)] bg-white border border-ink-200 rounded-[16px] shadow-lg p-4 flex flex-col gap-3">
+        <div className="w-[320px] max-w-[calc(100vw-2rem)] bg-white border border-ink-200 rounded-[16px] shadow-lg p-4 flex flex-col gap-3 pointer-events-auto">
           <div className="flex items-center justify-between">
             <span className="font-display font-bold text-[15px] text-ink-1000">
               הודעה או בקשה לצוות 💜
@@ -116,7 +116,7 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
                 <Textarea id="req-body" name="body" required rows={3} placeholder="בקשה, שאלה, רעיון — הכול מתקבל 💜" />
               </Field>
               <Button type="submit" size="sm" disabled={pending} className="self-start">
-                {pending ? "שולחת…" : "שליחה לצוות"}
+                {pending ? "שולח…" : "שליחה לצוות"}
               </Button>
             </form>
           )}
@@ -148,16 +148,37 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
         </div>
       )}
 
-      {/* Launch-period nudge (the owner, 30/8): the community is in test
-          drive — a found bug belongs HERE, says the bouncing arrow. */}
+      {/* Launch-period nudge (the owner, 30/8): a drawn arrow, big and right
+          beside the widget button, pointing at it. */}
       {!open && (
-        <div className="flex flex-col items-center gap-0 pointer-events-none select-none">
-          <span className="bg-white border border-[#DDC9EC] text-ink-900 text-[12px] font-semibold rounded-full px-3.5 py-1.5 shadow-md text-center max-w-[240px]">
-            הקהילה בהרצה 🚀 מצאת באג? זה הסימן לדווח לנו
+        <div className="flex flex-col items-start gap-0 pointer-events-none select-none -ms-2">
+          <span className="bg-white border border-[#DDC9EC] text-ink-900 text-[12px] font-semibold rounded-full px-3.5 py-1.5 shadow-md text-center max-w-[250px]">
+            הקהילה בהרצה 🚀 מצאת באג? זה הזמן לדווח לנו
           </span>
-          <span aria-hidden className="animate-bounce text-brand-pink-deep text-[20px] leading-none mt-0.5">
-            ⬇
-          </span>
+          <svg
+            aria-hidden
+            width="46"
+            height="52"
+            viewBox="0 0 46 52"
+            fill="none"
+            className="animate-bounce ms-3 -mt-0.5"
+          >
+            <path
+              d="M34 4 C 20 12, 12 24, 13 38"
+              stroke="#E0418D"
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              fill="none"
+            />
+            <path
+              d="M5 32 L13 44 L23 35"
+              stroke="#E0418D"
+              strokeWidth="4.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              fill="none"
+            />
+          </svg>
         </div>
       )}
 
@@ -170,7 +191,7 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
             markSeen();
             setOpen(true);
           }}
-          className="font-display font-semibold text-[12.5px] px-3.5 py-2 rounded-full bg-white text-brand-purple border-[1.5px] border-brand-purple shadow-md animate-bounce"
+          className="font-display font-semibold text-[12.5px] px-3.5 py-2 rounded-full bg-white text-brand-purple border-[1.5px] border-brand-purple shadow-md animate-bounce pointer-events-auto"
         >
           יש לך תשובה מהצוות 💜
         </button>
@@ -183,7 +204,7 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
           if (sent) setSent(false);
         }}
         aria-expanded={open}
-        className="relative inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2.5 rounded-full bg-brand-gradient text-white shadow-glow-pink hover:opacity-95 transition-opacity"
+        className="relative inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2.5 rounded-full bg-brand-gradient text-white shadow-glow-pink hover:opacity-95 transition-opacity pointer-events-auto"
       >
         <MessageSquarePlus size={15} /> יש לך בקשה?
         {freshAnswer && !open && (

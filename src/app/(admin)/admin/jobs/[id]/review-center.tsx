@@ -1668,7 +1668,7 @@ function TeamNoteBox({ jobId, initial }: { jobId: string; initial: string | null
             })
           }
         >
-          {pending ? "שומרת…" : "שמירת ההערה"}
+          {pending ? "שומר…" : "שמירת ההערה"}
         </Button>
         {savedAt && <span className="text-[12px] font-semibold text-success">נשמר ✓</span>}
       </div>

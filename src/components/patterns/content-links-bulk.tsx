@@ -30,7 +30,7 @@ export function ContentLinksBulkList({ links }: { links: ContentLink[] }) {
             }}
             className="inline-flex items-center gap-1 text-[12px] font-semibold text-danger cursor-pointer"
           >
-            <Trash2 size={12} /> {pending ? "מוחקת…" : "מחיקת הנבחרים"}
+            <Trash2 size={12} /> {pending ? "מוחק…" : "מחיקת הנבחרים"}
           </button>
           <button
             type="button"

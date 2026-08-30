@@ -67,7 +67,7 @@ export function MemberEmploymentForm({
         </>
       )}
       <Button type="submit" size="sm" disabled={saving} className="w-fit">
-        {saving ? "שומרות…" : "שמירה"}
+        {saving ? "שומר…" : "שמירה"}
       </Button>
     </form>
   );

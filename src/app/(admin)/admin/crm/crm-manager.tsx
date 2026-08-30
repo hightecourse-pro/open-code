@@ -119,7 +119,7 @@ function ClientEditForm({ client }: { client: CrmClientRow }) {
       </Field>
 
       <Button type="submit" size="sm" disabled={pending} className="w-fit">
-        {pending ? "שומרת…" : "שמירה"}
+        {pending ? "שומר…" : "שמירה"}
       </Button>
     </form>
   );

@@ -36,6 +36,7 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
   if (!user) redirect("/login");
 
   let base64: string;
+  let uploadBuffer: Buffer | null = null;
   if (docId) {
     // A CV she already keeps with us. profile_id is checked explicitly, not
     // left to RLS — an admin's RLS reads every document, and the service role
@@ -71,7 +72,8 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
     if (file.size > MAX_BYTES) {
       return { error: "הקובץ גדול מדי — עד 10MB." };
     }
-    base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+    uploadBuffer = Buffer.from(await file.arrayBuffer());
+    base64 = uploadBuffer.toString("base64");
   }
 
   const result = await withUserKey((apiKey) =>
@@ -82,6 +84,21 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
   }
 
   const analysis = result.data;
+
+  // A one-off upload is kept as a snapshot so the history can open the exact
+  // file the feedback talks about (the owner, 30/8). Under her own folder in
+  // the cvs bucket — the member storage policy signs it without a new route.
+  // Best effort: a storage hiccup must not cost her the analysis she paid
+  // tokens for.
+  let checkedFilePath: string | null = null;
+  if (uploadBuffer) {
+    const path = `${user.id}/ai-checks/${Date.now()}.pdf`;
+    const { error: upErr } = await createAdminClient()
+      .storage.from("cvs")
+      .upload(path, uploadBuffer, { contentType: "application/pdf" });
+    if (!upErr) checkedFilePath = path;
+  }
+
   await supabase.from("cv_reviews").insert({
     profile_id: user.id,
     source: "ai",
@@ -91,8 +108,9 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
     job_fit: (analysis.job_fit ?? null) as unknown as Json,
     cv_text: null,
     // Which saved document this ran on — the history list links back to it
-    // (the owner, 30/8). A one-off upload has no saved document.
+    // (the owner, 30/8). A one-off upload keeps its snapshot instead.
     cv_document_id: docId || null,
+    checked_file_path: checkedFilePath,
   });
 
   return { analysis };

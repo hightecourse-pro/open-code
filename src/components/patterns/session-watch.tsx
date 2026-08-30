@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown, ExternalLink, Play } from "lucide-react";
+import { ChevronDown, ExternalLink, Play, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { driveEmbedUrl } from "@/lib/drive";
 import { logContentOpen } from "@/app/(app)/content/actions";
@@ -15,11 +15,14 @@ export interface WatchLink {
  * Watching a session recording, inline or out (the owner, 30/8): a fixed
  * "צפייה" button (the link's TITLE never leaks onto it) that opens an
  * embedded player right in the row, with an external Drive link beside it.
- * Drive sometimes takes a few minutes to process a fresh upload — the note
- * under the player says so instead of letting it read like a failure.
+ * The FIRST gate press is what grants her Drive permission, and Google can
+ * take a few seconds to propagate it to the player — so the note tells that
+ * truth and a רענון button remounts the iframe (the owner, 30/8: "הפתיחה
+ * בעצם יוצרת שיתוף… זה יקרה לכולם").
  */
 export function SessionWatch({ sessionId, links }: { sessionId: string; links: WatchLink[] }) {
   const [openId, setOpenId] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const [, start] = useTransition();
 
   const log = (linkId: string, source: "open" | "embed") =>
@@ -75,6 +78,7 @@ export function SessionWatch({ sessionId, links }: { sessionId: string; links: W
             <div className="w-full">
               {embed ? (
                 <iframe
+                  key={reloadKey}
                   src={embed}
                   title="הקלטת הסשן"
                   allow="autoplay"
@@ -90,9 +94,18 @@ export function SessionWatch({ sessionId, links }: { sessionId: string; links: W
                   .
                 </p>
               )}
-              <p className="text-[11.5px] text-ink-400 mt-1">
-                לא נטען? הקלטה שהועלתה ממש עכשיו לוקחת לדרייב כמה דקות לעבד — נסי לרענן בעוד רגע,
-                או פתחי בדרייב עם החץ שליד הכפתור.
+              <p className="text-[11.5px] text-ink-400 mt-1 flex items-center gap-2 flex-wrap">
+                <span>
+                  בפתיחה הראשונה נפתחת לך גישה בדרייב — אם הנגן מבקש הרשאה, חכי כמה שניות
+                  ולחצי רענון.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReloadKey((k) => k + 1)}
+                  className="inline-flex items-center gap-1 font-semibold text-brand-purple hover:underline cursor-pointer"
+                >
+                  <RotateCw size={11} /> רענון
+                </button>
               </p>
             </div>
           );

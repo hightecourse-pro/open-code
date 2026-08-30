@@ -329,6 +329,9 @@ export async function deleteContentLink(id: string): Promise<void> {
   await supabase.from("content_links").delete().eq("id", id);
   revalidatePath("/admin/content");
   revalidatePath("/courses");
+  // The sessions manager hosts the same delete (session materials panel) —
+  // without this the row survived on screen and read as "אין אפשרות למחוק".
+  revalidatePath("/admin/sessions");
 }
 
 /** Delete a checked subset of a course/session's links in one motion. */
@@ -340,6 +343,7 @@ export async function bulkDeleteContentLinks(ids: string[]): Promise<void> {
   await supabase.from("content_links").delete().in("id", clean);
   revalidatePath("/admin/content");
   revalidatePath("/courses");
+  revalidatePath("/admin/sessions");
 }
 
 /** Bulk-mark pending shares as done — all of them or a checked subset. */

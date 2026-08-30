@@ -1157,6 +1157,7 @@ export interface Database {
           job_fit: Json | null;
           cv_text: string | null;
           cv_document_id: string | null;
+          checked_file_path: string | null;
           created_at: string;
         };
         Insert: {
@@ -1171,6 +1172,7 @@ export interface Database {
           job_fit?: Json | null;
           cv_text?: string | null;
           cv_document_id?: string | null;
+          checked_file_path?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["cv_reviews"]["Insert"]>;

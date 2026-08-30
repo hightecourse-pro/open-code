@@ -178,7 +178,7 @@ function OpenRequestCard({
                   </select>
                 )}
                 <Button type="button" size="sm" disabled={pending || !reply.trim()} onClick={() => submit(false)}>
-                  {pending ? "שולחת…" : "שליחת תשובה בצ'אט + סימון טופל"}
+                  {pending ? "שולח…" : "שליחת תשובה בצ'אט + סימון טופל"}
                 </Button>
                 <button
                   type="button"
@@ -467,7 +467,7 @@ function InboxSettingsForm({ teamNames, canned }: { teamNames: string[]; canned:
             });
           }}
         >
-          {pending ? "שומרת…" : "שמירה"}
+          {pending ? "שומר…" : "שמירה"}
         </Button>
         {saved && <span className="text-[12.5px] font-semibold text-success">נשמר ✓</span>}
       </div>

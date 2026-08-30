@@ -11,7 +11,7 @@ export default function AdminLoading() {
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-pink-deep/30" />
           <span className="relative inline-flex h-10 w-10 animate-spin rounded-full border-[3px] border-ink-200 border-t-brand-pink-deep" />
         </span>
-        <span className="font-display text-sm font-semibold text-ink-500">רק רגע, טוענות…</span>
+        <span className="font-display text-sm font-semibold text-ink-500">רק רגע, טוען…</span>
       </div>
     </div>
   );

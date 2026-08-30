@@ -149,7 +149,7 @@ export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
           <Textarea id="job" name="job" rows={4} placeholder="הדביקי תיאור משרה ונבדוק יחד עד כמה את מתאימה…" />
         </Field>
         <Button type="submit" disabled={pending} className="w-fit" bracketed>
-          {pending ? "בודקת את קורות החיים שלך…" : "בדיקת קורות חיים"}
+          {pending ? "בודק את קורות החיים שלך…" : "בדיקת קורות חיים"}
         </Button>
 
         {/* The analysis takes real time (10-60s through Google) — a working

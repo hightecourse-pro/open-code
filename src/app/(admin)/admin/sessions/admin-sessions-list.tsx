@@ -100,7 +100,7 @@ function EditForm({ s, onClose }: { s: AdminSessionRow; onClose: () => void }) {
       </Field>
       <div className="flex items-end gap-2">
         <Button type="submit" size="sm" disabled={pending}>
-          {pending ? "שומרת…" : "שמירה"}
+          {pending ? "שומר…" : "שמירה"}
         </Button>
         <Button type="button" size="sm" variant="ghost" onClick={onClose}>
           ביטול

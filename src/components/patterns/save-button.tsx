@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * A submit button that SAYS what's happening (the owner, 30/8: "צריכה להיות
- * אינדיקציה של שמירה אחרי שנשמר"): pending → "שומרת…", then a green
+ * אינדיקציה של שמירה אחרי שנשמר"): pending → "שומר…", then a green
  * "נשמר ✓" flash for a moment.
  */
 export function SaveButton({ label, className }: { label: string; className?: string }) {
@@ -36,7 +36,7 @@ export function SaveButton({ label, className }: { label: string; className?: st
         className
       )}
     >
-      {pending ? "שומרת…" : savedFlash ? "נשמר ✓" : label}
+      {pending ? "שומר…" : savedFlash ? "נשמר ✓" : label}
     </button>
   );
 }

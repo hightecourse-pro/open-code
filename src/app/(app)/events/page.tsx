@@ -94,33 +94,60 @@ export default async function EventsPage() {
       .limit(6),
   ]);
 
+  // A live session ENDS (the owner, 30/8: "צריך להפסיק להיות לייב"): with a
+  // duration — when it runs out; without one — two hours after the start.
+  // A long hackathon evening stays live by getting a real duration.
+  const liveUntil = (s: { scheduled_at: string; duration_minutes?: number | null }) =>
+    new Date(s.scheduled_at).getTime() + (s.duration_minutes ?? 120) * 60 * 1000;
+  const isLive = (s: {
+    scheduled_at: string;
+    canceled_at: string | null;
+    status: string;
+    duration_minutes?: number | null;
+  }) =>
+    !s.canceled_at &&
+    s.status !== "done" &&
+    (s.status === "live" || new Date(s.scheduled_at).getTime() <= now.getTime()) &&
+    now.getTime() < liveUntil(s);
+
   // A finished session moves off this screen (it lives in the recordings page);
-  // a canceled one still shows (as "בוטל") for 24h, then disappears.
-  // A session the admin marked `live` stays live past the 2h window — a long
-  // hackathon evening ends when she marks it done, not when the clock says so.
-  const stillLive = (past ?? []).filter((s) => s.status === "live" && !s.canceled_at);
+  // a canceled one still shows (as "בוטל") for 24h, then disappears. Sessions
+  // older than the 2h window but still running (long duration, or marked live
+  // and within their window) stay pinned at the top; expired ones fall back
+  // into the past list instead of glowing forever.
+  const stillLive = (past ?? []).filter((s) => isLive(s));
   const upcoming = [
     ...stillLive,
     ...(upcomingRaw ?? []).filter(
       (s) => s.status !== "done" && (!s.canceled_at || new Date(s.canceled_at).getTime() > cutoff)
     ),
   ];
-  const isLive = (s: { scheduled_at: string; canceled_at: string | null; status: string }) =>
-    !s.canceled_at &&
-    s.status !== "done" &&
-    (s.status === "live" || new Date(s.scheduled_at).getTime() <= now.getTime());
 
-  const pastShown = (past ?? []).filter((s) => !s.canceled_at && s.status !== "live");
+  const pastShown = (past ?? []).filter((s) => !s.canceled_at && !isLive(s));
   // "הועבר + כניסה מההקלטות": the link shows only when a recording actually
   // exists for that session — a dead "להקלטה" teaches her not to click it.
   const recTable = subscriber ? "recordings" : "recordings_public";
-  const { data: recRows } = pastShown.length
-    ? await supabase
-        .from(recTable)
-        .select("id, session_id")
-        .in("session_id", pastShown.map((s) => s.id))
-    : { data: [] };
-  const recordedSessions = new Set((recRows ?? []).map((r) => r.session_id));
+  const [{ data: recRows }, { data: recLinks }] = pastShown.length
+    ? await Promise.all([
+        supabase
+          .from(recTable)
+          .select("id, session_id")
+          .in("session_id", pastShown.map((s) => s.id)),
+        // Recordings added on the session itself (ניהול סשנים) live in
+        // content_links — without this, a session with a recording said
+        // nothing (the owner, 30/8: "סשן 2 יש גם הקלטה — למה לא רואים").
+        supabase
+          .from("content_links")
+          .select("owner_id")
+          .eq("owner_type", "session")
+          .eq("kind", "video")
+          .in("owner_id", pastShown.map((s) => s.id)),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const recordedSessions = new Set([
+    ...(recRows ?? []).map((r) => r.session_id),
+    ...(recLinks ?? []).map((r) => r.owner_id),
+  ]);
 
   return (
     <div className="flex flex-col gap-5">

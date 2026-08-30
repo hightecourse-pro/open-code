@@ -108,7 +108,11 @@ export default async function AuthenticatedLayout({
       supabase.from("session_feedback").select("session_id").eq("profile_id", profile.id),
     ]);
     const done = new Set((answered ?? []).map((a) => a.session_id));
-    feedbackSession = (ended ?? []).find((s) => !done.has(s.id)) ?? null;
+    // ONLY the newest ended session may ask (the owner, 30/8: answering one
+    // then being asked about an OLDER one read as "מופיע שוב") — once it is
+    // answered or dismissed, the banner goes quiet.
+    const newest = (ended ?? [])[0] ?? null;
+    feedbackSession = newest && !done.has(newest.id) ? newest : null;
   }
   // The admin-worded rating questions + the celebration names — only fetched
   // when someone will actually see them.

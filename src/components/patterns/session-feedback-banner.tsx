@@ -166,7 +166,7 @@ export function SessionFeedbackBanner({
           ))}
           <Textarea name="comment" rows={2} placeholder="משהו נוסף שתרצי שנדע? (רשות)" />
           <Button type="submit" size="sm" disabled={pending} className="self-start">
-            {pending ? "שולחת…" : "שליחת המשוב 💜"}
+            {pending ? "שולח…" : "שליחת המשוב 💜"}
           </Button>
         </form>
       )}

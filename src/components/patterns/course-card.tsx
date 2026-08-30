@@ -194,7 +194,7 @@ export function CourseCard({
               disabled={pending}
               className="w-full font-display font-semibold text-[13px] py-2 rounded-md bg-white text-brand-purple border-[1.5px] border-brand-purple hover:bg-tint-purple transition-colors disabled:opacity-60"
             >
-              {pending ? "מחליפה…" : "החלפה לקורס הזה 📚"}
+              {pending ? "מחליף…" : "החלפה לקורס הזה 📚"}
             </button>
           ) : (
             !locked && (

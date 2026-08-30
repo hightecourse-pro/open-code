@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Info, Lightbulb, TriangleAlert, X } from "lucide-react";
+import { Check, ChevronDown, FileText, Info, Lightbulb, TriangleAlert, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface CvHistoryEntry {
@@ -10,6 +10,8 @@ export interface CvHistoryEntry {
   score: number | null;
   summary: string | null;
   docName: string | null;
+  /** Signed URL to the exact file this check ran on (snapshot or saved doc). */
+  fileUrl: string | null;
   insights: { type: "good" | "warn" | "bad" | "tip"; title: string; detail: string }[];
   jobFit: { score: number; matched: string[]; missing: string[] } | null;
 }
@@ -74,6 +76,16 @@ export function CvHistoryList({ entries }: { entries: CvHistoryEntry[] }) {
 
               {open && (
                 <div className="pb-3 flex flex-col gap-2">
+                  {r.fileUrl && (
+                    <a
+                      href={r.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="self-start inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-3 py-1.5 hover:bg-tint-indigo"
+                    >
+                      <FileText size={13} /> צפייה בקובץ שנבדק
+                    </a>
+                  )}
                   {r.insights.map((ins, i) => {
                     const s = STYLE[ins.type] ?? STYLE.tip;
                     const Icon = s.icon;

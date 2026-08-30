@@ -138,7 +138,7 @@ export function ChatThread({
   const status = !last
     ? "עוד לא התחלתן — כתבי לה מה מעסיק אותך 💜"
     : inFlight || awaiting
-      ? "שולחת…"
+      ? "שולח…"
       : last.sender_id === meId
         ? "נשלח · ממתינה לתשובה שלה"
         : `${iWrote ? "היא ענתה לך" : "היא כתבה לך"} · ${timeAgo(last.created_at)}`;

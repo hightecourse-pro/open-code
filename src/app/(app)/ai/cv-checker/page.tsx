@@ -52,17 +52,39 @@ export default async function CvCheckerPage() {
   // on (the owner, 30/8: "לשמור היסטוריית חוות דעת... יחד עם לינק למסמך").
   const { data: pastReviews } = await supabase
     .from("cv_reviews")
-    .select("id, created_at, score, summary, cv_document_id, insights, job_fit")
+    .select("id, created_at, score, summary, cv_document_id, checked_file_path, insights, job_fit")
     .eq("profile_id", profile.id)
     .eq("source", "ai")
     .order("created_at", { ascending: false })
     .limit(12);
   const historyDocNames = new Map<string, string>();
+  const historyDocPaths = new Map<string, string>();
   {
     const docIds = [...new Set((pastReviews ?? []).map((r) => r.cv_document_id).filter((v): v is string => !!v))];
     if (docIds.length) {
-      const { data: hd } = await supabase.from("cv_documents").select("id, label, file_name").in("id", docIds);
-      for (const d of hd ?? []) historyDocNames.set(d.id, d.label ?? d.file_name ?? "מסמך");
+      const { data: hd } = await supabase.from("cv_documents").select("id, label, file_name, file_path").in("id", docIds);
+      for (const d of hd ?? []) {
+        historyDocNames.set(d.id, d.label ?? d.file_name ?? "מסמך");
+        if (d.file_path) historyDocPaths.set(d.id, d.file_path);
+      }
+    }
+  }
+  // Every entry opens the file it was checked against (the owner, 30/8):
+  // direct uploads keep a snapshot in checked_file_path, saved documents go
+  // through their cv_documents path. All under her own folder, so her own
+  // storage policy signs them.
+  const historyFileUrls = new Map<string, string>();
+  {
+    const paths = [
+      ...new Set(
+        (pastReviews ?? [])
+          .map((r) => r.checked_file_path ?? (r.cv_document_id ? historyDocPaths.get(r.cv_document_id) : null))
+          .filter((v): v is string => !!v)
+      ),
+    ];
+    if (paths.length) {
+      const { data: signed } = await supabase.storage.from("cvs").createSignedUrls(paths, 3600);
+      for (const s of signed ?? []) if (s.signedUrl && s.path) historyFileUrls.set(s.path, s.signedUrl);
     }
   }
 
@@ -78,6 +100,10 @@ export default async function CvCheckerPage() {
           score: r.score,
           summary: r.summary,
           docName: r.cv_document_id ? (historyDocNames.get(r.cv_document_id) ?? "המסמך") : null,
+          fileUrl: (() => {
+            const p = r.checked_file_path ?? (r.cv_document_id ? historyDocPaths.get(r.cv_document_id) : null);
+            return p ? (historyFileUrls.get(p) ?? null) : null;
+          })(),
           insights: Array.isArray(r.insights)
             ? (r.insights as { type: "good" | "warn" | "bad" | "tip"; title: string; detail: string }[])
             : [],

@@ -70,7 +70,7 @@ export function AddSystemKeyForm() {
       </div>
 
       <Button type="submit" disabled={pending} className="w-fit" bracketed>
-        {pending ? "שומרת…" : "הוספת מפתח"}
+        {pending ? "שומר…" : "הוספת מפתח"}
       </Button>
     </form>
   );

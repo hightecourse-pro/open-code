@@ -111,12 +111,12 @@ export function ArticleEditor({
       <div className="flex items-center gap-2">
         {article ? (
           <Button type="submit" size="sm" disabled={pending}>
-            {pending ? "שומרת…" : "שמירת השינויים"}
+            {pending ? "שומר…" : "שמירת השינויים"}
           </Button>
         ) : (
           <>
             <Button type="submit" size="sm" name="publish" value="1" disabled={pending}>
-              {pending ? "שומרת…" : "פרסום עכשיו"}
+              {pending ? "שומר…" : "פרסום עכשיו"}
             </Button>
             <Button type="submit" size="sm" variant="secondary" disabled={pending}>
               שמירה כטיוטה
