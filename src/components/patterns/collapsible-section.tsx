@@ -42,6 +42,11 @@ function writeStored(key: string, value: string) {
   listeners.forEach((notify) => notify());
 }
 
+/** Open a section from the outside (e.g. a "jump to the library" link). */
+export function openCollapsible(storageKey: string) {
+  writeStored(storageKey, "open");
+}
+
 /**
  * A card section she can fold away — the whole header is the toggle, and her
  * choice is remembered per section (storageKey) across visits. While it's

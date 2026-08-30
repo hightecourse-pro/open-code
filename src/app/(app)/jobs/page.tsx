@@ -155,7 +155,15 @@ export default async function JobsPage({
       // Honest closure wording: filled and closed-without-hire are different
       // endings, and "אוישה" on a job nobody got would be a small lie.
       const closedLabelOf = (j: { status: string; pipeline_status: string }) =>
-        j.status === "open" ? null : j.pipeline_status === "hired" ? "המשרה אוישה" : "המשרה נסגרה";
+        j.status === "open"
+          ? // Still open but past submissions (sent to client / interviews) —
+            // she should see her application moved along with the job.
+            j.pipeline_status === "candidates_sent" || j.pipeline_status === "interviews"
+            ? "המשרה בשלב הבא — המועמדויות אצל המעסיק"
+            : null
+          : j.pipeline_status === "hired"
+            ? "המשרה אוישה"
+            : "המשרה נסגרה";
       // "הוגשה ללקוח" is a FACT, not a status guess: a job_candidates row means
       // her CV physically went out; the pipeline statuses that imply it count
       // too, so an admin skipping a step never hides the handoff from her.
@@ -356,34 +364,31 @@ export default async function JobsPage({
         <MyApplications applications={myAppItems} submitted={submittedForHer} />
       ) : (
         <>
-          {targetedJobs.length > 0 && (
-            <section className="rounded-[18px] p-[2px] bg-brand-gradient shadow-glow-pink">
-              <div className="rounded-[16px] bg-white p-3.5 flex flex-col gap-1">
-                <h2 className="font-display text-[16px] font-black text-ink-1000">
-                  משרות בשבילך מקוד פתוח 💜
-                  <span className="text-[12px] font-normal text-ink-500 ms-2">
-                    פורסמו לקבוצה מצומצמת שמתאימה — ואת בפנים
-                  </span>
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-                  {targetedJobs.map((job) => (
-                    <div key={job.id} className="h-full">
-                      <JobCard {...cardProps(job)} />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </section>
-          )}
-
           {/* Instant search + the PM's structured filters over the loaded
-              board. The haystack includes the company ONLY on the market tab:
-              matching an internal job by its client's name would let a member
-              infer the confidential company. */}
+              board — rendered at the top and applied to the targeted section
+              too (the owner). The haystack includes the company ONLY on the
+              market tab: matching an internal job by its client's name would
+              let a member infer the confidential company. */}
           <JobsInstantList
             initialQuery={initialQuery}
             fitOnly={fitOnly}
             facets={facets}
+            targeted={targetedJobs.map((job) => ({
+              id: job.id,
+              haystack: [job.title, job.description.slice(0, 300), job.tech_tags.join(" ")].join(" "),
+              tech: job.tech_tags,
+              location: job.location,
+              employment: job.employment_type,
+              node: <JobCard {...cardProps(job)} />,
+            }))}
+            targetedHeader={
+              <h2 className="font-display text-[16px] font-black text-ink-1000">
+                משרות בשבילך מקוד פתוח 💜
+                <span className="text-[12px] font-normal text-ink-500 ms-2">
+                  פורסמו לקבוצה מצומצמת שמתאימה — ואת בפנים
+                </span>
+              </h2>
+            }
             items={sortedJobs.map((job) => ({
               id: job.id,
               haystack: [

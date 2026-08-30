@@ -149,9 +149,17 @@ export async function saveCourseFeedback(
   } = await supabase.auth.getUser();
   if (!user) return;
   const safe = Math.max(1, Math.min(5, Math.round(rating))) || null;
+  const clean = feedback.trim() || null;
+  // The truth lives in course_feedback — it exists for EVERY member, admin or
+  // gifted-course included; the enrollments copy (when she has a row) keeps
+  // the existing analytics working unchanged.
+  await supabase.from("course_feedback").upsert(
+    { profile_id: user.id, course_id: courseId, rating: safe, feedback: clean, updated_at: new Date().toISOString() },
+    { onConflict: "profile_id,course_id" }
+  );
   await supabase
     .from("enrollments")
-    .update({ rating: safe, feedback: feedback.trim() || null })
+    .update({ rating: safe, feedback: clean })
     .eq("profile_id", user.id)
     .eq("course_id", courseId);
   revalidatePath("/courses");

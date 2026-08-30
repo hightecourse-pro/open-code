@@ -42,6 +42,12 @@ export interface ProfileFormProps {
   requireCv?: boolean;
   /** First-time signup may switch to the mentor track from the gate step. */
   allowMentorTrack?: boolean;
+  /**
+   * Fallback for the experience gate when no per-question answer row exists
+   * (profiles completed by older/other paths store only profiles.is_experienced).
+   * Without it a returning member is forced to "choose again".
+   */
+  initialExperienced?: boolean | null;
 }
 
 const LONG_TEXT = new Set([
@@ -68,7 +74,7 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, allowMentorTrack = false }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, allowMentorTrack = false, initialExperienced = null }: ProfileFormProps) {
   const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
@@ -161,7 +167,13 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     setNewLang("");
   }
   const [expChoice, setExpChoice] = useState<boolean | null>(
-    gate ? (answers[gate.id] === true ? true : answers[gate.id] === false ? false : null) : false
+    gate
+      ? answers[gate.id] === true
+        ? true
+        : answers[gate.id] === false
+          ? false
+          : initialExperienced
+      : false
   );
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});

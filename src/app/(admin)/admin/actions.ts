@@ -511,6 +511,30 @@ export async function recordManualPayment(
 export async function setMemberStatus(profileId: string, status: ProfileStatus) {
   await requireRole("admin");
   const supabase = await createClient();
+
+  // "פעילה" means PAYING for a junior — activation comes from the payment
+  // webhook, not from a button. Without this guard a well-meaning אישור used
+  // to open chat, courses and Drive to someone who never paid (2026-08-30:
+  // "הוא ללא מנוי ועדיין יכול להתכתב"). Mentors' activation is the mentor
+  // acceptance flow; admins are never gated.
+  if (status === "active") {
+    const admin = createAdminClient();
+    const [{ data: target }, { count: liveSubs }] = await Promise.all([
+      admin.from("profiles").select("role").eq("id", profileId).maybeSingle(),
+      admin
+        .from("subscriptions")
+        .select("*", { count: "exact", head: true })
+        .eq("profile_id", profileId)
+        .eq("status", "active"),
+    ]);
+    if (target?.role === "junior" && (liveSubs ?? 0) === 0) {
+      return {
+        error:
+          "אין לה מנוי פעיל — חברה ללא תשלום נכנסת חופשי בלי אישור, והפעלה מלאה קורית אוטומטית עם התשלום. אם שולם מחוץ למערכת, שייכי את התשלום במסך התשלומים.",
+      };
+    }
+  }
+
   const { error } = await supabase.from("profiles").update({ status }).eq("id", profileId);
   if (error) return { error: error.message };
 
@@ -1734,6 +1758,38 @@ export type AdminMark = "optional" | "not_fit" | "approved";
  * Internal review mark on an application (אופציונלית / לא מתאימה / אישור
  * סופי). Admin-only — never surfaces to the member or the client.
  */
+/**
+ * The per-application internal note — "הערה ספציפית שמקושרת לבת במשרה זו"
+ * (the owner, 2026-08-30). Lives in admin-only application_notes, so it can
+ * never surface through the member's own application rows.
+ */
+export async function setApplicationNote(
+  applicationId: string,
+  note: string
+): Promise<FormState> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+
+  const { data: app } = await admin
+    .from("applications")
+    .select("id, job_id")
+    .eq("id", applicationId)
+    .maybeSingle();
+  if (!app) return { error: "ההגשה לא נמצאה." };
+
+  const clean = note.trim().slice(0, 500) || null;
+  const { error } = await admin
+    .from("application_notes")
+    .upsert(
+      { application_id: applicationId, note: clean, updated_at: new Date().toISOString() },
+      { onConflict: "application_id" }
+    );
+  if (error) return { error: "שמירת ההערה נכשלה. נסי שוב." };
+
+  revalidatePath(`/admin/jobs/${app.job_id}`);
+  return { ok: true };
+}
+
 export async function setApplicationMark(
   applicationId: string,
   mark: AdminMark | null,

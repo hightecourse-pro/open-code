@@ -15,7 +15,17 @@ export class EmptyResponseError extends Error {}
 // went dark when the whole old chain died), so a single hard-coded model
 // starts failing with 429/404 for every member. Fall through the chain on
 // quota/not-found and only give up if every model failed.
-const MODELS = ["gemini-flash-latest", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-3.5-flash-lite"];
+// The lite tier sits on separate capacity — when a "high demand" 503 storm
+// takes out the main flash models (29/8: flash-latest 503ing for minutes,
+// each failed call burning 8-26s), the lite models usually still answer.
+const MODELS = [
+  "gemini-flash-latest",
+  "gemini-3.7-flash",
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-flash-lite-latest",
+  "gemini-3.5-flash-lite",
+];
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
 export type GeminiRole = "user" | "model";
@@ -110,13 +120,14 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
 
 // Google's free tier fails transiently all the time — 503 "model overloaded",
 // brief network blips. Without a quiet retry those surface to the member as an
-// alert she reads as a broken key, and her very next attempt works.
-const TRANSIENT_RETRY_DELAY_MS = 1200;
+// alert she reads as a broken key, and her very next attempt works. A 503
+// storm outlives a 1.2s pause, so the later waits are longer.
+const TRANSIENT_RETRY_DELAYS_MS = [1500, 5000];
 
 async function generate(opts: GenerateOptions): Promise<string> {
   let lastError: unknown;
   let sawQuota = false;
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt <= TRANSIENT_RETRY_DELAYS_MS.length; attempt++) {
     let sawTransient = false;
     for (const model of MODELS) {
       try {
@@ -131,8 +142,8 @@ async function generate(opts: GenerateOptions): Promise<string> {
     }
     // Quota-only failures are not retried: a per-minute 429 won't clear in a
     // second, and hammering it spends more of the very quota that ran out.
-    if (!sawTransient || attempt > 0) break;
-    await new Promise((r) => setTimeout(r, TRANSIENT_RETRY_DELAY_MS));
+    if (!sawTransient || attempt >= TRANSIENT_RETRY_DELAYS_MS.length) break;
+    await new Promise((r) => setTimeout(r, TRANSIENT_RETRY_DELAYS_MS[attempt]));
   }
   if (sawQuota) throw new QuotaError("Gemini quota exhausted on all models");
   throw lastError instanceof Error ? lastError : new Error("Gemini failed");

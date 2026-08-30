@@ -1,6 +1,6 @@
 import { AdminShell } from "@/components/layout";
 import { requireRole } from "@/lib/auth";
-import { unreadAlertCount } from "@/lib/alerts";
+import { openRequestCount, unreadAlertCount } from "@/lib/alerts";
 
 export default async function AdminRouteLayout({
   children,
@@ -11,6 +11,6 @@ export default async function AdminRouteLayout({
   await requireRole("admin");
   // One head-only count — the sidebar bell. Every admin page pays it, which
   // is the point: an unread critical alert should be visible from anywhere.
-  const alertsBadge = await unreadAlertCount();
-  return <AdminShell alertsBadge={alertsBadge}>{children}</AdminShell>;
+  const [alertsBadge, requestsBadge] = await Promise.all([unreadAlertCount(), openRequestCount()]);
+  return <AdminShell alertsBadge={alertsBadge} requestsBadge={requestsBadge}>{children}</AdminShell>;
 }

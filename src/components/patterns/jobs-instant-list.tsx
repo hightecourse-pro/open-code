@@ -14,9 +14,15 @@ export interface JobListItem extends InstantItem {
  * The jobs board: instant text search plus the PM's structured filters —
  * technology, location, employment type. Everything arrives server-rendered
  * (cards, ordering, match badges); this component only shows and hides.
+ *
+ * The search/filters row sits at the TOP and governs the whole board — the
+ * targeted "משרות בשבילך" section included (the owner, 2026-08-30: "הסינון
+ * אמור להיות למעלה ולחול על הכל").
  */
 export function JobsInstantList({
   items,
+  targeted = [],
+  targetedHeader,
   controls,
   fitOnly,
   emptyFallback,
@@ -24,6 +30,10 @@ export function JobsInstantList({
   facets,
 }: {
   items: JobListItem[];
+  /** Jobs published personally to this member — framed above the main grid. */
+  targeted?: JobListItem[];
+  /** The frame's heading content (server-rendered). */
+  targetedHeader?: ReactNode;
   /** Server-rendered links that keep their URL state (view pills, tabs). */
   controls?: ReactNode;
   fitOnly: boolean;
@@ -36,20 +46,29 @@ export function JobsInstantList({
   const [location, setLocation] = useState("");
   const [employment, setEmployment] = useState("");
 
+  const matchesFacets = (item: InstantItem) => {
+    const it = item as JobListItem;
+    if (tech && !it.tech.some((t) => t === tech)) return false;
+    if (location && it.location !== location) return false;
+    if (employment && it.employment !== employment) return false;
+    return true;
+  };
+
   const textFiltered = useInstantFilter(items, needle, (item) => item.haystack);
   const filtered = useMemo(
-    () =>
-      textFiltered.filter((item) => {
-        const it = item as JobListItem;
-        if (tech && !it.tech.some((t) => t === tech)) return false;
-        if (location && it.location !== location) return false;
-        if (employment && it.employment !== employment) return false;
-        return true;
-      }),
+    () => textFiltered.filter(matchesFacets),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [textFiltered, tech, location, employment]
+  );
+  const targetedTextFiltered = useInstantFilter(targeted, needle, (item) => item.haystack);
+  const filteredTargeted = useMemo(
+    () => targetedTextFiltered.filter(matchesFacets),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [targetedTextFiltered, tech, location, employment]
   );
 
   const anyFilter = needle.trim() || tech || location || employment;
+  const totalShown = filtered.length + filteredTargeted.length;
   const selectCls =
     "px-2.5 py-1.5 rounded-md border border-ink-200 bg-white text-[12.5px] text-ink-700 outline-none focus:border-brand-purple max-w-40";
 
@@ -109,26 +128,43 @@ export function JobsInstantList({
 
       {anyFilter && (
         <p className="text-[13px] text-ink-700 -mt-1">
-          {filtered.length === 1 ? "תוצאה אחת" : `${filtered.length} תוצאות`}
+          {totalShown === 1 ? "תוצאה אחת" : `${totalShown} תוצאות`}
           {needle.trim() ? ` עבור “${needle.trim()}”` : ""}
           {fitOnly ? " — רק משרות שמתאימות לך" : ""}.
         </p>
       )}
 
-      {items.length === 0 ? (
+      {filteredTargeted.length > 0 && (
+        <section className="rounded-[18px] p-[2px] bg-brand-gradient shadow-glow-pink">
+          <div className="rounded-[16px] bg-white p-3.5 flex flex-col gap-1">
+            {targetedHeader}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+              {filteredTargeted.map((item) => (
+                <div key={item.id} className="h-full">
+                  {item.node}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {items.length === 0 && targeted.length === 0 ? (
         emptyFallback
-      ) : filtered.length === 0 ? (
+      ) : totalShown === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-5 shadow-sm text-ink-700 text-sm">
           שום משרה לא עונה על הסינון הזה — נסי לשחרר מסנן אחד 💜
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
-          {filtered.map((item) => (
-            <div key={item.id} className="h-full">
-              {item.node}
-            </div>
-          ))}
-        </div>
+        filtered.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-stretch">
+            {filtered.map((item) => (
+              <div key={item.id} className="h-full">
+                {item.node}
+              </div>
+            ))}
+          </div>
+        )
       )}
     </>
   );

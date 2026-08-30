@@ -26,10 +26,20 @@ function StarRow({
   onChange: (v: number) => void;
   label: string;
 }) {
+  // Empty stars used to be ink-200 outlines on the lilac gradient — invisible
+  // enough that "אין אפשרות לדרג" was reported. The empty state must READ as a
+  // clickable rating: darker outline, bigger target, hover previews the fill.
+  const [hover, setHover] = useState(0);
+  const lit = hover || value;
   return (
     <div className="flex items-center gap-2 flex-wrap">
       <span className="w-32 text-[13px] text-ink-700">{label}</span>
-      <span className="flex gap-0.5" role="radiogroup" aria-label={label}>
+      <span
+        className="flex gap-0.5"
+        role="radiogroup"
+        aria-label={label}
+        onMouseLeave={() => setHover(0)}
+      >
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -38,15 +48,17 @@ function StarRow({
             aria-checked={value === n}
             aria-label={`${n} מתוך 5`}
             onClick={() => onChange(n)}
-            className="p-0.5 cursor-pointer"
+            onMouseEnter={() => setHover(n)}
+            className="p-1 cursor-pointer"
           >
             <Star
-              size={18}
+              size={20}
+              strokeWidth={1.75}
               className={cn(
                 "transition-colors",
-                n <= value ? "text-[#E5A93C]" : "text-ink-200"
+                n <= lit ? "text-[#E5A93C]" : "text-ink-500"
               )}
-              fill={n <= value ? "currentColor" : "none"}
+              fill={n <= lit ? "currentColor" : "white"}
             />
           </button>
         ))}
@@ -143,6 +155,7 @@ export function SessionFeedbackBanner({
           className="flex flex-col gap-2"
         >
           {error && <Alert variant="danger">{error}</Alert>}
+          <p className="text-[12.5px] text-ink-500">לחצי על הכוכבים לדירוג — 1 עד 5 בכל שורה:</p>
           {aspects.map((a) => (
             <StarRow
               key={a.name}

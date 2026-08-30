@@ -769,6 +769,40 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["session_reminders"]["Insert"]>;
         Relationships: [];
       };
+      /** Admin-only note on one application (member × job) — see the migration. */
+      application_notes: {
+        Row: {
+          application_id: string;
+          note: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          application_id: string;
+          note?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["application_notes"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Feedback with no enrollment dependency (admins, gifted courses). */
+      course_feedback: {
+        Row: {
+          profile_id: string;
+          course_id: string;
+          rating: number | null;
+          feedback: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          course_id: string;
+          rating?: number | null;
+          feedback?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["course_feedback"]["Insert"]>;
+        Relationships: [];
+      };
       /** Per-recipient reminder queue — drained in bounded batches by the tick. */
       session_reminder_queue: {
         Row: {

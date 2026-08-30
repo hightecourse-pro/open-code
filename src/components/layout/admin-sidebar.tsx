@@ -80,7 +80,7 @@ const SECTIONS: AdminNavSection[] = [
   },
 ];
 
-export function AdminSidebar({ alertsBadge = 0 }: { alertsBadge?: number }) {
+export function AdminSidebar({ alertsBadge = 0, requestsBadge = 0 }: { alertsBadge?: number; requestsBadge?: number }) {
   const pathname = usePathname();
 
   return (
@@ -103,7 +103,11 @@ export function AdminSidebar({ alertsBadge = 0 }: { alertsBadge?: number }) {
                 : pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             const badge =
-              item.href === "/admin/alerts" && alertsBadge > 0 ? alertsBadge : item.badge;
+              item.href === "/admin/alerts" && alertsBadge > 0
+                ? alertsBadge
+                : item.href === "/admin/requests" && requestsBadge > 0
+                  ? requestsBadge
+                  : item.badge;
             return (
               <Link
                 key={item.href}

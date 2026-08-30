@@ -227,8 +227,10 @@ async function drainJobEmails(admin: AdminClient) {
   let sent = 0;
   for (const t of targets) {
     const job = jobOf.get(t.job_id);
-    // Only live, published jobs still announce; a withdrawn one just drains.
-    const live = job && job.status === "open" && job.pipeline_status !== "draft";
+    // Only live, published jobs still announce; a withdrawn one just drains —
+    // and so does a job already sent to the client / in interviews / hired
+    // (the owner, 2026-08-30: no submission nudges once the job moved on).
+    const live = job && job.status === "open" && job.pipeline_status === "published";
     const email = live ? emailOf.get(t.profile_id) : null;
     if (email && job) {
       const p = nameOf.get(t.profile_id);

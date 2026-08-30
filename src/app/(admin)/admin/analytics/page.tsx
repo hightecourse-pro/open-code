@@ -10,9 +10,11 @@ export const metadata: Metadata = { title: "אנליטיקת למידה" };
 export default async function AdminAnalyticsPage() {
   const supabase = await createClient();
 
-  const [{ data: courses }, { data: enrollments }, { data: sessions }] = await Promise.all([
+  const [{ data: courses }, { data: enrollments }, { data: extraFb }, { data: sessions }] = await Promise.all([
     supabase.from("courses").select("id, title").order("title"),
     supabase.from("enrollments").select("profile_id, course_id, rating, studied, feedback"),
+    // Feedback that has no enrollment behind it (admins, gifted courses).
+    supabase.from("course_feedback").select("profile_id, course_id, rating, feedback"),
     supabase
       .from("sessions")
       .select("id, title, scheduled_at, open_to_all")
@@ -42,8 +44,20 @@ export default async function AdminAnalyticsPage() {
 
   // A משוב without a name is unusable — an admin needs to know who to answer.
   // Only the members who actually wrote something are looked up.
+  // One merged feedback set: course_feedback wins per (member, course); the
+  // enrollments copy fills anything predating the table.
+  const fbKey = (r: { profile_id: string; course_id: string }) => `${r.profile_id}:${r.course_id}`;
+  const mergedFb = new Map<string, { profile_id: string; course_id: string; rating: number | null; feedback: string | null }>();
+  for (const e of enrollments ?? []) {
+    if (e.rating != null || e.feedback?.trim()) {
+      mergedFb.set(fbKey(e), { profile_id: e.profile_id, course_id: e.course_id, rating: e.rating, feedback: e.feedback });
+    }
+  }
+  for (const f of extraFb ?? []) mergedFb.set(fbKey(f), f);
+  const allFb = [...mergedFb.values()];
+
   const commenterIds = [
-    ...new Set((enrollments ?? []).filter((e) => e.feedback?.trim()).map((e) => e.profile_id)),
+    ...new Set(allFb.filter((e) => e.feedback?.trim()).map((e) => e.profile_id)),
   ];
   const { data: commenters } = commenterIds.length
     ? await supabase.from("profiles").select("id, full_name").in("id", commenterIds)
@@ -52,7 +66,10 @@ export default async function AdminAnalyticsPage() {
 
   const courseStats = (courses ?? []).map((c) => {
     const es = (enrollments ?? []).filter((e) => e.course_id === c.id);
-    const ratings = es.map((e) => e.rating).filter((r): r is number => typeof r === "number");
+    const ratings = allFb
+      .filter((e) => e.course_id === c.id)
+      .map((e) => e.rating)
+      .filter((r): r is number => typeof r === "number");
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
     const opens = byCourse.get(c.id);
     return {
@@ -144,7 +161,7 @@ export default async function AdminAnalyticsPage() {
 
       {(() => {
         const titleOf = new Map((courses ?? []).map((c) => [c.id, c.title]));
-        const comments = (enrollments ?? [])
+        const comments = allFb
           .filter((e) => e.feedback && e.feedback.trim())
           .map((e) => ({
             profileId: e.profile_id,

@@ -74,6 +74,13 @@ export function CourseCard({
     onStart();
   }
 
+  // A first pick opens a rolling month — she confirms it knowingly (the
+  // owner: "האם את מעוניינת לבחור את הקורס הזה לחודש הקרוב").
+  function onFirstPick() {
+    if (!confirm(`לבחור את "${course.title}" לחודש הקרוב? זה יהיה הקורס הפעיל שלך, והחלפה תיפתח כעבור חודש 📚`)) return;
+    onStart();
+  }
+
   return (
     <div
       className={cn(
@@ -186,7 +193,7 @@ export function CourseCard({
             !locked && (
               <button
                 type="button"
-                onClick={onStart}
+                onClick={onFirstPick}
                 disabled={pending}
                 className="w-full font-display font-semibold text-[13px] py-2 rounded-md bg-brand-gradient text-white disabled:opacity-60"
               >

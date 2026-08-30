@@ -54,7 +54,21 @@ export default async function JoinPage({
   const { locked } = await searchParams;
   const profile = await getProfile();
   if (!profile) redirect("/login");
-  if (profile.status === "active") redirect("/forum");
+  if (profile.status === "active") {
+    // Bounce to the community only when the activation is REAL. A junior whose
+    // status was flipped by hand with no live subscription used to be thrown
+    // to the forum here instead of reaching the checkout (the owner,
+    // 2026-08-30: "להצטרפות מעיף אותו למסך אחר ולא שולח אותו לתשלום").
+    if (profile.role !== "junior") redirect("/forum");
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+    const { count: liveSubs } = await supabase
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("profile_id", profile.id)
+      .eq("status", "active");
+    if ((liveSubs ?? 0) > 0) redirect("/forum");
+  }
 
   // She may have paid OUTSIDE the app (a direct Nedarim link) before signing
   // up — the payment waits in external_payments under her email. Claiming it

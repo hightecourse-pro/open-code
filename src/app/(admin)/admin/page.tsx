@@ -9,9 +9,17 @@ export const metadata: Metadata = { title: "דשבורד אדמין" };
 export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
-  const [active, pending, mentors, posts] = await Promise.all([
+  // Only a MENTOR candidate goes through approval (the owner, 2026-08-30):
+  // a woman who joined without paying is simply a free member — she browses
+  // immediately, nothing to approve. Payment (not an admin) activates a
+  // subscriber; the approval queue below is mentors only.
+  const [active, pendingMentors, mentors, posts] = await Promise.all([
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("status", "active"),
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("status", "pending"),
+    supabase
+      .from("profiles")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending")
+      .eq("role", "mentor"),
     supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "mentor"),
     supabase.from("posts").select("*", { count: "exact", head: true }),
   ]);
@@ -20,7 +28,7 @@ export default async function AdminDashboardPage() {
   // it counts, already narrowed.
   const stats = [
     { label: "חברות פעילות", value: active.count ?? 0, href: "/admin/members?status=active" },
-    { label: "ממתינות לאישור", value: pending.count ?? 0, href: "/admin/members?status=pending" },
+    { label: "מנטוריות לאישור", value: pendingMentors.count ?? 0, href: "/admin/members?status=pending" },
     { label: "מנטוריות", value: mentors.count ?? 0, href: "/admin/mentors" },
     { label: "פוסטים בקהילה", value: posts.count ?? 0, href: "/forum" },
   ];
@@ -29,6 +37,7 @@ export default async function AdminDashboardPage() {
     .from("profiles")
     .select("id, full_name, avatar_initials, specialization, status")
     .eq("status", "pending")
+    .eq("role", "mentor")
     .order("created_at", { ascending: true })
     .limit(8);
 
@@ -56,14 +65,16 @@ export default async function AdminDashboardPage() {
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold flex items-center gap-2 mb-1">
-          חברות חדשות לאישור
+          מנטוריות חדשות לאישור
           {(pendingMembers?.length ?? 0) > 0 && (
             <span className="bg-tint-pink text-brand-pink-deep px-2 py-px rounded-full text-[11px] font-bold">
               {pendingMembers!.length}
             </span>
           )}
         </h3>
-        <p className="text-[12.5px] text-ink-500 mb-3.5">אשרי או דחי הצטרפות לקהילה.</p>
+        <p className="text-[12.5px] text-ink-500 mb-3.5">
+          רק הצטרפות כמנטורית עוברת אישור צוות — חברה שנרשמה בלי מנוי נכנסת מיד, בלי אישור.
+        </p>
 
         {pendingMembers && pendingMembers.length > 0 ? (
           <div className="flex flex-col">
@@ -82,7 +93,7 @@ export default async function AdminDashboardPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-ink-500 py-4 text-center">אין כרגע חברות שממתינות לאישור 🎉</p>
+          <p className="text-sm text-ink-500 py-4 text-center">אין כרגע מנטוריות שממתינות לאישור 🎉</p>
         )}
 
         <Link

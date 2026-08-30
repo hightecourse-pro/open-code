@@ -70,3 +70,16 @@ export async function unreadAlertCount(): Promise<number> {
     return 0;
   }
 }
+
+/** Open member requests — the פניות לצוות sidebar badge. */
+export async function openRequestCount(): Promise<number> {
+  try {
+    const { count } = await createAdminClient()
+      .from("member_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "open");
+    return count ?? 0;
+  } catch {
+    return 0;
+  }
+}

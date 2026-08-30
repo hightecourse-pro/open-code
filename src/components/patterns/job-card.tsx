@@ -97,6 +97,14 @@ export function JobCard({
   const [, start] = useTransition();
   const techSet = new Set(myTech);
   const publishedAt = job.published_at ?? job.created_at;
+  // Candidates already went to the client (or further) — the job is still
+  // listed, but the apply door is closed and the card says so (the owner,
+  // 2026-08-30: "אינדיקציה שהמשרה התקדמה לשלב הבא ואין מה להגיש").
+  const advanced =
+    job.source === "ours" &&
+    job.status === "open" &&
+    job.pipeline_status !== "published" &&
+    job.pipeline_status !== "draft";
 
   function onSave() {
     const next = !isSaved;
@@ -262,6 +270,10 @@ export function JobCard({
                 · {APPLIED_DATE.format(new Date(appliedAt))}
               </span>
             )}
+          </span>
+        ) : advanced ? (
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1.5">
+            🎯 המשרה התקדמה לשלב הבא — ההגשות הועברו למעסיק, אין מה להגיש כרגע
           </span>
         ) : ineligible ? (
           // The apply door is closed here on purpose — say why, plainly.

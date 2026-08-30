@@ -95,15 +95,15 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-white border-e border-ink-200 p-[14px] pt-4 flex flex-col gap-1 sticky top-0 h-screen overflow-y-auto">
-      <Link href="/forum" className="px-2 mb-1.5 block w-fit" aria-label="קוד פתוח">
-        <Logo width={128} />
+    <nav className="bg-white border-e border-ink-200 p-3 pt-3 flex flex-col gap-1 sticky top-0 h-screen overflow-y-auto">
+      <Link href="/forum" className="px-2 mb-1 block w-fit" aria-label="קוד פתוח">
+        <Logo width={112} />
       </Link>
 
       {SECTIONS.map((section, i) => (
         <div key={section.label ?? i} className="flex flex-col gap-0.5">
           {section.label && (
-            <div className="text-[11px] text-ink-500 tracking-[0.06em] uppercase font-semibold px-2 mt-2 mb-0.5">
+            <div className="text-[11px] text-ink-500 tracking-[0.06em] uppercase font-semibold px-2 mt-1.5">
               {section.label}
             </div>
           )}
@@ -124,7 +124,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
                 aria-current={active ? "page" : undefined}
                 title={locked ? "נפתח עם מנוי" : undefined}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[13.5px] font-medium transition-colors",
+                  "flex items-center gap-2.5 px-3 py-1 rounded-xl text-[13.5px] font-medium transition-colors",
                   active
                     ? "bg-brand-gradient text-white shadow-glow-pink"
                     : locked
@@ -167,7 +167,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
       {user.isSubscriber === false && (
         <Link
           href="/join"
-          className="mt-auto flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[13.5px] font-semibold bg-brand-gradient-soft border border-[#DDC9EC] text-ink-900 hover:border-brand-purple transition-colors"
+          className="mt-auto flex items-center gap-2.5 px-3 py-1 rounded-xl text-[13.5px] font-semibold bg-brand-gradient-soft border border-[#DDC9EC] text-ink-900 hover:border-brand-purple transition-colors"
         >
           <Sparkles size={17} className="shrink-0 text-brand-pink-deep" />
           <span>שדרוג למנוי מלא</span>
@@ -179,7 +179,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
           href="/admin"
           aria-current={pathname.startsWith("/admin") ? "page" : undefined}
           className={cn(
-            "mt-auto flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-[13.5px] font-semibold transition-colors",
+            "mt-auto flex items-center gap-2.5 px-3 py-1 rounded-xl text-[13.5px] font-semibold transition-colors",
             pathname.startsWith("/admin")
               ? "bg-ink-1000 text-white"
               : "bg-ink-100 text-ink-900 hover:bg-ink-200"
@@ -192,11 +192,11 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
 
       <div
         className={cn(
-          "bg-ink-50 border border-ink-200 rounded-md p-3 flex items-center gap-2.5",
+          "bg-ink-50 border border-ink-200 rounded-md p-2.5 flex items-center gap-2.5",
           !user.isAdmin && user.isSubscriber !== false && "mt-auto"
         )}
       >
-        <div className="w-9 h-9 rounded-full bg-brand-gradient text-white font-bold flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-full bg-brand-gradient text-white text-sm font-bold flex items-center justify-center shrink-0">
           {user.initials}
         </div>
         <div className="min-w-0 flex-1">

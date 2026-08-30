@@ -85,6 +85,8 @@ export async function analyzeCvPdf(
       { role: "user", text: user, inlineData: { mimeType: "application/pdf", data: pdfBase64 } },
     ],
     jsonSchema: SCHEMA,
-    maxOutputTokens: 2048,
+    // Hebrew is token-hungry: a rich CV's 5-7 detailed insights flirt with a
+    // 2048 budget, and a MAX_TOKENS cut mid-JSON reads as "משהו השתבש".
+    maxOutputTokens: 4096,
   });
 }

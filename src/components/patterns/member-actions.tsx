@@ -46,7 +46,13 @@ export function MemberActions({
   status: ProfileStatus;
 }) {
   const [pending, start] = useTransition();
-  const set = (s: ProfileStatus) => start(() => void setMemberStatus(profileId, s));
+  const set = (s: ProfileStatus) =>
+    start(async () => {
+      const res = await setMemberStatus(profileId, s);
+      // A refused activation must be SAID (e.g. junior with no live
+      // subscription) — a silent no-op reads as a broken button.
+      if (res?.error) alert(res.error);
+    });
 
   return (
     <div className="flex gap-1">

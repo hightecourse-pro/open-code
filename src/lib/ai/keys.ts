@@ -124,8 +124,16 @@ export async function withUserKey<T>(run: (apiKey: string) => Promise<T>): Promi
     }
     // The generic branch used to swallow the cause entirely — when every model
     // in the chain 404s (Google retiring a generation) nothing anywhere said
-    // why. Now the logs do.
-    console.error("[ai] call failed with member key:", e instanceof Error ? e.message : e);
+    // why. Now the logs do — and the key row keeps the last cause (status
+    // stays active: a transient 503 storm is not the member's key's fault),
+    // so "משהו השתבש" is diagnosable from the DB after the fact.
+    const msg = e instanceof Error ? e.message : String(e);
+    console.error("[ai] call failed with member key:", msg);
+    const supabase = await createClient();
+    await supabase
+      .from("user_ai_keys")
+      .update({ last_error: msg.slice(0, 300) })
+      .eq("id", key.id);
     return { ok: false, reason: "error" };
   }
 }

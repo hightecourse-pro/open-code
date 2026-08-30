@@ -86,7 +86,10 @@ export async function GET(req: Request) {
 
   const [posts, jobs, sessions, unreadRes, batchRes] = await Promise.all([
     admin.from("posts").select("id", { count: "exact", head: true }).eq("kind", "forum").gte("created_at", since),
-    admin.from("jobs").select("id", { count: "exact", head: true }).eq("status", "open").gte("created_at", since),
+    // Only jobs still taking submissions count as "new" — an OUR job already
+    // sent to the client would nudge members toward a closed door. External
+    // jobs have no pipeline and count as before.
+    admin.from("jobs").select("id", { count: "exact", head: true }).eq("status", "open").or("source.neq.ours,pipeline_status.eq.published").gte("created_at", since),
     admin.from("sessions").select("title, scheduled_at").neq("status", "done").is("canceled_at", null).gte("scheduled_at", now).lte("scheduled_at", in7).order("scheduled_at", { ascending: true }),
     // Unread counts per recipient — one SQL aggregate, not every message row.
     admin.rpc("digest_unread_counts"),

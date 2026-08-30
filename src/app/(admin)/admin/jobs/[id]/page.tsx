@@ -183,7 +183,7 @@ export default async function AdminJobPage({
   const { data: named } = needIds.length
     ? await admin
         .from("profiles")
-        .select("id, full_name, specialization, region, is_experienced, status")
+        .select("id, full_name, specialization, region, is_experienced, status, member_tier, role")
         .in("id", needIds)
     : {
         data: [] as {
@@ -193,10 +193,19 @@ export default async function AdminJobPage({
           region: string | null;
           is_experienced: boolean;
           status: string;
+          member_tier: string;
+          role: string;
         }[],
       };
   const profileOf = new Map((named ?? []).map((p) => [p.id, p]));
   const curatedSet = new Set(curatedIds);
+
+  // The per-application internal notes (admin-only table) — the "הערה" column.
+  const appIds = appList.map((a) => a.id);
+  const { data: noteRows } = appIds.length
+    ? await admin.from("application_notes").select("application_id, note").in("application_id", appIds)
+    : { data: [] as { application_id: string; note: string | null }[] };
+  const noteOf = new Map((noteRows ?? []).map((n) => [n.application_id, n.note]));
 
   // VIP flags from the admin-only member_crm table — an internal triage aid
   // that stays on this admin surface, never in the portal or member views.
@@ -305,9 +314,13 @@ export default async function AdminJobPage({
         : null,
       curated: curatedSet.has(a.applicant_id),
       clientFeedback: feedbackOf.get(a.applicant_id) ?? null,
-      isSubscriber: p?.status === "active",
+      // "מנויה" = actually paying (or a mentor/admin) — a manually-activated
+      // profile with no live subscription must not read as one (2026-08-30).
+      isSubscriber:
+        p?.status === "active" && (p.member_tier === "paid" || p.role === "mentor" || p.role === "admin"),
       isVip: vipSet.has(a.applicant_id),
       crmNote: crmNoteOf.get(a.applicant_id) ?? null,
+      adminNote: noteOf.get(a.id) ?? null,
     };
   });
 

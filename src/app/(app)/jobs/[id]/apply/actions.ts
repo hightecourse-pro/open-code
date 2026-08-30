@@ -50,11 +50,16 @@ export async function submitApplication(
   // The job must be visible to her (RLS gates targeted jobs), ours and open.
   const { data: job } = await supabase
     .from("jobs")
-    .select("id, title, source, status")
+    .select("id, title, source, status, pipeline_status")
     .eq("id", jobId)
     .maybeSingle();
   if (!job || job.source !== "ours" || job.status !== "open") {
     return { error: "המשרה כבר לא זמינה להגשה." };
+  }
+  // Once the candidates went to the client (or further), the door is closed —
+  // the owner: no submissions once the job moved to the next stage.
+  if (job.pipeline_status !== "published") {
+    return { error: "המשרה הזו כבר התקדמה לשלב הבא — ההגשות הועברו למעסיק ואין מה להגיש כרגע 💜" };
   }
 
   // Required answers — validated per answer type against the job's questions

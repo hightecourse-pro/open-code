@@ -151,6 +151,26 @@ export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
         <Button type="submit" disabled={pending} className="w-fit" bracketed>
           {pending ? "בודקת את קורות החיים שלך…" : "בדיקת קורות חיים"}
         </Button>
+
+        {/* The analysis takes real time (10-60s through Google) — a working
+            animation says "בעבודה", not a frozen form (the owner, 2026-08-30). */}
+        {pending && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-3 rounded-md border border-[#DDC9EC] bg-tint-purple px-4 py-3"
+          >
+            <span className="relative flex h-7 w-7 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-purple/25" />
+              <span className="relative inline-flex h-7 w-7 animate-spin rounded-full border-[2.5px] border-white border-t-brand-purple" />
+            </span>
+            <span className="text-[13px] text-ink-700 leading-snug">
+              <b className="font-display text-brand-purple">ה-AI קוראת את קורות החיים שלך ממש עכשיו…</b>
+              <br />
+              זה לוקח עד דקה — שווה לחכות 💜
+            </span>
+          </div>
+        )}
       </form>
 
       {analysis && (

@@ -2,7 +2,6 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { raiseAlert } from "@/lib/alerts";
 
 /**
  * The floating "יש לך בקשה?" widget: a message straight to the team. The row
@@ -25,19 +24,8 @@ export async function createMemberRequest(formData: FormData): Promise<{ error?:
     .insert({ profile_id: user.id, subject, body });
   if (error) return { error: "משהו השתבש — נסי שוב עוד רגע." };
 
-  const { data: who } = await supabase
-    .from("profiles")
-    .select("full_name")
-    .eq("id", user.id)
-    .maybeSingle();
-  await raiseAlert({
-    kind: "member_request",
-    severity: "info",
-    title: `בקשה חדשה מ${who?.full_name ?? "חברה"}: ${subject}`,
-    body: body.slice(0, 300),
-    context: { profileId: user.id },
-    dedupeKey: `member-request:${user.id}:${subject}`,
-  });
+  // No alerts-center row (the owner, 2026-08-30): a member request lives ONLY
+  // in פניות לצוות — the sidebar badge there is what says "something waits".
 
   return {};
 }

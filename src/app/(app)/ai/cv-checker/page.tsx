@@ -8,6 +8,10 @@ import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 
 export const metadata: Metadata = { title: "בודקת קורות חיים" };
 
+// The analysis rides through Google's 503 storms (model chain + waits between
+// retry rounds) — the default function window cuts that journey short.
+export const maxDuration = 120;
+
 export default async function CvCheckerPage() {
   const profile = await requireCommunityAccess();
   if (!isSubscriber(profile)) {

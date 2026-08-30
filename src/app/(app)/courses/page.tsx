@@ -8,6 +8,7 @@ import { LoggedLink } from "@/components/patterns/logged-link";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { CollapsibleSection } from "@/components/patterns/collapsible-section";
+import { JumpToCatalogue } from "@/components/patterns/jump-to-catalogue";
 import { COURSE_DATE_HE, swapEligibleAt } from "@/lib/course-library";
 import type { ContentLink } from "@/types/database";
 
@@ -125,6 +126,16 @@ export default async function CoursesPage() {
   );
   const giftedCourses = (courses ?? []).filter((c) => giftedIds.includes(c.id));
 
+  // Her feedback for gifted courses lives in course_feedback (no enrollment).
+  const { data: giftedFb } = user && giftedCourses.length
+    ? await supabase
+        .from("course_feedback")
+        .select("course_id, rating, feedback")
+        .eq("profile_id", user.id)
+        .in("course_id", giftedCourses.map((c) => c.id))
+    : { data: [] };
+  const giftedFbOf = new Map((giftedFb ?? []).map((f) => [f.course_id, f]));
+
   let giftedLinks: ContentLink[] = [];
   if (giftedCourses.length) {
     const { data } = await supabase
@@ -206,6 +217,13 @@ export default async function CoursesPage() {
                 ? "זכאות ההחלפה שלך פתוחה — אפשר לבחור קורס אחר מהספרייה 📚"
                 : `זכאות החלפת קורס: ${COURSE_DATE_HE.format(eligibleAt!)}`}
             </div>
+            <JumpToCatalogue
+              storageKey="courses:catalogue"
+              targetId="course-catalogue"
+              className="text-[13px] font-semibold underline underline-offset-2 opacity-95 hover:opacity-100 mt-2 cursor-pointer"
+            >
+              לרשימת הקורסים המלאה ↓
+            </JumpToCatalogue>
           </div>
           <div className="flex flex-col gap-2 sm:ms-auto">
             {/* Only once she really holds the Drive share — otherwise this
@@ -262,8 +280,8 @@ export default async function CoursesPage() {
               links={links.filter((l) => !l.unit_id)}
               units={units}
               studied={false}
-              rating={null}
-              feedback={null}
+              rating={giftedFbOf.get(course.id)?.rating ?? null}
+              feedback={giftedFbOf.get(course.id)?.feedback ?? null}
               unlocked={unlockedCourses.has(course.id)}
             />
           </div>
@@ -281,6 +299,7 @@ export default async function CoursesPage() {
       {/* With a course underway, the full catalogue is next month's business —
           folded away instead of scrolling under her feet (PM feedback). */}
       {activeCourse ? (
+        <div id="course-catalogue" className="scroll-mt-4">
         <CollapsibleSection
           title="כל הקורסים בספרייה"
           subtitle={
@@ -294,6 +313,7 @@ export default async function CoursesPage() {
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{courseCards}</div>
         </CollapsibleSection>
+        </div>
       ) : (
         <>
           <h2 className="font-display text-lg font-bold text-ink-1000">כל הקורסים</h2>

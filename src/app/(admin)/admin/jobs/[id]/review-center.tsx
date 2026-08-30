@@ -18,6 +18,7 @@ import {
   addJobCandidate,
   setApplicationMark,
   setApplicationMarkBulk,
+  setApplicationNote,
   updateApplicationPipeline,
 } from "@/app/(admin)/admin/actions";
 import type { AdminMark, PipelineStatus } from "@/app/(admin)/admin/actions";
@@ -63,6 +64,8 @@ export interface ReviewApplication {
   isVip: boolean;
   /** The team's general internal note about her (member_crm) — admin-only. */
   crmNote: string | null;
+  /** Note tied to HER × THIS JOB (application_notes) — the table's הערה column. */
+  adminNote: string | null;
 }
 
 // -------------------------------------------------------------------- labels
@@ -148,6 +151,55 @@ function Stat({
   );
 }
 
+/**
+ * Inline editor for the per-application note (the owner's הערה column).
+ * Saves on blur / Enter; the optimistic value lives with the parent so the
+ * cell survives re-sorts and filter changes.
+ */
+function NoteCell({
+  appId,
+  value,
+  onSaved,
+  onError,
+}: {
+  appId: string;
+  value: string | null;
+  onSaved: (v: string | null) => void;
+  onError: (m: string) => void;
+}) {
+  const [draft, setDraft] = useState(value ?? "");
+  const [pending, start] = useTransition();
+
+  function save() {
+    const clean = draft.trim().slice(0, 500);
+    if ((value ?? "") === clean) return;
+    start(async () => {
+      const res = await setApplicationNote(appId, clean);
+      if (res?.error) onError(res.error);
+      else onSaved(clean || null);
+    });
+  }
+
+  return (
+    <input
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={save}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+      }}
+      placeholder="הערה עליה במשרה הזו…"
+      aria-label="הערה פנימית על ההגשה"
+      maxLength={500}
+      className={cn(
+        "w-full min-w-[150px] rounded-md border border-ink-200 bg-ink-0 px-2 py-1 text-[12px] text-ink-900",
+        "outline-none focus:border-brand-purple placeholder:text-ink-300",
+        pending && "opacity-60 animate-pulse"
+      )}
+    />
+  );
+}
+
 /** ⭐ (VIP) + "מנויה" pill — internal indications, admin-only surface. */
 function MemberFlair({ app, starClass }: { app: ReviewApplication; starClass?: string }) {
   return (
@@ -223,6 +275,26 @@ export function ReviewCenter({
   const [reasonEditor, setReasonEditor] = useState<{ id: string; draft: string } | null>(null);
   const [, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
+
+  // Optimistic per-application notes (application_notes) — the הערה column.
+  const [notes, setNotes] = useState<Record<string, string | null>>({});
+  const noteValOf = useCallback(
+    (a: ReviewApplication): string | null => (a.id in notes ? notes[a.id] : a.adminNote),
+    [notes]
+  );
+
+  // Per-column filters for the table (the owner: "אופציה לסנן לפי כל עמודה").
+  const [colFilters, setColFilters] = useState({
+    name: "",
+    spec: "",
+    region: "",
+    exp: "",
+    status: "",
+    mark: "",
+    note: "",
+  });
+  const setCol = (key: keyof typeof colFilters) => (value: string) =>
+    setColFilters((prev) => ({ ...prev, [key]: value }));
 
   const markOf = useCallback(
     (a: ReviewApplication): AdminMark | null => (a.id in marks ? marks[a.id] : a.adminMark),
@@ -321,6 +393,49 @@ export function ReviewCenter({
     for (const a of filtered) if (selection.has(a.id)) next.add(a.id);
     return next;
   }, [selection, filtered]);
+
+  // ------------------------------------------------ table per-column filters
+
+  // The select options offer only values present among the (globally)
+  // filtered rows — no dead choices.
+  const colOptions = useMemo(() => {
+    const specs = new Set<string>();
+    const regions = new Set<string>();
+    const statuses2 = new Set<string>();
+    const marks2 = new Set<string>();
+    for (const a of filtered) {
+      if (a.profile?.specialization) specs.add(a.profile.specialization);
+      if (a.profile?.region) regions.add(a.profile.region);
+      statuses2.add(statusOf(a));
+      const m = markOf(a);
+      marks2.add(m ?? "none");
+    }
+    const heSort = (x: string, y: string) => x.localeCompare(y, "he");
+    return {
+      specs: [...specs].sort(heSort),
+      regions: [...regions].sort(heSort),
+      statuses: [...statuses2],
+      marks: [...marks2],
+    };
+  }, [filtered, statusOf, markOf]);
+
+  const tableRows = useMemo(() => {
+    const nameQ = colFilters.name.trim().toLowerCase();
+    const noteQ = colFilters.note.trim().toLowerCase();
+    return filtered.filter((a) => {
+      if (nameQ && !(a.profile?.fullName ?? "").toLowerCase().includes(nameQ)) return false;
+      if (colFilters.spec && (a.profile?.specialization ?? "") !== colFilters.spec) return false;
+      if (colFilters.region && (a.profile?.region ?? "") !== colFilters.region) return false;
+      if (colFilters.exp === "yes" && !a.profile?.isExperienced) return false;
+      if (colFilters.exp === "no" && a.profile?.isExperienced) return false;
+      if (colFilters.status && statusOf(a) !== colFilters.status) return false;
+      if (colFilters.mark && (markOf(a) ?? "none") !== colFilters.mark) return false;
+      if (noteQ && !(noteValOf(a) ?? "").toLowerCase().includes(noteQ)) return false;
+      return true;
+    });
+  }, [filtered, colFilters, statusOf, markOf, noteValOf]);
+
+  const anyColFilter = Object.values(colFilters).some((v) => v !== "");
 
   // --------------------------------------------------- criteria bar helpers
 
@@ -538,17 +653,77 @@ export function ReviewCenter({
             />
           </div>
         </div>
-        {/* The tiles double as one-click filters (click again to clear). */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+        {/* The owner's four statuses (2026-08-30) — each tile filters AND
+            opens the organized table; the מנויות/VIP counts live INSIDE
+            "הגישו". The list view stays one click away on the toggle. */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+          <div
+            className={cn(
+              "rounded-[14px] border px-3 py-2 text-center transition-shadow border-ink-200 bg-ink-0 text-ink-900",
+              markFilter === "all" && statusFilter === "all" && tierFilter !== "all" && "shadow-[0_0_0_2.5px_rgba(224,65,141,0.25)]"
+            )}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                setMarkFilter("all");
+                setStatusFilter("all");
+                setTierFilter("all");
+                setView("table");
+              }}
+              title="כל ההגשות — פתיחה בטבלה"
+              className="w-full cursor-pointer"
+            >
+              <div className="font-display text-xl font-black leading-none">{counts.total}</div>
+              <div className="mt-1 text-[11.5px] font-semibold">הגישו</div>
+            </button>
+            <div className="mt-1.5 flex items-center justify-center gap-1.5">
+              <button
+                type="button"
+                aria-pressed={tierFilter === "subscribers"}
+                onClick={() => {
+                  setTierFilter((v) => (v === "subscribers" ? "all" : "subscribers"));
+                  setView("table");
+                }}
+                title="רק המנויות מבין המגישות — פתיחה בטבלה"
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10.5px] font-bold border cursor-pointer transition-colors",
+                  tierFilter === "subscribers"
+                    ? "bg-brand-pink-deep text-white border-brand-pink-deep"
+                    : "bg-tint-pink text-brand-pink-deep border-[#F3C6DD] hover:border-brand-pink-deep"
+                )}
+              >
+                מנויות {counts.subscribers}
+              </button>
+              <button
+                type="button"
+                aria-pressed={tierFilter === "vip"}
+                onClick={() => {
+                  setTierFilter((v) => (v === "vip" ? "all" : "vip"));
+                  setView("table");
+                }}
+                title="רק ה-VIP מבין המגישות — פתיחה בטבלה"
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10.5px] font-bold border cursor-pointer transition-colors",
+                  tierFilter === "vip"
+                    ? "bg-[#8C5E0E] text-white border-[#8C5E0E]"
+                    : "bg-tint-warm text-[#8C5E0E] border-[#E5C55C] hover:border-[#8C5E0E]"
+                )}
+              >
+                ⭐ VIP {counts.vips}
+              </button>
+            </div>
+          </div>
           <Stat
-            label="הגישו"
-            value={counts.total}
-            active={markFilter === "all" && statusFilter === "all"}
+            label="לא מתאימות"
+            value={counts.notFit}
+            active={markFilter === "not_fit"}
             onClick={() => {
-              setMarkFilter("all");
               setStatusFilter("all");
+              setMarkFilter((v) => (v === "not_fit" ? "all" : "not_fit"));
+              setView("table");
             }}
-            className="border-ink-200 bg-ink-0 text-ink-900"
+            className="border-[#F2BBC8] bg-danger-bg text-[#A8254B]"
           />
           <Stat
             label="אופציונליות"
@@ -557,18 +732,9 @@ export function ReviewCenter({
             onClick={() => {
               setStatusFilter("all");
               setMarkFilter((v) => (v === "optional" ? "all" : "optional"));
+              setView("table");
             }}
             className="border-[#F0DCA8] bg-tint-warm text-[#8C5E0E]"
-          />
-          <Stat
-            label="לא מתאימות"
-            value={counts.notFit}
-            active={markFilter === "not_fit"}
-            onClick={() => {
-              setStatusFilter("all");
-              setMarkFilter((v) => (v === "not_fit" ? "all" : "not_fit"));
-            }}
-            className="border-[#F2BBC8] bg-danger-bg text-[#A8254B]"
           />
           <Stat
             label="אושרו סופית"
@@ -577,32 +743,20 @@ export function ReviewCenter({
             onClick={() => {
               setStatusFilter("all");
               setMarkFilter((v) => (v === "approved" ? "all" : "approved"));
+              setView("table");
             }}
             className="border-[#BFE4D1] bg-tint-mint text-[#0F6E4A]"
           />
           <Stat
-            label="הוגשו ללקוח"
+            label="הוגשו סופית"
             value={counts.sentToClient}
             active={statusFilter === "sent"}
             onClick={() => {
               setMarkFilter("all");
               setStatusFilter((v) => (v === "sent" ? "all" : "sent"));
+              setView("table");
             }}
             className="border-[#DDC9EC] bg-tint-purple text-brand-purple"
-          />
-          <Stat
-            label="מנויות"
-            value={counts.subscribers}
-            active={tierFilter === "subscribers"}
-            onClick={() => setTierFilter((v) => (v === "subscribers" ? "all" : "subscribers"))}
-            className="border-[#F3C6DD] bg-tint-pink text-brand-pink-deep"
-          />
-          <Stat
-            label="VIP ⭐"
-            value={counts.vips}
-            active={tierFilter === "vip"}
-            onClick={() => setTierFilter((v) => (v === "vip" ? "all" : "vip"))}
-            className="border-[#E5C55C] bg-tint-warm text-[#8C5E0E]"
           />
         </div>
       </div>
@@ -856,36 +1010,176 @@ export function ReviewCenter({
           {filtered.length === 0 ? (
             <p className="text-ink-500 text-sm px-3 py-4">אין מועמדות שתואמות את הסינון.</p>
           ) : (
-            <table className="w-full min-w-[860px] text-sm border-separate border-spacing-0">
+            <table className="w-full min-w-[1020px] text-sm border-separate border-spacing-0">
               <thead>
+                {/* Label + that column's own filter, stacked in one sticky
+                    header (the owner: "מעל הטבלה אופציה לסנן לפי כל עמודה"). */}
                 <tr className="text-start">
-                  {[
-                    <Checkbox
-                      key="all"
-                      checked={allVisibleSelected}
-                      onChange={(e) => toggleSelectAll(e.target.checked)}
-                      aria-label="בחירת כל המועמדות המוצגות"
-                    />,
-                    "שם",
-                    "תחום",
-                    "אזור",
-                    "ניסיון",
-                    "סטטוס",
-                    "סימון פנימי",
-                    "הוגשה",
-                    "",
-                  ].map((h, i) => (
+                  {(
+                    [
+                      {
+                        key: "check",
+                        head: (
+                          <Checkbox
+                            checked={tableRows.length > 0 && tableRows.every((a) => selection.has(a.id))}
+                            onChange={(e) =>
+                              setSelection(e.target.checked ? new Set(tableRows.map((a) => a.id)) : new Set())
+                            }
+                            aria-label="בחירת כל המועמדות המוצגות"
+                          />
+                        ),
+                        filter: null,
+                      },
+                      {
+                        key: "name",
+                        head: "שם",
+                        filter: (
+                          <input
+                            value={colFilters.name}
+                            onChange={(e) => setCol("name")(e.target.value)}
+                            placeholder="סינון…"
+                            aria-label="סינון לפי שם"
+                            className="mt-1 w-full min-w-[110px] rounded-md border border-ink-200 bg-ink-0 px-1.5 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          />
+                        ),
+                      },
+                      {
+                        key: "spec",
+                        head: "תחום",
+                        filter: (
+                          <select
+                            value={colFilters.spec}
+                            onChange={(e) => setCol("spec")(e.target.value)}
+                            aria-label="סינון לפי תחום"
+                            className="mt-1 w-full rounded-md border border-ink-200 bg-ink-0 px-1 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          >
+                            <option value="">הכול</option>
+                            {colOptions.specs.map((s) => (
+                              <option key={s} value={s}>
+                                {s}
+                              </option>
+                            ))}
+                          </select>
+                        ),
+                      },
+                      {
+                        key: "region",
+                        head: "אזור",
+                        filter: (
+                          <select
+                            value={colFilters.region}
+                            onChange={(e) => setCol("region")(e.target.value)}
+                            aria-label="סינון לפי אזור"
+                            className="mt-1 w-full rounded-md border border-ink-200 bg-ink-0 px-1 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          >
+                            <option value="">הכול</option>
+                            {colOptions.regions.map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                          </select>
+                        ),
+                      },
+                      {
+                        key: "exp",
+                        head: "ניסיון",
+                        filter: (
+                          <select
+                            value={colFilters.exp}
+                            onChange={(e) => setCol("exp")(e.target.value)}
+                            aria-label="סינון לפי ניסיון"
+                            className="mt-1 w-full rounded-md border border-ink-200 bg-ink-0 px-1 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          >
+                            <option value="">הכול</option>
+                            <option value="yes">בעלת ניסיון</option>
+                            <option value="no">בלי ניסיון</option>
+                          </select>
+                        ),
+                      },
+                      {
+                        key: "status",
+                        head: "סטטוס",
+                        filter: (
+                          <select
+                            value={colFilters.status}
+                            onChange={(e) => setCol("status")(e.target.value)}
+                            aria-label="סינון לפי סטטוס"
+                            className="mt-1 w-full rounded-md border border-ink-200 bg-ink-0 px-1 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          >
+                            <option value="">הכול</option>
+                            {colOptions.statuses.map((s) => (
+                              <option key={s} value={s}>
+                                {STATUS_LABEL[s] ?? s}
+                              </option>
+                            ))}
+                          </select>
+                        ),
+                      },
+                      {
+                        key: "mark",
+                        head: "סימון פנימי",
+                        filter: (
+                          <select
+                            value={colFilters.mark}
+                            onChange={(e) => setCol("mark")(e.target.value)}
+                            aria-label="סינון לפי סימון פנימי"
+                            className="mt-1 w-full rounded-md border border-ink-200 bg-ink-0 px-1 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          >
+                            <option value="">הכול</option>
+                            {colOptions.marks.map((m) => (
+                              <option key={m} value={m}>
+                                {m === "none" ? "ללא סימון" : MARK_LABEL[m as AdminMark]}
+                              </option>
+                            ))}
+                          </select>
+                        ),
+                      },
+                      { key: "date", head: "הוגשה", filter: null },
+                      {
+                        key: "note",
+                        head: "הערה",
+                        filter: (
+                          <input
+                            value={colFilters.note}
+                            onChange={(e) => setCol("note")(e.target.value)}
+                            placeholder="סינון…"
+                            aria-label="סינון לפי הערה"
+                            className="mt-1 w-full min-w-[110px] rounded-md border border-ink-200 bg-ink-0 px-1.5 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          />
+                        ),
+                      },
+                      { key: "open", head: "", filter: null },
+                    ] as const
+                  ).map((c) => (
                     <th
-                      key={i}
-                      className="sticky top-0 z-[1] bg-ink-50 border-b border-ink-200 px-3 py-2 text-start text-[11.5px] font-bold text-ink-700 whitespace-nowrap"
+                      key={c.key}
+                      className="sticky top-0 z-[1] bg-ink-50 border-b border-ink-200 px-3 py-2 text-start text-[11.5px] font-bold text-ink-700 whitespace-nowrap align-top"
                     >
-                      {h}
+                      {c.head}
+                      {c.filter}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((a, i) => {
+                {anyColFilter && tableRows.length === 0 && (
+                  <tr>
+                    <td colSpan={10} className="px-3 py-4 text-sm text-ink-500">
+                      אין מועמדות שתואמות את סינון העמודות.{" "}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setColFilters({ name: "", spec: "", region: "", exp: "", status: "", mark: "", note: "" })
+                        }
+                        className="font-semibold text-brand-purple underline cursor-pointer"
+                      >
+                        ניקוי סינון עמודות
+                      </button>
+                    </td>
+                  </tr>
+                )}
+                {tableRows.map((a, i) => {
                   const mark = markOf(a);
                   const status = statusOf(a);
                   const reason = reasonOf(a);
@@ -953,6 +1247,15 @@ export function ReviewCenter({
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 tabular-nums whitespace-nowrap">
                         {fmtDate(a.submittedAt)}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top min-w-[170px]">
+                        <NoteCell
+                          key={`${a.id}:${noteValOf(a) ?? ""}`}
+                          appId={a.id}
+                          value={noteValOf(a)}
+                          onSaved={(v) => setNotes((prev) => ({ ...prev, [a.id]: v }))}
+                          onError={setActionError}
+                        />
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
                         <button

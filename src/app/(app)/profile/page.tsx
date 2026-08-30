@@ -146,6 +146,9 @@ export default async function ProfilePage() {
           answers={answerMap}
           taxonomyOptions={taxonomyOptions}
           requireCv={requireCv}
+          // A completed profile is never asked the experience gate afresh —
+          // profiles.is_experienced stands in when no answer row exists.
+          initialExperienced={profile.profile_completed ? profile.is_experienced === true : null}
         />
       </div>
 
