@@ -206,10 +206,12 @@ export default async function AuthenticatedLayout({
         >
           <Sparkles size={17} className="text-brand-pink-deep shrink-0" />
           <span className="flex-1">
-            את מסתכלת מסביב 👋 עם מנוי נפתחות גם הקלטות הסשנים, הקורסים, כלי ה-AI והשיחות בפורום.
+            {profile.role === "mentor"
+              ? "הבקשה שלך כמנטורית אצל הצוות 👑 ברגע שתאושרי — הכול נפתח מעצמו, בלי תשלום."
+              : "את מסתכלת מסביב 👋 עם מנוי נפתחות גם הקלטות הסשנים, הקורסים, כלי ה-AI והשיחות בפורום."}
           </span>
           <span className="font-display font-semibold text-brand-purple whitespace-nowrap">
-            למנוי ←
+            {profile.role === "mentor" ? "למצב הבקשה ←" : "למנוי ←"}
           </span>
         </Link>
       )}
