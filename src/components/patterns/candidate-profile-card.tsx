@@ -239,7 +239,12 @@ export function CandidateProfileCard({
               פרויקטים וקוד
             </h2>
             <p className="t-caption mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
-            <ul className="grid gap-2.5 sm:grid-cols-1 xl:grid-cols-2">
+            <ul
+              className={cn(
+                "grid gap-2.5 grid-cols-1",
+                candidate.links.length > 2 && "xl:grid-cols-2"
+              )}
+            >
               {candidate.links.map((link) => (
                 <li key={`${link.label}-${link.url}`}>
                   <a
