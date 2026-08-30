@@ -12,6 +12,8 @@ export const EXPERIENCE_KEYS = new Set([PRACTICAL_EXPERIENCE_KEY, WORK_HISTORY_K
 export type ExperienceEntry = {
   /** practical_experience only — one of EXPERIENCE_KINDS values. */
   kind?: string;
+  /** work_history only — the role label she picked ("מפתחת", "ראש צוות"…). */
+  role?: string;
   place: string;
   /** Tech taxonomy VALUES (labels are resolved at render time). */
   tech: string[];
@@ -58,6 +60,7 @@ export function parseExperienceEntries(value: unknown): ExperienceEntry[] {
       end: typeof o.end === "string" ? o.end.trim() : "",
     };
     if (typeof o.kind === "string" && o.kind.trim()) entry.kind = o.kind.trim();
+    if (typeof o.role === "string" && o.role.trim()) entry.role = o.role.trim();
     if (o.current === true) entry.current = true;
     out.push(entry);
   }

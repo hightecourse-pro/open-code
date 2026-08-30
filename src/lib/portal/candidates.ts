@@ -10,6 +10,8 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTaxonomyOptionsForPortal, type TaxonomyOption } from "@/lib/taxonomies";
+import { parseLinkItems } from "@/lib/link-items";
+import { htmlToPlainText } from "@/lib/rich-text";
 import {
   DEFAULT_LANGUAGES,
   LANGUAGE_SKILLS_KEY,
@@ -118,8 +120,15 @@ function toDisplay(
   q: ConfigQuestion,
   raw: unknown,
   labels: Map<string, string>,
-  techLabels: Map<string, string>
-): { values: string[]; kind: CandidateField["kind"]; entries?: ExperienceEntryDisplay[] } {
+  techLabels: Map<string, string>,
+  techGroups: Map<string, string>
+): {
+  values: string[];
+  kind: CandidateField["kind"];
+  entries?: ExperienceEntryDisplay[];
+  chipGroups?: { name: string; values: string[] }[];
+  linkItems?: { url: string; title: string; note: string }[];
+} {
   if (q.key === LANGUAGE_SKILLS_KEY) {
     return {
       values: parseLangSkills(raw).map((s) => `${s.lang} — ${langLevelLabel(s.level)}`),
@@ -132,6 +141,7 @@ function toDisplay(
       .filter((e) => e.place)
       .map((e) => ({
         headline: [
+          e.role,
           e.place,
           q.key === WORK_HISTORY_KEY
             ? e.current
@@ -142,12 +152,18 @@ function toDisplay(
         ]
           .filter(Boolean)
           .join(" · "),
+        role: e.role,
+        place: e.place,
+        range: experienceRangeLabel(e),
+        current: e.current,
+        kindLabel: q.key === WORK_HISTORY_KEY ? undefined : experienceKindLabel(e.kind) || undefined,
         tech: e.tech.map((t) => techLabels.get(t) ?? t),
         description: e.description,
       }));
     return {
-      // Flattened copy so the free-text search still matches these answers.
-      values: entries.flatMap((e) => [e.headline, ...e.tech, e.description].filter(Boolean)),
+      // Flattened copy so the free-text search still matches these answers
+      // (descriptions may be rich HTML — search the words, not the tags).
+      values: entries.flatMap((e) => [e.headline, ...e.tech, htmlToPlainText(e.description)].filter(Boolean)),
       kind: "experience",
       entries,
     };
@@ -159,9 +175,24 @@ function toDisplay(
     return { values: label ? [label] : [], kind: "text" };
   }
   if (Array.isArray(raw)) {
-    const items = raw
-      .filter((v): v is string => typeof v === "string")
-      .map((v) => labels.get(v) ?? v);
+    // Structured links arrive as an array of objects.
+    if (LINK_KEYS.has(q.key)) {
+      const items = parseLinkItems(raw);
+      return { values: items.map((l) => [l.title, l.url, l.note].filter(Boolean).join(" ")), kind: "links", linkItems: items };
+    }
+    const rawVals = raw.filter((v): v is string => typeof v === "string");
+    const items = rawVals.map((v) => labels.get(v) ?? v);
+    // Tech chips are grouped by תת-נושא (the owner, 31/8) — group order
+    // follows the taxonomy, ungrouped/custom values close the list.
+    if (q.taxonomy_kind === "tech" && items.length > 0) {
+      const byGroup = new Map<string, string[]>();
+      for (const v of rawVals) {
+        const g = techGroups.get(v) ?? "עוד";
+        (byGroup.get(g) ?? byGroup.set(g, []).get(g)!).push(labels.get(v) ?? v);
+      }
+      const chipGroups = [...byGroup.entries()].map(([name, values]) => ({ name, values }));
+      return { values: items, kind: "chips", chipGroups };
+    }
     return { values: items, kind: "chips" };
   }
   if (typeof raw === "boolean") return { values: [raw ? "כן" : "לא"], kind: "text" };
@@ -169,7 +200,8 @@ function toDisplay(
   if (typeof raw === "string" && raw.trim()) {
     if (LINK_KEYS.has(q.key)) {
       const urls = extractUrls(raw);
-      if (urls.length) return { values: urls, kind: "links" };
+      if (urls.length)
+        return { values: urls, kind: "links", linkItems: urls.map((url) => ({ url, title: "", note: "" })) };
     }
     return { values: [labels.get(raw) ?? raw], kind: q.field_type === "select" ? "chips" : "text" };
   }
@@ -284,6 +316,9 @@ export async function loadCandidates(opts?: {
   const labelsFor = labelResolverFrom(taxonomies);
   // Experience entries carry tech taxonomy VALUES — resolve them to labels.
   const techLabels = new Map((taxonomies.tech ?? []).map((o) => [o.value, o.label]));
+  const techGroups = new Map(
+    (taxonomies.tech ?? []).filter((o) => o.group).map((o) => [o.value, o.group as string])
+  );
 
   const { data: profiles } = await admin
     .from("profiles")
@@ -328,17 +363,25 @@ export async function loadCandidates(opts?: {
   const candidates: CandidateDetail[] = listed.map((p) => {
     const mine = byMember.get(p.id) ?? new Map();
     const fields: CandidateField[] = [];
-    const links: { label: string; url: string }[] = [];
+    const links: { label: string; url: string; note?: string }[] = [];
 
     for (const q of questions) {
       if (!mine.has(q.id)) continue;
-      const { values, kind, entries } = toDisplay(q, mine.get(q.id), labelsFor(q), techLabels);
+      const { values, kind, entries, chipGroups, linkItems } = toDisplay(
+        q,
+        mine.get(q.id),
+        labelsFor(q),
+        techLabels,
+        techGroups
+      );
       if (values.length === 0) continue;
       if (kind === "links") {
-        for (const url of values) links.push({ label: portalLabel(q), url });
+        for (const item of linkItems ?? []) {
+          links.push({ label: item.title || portalLabel(q), url: item.url, note: item.note || undefined });
+        }
         continue;
       }
-      fields.push({ key: q.key, label: portalLabel(q), values, kind, entries });
+      fields.push({ key: q.key, label: portalLabel(q), values, kind, entries, chipGroups });
     }
 
     const headline = fields

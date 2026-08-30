@@ -4,10 +4,18 @@
 
 /** One display-ready experience entry (practical_experience / work_history). */
 export interface ExperienceEntryDisplay {
-  /** "מקום · סוג/נוכחי · MM.YYYY–MM.YYYY" */
+  /** "מקום · סוג/נוכחי · MM.YYYY–MM.YYYY" (kept for search/back-compat). */
   headline: string;
+  /** Structured pieces so the card can lay the entry out properly (31/8). */
+  role?: string;
+  place: string;
+  /** "MM.YYYY–MM.YYYY" or "MM.YYYY–היום". */
+  range: string;
+  current?: boolean;
+  kindLabel?: string;
   /** Resolved tech LABELS. */
   tech: string[];
+  /** May be sanitized rich HTML — render through the safe-rich helper. */
   description: string;
 }
 
@@ -19,6 +27,10 @@ export interface CandidateField {
   kind: "chips" | "text" | "links" | "experience";
   /** Only for kind === "experience". */
   entries?: ExperienceEntryDisplay[];
+  /** chips backed by the tech taxonomy — same values, grouped by תת-נושא. */
+  chipGroups?: { name: string; values: string[] }[];
+  /** kind === "links": the structured items (title + note per URL). */
+  linkItems?: { url: string; title: string; note: string }[];
 }
 
 export interface CandidateSummary {
@@ -36,7 +48,7 @@ export interface CandidateSummary {
 export interface CandidateDetail extends CandidateSummary {
   bio: string | null;
   fields: CandidateField[];
-  links: { label: string; url: string }[];
+  links: { label: string; url: string; note?: string }[];
 }
 
 /** One filterable profile parameter offered in the portal search. */

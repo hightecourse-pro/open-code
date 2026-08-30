@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import { applyAsMentor } from "@/app/join/actions";
 import { FIELD_VALIDATORS } from "@/lib/validators";
+import { RichTextEditor } from "@/components/patterns/rich-text-editor";
+import { LinksListEditor } from "@/components/patterns/links-list-editor";
 import { groupBySection } from "@/lib/profile-sections";
 import { CITIES } from "@/data/cities";
 import {
@@ -49,6 +51,14 @@ export interface ProfileFormProps {
    */
   initialExperienced?: boolean | null;
 }
+
+// Long free text becomes RICH text (the owner, 31/8: "בטקסט חופשי ארוך צריך
+// להיות טקסט עשיר, הדגשות, בולטים, מספור") — stored as sanitized HTML.
+const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps"]);
+// Structured links: URL + title + short note per link (the owner, 31/8).
+const FORM_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
+// The placement-fee acknowledgment: a fact with a must-check checkbox.
+const PAY_ACK_KEY = "paid_placement";
 
 const LONG_TEXT = new Set([
   "bio",
@@ -228,8 +238,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       if (v === "other") v = String(fd.get(`${key}__other`) ?? "").trim();
       return !v;
     }
-    if (q.field_type === "bool") return false;
-    return !String(fd.get(key) ?? "").trim();
+    if (q.field_type === "bool") {
+      // The payment acknowledgment must actually be checked.
+      return q.key === PAY_ACK_KEY && q.required ? fd.get(key) == null : false;
+    }
+    if (FORM_LINK_KEYS.has(q.key)) return false;
+    const rawVal = String(fd.get(key) ?? "");
+    if (RICH_KEYS.has(q.key)) return !rawVal.replace(/<[^>]*>/g, "").trim();
+    return !rawVal.trim();
   }
   /** Entry-level rules for the two JSON-array experience questions. */
   function experienceError(q: ConfigQuestion, fd: FormData): string | undefined {
@@ -286,7 +302,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
         errs[q.id] =
           q.key === LANGUAGE_SKILLS_KEY
             ? "סמני את רמת השליטה שלך בעברית ובאנגלית 🙂"
-            : "שדה חובה";
+            : q.key === PAY_ACK_KEY
+              ? "כדי להמשיך צריך לאשר שקראת את תנאי ההשמה 🙂"
+              : "שדה חובה";
         continue;
       }
       const check = FIELD_VALIDATORS[q.key];
@@ -375,6 +393,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             variant={isPractical ? "practical" : "work"}
             initial={parseExperienceEntries(current)}
             techOptions={taxonomyOptions.tech ?? []}
+            roleOptions={isPractical ? [] : opts(rest.find((x) => x.key === "exp_role") ?? q)}
             error={!!err}
           />
         </Field>
@@ -386,6 +405,29 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       return (
         <Field key={q.id} label={q.label_he} error={err}>
           <PeriodPicker name={key} initial={parsePracticumPeriod(current)} />
+        </Field>
+      );
+    }
+
+    // Structured link lists: URL + title + note per link.
+    if (FORM_LINK_KEYS.has(q.key)) {
+      return (
+        <Field key={q.id} label={q.label_he.replace(/\s*\(שורה לכל קישור\)/, "")} error={err}>
+          <LinksListEditor name={key} initial={current} />
+        </Field>
+      );
+    }
+
+    // Long free text → rich editor (bold, bullets, numbering).
+    if (RICH_KEYS.has(q.key)) {
+      return (
+        <Field key={q.id} label={q.label_he} error={err}>
+          <RichTextEditor
+            name={key}
+            defaultValue={typeof current === "string" ? current : ""}
+            tools={["bold", "ul", "ol"]}
+            placeholder="אפשר הדגשות, בולטים ומספור 💜"
+          />
         </Field>
       );
     }
@@ -561,6 +603,21 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
 
     if (q.field_type === "bool") {
+      // The placement-fee line is a FACT she confirms, not a question — one
+      // checkbox carrying the whole sentence, and it must be checked.
+      if (q.key === PAY_ACK_KEY) {
+        return (
+          <div key={q.id} id={key} className={cn("rounded-[14px] border p-4", err ? "border-danger bg-danger-bg/30" : "border-[#EAD9A8] bg-tint-warm/60")}>
+            <Checkbox
+              name={key}
+              defaultChecked={bools[q.key]}
+              label={q.label_he}
+              onChange={(e) => setBools((b) => ({ ...b, [q.key]: e.target.checked }))}
+            />
+            {err && <p className="text-danger text-xs mt-1.5">{err}</p>}
+          </div>
+        );
+      }
       return (
         <Field key={q.id} label={q.label_he} error={err}>
           <Checkbox

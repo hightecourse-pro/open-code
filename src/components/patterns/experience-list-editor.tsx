@@ -7,7 +7,8 @@
 
 import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Checkbox, Input, Select, Textarea } from "@/components/ui";
+import { Checkbox, Input, Select } from "@/components/ui";
+import { RichTextEditor } from "@/components/patterns/rich-text-editor";
 import { cn } from "@/lib/utils";
 import {
   EXPERIENCE_KINDS,
@@ -24,6 +25,8 @@ export interface ExperienceListEditorProps {
   initial: ExperienceEntry[];
   /** Tech taxonomy options (chips per entry, stored as VALUES). */
   techOptions: Option[];
+  /** work variant — the per-entry role select (the owner, 31/8). */
+  roleOptions?: Option[];
   error?: boolean;
 }
 
@@ -75,6 +78,7 @@ export function ExperienceListEditor({
   variant,
   initial,
   techOptions,
+  roleOptions = [],
   error,
 }: ExperienceListEditorProps) {
   const [entries, setEntries] = useState<ExperienceEntry[]>(initial);
@@ -143,7 +147,20 @@ export function ExperienceListEditor({
                   </Select>
                 </div>
               )}
-              <div className={cn("flex flex-col gap-1.5", variant === "work" && "sm:col-span-2")}>
+              {variant === "work" && roleOptions.length > 0 && (
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-ink-700">תפקיד</span>
+                  <Select value={entry.role ?? ""} onChange={(e) => patch(i, { role: e.target.value || undefined })}>
+                    <option value="">בחרי תפקיד…</option>
+                    {roleOptions.map((o) => (
+                      <option key={o.value} value={o.label}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              )}
+              <div className={cn("flex flex-col gap-1.5", variant === "work" && roleOptions.length === 0 && "sm:col-span-2")}>
                 <span className="text-xs font-semibold text-ink-700">מקום</span>
                 <Input
                   value={entry.place}
@@ -187,10 +204,18 @@ export function ExperienceListEditor({
 
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold text-ink-700">תיאור חופשי</span>
-              <Textarea
-                value={entry.description}
-                onChange={(e) => patch(i, { description: e.target.value })}
-                placeholder="מה עשית שם בפועל? באיזה צוות, על מה עבדת…"
+              <RichTextEditor
+                // Remount when the list length changes: the editor is
+                // uncontrolled, so a removed middle entry must re-seed the
+                // ones after it from state.
+                key={`${i}-${entries.length}`}
+                name={`${name}__rich_${i}`}
+                defaultValue={entry.description}
+                tools={["bold", "ul", "ol"]}
+                placeholder="מה עשית שם בפועל? אפשר הדגשות, בולטים ומספור — זה מה שהמגייסת תקרא."
+                onHtmlChange={(html) =>
+                  patch(i, { description: html.replace(/<[^>]*>/g, "").trim() ? html : "" })
+                }
               />
             </div>
 

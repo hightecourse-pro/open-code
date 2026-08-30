@@ -39,6 +39,7 @@ export function RichTextEditor({
   placeholder,
   submitOnEnter = false,
   editorRef,
+  onHtmlChange,
 }: {
   name?: string;
   defaultValue?: string | null;
@@ -52,6 +53,9 @@ export function RichTextEditor({
   submitOnEnter?: boolean;
   /** Imperative access for clear-after-send / restore-after-failure. */
   editorRef?: RefObject<RichEditorHandle | null>;
+  /** Fires with the current HTML on every edit — for parents that keep the
+      value in their own state (e.g. the experience-entry editor). */
+  onHtmlChange?: (html: string) => void;
 }) {
   // Fully uncontrolled: React never touches the contentEditable's children
   // (any re-render that rewrites them blocks typing). The initial HTML is set
@@ -74,6 +78,7 @@ export function RichTextEditor({
     if (inputRef.current && areaRef.current) {
       inputRef.current.value = areaRef.current.innerHTML;
     }
+    if (onHtmlChange && areaRef.current) onHtmlChange(areaRef.current.innerHTML);
   }
 
   useEffect(() => {

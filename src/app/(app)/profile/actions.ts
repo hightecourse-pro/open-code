@@ -6,6 +6,8 @@ import { claimExternalPaymentsFor } from "@/lib/payments/external";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
+import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { parseLinkItems } from "@/lib/link-items";
 import { DEFAULT_LANGUAGES, LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/language-skills";
 import {
   EXPERIENCE_KEYS,
@@ -176,6 +178,12 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     // Active questions, plus the structural experience gate even if toggled off.
     .or("active.eq.true,key.eq.has_experience");
 
+  // Rich free-text keys are stored as SANITIZED HTML; link keys as a JSON
+  // array of {url,title,note} (legacy plain-line strings hydrate on render).
+  const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps"]);
+  const SAVE_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
+  const PAY_ACK_KEY = "paid_placement";
+
   // Resolve each answer (handling "אחר" free-text), and validate required ones.
   const answered: { question_id: string; value: Json }[] = [];
   const missing: string[] = [];
@@ -248,6 +256,12 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       } catch {
         entries = [];
       }
+      // Rich descriptions ride in as HTML — sanitize each one, and treat
+      // markup-only bodies as empty.
+      entries = entries.map((e) => {
+        const clean = sanitizeRichHtml(e.description);
+        return { ...e, description: htmlToPlainText(clean).trim() ? clean : "" };
+      });
       // Only one work_history entry may be "מקום נוכחי/אחרון".
       let seenCurrent = false;
       entries = entries.map((e) => {
@@ -317,12 +331,27 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       if (v === "other") v = String(formData.get(`${key}__other`) ?? "").trim();
       value = v;
       empty = v === "";
+    } else if (SAVE_LINK_KEYS.has(q.key)) {
+      const items = parseLinkItems((() => {
+        try { return JSON.parse(String(formData.get(key) || "[]")); } catch { return String(formData.get(key) ?? ""); }
+      })());
+      value = items as unknown as Json;
+      empty = items.length === 0;
+    } else if (RICH_KEYS.has(q.key)) {
+      const clean = sanitizeRichHtml(String(formData.get(key) ?? ""));
+      const v = htmlToPlainText(clean).trim() ? clean : "";
+      value = v;
+      empty = v === "";
     } else {
       const v = String(formData.get(key) ?? "").trim();
       value = v;
       empty = v === "";
     }
 
+    // The placement-fee acknowledgment must actually be checked.
+    if (q.key === PAY_ACK_KEY && q.required && value !== true) {
+      missing.push("אישור תנאי ההשמה");
+    }
     if (q.required && empty) missing.push(q.label_he);
     const check = FIELD_VALIDATORS[q.key];
     if (check && typeof value === "string") {

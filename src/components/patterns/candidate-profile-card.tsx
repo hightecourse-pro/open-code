@@ -10,6 +10,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Avatar, Badge, type BadgeProps } from "@/components/ui";
+import { MessageBody } from "@/components/patterns/rich-text";
 import { cn } from "@/lib/utils";
 import type { CandidateDetail, CandidateField } from "@/lib/portal/candidates";
 
@@ -207,9 +208,7 @@ export function CandidateProfileCard({
               )}
             </div>
             {candidate.bio && (
-              <p className="t-body mt-4 max-w-[68ch] whitespace-pre-line text-ink-900">
-                {candidate.bio}
-              </p>
+              <MessageBody body={candidate.bio} className="t-body mt-4 max-w-[68ch] whitespace-pre-line text-ink-900" />
             )}
             {candidate.headline.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -256,6 +255,9 @@ export function CandidateProfileCard({
                       <span className="block text-sm font-semibold text-ink-1000 group-hover:text-brand-purple">
                         {link.label}
                       </span>
+                      {link.note && (
+                        <span className="block text-[12px] text-ink-700 leading-snug">{link.note}</span>
+                      )}
                       <span dir="ltr" className="t-caption block truncate text-start">
                         {prettyUrl(link.url)}
                       </span>
@@ -316,12 +318,36 @@ function FieldRow({ field, tone }: { field: CandidateField; tone: BadgeProps["va
           <div className="flex flex-col gap-2.5">
             {(field.entries ?? []).map((entry, i) => (
               <div
-                key={`${entry.headline}-${i}`}
+                key={`${entry.place}-${i}`}
                 className="rounded-[14px] border border-ink-100 bg-ink-0/60 p-3.5"
               >
-                <div className="text-[14.5px] font-bold text-ink-1000">{entry.headline}</div>
+                <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                  <div className="min-w-0">
+                    {entry.role && (
+                      <div className="text-[15px] font-bold text-brand-purple leading-tight">{entry.role}</div>
+                    )}
+                    <div className="text-[14.5px] font-bold text-ink-1000 leading-snug">
+                      {entry.place}
+                      {entry.kindLabel && (
+                        <span className="ms-2 text-[11.5px] font-semibold text-ink-500">· {entry.kindLabel}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {entry.current && (
+                      <span className="text-[10.5px] font-bold bg-tint-mint text-[#0F6E4A] px-2 py-0.5 rounded-full whitespace-nowrap">
+                        מקום נוכחי/אחרון
+                      </span>
+                    )}
+                    {entry.range && (
+                      <span dir="ltr" className="text-[12.5px] font-semibold text-ink-500 tabular-nums whitespace-nowrap">
+                        {entry.range}
+                      </span>
+                    )}
+                  </div>
+                </div>
                 {entry.tech.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
                     {entry.tech.map((t) => (
                       <Badge key={t} variant="tech">
                         {t}
@@ -330,21 +356,39 @@ function FieldRow({ field, tone }: { field: CandidateField; tone: BadgeProps["va
                   </div>
                 )}
                 {entry.description && (
-                  <p className="t-body-sm mt-2 max-w-[68ch] whitespace-pre-line text-ink-900">
-                    {entry.description}
-                  </p>
+                  <MessageBody
+                    body={entry.description}
+                    className="t-body-sm mt-2.5 max-w-[68ch] whitespace-pre-line text-ink-900 border-t border-ink-100 pt-2.5"
+                  />
                 )}
               </div>
             ))}
           </div>
         ) : field.kind === "chips" ? (
-          <div className="flex flex-wrap gap-1.5">
-            {field.values.map((value) => (
-              <Badge key={value} variant={tone}>
-                {value}
-              </Badge>
-            ))}
-          </div>
+          field.chipGroups && field.chipGroups.length > 1 ? (
+            <div className="flex flex-col gap-2.5">
+              {field.chipGroups.map((g) => (
+                <div key={g.name}>
+                  <div className="text-[11px] font-bold text-ink-500 mb-1">{g.name}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {g.values.map((value) => (
+                      <Badge key={value} variant={tone}>
+                        {value}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {field.values.map((value) => (
+                <Badge key={value} variant={tone}>
+                  {value}
+                </Badge>
+              ))}
+            </div>
+          )
         ) : field.kind === "links" ? (
           <div className="flex flex-col gap-1">
             {field.values.map((value) => (
@@ -360,6 +404,8 @@ function FieldRow({ field, tone }: { field: CandidateField; tone: BadgeProps["va
               </a>
             ))}
           </div>
+        ) : field.values.length === 1 ? (
+          <MessageBody body={field.values[0]} className="t-body-sm max-w-[68ch] whitespace-pre-line text-ink-900" />
         ) : (
           <div className="t-body-sm max-w-[68ch] whitespace-pre-line text-ink-900">
             {field.values.join(" · ")}
