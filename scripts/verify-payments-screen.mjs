@@ -4,7 +4,14 @@
 //  2. /admin/payments shows it with the review badge; approve keeps it
 //     waiting (no member with that email); assign activates the fixture.
 import { chromium } from "@playwright/test";
+import { createClient } from "@supabase/supabase-js";
 const ADMIN_PASS = process.env.QA_ADMIN_PASSWORD;
+// The dedup index (scale round) rejects a replayed TransactionId — every run
+// gets a fresh one, and older leftovers are swept first.
+// Run with: node --env-file=.env.local scripts/verify-payments-screen.mjs
+const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
+await sb.from("external_payments").delete().like("provider_payment_id", "EXTV-UNVERIFIED-%");
+const TXN = `EXTV-UNVERIFIED-${Date.now()}`;
 const BASE = "https://open-code-psi.vercel.app";
 const SHOTS = process.env.SHOTS_DIR || ".";
 const results = [];
@@ -21,7 +28,7 @@ const res = await fetch(`${BASE}/api/webhooks/payments`, {
     Mail: "ext-verify@example.com",
     ClientName: "בדיקת מקור לא מזוהה",
     Phone: "050-0000000",
-    TransactionId: "EXTV-UNVERIFIED-1",
+    TransactionId: TXN,
     Groupe: "דמי מנוי - קהילת קוד פתוח",
   }),
 });
