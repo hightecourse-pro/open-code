@@ -156,15 +156,14 @@ export default async function JobsPage({
       // Honest closure wording: filled and closed-without-hire are different
       // endings, and "אוישה" on a job nobody got would be a small lie.
       const closedLabelOf = (j: { status: string; pipeline_status: string }) =>
-        j.status === "open"
-          ? // Still open but past submissions (sent to client / interviews) —
-            // she should see her application moved along with the job.
-            j.pipeline_status === "candidates_sent" || j.pipeline_status === "interviews"
-            ? "המשרה בשלב הבא — המועמדויות אצל המעסיק"
-            : null
-          : j.pipeline_status === "hired"
-            ? "המשרה אוישה"
-            : "המשרה נסגרה";
+        j.status === "open" ? null : j.pipeline_status === "hired" ? "המשרה אוישה" : "המשרה נסגרה";
+      // Still open but past submissions (sent to client / interviews) — a
+      // chip, NOT an ending (the owner, 31/8: it filed under "הסתיימו").
+      const stageLabelOf = (j: { status: string; pipeline_status: string }) =>
+        j.status === "open" &&
+        (j.pipeline_status === "candidates_sent" || j.pipeline_status === "interviews")
+          ? "המשרה בשלב הבא — המועמדויות אצל המעסיק"
+          : null;
       // "הוגשה ללקוח" is a FACT, not a status guess: a job_candidates row means
       // her CV physically went out; the pipeline statuses that imply it count
       // too, so an admin skipping a step never hides the handoff from her.
@@ -180,11 +179,14 @@ export default async function JobsPage({
           appliedAt: a.created_at ?? null,
           forwarded: candSet.has(a.job_id) || FORWARDED.includes(a.status),
           closedLabel: closedLabelOf(j),
+          stageLabel: stageLabelOf(j),
         }];
       });
       submittedForHer = candJobIds.flatMap((id) => {
         const j = jobOf.get(id);
-        return j ? [{ jobId: id, title: j.title, company: j.company, closedLabel: closedLabelOf(j) }] : [];
+        return j
+          ? [{ jobId: id, title: j.title, company: j.company, closedLabel: closedLabelOf(j), stageLabel: stageLabelOf(j) }]
+          : [];
       });
     }
   }

@@ -16,6 +16,12 @@ export interface MyApplicationItem {
    * files under הסתיימו, whatever its own status says.
    */
   closedLabel: string | null;
+  /**
+   * The job is still OPEN but moved past submissions (sent to client /
+   * interviews). Shown as a chip only — it does NOT end the story (the
+   * owner, 31/8: "רק הוגש ללקוח" is not "הסתיימו").
+   */
+  stageLabel: string | null;
 }
 
 export interface MySubmittedItem {
@@ -23,6 +29,7 @@ export interface MySubmittedItem {
   title: string;
   company: string;
   closedLabel: string | null;
+  stageLabel: string | null;
 }
 
 // Warm member-facing pills, one per pipeline stage.
@@ -55,11 +62,13 @@ function Row({
   pill,
   appliedAt,
   closedLabel,
+  stageLabel,
 }: {
   title: string;
   pill: { label: string; cls: string };
   appliedAt?: string | null;
   closedLabel?: string | null;
+  stageLabel?: string | null;
 }) {
   return (
     <div className="flex items-center gap-2.5 py-2 border-b border-ink-100 last:border-b-0 flex-wrap">
@@ -71,9 +80,9 @@ function Row({
           </span>
         )}
       </div>
-      {closedLabel && (
+      {(closedLabel ?? stageLabel) && (
         <span className="inline-flex items-center px-2.5 py-[3px] rounded-full text-[11px] font-semibold bg-ink-100 text-ink-500">
-          {closedLabel}
+          {closedLabel ?? stageLabel}
         </span>
       )}
       <span
@@ -148,7 +157,7 @@ export function MyApplications({
           hint="הצוות עובר על כל הגשה אישית ובוחר את המתאימות ביותר לכל משרה — לא כל הגשה מועברת ללקוח, וברגע שהמועמדות שלך עוברת תראי את זה כאן."
         >
           {inProgress.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
           ))}
         </Group>
       )}
@@ -160,10 +169,10 @@ export function MyApplications({
           hint="קורות החיים שלך אצל המעסיק — נעדכן אותך בכל צעד."
         >
           {forwarded.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
           ))}
           {submittedOpen.map((s) => (
-            <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} />
+            <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} stageLabel={s.stageLabel} />
           ))}
         </Group>
       )}
@@ -171,10 +180,10 @@ export function MyApplications({
       {(done.length > 0 || submittedClosed.length > 0) && (
         <Group icon={HeartHandshake} title={`הסתיימו (${done.length + submittedClosed.length})`}>
           {done.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
           ))}
           {submittedClosed.map((s) => (
-            <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} />
+            <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} stageLabel={s.stageLabel} />
           ))}
         </Group>
       )}
