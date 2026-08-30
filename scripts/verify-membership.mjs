@@ -61,7 +61,9 @@ async function login(page, email, pass) {
   await page.waitForSelector("text=מתחדש אוטומטית ב-", { timeout: 20000 });
   ok("resume restores renewal", true);
 
-  // course library: take a course, then the dates must print everywhere
+  // course library: take a course, then the dates must print everywhere.
+  // A first pick asks "לבחור לחודש הקרוב?" (2026-08-30) — accept it.
+  page.on("dialog", (d) => d.accept());
   await page.goto(`${BASE}/courses`);
   await page.waitForLoadState("networkidle");
   const startBtn = page.locator('button:has-text("התחילי קורס")').first();
@@ -74,10 +76,15 @@ async function login(page, email, pass) {
   const fold = page.locator('button:has-text("כל הקורסים בספרייה")').first();
   if (await fold.count()) await fold.click().catch(() => {});
   await page.waitForTimeout(400);
-  ok(
-    "swap eligibility date printed (fold or cards)",
-    (await page.locator("text=זכאות ההחלפה").count()) + (await page.locator("text=זכאות החלפת קורס").count()) > 1
-  );
+  // The eligibility story prints in several voices: the hero ("זכאות החלפת
+  // קורס:"), the fold subtitle ("הזכאות נפתחת ב-" / "זכאות ההחלפה שלך
+  // פתוחה") and locked cards ("זכאות החלפה מ-"). Any two of them = printed.
+  const eligibilityMentions =
+    (await page.locator("text=זכאות ההחלפה").count()) +
+    (await page.locator("text=זכאות החלפת קורס").count()) +
+    (await page.locator("text=הזכאות נפתחת ב").count()) +
+    (await page.locator("text=זכאות החלפה מ").count());
+  ok("swap eligibility date printed (fold or cards)", eligibilityMentions > 1);
   await page.screenshot({ path: `${SHOTS}/mm-4-course-dates.png`, fullPage: true });
   await page.close();
 }

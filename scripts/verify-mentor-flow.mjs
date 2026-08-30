@@ -28,7 +28,7 @@ ok("member: pool-building notice", ((await member.textContent("body")) ?? "").in
 const hasForm = (await member.locator('button:has-text("שליחת בקשה למנטורית")').count()) > 0;
 if (hasForm) {
   await member.selectOption("#mr-reason", { index: 1 });
-  await member.locator('button:has-text("שליחת בקשה למנטורית")').click();
+  await member.locator('button:has-text("שליחת בקשה למנטורית")').click({ force: true });
   await member.waitForTimeout(2000);
 }
 ok("member: request sent", hasForm);

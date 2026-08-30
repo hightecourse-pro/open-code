@@ -92,9 +92,17 @@ async function login(page, email, pass) {
   await page.waitForLoadState("networkidle");
   ok("jobs(fit): explanation line", (await page.locator("text=מוצגות מעומעמות").count()) > 0);
   const dimmed = await page.locator("article.opacity-65").count();
+  // A dimmed card carries ONE closed-door message: the ineligible text, or —
+  // when the job moved past submissions (2026-08-30) — the advanced chip.
   const blocked = await page.locator("text=לא ניתן להגיש").count();
+  const advancedDimmed = await page
+    .locator('article.opacity-65:has-text("המשרה התקדמה לשלב הבא")')
+    .count();
   const totalCards = await page.locator("article").count();
-  ok(`jobs(fit): non-matching dimmed (${dimmed}/${totalCards}, blocked=${blocked})`, totalCards === 0 || dimmed === blocked);
+  ok(
+    `jobs(fit): non-matching dimmed (${dimmed}/${totalCards}, blocked=${blocked}+${advancedDimmed})`,
+    totalCards === 0 || dimmed === blocked + advancedDimmed
+  );
   ok("jobs: letter logo removed", (await page.locator("article .w-\\[42px\\]").count()) === 0);
   await page.screenshot({ path: `${SHOTS}/pm4-4-jobs-fit.png` });
 

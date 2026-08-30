@@ -65,26 +65,13 @@ const keysHref = await page.locator('a[href*="/ai/keys"]').last().getAttribute("
 ok("no_key alert links back to checker", decodeURIComponent(keysHref ?? "").includes("next=/ai/cv-checker"), keysHref ?? "");
 await page.screenshot({ path: `${SHOTS}/sweep-3-checker-nokey.png` });
 
-// 3. interview thread: optimistic bubble + typing row + restore on failure
+// 3. interview: OFFLINE by the owner's call (2026-08-29) — the session page
+// redirects to the "בקרוב" screen. The optimistic-thread checks return with
+// the simulator (git history has them).
 await page.goto(`${BASE}/ai/interview/${SESSION}`);
 await page.waitForLoadState("networkidle");
-ok("opening question rendered", (await page.locator("text=ספרי לי קצת על עצמך").count()) > 0);
-await page.fill('input[name="answer"]', "יש לי המון מוטיבציה ורקע מריאקט");
-await page.click('button[type="submit"]:has-text("שליחה")');
-await page.waitForTimeout(250);
-const bubbleNow = (await page.locator("text=יש לי המון מוטיבציה").count()) > 0;
-const typingNow = (await page.locator("text=המראיינת מקלידה").count()) > 0;
-ok("answer bubble appears instantly", bubbleNow);
-ok("typing indicator appears", typingNow);
-await page.screenshot({ path: `${SHOTS}/sweep-4-interview-optimistic.png` });
-// Match ONLY the alert's link (it carries ?next=) — the sidebar's plain
-// /ai/keys item also exists on the page.
-await page.waitForSelector('a[href*="next="]', { timeout: 25000 });
-const sessHref = await page.locator('a[href*="next="]').last().getAttribute("href");
-ok("key alert returns to session", decodeURIComponent(sessHref ?? "").includes(`next=/ai/interview/${SESSION}`));
-const restored = await page.locator('input[name="answer"]').inputValue();
-ok("failed answer restored to box", restored.includes("מוטיבציה"));
-await page.screenshot({ path: `${SHOTS}/sweep-5-interview-failed.png` });
+ok("interview session redirects to offline screen", page.url().endsWith("/ai/interview"));
+ok("interview offline copy shown", ((await page.textContent("body")) ?? "").includes("בקרוב"));
 
 // 4. profile form: address trio on one row (desktop)
 await page.goto(`${BASE}/profile`);
