@@ -1,28 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Trash2, BookOpen, CalendarDays, Globe, Lock } from "lucide-react";
+import { Trash2, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
-import { ContentLinksEditor } from "@/components/patterns/content-links-editor";
 import { CourseUnitsEditor } from "@/components/patterns/course-units-editor";
 import { Collapsible } from "@/components/patterns/collapsible";
-import {
-  createCourse,
-  createSessionContent,
-  deleteCourse,
-  deleteSessionContent,
-  setSessionOpenToAll,
-  updateSessionFiles,
-} from "./actions";
+import { createCourse, deleteCourse } from "./actions";
 import type { ContentLink, CourseUnit } from "@/types/database";
 
 export const metadata: Metadata = { title: "ניהול תכנים" };
 
 export default async function AdminContentPage() {
   const supabase = await createClient();
-  const [{ data: courses }, { data: sessions }, { data: links }, { data: units }] = await Promise.all([
+  const [{ data: courses }, { data: links }, { data: units }] = await Promise.all([
     supabase.from("courses").select("*").order("created_at", { ascending: false }),
-    supabase.from("sessions").select("id, title, topic, scheduled_at, open_to_all, syllabus_url, materials_url").order("scheduled_at", { ascending: false }),
     supabase.from("content_links").select("*").order("sort_order", { ascending: true }),
     supabase.from("course_units").select("*").order("sort_order", { ascending: true }),
   ]);
@@ -115,99 +105,15 @@ export default async function AdminContentPage() {
         {(courses ?? []).length === 0 && <p className="text-ink-500 text-sm">אין קורסים עדיין — הוסיפי את הראשון 💜</p>}
       </section>
 
-      {/* ---------- Sessions ---------- */}
-      <section className="flex flex-col gap-3">
-        <h2 className="font-display text-lg font-bold text-ink-1000 flex items-center gap-2">
-          <CalendarDays size={18} className="text-brand-purple" /> סשנים
-        </h2>
-
-        <form
-          action={createSessionContent}
-          className="bg-white border border-ink-200 rounded-[14px] p-3 flex flex-wrap items-center gap-2 shadow-sm"
-        >
-          <input name="title" placeholder="שם הסשן" required className="flex-1 min-w-[160px] text-sm border border-ink-300 rounded-md px-3 py-2" />
-          <input name="topic" placeholder="נושא" className="text-sm border border-ink-300 rounded-md px-3 py-2 w-44" />
-          <button type="submit" className="text-sm font-semibold text-white bg-brand-gradient rounded-md px-4 py-2">
-            הוספת סשן
-          </button>
-        </form>
-
-        {(sessions ?? []).map((s) => (
-          <div key={s.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
-            <Collapsible
-              title={`${s.title}${s.topic ? ` · ${s.topic}` : ""}`}
-              count={(linksByOwner.get(`session:${s.id}`) ?? []).length}
-              defaultOpen={false}
-            >
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <form action={deleteSessionContent.bind(null, s.id)} className="ms-auto">
-                <button type="submit" className="text-ink-400 hover:text-danger flex items-center gap-1 text-xs">
-                  <Trash2 size={14} /> מחיקת סשן
-                </button>
-              </form>
-            </div>
-            {/* Audience: paid + mentors by default, or the whole community. */}
-            <form
-              action={setSessionOpenToAll.bind(null, s.id, !s.open_to_all)}
-              className="flex items-center gap-2 mb-3"
-            >
-              <button
-                type="submit"
-                className={cn(
-                  "inline-flex items-center gap-1.5 text-[12px] font-semibold rounded-full px-3 py-1 border transition-colors",
-                  s.open_to_all
-                    ? "bg-tint-mint border-[#A7E3C6] text-[#1B7A4B]"
-                    : "bg-ink-50 border-ink-200 text-ink-500 hover:border-brand-purple"
-                )}
-              >
-                {s.open_to_all ? (
-                  <>
-                    <Globe size={12} /> פתוח לכל הקהילה
-                  </>
-                ) : (
-                  <>
-                    <Lock size={12} /> למנויות ולמנטוריות
-                  </>
-                )}
-              </button>
-              <span className="text-[11.5px] text-ink-400">
-                {s.open_to_all
-                  ? "כל המשתתפות מקבלות את ההקלטה — גם החינמיות. לחיצה תחזיר אותו למנויות בלבד."
-                  : "לחיצה תפתח את ההקלטה לכל הקהילה."}
-              </span>
-            </form>
-            {/* Downloadable handouts — what the members' events screen offers. */}
-            <form
-              action={updateSessionFiles.bind(null, s.id)}
-              className="flex flex-wrap items-center gap-2 mb-3"
-            >
-              <input
-                name="syllabus_url"
-                dir="ltr"
-                placeholder="קישור לסילבוס (לכל הקהילה)"
-                defaultValue={s.syllabus_url ?? ""}
-                className="flex-1 min-w-[180px] text-[12.5px] border border-ink-300 rounded-md px-3 py-1.5"
-              />
-              <input
-                name="materials_url"
-                dir="ltr"
-                placeholder="קישור לחומרים (למנויות)"
-                defaultValue={s.materials_url ?? ""}
-                className="flex-1 min-w-[180px] text-[12.5px] border border-ink-300 rounded-md px-3 py-1.5"
-              />
-              <button
-                type="submit"
-                className="text-[12.5px] font-semibold text-brand-purple border border-brand-purple rounded-md px-3 py-1.5 hover:bg-tint-purple"
-              >
-                שמירת קבצים
-              </button>
-            </form>
-            <ContentLinksEditor ownerType="session" ownerId={s.id} links={linksByOwner.get(`session:${s.id}`) ?? []} />
-            </Collapsible>
-          </div>
-        ))}
-        {(sessions ?? []).length === 0 && <p className="text-ink-500 text-sm">אין סשנים עדיין.</p>}
-      </section>
+      {/* Session content moved to ניהול סשנים (the owner, 30/8) — one home
+          per session: recording, syllabus upload, materials, pre-topics. */}
+      <p className="text-[13px] text-ink-500 bg-ink-50 border border-ink-200 rounded-md px-4 py-3">
+        תכני הסשנים (הקלטה, סילבוס, חומרים ונושאים) מנוהלים עכשיו במסך{" "}
+        <a href="/admin/sessions" className="font-semibold text-brand-purple hover:underline">
+          ניהול סשנים
+        </a>{" "}
+        — על כל סשן, בכפתור התיקייה.
+      </p>
     </div>
   );
 }

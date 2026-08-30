@@ -1093,6 +1093,7 @@ export interface Database {
           open_to_all: boolean;
           /** Downloadable handouts — plain URLs the admin pastes. */
           syllabus_url: string | null;
+          pre_topics: string | null;
           materials_url: string | null;
           /** Planned length, minutes — shown in admin and on the events screen. */
           duration_minutes: number | null;
@@ -1110,6 +1111,7 @@ export interface Database {
           open_to_all?: boolean;
           canceled_at?: string | null;
           syllabus_url?: string | null;
+          pre_topics?: string | null;
           materials_url?: string | null;
           duration_minutes?: number | null;
         };
@@ -1154,6 +1156,7 @@ export interface Database {
           insights: Json;
           job_fit: Json | null;
           cv_text: string | null;
+          cv_document_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -1167,6 +1170,7 @@ export interface Database {
           insights?: Json;
           job_fit?: Json | null;
           cv_text?: string | null;
+          cv_document_id?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["cv_reviews"]["Insert"]>;

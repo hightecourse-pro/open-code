@@ -437,6 +437,12 @@ export default async function AdminMemberProfilePage({
         <div className="flex-1 min-w-[200px]">
           <h1 className="font-display text-[24px] font-black text-ink-1000">{profile.full_name}</h1>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+            <Link
+              href={`/admin/members/${profile.id}/profile`}
+              className="inline-flex items-center gap-1 text-[12px] font-bold text-white bg-brand-gradient px-2.5 py-0.5 rounded-full hover:opacity-95"
+            >
+              הפרופיל המלא ↗
+            </Link>
             <RoleTag role={profile.role} experienced={profile.is_experienced === true} />
             <StatusPill status={profile.status} />
             {isVip && (

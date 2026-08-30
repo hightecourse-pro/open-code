@@ -17,6 +17,22 @@ export default async function SubscriptionPage() {
   const profile = await requireCommunityAccess();
   if (profile.role === "mentor") redirect("/profile");
 
+  // Staff don't pay (the owner, 30/8: "אם אני צוות למה המנוי פעיל בתשלום?") —
+  // an admin sees a staff notice, never billing details.
+  if (profile.role === "admin") {
+    return (
+      <div className="flex flex-col gap-5 max-w-2xl">
+        <div>
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;מנוי/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המנוי שלי</h1>
+        </div>
+        <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14.5px] text-ink-700">
+          חשבון צוות 💜 הכול פתוח לך בלי מנוי ובלי תשלום — אין כאן מה לנהל.
+        </div>
+      </div>
+    );
+  }
+
   const supabase = await createClient();
   const [{ data: subscription }, pricing] = await Promise.all([
     supabase

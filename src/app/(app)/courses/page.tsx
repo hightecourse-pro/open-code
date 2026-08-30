@@ -233,7 +233,7 @@ export default async function CoursesPage() {
       )}
 
       {activeCourse && (
-        <div className="relative overflow-hidden bg-brand-gradient rounded-[22px] p-6 text-white shadow-glow-pink flex flex-col sm:flex-row gap-5 items-start sm:items-center">
+        <div id="active-course" className="relative overflow-hidden bg-brand-gradient scroll-mt-4 rounded-[22px] p-6 text-white shadow-glow-pink flex flex-col sm:flex-row gap-5 items-start sm:items-center">
           <div className="w-[120px] h-[80px] rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0 border border-white/25">
             <Play size={28} fill="white" />
           </div>

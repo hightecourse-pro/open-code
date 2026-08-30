@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import {
   processShareQueue,
@@ -135,23 +136,94 @@ export async function setSessionOpenToAll(id: string, open: boolean): Promise<vo
   revalidatePath("/recordings");
 }
 
+const SESSION_FILE_MAX = 10 * 1024 * 1024;
+
+/** Upload a session handout to the public session-files bucket → its URL. */
+async function hostSessionFile(sessionId: string, file: File, tag: string): Promise<string | null> {
+  if (file.size === 0 || file.size > SESSION_FILE_MAX) return null;
+  const admin = createAdminClient();
+  const safe = file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `${sessionId}/${tag}-${Date.now()}-${safe}`;
+  const { error } = await admin.storage
+    .from("session-files")
+    .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+  if (error) {
+    console.error("[sessions] file upload failed:", error.message);
+    return null;
+  }
+  return admin.storage.from("session-files").getPublicUrl(path).data?.publicUrl ?? null;
+}
+
 /**
- * The session's downloadable handouts — a syllabus (visible to the whole
- * community) and a materials link (subscribers). Pasted URLs; clearing a
- * field takes the button away on the events screen.
+ * The session's learning material (the owner, 2026-08-30): the syllabus is an
+ * UPLOADED file (not a link); materials take a link or an upload (the upload
+ * wins); pre_topics is what to know BEFORE the session. Clearing removes the
+ * button on the events screen; the syllabus stays visible after a recording.
  */
 export async function updateSessionFiles(id: string, formData: FormData): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();
-  await supabase
-    .from("sessions")
-    .update({
-      syllabus_url: String(formData.get("syllabus_url") ?? "").trim() || null,
-      materials_url: String(formData.get("materials_url") ?? "").trim() || null,
-    })
-    .eq("id", id);
+
+  const patch: { pre_topics: string | null; syllabus_url?: string | null; materials_url?: string | null } = {
+    pre_topics: String(formData.get("pre_topics") ?? "").trim().slice(0, 2000) || null,
+  };
+
+  const syllabusFile = formData.get("syllabus_file");
+  if (formData.get("clear_syllabus") === "1") patch.syllabus_url = null;
+  else if (syllabusFile instanceof File && syllabusFile.size > 0) {
+    const url = await hostSessionFile(id, syllabusFile, "syllabus");
+    if (url) patch.syllabus_url = url;
+  }
+
+  const materialsFile = formData.get("materials_file");
+  if (materialsFile instanceof File && materialsFile.size > 0) {
+    const url = await hostSessionFile(id, materialsFile, "materials");
+    if (url) patch.materials_url = url;
+  } else {
+    patch.materials_url = String(formData.get("materials_url") ?? "").trim() || null;
+  }
+
+  await supabase.from("sessions").update(patch).eq("id", id);
   revalidatePath("/admin/content");
+  revalidatePath("/admin/sessions");
   revalidatePath("/events");
+}
+
+/**
+ * The one-field recording shortcut on the session row (the owner: "בעדכון
+ * סשן אני לא רואה עדכון של הקישור להקלטה") — maintains the session's FIRST
+ * video content_link: set → update/insert, empty → remove.
+ */
+export async function setSessionRecording(id: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const url = String(formData.get("recording_url") ?? "").trim();
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("content_links")
+    .select("id")
+    .eq("owner_type", "session")
+    .eq("owner_id", id)
+    .eq("kind", "video")
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (!url) {
+    if (existing) await supabase.from("content_links").delete().eq("id", existing.id);
+  } else if (existing) {
+    await supabase.from("content_links").update({ url }).eq("id", existing.id);
+  } else {
+    await supabase.from("content_links").insert({
+      owner_type: "session",
+      owner_id: id,
+      kind: "video",
+      title: "הקלטת הסשן",
+      url,
+      sort_order: 0,
+    });
+  }
+  revalidatePath("/admin/sessions");
+  revalidatePath("/admin/content");
+  revalidatePath("/recordings");
 }
 
 export async function deleteSessionContent(id: string): Promise<void> {

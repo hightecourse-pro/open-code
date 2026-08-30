@@ -92,7 +92,9 @@ export default async function ProfilePage() {
     .from("cv_documents")
     .select("id", { count: "exact", head: true })
     .eq("profile_id", profile.id);
-  const requireCv = profile.role === "junior" && (cvCount ?? 0) === 0;
+  // At least one CV for every member INCLUDING mentors (the owner, 30/8) —
+  // only staff accounts are exempt (the server enforces the same rule).
+  const requireCv = profile.role !== "admin" && (cvCount ?? 0) === 0;
 
   // Resolve the assigned mentor's name for the employment card.
   let employmentMentorName: string | null = null;

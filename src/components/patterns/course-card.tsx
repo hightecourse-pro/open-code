@@ -159,9 +159,16 @@ export function CourseCard({
             win the merge) is what lines the buttons up across the grid row. */}
         <div className="mt-auto pt-3">
           {isActive ? (
-            <div className="w-full text-center font-display font-bold text-[13px] py-2 rounded-md bg-tint-pink text-brand-pink-deep flex items-center justify-center gap-1.5">
-              <CheckCircle2 size={14} /> את לומדת אותו עכשיו — החומרים למעלה
-            </div>
+            <button
+              type="button"
+              onClick={() =>
+                document.getElementById("active-course")?.scrollIntoView({ behavior: "smooth", block: "start" })
+              }
+              className="w-full text-center font-display font-bold text-[13px] py-2 rounded-md bg-tint-pink text-brand-pink-deep flex items-center justify-center gap-1.5 cursor-pointer hover:bg-brand-pink-deep hover:text-white transition-colors"
+              title="קפיצה לקורס"
+            >
+              <CheckCircle2 size={14} /> את לומדת אותו עכשיו — לחצי למעבר לקורס
+            </button>
           ) : needsSubscription ? (
             <Link
               href="/join"

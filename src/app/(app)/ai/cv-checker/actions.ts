@@ -90,6 +90,9 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
     insights: analysis.insights as unknown as Json,
     job_fit: (analysis.job_fit ?? null) as unknown as Json,
     cv_text: null,
+    // Which saved document this ran on — the history list links back to it
+    // (the owner, 30/8). A one-off upload has no saved document.
+    cv_document_id: docId || null,
   });
 
   return { analysis };

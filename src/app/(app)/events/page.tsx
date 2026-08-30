@@ -21,6 +21,10 @@ function materialsUrl(session: object): string | null {
   return (session as { materials_url?: string | null }).materials_url ?? null;
 }
 
+function preTopics(session: object): string | null {
+  return (session as { pre_topics?: string | null }).pre_topics ?? null;
+}
+
 /** A session counts as "live" from its start until this many ms later. */
 const LIVE_WINDOW_MS = 2 * 3600 * 1000;
 
@@ -191,6 +195,14 @@ export default async function EventsPage() {
                       subscriber={subscriber}
                     />
                   </div>
+                  {/* "נושאים שחשוב להכיר" — prep only, so it shows ONLY until
+                      the session actually starts (the owner, 30/8). */}
+                  {preTopics(s) && new Date(s.scheduled_at).getTime() > now.getTime() && (
+                    <div className="mt-2 text-[12.5px] text-ink-700 bg-tint-warm/50 border border-[#F0DCA8] rounded-md px-3 py-2 max-w-xl">
+                      <b className="text-[#8C5E0E]">כדאי להכיר לפני הסשן:</b>{" "}
+                      <span className="whitespace-pre-line">{preTopics(s)}</span>
+                    </div>
+                  )}
                 </div>
                 {!s.canceled_at &&
                   (subscriber ? (

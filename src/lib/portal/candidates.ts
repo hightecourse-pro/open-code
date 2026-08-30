@@ -250,7 +250,11 @@ function buildCatalogue(
 }
 
 /** Every listed candidate, with only employer-visible answers attached. */
-export async function loadCandidates(opts?: { includeMentors?: boolean }): Promise<{
+export async function loadCandidates(opts?: {
+  includeMentors?: boolean;
+  /** TEAM view (the owner, 30/8): every member, hidden-from-portal included. */
+  everyoneForTeam?: boolean;
+}): Promise<{
   candidates: CandidateDetail[];
   questions: ConfigQuestion[];
   catalogue: CatalogueField[];
@@ -286,7 +290,9 @@ export async function loadCandidates(opts?: { includeMentors?: boolean }): Promi
     .in("role", roles)
     .order("full_name", { ascending: true });
 
-  const listed = (profiles ?? []).filter((p) => p.portal_listed !== false);
+  const listed = opts?.everyoneForTeam
+    ? (profiles ?? [])
+    : (profiles ?? []).filter((p) => p.portal_listed !== false);
   // No candidates yet — still return the full filter palette from the questions
   // so the recruiter sees the parameters that mirror the profile.
   if (listed.length === 0) {

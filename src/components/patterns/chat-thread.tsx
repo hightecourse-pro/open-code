@@ -162,9 +162,9 @@ export function ChatThread({
       >
         {bubbles.map((m, i) => {
           const mine = m.sender_id === meId;
-          // Her avatar chip marks the start of each of her runs — so even a
-          // fast back-and-forth reads unambiguously: my side, her side.
-          const runStart = !mine && bubbles[i - 1]?.sender_id !== m.sender_id;
+          // Every run of messages is HEADED by its sender's name, both sides
+          // (the owner, 30/8: "לא ברור מי כתב מה... כותרת ברורה לכל צד").
+          const runStart = bubbles[i - 1]?.sender_id !== m.sender_id;
           return (
             <div
               key={m.id}
@@ -174,8 +174,18 @@ export function ChatThread({
                 m.pending && "opacity-60"
               )}
             >
+              {runStart && (
+                <span
+                  className={cn(
+                    "text-[11px] font-bold mt-1.5 mb-0.5 px-1",
+                    mine ? "text-brand-pink-deep" : "text-brand-purple ms-[30px]"
+                  )}
+                >
+                  {mine ? "את" : otherName ?? "הצד השני"}
+                </span>
+              )}
               <div className={cn("flex items-end gap-1.5", !mine && "flex-row-reverse")}>
-                {runStart ? (
+                {runStart && !mine ? (
                   <span
                     aria-hidden
                     className="w-6 h-6 rounded-full bg-tint-purple text-brand-purple text-[11px] font-bold flex items-center justify-center shrink-0 mb-0.5"

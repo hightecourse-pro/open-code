@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Ban, Check, ChevronDown, Clock, Pencil, Play, Trash2, Users, Search } from "lucide-react";
+import { Ban, Check, ChevronDown, Clock, Pencil, Play, Trash2, Users, Search , FolderOpen } from "lucide-react";
 import { Badge, Button, Field, Input } from "@/components/ui";
 import { cn, fmtIsraelDateTime, isoToIsraelInput, israelLocalToIso } from "@/lib/utils";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
@@ -98,12 +98,6 @@ function EditForm({ s, onClose }: { s: AdminSessionRow; onClose: () => void }) {
       <Field label="קישור Zoom" htmlFor={`z-${s.id}`}>
         <Input id={`z-${s.id}`} name="zoom_url" dir="ltr" defaultValue={s.zoom_url ?? ""} />
       </Field>
-      <Field label="סילבוס (קישור)" htmlFor={`sy-${s.id}`}>
-        <Input id={`sy-${s.id}`} name="syllabus_url" dir="ltr" defaultValue={s.syllabus_url ?? ""} />
-      </Field>
-      <Field label="חומרים (קישור, למנויות)" htmlFor={`m-${s.id}`}>
-        <Input id={`m-${s.id}`} name="materials_url" dir="ltr" defaultValue={s.materials_url ?? ""} />
-      </Field>
       <div className="flex items-end gap-2">
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "שומרת…" : "שמירה"}
@@ -116,9 +110,10 @@ function EditForm({ s, onClose }: { s: AdminSessionRow; onClose: () => void }) {
   );
 }
 
-function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
+function Row({ s, past, panel }: { s: AdminSessionRow; past: boolean; panel?: React.ReactNode }) {
   const [editing, setEditing] = useState(false);
   const [fbOpen, setFbOpen] = useState(false);
+  const [contentOpen, setContentOpen] = useState(false);
   return (
     <div className="py-2.5 border-b border-ink-100 last:border-b-0">
       <div className="flex items-center gap-3 flex-wrap">
@@ -166,6 +161,16 @@ function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
         <StatusBadge s={s} />
         <button
           type="button"
+          onClick={() => setContentOpen((v) => !v)}
+          className={
+            "p-1.5 " + (contentOpen ? "text-brand-purple" : "text-ink-400 hover:text-brand-purple")
+          }
+          title="תוכן הסשן: הקלטה, סילבוס, חומרים ונושאים"
+        >
+          <FolderOpen size={15} />
+        </button>
+        <button
+          type="button"
           onClick={() => setEditing((v) => !v)}
           className="text-ink-400 hover:text-brand-purple p-1.5"
           title="עריכת הסשן"
@@ -199,6 +204,7 @@ function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
         </ConfirmActionButton>
       </div>
       {editing && <EditForm s={s} onClose={() => setEditing(false)} />}
+      {contentOpen && panel}
       {fbOpen && s.feedback.count > 0 && (
         <div className="mt-2 rounded-[12px] border border-[#F0DCA8] bg-tint-warm/40 p-3 flex flex-col gap-2">
           <div className="text-[12px] font-bold text-[#8C5E0E]">
@@ -229,7 +235,7 @@ function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
  * separate groups, searchable, each session editable in place; past sessions
  * carry their participant count and a recording link.
  */
-export function AdminSessionsList({ sessions }: { sessions: AdminSessionRow[] }) {
+export function AdminSessionsList({ sessions, panels = {} }: { sessions: AdminSessionRow[]; panels?: Record<string, React.ReactNode> }) {
   const [q, setQ] = useState("");
   const [pastOpen, setPastOpen] = useState(true);
   // Captured once per mount — render must stay pure (react-hooks/purity).
@@ -264,7 +270,7 @@ export function AdminSessionsList({ sessions }: { sessions: AdminSessionRow[] })
         <h3 className="font-display text-base font-bold mb-2">מתוכננים ({upcoming.length})</h3>
         <div className="flex flex-col">
           {upcoming.map((s) => (
-            <Row key={s.id} s={s} past={false} />
+            <Row key={s.id} s={s} past={false} panel={panels[s.id]} />
           ))}
           {upcoming.length === 0 && (
             <p className="text-ink-500 text-sm py-3">אין סשנים מתוכננים{q ? " שתואמים לחיפוש" : ""}.</p>
@@ -284,7 +290,7 @@ export function AdminSessionsList({ sessions }: { sessions: AdminSessionRow[] })
         {pastOpen && (
           <div className="flex flex-col mt-2">
             {past.map((s) => (
-              <Row key={s.id} s={s} past />
+              <Row key={s.id} s={s} past panel={panels[s.id]} />
             ))}
             {past.length === 0 && (
               <p className="text-ink-500 text-sm py-3">עוד לא התקיימו סשנים{q ? " שתואמים לחיפוש" : ""}.</p>

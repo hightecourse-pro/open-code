@@ -12,6 +12,8 @@ export interface CourseStatRow {
   members: number;
   views: number;
   last: string | null;
+  /** The course's member feedback — expands under the row (the owner, 30/8). */
+  feedback: { profileId: string; name: string; rating: number | null; text: string | null }[];
 }
 
 export interface SessionStatRow {
@@ -44,10 +46,15 @@ function SortableTable<T extends { id: string }>({
   cols,
   rows,
   defaultKey,
+  openDetailId,
+  renderDetail,
 }: {
   cols: Col<T>[];
   rows: T[];
   defaultKey: string;
+  /** When set, that row renders renderDetail() in a full-width row below it. */
+  openDetailId?: string | null;
+  renderDetail?: (r: T) => React.ReactNode;
 }) {
   const [sort, setSort] = useState<{ key: string; dir: 1 | -1 }>({ key: defaultKey, dir: -1 });
   const sorted = useMemo(() => {
@@ -86,33 +93,101 @@ function SortableTable<T extends { id: string }>({
       </thead>
       <tbody>
         {sorted.map((r) => (
-          <tr key={r.id} className="border-b border-ink-100 last:border-b-0">
-            {cols.map((c) => (
-              <td key={c.key} className="py-2.5 first:font-medium first:text-ink-900 text-ink-700 tabular-nums">
-                {c.render ? c.render(r) : (c.value(r) ?? "—")}
-              </td>
-            ))}
-          </tr>
+          <FragmentRow
+            key={r.id}
+            r={r}
+            cols={cols}
+            open={openDetailId === r.id}
+            renderDetail={renderDetail}
+          />
         ))}
       </tbody>
     </table>
   );
 }
 
+function FragmentRow<T extends { id: string }>({
+  r,
+  cols,
+  open,
+  renderDetail,
+}: {
+  r: T;
+  cols: Col<T>[];
+  open: boolean;
+  renderDetail?: (r: T) => React.ReactNode;
+}) {
+  return (
+    <>
+      <tr className="border-b border-ink-100 last:border-b-0">
+        {cols.map((c) => (
+          <td key={c.key} className="py-2.5 first:font-medium first:text-ink-900 text-ink-700 tabular-nums">
+            {c.render ? c.render(r) : (c.value(r) ?? "—")}
+          </td>
+        ))}
+      </tr>
+      {open && renderDetail && (
+        <tr className="border-b border-ink-100">
+          <td colSpan={cols.length} className="py-3">
+            {renderDetail(r)}
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
+  const [openId, setOpenId] = useState<string | null>(null);
   return (
     <SortableTable
       rows={rows}
       defaultKey="views"
+      openDetailId={openId}
+      renderDetail={(r) =>
+        r.feedback.length === 0 ? null : (
+          <div className="rounded-[12px] border border-ink-100 bg-ink-50/50 p-3.5 flex flex-col gap-2">
+            {r.feedback.map((f, i) => (
+              <div key={i} className="bg-white border border-ink-100 rounded-md px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-ink-500">
+                  <a
+                    href={`/admin/members/${f.profileId}`}
+                    className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
+                  >
+                    {f.name}
+                  </a>
+                  {f.rating != null && <span>{"⭐".repeat(f.rating)}</span>}
+                </div>
+                {f.text && <p className="text-sm text-ink-900 mt-0.5">{f.text}</p>}
+              </div>
+            ))}
+          </div>
+        )
+      }
       cols={[
         { key: "title", label: "קורס", value: (r) => r.title },
         { key: "enrollments", label: "נרשמו", value: (r) => r.enrollments },
         { key: "studied", label: "סיימו", value: (r) => r.studied },
         {
           key: "avgRating",
-          label: "דירוג ממוצע",
+          label: "דירוג ומשובים",
           value: (r) => r.avgRating ?? 0,
-          render: (r) => (r.avgRating != null ? `${r.avgRating.toFixed(1)} ⭐` : "—"),
+          render: (r) =>
+            r.feedback.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}
+                className="font-semibold text-brand-purple hover:underline cursor-pointer"
+                title="פתיחת המשובים של הקורס"
+              >
+                {r.avgRating != null ? `${r.avgRating.toFixed(1)} ⭐` : "—"} ·{" "}
+                {r.feedback.length === 1 ? "משוב אחד" : `${r.feedback.length} משובים`} ▾
+              </button>
+            ) : r.avgRating != null ? (
+              `${r.avgRating.toFixed(1)} ⭐`
+            ) : (
+              "—"
+            ),
         },
         { key: "members", label: "כמה חברות", value: (r) => r.members, render: (r) => r.members || "—" },
         { key: "views", label: "סה״כ כניסות", value: (r) => r.views },

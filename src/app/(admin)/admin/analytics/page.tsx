@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CoursesStatsTable, SessionsStatsTable } from "./stats-tables";
@@ -66,10 +65,8 @@ export default async function AdminAnalyticsPage() {
 
   const courseStats = (courses ?? []).map((c) => {
     const es = (enrollments ?? []).filter((e) => e.course_id === c.id);
-    const ratings = allFb
-      .filter((e) => e.course_id === c.id)
-      .map((e) => e.rating)
-      .filter((r): r is number => typeof r === "number");
+    const fbRows = allFb.filter((e) => e.course_id === c.id && (e.rating != null || e.feedback?.trim()));
+    const ratings = fbRows.map((e) => e.rating).filter((r): r is number => typeof r === "number");
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
     const opens = byCourse.get(c.id);
     return {
@@ -81,6 +78,13 @@ export default async function AdminAnalyticsPage() {
       views: opens?.opens ?? 0,
       members: opens?.members ?? 0,
       last: opens?.last ?? null,
+      // The feedback opens INSIDE the course row (the owner, 30/8).
+      feedback: fbRows.map((e) => ({
+        profileId: e.profile_id,
+        name: nameOf.get(e.profile_id) ?? "חברת קהילה",
+        rating: e.rating,
+        text: e.feedback,
+      })),
     };
   });
 
@@ -158,68 +162,6 @@ export default async function AdminAnalyticsPage() {
           </p>
         )}
       </div>
-
-      {(() => {
-        // PER COURSE (the owner, 30/8): each course carries its own average
-        // stars and its own feedback list — who said what.
-        const titleOf = new Map((courses ?? []).map((c) => [c.id, c.title]));
-        const byCourse = new Map<string, typeof allFb>();
-        for (const e of allFb) {
-          if (e.rating == null && !e.feedback?.trim()) continue;
-          const arr = byCourse.get(e.course_id) ?? [];
-          arr.push(e);
-          byCourse.set(e.course_id, arr);
-        }
-        if (byCourse.size === 0) return null;
-        const groups = [...byCourse.entries()]
-          .map(([courseId, rows]) => {
-            const ratings = rows.map((r) => r.rating).filter((n): n is number => typeof n === "number");
-            return {
-              courseId,
-              title: titleOf.get(courseId) ?? "—",
-              avg: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null,
-              count: rows.length,
-              rows,
-            };
-          })
-          .sort((a, b) => b.count - a.count);
-        return (
-          <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-            <h3 className="font-display text-base font-bold mb-3">משובים מהחברות — לפי קורס</h3>
-            <div className="flex flex-col gap-4">
-              {groups.map((g) => (
-                <div key={g.courseId} className="rounded-[12px] border border-ink-100 bg-ink-50/40 p-3.5">
-                  <div className="flex items-center gap-2 flex-wrap mb-2">
-                    <span className="font-display font-bold text-ink-1000">{g.title}</span>
-                    {g.avg != null && (
-                      <span className="text-[12.5px] font-bold text-[#8C5E0E]">⭐ {g.avg.toFixed(1)}</span>
-                    )}
-                    <span className="text-[12px] text-ink-500">
-                      {g.count === 1 ? "משוב אחד" : `${g.count} משובים`}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    {g.rows.map((e) => (
-                      <div key={`${e.profile_id}-${g.courseId}`} className="bg-white border border-ink-100 rounded-md px-3 py-2">
-                        <div className="flex items-center gap-2 text-xs text-ink-500">
-                          <Link
-                            href={`/admin/members/${e.profile_id}`}
-                            className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
-                          >
-                            {nameOf.get(e.profile_id) ?? "חברת קהילה"}
-                          </Link>
-                          {e.rating != null && <span>{"⭐".repeat(e.rating)}</span>}
-                        </div>
-                        {e.feedback?.trim() && <p className="text-sm text-ink-900 mt-0.5">{e.feedback}</p>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
     </div>
   );
 }

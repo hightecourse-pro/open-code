@@ -3,15 +3,27 @@ import { createClient } from "@/lib/supabase/server";
 import { AdminCreateSession } from "@/components/patterns/admin-create-session";
 import { Collapsible } from "@/components/patterns/collapsible";
 import { AdminSessionsList, type AdminSessionRow } from "./admin-sessions-list";
+import { SessionContentPanel } from "./session-content-panel";
 
 export const metadata: Metadata = { title: "ניהול סשנים" };
 
 export default async function AdminSessionsPage() {
   const supabase = await createClient();
-  const [{ data: sessions }, { data: recordings }] = await Promise.all([
+  const [{ data: sessions }, { data: recordings }, { data: sessionLinks }] = await Promise.all([
     supabase.from("sessions").select("*").order("scheduled_at", { ascending: false }),
     supabase.from("recordings").select("session_id, video_url"),
+    supabase
+      .from("content_links")
+      .select("*")
+      .eq("owner_type", "session")
+      .order("sort_order", { ascending: true }),
   ]);
+  const linksOf = new Map<string, NonNullable<typeof sessionLinks>>();
+  for (const l of sessionLinks ?? []) {
+    const arr = linksOf.get(l.owner_id) ?? [];
+    arr.push(l);
+    linksOf.set(l.owner_id, arr);
+  }
 
   // Distinct members who opened each session's content — the "participants"
   // number the PM asked to see on past sessions.
@@ -111,7 +123,25 @@ export default async function AdminSessionsPage() {
         </Collapsible>
       </div>
 
-      <AdminSessionsList sessions={rows} />
+      <AdminSessionsList
+        sessions={rows}
+        panels={Object.fromEntries(
+          (sessions ?? []).map((sx) => [
+            sx.id,
+            <SessionContentPanel
+              key={sx.id}
+              session={{
+                id: sx.id,
+                open_to_all: sx.open_to_all === true,
+                syllabus_url: sx.syllabus_url ?? null,
+                materials_url: sx.materials_url ?? null,
+                pre_topics: sx.pre_topics ?? null,
+              }}
+              links={linksOf.get(sx.id) ?? []}
+            />,
+          ])
+        )}
+      />
     </div>
   );
 }
