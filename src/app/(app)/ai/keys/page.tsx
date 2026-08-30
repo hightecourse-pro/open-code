@@ -45,6 +45,7 @@ export default async function AiKeysPage({
           </p>
         </div>
         <UpgradeCard
+          mentorWaiting={profile.role === "mentor"}
           title="כלי ה-AI נפתחים עם מנוי 💜"
           body="עם מנוי תוכלי לחבר מפתח Google משלך ולקבל ניתוח קורות חיים חכם והכנה לראיונות. לחיצה אחת — ואחרי התשלום הכול נפתח."
           cta="לשדרוג ולתשלום"

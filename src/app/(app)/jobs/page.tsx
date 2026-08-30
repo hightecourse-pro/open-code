@@ -325,7 +325,7 @@ export default async function JobsPage({
         <span className="text-ink-300">·</span>
         <Crown size={12} className="text-[#B8860B] shrink-0" />
         עדיפות למנויות הקהילה
-        {!subscriber && (
+        {!subscriber && profile.role !== "mentor" && (
           <Link href="/join" className="text-brand-purple font-semibold hover:underline">
             — לשדרוג ←
           </Link>

@@ -196,9 +196,13 @@ export default async function ChatPage({
           className="flex items-center gap-2.5 bg-tint-purple border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-700 hover:border-brand-purple transition-colors"
         >
           <span className="flex-1">
-            ההתכתבות עם חברות ומנטוריות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜
+            {me.role === "mentor"
+              ? "ההתכתבות תיפתח ברגע שהצוות יאשר את הבקשה שלך כמנטורית — בלי תשלום 💜"
+              : "ההתכתבות עם חברות ומנטוריות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜"}
           </span>
-          <span className="font-semibold text-brand-purple whitespace-nowrap">לשדרוג ←</span>
+          <span className="font-semibold text-brand-purple whitespace-nowrap">
+            {me.role === "mentor" ? "למצב הבקשה ←" : "לשדרוג ←"}
+          </span>
         </Link>
       )}
 
@@ -335,7 +339,9 @@ export default async function ChatPage({
                       href="/join"
                       className="p-3.5 border-t border-ink-100 text-[13px] text-ink-700 text-center bg-tint-purple hover:text-brand-purple transition-colors"
                     >
-                      ההתכתבות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜
+                      {me.role === "mentor"
+                        ? "ההתכתבות תיפתח עם אישור הבקשה שלך כמנטורית 💜"
+                        : "ההתכתבות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜"}
                     </Link>
                   ) : (
                     // Deliberately vague: why she can't write here is nobody

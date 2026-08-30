@@ -5,18 +5,31 @@ import { cn } from "@/lib/utils";
 /**
  * The friendly nudge a free member sees wherever a paid feature would be.
  * Never scolding — it names what's waiting for her and offers the way in.
+ *
+ * mentorWaiting: a mentor-track account that isn't active yet (pending
+ * approval / paused) must NEVER be pitched a payment — mentors don't pay.
+ * The card explains the approval instead (the owner, 2026-08-30: "זה נראה
+ * בלגן שלם... מצד שני מציע לי לשלם").
  */
 export function UpgradeCard({
   title,
   body,
   cta = "להצטרפות למנוי",
   className,
+  mentorWaiting = false,
 }: {
   title: string;
   body: string;
   cta?: string;
   className?: string;
+  mentorWaiting?: boolean;
 }) {
+  if (mentorWaiting) {
+    title = "החשבון שלך כמנטורית עוד לא פעיל 👑";
+    body =
+      "מנטוריות לא משלמות — הצוות עובר על הבקשה שלך, וברגע שתאושרי הכול נפתח מעצמו. אפשר לראות את המצב בכל רגע.";
+    cta = "למצב הבקשה שלי";
+  }
   return (
     <div
       className={cn(
@@ -42,7 +55,16 @@ export function UpgradeCard({
 }
 
 /** A slim inline version for sitting under a heading or beside a list. */
-export function UpgradeNote({ children, className }: { children: React.ReactNode; className?: string }) {
+export function UpgradeNote({
+  children,
+  className,
+  mentorWaiting = false,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** A not-yet-active mentor is told about approval, never about paying. */
+  mentorWaiting?: boolean;
+}) {
   return (
     <div
       className={cn(
@@ -51,9 +73,13 @@ export function UpgradeNote({ children, className }: { children: React.ReactNode
       )}
     >
       <Lock size={16} className="text-brand-purple shrink-0 mt-0.5" />
-      <span className="flex-1">{children}</span>
+      <span className="flex-1">
+        {mentorWaiting
+          ? "החלק הזה ייפתח ברגע שהצוות יאשר את הבקשה שלך כמנטורית — בלי תשלום 💜"
+          : children}
+      </span>
       <Link href="/join" className="text-brand-purple font-semibold whitespace-nowrap hover:underline">
-        לשדרוג ←
+        {mentorWaiting ? "למצב הבקשה ←" : "לשדרוג ←"}
       </Link>
     </div>
   );

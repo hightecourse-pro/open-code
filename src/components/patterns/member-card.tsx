@@ -46,10 +46,13 @@ export function MemberChatAction({
   member,
   canChat,
   className,
+  mentorWaiting = false,
 }: {
   member: DirectoryMember;
   canChat: boolean;
   className?: string;
+  /** A not-yet-active mentor is told about approval, never about paying. */
+  mentorWaiting?: boolean;
 }) {
   if (!canChat) {
     return (
@@ -61,7 +64,7 @@ export function MemberChatAction({
           className
         )}
       >
-        <Lock size={14} /> התכתבות נפתחת עם מנוי
+        <Lock size={14} /> {mentorWaiting ? "התכתבות תיפתח עם אישור המנטוריות" : "התכתבות נפתחת עם מנוי"}
       </Link>
     );
   }
@@ -102,7 +105,8 @@ export function MemberCard({
   member,
   canChat,
   score,
-  subscriber = false,
+  subscriber,
+  mentorWaiting = false,
 }: {
   member: DirectoryMember;
   canChat: boolean;
@@ -110,6 +114,8 @@ export function MemberCard({
   score?: number;
   /** Paying member — shown as a badge (the owner's call, 2026-08-26). */
   subscriber?: boolean;
+  /** The viewer is a not-yet-active mentor — approval copy, no pay pitch. */
+  mentorWaiting?: boolean;
 }) {
   const isMentor = member.role === "mentor";
 
@@ -151,7 +157,7 @@ export function MemberCard({
         <p className="text-[13.5px] text-ink-700 leading-relaxed line-clamp-2">{member.bio}</p>
       )}
 
-      <MemberChatAction member={member} canChat={canChat} className="mt-auto" />
+      <MemberChatAction member={member} canChat={canChat} mentorWaiting={mentorWaiting} className="mt-auto" />
     </div>
   );
 }

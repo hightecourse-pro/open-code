@@ -207,7 +207,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
               <Pencil size={14} /> זה את — לעריכת הפרופיל שלך
             </Link>
           ) : (
-            <MemberChatAction member={member} canChat={isSubscriber(me)} />
+            <MemberChatAction member={member} canChat={isSubscriber(me)} mentorWaiting={me.role === "mentor"} />
           )}
         </div>
       </div>

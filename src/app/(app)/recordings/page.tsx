@@ -111,6 +111,7 @@ export default async function RecordingsPage() {
 
       {!paysForSessions && (
         <UpgradeCard
+          mentorWaiting={profile.role === "mentor"}
           title="הצפייה בהקלטות נפתחת עם מנוי"
           body={
             openToAllCount > 0

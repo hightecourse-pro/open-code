@@ -25,6 +25,7 @@ export default async function CvCheckerPage() {
           </p>
         </div>
         <UpgradeCard
+          mentorWaiting={profile.role === "mentor"}
           title="כלי ה-AI נפתחים עם מנוי"
           body="בודקת קורות החיים נותנת לך משוב מפורט על הקו״ח שלך ובודקת התאמה למשרה — הכול נפתח עם מנוי לקהילה."
         />

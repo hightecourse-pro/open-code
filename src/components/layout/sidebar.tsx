@@ -116,6 +116,8 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
             // The chat count comes from the server on every render; a static
             // `badge` on the item would be a number nobody updates.
             const unread = item.href === "/chat" ? (user.unreadCount ?? 0) : 0;
+            const label =
+              item.href === "/mentor" && user.isMentor ? "הליוויים שלי" : item.label;
             const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : item.badge?.toString();
             return (
               <Link
@@ -133,7 +135,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
                 )}
               >
                 <Icon size={16} className="shrink-0" />
-                <span>{item.label}</span>
+                <span>{label}</span>
                 {(locked || badge) && (
                   <span className="ms-auto flex items-center gap-1.5">
                     {locked && (
@@ -164,7 +166,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
         </div>
       ))}
 
-      {user.isSubscriber === false && (
+      {user.isSubscriber === false && !user.isMentor && (
         <Link
           href="/join"
           className="mt-auto flex items-center gap-2.5 px-3 py-1 rounded-xl text-[13.5px] font-semibold bg-brand-gradient-soft border border-[#DDC9EC] text-ink-900 hover:border-brand-purple transition-colors"

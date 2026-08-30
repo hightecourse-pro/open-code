@@ -19,6 +19,7 @@ export default async function MembersPage({
 
   const me = await requireCommunityAccess();
   const canChat = isSubscriber(me);
+  const mentorWaiting = me.role === "mentor" && !canChat;
   const supabase = await createClient();
 
   // members_directory — never `profiles`: the view simply doesn't carry
@@ -90,6 +91,7 @@ export default async function MembersPage({
             <MemberCard
               member={member}
               canChat={canChat}
+              mentorWaiting={mentorWaiting}
               score={scores.get(member.id)?.score}
               subscriber={subscriberIds.has(member.id)}
             />

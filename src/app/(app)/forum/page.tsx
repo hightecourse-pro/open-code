@@ -154,6 +154,7 @@ export default async function ForumPage({
 
       {!canWrite && (
         <UpgradeCard
+          mentorWaiting={profile.role === "mentor"}
           title="השיחות בפורום נפתחות עם מנוי 💜"
           body="כאן חברות הקהילה מתייעצות, שואלות ומשתפות ידע. עם מנוי תוכלי לקרוא את כל השיחות — וגם להצטרף אליהן."
           cta="להצטרפות"

@@ -127,7 +127,7 @@ export default async function EventsPage() {
       </div>
 
       {!subscriber && (
-        <UpgradeNote>
+        <UpgradeNote mentorWaiting={profile.role === "mentor"}>
           את רואה מה מתוכנן — קישורי ההצטרפות והתזכורות נפתחים עם מנוי.
         </UpgradeNote>
       )}
