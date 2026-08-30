@@ -56,6 +56,7 @@ const PORTAL_LABELS: Record<string, string> = {
   work_history: "ניסיון תעסוקתי",
   practicum_description: "תיאור הפרקטיקום",
   practicum_done: "ביצעה פרקטיקום / פרויקט עם לקוח אמיתי",
+  practicum_kind: "בוטקאמפ / פרקטיקום",
   practicum_employer: "המעסיק בפרקטיקום",
   practicum_period: "תקופת הפרקטיקום",
   practicum_tech: "טכנולוגיות הפרקטיקום",

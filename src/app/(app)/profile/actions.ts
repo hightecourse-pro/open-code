@@ -180,7 +180,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
 
   // Rich free-text keys are stored as SANITIZED HTML; link keys as a JSON
   // array of {url,title,note} (legacy plain-line strings hydrate on render).
-  const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps"]);
+  const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps", "practicum_description"]);
   const SAVE_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
   const PAY_ACK_KEY = "paid_placement";
 

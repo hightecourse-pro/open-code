@@ -173,6 +173,18 @@ export function ExperienceListEditor({
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold text-ink-700">טכנולוגיות</span>
               <div className="flex flex-wrap gap-2">
+                {/* Custom values she typed under "אחר" — removable chips. */}
+                {entry.tech.filter((t) => !techOptions.some((o) => o.value === t)).map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => patch(i, { tech: entry.tech.filter((x) => x !== t) })}
+                    className="inline-flex items-center gap-1 px-3 py-[5px] rounded-full text-xs font-semibold bg-brand-purple text-white border border-brand-purple cursor-pointer"
+                    title="הסרה"
+                  >
+                    {t} ×
+                  </button>
+                ))}
                 {techOptions.map((o) => {
                   const on = entry.tech.includes(o.value);
                   return (
@@ -199,6 +211,17 @@ export function ExperienceListEditor({
                     </button>
                   );
                 })}
+                <input
+                  placeholder="אחר — הקלידי ו-Enter"
+                  className="w-40 text-xs border border-dashed border-ink-300 rounded-full px-3 py-[5px] outline-none focus:border-brand-purple"
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    const v = (e.target as HTMLInputElement).value.trim();
+                    if (v && !entry.tech.includes(v)) patch(i, { tech: [...entry.tech, v] });
+                    (e.target as HTMLInputElement).value = "";
+                  }}
+                />
               </div>
             </div>
 

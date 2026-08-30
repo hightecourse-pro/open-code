@@ -15,12 +15,17 @@ export function TaxonomyManager({
   kind,
   label,
   items,
+  otherValues = [],
 }: {
   kind: TaxonomyKind;
   label: string;
   items: ConfigTaxonomy[];
+  /** Free-typed values members wrote under "אחר" — adoption candidates. */
+  otherValues?: string[];
 }) {
   const [list, setList] = useState(items);
+  const [adoptGroup, setAdoptGroup] = useState("");
+  const [adopted, setAdopted] = useState<Set<string>>(new Set());
   const [vals, setVals] = useState<Record<string, string>>({});
   const [newGroup, setNewGroup] = useState("");
   const [newGroupVal, setNewGroupVal] = useState("");
@@ -50,6 +55,20 @@ export function TaxonomyManager({
   function remove(id: string) {
     setList((l) => l.filter((t) => t.id !== id));
     if (!id.startsWith("temp-")) start(() => void removeTaxonomy(id));
+  }
+
+  const groupNames = [...new Set(list.map((t) => t.group_he).filter((g): g is string => !!g))];
+  const pendingOther = otherValues.filter(
+    (v) => !adopted.has(v) && !list.some((t) => t.label_he === v || t.value === v)
+  );
+  function adopt(v: string) {
+    setAdopted((s) => new Set([...s, v]));
+    const temp: ConfigTaxonomy = {
+      id: `temp-adopt-${v}`, kind, value: v, label_he: v,
+      group_he: adoptGroup || null, sort_order: list.length + 1, active: true, created_at: "",
+    };
+    setList((l) => [...l, temp]);
+    start(() => void addTaxonomy(kind, v, adoptGroup || undefined));
   }
 
   // A render helper, not a component — a component born inside render would
@@ -101,6 +120,33 @@ export function TaxonomyManager({
           {label}
         </div>
         {renderChips(list, null)}
+      {pendingOther.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-dashed border-[#EAD9A8] flex flex-wrap items-center gap-2">
+          <span className="text-[11.5px] font-bold text-[#8C5E0E]">נכתב תחת &quot;אחר&quot;:</span>
+          <select
+            value={adoptGroup}
+            onChange={(e) => setAdoptGroup(e.target.value)}
+            className="text-[12px] border border-ink-300 rounded-md px-2 py-1"
+            title="לאיזו קטגוריה לאמץ"
+          >
+            <option value="">בלי קטגוריה</option>
+            {groupNames.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+          {pendingOther.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => adopt(v)}
+              className="inline-flex items-center gap-1 text-[12px] font-semibold bg-tint-warm text-[#8C5E0E] border border-[#EAD9A8] rounded-full px-3 py-1 cursor-pointer hover:border-[#E5A93C]"
+              title="לחיצה מוסיפה לרשימה בקטגוריה שנבחרה"
+            >
+              <Plus size={12} /> {v}
+            </button>
+          ))}
+        </div>
+      )}
       </div>
     );
   }
@@ -128,6 +174,35 @@ export function TaxonomyManager({
             {renderChips(g.rows, g.name)}
           </div>
         ))}
+      </div>
+      {pendingOther.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-dashed border-[#EAD9A8] flex flex-wrap items-center gap-2">
+          <span className="text-[11.5px] font-bold text-[#8C5E0E]">נכתב תחת &quot;אחר&quot;:</span>
+          <select
+            value={adoptGroup}
+            onChange={(e) => setAdoptGroup(e.target.value)}
+            className="text-[12px] border border-ink-300 rounded-md px-2 py-1"
+            title="לאיזו קטגוריה לאמץ"
+          >
+            <option value="">בלי קטגוריה</option>
+            {groupNames.map((g) => (
+              <option key={g} value={g}>{g}</option>
+            ))}
+          </select>
+          {pendingOther.map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => adopt(v)}
+              className="inline-flex items-center gap-1 text-[12px] font-semibold bg-tint-warm text-[#8C5E0E] border border-[#EAD9A8] rounded-full px-3 py-1 cursor-pointer hover:border-[#E5A93C]"
+              title="לחיצה מוסיפה לרשימה בקטגוריה שנבחרה"
+            >
+              <Plus size={12} /> {v}
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="mt-3">
 
         {/* A new group: name it + its first technology. */}
         <div className="border-t border-ink-100 pt-2.5 flex items-end gap-2 flex-wrap">

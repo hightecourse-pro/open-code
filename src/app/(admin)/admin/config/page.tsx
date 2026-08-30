@@ -69,6 +69,26 @@ export default async function AdminConfigPage() {
     .maybeSingle();
   const launchNudgeOn = (nudgeRow?.value as { on?: boolean } | null)?.on !== false;
 
+  // Tech values members typed under "אחר" (in the tech multiselects and inside
+  // experience entries) — surfaced in the tech taxonomy for one-click adoption.
+  const knownTech = new Set((taxonomies ?? []).filter((t) => t.kind === "tech").flatMap((t) => [t.value, t.label_he]));
+  const techQIds = (questions ?? []).filter((q) => q.taxonomy_kind === "tech").map((q) => q.id);
+  const expQIds = (questions ?? []).filter((q) => ["work_history", "practical_experience"].includes(q.key)).map((q) => q.id);
+  const { data: techAns } = techQIds.length + expQIds.length
+    ? await supabase.from("profile_answers").select("question_id, value").in("question_id", [...techQIds, ...expQIds])
+    : { data: [] };
+  const customTech = new Set<string>();
+  for (const a of techAns ?? []) {
+    if (techQIds.includes(a.question_id) && Array.isArray(a.value)) {
+      for (const v of a.value as unknown[]) if (typeof v === "string" && v.trim() && !knownTech.has(v)) customTech.add(v.trim());
+    } else if (expQIds.includes(a.question_id) && Array.isArray(a.value)) {
+      for (const e of a.value as { tech?: unknown[] }[]) {
+        if (Array.isArray(e?.tech))
+          for (const v of e.tech) if (typeof v === "string" && v.trim() && !knownTech.has(v)) customTech.add(v.trim());
+      }
+    }
+  }
+
   const plans = buildPlans(pricing);
 
   // What members typed under "אחר" on select questions (the owner, 30/8:
@@ -298,6 +318,7 @@ export default async function AdminConfigPage() {
                 kind={kind}
                 label={KIND_LABEL[kind]}
                 items={byKind.get(kind) ?? []}
+                otherValues={kind === "tech" ? [...customTech].slice(0, 40) : []}
               />
             )
           )}

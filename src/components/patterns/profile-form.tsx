@@ -54,7 +54,7 @@ export interface ProfileFormProps {
 
 // Long free text becomes RICH text (the owner, 31/8: "בטקסט חופשי ארוך צריך
 // להיות טקסט עשיר, הדגשות, בולטים, מספור") — stored as sanitized HTML.
-const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps"]);
+const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps", "practicum_description"]);
 // Structured links: URL + title + short note per link (the owner, 31/8).
 const FORM_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
 // The placement-fee acknowledgment: a fact with a must-check checkbox.
@@ -375,7 +375,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   function renderField(q: ConfigQuestion) {
     const key = `q_${q.id}`;
     const current = answers[q.id];
-    const list = opts(q);
+    let list = opts(q);
     const err = errors[q.id];
 
     // Experience lists: repeatable JSON-array editors (CV-style entries).
@@ -554,6 +554,23 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       // headings — 58 flat chips were a wall nobody could scan.
       const selected = multiVals[q.id] ?? [];
       const isOther = selected.includes("other");
+      // The practicum tech list also offers the GenAI options (the owner,
+      // 31/8: "תוסיף בטכנולוגיות בפרקטיקום גם את הרשימה של פיתוח AI").
+      if (q.key === "practicum_tech") {
+        const genai = opts(rest.find((x) => x.key === "genai_practiced") ?? q);
+        list = [
+          ...list,
+          ...genai
+            .filter((g) => !list.some((o) => o.value === g.value))
+            .map((g) => ({ ...g, group: "GenAI" })),
+        ];
+      }
+      // Taxonomy-backed tech lists get an "אחר" chip too (the owner, 31/8) —
+      // free-typed values ride the existing other-mechanism and the admin can
+      // adopt them into the taxonomy from הגדרות.
+      if (q.taxonomy_kind === "tech" && !list.some((o) => o.value === "other")) {
+        list = [...list, { value: "other", label: "אחר" }];
+      }
       const grouped = list.some((o) => o.group);
       const groups: { name: string | null; items: Option[] }[] = [];
       for (const o of list) {

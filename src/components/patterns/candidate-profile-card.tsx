@@ -51,6 +51,7 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
     keys: [
       "practical_experience",
       "practicum_done",
+      "practicum_kind",
       "practicum_employer",
       "practicum_period",
       "practicum_tech",
@@ -92,6 +93,8 @@ const NOT_FOR_EMPLOYERS = new Set([
   "years_experience",
   "exp_role",
   "currently_working",
+  // A placement preference, not a qualification (the owner, 31/8).
+  "practicum_placement",
 ]);
 
 function isHeaderField(field: CandidateField, candidate: CandidateDetail): boolean {
