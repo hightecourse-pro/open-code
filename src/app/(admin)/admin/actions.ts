@@ -509,6 +509,21 @@ export async function recordManualPayment(
 }
 
 /** Approve / reject / pause a member. Admin-gated (action + RLS + role check). */
+/**
+ * Hide (or unhide) a profile from the other members — for the team's
+ * test/preview accounts. The account itself stays fully functional: it
+ * leaves the members directory, the chat search and the employer portal,
+ * but its own login sees the app exactly like any member.
+ */
+export async function setMemberHidden(profileId: string, hidden: boolean): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  await admin.from("profiles").update({ is_hidden: hidden }).eq("id", profileId);
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
+  revalidatePath("/members");
+}
+
 export async function setMemberStatus(profileId: string, status: ProfileStatus) {
   await requireRole("admin");
   const supabase = await createClient();

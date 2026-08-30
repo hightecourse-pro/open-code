@@ -105,11 +105,35 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (q.taxonomy_kind) return taxonomyOptions[q.taxonomy_kind] ?? [];
     return Array.isArray(q.options) ? (q.options as unknown as Option[]) : [];
   }
+  // The list a multiselect ACTUALLY offers: opts() plus the GenAI merge for
+  // practicum_tech and the "אחר" chip on tech taxonomies. Every "is this
+  // stored value a known option?" check must use THIS list — checking opts()
+  // alone shoved saved GenAI selections into the "אחר" free-text (the owner,
+  // 31/8: "באחר מוצב מה שהיה במערכת").
+  function fullList(q: ConfigQuestion): Option[] {
+    let list = opts(q);
+    if (q.key === "practicum_tech") {
+      const genai = opts(rest.find((x) => x.key === "genai_practiced") ?? q);
+      list = [
+        ...list,
+        ...genai
+          .filter((g) => !list.some((o) => o.value === g.value))
+          .map((g) => ({ ...g, group: "GenAI" })),
+      ];
+    }
+    if (q.taxonomy_kind === "tech" && !list.some((o) => o.value === "other")) {
+      list = [...list, { value: "other", label: "אחר" }];
+    }
+    return list;
+  }
   function customText(q: ConfigQuestion): string {
-    const vals = opts(q).map((o) => o.value);
     const cur = answers[q.id];
-    if (q.field_type === "select" && typeof cur === "string" && cur && !vals.includes(cur)) return cur;
+    if (q.field_type === "select") {
+      const vals = opts(q).map((o) => o.value);
+      if (typeof cur === "string" && cur && !vals.includes(cur)) return cur;
+    }
     if ((q.field_type === "multiselect" || q.field_type === "tags") && Array.isArray(cur)) {
+      const vals = fullList(q).map((o) => o.value);
       return (cur as string[]).filter((v) => !vals.includes(v) && !isOtherVal(v)).join(", ");
     }
     return "";
@@ -123,11 +147,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   const initMultiVals: Record<string, string[]> = {};
   for (const q of rest) {
     if (q.field_type === "bool") initBools[q.key] = answers[q.id] === true;
-    const vals = opts(q).map((o) => o.value);
     if (q.field_type === "select") {
+      const vals = opts(q).map((o) => o.value);
       const cur = answers[q.id];
       if (typeof cur === "string" && cur && !vals.includes(cur)) initSelOther[q.id] = true;
     } else if (q.field_type === "multiselect" || q.field_type === "tags") {
+      // Against the FULL offered list — otherwise saved GenAI values (merged
+      // into practicum_tech at render time) read as free-typed "אחר" text.
+      const vals = fullList(q).map((o) => o.value);
       const arr = Array.isArray(answers[q.id]) ? (answers[q.id] as string[]) : [];
       const known = arr.filter((v) => vals.includes(v) && !isOtherVal(v));
       // Custom (free-text) values keep the "אחר" chip on with its text intact.
@@ -556,23 +583,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       // headings — 58 flat chips were a wall nobody could scan.
       const selected = multiVals[q.id] ?? [];
       const isOther = selected.includes("other");
-      // The practicum tech list also offers the GenAI options (the owner,
-      // 31/8: "תוסיף בטכנולוגיות בפרקטיקום גם את הרשימה של פיתוח AI").
-      if (q.key === "practicum_tech") {
-        const genai = opts(rest.find((x) => x.key === "genai_practiced") ?? q);
-        list = [
-          ...list,
-          ...genai
-            .filter((g) => !list.some((o) => o.value === g.value))
-            .map((g) => ({ ...g, group: "GenAI" })),
-        ];
-      }
-      // Taxonomy-backed tech lists get an "אחר" chip too (the owner, 31/8) —
-      // free-typed values ride the existing other-mechanism and the admin can
-      // adopt them into the taxonomy from הגדרות.
-      if (q.taxonomy_kind === "tech" && !list.some((o) => o.value === "other")) {
-        list = [...list, { value: "other", label: "אחר" }];
-      }
+      // GenAI merge for practicum_tech + the "אחר" chip on tech taxonomies —
+      // fullList is also what the saved-value checks compare against.
+      list = fullList(q);
       const grouped = list.some((o) => o.group);
       const groups: { name: string | null; items: Option[] }[] = [];
       for (const o of list) {

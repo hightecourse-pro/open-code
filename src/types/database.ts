@@ -90,6 +90,9 @@ export interface Database {
           digest_frequency: string; // 'daily' | 'unread' | 'off'
           /** Opt-out from the employer portal listing. */
           portal_listed: boolean;
+          /** Team test/preview account: fully active for its owner, invisible
+              to other members and to the employer portal. */
+          is_hidden: boolean;
           found_job: boolean;
           hired_via_us: boolean;
           hired_at: string | null;
@@ -117,6 +120,7 @@ export interface Database {
           profile_completed?: boolean;
           digest_frequency?: string;
           portal_listed?: boolean;
+          is_hidden?: boolean;
           found_job?: boolean;
           hired_via_us?: boolean;
           hired_at?: string | null;

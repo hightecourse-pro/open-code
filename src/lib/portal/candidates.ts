@@ -337,16 +337,18 @@ export async function loadCandidates(opts?: {
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, status, profile_completed, role")
+    .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, is_hidden, status, profile_completed, role")
     .in("status", ["active", "pending"])
     .eq("profile_completed", true)
     // Job-seeking members; never admins. Mentors only behind the toggle.
     .in("role", roles)
     .order("full_name", { ascending: true });
 
+  // Hidden (team test) accounts never reach employers; the team's own full
+  // view still shows them so the admin can preview what she built.
   const listed = opts?.everyoneForTeam
     ? (profiles ?? [])
-    : (profiles ?? []).filter((p) => p.portal_listed !== false);
+    : (profiles ?? []).filter((p) => p.portal_listed !== false && p.is_hidden !== true);
   // No candidates yet — still return the full filter palette from the questions
   // so the recruiter sees the parameters that mirror the profile.
   if (listed.length === 0) {

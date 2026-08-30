@@ -9,6 +9,8 @@ import { Avatar, Badge } from "@/components/ui";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
+import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
+import { setMemberHidden } from "@/app/(admin)/admin/actions";
 import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
 import {
   EmploymentMentorAssign,
@@ -460,6 +462,14 @@ export default async function AdminMemberProfilePage({
                 🎉 גויסה דרך קוד פתוח 💜
               </span>
             )}
+            {profile.is_hidden && (
+              <span
+                title="חשבון בדיקה של הצוות — פעיל לעצמו, לא מופיע לחברות ולא בפורטל"
+                className="inline-flex items-center gap-1 text-[12px] font-bold text-ink-700 bg-ink-100 border border-ink-300 px-2 py-0.5 rounded-full"
+              >
+                🙈 מוסתרת מחברות
+              </span>
+            )}
           </div>
           <div className="text-[13px] text-ink-500 mt-2 flex flex-col gap-0.5">
             {email && (
@@ -479,7 +489,21 @@ export default async function AdminMemberProfilePage({
             )}
           </div>
         </div>
-        <MemberActions profileId={profile.id} status={profile.status} />
+        <div className="flex flex-col items-end gap-2">
+          <MemberActions profileId={profile.id} status={profile.status} />
+          {/* Team preview accounts: fully active, invisible to other members. */}
+          <ConfirmActionButton
+            action={setMemberHidden.bind(null, profile.id, !profile.is_hidden)}
+            message={
+              profile.is_hidden
+                ? "להחזיר את החשבון לתצוגה? הוא יופיע שוב בספריית המשתתפות, בחיפוש הצ'אט ובפורטל."
+                : "להסתיר את החשבון מהחברות? הוא יישאר פעיל לעצמו, אבל ייעלם מספריית המשתתפות, מחיפוש הצ'אט ומפורטל המעסיקים."
+            }
+            className="text-[12px] font-semibold text-ink-500 hover:text-brand-purple"
+          >
+            {profile.is_hidden ? "ביטול הסתרה מחברות" : "🙈 הסתרה מחברות (חשבון בדיקה)"}
+          </ConfirmActionButton>
+        </div>
       </div>
 
       {/* Manual payment — the webhook-failed fallback. Kept next to the status

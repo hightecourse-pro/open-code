@@ -185,6 +185,8 @@ export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
     .from("profiles")
     .select("id, full_name, specialization, avatar_initials")
     .eq("status", "active")
+    // Team test accounts stay invisible to other members (see is_hidden).
+    .eq("is_hidden", false)
     .neq("id", user.id)
     .order("full_name", { ascending: true })
     .limit(8);
