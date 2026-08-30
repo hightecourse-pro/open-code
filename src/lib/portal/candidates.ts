@@ -261,7 +261,11 @@ export async function loadCandidates(opts?: {
 }> {
   // Mentors are not job-seekers: by default they simply don't exist in the
   // portal. The owner's rule — they surface only behind an explicit toggle.
-  const roles: UserRole[] = opts?.includeMentors ? ["junior", "mentor"] : ["junior"];
+  const roles: UserRole[] = opts?.everyoneForTeam
+    ? ["junior", "mentor", "admin"]
+    : opts?.includeMentors
+      ? ["junior", "mentor"]
+      : ["junior"];
   const admin = createAdminClient();
   // Taxonomies come through the service role like everything else here: the
   // portal visitor is not a Supabase user, and the cookie-bound client would

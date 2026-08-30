@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Play, Video, ExternalLink, Hourglass, Lock } from "lucide-react";
+import { FileDown, Play, Video, ExternalLink, Hourglass, Lock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUser, isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { mayOpenSessions } from "@/lib/content-access";
 import { ContentGate } from "@/components/patterns/content-gate";
 import { LoggedLink } from "@/components/patterns/logged-link";
+import { SessionWatch } from "@/components/patterns/session-watch";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { fmtIsraelDate } from "@/lib/utils";
 
@@ -13,6 +14,11 @@ export const metadata: Metadata = { title: "הקלטות סשנים" };
 
 function minutes(sec: number): string {
   return `${Math.round(sec / 60)} דק'`;
+}
+
+/** Materials, like video URLs, exist only on the subscriber read. */
+function materialsUrl(session: object): string | null {
+  return (session as { materials_url?: string | null }).materials_url ?? null;
 }
 
 /** Present only on the subscriber read — the free view omits the column. */
@@ -81,15 +87,17 @@ export default async function RecordingsPage() {
         .from("content_links")
         .select("*")
         .eq("owner_type", "session")
-        .eq("kind", "video")
+        .in("kind", ["video", "materials"])
         .in("owner_id", readableSessions.map((s) => s.id))
         .order("sort_order", { ascending: true })
     : { data: [] };
   const linksBySession = new Map<string, { id: string; title: string; url: string }[]>();
+  const materialsBySession = new Map<string, { id: string; title: string; url: string }[]>();
   for (const l of sessionLinks ?? []) {
-    const arr = linksBySession.get(l.owner_id) ?? [];
+    const bucket = l.kind === "materials" ? materialsBySession : linksBySession;
+    const arr = bucket.get(l.owner_id) ?? [];
     arr.push({ id: l.id, title: l.title, url: l.url });
-    linksBySession.set(l.owner_id, arr);
+    bucket.set(l.owner_id, arr);
   }
 
   return (
@@ -132,6 +140,17 @@ export default async function RecordingsPage() {
                     {fmtIsraelDate(s.scheduled_at, { day: "numeric", month: "long" })}
                   </div>
                 </div>
+                {/* The syllabus is community-wide and survives the recording. */}
+                {s.syllabus_url && (
+                  <a
+                    href={s.syllabus_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"
+                  >
+                    <FileDown size={13} /> סילבוס
+                  </a>
+                )}
                 {!mayOpen(s) ? (
                   <Link
                     href="/join"
@@ -139,9 +158,9 @@ export default async function RecordingsPage() {
                   >
                     <Lock size={13} /> נפתח עם מנוי
                   </Link>
-                ) : links.length > 0 ? (
+                ) : links.length > 0 || (materialsBySession.get(s.id)?.length ?? 0) > 0 || materialsUrl(s) ? (
                   // The first press opens her Drive access to this session's
-                  // recordings; from then on the links are simply here.
+                  // recordings; from then on the player is simply here.
                   <ContentGate
                     ownerType="session"
                     ownerId={s.id}
@@ -149,19 +168,40 @@ export default async function RecordingsPage() {
                     variant="inline"
                     label="צפייה"
                   >
-                    <div className="flex flex-wrap gap-2">
-                      {links.map((l) => (
-                        <LoggedLink
-                          key={l.url}
-                          href={l.url}
-                          ownerType="session"
-                          ownerId={s.id}
-                          linkId={l.id}
-                          className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-2"
-                        >
-                          <Play size={13} fill="currentColor" /> {l.title} <ExternalLink size={11} />
-                        </LoggedLink>
-                      ))}
+                    <div className="flex flex-col gap-2 w-full">
+                      {links.length > 0 ? (
+                        <SessionWatch sessionId={s.id} links={links.map((l) => ({ id: l.id, url: l.url }))} />
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-500">
+                          <Hourglass size={13} /> ההקלטה תעלה בקרוב
+                        </span>
+                      )}
+                      {((materialsBySession.get(s.id)?.length ?? 0) > 0 || materialsUrl(s)) && (
+                        <span className="flex flex-wrap items-center gap-2 text-[12.5px]">
+                          <span className="font-semibold text-ink-700">חומרים:</span>
+                          {(materialsBySession.get(s.id) ?? []).map((m) => (
+                            <a
+                              key={m.id}
+                              href={m.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1 hover:bg-tint-indigo"
+                            >
+                              {m.title} <ExternalLink size={11} />
+                            </a>
+                          ))}
+                          {materialsUrl(s) && (
+                            <a
+                              href={materialsUrl(s)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1 hover:bg-tint-indigo"
+                            >
+                              חומרי הסשן <ExternalLink size={11} />
+                            </a>
+                          )}
+                        </span>
+                      )}
                     </div>
                   </ContentGate>
                 ) : (

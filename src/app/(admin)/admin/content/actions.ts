@@ -190,6 +190,47 @@ export async function updateSessionFiles(id: string, formData: FormData): Promis
 }
 
 /**
+ * Add ONE materials item to a session as a content_links row — either an
+ * uploaded file (hosted in session-files) or a pasted link, each with an
+ * optional הסבר that becomes its title (the owner, 30/8: "רשימה של קישורים
+ * וקבצים... אופציונלי להוסיף הסבר").
+ */
+export async function addSessionMaterial(id: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 120);
+  const file = formData.get("file");
+  let url = String(formData.get("url") ?? "").trim();
+  let fallbackTitle = "חומרים";
+  if (file instanceof File && file.size > 0) {
+    const hosted = await hostSessionFile(id, file, "materials");
+    if (!hosted) return;
+    url = hosted;
+    fallbackTitle = file.name;
+  }
+  if (!url) return;
+  const supabase = await createClient();
+  const { data: max } = await supabase
+    .from("content_links")
+    .select("sort_order")
+    .eq("owner_type", "session")
+    .eq("owner_id", id)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  await supabase.from("content_links").insert({
+    owner_type: "session",
+    owner_id: id,
+    kind: "materials",
+    title: note || fallbackTitle,
+    url,
+    sort_order: (max?.sort_order ?? 0) + 1,
+  });
+  revalidatePath("/admin/sessions");
+  revalidatePath("/recordings");
+  revalidatePath("/events");
+}
+
+/**
  * The one-field recording shortcut on the session row (the owner: "בעדכון
  * סשן אני לא רואה עדכון של הקישור להקלטה") — maintains the session's FIRST
  * video content_link: set → update/insert, empty → remove.

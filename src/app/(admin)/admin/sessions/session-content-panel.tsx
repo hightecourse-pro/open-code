@@ -1,6 +1,9 @@
-import { FileText, Link2, ListChecks, Play } from "lucide-react";
+import { FileText, FolderOpen, ListChecks, Play, Trash2 } from "lucide-react";
 import { ContentLinksEditor } from "@/components/patterns/content-links-editor";
+import { SaveButton } from "@/components/patterns/save-button";
 import {
+  addSessionMaterial,
+  deleteContentLink,
   setSessionOpenToAll,
   setSessionRecording,
   updateSessionFiles,
@@ -28,6 +31,7 @@ export function SessionContentPanel({
   links: ContentLink[];
 }) {
   const recording = links.find((l) => l.kind === "video") ?? null;
+  const materials = links.filter((l) => l.kind === "materials");
   return (
     <div className="mt-2 rounded-md border border-ink-200 bg-white p-3.5 flex flex-col gap-4">
       {/* recording — the one-field shortcut */}
@@ -42,9 +46,7 @@ export function SessionContentPanel({
           placeholder="קישור Drive להקלטה…"
           className="flex-1 min-w-[220px] text-[12px] border border-ink-300 rounded-md px-2 py-1.5"
         />
-        <button type="submit" className="text-[12px] font-semibold text-white bg-brand-gradient rounded-md px-3 py-1.5">
-          שמירה
-        </button>
+        <SaveButton label="שמירה" />
         <span className="text-[11px] text-ink-400 w-full">ריקון השדה מסיר את ההקלטה מהחברות.</span>
       </form>
 
@@ -72,21 +74,6 @@ export function SessionContentPanel({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-ink-900 w-32">
-            <Link2 size={13} className="text-brand-indigo" /> חומרים
-          </span>
-          <input
-            name="materials_url"
-            dir="ltr"
-            defaultValue={session.materials_url ?? ""}
-            placeholder="קישור לחומרים…"
-            className="flex-1 min-w-[180px] text-[12px] border border-ink-300 rounded-md px-2 py-1.5"
-          />
-          <span className="text-[11.5px] text-ink-400">או קובץ:</span>
-          <input type="file" name="materials_file" className="text-[12px] max-w-48" />
-        </div>
-
         <div className="flex flex-wrap items-start gap-2">
           <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-ink-900 w-32 mt-1.5">
             <ListChecks size={13} className="text-[#8C5E0E]" /> נושאים לפני
@@ -102,14 +89,62 @@ export function SessionContentPanel({
         </div>
 
         <div className="flex items-center gap-3">
-          <button type="submit" className="text-[12px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-1.5 w-fit">
-            שמירת תוכן הסשן
-          </button>
+          <SaveButton label="שמירת סילבוס ונושאים" />
           <span className="text-[11px] text-ink-400">
             הסילבוס מוצג לחברות רק אם הועלה — ונשאר גם אחרי שההקלטה עולה.
           </span>
         </div>
       </form>
+
+      {/* materials: a LIST of files and links, each with its own הסבר. */}
+      <div className="flex flex-col gap-2 border-t border-ink-100 pt-3">
+        <span className="inline-flex items-center gap-1.5 text-[12.5px] font-bold text-ink-900">
+          <FolderOpen size={13} className="text-brand-indigo" /> חומרים לסשן
+        </span>
+        {materials.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {materials.map((m) => (
+              <div key={m.id} className="flex items-center gap-2 text-[12.5px] bg-ink-50/60 border border-ink-100 rounded-md px-2.5 py-1.5">
+                <a href={m.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-purple hover:underline truncate">
+                  {m.title}
+                </a>
+                <span className="text-ink-400 truncate flex-1" dir="ltr">{m.url}</span>
+                <form action={deleteContentLink.bind(null, m.id)}>
+                  <button type="submit" className="text-ink-400 hover:text-danger" title="הסרה">
+                    <Trash2 size={13} />
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        )}
+        <form action={addSessionMaterial.bind(null, session.id)} className="flex flex-wrap items-center gap-2">
+          <input
+            name="note"
+            placeholder="הסבר (אופציונלי)"
+            maxLength={120}
+            className="w-44 text-[12px] border border-ink-300 rounded-md px-2 py-1.5"
+          />
+          <input
+            name="url"
+            dir="ltr"
+            placeholder="קישור…"
+            className="flex-1 min-w-[160px] text-[12px] border border-ink-300 rounded-md px-2 py-1.5"
+          />
+          <span className="text-[11.5px] text-ink-400">או קובץ:</span>
+          <input type="file" name="file" className="text-[12px] max-w-44" />
+          <SaveButton label="הוספה" />
+        </form>
+        {session.materials_url && (
+          <p className="text-[11px] text-ink-400">
+            קישור חומרים ישן (מהגרסה הקודמת):{" "}
+            <a href={session.materials_url} target="_blank" rel="noopener noreferrer" className="text-brand-purple hover:underline" dir="ltr">
+              {session.materials_url}
+            </a>{" "}
+            — מוצג לחברות לצד הרשימה.
+          </p>
+        )}
+      </div>
 
       {/* open to all + the full links editor (moved from ניהול תכנים) */}
       <div className="border-t border-ink-100 pt-3 flex flex-col gap-2">

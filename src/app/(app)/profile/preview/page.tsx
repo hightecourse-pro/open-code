@@ -17,7 +17,12 @@ export const dynamic = "force-dynamic";
 
 export default async function ProfilePreviewPage() {
   const profile = await requireCommunityAccess();
-  const { candidates } = await loadCandidates({ includeMentors: true });
+  // Staff aren't portal candidates — the team view renders their card anyway
+  // (the owner, 30/8: "ככה נראה הפרופיל שלי כצוות" was an empty message).
+  const { candidates } = await loadCandidates({
+    includeMentors: true,
+    everyoneForTeam: profile.role === "admin",
+  });
   const me = candidates.find((c) => c.id === profile.id) ?? null;
 
   return (
