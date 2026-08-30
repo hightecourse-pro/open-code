@@ -527,7 +527,9 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       .maybeSingle();
     redirect(after?.status === "active" ? "/forum" : "/join");
   }
-  return { ok: true };
+  // An EDIT lands back on the top of the profile screen with a clear saved
+  // indication (the owner, 31/8) — not mid-wizard wondering if it took.
+  redirect("/profile?saved=1");
 }
 
 /**

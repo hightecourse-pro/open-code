@@ -17,7 +17,12 @@ import type { QuestionScope } from "@/types/database";
 
 export const metadata: Metadata = { title: "הפרופיל שלי" };
 
-export default async function ProfilePage() {
+export default async function ProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ saved?: string }>;
+}) {
+  const { saved } = await searchParams;
   const profile = await requireProfile();
   const supabase = await createClient();
   const {
@@ -109,6 +114,11 @@ export default async function ProfilePage() {
 
   return (
     <div className="flex flex-col gap-5">
+      {saved === "1" && (
+        <div className="flex items-center gap-2.5 bg-tint-mint border border-[#BFE4D1] rounded-[14px] p-3.5 px-4 text-[14px] font-semibold text-[#0F6E4A]">
+          ✓ השינויים נשמרו — הפרופיל שלך מעודכן.
+        </div>
+      )}
       <div className="flex items-center gap-4">
         <Avatar
           size="xl"
@@ -134,7 +144,7 @@ export default async function ProfilePage() {
           href="/profile/preview"
           className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-full bg-white text-brand-purple border-[1.5px] border-brand-purple shadow-sm hover:bg-tint-purple transition-colors whitespace-nowrap"
         >
-          <Eye size={15} /> איך אני נראית למגייסות?
+          <Eye size={15} /> לצפיה בפרופיל
         </Link>
       </div>
 
