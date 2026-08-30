@@ -77,7 +77,7 @@ export function ForumInstantList({
               ? "עוד לא שמרת נושאים. בכל שיחה יש כפתור שמירה 🔖 — מה שתשמרי יחכה לך כאן 💜"
               : canWrite
                 ? "הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?"
-                : "השיחות של הקהילה מחכות כאן מאחורי המנוי — נשמח לפתוח לך אותן 💜"}
+                : "הפורום שקט עכשיו — ברגע שיהיו שיחות הן יופיעו כאן, פתוחות לקריאה גם בלי מנוי 💜"}
         </div>
       ) : (
         <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden divide-y divide-ink-100">
