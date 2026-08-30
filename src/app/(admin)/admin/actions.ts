@@ -1934,6 +1934,33 @@ const PIPELINE_STATUSES: PipelineStatus[] = ["sent", "interview", "exam", "hired
  * Close a job's journey — "גויס" (filled, possibly by several members) or
  * "נסגר ללא גיוס" — or reopen it. Closing also takes it off the board.
  */
+/**
+ * Manually close (or reopen) an open job to NEW submissions — for the times
+ * the admin hands candidates to the client outside the system, so the
+ * automatic "candidates sent" stamp (the client-email flow) never fired.
+ * Members then see "המשרה התקדמה לשלב הבא" and the apply door closes.
+ * Only swaps between the open-board stages; draft/closed are never touched.
+ */
+export async function setJobSubmissionsClosed(jobId: string, closed: boolean): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: job } = await admin
+    .from("jobs")
+    .select("pipeline_status, status, source")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (!job || job.source !== "ours" || job.status !== "open") return;
+  if (closed && job.pipeline_status === "published") {
+    await admin.from("jobs").update({ pipeline_status: "candidates_sent" }).eq("id", jobId);
+  } else if (!closed && (job.pipeline_status === "candidates_sent" || job.pipeline_status === "interviews")) {
+    await admin.from("jobs").update({ pipeline_status: "published" }).eq("id", jobId);
+  }
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin/crm");
+  revalidatePath("/jobs");
+}
+
 export async function setJobOutcome(
   jobId: string,
   outcome: "hired" | "closed_no_hire" | "reopen"

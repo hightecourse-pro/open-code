@@ -17,6 +17,7 @@ import {
   deleteExternalApplication,
   removeJobCandidate,
   setJobOutcome,
+  setJobSubmissionsClosed,
 } from "@/app/(admin)/admin/actions";
 import { SaveButton } from "@/components/patterns/save-button";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
@@ -422,6 +423,24 @@ export default async function AdminJobPage({
             </>
           ) : (
             <>
+              {job.pipeline_status === "published" && (
+                <ConfirmActionButton
+                  action={setJobSubmissionsClosed.bind(null, job.id, true)}
+                  message="לסגור את המשרה להגשות חדשות? היא תישאר פתוחה אצלך, החברות יראו שהיא התקדמה לשלב הבא ולא יוכלו להגיש עוד."
+                  className="inline-flex items-center rounded-full border border-ink-300 text-ink-700 text-[12.5px] font-semibold px-3.5 py-1.5 hover:border-brand-purple hover:text-brand-purple transition-colors"
+                >
+                  סגירה להגשות — המועמדות אצל המעסיק
+                </ConfirmActionButton>
+              )}
+              {(job.pipeline_status === "candidates_sent" || job.pipeline_status === "interviews") && (
+                <ConfirmActionButton
+                  action={setJobSubmissionsClosed.bind(null, job.id, false)}
+                  message="לפתוח את המשרה מחדש להגשות? החברות בקהל היעד יוכלו שוב להגיש מועמדות."
+                  className="text-[12.5px] font-semibold text-brand-purple hover:text-brand-pink-deep"
+                >
+                  פתיחה מחדש להגשות
+                </ConfirmActionButton>
+              )}
               {hiredCount > 0 && (
                 <span className="text-[12.5px] text-ink-700">
                   🎉 {hiredCount === 1 ? "מועמדת אחת גויסה" : `${hiredCount} מועמדות גויסו`} —
