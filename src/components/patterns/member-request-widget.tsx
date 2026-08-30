@@ -53,6 +53,29 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
       r.handled_at &&
       now - new Date(r.handled_at).getTime() < 7 * 24 * 3600 * 1000
   );
+  // The in-site notification (the owner, 30/8): the newest answer pulses on
+  // the button until she OPENS the popup once; "seen" is remembered locally
+  // per answer time, so a new answer starts pulsing again.
+  const latestAnswerAt = requests.reduce(
+    (acc, r) => (r.status === "handled" && r.handled_at && r.handled_at > acc ? r.handled_at : acc),
+    ""
+  );
+  const [seenAnswerAt, setSeenAnswerAt] = useState<string>(() => {
+    try {
+      return window.localStorage.getItem("oc:req-seen") ?? "";
+    } catch {
+      return "";
+    }
+  });
+  const unseenAnswer = freshAnswer && latestAnswerAt > seenAnswerAt;
+  function markSeen() {
+    setSeenAnswerAt(latestAnswerAt);
+    try {
+      window.localStorage.setItem("oc:req-seen", latestAnswerAt);
+    } catch {
+      /* private mode — the pulse just stays for the visit */
+    }
+  }
 
   return (
     <div className="fixed bottom-4 end-4 z-40 flex flex-col items-end gap-2" dir="rtl">
@@ -125,14 +148,29 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
         </div>
       )}
 
+      {/* An UNSEEN answer announces itself — a label + pulse, not a quiet ✓
+          (the owner, 30/8: "צריך להיות נוטיפיקציה גם באתר לא רק במייל"). */}
+      {unseenAnswer && !open && (
+        <button
+          type="button"
+          onClick={() => {
+            markSeen();
+            setOpen(true);
+          }}
+          className="font-display font-semibold text-[12.5px] px-3.5 py-2 rounded-full bg-white text-brand-purple border-[1.5px] border-brand-purple shadow-md animate-bounce"
+        >
+          יש לך תשובה מהצוות 💜
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {
+          if (unseenAnswer) markSeen();
           setOpen((v) => !v);
           if (sent) setSent(false);
         }}
         aria-expanded={open}
-        className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2.5 rounded-full bg-brand-gradient text-white shadow-glow-pink hover:opacity-95 transition-opacity"
+        className="relative inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2.5 rounded-full bg-brand-gradient text-white shadow-glow-pink hover:opacity-95 transition-opacity"
       >
         <MessageSquarePlus size={15} /> יש לך בקשה?
         {freshAnswer && !open && (
@@ -141,6 +179,12 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
             title="ענו לך על פנייה — פתחי לפרטים"
           >
             ✓
+          </span>
+        )}
+        {unseenAnswer && !open && (
+          <span className="absolute -top-1 -end-1 flex h-3.5 w-3.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-pink-deep opacity-60" />
+            <span className="relative inline-flex h-3.5 w-3.5 rounded-full bg-brand-pink-deep border-2 border-white" />
           </span>
         )}
       </button>

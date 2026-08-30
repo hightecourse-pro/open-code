@@ -63,6 +63,35 @@ export default async function AdminConfigPage() {
 
   const plans = buildPlans(pricing);
 
+  // What members typed under "אחר" on select questions (the owner, 30/8:
+  // "שנוכל לראות איזה אחר שמו כדי לשקול להוסיף לרשימה") — any stored answer
+  // that isn't one of the question's options.
+  const selectIds = (questions ?? [])
+    .filter((q) => q.field_type === "select" && Array.isArray(q.options) && (q.options as unknown[]).length > 0)
+    .map((q) => q.id);
+  const otherValuesOf = new Map<string, string[]>();
+  if (selectIds.length) {
+    const { data: ans } = await supabase
+      .from("profile_answers")
+      .select("question_id, value")
+      .in("question_id", selectIds);
+    const optValues = new Map(
+      (questions ?? []).map((q) => [
+        q.id,
+        new Set(((q.options as { value?: string }[] | null) ?? []).map((o) => String(o.value ?? ""))),
+      ])
+    );
+    for (const a of ans ?? []) {
+      const v = typeof a.value === "string" ? a.value.trim() : "";
+      if (!v) continue;
+      const known = optValues.get(a.question_id);
+      if (known?.has(v)) continue;
+      const arr = otherValuesOf.get(a.question_id) ?? [];
+      if (!arr.includes(v)) arr.push(v);
+      otherValuesOf.set(a.question_id, arr);
+    }
+  }
+
   // group taxonomies by kind
   const byKind = new Map<TaxonomyKind, ConfigTaxonomy[]>();
   for (const t of taxonomies ?? []) {
@@ -214,7 +243,7 @@ export default async function AdminConfigPage() {
                     <QuestionToggle id={q.id} active={q.active} />
                   )}
                 </div>
-                {editable && <QuestionOptionsEditor questionId={q.id} options={qOptions} />}
+                {editable && <QuestionOptionsEditor questionId={q.id} options={qOptions} otherValues={otherValuesOf.get(q.id) ?? []} />}
               </div>
             );
           })}

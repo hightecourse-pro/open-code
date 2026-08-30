@@ -34,6 +34,47 @@ export default async function AdminSessionsPage() {
     (recordings ?? []).filter((r) => r.session_id).map((r) => [r.session_id as string, r.video_url])
   );
 
+  // Per-session feedback (the owner, 30/8): average stars + who said what.
+  const { data: fbRows } = ids.length
+    ? await supabase
+        .from("session_feedback")
+        .select("session_id, profile_id, attended, content_rating, practical_rating, clarity_rating, speaker_rating, comment")
+        .in("session_id", ids)
+    : { data: [] as never[] };
+  const fbNames = new Map<string, string>();
+  {
+    const pids = [...new Set((fbRows ?? []).map((f) => f.profile_id))];
+    if (pids.length) {
+      const { data: ps } = await supabase.from("profiles").select("id, full_name").in("id", pids);
+      for (const pr of ps ?? []) fbNames.set(pr.id, pr.full_name);
+    }
+  }
+  const fbBySession = new Map<string, AdminSessionRow["feedback"]>();
+  for (const f of fbRows ?? []) {
+    if (!f.attended) continue; // "לא הפעם" closes the ask — not a rating
+    const cur = fbBySession.get(f.session_id) ?? { avg: null, count: 0, entries: [] };
+    const nums = [f.content_rating, f.practical_rating, f.clarity_rating, f.speaker_rating].filter(
+      (n): n is number => typeof n === "number"
+    );
+    cur.entries.push({
+      name: fbNames.get(f.profile_id) ?? "חברת קהילה",
+      profileId: f.profile_id,
+      content: f.content_rating,
+      practical: f.practical_rating,
+      clarity: f.clarity_rating,
+      speaker: f.speaker_rating,
+      comment: f.comment,
+      avg: nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : null,
+    });
+    cur.count = cur.entries.length;
+    fbBySession.set(f.session_id, cur);
+  }
+  for (const [sid, agg] of fbBySession) {
+    const avgs = agg.entries.map((e) => e.avg).filter((n): n is number => n != null);
+    agg.avg = avgs.length ? avgs.reduce((a, b) => a + b, 0) / avgs.length : null;
+    fbBySession.set(sid, agg);
+  }
+
   const rows: AdminSessionRow[] = (sessions ?? []).map((s) => ({
     id: s.id,
     title: s.title,
@@ -47,6 +88,7 @@ export default async function AdminSessionsPage() {
     duration_minutes: s.duration_minutes ?? null,
     views: viewsBySession.get(s.id)?.size ?? 0,
     recordingUrl: recBySession.get(s.id) ?? null,
+    feedback: fbBySession.get(s.id) ?? { avg: null, count: 0, entries: [] },
   }));
 
   return (

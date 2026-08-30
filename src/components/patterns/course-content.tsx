@@ -266,9 +266,15 @@ export function CourseContent({
               placeholder="מה היה שימושי? מה חסר?"
               className="text-[13px] border border-ink-300 rounded-md p-2 outline-none focus:border-brand-purple"
             />
+            {!stars && (
+              <p className="text-[12px] text-ink-500 -mt-1">
+                בחרי דירוג כוכבים (1–5) — ואז אפשר לשלוח את המשוב.
+              </p>
+            )}
             <button
               type="button"
               disabled={!stars}
+              title={!stars ? "קודם בחרי דירוג כוכבים" : undefined}
               onClick={() =>
                 start(() => {
                   void saveCourseFeedback(courseId, stars, text);

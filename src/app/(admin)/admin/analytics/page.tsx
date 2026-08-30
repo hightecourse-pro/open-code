@@ -56,9 +56,9 @@ export default async function AdminAnalyticsPage() {
   for (const f of extraFb ?? []) mergedFb.set(fbKey(f), f);
   const allFb = [...mergedFb.values()];
 
-  const commenterIds = [
-    ...new Set(allFb.filter((e) => e.feedback?.trim()).map((e) => e.profile_id)),
-  ];
+  // Names for EVERY feedback row — a stars-only rating is listed per course
+  // too (30/8), and an admin needs to know whose it is.
+  const commenterIds = [...new Set(allFb.map((e) => e.profile_id))];
   const { data: commenters } = commenterIds.length
     ? await supabase.from("profiles").select("id, full_name").in("id", commenterIds)
     : { data: [] };
@@ -160,38 +160,60 @@ export default async function AdminAnalyticsPage() {
       </div>
 
       {(() => {
+        // PER COURSE (the owner, 30/8): each course carries its own average
+        // stars and its own feedback list — who said what.
         const titleOf = new Map((courses ?? []).map((c) => [c.id, c.title]));
-        const comments = allFb
-          .filter((e) => e.feedback && e.feedback.trim())
-          .map((e) => ({
-            profileId: e.profile_id,
-            member: nameOf.get(e.profile_id) ?? "חברת קהילה",
-            course: titleOf.get(e.course_id) ?? "—",
-            rating: e.rating,
-            text: e.feedback as string,
-          }));
-        if (comments.length === 0) return null;
+        const byCourse = new Map<string, typeof allFb>();
+        for (const e of allFb) {
+          if (e.rating == null && !e.feedback?.trim()) continue;
+          const arr = byCourse.get(e.course_id) ?? [];
+          arr.push(e);
+          byCourse.set(e.course_id, arr);
+        }
+        if (byCourse.size === 0) return null;
+        const groups = [...byCourse.entries()]
+          .map(([courseId, rows]) => {
+            const ratings = rows.map((r) => r.rating).filter((n): n is number => typeof n === "number");
+            return {
+              courseId,
+              title: titleOf.get(courseId) ?? "—",
+              avg: ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null,
+              count: rows.length,
+              rows,
+            };
+          })
+          .sort((a, b) => b.count - a.count);
         return (
           <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-            <h3 className="font-display text-base font-bold mb-3">משובים מהחברות</h3>
-            <div className="flex flex-col gap-3">
-              {comments.map((c) => (
-                <div
-                  key={`${c.profileId}-${c.course}`}
-                  className="border-b border-ink-100 last:border-b-0 pb-3 last:pb-0"
-                >
-                  <div className="flex items-center gap-2 text-xs text-ink-500 mb-0.5">
-                    <Link
-                      href={`/admin/members/${c.profileId}`}
-                      className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
-                    >
-                      {c.member}
-                    </Link>
-                    <span>·</span>
-                    <span className="font-medium text-ink-700">{c.course}</span>
-                    {c.rating != null && <span>{"⭐".repeat(c.rating)}</span>}
+            <h3 className="font-display text-base font-bold mb-3">משובים מהחברות — לפי קורס</h3>
+            <div className="flex flex-col gap-4">
+              {groups.map((g) => (
+                <div key={g.courseId} className="rounded-[12px] border border-ink-100 bg-ink-50/40 p-3.5">
+                  <div className="flex items-center gap-2 flex-wrap mb-2">
+                    <span className="font-display font-bold text-ink-1000">{g.title}</span>
+                    {g.avg != null && (
+                      <span className="text-[12.5px] font-bold text-[#8C5E0E]">⭐ {g.avg.toFixed(1)}</span>
+                    )}
+                    <span className="text-[12px] text-ink-500">
+                      {g.count === 1 ? "משוב אחד" : `${g.count} משובים`}
+                    </span>
                   </div>
-                  <p className="text-sm text-ink-900">{c.text}</p>
+                  <div className="flex flex-col gap-2">
+                    {g.rows.map((e) => (
+                      <div key={`${e.profile_id}-${g.courseId}`} className="bg-white border border-ink-100 rounded-md px-3 py-2">
+                        <div className="flex items-center gap-2 text-xs text-ink-500">
+                          <Link
+                            href={`/admin/members/${e.profile_id}`}
+                            className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
+                          >
+                            {nameOf.get(e.profile_id) ?? "חברת קהילה"}
+                          </Link>
+                          {e.rating != null && <span>{"⭐".repeat(e.rating)}</span>}
+                        </div>
+                        {e.feedback?.trim() && <p className="text-sm text-ink-900 mt-0.5">{e.feedback}</p>}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>

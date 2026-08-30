@@ -2,12 +2,14 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import { InstantSearchInput, useInstantFilter, type InstantItem } from "./instant-filter";
+import { techKey } from "@/lib/tech-match";
 
 export interface JobListItem extends InstantItem {
   /** Facet values for the filter selects — prepared by the server. */
   tech: string[];
   location: string | null;
-  employment: string;
+  /** The job's role bucket (פיתוח / בדיקות / …) — "אחר" when unset. */
+  role: string;
 }
 
 /**
@@ -39,18 +41,22 @@ export function JobsInstantList({
   fitOnly: boolean;
   emptyFallback: ReactNode;
   initialQuery?: string;
-  facets: { tech: string[]; locations: string[]; employments: { value: string; label: string }[] };
+  facets: { techOptions: string[]; locations: string[]; roles: string[] };
 }) {
   const [needle, setNeedle] = useState(initialQuery);
   const [tech, setTech] = useState("");
   const [location, setLocation] = useState("");
-  const [employment, setEmployment] = useState("");
+  const [role, setRole] = useState("");
 
   const matchesFacets = (item: InstantItem) => {
     const it = item as JobListItem;
-    if (tech && !it.tech.some((t) => t === tech)) return false;
+    if (tech) {
+      // Contains-match on the canonical key: "נוד" or "node" finds Node.js.
+      const k = techKey(tech);
+      if (!k || !it.tech.some((t) => techKey(t).includes(k))) return false;
+    }
     if (location && it.location !== location) return false;
-    if (employment && it.employment !== employment) return false;
+    if (role && it.role !== role) return false;
     return true;
   };
 
@@ -58,16 +64,16 @@ export function JobsInstantList({
   const filtered = useMemo(
     () => textFiltered.filter(matchesFacets),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [textFiltered, tech, location, employment]
+    [textFiltered, tech, location, role]
   );
   const targetedTextFiltered = useInstantFilter(targeted, needle, (item) => item.haystack);
   const filteredTargeted = useMemo(
     () => targetedTextFiltered.filter(matchesFacets),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [targetedTextFiltered, tech, location, employment]
+    [targetedTextFiltered, tech, location, role]
   );
 
-  const anyFilter = needle.trim() || tech || location || employment;
+  const anyFilter = needle.trim() || tech || location || role;
   const totalShown = filtered.length + filteredTargeted.length;
   const selectCls =
     "px-2.5 py-1.5 rounded-md border border-ink-200 bg-white text-[12.5px] text-ink-700 outline-none focus:border-brand-purple max-w-40";
@@ -84,14 +90,21 @@ export function JobsInstantList({
           placeholder="תפקיד, טכנולוגיה או מילה מהתיאור…"
           className="min-w-44"
         />
-        <select aria-label="סינון לפי טכנולוגיה" value={tech} onChange={(e) => setTech(e.target.value)} className={selectCls}>
-          <option value="">כל טכנולוגיה</option>
-          {facets.tech.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
+        {/* Type-ahead over the FULL technology list — contains-matching, so
+            typing part of a name offers it (the owner, 30/8). */}
+        <input
+          list="job-tech-options"
+          aria-label="סינון לפי טכנולוגיה"
+          value={tech}
+          onChange={(e) => setTech(e.target.value)}
+          placeholder="טכנולוגיה…"
+          className="px-2.5 py-1.5 rounded-md border border-ink-200 bg-white text-[12.5px] text-ink-700 outline-none focus:border-brand-purple max-w-36"
+        />
+        <datalist id="job-tech-options">
+          {facets.techOptions.map((t) => (
+            <option key={t} value={t} />
           ))}
-        </select>
+        </datalist>
         {facets.locations.length > 0 && (
           <select aria-label="סינון לפי מיקום" value={location} onChange={(e) => setLocation(e.target.value)} className={selectCls}>
             <option value="">כל מיקום</option>
@@ -102,11 +115,11 @@ export function JobsInstantList({
             ))}
           </select>
         )}
-        <select aria-label="סינון לפי היקף" value={employment} onChange={(e) => setEmployment(e.target.value)} className={selectCls}>
-          <option value="">כל היקף</option>
-          {facets.employments.map((e2) => (
-            <option key={e2.value} value={e2.value}>
-              {e2.label}
+        <select aria-label="סינון לפי תפקיד" value={role} onChange={(e) => setRole(e.target.value)} className={selectCls}>
+          <option value="">כל תפקיד</option>
+          {facets.roles.map((r) => (
+            <option key={r} value={r}>
+              {r}
             </option>
           ))}
         </select>
@@ -117,7 +130,7 @@ export function JobsInstantList({
               setNeedle("");
               setTech("");
               setLocation("");
-              setEmployment("");
+              setRole("");
             }}
             className="text-[12.5px] font-semibold text-brand-purple cursor-pointer"
           >

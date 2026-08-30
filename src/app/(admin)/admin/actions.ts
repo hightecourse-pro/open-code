@@ -772,6 +772,11 @@ function jobFields(formData: FormData) {
     ? (empRaw as EmploymentType)
     : "full";
   const external_url = String(formData.get("external_url") ?? "").trim() || null;
+  // The member board's role filter (30/8) — a fixed vocabulary, אחר as the
+  // honest fallback.
+  const ROLES = ["פיתוח", "בדיקות", "יישום", "ניתוח מערכות", "דאטה", "ניהול מוצר", "עיצוב", "אחר"];
+  const roleRaw = String(formData.get("role_category") ?? "").trim();
+  const role_category = ROLES.includes(roleRaw) ? roleRaw : "אחר";
 
   const kindRaw = String(formData.get("job_kind") ?? "immediate");
   const job_kind: JobKind = JOB_KINDS.includes(kindRaw as JobKind)
@@ -799,6 +804,7 @@ function jobFields(formData: FormData) {
     external_url,
     job_kind,
     practicum_percent,
+    role_category,
     description_html: sanitizeRichHtml(String(formData.get("description_html") ?? "")) || null,
   };
 }

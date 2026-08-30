@@ -242,6 +242,15 @@ export function AdminCreateJob({
             />
           </Field>
         )}
+        <Field label="תפקיד" htmlFor="j-role">
+          <Select id="j-role" name="role_category" defaultValue="פיתוח">
+            {["פיתוח", "בדיקות", "יישום", "ניתוח מערכות", "דאטה", "ניהול מוצר", "עיצוב", "אחר"].map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Field label="היקף" htmlFor="j-emp">
           <Select id="j-emp" name="employment_type" defaultValue="full">
             {EMPLOYMENT.map((e) => (

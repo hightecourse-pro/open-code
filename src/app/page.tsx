@@ -6,6 +6,7 @@ import {
   FileCheck2,
   GraduationCap,
   Mic,
+  Trophy,
   Users,
   Video,
 } from "lucide-react";
@@ -26,6 +27,7 @@ const FEATURES = [
   { icon: Crown, title: "מנטוריות", body: "נשים מנוסות שמלוות אותך אישית — מהצעד הראשון ועד להשתלבות בעבודה." },
   { icon: FileCheck2, title: "בודקת קורות חיים", body: "ניתוח AI חכם של קורות החיים שלך, עם תובנות והתאמה למשרה." },
   { icon: Mic, title: "סימולטור ראיונות", body: "תרגול ראיונות עם משוב מחזק — כדי שתגיעי בטוחה." },
+  { icon: Trophy, title: "האקתון תחרותי", body: "אירוע האקתון עם שת\"פים מהתעשייה — כדי שתוכיחי לכולם את היכולות שלך." },
 ];
 
 export default async function Home({

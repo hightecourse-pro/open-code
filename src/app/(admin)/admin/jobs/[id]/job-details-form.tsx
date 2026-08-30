@@ -20,6 +20,7 @@ export interface JobDetailsData {
   client_id: string | null;
   job_kind: JobKind;
   practicum_percent: number | null;
+  role_category: string | null;
 }
 
 const EMPLOYMENT_OPTIONS: { value: EmploymentType; label: string }[] = [
@@ -98,6 +99,15 @@ export function JobDetailsForm({
             />
           </Field>
         )}
+        <Field label="תפקיד">
+          <Select name="role_category" defaultValue={job.role_category ?? "אחר"}>
+            {["פיתוח", "בדיקות", "יישום", "ניתוח מערכות", "דאטה", "ניהול מוצר", "עיצוב", "אחר"].map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </Select>
+        </Field>
         <Field label="היקף">
           <Select name="employment_type" defaultValue={job.employment_type}>
             {EMPLOYMENT_OPTIONS.map((e) => (

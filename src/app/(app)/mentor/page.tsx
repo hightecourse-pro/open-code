@@ -200,8 +200,11 @@ export default async function MentorPage() {
         </div>
       )}
 
-      {/* No mentor matched yet → she can ask us to connect her with one. */}
+      {/* No mentor matched yet → she can ask us to connect her with one.
+          While the pool-building notice is up, the request form is CLOSED
+          (the owner, 30/8: no requests until the notice comes down). */}
       {!hasMentor &&
+        !poolNotice &&
         (subscriber ? (
           <MentorRequestForm pendingRequest={waiting} />
         ) : (

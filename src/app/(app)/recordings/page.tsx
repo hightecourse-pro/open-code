@@ -7,18 +7,9 @@ import { mayOpenSessions } from "@/lib/content-access";
 import { ContentGate } from "@/components/patterns/content-gate";
 import { LoggedLink } from "@/components/patterns/logged-link";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
-import { cn, fmtIsraelDate } from "@/lib/utils";
+import { fmtIsraelDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "הקלטות סשנים" };
-
-const COVERS = [
-  "bg-[linear-gradient(135deg,#E0418D,#913F80)]",
-  "bg-[linear-gradient(135deg,#6B3D99,#464CA0)]",
-  "bg-[linear-gradient(135deg,#1F1E3F,#464CA0)]",
-  "bg-[linear-gradient(135deg,#36C57B,#28A864)]",
-  "bg-[linear-gradient(135deg,#FFB85C,#E5A93C)]",
-  "bg-[linear-gradient(135deg,#913F80,#E0418D)]",
-];
 
 function minutes(sec: number): string {
   return `${Math.round(sec / 60)} דק'`;
@@ -121,7 +112,7 @@ export default async function RecordingsPage() {
         />
       )}
 
-      {sessions.length > 0 && (
+      {(sessions.length > 0 || (recordings?.length ?? 0) > 0) && (
         <section className="flex flex-col gap-2.5">
           <h2 className="font-display text-lg font-bold text-ink-1000">סשנים שהסתיימו</h2>
           {sessions.map((s) => {
@@ -181,77 +172,74 @@ export default async function RecordingsPage() {
               </div>
             );
           })}
+
+          {/* Curated recordings (the recordings table) — the SAME row shape
+              as every other session (the owner, 30/8: "כל סשן אמור להיות
+              שורה"), not a card grid. */}
+          {(recordings ?? []).map((rec) => {
+            const href = subscriber ? videoUrl(rec) ?? "#" : "/join";
+            // These curated links live on `recordings.video_url`, not in
+            // content_links — nothing to unlock; the entry is still logged.
+            const watch =
+              subscriber && rec.session_id ? (
+                <LoggedLink
+                  href={href}
+                  ownerType="session"
+                  ownerId={rec.session_id as string}
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-2"
+                >
+                  <Play size={13} fill="currentColor" /> צפייה <ExternalLink size={11} />
+                </LoggedLink>
+              ) : subscriber ? (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-2"
+                >
+                  <Play size={13} fill="currentColor" /> צפייה <ExternalLink size={11} />
+                </a>
+              ) : (
+                <Link
+                  href="/join"
+                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple bg-white border-[1.5px] border-brand-purple rounded-md px-3.5 py-2 hover:bg-tint-purple transition-colors"
+                >
+                  <Lock size={13} /> נפתח עם מנוי
+                </Link>
+              );
+            return (
+              <div
+                key={rec.id}
+                className="bg-white border border-ink-200 rounded-[16px] p-4 flex items-center gap-3 shadow-sm flex-wrap"
+              >
+                <div className="w-10 h-10 rounded-md bg-brand-gradient-soft flex items-center justify-center shrink-0">
+                  <Play size={17} className="text-brand-pink-deep" />
+                </div>
+                <div className="flex-1 min-w-[160px]">
+                  <div className="font-display font-bold text-[14.5px] text-ink-1000">{rec.title}</div>
+                  <div className="text-xs text-ink-500 flex items-center gap-1.5 flex-wrap">
+                    {rec.category && <span className="font-mono text-brand-pink-deep">{rec.category}</span>}
+                    {rec.category && <span>·</span>}
+                    <span>{minutes(rec.duration_sec)}</span>
+                    {rec.is_free && (
+                      <span className="bg-success text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                        חינם
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {watch}
+              </div>
+            );
+          })}
         </section>
       )}
 
-      {recordings && recordings.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-          {recordings.map((rec) => {
-            const cover = COVERS[(rec.cover_variant - 1) % COVERS.length];
-            const href = subscriber ? videoUrl(rec) ?? "#" : "/join";
-            const cardClass =
-              "bg-white border border-ink-200 rounded-2xl overflow-hidden transition-[transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:shadow-md";
-            // These curated links live on `recordings.video_url`, not in
-            // content_links — they were never granted or revoked per member,
-            // so there is nothing to unlock here. We do log the entry, so
-            // "every access is documented" is actually true.
-            const logged = subscriber && rec.session_id;
-            const inner = (
-              <>
-                <div className={cn("h-24 relative flex items-center justify-center", cover)}>
-                  <div className="w-[42px] h-[42px] rounded-full bg-white/90 flex items-center justify-center text-brand-pink-deep shadow-md">
-                    {subscriber ? (
-                      <Play size={18} fill="currentColor" className="ms-0.5" />
-                    ) : (
-                      <Lock size={17} />
-                    )}
-                  </div>
-                  <span className="absolute bottom-2 left-2 bg-ink-1000/80 text-white text-[10.5px] font-mono px-1.5 py-0.5 rounded">
-                    {minutes(rec.duration_sec)}
-                  </span>
-                  {rec.is_free && (
-                    <span className="absolute top-2 right-2 bg-success text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      חינם
-                    </span>
-                  )}
-                </div>
-                <div className="p-3.5">
-                  {rec.category && (
-                    <div className="font-mono text-[10.5px] text-brand-pink-deep">{rec.category}</div>
-                  )}
-                  <div className="font-display font-bold text-sm text-ink-1000 leading-tight my-0.5">
-                    {rec.title}
-                  </div>
-                </div>
-              </>
-            );
-            return logged ? (
-              <LoggedLink
-                key={rec.id}
-                href={href}
-                ownerType="session"
-                ownerId={rec.session_id as string}
-                className={cardClass}
-              >
-                {inner}
-              </LoggedLink>
-            ) : (
-              <a
-                key={rec.id}
-                href={href}
-                title={subscriber ? undefined : "הצפייה נפתחת עם מנוי"}
-                className={cardClass}
-              >
-                {inner}
-              </a>
-            );
-          })}
-        </div>
-      ) : sessions.length === 0 ? (
+      {sessions.length === 0 && (recordings?.length ?? 0) === 0 && (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
           עדיין אין הקלטות — הראשונות יחכו לך כאן בקרוב 💜
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -904,6 +904,7 @@ export interface Database {
           /** Employer share (1-100) for practicum_percent jobs. */
           practicum_percent: number | null;
           pipeline_status: JobPipelineStatus;
+          role_category: string | null;
           description_html: string | null;
           published_at: string | null;
           /** Internal note for the team reviewing this job's applicants. */
@@ -929,6 +930,7 @@ export interface Database {
           job_kind?: JobKind;
           practicum_percent?: number | null;
           pipeline_status?: JobPipelineStatus;
+          role_category?: string | null;
           description_html?: string | null;
           published_at?: string | null;
           team_note?: string | null;

@@ -75,7 +75,7 @@ export default async function AdminJobPage({
   const { data: job } = await admin
     .from("jobs")
     .select(
-      "id, title, company, client_id, source, employment_type, location, tech_tags, external_url, description_html, status, job_kind, practicum_percent, pipeline_status, published_at, team_note"
+      "id, title, company, client_id, source, employment_type, location, tech_tags, external_url, description_html, status, job_kind, practicum_percent, pipeline_status, published_at, team_note, role_category"
     )
     .eq("id", id)
     .maybeSingle();
@@ -337,6 +337,7 @@ export default async function AdminJobPage({
     client_id: job.client_id,
     job_kind: job.job_kind ?? "immediate",
     practicum_percent: job.practicum_percent ?? null,
+    role_category: job.role_category ?? null,
   };
 
   const pipelinePill = PIPELINE[job.pipeline_status] ?? PIPELINE.draft;

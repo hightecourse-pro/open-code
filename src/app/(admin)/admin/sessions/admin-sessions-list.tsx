@@ -21,6 +21,20 @@ export interface AdminSessionRow {
   duration_minutes: number | null;
   /** Distinct members who opened the session's material/recording. */
   views: number;
+  feedback: {
+    avg: number | null;
+    count: number;
+    entries: {
+      name: string;
+      profileId: string;
+      content: number | null;
+      practical: number | null;
+      clarity: number | null;
+      speaker: number | null;
+      comment: string | null;
+      avg: number | null;
+    }[];
+  };
   recordingUrl: string | null;
 }
 
@@ -104,6 +118,7 @@ function EditForm({ s, onClose }: { s: AdminSessionRow; onClose: () => void }) {
 
 function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
   const [editing, setEditing] = useState(false);
+  const [fbOpen, setFbOpen] = useState(false);
   return (
     <div className="py-2.5 border-b border-ink-100 last:border-b-0">
       <div className="flex items-center gap-3 flex-wrap">
@@ -125,6 +140,16 @@ function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
               <span className="inline-flex items-center gap-1" title="חברות שנכנסו לתוכן הסשן">
                 <Users size={11} /> {s.views === 1 ? "משתתפת אחת" : `${s.views} משתתפות`}
               </span>
+            )}
+            {past && !s.canceled_at && s.feedback.count > 0 && (
+              <button
+                type="button"
+                onClick={() => setFbOpen((v) => !v)}
+                className="inline-flex items-center gap-1 font-semibold text-[#8C5E0E] hover:underline cursor-pointer"
+                title="משובי החברות על הסשן"
+              >
+                ⭐ {s.feedback.avg?.toFixed(1)} · {s.feedback.count === 1 ? "משוב אחד" : `${s.feedback.count} משובים`}
+              </button>
             )}
             {past && s.recordingUrl && (
               <a
@@ -174,6 +199,27 @@ function Row({ s, past }: { s: AdminSessionRow; past: boolean }) {
         </ConfirmActionButton>
       </div>
       {editing && <EditForm s={s} onClose={() => setEditing(false)} />}
+      {fbOpen && s.feedback.count > 0 && (
+        <div className="mt-2 rounded-[12px] border border-[#F0DCA8] bg-tint-warm/40 p-3 flex flex-col gap-2">
+          <div className="text-[12px] font-bold text-[#8C5E0E]">
+            ממוצע כללי ⭐ {s.feedback.avg?.toFixed(1)} · תוכן / מעשיות / בהירות / מרצה
+          </div>
+          {s.feedback.entries.map((e, i) => (
+            <div key={i} className="bg-white border border-ink-100 rounded-md px-3 py-2 text-[12.5px]">
+              <div className="flex items-center gap-2 flex-wrap">
+                <a href={`/admin/members/${e.profileId}`} className="font-semibold text-ink-900 hover:text-brand-purple hover:underline">
+                  {e.name}
+                </a>
+                <span className="text-ink-500" dir="ltr">
+                  {[e.content, e.practical, e.clarity, e.speaker].map((n) => n ?? "—").join(" / ")}
+                </span>
+                {e.avg != null && <span className="text-[#8C5E0E] font-bold">⭐ {e.avg.toFixed(1)}</span>}
+              </div>
+              {e.comment && <p className="text-ink-700 mt-1">{e.comment}</p>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

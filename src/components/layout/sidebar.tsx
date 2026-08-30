@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
+  Trophy,
   Briefcase,
   Calendar,
   CreditCard,
@@ -44,6 +45,7 @@ const SECTIONS: NavSection[] = [
       { href: "/recordings", label: "הקלטות סשנים", icon: Play, paid: true },
       { href: "/courses", label: "ספריית קורסים", icon: GraduationCap, paid: true },
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
+      { href: "/hackathon", label: "האקתון", icon: Trophy },
     ],
   },
   {

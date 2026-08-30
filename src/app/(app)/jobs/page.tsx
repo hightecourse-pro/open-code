@@ -68,7 +68,7 @@ export default async function JobsPage({
   // Explicit columns and a hard cap — select("*") dragged every full job text
   // (twice, with the haystack) into a page that refreshes on a timer.
   const JOB_CARD_COLUMNS =
-    "id, company, title, source, location, region, employment_type, description, description_html, tech_tags, external_url, logo_variant, status, created_at, job_kind, practicum_percent, pipeline_status, published_at";
+    "id, company, title, source, location, region, employment_type, description, description_html, tech_tags, external_url, logo_variant, status, created_at, job_kind, practicum_percent, pipeline_status, published_at, role_category";
   const jobsQuery = supabase
     .from("jobs")
     .select(JOB_CARD_COLUMNS)
@@ -262,23 +262,26 @@ export default async function JobsPage({
   // targeted section included (30/8: with every job published to her
   // personally, boardJobs alone left the dropdowns empty).
   const facetSource = [...boardJobs, ...targetedJobs];
-  const facetCount = new Map<string, number>();
-  for (const j of facetSource) for (const t of j.tech_tags) facetCount.set(t, (facetCount.get(t) ?? 0) + 1);
+  // Technology suggestions: the FULL taxonomy plus whatever tags actually
+  // appear on this tab (deduped by canonical key) — so the box offers real
+  // choices even when the board itself is small (the owner, 30/8).
+  const techSeen = new Map<string, string>();
+  for (const t of techTax ?? []) {
+    if (t.label_he) techSeen.set(techKey(t.label_he), t.label_he);
+  }
+  for (const j of facetSource) {
+    for (const t of j.tech_tags) if (!techSeen.has(techKey(t))) techSeen.set(techKey(t), t);
+  }
   const facets = {
-    tech: [...facetCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20).map(([t]) => t),
+    techOptions: [...techSeen.values()].sort((a, b) => a.localeCompare(b, "he")),
     locations: [...new Set(facetSource.map((j) => j.location).filter((l): l is string => !!l))].sort((a, b) =>
       a.localeCompare(b, "he")
     ),
-    employments: (
-      [
-        ["full", "משרה מלאה"],
-        ["part", "חלקית"],
-        ["student", "סטודנטית"],
-        ["freelance", "פרילנס"],
-      ] as const
-    )
-      .filter(([v]) => facetSource.some((j) => j.employment_type === v))
-      .map(([value, label]) => ({ value, label })),
+    // The role filter (replaces the retired scope filter): the fixed
+    // vocabulary, narrowed to what exists on this tab.
+    roles: ["פיתוח", "בדיקות", "יישום", "ניתוח מערכות", "דאטה", "ניהול מוצר", "עיצוב", "אחר"].filter((r) =>
+      facetSource.some((j) => (j.role_category ?? "אחר") === r)
+    ),
   };
 
   const cardProps = (job: Job) => ({
@@ -381,7 +384,7 @@ export default async function JobsPage({
               haystack: [job.title, job.description.slice(0, 300), job.tech_tags.join(" ")].join(" "),
               tech: job.tech_tags,
               location: job.location,
-              employment: job.employment_type,
+              role: job.role_category ?? "אחר",
               node: <JobCard {...cardProps(job)} />,
             }))}
             targetedHeader={
@@ -403,7 +406,7 @@ export default async function JobsPage({
               ].join(" "),
               tech: job.tech_tags,
               location: job.location,
-              employment: job.employment_type,
+              role: job.role_category ?? "אחר",
               node: <JobCard {...cardProps(job)} />,
             }))}
             controls={
