@@ -187,6 +187,21 @@ export default async function ChatPage({
         {subscriber && <NewChatButton />}
       </div>
 
+      {/* A free member with no conversations used to see a bare empty page —
+          the upgrade offer must exist here like everywhere gated (the owner,
+          2026-08-30: "הצעה לשדרוג בכל מקום בו אין הרשאה"). */}
+      {!subscriber && (
+        <Link
+          href="/join"
+          className="flex items-center gap-2.5 bg-tint-purple border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-700 hover:border-brand-purple transition-colors"
+        >
+          <span className="flex-1">
+            ההתכתבות עם חברות ומנטוריות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜
+          </span>
+          <span className="font-semibold text-brand-purple whitespace-nowrap">לשדרוג ←</span>
+        </Link>
+      )}
+
       {/* Bounded to the viewport so the thread scrolls inside its own pane and
           the composer stays on screen — the page itself never scrolls to chat.
           On mobile the panes stack: the list keeps its natural height (capped),
