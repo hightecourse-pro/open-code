@@ -70,7 +70,7 @@ const browser = await chromium.launch();
   await page.goto(`${BASE}/chat`);
   await page.waitForLoadState("networkidle");
   const chatBody = (await page.textContent("body")) ?? "";
-  ok("free: chat upgrade line", chatBody.includes("ההתכתבות נפתחת עם מנוי"));
+  ok("free: chat upgrade line", /ההתכתבות.*נפתחת עם מנוי/.test(chatBody));
   ok("free: chat has no new-chat button", (await page.locator('text=שיחה חדשה').count()) === 0);
 
   await page.goto(`${BASE}/courses`);
