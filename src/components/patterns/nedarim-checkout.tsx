@@ -127,6 +127,14 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   }
 
   if (status === "success") {
+    // OUR renewal date, said out loud — the Nedarim receipt sometimes prints
+    // a confusing "NextDate" from their fixed keva day (e.g. a past 28/08 on
+    // a 30/08 signup); the membership month is what we honor.
+    const renewal = new Intl.DateTimeFormat("he-IL", {
+      day: "numeric",
+      month: "long",
+      timeZone: "Asia/Jerusalem",
+    }).format(new Date(Date.now() + 30 * 24 * 3600 * 1000));
     return (
       <Alert variant="success" title="התשלום התקבל! 💜">
         {activationTimedOut ? (
@@ -138,7 +146,12 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
             . אם זה לא נפתח, נעדכן אותך במייל.
           </>
         ) : (
-          "תודה רבה. מפעיל את החשבון שלך — עוד רגע נעביר אותך לקהילה…"
+          <>
+            תודה רבה. מפעיל את החשבון שלך — עוד רגע נעביר אותך לקהילה…
+            <span className="block mt-1 text-[12.5px]">
+              המנוי שלך מתחדש ב-{renewal}; את התאריך המדויק תמיד רואים ב״המנוי שלי״.
+            </span>
+          </>
         )}
       </Alert>
     );

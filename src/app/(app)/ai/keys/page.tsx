@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { ExternalLink, KeyRound, Trash2 } from "lucide-react";
 import { listUserKeys } from "@/lib/ai/keys";
-import { requireSubscription } from "@/lib/auth";
+import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { Badge } from "@/components/ui";
 import { AddKeyForm } from "@/components/patterns/add-key-form";
+import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { removeKey } from "./actions";
 
 export const metadata: Metadata = { title: "מפתחות ה-AI שלי" };
@@ -28,7 +29,29 @@ export default async function AiKeysPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // A key is only useful with the AI tools, which are part of the membership.
-  await requireSubscription("ai");
+  // A free member is EXPLAINED in place, never thrown at the checkout with no
+  // context (the owner, 2026-08-30: "להציע בנחמדות לשדרג ולהעביר לתשלום
+  // בלחיצה — לאחר התשלום שיפתח").
+  const profile = await requireCommunityAccess();
+  if (!isSubscriber(profile)) {
+    return (
+      <div className="flex flex-col gap-5 max-w-2xl">
+        <div>
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;מפתחות AI/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">מפתחות ה-AI שלי</h1>
+          <p className="t-body-sm text-ink-700">
+            כאן שומרים את מפתח ה-Google שמפעיל את כלי ה-AI — בודקת קורות החיים וסימולטור
+            הראיונות.
+          </p>
+        </div>
+        <UpgradeCard
+          title="כלי ה-AI נפתחים עם מנוי 💜"
+          body="עם מנוי תוכלי לחבר מפתח Google משלך ולקבל ניתוח קורות חיים חכם והכנה לראיונות. לחיצה אחת — ואחרי התשלום הכול נפתח."
+          cta="לשדרוג ולתשלום"
+        />
+      </div>
+    );
+  }
   // Where she came from (a tool page) — saving a key sends her straight back
   // there. Internal paths only, so the param can never become an open redirect.
   const sp = await searchParams;
