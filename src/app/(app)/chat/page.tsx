@@ -50,7 +50,7 @@ export default async function ChatPage({
 
   const { data: conversations } = await supabase
     .from("conversations")
-    .select("id, a_id, b_id, last_message_at")
+    .select("id, a_id, b_id, last_message_at, created_at")
     .order("last_message_at", { ascending: false });
 
   const active = (conversations ?? []).find((c) => c.id === activeId) ?? null;
@@ -163,6 +163,22 @@ export default async function ChatPage({
     unreadCount.set(m.conversation_id, (unreadCount.get(m.conversation_id) ?? 0) + 1);
   }
 
+  // A conversation nobody wrote in yet is clutter, not a chat (the owner,
+  // 31/8: "למה יש צ'אטים שהם ריקים?") — the row is created the moment a
+  // member picks someone, so an abandoned pick leaves an empty thread behind.
+  // Hide those from the list. "Has traffic" without querying every message:
+  // a preview in the recent window, an unread message, or last_message_at
+  // that moved away from created_at (sendMessage bumps it). The one she just
+  // opened stays visible so she can write the first message.
+  const listedConversations = (conversations ?? []).filter((c) => {
+    if (c.id === activeId) return true;
+    if (lastMessage.has(c.id)) return true;
+    if ((unreadCount.get(c.id) ?? 0) > 0) return true;
+    return (
+      new Date(c.last_message_at).getTime() - new Date(c.created_at).getTime() > 1500
+    );
+  });
+
   const activeIsMyMentor = !!activeOther && myMentorIds.has(activeOther.id);
   const activeSubtitle = activeOther
     ? [roleWord(activeOther.role), activeOther.specialization].filter(Boolean).join(" · ")
@@ -223,8 +239,8 @@ export default async function ChatPage({
       >
         {/* conversation list */}
         <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm min-h-0 max-h-[35dvh] md:max-h-none overflow-y-auto">
-          {conversations && conversations.length > 0 ? (
-            conversations.map((c) => {
+          {listedConversations.length > 0 ? (
+            listedConversations.map((c) => {
               const other = otherMap.get(c.a_id === me.id ? c.b_id : c.a_id);
               const preview = lastMessage.get(c.id);
               const unread = unreadCount.get(c.id) ?? 0;

@@ -7,7 +7,7 @@ import { QuestionOptionsEditor } from "@/components/patterns/question-options-ed
 import { QuestionOrder } from "./question-order";
 import { PricingForm } from "@/components/patterns/pricing-form";
 import { FeedbackQuestionsForm } from "@/components/patterns/feedback-questions-form";
-import { setMentorPoolNotice } from "../actions";
+import { setLaunchNudge, setMentorPoolNotice } from "../actions";
 import { getPricing } from "@/lib/payments/pricing";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { groupBySection } from "@/lib/profile-sections";
@@ -60,6 +60,14 @@ export default async function AdminConfigPage() {
     .eq("key", "mentor_pool_notice")
     .maybeSingle();
   const mentorPoolNoticeOn = (poolRow?.value as { on?: boolean } | null)?.on === true;
+
+  // The launch nudge defaults ON until the owner turns it off (missing row = on).
+  const { data: nudgeRow } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "launch_nudge")
+    .maybeSingle();
+  const launchNudgeOn = (nudgeRow?.value as { on?: boolean } | null)?.on !== false;
 
   const plans = buildPlans(pricing);
 
@@ -147,6 +155,29 @@ export default async function AdminConfigPage() {
             }
           >
             {mentorPoolNoticeOn ? "ההודעה מוצגת עכשיו — לחיצה תכבה" : "ההודעה כבויה — לחיצה תדליק"}
+          </button>
+        </form>
+        </Collapsible>
+      </div>
+
+      {/* Launch nudge toggle */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+        <Collapsible title='הודעת ההרצה ("מצאת באג? זה הזמן")' defaultOpen={false}>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          הבועה עם החץ שמעל כפתור &quot;יש לך בקשה?&quot; — מזמינה את החברות לדווח על באגים בתקופת
+          ההרצה. כשההרצה נגמרת — מכבות כאן בלחיצה.
+        </p>
+        <form action={setLaunchNudge.bind(null, !launchNudgeOn)}>
+          <button
+            type="submit"
+            className={
+              "inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold border transition-colors cursor-pointer " +
+              (launchNudgeOn
+                ? "bg-tint-mint border-[#A7E3C6] text-[#1B7A4B]"
+                : "bg-ink-50 border-ink-200 text-ink-500 hover:border-brand-purple")
+            }
+          >
+            {launchNudgeOn ? "ההודעה מוצגת עכשיו — לחיצה תכבה" : "ההודעה כבויה — לחיצה תדליק"}
           </button>
         </form>
         </Collapsible>

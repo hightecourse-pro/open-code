@@ -230,6 +230,48 @@ export async function addSessionMaterial(id: string, formData: FormData): Promis
   revalidatePath("/events");
 }
 
+/** Add a recording link to the session's video LIST (the reorganized panel). */
+export async function addSessionVideo(id: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const url = String(formData.get("url") ?? "").trim();
+  if (!url) return;
+  const note = String(formData.get("note") ?? "").trim().slice(0, 120);
+  const supabase = await createClient();
+  const { data: max } = await supabase
+    .from("content_links")
+    .select("sort_order")
+    .eq("owner_type", "session")
+    .eq("owner_id", id)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  await supabase.from("content_links").insert({
+    owner_type: "session",
+    owner_id: id,
+    kind: "video",
+    title: note || "הקלטה",
+    url,
+    sort_order: (max?.sort_order ?? 0) + 1,
+  });
+  revalidatePath("/admin/sessions");
+  revalidatePath("/recordings");
+  revalidatePath("/events");
+}
+
+/**
+ * Remove the legacy pre-list materials link from a session (the owner, 31/8:
+ * "לא הבנתי איך אני מוחקת את הקישור הישן") — the list rows have their own
+ * trash; this gives the old sessions.materials_url one too.
+ */
+export async function clearSessionLegacyMaterials(id: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("sessions").update({ materials_url: null }).eq("id", id);
+  revalidatePath("/admin/sessions");
+  revalidatePath("/recordings");
+  revalidatePath("/events");
+}
+
 /**
  * The one-field recording shortcut on the session row (the owner: "בעדכון
  * סשן אני לא רואה עדכון של הקישור להקלטה") — maintains the session's FIRST

@@ -19,10 +19,11 @@ export interface HiredMember {
  * celebration re-opens it.
  */
 export function HiredBanner({ members }: { members: HiredMember[] }) {
-  // First names — a celebration between friends, not a roster of full names
-  // broadcast to the whole community.
+  // FULL names, by the owner's explicit call (31/8: "השמות מלאים כמובן") —
+  // and because the storage key below is derived from this exact string,
+  // every newly hired member changes it and the banner re-opens for everyone.
   const names = members
-    .map((m) => m.full_name.trim().split(/\s+/)[0])
+    .map((m) => m.full_name.trim())
     .filter(Boolean)
     .join(", ");
 

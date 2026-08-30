@@ -128,6 +128,14 @@ export default async function ProfilePage() {
             {profile.specialization && <Badge variant="purple">{profile.specialization}</Badge>}
           </div>
         </div>
+        {/* The mirror sits at the TOP (the owner, 31/8) — it's the reason to
+            polish everything below. */}
+        <Link
+          href="/profile/preview"
+          className="ms-auto inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-full bg-white text-brand-purple border-[1.5px] border-brand-purple shadow-sm hover:bg-tint-purple transition-colors whitespace-nowrap"
+        >
+          <Eye size={15} /> איך אני נראית למגייסות?
+        </Link>
       </div>
 
       <div className="bg-white border-2 border-[#DDC9EC] rounded-[18px] p-6 shadow-sm">
@@ -216,21 +224,6 @@ export default async function ProfilePage() {
           )}
         </div>
       )}
-
-      {/* The mirror: exactly what a recruiter sees on the portal (PM ask). */}
-      <Link
-        href="/profile/preview"
-        className="flex items-center gap-2.5 bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm hover:border-brand-purple transition-colors"
-      >
-        <Eye size={17} className="text-brand-purple shrink-0" />
-        <span className="flex-1 text-[13.5px] text-ink-900">
-          <b className="font-display">איך אני נראית למגייסות?</b>
-          <span className="text-ink-500"> — תצוגה מקדימה של הפרופיל שלך כפי שהוא מוצג בפורטל המעסיקים.</span>
-        </span>
-        <span className="font-display font-semibold text-brand-purple text-[13px] whitespace-nowrap">
-          לתצוגה ←
-        </span>
-      </Link>
 
       <DriveEmailForm
         current={priv?.drive_email ?? null}

@@ -20,6 +20,7 @@ export function NewChatButton() {
   const [q, setQ] = useState("");
   const [hits, setHits] = useState<ChatMemberHit[]>([]);
   const [loading, setLoading] = useState(false);
+  const [stale, setStale] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -29,6 +30,11 @@ export function NewChatButton() {
       try {
         const rows = await searchChatMembers(q);
         if (alive) setHits(rows);
+      } catch {
+        // A rejected server action (typically a tab from before a deploy whose
+        // action ids no longer exist) must NOT reach the error boundary — a
+        // refresh fixes it, so say that instead of crashing the page.
+        if (alive) setStale(true);
       } finally {
         if (alive) setLoading(false);
       }
@@ -85,7 +91,16 @@ export function NewChatButton() {
                 </button>
               </form>
             ))}
-            {!loading && hits.length === 0 && (
+            {stale && (
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="text-[12.5px] font-semibold text-brand-purple px-2 py-3 text-center cursor-pointer hover:underline"
+              >
+                העמוד התעדכן מאז שנפתח — לחצי לרענון ונמשיך משם 💜
+              </button>
+            )}
+            {!stale && !loading && hits.length === 0 && (
               <p className="text-[12.5px] text-ink-500 px-2 py-3 text-center">
                 לא מצאנו — נסי שם אחר 🙂
               </p>

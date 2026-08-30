@@ -747,6 +747,20 @@ export async function setMentorPoolNotice(on: boolean): Promise<void> {
   revalidatePath("/mentor");
 }
 
+/**
+ * The launch-period nudge above the request widget ("הקהילה בהרצה 🚀") —
+ * the owner turns it off here when the launch settles (30/8).
+ */
+export async function setLaunchNudge(on: boolean): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("app_settings")
+    .upsert({ key: "launch_nudge", value: { on } }, { onConflict: "key" });
+  revalidatePath("/admin/config");
+  revalidatePath("/", "layout");
+}
+
 export type FormState = { ok?: boolean; error?: string };
 
 const EMPLOYMENT: EmploymentType[] = ["full", "part", "student", "freelance"];

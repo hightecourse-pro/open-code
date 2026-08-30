@@ -44,6 +44,10 @@ export async function startConversation(otherId: string) {
     convId = created?.id;
   }
 
+  // A failed insert (RLS, race) must not produce /chat?c=undefined — land on
+  // the list instead of an error page.
+  if (!convId) redirect("/chat");
+
   redirect(`/chat?c=${convId}`);
 }
 

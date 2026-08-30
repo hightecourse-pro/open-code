@@ -83,10 +83,14 @@ export default async function AuthenticatedLayout({
   const unreadCount = await unreadMessageCount(profile.id);
 
   // "היית איתנו בסשן?" — for a week after a session ends, until she answers.
-  // The newest unanswered one; active members only. Title AND date ride along
-  // (the PM: it must be obvious WHICH session is being asked about).
+  // Only women who may actually ATTEND sessions are asked (the owner, 30/8:
+  // "מנויות רשומות ומנטוריות, השאר לא מקבלות משוב") — same crowd as the
+  // session gate itself.
   let feedbackSession: { id: string; title: string; scheduled_at: string } | null = null;
-  if (profile.status === "active") {
+  const mayAttendSessions =
+    profile.status === "active" &&
+    (profile.member_tier === "paid" || profile.role === "mentor" || profile.role === "admin");
+  if (mayAttendSessions) {
     const supabase = await createClient();
     const now = new Date();
     const weekAgo = new Date(now.getTime() - 7 * 24 * 3600 * 1000).toISOString();
@@ -114,11 +118,21 @@ export default async function AuthenticatedLayout({
     const newest = (ended ?? [])[0] ?? null;
     feedbackSession = newest && !done.has(newest.id) ? newest : null;
   }
-  // The admin-worded rating questions + the celebration names — only fetched
-  // when someone will actually see them.
-  const [feedbackAspects, hired] = await Promise.all([
+  // The admin-worded rating questions + the celebration names + whether the
+  // launch nudge is on — only fetched when someone will actually see them.
+  const [feedbackAspects, hired, launchNudgeOn] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
+    (async () => {
+      const supabase = await createClient();
+      const { data } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "launch_nudge")
+        .maybeSingle();
+      // Missing row = on; the admin turns it off in הגדרות.
+      return (data?.value as { on?: boolean } | null)?.on !== false;
+    })(),
   ]);
 
   // Her recent team requests — the widget shows their status and WHO answered.
@@ -222,7 +236,7 @@ export default async function AuthenticatedLayout({
       {children}
       {/* The floating message-to-the-team widget (PM ask) — the reply lands
           back in her chat. */}
-      <MemberRequestWidget requests={myRequests} />
+      <MemberRequestWidget requests={myRequests} launchNudge={launchNudgeOn} />
       {/* The hired celebration — floating, minimizable, on every screen. */}
       <HiredBanner members={hired} />
     </AppShell>

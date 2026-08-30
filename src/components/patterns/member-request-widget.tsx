@@ -27,7 +27,14 @@ const REQ_DATE = new Intl.DateTimeFormat("he-IL", {
  * recent requests — answered ones say WHO answered, and a fresh answer puts
  * a ✓ on the floating button so she notices.
  */
-export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow[] }) {
+export function MemberRequestWidget({
+  requests = [],
+  launchNudge = true,
+}: {
+  requests?: MyRequestRow[];
+  /** The launch-period "מצאת באג?" bubble — the admin turns it off in הגדרות. */
+  launchNudge?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,10 +155,11 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
         </div>
       )}
 
-      {/* Launch-period nudge (the owner, 30/8): a drawn arrow, big and right
-          beside the widget button, pointing at it. */}
-      {!open && (
-        <div className="flex flex-col items-start gap-0 pointer-events-none select-none -ms-2">
+      {/* Launch-period nudge (the owner, 30/8): a drawn arrow on the button's
+          side of the bubble (31/8: "תעביר את החץ לצד השני"), pointing straight
+          at "יש לך בקשה?" below it. Admin-switchable in הגדרות. */}
+      {launchNudge && !open && (
+        <div className="flex flex-col items-end gap-0 pointer-events-none select-none">
           <span className="bg-white border border-[#DDC9EC] text-ink-900 text-[12px] font-semibold rounded-full px-3.5 py-1.5 shadow-md text-center max-w-[250px]">
             הקהילה בהרצה 🚀 מצאת באג? זה הזמן לדווח לנו
           </span>
@@ -161,17 +169,17 @@ export function MemberRequestWidget({ requests = [] }: { requests?: MyRequestRow
             height="52"
             viewBox="0 0 46 52"
             fill="none"
-            className="animate-bounce ms-3 -mt-0.5"
+            className="animate-bounce me-6 -mt-0.5"
           >
             <path
-              d="M34 4 C 20 12, 12 24, 13 38"
+              d="M12 4 C 26 12, 34 24, 33 38"
               stroke="#E0418D"
               strokeWidth="4.5"
               strokeLinecap="round"
               fill="none"
             />
             <path
-              d="M5 32 L13 44 L23 35"
+              d="M41 32 L33 44 L23 35"
               stroke="#E0418D"
               strokeWidth="4.5"
               strokeLinecap="round"
