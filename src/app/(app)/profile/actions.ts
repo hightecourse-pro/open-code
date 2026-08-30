@@ -182,6 +182,8 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   // array of {url,title,note} (legacy plain-line strings hydrate on render).
   const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps", "practicum_description"]);
   const SAVE_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
+  // Selects where "אחר" is stored as-is — the form shows no פירוט field.
+  const PLAIN_OTHER_KEYS = new Set(["marital_status"]);
   const PAY_ACK_KEY = "paid_placement";
 
   // Resolve each answer (handling "אחר" free-text), and validate required ones.
@@ -328,7 +330,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       empty = false; // a "no" is a valid answer
     } else if (q.field_type === "select") {
       let v = String(formData.get(key) ?? "");
-      if (v === "other") v = String(formData.get(`${key}__other`) ?? "").trim();
+      if (v === "other" && !PLAIN_OTHER_KEYS.has(q.key)) v = String(formData.get(`${key}__other`) ?? "").trim();
       value = v;
       empty = v === "";
     } else if (SAVE_LINK_KEYS.has(q.key)) {

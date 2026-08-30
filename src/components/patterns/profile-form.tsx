@@ -57,6 +57,8 @@ export interface ProfileFormProps {
 const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps", "practicum_description"]);
 // Structured links: URL + title + short note per link (the owner, 31/8).
 const FORM_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
+// Selects where "אחר" is a complete answer — no פירוט field (the owner, 31/8).
+const PLAIN_OTHER_KEYS = new Set(["marital_status"]);
 // The placement-fee acknowledgment: a fact with a must-check checkbox.
 const PAY_ACK_KEY = "paid_placement";
 
@@ -235,7 +237,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
     if (q.field_type === "select") {
       let v = String(fd.get(key) ?? "");
-      if (v === "other") v = String(fd.get(`${key}__other`) ?? "").trim();
+      if (v === "other" && !PLAIN_OTHER_KEYS.has(q.key)) v = String(fd.get(`${key}__other`) ?? "").trim();
       return !v;
     }
     if (q.field_type === "bool") {
@@ -519,7 +521,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
 
     if (q.field_type === "select") {
-      const isOther = selOther[q.id];
+      const isOther = selOther[q.id] && !PLAIN_OTHER_KEYS.has(q.key);
       return (
         <Field key={q.id} label={q.label_he} htmlFor={key} error={err}>
           <Select
