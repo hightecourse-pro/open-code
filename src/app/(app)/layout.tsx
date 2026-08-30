@@ -6,6 +6,7 @@ import { MemberRequestWidget } from "@/components/patterns/member-request-widget
 import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { claimExternalApplications } from "@/lib/claim-external";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -120,6 +121,8 @@ export default async function AuthenticatedLayout({
   }
   // The admin-worded rating questions + the celebration names + whether the
   // launch nudge is on — only fetched when someone will actually see them.
+  // The external-applications claim rides in the same wave: an application
+  // the team recorded by her email becomes hers on the first navigation.
   const [feedbackAspects, hired, launchNudgeOn] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
@@ -132,6 +135,15 @@ export default async function AuthenticatedLayout({
         .maybeSingle();
       // Missing row = on; the admin turns it off in הגדרות.
       return (data?.value as { on?: boolean } | null)?.on !== false;
+    })(),
+    // Position matters: the claim's undefined must stay OUT of the
+    // destructured slots above.
+    (async () => {
+      const supabase = await createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      await claimExternalApplications(profile.id, user?.email);
     })(),
   ]);
 

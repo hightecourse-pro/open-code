@@ -1118,6 +1118,30 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["sessions"]["Insert"]>;
         Relationships: [];
       };
+      external_applications: {
+        Row: {
+          id: string;
+          job_id: string;
+          email: string;
+          note: string | null;
+          created_by: string | null;
+          created_at: string;
+          claimed_profile_id: string | null;
+          claimed_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          job_id: string;
+          email: string;
+          note?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          claimed_profile_id?: string | null;
+          claimed_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["external_applications"]["Insert"]>;
+        Relationships: [];
+      };
       conversations: {
         Row: { id: string; a_id: string; b_id: string; last_message_at: string; created_at: string };
         Insert: { id?: string; a_id: string; b_id: string; last_message_at?: string; created_at?: string };

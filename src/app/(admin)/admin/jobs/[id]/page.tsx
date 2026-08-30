@@ -12,7 +12,13 @@ import {
   type AudienceEligibility,
 } from "@/lib/admin/audience";
 import { Alert, Badge, Button } from "@/components/ui";
-import { removeJobCandidate, setJobOutcome } from "@/app/(admin)/admin/actions";
+import {
+  addExternalApplication,
+  deleteExternalApplication,
+  removeJobCandidate,
+  setJobOutcome,
+} from "@/app/(admin)/admin/actions";
+import { SaveButton } from "@/components/patterns/save-button";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import type { PortalClientOption } from "@/components/patterns/admin-job-row";
 import { CandidatePicker } from "./candidate-picker";
@@ -199,6 +205,14 @@ export default async function AdminJobPage({
       };
   const profileOf = new Map((named ?? []).map((p) => [p.id, p]));
   const curatedSet = new Set(curatedIds);
+
+  // Off-community applications recorded by email — claimed automatically the
+  // moment the woman signs in with that address (the owner, 31/8).
+  const { data: externalApps } = await admin
+    .from("external_applications")
+    .select("id, email, note, created_at, claimed_at, claimed_profile_id")
+    .eq("job_id", id)
+    .order("created_at", { ascending: false });
 
   // The per-application internal notes (admin-only table) — the "הערה" column.
   const appIds = appList.map((a) => a.id);
@@ -500,6 +514,64 @@ export default async function AdminJobPage({
         criteriaCatalogue={applicantCatalogue}
         criteriaPools={applicantPools}
       />
+
+      {/* Applications that happened OUTSIDE the community — recorded by email.
+          When the woman signs in with that address, she gets a real
+          application (original date) and this row turns "נקלטה". */}
+      <div className="mt-5 border-t border-ink-100 pt-4">
+        <h4 className="font-display text-[14px] font-bold mb-1 flex items-center gap-1.5">
+          <Mail size={14} className="text-brand-purple" /> הגישו מחוץ לקהילה ({(externalApps ?? []).length})
+        </h4>
+        <p className="text-[12.5px] text-ink-500 mb-2.5">
+          מועמדת שהגישה במייל לפני שנרשמה — רשמי את הכתובת, וברגע שתיכנס עם המייל הזה
+          ההגשה תופיע לה ב&quot;ההגשות שלי&quot; עם תאריך ההגשה המקורי.
+        </p>
+        {(externalApps ?? []).length > 0 && (
+          <div className="flex flex-col gap-1 mb-2.5">
+            {(externalApps ?? []).map((x) => (
+              <div key={x.id} className="flex items-center gap-2 text-[12.5px] bg-ink-50/60 border border-ink-100 rounded-md px-2.5 py-1.5">
+                <span className="font-semibold text-ink-900" dir="ltr">{x.email}</span>
+                {x.note && <span className="text-ink-500 truncate">· {x.note}</span>}
+                <span className="ms-auto shrink-0">
+                  {x.claimed_at ? (
+                    <span className="inline-flex items-center rounded-full bg-tint-mint text-[#0F6E4A] px-2 py-px text-[11px] font-bold">
+                      ✓ נקלטה {profileOf.get(x.claimed_profile_id ?? "")?.full_name ?? ""}
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center rounded-full bg-tint-purple text-brand-purple px-2 py-px text-[11px] font-bold">
+                      ממתינה להצטרפות
+                    </span>
+                  )}
+                </span>
+                {!x.claimed_at && (
+                  <form action={deleteExternalApplication.bind(null, job.id, x.id)}>
+                    <button type="submit" className="text-ink-400 hover:text-danger cursor-pointer" title="הסרה">
+                      ✕
+                    </button>
+                  </form>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+        <form action={addExternalApplication.bind(null, job.id)} className="flex flex-wrap items-center gap-2">
+          <input
+            name="email"
+            type="email"
+            required
+            dir="ltr"
+            placeholder="email@example.com"
+            className="w-56 text-[12px] border border-ink-300 rounded-md px-2 py-1.5"
+          />
+          <input
+            name="note"
+            maxLength={200}
+            placeholder="הערה (אופציונלי — למשל: הגישה במייל 28/8)"
+            className="flex-1 min-w-[180px] text-[12px] border border-ink-300 rounded-md px-2 py-1.5"
+          />
+          <SaveButton label="הוספה" />
+        </form>
+      </div>
     </div>
   );
 

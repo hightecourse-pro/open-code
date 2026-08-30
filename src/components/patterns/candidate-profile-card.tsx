@@ -123,7 +123,15 @@ function groupWeight(items: CandidateField[]): number {
   return w;
 }
 
-function spanClass(weight: number): string {
+/**
+ * Weighted spans need enough cards to fill rows; a SPARSE profile (the owner,
+ * 31/8: "אם חסר נתונים זה לא יפה ולא סימטרי") switches to symmetric spans so
+ * one or two cards still compose a full, balanced row.
+ */
+function spanClass(weight: number, totalCards: number): string {
+  if (totalCards <= 1) return "md:col-span-6 xl:col-span-12";
+  if (totalCards === 2) return "md:col-span-3 xl:col-span-6";
+  if (totalCards === 3) return "md:col-span-2 xl:col-span-4";
   if (weight >= 6) return "md:col-span-6 xl:col-span-7";
   if (weight >= 3) return "md:col-span-3 xl:col-span-5";
   return "md:col-span-3 xl:col-span-4";
@@ -156,6 +164,7 @@ export function CandidateProfileCard({
   headerExtra?: React.ReactNode;
 }) {
   const groups = groupFields(candidate);
+  const totalCards = groups.length + (candidate.links.length > 0 ? 1 : 0);
   return (
     <div className="flex flex-col gap-4">
       {/* ------------------------------------------------------- hero card */}
@@ -221,7 +230,7 @@ export function CandidateProfileCard({
           <section
             className={cn(
               "rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 break-inside-avoid",
-              candidate.links.length > 2 ? "md:col-span-6 xl:col-span-7" : "md:col-span-3 xl:col-span-5"
+              spanClass(candidate.links.length > 2 ? 6 : 3, totalCards)
             )}
           >
             <h2 className="font-display mb-1 flex items-center gap-2.5 text-[16px] font-bold text-ink-1000">
@@ -265,7 +274,7 @@ export function CandidateProfileCard({
               key={group.title}
               className={cn(
                 "rounded-[18px] border border-ink-200 bg-white p-5 shadow-sm break-inside-avoid print:shadow-none",
-                spanClass(weight)
+                spanClass(weight, totalCards)
               )}
             >
               <h2 className="font-display mb-4 flex items-center gap-2.5 text-[16px] font-bold text-ink-1000">

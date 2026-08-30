@@ -1784,6 +1784,36 @@ export type AdminMark = "optional" | "not_fit" | "approved";
  * (the owner, 2026-08-30). Lives in admin-only application_notes, so it can
  * never surface through the member's own application rows.
  */
+/**
+ * A candidate who applied OUTSIDE the community, recorded by email (the
+ * owner, 31/8): the moment she signs in with this email she gets a real
+ * application on this job, dated to when the team recorded her.
+ */
+export async function addExternalApplication(jobId: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  const note = String(formData.get("note") ?? "").trim().slice(0, 200) || null;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  await supabase
+    .from("external_applications")
+    .upsert(
+      { job_id: jobId, email, note, created_by: user?.id ?? null },
+      { onConflict: "job_id,email", ignoreDuplicates: true }
+    );
+  revalidatePath(`/admin/jobs/${jobId}`);
+}
+
+export async function deleteExternalApplication(jobId: string, id: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("external_applications").delete().eq("id", id);
+  revalidatePath(`/admin/jobs/${jobId}`);
+}
+
 export async function setApplicationNote(
   applicationId: string,
   note: string
