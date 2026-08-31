@@ -67,6 +67,23 @@ export function MemberRequestWidget({
     (acc, r) => (r.status === "handled" && r.handled_at && r.handled_at > acc ? r.handled_at : acc),
     ""
   );
+  // The launch bubble can be dismissed per-browser (a member, 1/9: "הכפתור
+  // של מצאת באג מסתיר את המסך") — the small ✕ remembers the choice locally.
+  const [nudgeHidden, setNudgeHidden] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem("oc:nudge-hidden") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const dismissNudge = () => {
+    setNudgeHidden(true);
+    try {
+      window.localStorage.setItem("oc:nudge-hidden", "1");
+    } catch {
+      /* private mode — hides for this page-load only */
+    }
+  };
   const [seenAnswerAt, setSeenAnswerAt] = useState<string>(() => {
     try {
       return window.localStorage.getItem("oc:req-seen") ?? "";
@@ -158,9 +175,17 @@ export function MemberRequestWidget({
       {/* Launch-period nudge (the owner, 30/8): a drawn arrow on the button's
           side of the bubble (31/8: "תעביר את החץ לצד השני"), pointing straight
           at "יש לך בקשה?" below it. Admin-switchable in הגדרות. */}
-      {launchNudge && !open && (
+      {launchNudge && !open && !nudgeHidden && (
         <div className="flex flex-col items-end gap-0 pointer-events-none select-none">
-          <span className="bg-white border border-[#DDC9EC] text-ink-900 text-[12px] font-semibold rounded-full px-3.5 py-1.5 shadow-md text-center max-w-[250px]">
+          <span className="bg-white border border-[#DDC9EC] text-ink-900 text-[12px] font-semibold rounded-full ps-2 pe-3.5 py-1.5 shadow-md text-center max-w-[260px] inline-flex items-center gap-1.5">
+            <button
+              type="button"
+              aria-label="הסתרת ההודעה"
+              onClick={dismissNudge}
+              className="pointer-events-auto text-ink-400 hover:text-ink-700 font-bold px-0.5 cursor-pointer"
+            >
+              ✕
+            </button>
             הקהילה בהרצה 🚀 מצאת באג? זה הזמן לדווח לנו
           </span>
           <svg

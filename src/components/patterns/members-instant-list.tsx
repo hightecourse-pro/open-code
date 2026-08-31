@@ -26,8 +26,18 @@ export function MembersInstantList({
   initialQuery?: string;
 }) {
   const [needle, setNeedle] = useState(initialQuery);
-  const filtered = useInstantFilter(items, needle, (item) => item.haystack);
-  const searching = needle.trim().length > 0;
+  // One-click group chips (the owner, 1/9): צוות / מנויות / מנטוריות.
+  const [group, setGroup] = useState<string>("");
+  const searchFiltered = useInstantFilter(items, needle, (item) => item.haystack);
+  const filtered = group ? searchFiltered.filter((i) => i.group === group) : searchFiltered;
+  const searching = needle.trim().length > 0 || group !== "";
+  const countOf = (g: string) => items.filter((i) => i.group === g).length;
+  const CHIPS: { id: string; label: string }[] = [
+    { id: "", label: `כולן (${items.length})` },
+    { id: "subscriber", label: `מנויות 💜 (${countOf("subscriber")})` },
+    { id: "mentor", label: `מנטוריות 👑 (${countOf("mentor")})` },
+    { id: "team", label: `צוות (${countOf("team")})` },
+  ];
 
   return (
     <>
@@ -38,6 +48,23 @@ export function MembersInstantList({
           label="חיפוש משתתפת"
           placeholder="חיפוש לפי שם, תחום או אזור…"
         />
+        <div className="flex gap-2 flex-wrap">
+          {CHIPS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setGroup(c.id)}
+              aria-pressed={group === c.id}
+              className={
+                group === c.id
+                  ? "font-display font-semibold text-[12.5px] px-3 py-[6px] rounded-full bg-brand-gradient text-white"
+                  : "font-display font-semibold text-[12.5px] px-3 py-[6px] rounded-full border-[1.5px] border-ink-200 bg-white text-ink-700 hover:border-brand-purple transition-colors cursor-pointer"
+              }
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-3 flex-wrap text-[12.5px] text-ink-500">
           <span>
             {countLabel(filtered.length, searching)}

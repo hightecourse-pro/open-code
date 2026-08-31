@@ -15,6 +15,8 @@ export interface InstantItem {
   haystack: string;
   /** The server-rendered row itself, shown or hidden by the filter. */
   node: ReactNode;
+  /** Optional one-click filter group (the directory chips: team/mentor/subscriber). */
+  group?: string;
 }
 
 /**

@@ -64,6 +64,10 @@ export async function cancelRenewal(): Promise<{ error?: string }> {
     await sendResendEmail({ to: user.email, subject: mail.subject, html: mail.html });
   }
 
+  // The subscription lives on ITS page — refreshing /profile alone left the
+  // screen frozen ("חידוש מנוי בלחיצה לא עובד", a member, 1/9).
+  revalidatePath("/subscription");
+  revalidatePath("/subscription");
   revalidatePath("/profile");
   return {};
 }

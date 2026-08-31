@@ -79,6 +79,16 @@ export default async function MembersPage({
         initialQuery={(q ?? "").trim()}
         items={members.map((member) => ({
           id: member.id,
+          // One-click chips: the view's masked role means "mentor" is always
+          // an APPROVED mentor; מנויות = the honest is_subscriber badge.
+          group:
+            member.role === "admin"
+              ? "team"
+              : member.role === "mentor"
+                ? "mentor"
+                : subscriberIds.has(member.id)
+                  ? "subscriber"
+                  : "member",
           haystack: [member.full_name, member.specialization ?? "", member.region ?? ""].join(" "),
           node: (
             <MemberCard
