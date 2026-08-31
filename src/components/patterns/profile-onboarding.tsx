@@ -53,7 +53,16 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
         </div>
         <p className="t-body-sm text-ink-500 mb-5">
           המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות — ולבחור הזדמנויות במיוחד בשבילך.
-          תמיד תוכלי לעדכן הכול מעמוד הפרופיל.
+          תמיד תוכלי לעדכן הכול מעמוד הפרופיל. מסירת הפרטים אינה חובה חוקית; מה שמיועד למעסיקות
+          יוצג להן רק כשנגיש אותך למשרה — הכול מפורט ב
+          <a
+            href="/privacy"
+            target="_blank"
+            className="font-semibold text-brand-purple hover:underline"
+          >
+            מדיניות הפרטיות
+          </a>
+          .
         </p>
         <ProfileForm
           firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}

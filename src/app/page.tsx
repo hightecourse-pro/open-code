@@ -125,7 +125,10 @@ export default async function Home({
       </section>
 
       <footer className="px-6 py-8 text-center text-ink-500 text-sm border-t border-ink-200">
-        קוד פתוח · קהילה למפתחות ג&apos;וניוריות 💜
+        קוד פתוח · קהילה למפתחות ג&apos;וניוריות 💜 ·{" "}
+        <Link href="/privacy" className="font-semibold text-brand-purple hover:underline">
+          מדיניות פרטיות
+        </Link>
       </footer>
     </main>
   );

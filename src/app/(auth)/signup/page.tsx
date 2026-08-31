@@ -32,6 +32,14 @@ export default function SignupPage() {
           <Button type="submit" disabled={pending} className="w-full" bracketed>
             {pending ? "רגע אחד…" : "הצטרפות"}
           </Button>
+          {/* §11 notice: collection starts here, so the policy link lives here. */}
+          <p className="text-[12px] text-ink-500 text-center -mt-1">
+            בהצטרפות את מאשרת את{" "}
+            <Link href="/privacy" target="_blank" className="font-semibold text-brand-purple hover:underline">
+              מדיניות הפרטיות
+            </Link>{" "}
+            שלנו.
+          </p>
         </form>
       )}
 
