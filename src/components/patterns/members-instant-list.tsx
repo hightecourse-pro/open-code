@@ -46,7 +46,7 @@ export function MembersInstantList({
           value={needle}
           onChange={setNeedle}
           label="חיפוש משתתפת"
-          placeholder="חיפוש לפי שם, תחום או אזור…"
+          placeholder="חיפוש לפי שם, תחום או עיר…"
         />
         <div className="flex gap-2 flex-wrap">
           {CHIPS.map((c) => (

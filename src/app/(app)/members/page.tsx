@@ -99,7 +99,7 @@ export default async function MembersPage({
         <span className="font-mono text-xs text-brand-pink-deep">&lt;קהילה/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המשתתפות שלנו 💜</h1>
         <p className="t-body-sm text-ink-700">
-          כל מי שנמצאת כאן איתנו. חפשי לפי שם, תחום או אזור — ואם בא לך להכיר, אפשר לכתוב לה ישירות.
+          כל מי שנמצאת כאן איתנו. חפשי לפי שם, תחום או עיר — ואם בא לך להכיר, אפשר לכתוב לה ישירות.
         </p>
       </div>
 
