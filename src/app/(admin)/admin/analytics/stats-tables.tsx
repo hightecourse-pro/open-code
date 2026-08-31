@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { cn } from "@/lib/utils";
+import { sessionViewers, type SessionViewer } from "./actions";
 
 export interface CourseStatRow {
   id: string;
@@ -244,14 +245,73 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
 }
 
 export function SessionsStatsTable({ rows }: { rows: SessionStatRow[] }) {
+  // "מי נכנסה" per session (the owner, 31/8) — fetched lazily on first click
+  // and cached, so the page never ships member×content history up front.
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [viewersOf, setViewersOf] = useState<Record<string, SessionViewer[]>>({});
+  const [, startTransition] = useTransition();
+  const toggle = (id: string) => {
+    setOpenId((v) => (v === id ? null : id));
+    if (!viewersOf[id]) {
+      startTransition(async () => {
+        const list = await sessionViewers(id);
+        setViewersOf((s) => ({ ...s, [id]: list }));
+      });
+    }
+  };
   return (
     <SortableTable
       rows={rows}
       defaultKey="views"
+      openDetailId={openId}
+      renderDetail={(r) => {
+        const list = viewersOf[r.id];
+        return (
+          <div className="rounded-[12px] border border-ink-100 bg-ink-50/50 p-3.5">
+            <div className="text-xs text-ink-500 font-semibold mb-2">מי נכנסה להקלטה</div>
+            {!list ? (
+              <div className="text-sm text-ink-500">טוען…</div>
+            ) : list.length === 0 ? (
+              <div className="text-sm text-ink-500">אין עדיין כניסות</div>
+            ) : (
+              <div className="flex flex-wrap gap-1.5">
+                {list.map((v) => (
+                  <a
+                    key={v.profileId}
+                    href={`/admin/members/${v.profileId}`}
+                    className="bg-white border border-ink-200 rounded-full px-3 py-1 text-[12.5px] text-ink-900 hover:text-brand-purple hover:border-brand-purple transition-colors"
+                    title={`כניסה אחרונה ${dmy(v.last)}`}
+                  >
+                    {v.name}
+                    <span className="text-ink-400"> · {v.opens === 1 ? "כניסה אחת" : `${v.opens} כניסות`}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }}
       cols={[
         { key: "title", label: "סשן", value: (r) => r.title },
         { key: "scheduledAt", label: "תאריך הסשן", value: (r) => r.scheduledAt, render: (r) => dmy(r.scheduledAt) },
-        { key: "members", label: "כמה חברות נכנסו", value: (r) => r.members },
+        {
+          key: "members",
+          label: "כמה חברות נכנסו",
+          value: (r) => r.members,
+          render: (r) =>
+            r.members > 0 ? (
+              <button
+                type="button"
+                onClick={() => toggle(r.id)}
+                className="font-semibold text-brand-purple hover:underline cursor-pointer"
+                title="פתיחת רשימת מי שנכנסה להקלטה"
+              >
+                {r.members} ▾
+              </button>
+            ) : (
+              "—"
+            ),
+        },
         { key: "views", label: "סה״כ כניסות", value: (r) => r.views },
         { key: "last", label: "כניסה אחרונה", value: (r) => r.last ?? "", render: (r) => dmy(r.last) },
         { key: "openToAll", label: "פתוח לכולן", value: (r) => (r.openToAll ? 1 : 0), render: (r) => (r.openToAll ? "כן" : "—") },
