@@ -146,7 +146,7 @@ export default function Hackathon2026Page() {
               <Squiggle className="absolute -bottom-2 right-0 w-full" />
             </span>{" "}
             קוד פתוח
-            <span className="relative inline-block mt-2 text-[30px] sm:text-[36px] text-ink-700 font-black">
+            <span className="relative block w-fit mx-auto mt-3 text-[30px] sm:text-[36px] text-ink-700 font-black rotate-2">
               <Scribble className="absolute -inset-x-8 -inset-y-3 w-[calc(100%+64px)] h-[calc(100%+24px)]" />
               2026
             </span>
