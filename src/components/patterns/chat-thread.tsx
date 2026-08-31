@@ -235,7 +235,7 @@ export function ChatThread({
                   {mine ? "את" : otherName ?? "הצד השני"}
                 </span>
               )}
-              <div className={cn("group flex items-end gap-1.5", !mine && "flex-row-reverse")}>
+              <div className={cn("group relative flex items-end gap-1.5", !mine && "flex-row-reverse")}>
                 {runStart && !mine ? (
                   <span
                     aria-hidden
@@ -273,9 +273,17 @@ export function ChatThread({
                   {m.attachments && <AttachmentList items={m.attachments} compact />}
                 </div>
                 {/* Reply + react — appear on hover (always reachable on touch
-                    via the reaction chips row below). */}
+                    via the reaction chips row below). ABSOLUTE on purpose: as
+                    flex siblings they reserved ~80px beside every bubble and
+                    shrank the message width (the owner, 31/8) — floated past
+                    the bubble's center-facing edge they cost no layout space. */}
                 {!m.pending && (action || reactAction) && (
-                  <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity mb-1">
+                  <span
+                    className={cn(
+                      "absolute bottom-1 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity",
+                      mine ? "end-full translate-x-1.5" : "start-full -translate-x-1.5"
+                    )}
+                  >
                     {reactAction && (
                       <button
                         type="button"
