@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Lock, MapPin, MessageCircle } from "lucide-react";
+import { GraduationCap, Lock, MapPin, MessageCircle } from "lucide-react";
 import { Avatar, Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { startConversation } from "@/app/(app)/chat/actions";
@@ -127,6 +127,7 @@ export function MemberCard({
   subscriber,
   mentorWaiting = false,
   viewerIsTeam = false,
+  studyPlace = null,
 }: {
   member: DirectoryMember;
   canChat: boolean;
@@ -138,6 +139,8 @@ export function MemberCard({
   mentorWaiting?: boolean;
   /** The team writes to anyone; members only to מנויות/mentors/team. */
   viewerIsTeam?: boolean;
+  /** Where she studied — shown on the card (the owner, 1/9). */
+  studyPlace?: string | null;
 }) {
   const isMentor = member.role === "mentor";
   const writable = viewerIsTeam || member.role !== "junior" || subscriber === true;
@@ -173,6 +176,12 @@ export function MemberCard({
             )}
           </span>
           <MemberMeta member={member} />
+          {studyPlace && (
+            <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-500">
+              <GraduationCap size={13} className="shrink-0" />
+              {studyPlace}
+            </span>
+          )}
         </div>
       </div>
 

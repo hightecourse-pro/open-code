@@ -57,6 +57,35 @@ export default async function MembersPage({
   // Mentor scores are public — the directory card carries them.
   const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
 
+  // Study place on the card (the owner, 1/9: "תוסיף את הסמינר") — stored as
+  // the select's VALUE in profile_answers; resolved to the label here with
+  // the service role (answers aren't member-readable) and passed per card.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminC = createAdminClient();
+  const { data: studyQ } = await adminC
+    .from("config_questions")
+    .select("id, options")
+    .eq("key", "study_place")
+    .maybeSingle();
+  const studyOf = new Map<string, string>();
+  if (studyQ && members.length) {
+    const labelOf = new Map(
+      (Array.isArray(studyQ.options) ? (studyQ.options as unknown as { value: string; label: string }[]) : []).map(
+        (o) => [o.value, o.label]
+      )
+    );
+    for (let i = 0; i < members.length; i += 500) {
+      const { data: ans } = await adminC
+        .from("profile_answers")
+        .select("profile_id, value")
+        .eq("question_id", studyQ.id)
+        .in("profile_id", members.slice(i, i + 500).map((m) => m.id));
+      for (const a of ans ?? []) {
+        if (typeof a.value === "string" && a.value) studyOf.set(a.profile_id, labelOf.get(a.value) ?? a.value);
+      }
+    }
+  }
+
   // Who is a paying subscriber — since 31/8 the view computes it (activated
   // paid junior / live subscription / on the Nedarim payers list), so a
   // PENDING member who already paid is labeled מנויה too (the owner's ask).
@@ -89,7 +118,7 @@ export default async function MembersPage({
                 : subscriberIds.has(member.id)
                   ? "subscriber"
                   : "member",
-          haystack: [member.full_name, member.specialization ?? "", member.region ?? ""].join(" "),
+          haystack: [member.full_name, member.specialization ?? "", member.region ?? "", studyOf.get(member.id) ?? ""].join(" "),
           node: (
             <MemberCard
               member={member}
@@ -98,6 +127,7 @@ export default async function MembersPage({
               score={scores.get(member.id)?.score}
               subscriber={subscriberIds.has(member.id)}
               viewerIsTeam={me.role === "admin"}
+              studyPlace={studyOf.get(member.id) ?? null}
             />
           ),
         }))}
