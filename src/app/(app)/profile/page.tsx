@@ -247,7 +247,7 @@ export default async function ProfilePage({
           </div>
           <ConfirmActionButton
             action={switchMentorToMemberTrack}
-            message="לעבור למסלול הרגיל? הכתר יוסר ושאלון החברות ייפתח. מנוי הוא לבחירתך — ואם כבר שילמת, הוא יחובר מיד."
+            message="לעבור למסלול הרגיל? הכתר יוסר ושאלון החברות ייפתח."
             className="font-display font-semibold text-[13px] px-4 py-2 rounded-md border-[1.5px] border-ink-300 text-ink-700 hover:border-brand-purple hover:text-brand-purple transition-colors"
           >
             מעבר למסלול הרגיל

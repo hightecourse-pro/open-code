@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getUser, isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { mayOpenSessions } from "@/lib/content-access";
 import { ContentGate } from "@/components/patterns/content-gate";
-import { LoggedLink } from "@/components/patterns/logged-link";
 import { SessionWatch } from "@/components/patterns/session-watch";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { fmtIsraelDate } from "@/lib/utils";
@@ -218,18 +217,26 @@ export default async function RecordingsPage() {
               שורה"), not a card grid. */}
           {(recordings ?? []).map((rec) => {
             const href = subscriber ? videoUrl(rec) ?? "#" : "/join";
-            // These curated links live on `recordings.video_url`, not in
-            // content_links — nothing to unlock; the entry is still logged.
+            // Curated links live on `recordings.video_url` — but the WATCHING
+            // experience must match the session rows (the owner, 1/9: session
+            // #1 opened only externally while #2 embedded): same gate, same
+            // inline player.
             const watch =
-              subscriber && rec.session_id ? (
-                <LoggedLink
-                  href={href}
+              subscriber && rec.session_id && videoUrl(rec) ? (
+                <ContentGate
                   ownerType="session"
                   ownerId={rec.session_id as string}
-                  className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-white bg-brand-gradient rounded-md px-3.5 py-2"
+                  unlocked={unlockedSessions.has(rec.session_id as string)}
+                  variant="inline"
+                  label="צפייה"
                 >
-                  <Play size={13} fill="currentColor" /> צפייה <ExternalLink size={11} />
-                </LoggedLink>
+                  <div className="flex flex-col gap-2 w-full">
+                    <SessionWatch
+                      sessionId={rec.session_id as string}
+                      links={[{ id: rec.id, url: videoUrl(rec)! }]}
+                    />
+                  </div>
+                </ContentGate>
               ) : subscriber ? (
                 <a
                   href={href}
