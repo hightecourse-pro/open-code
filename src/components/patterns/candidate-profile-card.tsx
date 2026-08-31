@@ -284,15 +284,10 @@ export function CandidateProfileCard({
             {candidate.bio && (
               <MessageBody body={candidate.bio} className="t-body mt-4 max-w-[68ch] whitespace-pre-line text-ink-900" />
             )}
-            {candidate.headline.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {candidate.headline.map((item) => (
-                  <Badge key={item} variant="tech">
-                    {item}
-                  </Badge>
-                ))}
-              </div>
-            )}
+            {/* The header tech chips are gone (the owner, 1/9: "זה מיותר") —
+                they were just the first six dev_tech values, and the real
+                skills cards below tell the full story anyway. The compact
+                portal SEARCH card keeps its chips (a list needs a scent). */}
           </div>
         </div>
       </header>

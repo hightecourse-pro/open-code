@@ -203,6 +203,25 @@ async function handleCallback(req: Request) {
 
   if (!cfg) return reject("not_configured", 503, "payments not configured");
 
+  // Nedarim also POSTs a bare {"Status":"Error","Message":"..."} when a
+  // charge fails (e.g. "כרטיס זה חסום לסליקה") — minimal payload, no mosad
+  // number, no key. Answering 401 made their system email the owner a
+  // developer-error report (1/9). Accept it as a diagnostic: log + alert the
+  // team that someone's payment failed, and answer 200 so Nedarim is done.
+  if (params.Status === "Error" && params.Message && !params.MosadNumber && !params.Mosad) {
+    record.outcome = "provider_error_report";
+    await logEvent(record);
+    await raiseAlert({
+      kind: "payment_provider_error",
+      severity: "warning",
+      title: "נדרים דיווחו על תשלום שנכשל",
+      body: `מישהי ניסתה לשלם והסליקה נכשלה אצל נדרים: "${String(params.Message).slice(0, 200)}". הדיווח לא מזהה מי — אם חברה תפנה על תשלום שלא עבר, זו כנראה היא; לרוב זה כרטיס שנדרים חוסמים (פתרון מולם).`,
+      context: record,
+      dedupeKey: `provider-error:${String(params.Message).slice(0, 60)}`,
+    });
+    return NextResponse.json({ ok: true, noted: "provider_error" });
+  }
+
   // 1. Authenticate: the right address, or the shared secret. Either suffices.
   const allowlist = [
     ...KNOWN_NEDARIM_IPS,
