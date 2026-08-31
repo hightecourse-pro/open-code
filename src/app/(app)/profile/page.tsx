@@ -242,15 +242,15 @@ export default async function ProfilePage({
            member track — the questionnaire reopens, a payer re-activates. */
         <div className="border border-ink-200 bg-white rounded-[16px] p-4 flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[220px] text-[13px] text-ink-700">
-            <b className="text-ink-1000">מעדיפה להיות חברה רגילה במסלול מנוי?</b> אפשר לעבור —
+            <b className="text-ink-1000">מעדיפה להיות משתתפת רגילה?</b> אפשר לעבור למסלול הרגיל —
             שאלון החברות ייפתח לך (מה שכבר מילאת יישמר), ואם כבר שילמת המנוי יחובר אוטומטית.
           </div>
           <ConfirmActionButton
             action={switchMentorToMemberTrack}
-            message="לעבור למסלול חברה רגילה? הכתר יוסר ושאלון החברות ייפתח. אם יש לך תשלום פעיל — המנוי יחובר מיד."
+            message="לעבור למסלול הרגיל? הכתר יוסר ושאלון החברות ייפתח. מנוי הוא לבחירתך — ואם כבר שילמת, הוא יחובר מיד."
             className="font-display font-semibold text-[13px] px-4 py-2 rounded-md border-[1.5px] border-ink-300 text-ink-700 hover:border-brand-purple hover:text-brand-purple transition-colors"
           >
-            מעבר למסלול מנוי
+            מעבר למסלול הרגיל
           </ConfirmActionButton>
         </div>
       )}

@@ -123,21 +123,14 @@ export function SubscriptionCard({
       )}
 
       {active && (
-        /* Card replacement rides the request channel (a member, 1/9): the
-           standing order lives in Nedarim, so the team coordinates the swap. */
-        <button
-          type="button"
-          onClick={() =>
-            window.dispatchEvent(
-              new CustomEvent("oc:open-request", {
-                detail: { subject: "החלפת כרטיס אשראי למנוי" },
-              })
-            )
-          }
+        /* Fully self-serve (the owner, 1/9): a new standing order with the
+           new card, straight through the secure Nedarim form. */
+        <Link
+          href="/subscription/replace-card"
           className="text-[12.5px] text-ink-500 hover:text-brand-purple underline w-fit"
         >
-          החלפת כרטיס אשראי — כתבי לנו ונסדיר את זה יחד
-        </button>
+          החלפת כרטיס אשראי
+        </Link>
       )}
 
       {active && canceledAt && (

@@ -97,8 +97,7 @@ export function SessionWatch({ sessionId, links }: { sessionId: string; links: W
               <p className="text-[11.5px] text-ink-400 mt-1 flex items-center gap-2 flex-wrap">
                 <span>
                   בפתיחה הראשונה נפתחת לך גישה בדרייב — אם הנגן מבקש הרשאה, חכי כמה שניות
-                  ולחצי רענון. עדיין לא נטען? הדפדפן כנראה חוסם התחברות לדרייב בתוך העמוד —
-                  פתחי בדרייב עם האייקון שלמעלה, זה אותו סרטון בדיוק 💜
+                  ולחצי רענון. עדיין לא נטען, או שמופיעה חסימה (למשל של נטפרי)? פתחי בדרייב עם האייקון שלמעלה — זה אותו סרטון בדיוק 💜
                 </span>
                 <button
                   type="button"

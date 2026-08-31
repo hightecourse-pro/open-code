@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { raiseAlert } from "@/lib/alerts";
 import { queueRevokeAll } from "@/lib/drive-shares";
 import { buildPlans } from "./plans";
 import { getPricingAdmin } from "./pricing";
@@ -61,6 +62,38 @@ export async function activateSubscription(input: ActivateInput) {
       .select("id")
       .single();
     subscriptionId = created?.id ?? null;
+  }
+
+  // Card replacement (the owner, 1/9): a NEW standing order for a member who
+  // already has one means the OLD keva must be canceled in the Nedarim
+  // console — Nedarim exposes no cancel API, so the alert is the handoff.
+  // Detected BEFORE recording the new payment, off the previous newest one.
+  const newKeva = ((input.raw as Record<string, unknown> | null)?.KevaId as string | undefined) ?? null;
+  if (newKeva) {
+    const { data: lastPay } = await admin
+      .from("payments")
+      .select("raw")
+      .eq("profile_id", input.profileId)
+      .eq("status", "succeeded")
+      .order("paid_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const oldKeva = ((lastPay?.raw as Record<string, unknown> | null)?.KevaId as string | undefined) ?? null;
+    if (oldKeva && oldKeva !== newKeva) {
+      const { data: who } = await admin
+        .from("profiles")
+        .select("full_name")
+        .eq("id", input.profileId)
+        .maybeSingle();
+      await raiseAlert({
+        kind: "keva_replaced",
+        severity: "critical",
+        title: `${who?.full_name ?? "חברה"} החליפה כרטיס אשראי — לבטל את הקבע הישן ${oldKeva} בנדרים`,
+        body: `הוקמה הוראת קבע חדשה (${newKeva}) במקום הישנה (${oldKeva}). את הישנה חייבים לבטל ידנית בקונסולת נדרים — אחרת הכרטיס הישן ימשיך להיות מחויב במקביל.`,
+        context: { profileId: input.profileId, oldKeva, newKeva },
+        dedupeKey: `keva-replace:${newKeva}`,
+      });
+    }
   }
 
   // Record the payment.
