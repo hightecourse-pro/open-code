@@ -179,6 +179,43 @@ export async function sendMessage(conversationId: string, formData: FormData) {
   revalidatePath("/chat");
 }
 
+/** How long a sent message stays editable — WhatsApp's convention. */
+const EDIT_WINDOW_MS = 15 * 60 * 1000;
+
+/**
+ * Rewrite the caller's OWN message (the owner, 1/9: "אפשרות לערוך בצ'אט") —
+ * within 15 minutes of sending. Same sanitation as sendMessage; edited_at
+ * marks the bubble. Members have no UPDATE policy on messages, so the write
+ * runs with the service role after the sender+window checks.
+ */
+export async function editMessage(messageId: string, formData: FormData): Promise<void> {
+  const raw = String(formData.get("body") ?? "").trim();
+  const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : decodeHtmlEntities(raw);
+  const plain = isRichHtml(raw) ? htmlToPlainText(body) : body;
+  if (!plain.trim() || plain.length > 2000 || body.length > 10000) return;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+  // Her client can only read messages of her own conversations — and only
+  // her OWN message may change.
+  const { data: msg } = await supabase
+    .from("messages")
+    .select("id, sender_id, created_at")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (!msg || msg.sender_id !== user.id) return;
+  if (Date.now() - new Date(msg.created_at).getTime() > EDIT_WINDOW_MS) return;
+
+  await createAdminClient()
+    .from("messages")
+    .update({ body, edited_at: new Date().toISOString() })
+    .eq("id", messageId);
+  revalidatePath("/chat");
+}
+
 export interface ChatMemberHit {
   id: string;
   full_name: string;

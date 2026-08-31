@@ -12,7 +12,7 @@ import { NewChatButton } from "@/components/patterns/new-chat-button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
-import { sendMessage, startConversation, toggleReaction } from "./actions";
+import { editMessage, sendMessage, startConversation, toggleReaction } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
 
@@ -100,7 +100,7 @@ export default async function ChatPage({
     active
       ? supabase
           .from("messages")
-          .select("id, sender_id, body, created_at, reactions, reply_to_id")
+          .select("id, sender_id, body, created_at, reactions, reply_to_id, edited_at")
           .eq("conversation_id", active.id)
           .order("created_at", { ascending: false })
           .limit(200)
@@ -218,6 +218,7 @@ export default async function ChatPage({
     ...m,
     reactions: (m as { reactions?: Record<string, string> | null }).reactions ?? null,
     reply_to_id: (m as { reply_to_id?: string | null }).reply_to_id ?? null,
+    edited_at: (m as { edited_at?: string | null }).edited_at ?? null,
     attachments: messageAtt.get(m.id),
   }));
 
@@ -372,6 +373,7 @@ export default async function ChatPage({
               <ChatThread
                 messages={messagesWithFiles}
                 reactAction={canSend ? toggleReaction : undefined}
+                editAction={canSend ? editMessage : undefined}
                 meId={me.id}
                 otherName={activeOther?.full_name ?? undefined}
                 action={canSend ? sendMessage.bind(null, active.id) : undefined}

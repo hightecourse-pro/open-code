@@ -18,7 +18,12 @@ export interface ThreadMessage {
   reactions?: Record<string, string> | null;
   /** The quoted message's id (chat reply), when there is one. */
   reply_to_id?: string | null;
+  /** Set when the sender edited the message. */
+  edited_at?: string | null;
 }
+
+/** How long a sent message stays editable — mirrors the server's window. */
+const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 /** The reaction palette — must match the server action's allowlist. */
 const REACTION_EMOJIS = ["💜", "👍", "😂", "🎉", "🙏", "😮"];
@@ -71,6 +76,7 @@ export function ChatThread({
   hint,
   footer,
   reactAction,
+  editAction,
 }: {
   messages: ThreadMessage[];
   meId: string;
@@ -84,6 +90,8 @@ export function ChatThread({
   footer?: ReactNode;
   /** Toggles the caller's emoji on a message — absent on read-only threads. */
   reactAction?: (messageId: string, emoji: string) => Promise<void>;
+  /** Rewrites the caller's own message — absent on read-only threads. */
+  editAction?: (messageId: string, formData: FormData) => Promise<void>;
 }) {
   const [bubbles, addBubble] = useOptimistic<Bubble[], string>(messages, (state, body) => [
     ...state,
@@ -101,6 +109,8 @@ export function ChatThread({
   const [failed, setFailed] = useState(false);
   // Quote-reply state: what the next send will quote (shown above the box).
   const [replyTo, setReplyTo] = useState<{ id: string; preview: string; name: string } | null>(null);
+  // Edit state: which of HER messages the box is rewriting right now.
+  const [editing, setEditing] = useState<{ id: string; original: string } | null>(null);
   // Which message's emoji palette is open, and optimistic reaction overlays.
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   const [localReactions, setLocalReactions] = useState<Record<string, Record<string, string>>>({});
@@ -274,6 +284,21 @@ export function ChatThread({
                         🙂
                       </button>
                     )}
+                    {editAction && mine && Date.now() - new Date(m.created_at).getTime() < EDIT_WINDOW_MS && (
+                      <button
+                        type="button"
+                        aria-label="עריכת ההודעה"
+                        onClick={() => {
+                          setEditing({ id: m.id, original: m.body });
+                          setReplyTo(null);
+                          composerRef.current?.setHtml(m.body);
+                          composerRef.current?.focus();
+                        }}
+                        className="w-6 h-6 rounded-full text-[12px] text-ink-400 hover:bg-ink-100 cursor-pointer"
+                      >
+                        ✏️
+                      </button>
+                    )}
                     {action && (
                       <button
                         type="button"
@@ -342,6 +367,7 @@ export function ChatThread({
                 suppressHydrationWarning
               >
                 {m.pending ? "נשלחת…" : timeAgo(m.created_at)}
+                {m.edited_at && !m.pending && " · נערכה"}
               </span>
             </div>
           );
@@ -364,7 +390,23 @@ export function ChatThread({
           {hint && (
             <div className="px-3.5 pt-2.5 text-[12.5px] text-ink-500 leading-relaxed">{hint}</div>
           )}
-          {replyTo && (
+          {editing && (
+            <div className="mx-3.5 mt-2 flex items-start gap-2 border-s-2 border-brand-pink-deep bg-tint-pink/40 rounded-md px-3 py-1.5 text-[12.5px] text-ink-700">
+              <span className="flex-1 min-w-0 truncate">✏️ עריכת הודעה — שליחה תעדכן את ההודעה המקורית</span>
+              <button
+                type="button"
+                aria-label="ביטול העריכה"
+                onClick={() => {
+                  setEditing(null);
+                  composerRef.current?.setHtml("");
+                }}
+                className="text-ink-400 hover:text-ink-700 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          {replyTo && !editing && (
             <div className="mx-3.5 mt-2 flex items-start gap-2 border-s-2 border-brand-purple bg-tint-purple/50 rounded-md px-3 py-1.5 text-[12.5px] text-ink-700">
               <span className="flex-1 min-w-0 truncate">
                 {replyTo.name && <b>{replyTo.name}: </b>}
@@ -386,6 +428,14 @@ export function ChatThread({
               const body = String(formData.get("body") ?? "").trim();
               if (!body) return;
               setFailed(false);
+              if (editing) {
+                // Rewriting, not sending: no optimistic bubble, no delivery
+                // watch — the revalidated thread brings the new text back.
+                const target = editing.id;
+                setEditing(null);
+                await editAction?.(target, formData);
+                return;
+              }
               if (replyTo) {
                 formData.set("reply_to", replyTo.id);
                 setReplyTo(null);

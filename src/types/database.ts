@@ -1170,6 +1170,8 @@ export interface Database {
           reply_to_id: string | null;
           /** Set once the grace-period email cron handled this message. */
           email_notified_at: string | null;
+          /** Set when the sender edited her message (15-minute window). */
+          edited_at: string | null;
         };
         Insert: {
           id?: string;
@@ -1181,6 +1183,7 @@ export interface Database {
           reactions?: Json;
           reply_to_id?: string | null;
           email_notified_at?: string | null;
+          edited_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
         Relationships: [];
