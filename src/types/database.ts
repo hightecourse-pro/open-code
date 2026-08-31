@@ -1164,6 +1164,10 @@ export interface Database {
           body: string;
           read_at: string | null;
           created_at: string;
+          /** One emoji per participant, keyed by profile id. */
+          reactions: Json;
+          /** The quoted message (chat reply), when there is one. */
+          reply_to_id: string | null;
         };
         Insert: {
           id?: string;
@@ -1172,6 +1176,8 @@ export interface Database {
           body: string;
           read_at?: string | null;
           created_at?: string;
+          reactions?: Json;
+          reply_to_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
         Relationships: [];

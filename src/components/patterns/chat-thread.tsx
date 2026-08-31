@@ -14,7 +14,14 @@ export interface ThreadMessage {
   body: string;
   created_at: string;
   attachments?: AttachmentView[];
+  /** One emoji per participant, keyed by profile id. */
+  reactions?: Record<string, string> | null;
+  /** The quoted message's id (chat reply), when there is one. */
+  reply_to_id?: string | null;
 }
+
+/** The reaction palette — must match the server action's allowlist. */
+const REACTION_EMOJIS = ["💜", "👍", "😂", "🎉", "🙏", "😮"];
 
 /** A message on screen — either from the server, or hers still on its way. */
 type Bubble = ThreadMessage & { pending?: boolean };
@@ -63,6 +70,7 @@ export function ChatThread({
   action,
   hint,
   footer,
+  reactAction,
 }: {
   messages: ThreadMessage[];
   meId: string;
@@ -74,6 +82,8 @@ export function ChatThread({
   hint?: ReactNode;
   /** Rendered instead of the box when there is no action. */
   footer?: ReactNode;
+  /** Toggles the caller's emoji on a message — absent on read-only threads. */
+  reactAction?: (messageId: string, emoji: string) => Promise<void>;
 }) {
   const [bubbles, addBubble] = useOptimistic<Bubble[], string>(messages, (state, body) => [
     ...state,
@@ -89,6 +99,31 @@ export function ChatThread({
   // is it returning inside the revalidated thread.
   const [sending, setSending] = useState<{ body: string; key: string; seen: number } | null>(null);
   const [failed, setFailed] = useState(false);
+  // Quote-reply state: what the next send will quote (shown above the box).
+  const [replyTo, setReplyTo] = useState<{ id: string; preview: string; name: string } | null>(null);
+  // Which message's emoji palette is open, and optimistic reaction overlays.
+  const [pickerFor, setPickerFor] = useState<string | null>(null);
+  const [localReactions, setLocalReactions] = useState<Record<string, Record<string, string>>>({});
+  const byId = new Map(bubbles.map((b) => [b.id, b]));
+  /** The quoted snippet a bubble shows — flattened words, capped. */
+  const quotePreview = (id: string): { preview: string; name: string } | null => {
+    const q = byId.get(id);
+    if (!q) return { preview: "הודעה קודמת", name: "" };
+    return {
+      preview: plainKey(q.body).slice(0, 90) || "קובץ מצורף",
+      name: q.sender_id === meId ? "את" : otherName ?? "היא",
+    };
+  };
+  const reactionsOf = (m: Bubble): Record<string, string> =>
+    localReactions[m.id] ?? ((m.reactions ?? {}) as Record<string, string>);
+  const toggleLocal = (m: Bubble, emoji: string) => {
+    const cur = { ...reactionsOf(m) };
+    if (cur[meId] === emoji) delete cur[meId];
+    else cur[meId] = emoji;
+    setLocalReactions((s) => ({ ...s, [m.id]: cur }));
+    setPickerFor(null);
+    void reactAction?.(m.id, emoji);
+  };
   const composerRef = useRef<RichEditorHandle | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   // The freshest thread the server handed us — the failure timer consults THIS
@@ -188,7 +223,7 @@ export function ChatThread({
                   {mine ? "את" : otherName ?? "הצד השני"}
                 </span>
               )}
-              <div className={cn("flex items-end gap-1.5", !mine && "flex-row-reverse")}>
+              <div className={cn("group flex items-end gap-1.5", !mine && "flex-row-reverse")}>
                 {runStart && !mine ? (
                   <span
                     aria-hidden
@@ -207,10 +242,101 @@ export function ChatThread({
                       : "bg-white border border-ink-200 text-ink-900 rounded-2xl rounded-bl-md"
                   )}
                 >
+                  {m.reply_to_id &&
+                    (() => {
+                      const q = quotePreview(m.reply_to_id);
+                      return q ? (
+                        <div
+                          className={cn(
+                            "border-s-2 ps-2 mb-1.5 text-[12px] leading-snug rounded-sm",
+                            mine ? "border-white/60 text-white/85" : "border-brand-purple text-ink-500"
+                          )}
+                        >
+                          {q.name && <b>{q.name}: </b>}
+                          {q.preview}
+                        </div>
+                      ) : null;
+                    })()}
                   <MessageBody body={m.body} invert={mine} />
                   {m.attachments && <AttachmentList items={m.attachments} compact />}
                 </div>
+                {/* Reply + react — appear on hover (always reachable on touch
+                    via the reaction chips row below). */}
+                {!m.pending && (action || reactAction) && (
+                  <span className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity mb-1">
+                    {reactAction && (
+                      <button
+                        type="button"
+                        aria-label="הוספת תגובה"
+                        onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}
+                        className="w-6 h-6 rounded-full text-[13px] text-ink-400 hover:bg-ink-100 cursor-pointer"
+                      >
+                        🙂
+                      </button>
+                    )}
+                    {action && (
+                      <button
+                        type="button"
+                        aria-label="ציטוט"
+                        onClick={() => {
+                          const q = quotePreview(m.id);
+                          setReplyTo({ id: m.id, preview: q?.preview ?? "", name: q?.name ?? "" });
+                          composerRef.current?.focus();
+                        }}
+                        className="w-6 h-6 rounded-full text-[12px] text-ink-400 hover:bg-ink-100 cursor-pointer"
+                      >
+                        ↩
+                      </button>
+                    )}
+                  </span>
+                )}
               </div>
+              {pickerFor === m.id && reactAction && (
+                <div
+                  className={cn(
+                    "flex gap-1 bg-white border border-ink-200 rounded-full px-2 py-1 shadow-md mt-1 z-10",
+                    !mine && "ms-[30px]"
+                  )}
+                >
+                  {REACTION_EMOJIS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => toggleLocal(m, e)}
+                      className={cn(
+                        "text-[16px] leading-none p-1 rounded-full hover:bg-ink-100 cursor-pointer",
+                        reactionsOf(m)[meId] === e && "bg-tint-purple"
+                      )}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {Object.keys(reactionsOf(m)).length > 0 && (
+                <div className={cn("flex gap-1 -mt-1.5 z-[5]", !mine && "ms-[30px]")}>
+                  {Object.entries(
+                    Object.values(reactionsOf(m)).reduce<Record<string, number>>((acc, e) => {
+                      acc[e] = (acc[e] ?? 0) + 1;
+                      return acc;
+                    }, {})
+                  ).map(([emoji, n]) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => reactAction && toggleLocal(m, emoji)}
+                      className={cn(
+                        "inline-flex items-center gap-0.5 text-[12px] leading-none bg-white border rounded-full px-1.5 py-0.5 shadow-sm",
+                        reactionsOf(m)[meId] === emoji ? "border-brand-purple" : "border-ink-200",
+                        reactAction && "cursor-pointer hover:border-brand-purple"
+                      )}
+                    >
+                      {emoji}
+                      {n > 1 && <span className="text-ink-500">{n}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
               <span
                 className={cn("text-[10.5px] text-ink-400 mt-0.5 px-1", !mine && "me-[30px]")}
                 suppressHydrationWarning
@@ -238,12 +364,32 @@ export function ChatThread({
           {hint && (
             <div className="px-3.5 pt-2.5 text-[12.5px] text-ink-500 leading-relaxed">{hint}</div>
           )}
+          {replyTo && (
+            <div className="mx-3.5 mt-2 flex items-start gap-2 border-s-2 border-brand-purple bg-tint-purple/50 rounded-md px-3 py-1.5 text-[12.5px] text-ink-700">
+              <span className="flex-1 min-w-0 truncate">
+                {replyTo.name && <b>{replyTo.name}: </b>}
+                {replyTo.preview}
+              </span>
+              <button
+                type="button"
+                aria-label="ביטול הציטוט"
+                onClick={() => setReplyTo(null)}
+                className="text-ink-400 hover:text-ink-700 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          )}
           <ChatComposer
             editorRef={composerRef}
             action={async (formData) => {
               const body = String(formData.get("body") ?? "").trim();
               if (!body) return;
               setFailed(false);
+              if (replyTo) {
+                formData.set("reply_to", replyTo.id);
+                setReplyTo(null);
+              }
               const key = plainKey(body);
               setSending({ body, key, seen: countMine(messages, meId, key) });
               addBubble(body);

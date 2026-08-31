@@ -11,6 +11,38 @@ import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
+/** The reaction palette — WhatsApp-style, one emoji per person per message. */
+const REACTION_EMOJIS = new Set(["💜", "👍", "😂", "🎉", "🙏", "😮"]);
+
+/**
+ * Toggle the caller's emoji reaction on a message (the owner, 1/9). Her own
+ * client can only SELECT messages of conversations she is in — that read is
+ * the participation check; the write itself runs with the service role
+ * because members have no UPDATE policy on messages (by design).
+ */
+export async function toggleReaction(messageId: string, emoji: string): Promise<void> {
+  if (!REACTION_EMOJIS.has(emoji)) return;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const { data: msg } = await supabase
+    .from("messages")
+    .select("id, reactions")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (!msg) return;
+  const current = { ...((msg.reactions ?? {}) as Record<string, string>) };
+  if (current[user.id] === emoji) delete current[user.id];
+  else current[user.id] = emoji;
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  await createAdminClient()
+    .from("messages")
+    .update({ reactions: current as never })
+    .eq("id", messageId);
+}
+
 /** Find or create a 1:1 conversation with another member, then open it. */
 export async function startConversation(otherId: string) {
   const supabase = await createClient();
@@ -133,12 +165,27 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     isFirstNew = (count ?? 0) === 0;
   }
 
+  // Quoting (the owner, 1/9): a reply carries the quoted message's id — only
+  // if that message really lives in THIS conversation (her client can only
+  // read it if she's a participant, so the select is the check).
+  let replyToId: string | null = null;
+  const replyTo = String(formData.get("reply_to") ?? "").trim();
+  if (replyTo) {
+    const { data: quoted } = await supabase
+      .from("messages")
+      .select("id, conversation_id")
+      .eq("id", replyTo)
+      .maybeSingle();
+    if (quoted?.conversation_id === conversationId) replyToId = quoted.id;
+  }
+
   const { data: sent } = await supabase
     .from("messages")
     .insert({
       conversation_id: conversationId,
       sender_id: user.id,
       body,
+      reply_to_id: replyToId,
     })
     .select("id")
     .single();
