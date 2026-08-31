@@ -30,6 +30,18 @@ export interface MemberRow {
   profile_completed?: boolean;
   /** Where she studied — replaces the specialization column (the owner, 1/9). */
   study_place?: string | null;
+  /** Payment state for the export — "מנוי פעיל עד…" / payers-list / "". */
+  payment?: string;
+}
+
+/** The member's TYPE in words — the export's status column. */
+function typeLabel(m: MemberRow): string {
+  if (m.role === "admin") return "צוות";
+  if (m.role === "mentor") return m.status === "active" ? "מנטורית" : m.status === "pending" ? "מנטורית לאישור" : "מנטורית (לא פעילה)";
+  if (m.status === "active") return "מנויה";
+  if (m.status === "pending") return m.profile_completed ? "משתתפת ללא מנוי" : "באמצע השאלון";
+  if (m.status === "paused") return "מושהית";
+  return "חסומה";
 }
 
 /** Copies the email and confirms with a brief ✓. */
@@ -268,6 +280,43 @@ export function MembersTable({
             {finding && <span className="font-mono text-[11px]">({effective.length})</span>}
           </button>
         )}
+        {/* Excel export (the owner, 1/9) — exactly the rows currently shown,
+            so the chips/filters shape the file. UTF-8 BOM keeps Hebrew intact
+            when Excel opens the CSV. */}
+        <button
+          type="button"
+          onClick={() => {
+            const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+            const header = ["שם", "טלפון", "מייל", "סמינר", "אזור", "סטטוס", "מצב תשלום", "VIP", "הצטרפה"];
+            const lines = [header.map(esc).join(",")];
+            for (const m of rows) {
+              lines.push(
+                [
+                  m.full_name,
+                  m.phone ?? "",
+                  m.email ?? "",
+                  m.study_place ?? "",
+                  m.region ?? "",
+                  typeLabel(m),
+                  m.payment ?? "",
+                  m.is_vip ? "VIP" : "",
+                  new Date(m.created_at).toLocaleDateString("he-IL"),
+                ]
+                  .map(esc)
+                  .join(",")
+              );
+            }
+            const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = `חברות-קוד-פתוח-${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+          }}
+          className="inline-flex items-center gap-1.5 text-[13px] font-semibold px-3.5 py-2 rounded-md border border-ink-300 text-ink-700 hover:border-brand-purple hover:text-brand-purple transition-colors cursor-pointer"
+        >
+          ⬇ יצוא לאקסל
+        </button>
         <span className="text-[12px] text-ink-500 ms-auto">
           {finding && matching ? "מסננת…" : `${rows.length} תוצאות`}
         </span>

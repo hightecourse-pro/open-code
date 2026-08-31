@@ -100,6 +100,31 @@ export default async function AdminMembersPage({
       if (typeof p.value === "string" && p.value) phoneOf.set(p.profile_id, p.value);
     }
   }
+  // Payment state per member — for the Excel export (the owner, 1/9):
+  // a live subscription (with its renewal date), or presence on the imported
+  // Nedarim payers list, or nothing.
+  const DATE_IL = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Jerusalem" });
+  const [{ data: liveSubs }, { data: extPays }] = await Promise.all([
+    admin
+      .from("subscriptions")
+      .select("profile_id, status, current_period_end, canceled_at")
+      .in("status", ["active", "trialing"]),
+    admin.from("external_payments").select("email, claimed_by, needs_review").eq("needs_review", false),
+  ]);
+  const subOf = new Map((liveSubs ?? []).map((s) => [s.profile_id, s]));
+  const payerEmails = new Set((extPays ?? []).map((e) => (e.email ?? "").toLowerCase()).filter(Boolean));
+  const claimedBy = new Set((extPays ?? []).map((e) => e.claimed_by).filter(Boolean));
+  const paymentOf = (id: string): string => {
+    const s = subOf.get(id);
+    if (s) {
+      const until = s.current_period_end ? ` עד ${DATE_IL.format(new Date(s.current_period_end))}` : "";
+      return `מנוי פעיל${until}${s.canceled_at ? " (ביטלה חידוש)" : ""}`;
+    }
+    const email = (emailOf.get(id) ?? "").toLowerCase();
+    if (claimedBy.has(id) || (email && payerEmails.has(email))) return "ברשימת המשלמות של נדרים";
+    return "";
+  };
+
   // Study place replaces the specialization column (the owner, 1/9) — stored
   // as the select's VALUE; resolve to the human label, free-typed אחר as-is.
   const studyQ = (questions ?? []).find((q) => q.key === "study_place");
@@ -209,6 +234,7 @@ export default async function AdminMembersPage({
       phone: phoneOf.get(m.id) ?? null,
       profile_completed: m.profile_completed === true,
       study_place: studyOf.get(m.id) ?? null,
+      payment: paymentOf(m.id),
     };
   });
 
