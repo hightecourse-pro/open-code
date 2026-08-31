@@ -263,8 +263,9 @@ export default function Hackathon2026Page() {
             </span>
           </h1>
           <p className="t-body-lg text-ink-700 max-w-lg">
-            אתגרי AI אמיתיים מארגונים אמיתיים. בוחרת אתגר, בונה פתרון עובד — ואנחנו איתך בכל
-            צעד.
+            אתגרי AI אמיתיים מהתעשייה.
+            <span className="block mt-1">בהאקתון הזה את בוחרת את האתגר שהכי מלהיב אותך</span>
+            <span className="block font-bold text-ink-900">ומתמודדת על המקום הראשון! 🏆</span>
           </p>
           <div className="flex items-center gap-2.5 flex-wrap justify-center">
             <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[13px] font-bold shadow-md">
@@ -446,23 +447,60 @@ export default function Hackathon2026Page() {
             {"// טיפ: רישיון לכלי AI רציני כמו Claude Code שווה את זה — הוא בונה איתך את הפרויקט 🚀"}
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-12">
-            <div
-              className="bg-tint-purple/50 border-2 border-brand-purple/30 p-5 -rotate-1 hover:rotate-0 transition-transform shadow-[5px_6px_0_0_#DDC9EC]"
-              style={{ borderRadius: "24px 20px 26px 22px" }}
-            >
-              <div className="text-[30px] mb-1.5 w-fit"><span className="h26-wiggle">🧠</span></div>
-              <h3 className="font-display font-black text-[16px]">מנוע AI</h3>
-              <p className="t-body-sm text-ink-700 mt-1">הלב של הפרויקט — מקבל את הבעיה של הארגון ומחזיר פתרון אמיתי.</p>
+          {/* מה בונים? — the two halves of the project, joined by a drawn plus
+              (the owner, 31/8: add the question with a curly arrow + redesign) */}
+          <div className="mt-16 relative">
+            <Sparkle className="absolute -top-2 left-[12%] w-5 h-5" color="#E0418D" delay="0.7s" />
+            <div className="flex items-end justify-center gap-1 mb-2">
+              <span className="font-display font-black text-[26px] text-ink-1000 -rotate-3">
+                מה בונים?
+                <Squiggle className="block w-28 mx-auto -mt-1" />
+              </span>
+              <SwirlArrow className="h26-float w-14 h-12 mb-1" color="#E0418D" />
             </div>
-            <div
-              className="bg-tint-pink/40 border-2 border-brand-pink/30 p-5 rotate-1 hover:rotate-0 transition-transform shadow-[5px_6px_0_0_#F3C6DD]"
-              style={{ borderRadius: "20px 26px 22px 26px" }}
-            >
-              <div className="text-[30px] mb-1.5 w-fit"><span className="h26-float inline-block">☁️</span></div>
-              <h3 className="font-display font-black text-[16px]">ממשק בענן</h3>
-              <p className="t-body-sm text-ink-700 mt-1">UI שאפשר לגשת אליו מכל מקום ולראות את הפתרון עובד — ככה השופטות והארגון פוגשים אותו.</p>
+
+            <div className="flex flex-col sm:flex-row items-stretch justify-center gap-4 sm:gap-3 mt-6">
+              <div
+                className="flex-1 max-w-xs mx-auto sm:mx-0 bg-tint-purple/50 border-2 border-brand-purple/40 p-5 text-center -rotate-2 hover:rotate-0 transition-transform shadow-[6px_7px_0_0_#DDC9EC]"
+                style={{ borderRadius: "30px 22px 34px 24px" }}
+              >
+                <span
+                  className="w-14 h-14 mx-auto bg-white border-2 border-brand-purple/30 text-[28px] flex items-center justify-center -rotate-6"
+                  style={{ borderRadius: "52% 48% 45% 55% / 48% 55% 45% 52%" }}
+                >
+                  <span className="h26-wiggle">🧠</span>
+                </span>
+                <h3 className="font-display font-black text-[17px] mt-2">מנוע AI</h3>
+                <p className="t-body-sm text-ink-700 mt-1">הלב של הפרויקט — מקבל את הבעיה של הארגון ומחזיר פתרון אמיתי.</p>
+              </div>
+
+              <div className="flex items-center justify-center shrink-0">
+                <span
+                  className="h26-wobble w-12 h-12 bg-brand-gradient text-white font-display font-black text-[26px] flex items-center justify-center shadow-glow-pink"
+                  style={{ borderRadius: "55% 45% 48% 52% / 45% 52% 48% 55%" }}
+                >
+                  +
+                </span>
+              </div>
+
+              <div
+                className="flex-1 max-w-xs mx-auto sm:mx-0 bg-tint-pink/40 border-2 border-brand-pink/40 p-5 text-center rotate-2 hover:rotate-0 transition-transform shadow-[6px_7px_0_0_#F3C6DD]"
+                style={{ borderRadius: "22px 32px 24px 30px" }}
+              >
+                <span
+                  className="w-14 h-14 mx-auto bg-white border-2 border-brand-pink/30 text-[28px] flex items-center justify-center rotate-6"
+                  style={{ borderRadius: "45% 55% 52% 48% / 55% 45% 52% 48%" }}
+                >
+                  <span className="h26-float inline-block">☁️</span>
+                </span>
+                <h3 className="font-display font-black text-[17px] mt-2">ממשק בענן</h3>
+                <p className="t-body-sm text-ink-700 mt-1">UI שאפשר לגשת אליו מכל מקום ולראות את הפתרון עובד — ככה השופטות והארגון פוגשים אותו.</p>
+              </div>
             </div>
+
+            <p className="text-center font-display font-bold text-[15px] text-brand-purple mt-5 rotate-1">
+              = פרויקט AI אמיתי שעובד מכל מקום <Sparkle className="inline-block w-4 h-4 align-[-2px]" color="#F0B429" />
+            </p>
           </div>
         </div>
       </section>
