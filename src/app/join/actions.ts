@@ -113,7 +113,7 @@ export async function switchMentorToMemberTrack(): Promise<void> {
   redirect("/forum");
 }
 
-export async function revertMentorApplication(): Promise<void> {
+async function revertMentor(): Promise<void> {
   const user = await getUser();
   if (!user) redirect("/login");
   const supabase = await createClient();
@@ -141,5 +141,19 @@ export async function revertMentorApplication(): Promise<void> {
     console.error("[join] revert reconcile failed:", user.id, e);
   }
   revalidatePath("/", "layout");
+}
+
+export async function revertMentorApplication(): Promise<void> {
+  await revertMentor();
   redirect("/join");
+}
+
+/**
+ * The same way out, offered INSIDE the questionnaire (the owner, 31/8: "מי
+ * שלחצה בטעות על מנטורית אין לה דרך יציאה — תאפשר בכל שלב"). Lands back on
+ * the wizard, now on the regular-member track with her shared answers kept.
+ */
+export async function revertMentorFromWizard(): Promise<void> {
+  await revertMentor();
+  redirect("/");
 }
