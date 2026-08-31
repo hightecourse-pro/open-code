@@ -7,8 +7,8 @@ import { mentorScores } from "@/lib/mentor-score";
 
 export const metadata: Metadata = { title: "המשתתפות שלנו" };
 
-/** Plenty for browsing; a bigger community reaches for the search box. */
-const MAX_RESULTS = 200;
+/** PostgREST page size — the loop below walks pages until it drains. */
+const PAGE = 500;
 
 export default async function MembersPage({
   searchParams,
@@ -28,31 +28,31 @@ export default async function MembersPage({
   // "אמורים לראות את כולן".
   // (Before the migration runs this returns nothing and the empty state shows.)
   //
-  // The whole directory loads once (up to MAX_RESULTS) and the search box
-  // filters it client-side as she types (MembersInstantList) — instant, no
-  // URL writes. That means the search only sees the loaded rows; today's
-  // community fits well inside the cap.
-  // A ?q= runs the search on the SERVER over the whole community — the
-  // instant client filter only sees the loaded page, and past a few hundred
-  // members that page stops covering everyone (the ~93%-invisible problem).
+  // The WHOLE directory loads, paged behind the scenes (the owner, 1/9:
+  // "תביא את המספר המלא, אם נדרש בפייג'ינג נסתר") — the old 200-row cap
+  // silently hid everyone past the first page. The search box still filters
+  // client-side over what is now the complete list; ?q= from old links keeps
+  // narrowing on the server too.
   const serverNeedle = (q ?? "").trim().slice(0, 60);
-  let directoryQuery = supabase
-    .from("members_directory")
-    .select("id, full_name, first_name, avatar_initials, specialization, region, role, bio, created_at, is_subscriber")
-    .neq("id", me.id)
-    .order("full_name", { ascending: true })
-    .limit(MAX_RESULTS);
-  if (serverNeedle) {
-    directoryQuery = directoryQuery.or(
-      `full_name.ilike.%${serverNeedle}%,specialization.ilike.%${serverNeedle}%,region.ilike.%${serverNeedle}%`
-    );
+  const data: DirectoryMember[] = [];
+  for (let from = 0; ; from += PAGE) {
+    let pageQuery = supabase
+      .from("members_directory")
+      .select("id, full_name, first_name, avatar_initials, specialization, region, role, bio, created_at, is_subscriber")
+      .neq("id", me.id)
+      .order("full_name", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (serverNeedle) {
+      pageQuery = pageQuery.or(
+        `full_name.ilike.%${serverNeedle}%,specialization.ilike.%${serverNeedle}%,region.ilike.%${serverNeedle}%`
+      );
+    }
+    const { data: page } = await pageQuery;
+    data.push(...((page ?? []) as DirectoryMember[]));
+    if (!page || page.length < PAGE) break;
   }
-  const { data } = await directoryQuery;
   // Hebrew alphabetical — the database collation isn't necessarily Hebrew-aware.
-  const members: DirectoryMember[] = (data ?? []).sort((a, b) =>
-    a.full_name.localeCompare(b.full_name, "he")
-  );
-  const capped = members.length === MAX_RESULTS;
+  const members: DirectoryMember[] = data.sort((a, b) => a.full_name.localeCompare(b.full_name, "he"));
 
   // Mentor scores are public — the directory card carries them.
   const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
@@ -75,7 +75,7 @@ export default async function MembersPage({
       {/* Instant search — she types, the cards narrow, nothing navigates.
           An incoming ?q= from an old link still pre-fills the box. */}
       <MembersInstantList
-        capped={capped}
+        capped={false}
         initialQuery={(q ?? "").trim()}
         items={members.map((member) => ({
           id: member.id,
