@@ -23,6 +23,7 @@ import {
   Settings,
   Share2,
   Shield,
+  MessageSquareText,
   Users,
   type LucideIcon,
 } from "lucide-react";
@@ -73,6 +74,7 @@ const SECTIONS: AdminNavSection[] = [
     items: [
       { href: "/admin/analytics", label: "נתוני למידה", icon: BarChart3 },
       { href: "/admin/payments", label: "תשלומים", icon: CreditCard },
+      { href: "/admin/whatsapp", label: "וואטסאפ", icon: MessageSquareText },
       { href: "/admin/config", label: "הגדרות", icon: Settings },
       { href: "/admin/ai-keys", label: "מפתחות AI", icon: KeyRound },
       { href: "/admin/moderation", label: "מודרציה", icon: Shield },

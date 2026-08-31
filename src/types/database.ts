@@ -1495,6 +1495,56 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["reports"]["Insert"]>;
         Relationships: [];
       };
+      wa_contacts: {
+        Row: {
+          id: string;
+          wa_id: string;
+          display_name: string | null;
+          profile_id: string | null;
+          last_message_at: string | null;
+          last_inbound_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          wa_id: string;
+          display_name?: string | null;
+          profile_id?: string | null;
+          last_message_at?: string | null;
+          last_inbound_at?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["wa_contacts"]["Insert"]>;
+        Relationships: [];
+      };
+      wa_messages: {
+        Row: {
+          id: string;
+          contact_id: string;
+          direction: "in" | "out";
+          body: string;
+          wa_message_id: string | null;
+          status: "received" | "sent" | "delivered" | "read" | "failed";
+          template_name: string | null;
+          error: string | null;
+          sent_by: string | null;
+          raw: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          direction: "in" | "out";
+          body: string;
+          wa_message_id?: string | null;
+          status?: "received" | "sent" | "delivered" | "read" | "failed";
+          template_name?: string | null;
+          error?: string | null;
+          sent_by?: string | null;
+          raw?: Json | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["wa_messages"]["Insert"]>;
+        Relationships: [];
+      };
       personal_emails: {
         Row: {
           id: string;
