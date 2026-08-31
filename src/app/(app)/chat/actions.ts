@@ -81,7 +81,16 @@ export async function startConversation(otherId: string) {
   redirect(`/chat?c=${convId}`);
 }
 
-export async function sendMessage(conversationId: string, formData: FormData) {
+/**
+ * Returns an explicit verdict: {ok:true} means the row is in the database.
+ * The client once inferred delivery only from the revalidated thread coming
+ * back in time — on a cold serverless start that raced a 6s timer and branded
+ * DELIVERED messages "לא נשלחה" (the owner, 31/8). The verdict ends the guess.
+ */
+export async function sendMessage(
+  conversationId: string,
+  formData: FormData
+): Promise<{ ok: boolean }> {
   // The composer sends editor HTML; older clients (and tests) may still send
   // plain text. HTML passes the same sanitizing allowlist job descriptions
   // use, and every limit is measured on the words, not the markup.
@@ -91,7 +100,8 @@ export async function sendMessage(conversationId: string, formData: FormData) {
   const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : decodeHtmlEntities(raw);
   const plain = isRichHtml(raw) ? htmlToPlainText(body) : body;
   const attachIds = attachmentIdsFrom(formData);
-  if ((!plain.trim() && attachIds.length === 0) || plain.length > 2000 || body.length > 10000) return;
+  if ((!plain.trim() && attachIds.length === 0) || plain.length > 2000 || body.length > 10000)
+    return { ok: false };
 
   const supabase = await createClient();
   const {
@@ -106,7 +116,7 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     .select("a_id, b_id")
     .eq("id", conversationId)
     .maybeSingle();
-  if (!conv) return;
+  if (!conv) return { ok: false };
   const otherId = conv.a_id === user.id ? conv.b_id : conv.a_id;
   const [{ data: me }, otherRes] = await Promise.all([
     supabase.from("profiles").select("role, status, first_name, full_name").eq("id", user.id).single(),
@@ -120,12 +130,13 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     ? (await supabase.from("profiles").select("role, status").eq("id", otherId).single()).data
     : null;
   const other = otherRes.data ?? (otherFallback && { ...otherFallback, digest_frequency: "daily" });
-  if (other?.status !== "active" && other?.status !== "pending") return;
+  if (other?.status !== "active" && other?.status !== "pending") return { ok: false };
   // Free members read their history but don't send — EXCEPT to the team:
   // answering the team's personal note must never be behind a paywall.
-  if (!me) return;
+  if (!me) return { ok: false };
   const writingToTeam = other?.role === "admin";
-  if (!(me.status === "active" || me.role === "admin" || (writingToTeam && me.status === "pending"))) return;
+  if (!(me.status === "active" || me.role === "admin" || (writingToTeam && me.status === "pending")))
+    return { ok: false };
   // Who may be WRITTEN to (the owner, 1/9): the team writes to anyone still
   // here; a member writes only to מנויות (real payers — pending included),
   // approved mentors, and the team. The directory view is the single source
@@ -136,7 +147,8 @@ export async function sendMessage(conversationId: string, formData: FormData) {
       .select("role, is_subscriber")
       .eq("id", otherId)
       .maybeSingle();
-    if (!dir || !(dir.role === "admin" || dir.role === "mentor" || dir.is_subscriber)) return;
+    if (!dir || !(dir.role === "admin" || dir.role === "mentor" || dir.is_subscriber))
+      return { ok: false };
   }
 
   // Quoting (the owner, 1/9): a reply carries the quoted message's id — only
@@ -163,7 +175,8 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     })
     .select("id")
     .single();
-  if (sent) await linkAttachments(user.id, "message", sent.id, attachIds);
+  if (!sent) return { ok: false };
+  await linkAttachments(user.id, "message", sent.id, attachIds);
   // Service role: conversations has no RLS UPDATE policy, so the ordering
   // timestamp silently never moved. The sender was already validated above.
   await createAdminClient()
@@ -177,6 +190,7 @@ export async function sendMessage(conversationId: string, formData: FormData) {
   // (See drainChatEmailGrace in the session-reminders cron route.)
 
   revalidatePath("/chat");
+  return { ok: true };
 }
 
 /** How long a sent message stays editable — WhatsApp's convention. */

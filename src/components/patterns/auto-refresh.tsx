@@ -17,21 +17,30 @@ const IDLE_STOP_MS = 10 * 60 * 1000;
 export function AutoRefresh({ seconds = 45 }: { seconds?: number }) {
   const router = useRouter();
   const lastActive = useRef(0);
+  const lastRefresh = useRef(0);
 
   useEffect(() => {
     lastActive.current = Date.now();
+    lastRefresh.current = Date.now();
     const markActive = () => {
       lastActive.current = Date.now();
+    };
+    const refresh = () => {
+      lastRefresh.current = Date.now();
+      router.refresh();
     };
     const tick = () => {
       if (document.visibilityState !== "visible") return;
       if (Date.now() - lastActive.current > IDLE_STOP_MS) return; // asleep
-      router.refresh();
+      refresh();
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         markActive(); // coming back wakes the polling up
-        router.refresh();
+        // Refresh only when the data is actually stale. Firing on EVERY tab
+        // return meant a heavy server render raced her first click — exactly
+        // the "the site takes a while to wake up" feeling (the owner, 31/8).
+        if (Date.now() - lastRefresh.current > seconds * 1000) refresh();
       }
     };
     // ±20% jitter so a roomful of tabs doesn't tick in lockstep.

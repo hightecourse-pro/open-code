@@ -82,8 +82,10 @@ export function ChatThread({
   meId: string;
   /** Her display name — feeds the avatar chip beside her bubbles. */
   otherName?: string;
-  /** Missing when she can't write in this thread — `footer` says why. */
-  action?: (formData: FormData) => void | Promise<void>;
+  /** Missing when she can't write in this thread — `footer` says why.
+   *  A returned verdict ({ok}) is trusted outright; a void return falls back
+   *  to watching the revalidated thread (the old delivery detection). */
+  action?: (formData: FormData) => void | Promise<void | { ok: boolean }>;
   /** One line above the box framing what this conversation is for. */
   hint?: ReactNode;
   /** Rendered instead of the box when there is no action. */
@@ -443,7 +445,27 @@ export function ChatThread({
               const key = plainKey(body);
               setSending({ body, key, seen: countMine(messages, meId, key) });
               addBubble(body);
-              await action(formData);
+              try {
+                const verdict = await action(formData);
+                if (verdict && typeof verdict === "object" && "ok" in verdict) {
+                  // The server answered outright — no more inferring delivery
+                  // from a revalidation racing a timer (the owner, 31/8: a slow
+                  // cold start branded DELIVERED messages "לא נשלחה").
+                  setSending(null);
+                  if (!verdict.ok) {
+                    setFailed(true);
+                    composerRef.current?.setHtml(body);
+                    composerRef.current?.focus();
+                  }
+                }
+              } catch {
+                // The action itself failed to reach the server — that IS a
+                // real failure: hand her words back.
+                setSending(null);
+                setFailed(true);
+                composerRef.current?.setHtml(body);
+                composerRef.current?.focus();
+              }
             }}
           />
         </>
