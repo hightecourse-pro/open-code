@@ -2321,15 +2321,62 @@ export async function approveMentorApplication(profileId: string): Promise<void>
 }
 
 /**
+ * Junk-account block (the owner, 1/9): a spam/garbage signup is locked all
+ * the way — login banned, community access revoked (rejected) and hidden
+ * from every member-facing list. Reversible from the same button.
+ */
+export async function setMemberJunk(profileId: string, junk: boolean): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  await admin
+    .from("profiles")
+    .update(junk ? { status: "rejected", is_hidden: true } : { status: "pending", is_hidden: false })
+    .eq("id", profileId);
+  try {
+    // 100 years is Supabase's idiom for a permanent ban; "none" lifts it.
+    await admin.auth.admin.updateUserById(profileId, { ban_duration: junk ? "876000h" : "none" });
+  } catch (e) {
+    console.error("[members] junk ban update failed:", profileId, e);
+  }
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
+  revalidatePath("/members");
+}
+
+/**
  * A personal email from the team to one member, from her file page (the
  * owner, 1/9: "תן לי אפשרות לכתוב הודעה גם לאלה שדחיתי כבר") — a branded
  * email carrying exactly the admin's words.
  */
 export async function sendPersonalEmail(profileId: string, formData: FormData): Promise<void> {
-  await requireRole("admin");
+  const me = await requireRole("admin");
   const note = String(formData.get("note") ?? "").trim().slice(0, 4000);
   if (!note) return;
   const admin = createAdminClient();
+
+  // The note ALSO lands in her chat with the acting admin, and the email
+  // invites her to answer there (the owner, 1/9: "להחזיר תשובה דרך הצ'אט").
+  const [a_id, b_id] = [me.id, profileId].sort();
+  const { data: existing } = await admin
+    .from("conversations")
+    .select("id")
+    .eq("a_id", a_id)
+    .eq("b_id", b_id)
+    .maybeSingle();
+  let convId = existing?.id;
+  if (!convId) {
+    const { data: created } = await admin
+      .from("conversations")
+      .insert({ a_id, b_id })
+      .select("id")
+      .single();
+    convId = created?.id;
+  }
+  if (convId) {
+    await admin.from("messages").insert({ conversation_id: convId, sender_id: me.id, body: note });
+    await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", convId);
+  }
+
   const { data: p } = await admin
     .from("profiles")
     .select("first_name, full_name")
@@ -2338,7 +2385,8 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
   const { data: authUser } = await admin.auth.admin.getUserById(profileId);
   const email = authUser?.user?.email;
   if (!email) return;
-  const mail = teamPersonalEmail(p?.first_name ?? p?.full_name?.split(" ")[0] ?? undefined, note);
+  const chatUrl = `${getSiteUrl()}/chat${convId ? `?c=${convId}` : ""}`;
+  const mail = teamPersonalEmail(p?.first_name ?? p?.full_name?.split(" ")[0] ?? undefined, note, chatUrl);
   const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
   if (!sent.ok) console.error("[members] personal email failed:", profileId, sent.error);
   revalidatePath(`/admin/members/${profileId}`);

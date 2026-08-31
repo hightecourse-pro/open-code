@@ -635,16 +635,23 @@ export function mentorApprovedEmail(name?: string): BuiltEmail {
  * e.g. explaining a past mentor decline to someone rejected before the
  * personal-note flow existed. The note IS the email.
  */
-export function teamPersonalEmail(name: string | undefined, personalNote: string): BuiltEmail {
+export function teamPersonalEmail(
+  name: string | undefined,
+  personalNote: string,
+  chatUrl?: string
+): BuiltEmail {
   const note = escapeHtml(personalNote).replace(/\r?\n/g, "<br/>");
   return {
     subject: "הודעה אישית מצוות קוד פתוח 💜",
     html: renderEmail({
       heading: `${name ? `${escapeHtml(name)}, ` : ""}רצינו לכתוב לך אישית`,
-      lines: [note],
-      ctaText: "כניסה לקהילה",
-      ctaUrl: `${SITE}/forum`,
-      footnote: "אפשר פשוט להשיב למייל הזה — אנחנו כאן 💜",
+      lines: [
+        note,
+        "ההודעה מחכה לך גם בצ'אט בקהילה — הכי נוח לענות לי שם, ישירות.",
+      ],
+      ctaText: "לתשובה בצ'אט",
+      ctaUrl: chatUrl ?? `${SITE}/chat`,
+      footnote: "מחכות לתשובה שלך בצ'אט 💜",
     }),
   };
 }

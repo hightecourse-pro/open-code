@@ -10,7 +10,7 @@ import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
-import { sendPersonalEmail, setMemberHidden } from "@/app/(admin)/admin/actions";
+import { sendPersonalEmail, setMemberHidden, setMemberJunk } from "@/app/(admin)/admin/actions";
 import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
 import {
   EmploymentMentorAssign,
@@ -492,6 +492,18 @@ export default async function AdminMemberProfilePage({
         <div className="flex flex-col items-end gap-2">
           <MemberActions profileId={profile.id} status={profile.status} />
           {/* Team preview accounts: fully active, invisible to other members. */}
+          {/* Junk block: ban + reject + hide, one reversible action. */}
+          <ConfirmActionButton
+            action={setMemberJunk.bind(null, profile.id, profile.status !== "rejected")}
+            message={
+              profile.status === "rejected"
+                ? "לשחרר את החסימה? החשבון יחזור לממתינה רגילה ויוכל להתחבר."
+                : "לסמן את החשבון כזבל ולחסום? הכניסה תיחסם, הוא יוסתר מהחברות ויסומן כנדחה. אפשר לבטל מאותו כפתור."
+            }
+            className="text-[12px] font-semibold text-ink-500 hover:text-danger"
+          >
+            {profile.status === "rejected" ? "שחרור חסימה" : "🚫 סימון כזבל וחסימה"}
+          </ConfirmActionButton>
           <ConfirmActionButton
             action={setMemberHidden.bind(null, profile.id, !profile.is_hidden)}
             message={

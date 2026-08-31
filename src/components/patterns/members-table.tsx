@@ -26,6 +26,8 @@ export interface MemberRow {
   /** Contact details (the owner, 1/9): email with a copy button + phone. */
   email?: string | null;
   phone?: string | null;
+  /** Splits "ממתינה" into its two honest kinds (the owner, 1/9). */
+  profile_completed?: boolean;
 }
 
 /** Copies the email and confirms with a brief ✓. */
@@ -395,7 +397,23 @@ export function MembersTable({
                   {new Date(m.created_at).toLocaleDateString("he-IL")}
                 </td>
                 <td className="p-2 border-b border-ink-100"><RoleTag role={m.role} experienced={m.is_experienced === true} /></td>
-                <td className="p-2 border-b border-ink-100"><StatusPill status={m.status} /></td>
+                <td className="p-2 border-b border-ink-100">
+                  {m.status === "pending" ? (
+                    // Two different waits (the owner, 1/9): mid-questionnaire
+                    // vs a full member who simply has no subscription.
+                    m.profile_completed ? (
+                      <span className="inline-flex items-center whitespace-nowrap text-[11px] font-bold px-2 py-0.5 rounded-full bg-tint-purple text-brand-purple">
+                        משתתפת ללא מנוי
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center whitespace-nowrap text-[11px] font-bold px-2 py-0.5 rounded-full bg-ink-100 text-ink-500">
+                        באמצע השאלון
+                      </span>
+                    )
+                  ) : (
+                    <StatusPill status={m.status} />
+                  )}
+                </td>
                 <td className="p-2 border-b border-ink-100">
                   <MemberCrm id={m.id} isVip={m.is_vip} vipReason={m.vip_reason} notes={m.internal_notes} />
                 </td>

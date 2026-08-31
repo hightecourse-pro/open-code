@@ -91,8 +91,11 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     : null;
   const other = otherRes.data ?? (otherFallback && { ...otherFallback, digest_frequency: "daily" });
   if (other?.status !== "active" && other?.status !== "pending") return;
-  // Free members read their history but don't send.
-  if (!me || !(me.status === "active" || me.role === "admin")) return;
+  // Free members read their history but don't send — EXCEPT to the team:
+  // answering the team's personal note must never be behind a paywall.
+  if (!me) return;
+  const writingToTeam = other?.role === "admin";
+  if (!(me.status === "active" || me.role === "admin" || (writingToTeam && me.status === "pending"))) return;
   // Who may be WRITTEN to (the owner, 1/9): the team writes to anyone still
   // here; a member writes only to מנויות (real payers — pending included),
   // approved mentors, and the team. The directory view is the single source

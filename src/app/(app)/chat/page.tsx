@@ -171,7 +171,9 @@ export default async function ChatPage({
     !otherWritable &&
     me.role !== "admin" &&
     (activeOther.status === "active" || activeOther.status === "pending");
-  const canSend = subscriber && otherWritable;
+  // Writing to the TEAM is never behind a paywall — a member must be able to
+  // answer the team's personal note even before she subscribes.
+  const canSend = (subscriber || activeOther?.role === "admin") && otherWritable;
 
   // Chronological again for display (fetched newest-first for the LIMIT).
   const messages = [...(newestMessages ?? [])].reverse();
