@@ -672,7 +672,10 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (q.field_type === "number") {
       return (
         <Field key={q.id} label={q.label_he} htmlFor={key} error={err}>
-          <Input id={key} name={key} type="number" dir="ltr" defaultValue={typeof current === "number" ? current : ""} />
+          {/* step="any": a browser's default step=1 declares 3.5 שנות ניסיון
+              invalid and silently blocks the whole submit (the customer who
+              couldn't press סיום ושמירה, 1/9). */}
+          <Input id={key} name={key} type="number" step="any" dir="ltr" defaultValue={typeof current === "number" ? current : ""} />
         </Field>
       );
     }
@@ -739,6 +742,11 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   return (
     <form
       ref={formRef}
+      // Native validation off: OUR validation (missing() per step + the
+      // server) carries the rules with readable messages. The browser's own
+      // check runs over HIDDEN steps too, and an "invalid" control it cannot
+      // focus blocks the submit with no visible message at all.
+      noValidate
       // Manual submit, not action={action}: React 19 resets an uncontrolled
       // form after a form-action completes, so a save that returned a
       // validation error also wiped everything she had typed back to the
