@@ -70,16 +70,28 @@ export async function activateSubscription(input: ActivateInput) {
   // Detected BEFORE recording the new payment, off the previous newest one.
   const newKeva = ((input.raw as Record<string, unknown> | null)?.KevaId as string | undefined) ?? null;
   if (newKeva) {
-    const { data: lastPay } = await admin
+    // EVERY keva id we ever saw for her — raw.KevaId when the webhook carried
+    // it, and the digits of "keva-X"/"nedarim-keva-X" provider ids (the
+    // imported Nedarim list stores ONLY those — טובה זק's original keva had
+    // no raw.KevaId, so the old single-row comparison missed her replacement
+    // and both kevas kept charging, 1/9).
+    const { data: prevPays } = await admin
       .from("payments")
-      .select("raw")
+      .select("provider_payment_id, raw")
       .eq("profile_id", input.profileId)
       .eq("status", "succeeded")
       .order("paid_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const oldKeva = ((lastPay?.raw as Record<string, unknown> | null)?.KevaId as string | undefined) ?? null;
-    if (oldKeva && oldKeva !== newKeva) {
+      .limit(30);
+    const known = new Set<string>();
+    for (const pay of prevPays ?? []) {
+      const k = (pay.raw as Record<string, unknown> | null)?.KevaId;
+      if (k) known.add(String(k));
+      const m = /keva-(\d+)$/.exec(pay.provider_payment_id ?? "");
+      if (m) known.add(m[1]);
+    }
+    known.delete(newKeva);
+    const oldKeva = known.size > 0 ? [...known].join(", ") : null;
+    if (oldKeva) {
       const { data: who } = await admin
         .from("profiles")
         .select("full_name")
