@@ -135,8 +135,12 @@ export function ChatThread({
 
   const last = bubbles[bubbles.length - 1];
   const iWrote = bubbles.some((b) => b.sender_id === meId);
+  // A locked thread (no send action) never INVITES writing — that reads as a
+  // contradiction next to the lock explanation below.
   const status = !last
-    ? "עוד לא התחלתן — כתבי לה מה מעסיק אותך 💜"
+    ? action
+      ? "עוד לא התחלתן — כתבי לה מה מעסיק אותך 💜"
+      : "אין עדיין הודעות בשיחה הזו"
     : inFlight || awaiting
       ? "שולח…"
       : last.sender_id === meId
@@ -218,7 +222,7 @@ export function ChatThread({
         })}
         {bubbles.length === 0 && (
           <p className="text-sm text-ink-500 text-center my-auto">
-            התחילי את השיחה — כתבי לה הודעה ראשונה 💜
+            {action ? "התחילי את השיחה — כתבי לה הודעה ראשונה 💜" : "אין עדיין הודעות בשיחה הזו 💜"}
           </p>
         )}
       </div>
