@@ -19,6 +19,92 @@ async function userIdByEmail(email: string): Promise<string | null> {
 }
 
 /**
+ * A Nedarim charge-failure report (Status:"Error" + Message, usually a keva
+ * charge that was refused — "סירוב"). Until 31/8 this shape bounced off the
+ * webhook with a 401, Nedarim emailed the owner a developer-report, and
+ * NOTHING was documented — איילת טרבלסי's refused first charge left her
+ * looking like a clean מנויה. Now it is attributed (email → keva id) and
+ * written down as a failed payment + a named alert.
+ *
+ * Documentation only: it never touches the subscription — whether a refusal
+ * should pause anyone is the owner's call, made from the alert.
+ */
+export async function recordChargeFailure(
+  params: Record<string, string>
+): Promise<"charge_failure_recorded" | "charge_failure_unmatched" | "charge_failure_duplicate"> {
+  const admin = createAdminClient();
+  const kevaId = (params.KevaId ?? "").trim();
+  const email = params.Mail?.trim().toLowerCase() || null;
+  const name = params.ClientName?.trim() || null;
+  const message = String(params.Message ?? "").slice(0, 300);
+  const errorTime = (params.ErrorTime ?? "").trim();
+
+  // Attribute — the indexed email lookup first, then the keva id against
+  // every payment we ever recorded (live charges carry raw.KevaId; imported
+  // rows carry it in provider_payment_id).
+  let profileId = email ? await userIdByEmail(email) : null;
+  let subscriptionId: string | null = null;
+  if (kevaId) {
+    const { data: prev } = await admin
+      .from("payments")
+      .select("profile_id, subscription_id")
+      .or(
+        `provider_payment_id.eq.keva-${kevaId},provider_payment_id.eq.nedarim-keva-${kevaId},raw->>KevaId.eq.${kevaId}`
+      )
+      .limit(1)
+      .maybeSingle();
+    if (prev) {
+      profileId = profileId ?? prev.profile_id;
+      subscriptionId = prev.subscription_id;
+    }
+  }
+
+  const amountAgorot = Math.round(parseFloat(params.Amount ?? "0") * 100) || 0;
+  // ErrorTime keys the dedupe so a re-sent report never duplicates, while a
+  // NEW refusal next month is its own record.
+  const syntheticId = `keva-fail-${kevaId || email || "unknown"}-${errorTime || "no-time"}`;
+
+  let outcome: "charge_failure_recorded" | "charge_failure_unmatched" | "charge_failure_duplicate" =
+    profileId ? "charge_failure_recorded" : "charge_failure_unmatched";
+  if (profileId) {
+    const { data: seen } = await admin
+      .from("payments")
+      .select("id")
+      .eq("provider_payment_id", syntheticId)
+      .maybeSingle();
+    if (seen) outcome = "charge_failure_duplicate";
+    else
+      await admin.from("payments").insert({
+        profile_id: profileId,
+        subscription_id: subscriptionId,
+        provider_payment_id: syntheticId,
+        amount_agorot: amountAgorot,
+        status: "failed",
+        paid_at: null,
+        raw: params as unknown as Json,
+      });
+  }
+
+  if (outcome !== "charge_failure_duplicate") {
+    await raiseAlert({
+      kind: "payment_charge_failed",
+      severity: profileId ? "critical" : "warning",
+      title: profileId
+        ? `חיוב נכשל אצל נדרים: ${name ?? email ?? "חברה"}`
+        : "נדרים דיווחו על חיוב שנכשל — לא זוהתה חברה",
+      body: `${name ?? email ?? "מישהי"} חויבה ונדרים דיווחו סירוב: "${message}"${errorTime ? ` (${errorTime})` : ""}${kevaId ? ` · הוראת קבע ${kevaId}` : ""} · ${amountAgorot / 100} ₪. ${
+        profileId
+          ? "הסירוב תועד ברשימת התשלומים שלה. המנוי לא שונה — ההחלטה אם להשהות היא שלך, ובינתיים כדאי לפנות אליה על עדכון הכרטיס."
+          : "לא נמצאה חברה עם הפרטים האלה — כדאי להצליב מול קונסולת נדרים."
+      }`,
+      context: { params },
+      dedupeKey: syntheticId,
+    });
+  }
+  return outcome;
+}
+
+/**
  * An authenticated, successful payment webhook with nobody to hang it on.
  * Returns the outcome string for the webhook's diagnostic record.
  */

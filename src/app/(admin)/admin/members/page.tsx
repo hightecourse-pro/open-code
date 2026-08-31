@@ -104,25 +104,44 @@ export default async function AdminMembersPage({
   // a live subscription (with its renewal date), or presence on the imported
   // Nedarim payers list, or nothing.
   const DATE_IL = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Jerusalem" });
-  const [{ data: liveSubs }, { data: extPays }] = await Promise.all([
+  const [{ data: liveSubs }, { data: extPays }, { data: failedPays }] = await Promise.all([
     admin
       .from("subscriptions")
       .select("profile_id, status, current_period_end, canceled_at")
       .in("status", ["active", "trialing"]),
     admin.from("external_payments").select("email, claimed_by, needs_review").eq("needs_review", false),
+    // Refused charges reported by Nedarim (the owner, 31/8: "היה לה סירוב,
+    // זה לא מתועד") — the newest refusal rides the payment column.
+    admin
+      .from("payments")
+      .select("profile_id, created_at, raw")
+      .eq("status", "failed")
+      .order("created_at", { ascending: false })
+      .limit(2000),
   ]);
   const subOf = new Map((liveSubs ?? []).map((s) => [s.profile_id, s]));
   const payerEmails = new Set((extPays ?? []).map((e) => (e.email ?? "").toLowerCase()).filter(Boolean));
   const claimedBy = new Set((extPays ?? []).map((e) => e.claimed_by).filter(Boolean));
+  const failOf = new Map<string, { at: string; msg: string }>();
+  for (const f of failedPays ?? []) {
+    if (failOf.has(f.profile_id)) continue; // newest first — keep it
+    const raw = (f.raw ?? {}) as Record<string, string>;
+    failOf.set(f.profile_id, {
+      at: String(raw.ErrorTime ?? "").split(" ")[0] || DATE_IL.format(new Date(f.created_at)),
+      msg: String(raw.Message ?? "סירוב"),
+    });
+  }
   const paymentOf = (id: string): string => {
+    const fail = failOf.get(id);
+    const failNote = fail ? ` · ⚠️ חיוב סורב ${fail.at} (${fail.msg})` : "";
     const s = subOf.get(id);
     if (s) {
       const until = s.current_period_end ? ` עד ${DATE_IL.format(new Date(s.current_period_end))}` : "";
-      return `מנוי פעיל${until}${s.canceled_at ? " (ביטלה חידוש)" : ""}`;
+      return `מנוי פעיל${until}${s.canceled_at ? " (ביטלה חידוש)" : ""}${failNote}`;
     }
     const email = (emailOf.get(id) ?? "").toLowerCase();
-    if (claimedBy.has(id) || (email && payerEmails.has(email))) return "ברשימת המשלמות של נדרים";
-    return "";
+    if (claimedBy.has(id) || (email && payerEmails.has(email))) return `ברשימת המשלמות של נדרים${failNote}`;
+    return failNote ? failNote.replace(" · ", "") : "";
   };
 
   // Study place replaces the specialization column (the owner, 1/9) — stored
