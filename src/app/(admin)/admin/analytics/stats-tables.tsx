@@ -6,7 +6,10 @@ import { cn } from "@/lib/utils";
 export interface CourseStatRow {
   id: string;
   title: string;
+  /** All-time sign-ups, swapped-back ones included (the owner, 31/8). */
   enrollments: number;
+  /** Who holds the course right now — expands under the row (the owner, 31/8). */
+  current: { profileId: string; name: string; since: string; completed: boolean }[];
   studied: number;
   avgRating: number | null;
   members: number;
@@ -138,14 +141,39 @@ function FragmentRow<T extends { id: string }>({
 }
 
 export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
-  const [openId, setOpenId] = useState<string | null>(null);
+  // One detail panel per row, opened either from "רשומות כרגע" (the names) or
+  // from "דירוג ומשובים" (the feedback) — it shows whichever section was asked.
+  const [openDetail, setOpenDetail] = useState<{ id: string; kind: "current" | "feedback" } | null>(null);
+  const toggle = (id: string, kind: "current" | "feedback") =>
+    setOpenDetail((v) => (v?.id === id && v.kind === kind ? null : { id, kind }));
   return (
     <SortableTable
       rows={rows}
       defaultKey="views"
-      openDetailId={openId}
+      openDetailId={openDetail?.id ?? null}
       renderDetail={(r) =>
-        r.feedback.length === 0 ? null : (
+        openDetail?.kind === "current" ? (
+          r.current.length === 0 ? null : (
+            <div className="rounded-[12px] border border-ink-100 bg-ink-50/50 p-3.5">
+              <div className="text-xs text-ink-500 font-semibold mb-2">
+                רשומות לקורס כרגע ({r.current.length})
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {r.current.map((m) => (
+                  <a
+                    key={m.profileId}
+                    href={`/admin/members/${m.profileId}`}
+                    className="bg-white border border-ink-200 rounded-full px-3 py-1 text-[12.5px] text-ink-900 hover:text-brand-purple hover:border-brand-purple transition-colors"
+                    title={`בקורס מאז ${dmy(m.since)}`}
+                  >
+                    {m.name}
+                    {m.completed && <span className="text-ink-400"> · סיימה ✓</span>}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )
+        ) : r.feedback.length === 0 ? null : (
           <div className="rounded-[12px] border border-ink-100 bg-ink-50/50 p-3.5 flex flex-col gap-2">
             {r.feedback.map((f, i) => (
               <div key={i} className="bg-white border border-ink-100 rounded-md px-3 py-2">
@@ -166,7 +194,25 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
       }
       cols={[
         { key: "title", label: "קורס", value: (r) => r.title },
-        { key: "enrollments", label: "נרשמו", value: (r) => r.enrollments },
+        {
+          key: "current",
+          label: "רשומות כרגע",
+          value: (r) => r.current.length,
+          render: (r) =>
+            r.current.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => toggle(r.id, "current")}
+                className="font-semibold text-brand-purple hover:underline cursor-pointer"
+                title="פתיחת רשימת הרשומות לקורס"
+              >
+                {r.current.length} ▾
+              </button>
+            ) : (
+              "—"
+            ),
+        },
+        { key: "enrollments", label: "נרשמו עד היום", value: (r) => r.enrollments },
         { key: "studied", label: "סיימו", value: (r) => r.studied },
         {
           key: "avgRating",
@@ -176,7 +222,7 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
             r.feedback.length > 0 ? (
               <button
                 type="button"
-                onClick={() => setOpenId((v) => (v === r.id ? null : r.id))}
+                onClick={() => toggle(r.id, "feedback")}
                 className="font-semibold text-brand-purple hover:underline cursor-pointer"
                 title="פתיחת המשובים של הקורס"
               >

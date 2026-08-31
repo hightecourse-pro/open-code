@@ -11,7 +11,7 @@ export default async function AdminAnalyticsPage() {
 
   const [{ data: courses }, { data: enrollments }, { data: extraFb }, { data: sessions }] = await Promise.all([
     supabase.from("courses").select("id, title").order("title"),
-    supabase.from("enrollments").select("profile_id, course_id, rating, studied, feedback"),
+    supabase.from("enrollments").select("profile_id, course_id, rating, studied, feedback, status, started_at"),
     // Feedback that has no enrollment behind it (admins, gifted courses).
     supabase.from("course_feedback").select("profile_id, course_id, rating, feedback"),
     supabase
@@ -56,12 +56,15 @@ export default async function AdminAnalyticsPage() {
   const allFb = [...mergedFb.values()];
 
   // Names for EVERY feedback row — a stars-only rating is listed per course
-  // too (30/8), and an admin needs to know whose it is.
-  const commenterIds = [...new Set(allFb.map((e) => e.profile_id))];
-  const { data: commenters } = commenterIds.length
-    ? await supabase.from("profiles").select("id, full_name").in("id", commenterIds)
+  // too (30/8), and an admin needs to know whose it is — and for every
+  // enrolled member: the per-course "מי רשומה" list (the owner, 31/8).
+  const nameIds = [
+    ...new Set([...allFb.map((e) => e.profile_id), ...(enrollments ?? []).map((e) => e.profile_id)]),
+  ];
+  const { data: namedProfiles } = nameIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", nameIds)
     : { data: [] };
-  const nameOf = new Map((commenters ?? []).map((p) => [p.id, p.full_name]));
+  const nameOf = new Map((namedProfiles ?? []).map((p) => [p.id, p.full_name]));
 
   const courseStats = (courses ?? []).map((c) => {
     const es = (enrollments ?? []).filter((e) => e.course_id === c.id);
@@ -69,10 +72,22 @@ export default async function AdminAnalyticsPage() {
     const ratings = fbRows.map((e) => e.rating).filter((r): r is number => typeof r === "number");
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
     const opens = byCourse.get(c.id);
+    // Who holds the course RIGHT NOW — "returned" means she swapped it back
+    // into the rolling library, so she counts only in the all-time number.
+    const current = es
+      .filter((e) => e.status !== "returned")
+      .map((e) => ({
+        profileId: e.profile_id,
+        name: nameOf.get(e.profile_id) ?? "חברת קהילה",
+        since: e.started_at,
+        completed: e.status === "completed",
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name, "he"));
     return {
       id: c.id,
       title: c.title,
       enrollments: es.length,
+      current,
       studied: es.filter((e) => e.studied).length,
       avgRating: avg,
       views: opens?.opens ?? 0,
