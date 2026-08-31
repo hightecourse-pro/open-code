@@ -66,12 +66,37 @@ export interface FilterDef {
 type ActiveFilter = { defId: string; values: string[]; text: string };
 
 const STATUS_ORDER: Record<ProfileStatus, number> = { pending: 0, active: 1, paused: 2, rejected: 3 };
-const STATUSES: { value: string; label: string }[] = [
-  { value: "", label: "כל הסטטוסים" },
-  { value: "pending", label: "ממתינות" },
-  { value: "active", label: "פעילות" },
-  { value: "paused", label: "מושהות" },
-  { value: "rejected", label: "נדחו" },
+
+/** One-click member TYPES (the owner, 1/9) — each chip carries its count. */
+const TYPE_DEFS: { id: string; label: string; test: (m: MemberRow) => boolean; onlyWhenAny?: boolean }[] = [
+  { id: "subscribers", label: "מנויות 💜", test: (m) => m.role === "junior" && m.status === "active" },
+  { id: "free", label: "ללא מנוי", test: (m) => m.role === "junior" && m.status === "pending" && m.profile_completed === true },
+  { id: "midwizard", label: "באמצע השאלון", test: (m) => m.role === "junior" && m.status === "pending" && !m.profile_completed },
+  { id: "mentors", label: "מנטוריות 👑", test: (m) => m.role === "mentor" && m.status === "active" },
+  { id: "mentor-pending", label: "מנטוריות לאישור", test: (m) => m.role === "mentor" && m.status === "pending" },
+  { id: "team", label: "צוות", test: (m) => m.role === "admin" },
+  { id: "paused", label: "מושהות", test: (m) => m.status === "paused", onlyWhenAny: true },
+  { id: "rejected", label: "חסומות", test: (m) => m.status === "rejected", onlyWhenAny: true },
+];
+/** Old ?status= deep links (the dashboard cubes) keep filtering raw status. */
+const RAW_STATUS: Record<string, (m: MemberRow) => boolean> = {
+  active: (m) => m.status === "active",
+  pending: (m) => m.status === "pending",
+  paused: (m) => m.status === "paused",
+  rejected: (m) => m.status === "rejected",
+};
+
+/** Sortable/filterable columns — filter is a contains-match on the shown text. */
+const COLUMNS: { key: string; label: string; sortVal?: (m: MemberRow) => string; filterVal?: (m: MemberRow) => string }[] = [
+  { key: "name", label: "חברה", sortVal: (m) => m.full_name ?? "", filterVal: (m) => m.full_name ?? "" },
+  { key: "contact", label: "קשר", sortVal: (m) => m.email ?? "", filterVal: (m) => `${m.email ?? ""} ${m.phone ?? ""}` },
+  { key: "study", label: "מקום לימודים", sortVal: (m) => m.study_place ?? "", filterVal: (m) => m.study_place ?? "" },
+  { key: "region", label: "אזור", sortVal: (m) => m.region ?? "", filterVal: (m) => m.region ?? "" },
+  { key: "joined", label: "הצטרפה", sortVal: (m) => m.created_at },
+  { key: "role", label: "תפקיד", sortVal: (m) => `${m.role}${m.is_experienced ? "-exp" : ""}` },
+  { key: "status", label: "סטטוס", sortVal: (m) => `${STATUS_ORDER[m.status]}${m.profile_completed ? "b" : "a"}` },
+  { key: "crm", label: "CRM" },
+  { key: "actions", label: "פעולות" },
 ];
 
 export function MembersTable({
@@ -87,6 +112,9 @@ export function MembersTable({
   const [q, setQ] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const [vip, setVip] = useState(false);
+  // Per-column contains-filters + one active sort (click a header to toggle).
+  const [colFilters, setColFilters] = useState<Record<string, string>>({});
+  const [sort, setSort] = useState<{ col: string; dir: 1 | -1 } | null>(null);
   const [finderOpen, setFinderOpen] = useState(false);
   const [active, setActive] = useState<ActiveFilter[]>([]);
 
@@ -163,15 +191,25 @@ export function MembersTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveKey]);
 
+  const typeTest = useMemo(() => {
+    return TYPE_DEFS.find((t) => t.id === status)?.test ?? RAW_STATUS[status] ?? (() => true);
+  }, [status]);
+
   const rows = useMemo(() => {
     const needle = q.trim().toLowerCase();
+    const sortDef = sort ? COLUMNS.find((c) => c.key === sort.col) : null;
     return members
       .filter((m) => {
-        if (status && m.status !== status) return false;
+        if (!typeTest(m)) return false;
         if (vip && !m.is_vip) return false;
         if (needle) {
           const hay = `${m.full_name} ${m.specialization ?? ""} ${m.region ?? ""} ${m.email ?? ""} ${m.phone ?? ""} ${m.study_place ?? ""}`.toLowerCase();
           if (!hay.includes(needle)) return false;
+        }
+        // Per-column contains-filters (the owner, 1/9).
+        for (const c of COLUMNS) {
+          const f = (colFilters[c.key] ?? "").trim().toLowerCase();
+          if (f && c.filterVal && !c.filterVal(m).toLowerCase().includes(f)) return false;
         }
         // Candidate finder: the server returned the ids that match ALL the
         // active criteria; while it thinks, nothing is filtered out yet.
@@ -179,11 +217,15 @@ export function MembersTable({
         return true;
       })
       .sort((a, b) => {
+        // An explicit header sort wins over everything.
+        if (sortDef?.sortVal) {
+          return sortDef.sortVal(a).localeCompare(sortDef.sortVal(b), "he") * (sort?.dir ?? 1);
+        }
         // VIPs get priority once results are filtered down to candidates.
         if (finding && a.is_vip !== b.is_vip) return a.is_vip ? -1 : 1;
         return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
       });
-  }, [members, q, status, vip, matchIds, finding]);
+  }, [members, q, typeTest, vip, matchIds, finding, colFilters, sort]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -208,17 +250,6 @@ export function MembersTable({
             </button>
           )}
         </div>
-        <select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-          className="px-3 py-2 rounded-md border border-ink-300 text-sm"
-        >
-          {STATUSES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
         <label className="inline-flex items-center gap-1.5 text-sm text-ink-700 px-2">
           <input type="checkbox" checked={vip} onChange={(e) => setVip(e.target.checked)} /> VIP בלבד
         </label>
@@ -240,6 +271,30 @@ export function MembersTable({
         <span className="text-[12px] text-ink-500 ms-auto">
           {finding && matching ? "מסננת…" : `${rows.length} תוצאות`}
         </span>
+      </div>
+
+      {/* one-click TYPE chips with live counts (the owner, 1/9) */}
+      <div className="flex gap-2 flex-wrap">
+        {[{ id: "", label: "הכל", test: () => true as boolean, onlyWhenAny: false }, ...TYPE_DEFS].map((t) => {
+          const n = t.id === "" ? members.length : members.filter(t.test).length;
+          if (t.onlyWhenAny && n === 0) return null;
+          const on = status === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setStatus(t.id)}
+              aria-pressed={on}
+              className={
+                on
+                  ? "font-display font-semibold text-[12.5px] px-3 py-[6px] rounded-full bg-brand-gradient text-white"
+                  : "font-display font-semibold text-[12.5px] px-3 py-[6px] rounded-full border-[1.5px] border-ink-200 bg-white text-ink-700 hover:border-brand-purple transition-colors cursor-pointer"
+              }
+            >
+              {t.label} ({n})
+            </button>
+          );
+        })}
       </div>
 
       {/* candidate finder: filter by ANY profile parameter, multi-select */}
@@ -332,9 +387,48 @@ export function MembersTable({
         <table className="w-full border-collapse text-[13.5px]">
           <thead>
             <tr>
-              {["חברה", "קשר", "מקום לימודים", "אזור", "הצטרפה", "תפקיד", "סטטוס", "CRM", "פעולות"].map((h) => (
-                <th key={h} className="text-right p-2 text-[11px] text-ink-500 uppercase font-semibold border-b border-ink-200">
-                  {h}
+              {COLUMNS.map((c) => (
+                <th
+                  key={c.key}
+                  className="text-right p-2 text-[11px] text-ink-500 uppercase font-semibold border-b border-ink-200"
+                >
+                  {c.sortVal ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSort((s) =>
+                          s?.col === c.key
+                            ? s.dir === 1
+                              ? { col: c.key, dir: -1 }
+                              : null
+                            : { col: c.key, dir: 1 }
+                        )
+                      }
+                      className="inline-flex items-center gap-1 uppercase font-semibold hover:text-brand-purple cursor-pointer"
+                      title="מיון לפי העמודה"
+                    >
+                      {c.label}
+                      {sort?.col === c.key ? (sort.dir === 1 ? "▲" : "▼") : ""}
+                    </button>
+                  ) : (
+                    c.label
+                  )}
+                </th>
+              ))}
+            </tr>
+            {/* per-column contains-filters (the owner, 1/9) */}
+            <tr>
+              {COLUMNS.map((c) => (
+                <th key={c.key} className="p-1 border-b border-ink-200">
+                  {c.filterVal && (
+                    <input
+                      value={colFilters[c.key] ?? ""}
+                      onChange={(e) => setColFilters((f) => ({ ...f, [c.key]: e.target.value }))}
+                      placeholder="סינון…"
+                      aria-label={`סינון לפי ${c.label}`}
+                      className="w-full min-w-[70px] px-2 py-1 rounded border border-ink-200 text-[12px] font-normal outline-none focus:border-brand-purple"
+                    />
+                  )}
                 </th>
               ))}
             </tr>
