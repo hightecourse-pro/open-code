@@ -103,16 +103,18 @@ export function MemberChatAction({
   );
 }
 
-/** Her specialization and region, when she filled them in. */
-export function MemberMeta({ member }: { member: DirectoryMember }) {
-  if (!member.specialization && !member.region) return null;
+/** Her specialization and city (the owner, 31/8: עיר במקום אזור מגורים —
+ *  region stays only as a fallback for profiles without a city answer). */
+export function MemberMeta({ member, city = null }: { member: DirectoryMember; city?: string | null }) {
+  const place = city ?? member.region;
+  if (!member.specialization && !place) return null;
   return (
     <div className="flex items-center gap-2 flex-wrap">
       {member.specialization && <Badge variant="purple">{member.specialization}</Badge>}
-      {member.region && (
+      {place && (
         <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-500">
           <MapPin size={13} className="shrink-0" />
-          {member.region}
+          {place}
         </span>
       )}
     </div>
@@ -128,6 +130,7 @@ export function MemberCard({
   mentorWaiting = false,
   viewerIsTeam = false,
   studyPlace = null,
+  city = null,
 }: {
   member: DirectoryMember;
   canChat: boolean;
@@ -141,6 +144,8 @@ export function MemberCard({
   viewerIsTeam?: boolean;
   /** Where she studied — shown on the card (the owner, 1/9). */
   studyPlace?: string | null;
+  /** Her city — replaces the region on the card (the owner, 31/8). */
+  city?: string | null;
 }) {
   const isMentor = member.role === "mentor";
   const writable = viewerIsTeam || member.role !== "junior" || subscriber === true;
@@ -175,7 +180,7 @@ export function MemberCard({
               </span>
             )}
           </span>
-          <MemberMeta member={member} />
+          <MemberMeta member={member} city={city} />
           {studyPlace && (
             <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-500">
               <GraduationCap size={13} className="shrink-0" />

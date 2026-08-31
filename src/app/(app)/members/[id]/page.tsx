@@ -108,6 +108,33 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
       ])
     : [null, null];
 
+  // Her city — shown instead of the region (the owner, 31/8). Stored as the
+  // select's VALUE; resolved to the label with the service role.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const adminC = createAdminClient();
+  let city: string | null = null;
+  const { data: cityQ } = await adminC
+    .from("config_questions")
+    .select("id, options")
+    .eq("key", "city")
+    .maybeSingle();
+  if (cityQ) {
+    const { data: ans } = await adminC
+      .from("profile_answers")
+      .select("value")
+      .eq("question_id", cityQ.id)
+      .eq("profile_id", member.id)
+      .maybeSingle();
+    if (typeof ans?.value === "string" && ans.value) {
+      const labelOf = new Map(
+        (Array.isArray(cityQ.options) ? (cityQ.options as unknown as { value: string; label: string }[]) : []).map(
+          (o) => [o.value, o.label]
+        )
+      );
+      city = labelOf.get(ans.value) ?? ans.value;
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <Link
@@ -143,7 +170,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
                 </span>
               )}
             </span>
-            <MemberMeta member={member} />
+            <MemberMeta member={member} city={city} />
             <span className="text-[12.5px] text-ink-400">
               בקהילה מאז {MONTH_YEAR.format(new Date(member.created_at))}
             </span>

@@ -57,20 +57,22 @@ export default async function MembersPage({
   // Mentor scores are public — the directory card carries them.
   const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
 
-  // Study place on the card (the owner, 1/9: "תוסיף את הסמינר") — stored as
-  // the select's VALUE in profile_answers; resolved to the label here with
-  // the service role (answers aren't member-readable) and passed per card.
+  // Study place + city on the card (the owner, 1/9 + 31/8: עיר במקום אזור) —
+  // stored as the selects' VALUEs in profile_answers; resolved to labels here
+  // with the service role (answers aren't member-readable) and passed per card.
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const adminC = createAdminClient();
-  const { data: studyQ } = await adminC
+  const { data: cardQs } = await adminC
     .from("config_questions")
-    .select("id, options")
-    .eq("key", "study_place")
-    .maybeSingle();
+    .select("id, key, options")
+    .in("key", ["study_place", "city"]);
   const studyOf = new Map<string, string>();
-  if (studyQ && members.length) {
+  const cityOf = new Map<string, string>();
+  for (const q of cardQs ?? []) {
+    if (!members.length) break;
+    const into = q.key === "city" ? cityOf : studyOf;
     const labelOf = new Map(
-      (Array.isArray(studyQ.options) ? (studyQ.options as unknown as { value: string; label: string }[]) : []).map(
+      (Array.isArray(q.options) ? (q.options as unknown as { value: string; label: string }[]) : []).map(
         (o) => [o.value, o.label]
       )
     );
@@ -78,10 +80,10 @@ export default async function MembersPage({
       const { data: ans } = await adminC
         .from("profile_answers")
         .select("profile_id, value")
-        .eq("question_id", studyQ.id)
+        .eq("question_id", q.id)
         .in("profile_id", members.slice(i, i + 500).map((m) => m.id));
       for (const a of ans ?? []) {
-        if (typeof a.value === "string" && a.value) studyOf.set(a.profile_id, labelOf.get(a.value) ?? a.value);
+        if (typeof a.value === "string" && a.value) into.set(a.profile_id, labelOf.get(a.value) ?? a.value);
       }
     }
   }
@@ -118,7 +120,7 @@ export default async function MembersPage({
                 : subscriberIds.has(member.id)
                   ? "subscriber"
                   : "member",
-          haystack: [member.full_name, member.specialization ?? "", member.region ?? "", studyOf.get(member.id) ?? ""].join(" "),
+          haystack: [member.full_name, member.specialization ?? "", member.region ?? "", cityOf.get(member.id) ?? "", studyOf.get(member.id) ?? ""].join(" "),
           node: (
             <MemberCard
               member={member}
@@ -128,6 +130,7 @@ export default async function MembersPage({
               subscriber={subscriberIds.has(member.id)}
               viewerIsTeam={me.role === "admin"}
               studyPlace={studyOf.get(member.id) ?? null}
+              city={cityOf.get(member.id) ?? null}
             />
           ),
         }))}
