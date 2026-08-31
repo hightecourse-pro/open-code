@@ -146,7 +146,10 @@ export default async function ChatPage({
   // but doesn't send), and a thread with someone who has left the community
   // stays readable rather than open.
   const subscriber = isSubscriber(me);
-  const canSend = subscriber && !!activeOther && activeOther.status === "active";
+  // Pending members are writable too (the directory lists them since 31/8) —
+  // only a thread with someone paused/rejected stays read-only.
+  const canSend =
+    subscriber && !!activeOther && (activeOther.status === "active" || activeOther.status === "pending");
 
   // Chronological again for display (fetched newest-first for the LIMIT).
   const messages = [...(newestMessages ?? [])].reverse();

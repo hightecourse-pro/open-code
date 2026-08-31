@@ -90,7 +90,9 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     ? (await supabase.from("profiles").select("role, status").eq("id", otherId).single()).data
     : null;
   const other = otherRes.data ?? (otherFallback && { ...otherFallback, digest_frequency: "daily" });
-  if (other?.status !== "active") return;
+  // Pending members are part of the community (the directory shows them since
+  // 31/8) — only paused/rejected threads stay read-only.
+  if (other?.status !== "active" && other?.status !== "pending") return;
   // Free members read their history but don't send.
   if (!me || !(me.status === "active" || me.role === "admin")) return;
 
@@ -184,7 +186,8 @@ export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
   let query = supabase
     .from("profiles")
     .select("id, full_name, specialization, avatar_initials")
-    .eq("status", "active")
+    // Pending members are reachable too — same population as the directory.
+    .in("status", ["active", "pending"])
     // Team test accounts stay invisible to other members (see is_hidden).
     .eq("is_hidden", false)
     .neq("id", user.id)
