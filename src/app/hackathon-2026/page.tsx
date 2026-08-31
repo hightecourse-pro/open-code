@@ -247,7 +247,7 @@ export default function Hackathon2026Page() {
 
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-5">
           <Link href="/" className="-rotate-2 hover:rotate-0 transition-transform">
-            <Logo width={150} />
+            <Logo width={320} />
           </Link>
           <span className="font-mono text-xs text-brand-pink-deep rotate-1">&lt;hackathon/&gt;</span>
           <h1 className="font-display text-[42px] sm:text-[56px] font-black leading-[1.02]">
