@@ -1497,6 +1497,8 @@ export interface Database {
           role: UserRole;
           bio: string | null;
           created_at: string;
+          /** Really paying — activated paid / live sub / Nedarim payers list. */
+          is_subscriber: boolean;
         };
         Relationships: [];
       };

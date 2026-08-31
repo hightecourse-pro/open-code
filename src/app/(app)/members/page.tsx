@@ -22,8 +22,10 @@ export default async function MembersPage({
   const mentorWaiting = me.role === "mentor" && !canChat;
   const supabase = await createClient();
 
-  // members_directory — never `profiles`: the view simply doesn't carry
-  // `status` or `member_tier`, so nobody can tell from here who pays.
+  // members_directory — never `profiles`: the view carries no `status` or
+  // `member_tier`; the ONE payment fact it exposes is the deliberate
+  // is_subscriber badge. Since 31/8 it lists pending members too — the owner:
+  // "אמורים לראות את כולן".
   // (Before the migration runs this returns nothing and the empty state shows.)
   //
   // The whole directory loads once (up to MAX_RESULTS) and the search box
@@ -36,7 +38,7 @@ export default async function MembersPage({
   const serverNeedle = (q ?? "").trim().slice(0, 60);
   let directoryQuery = supabase
     .from("members_directory")
-    .select("id, full_name, first_name, avatar_initials, specialization, region, role, bio, created_at")
+    .select("id, full_name, first_name, avatar_initials, specialization, region, role, bio, created_at, is_subscriber")
     .neq("id", me.id)
     .order("full_name", { ascending: true })
     .limit(MAX_RESULTS);
@@ -55,19 +57,10 @@ export default async function MembersPage({
   // Mentor scores are public — the directory card carries them.
   const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
 
-  // Who is a paying subscriber — the owner's call (2026-08-26): the directory
-  // marks מנויות. The tier isn't in the public view, so it's resolved here
-  // with the service role and reaches the client as a boolean per card only.
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  const { data: tiers } = await createAdminClient()
-    .from("profiles")
-    .select("id, role, status, member_tier")
-    .in("id", members.map((m) => m.id));
-  const subscriberIds = new Set(
-    (tiers ?? [])
-      .filter((t) => t.role === "junior" && t.status === "active" && t.member_tier === "paid")
-      .map((t) => t.id)
-  );
+  // Who is a paying subscriber — since 31/8 the view computes it (activated
+  // paid junior / live subscription / on the Nedarim payers list), so a
+  // PENDING member who already paid is labeled מנויה too (the owner's ask).
+  const subscriberIds = new Set(members.filter((m) => m.is_subscriber === true).map((m) => m.id));
 
   return (
     <div className="flex flex-col gap-5">

@@ -21,6 +21,9 @@ export interface DirectoryMember {
   role: UserRole;
   bio: string | null;
   created_at: string;
+  /** Really paying (activated paid / live subscription / on the Nedarim
+      payers list) — computed in the view; optional for narrower selects. */
+  is_subscriber?: boolean;
 }
 
 /** Her avatar letters, falling back to the first letter of her name. */
