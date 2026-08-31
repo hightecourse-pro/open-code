@@ -170,7 +170,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
                 </span>
               )}
             </span>
-            <MemberMeta member={member} city={city} />
+            {member.role !== "admin" && <MemberMeta member={member} city={city} />}
             <span className="text-[12.5px] text-ink-400">
               בקהילה מאז {MONTH_YEAR.format(new Date(member.created_at))}
             </span>
