@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { getProfile } from "@/lib/auth";
 import { signOut } from "../(auth)/actions";
 import { applyAsMentor, revertMentorApplication } from "./actions";
-import { claimExternalPaymentsFor } from "@/lib/payments/external";
+import { reconcileSubscriberStatus } from "@/lib/payments/external";
 import { Alert, Button, Logo } from "@/components/ui";
 import { CheckoutPanel } from "@/components/patterns/checkout-panel";
 import { buildTransactionFields, isNedarimConfigured } from "@/lib/payments/nedarim";
@@ -80,7 +80,7 @@ export default async function JoinPage({
       data: { user },
     } = await supabase.auth.getUser();
     try {
-      if (await claimExternalPaymentsFor(profile.id, user?.email)) redirect("/forum");
+      if (await reconcileSubscriberStatus(profile.id, user?.email)) redirect("/forum");
     } catch (e) {
       // redirect() throws by design — let it through; log anything else.
       if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw e;

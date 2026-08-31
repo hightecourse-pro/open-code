@@ -2339,6 +2339,15 @@ export async function demoteMentorToMember(profileId: string): Promise<void> {
     .from("profiles")
     .update({ role: "junior", member_tier: "paid", status: "pending", profile_completed: false })
     .eq("id", profileId);
+  // A payer never lands as "pending" — her live/claimable payment activates
+  // her right back (הדסה, 1/9).
+  try {
+    const { data: au } = await admin.auth.admin.getUserById(profileId);
+    const { reconcileSubscriberStatus } = await import("@/lib/payments/external");
+    await reconcileSubscriberStatus(profileId, au?.user?.email);
+  } catch (e) {
+    console.error("[members] demote reconcile failed:", profileId, e);
+  }
   revalidatePath(`/admin/members/${profileId}`);
   revalidatePath("/admin/members");
   revalidatePath("/admin/mentors");
@@ -2462,6 +2471,14 @@ export async function rejectMentorApplication(profileId: string, formData: FormD
   await admin
     .from("personal_emails")
     .insert({ profile_id: profileId, sender_id: me.id, kind: "mentor_decline", body: note });
+  // A declined applicant who already PAID comes back as an active מנויה.
+  try {
+    const { data: au } = await admin.auth.admin.getUserById(profileId);
+    const { reconcileSubscriberStatus } = await import("@/lib/payments/external");
+    await reconcileSubscriberStatus(profileId, au?.user?.email);
+  } catch (e) {
+    console.error("[mentors] decline reconcile failed:", profileId, e);
+  }
 
   revalidatePath("/admin/mentors");
   revalidatePath("/admin");

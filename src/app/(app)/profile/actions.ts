@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { raiseAlert } from "@/lib/alerts";
-import { claimExternalPaymentsFor } from "@/lib/payments/external";
+import { reconcileSubscriberStatus } from "@/lib/payments/external";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
@@ -518,7 +518,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     // She may have already paid OUTSIDE the app (a direct Nedarim link) —
     // claim that payment by her email before deciding where she lands.
     try {
-      await claimExternalPaymentsFor(user.id, user.email);
+      await reconcileSubscriberStatus(user.id, user.email);
     } catch (e) {
       console.error("[profile] external payment claim failed:", e);
     }

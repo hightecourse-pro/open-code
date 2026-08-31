@@ -100,6 +100,41 @@ export async function handleExternalPayment(
 }
 
 /**
+ * Make her profile status agree with her money (the owner, 1/9: הדסה was a
+ * payer, got demoted from the mentor track, and stayed "pending" although her
+ * subscription was LIVE — the claim skips already-claimed rows). Claims any
+ * unclaimed payment first, then: a pending junior with a live subscription
+ * becomes active. Returns true when she ends up an active subscriber.
+ */
+export async function reconcileSubscriberStatus(
+  profileId: string,
+  email?: string | null
+): Promise<boolean> {
+  await claimExternalPaymentsFor(profileId, email);
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from("profiles")
+    .select("status, role")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!p || p.role !== "junior") return false;
+  if (p.status === "active") return true;
+  if (p.status !== "pending") return false;
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("status, current_period_end")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  const live =
+    !!sub &&
+    (sub.status === "active" || sub.status === "trialing") &&
+    (!sub.current_period_end || new Date(sub.current_period_end) > new Date());
+  if (!live) return false;
+  await admin.from("profiles").update({ status: "active", member_tier: "paid" }).eq("id", profileId);
+  return true;
+}
+
+/**
  * She exists now — claim any unclaimed external payment carrying her email.
  * Cheap when there is nothing to claim (one indexed select). Returns true
  * when something activated.

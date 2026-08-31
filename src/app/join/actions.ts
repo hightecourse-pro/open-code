@@ -79,6 +79,40 @@ export async function applyAsMentor(): Promise<void> {
 }
 
 /** She clicked the mentor track by mistake — back to the paid junior track. */
+/**
+ * A mentor — pending OR approved — chooses the regular member track from her
+ * PROFILE page (the owner, 1/9: "בהגדרת הפרופיל צריך לאפשר למנטורית להתחרט").
+ * She becomes a junior on the paid track; the member questionnaire reopens
+ * (shared answers pre-filled); a payer is activated straight back as מנויה.
+ */
+export async function switchMentorToMemberTrack(): Promise<void> {
+  const user = await getUser();
+  if (!user) redirect("/login");
+  const supabase = await createClient();
+  const { data: me } = await supabase
+    .from("profiles")
+    .select("status, role")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (!me || me.role !== "mentor" || me.status === "rejected") redirect("/profile");
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  await createAdminClient()
+    .from("profiles")
+    // An active MENTOR is not a payer — as a junior, "active" means paying
+    // (the honest gating), so she starts pending and the reconcile below
+    // activates her only if she actually pays.
+    .update({ role: "junior", member_tier: "paid", status: "pending", profile_completed: false })
+    .eq("id", user.id);
+  try {
+    const { reconcileSubscriberStatus } = await import("@/lib/payments/external");
+    await reconcileSubscriberStatus(user.id, user.email);
+  } catch (e) {
+    console.error("[profile] mentor switch reconcile failed:", user.id, e);
+  }
+  revalidatePath("/", "layout");
+  redirect("/forum");
+}
+
 export async function revertMentorApplication(): Promise<void> {
   const user = await getUser();
   if (!user) redirect("/login");
@@ -99,6 +133,13 @@ export async function revertMentorApplication(): Promise<void> {
     .from("profiles")
     .update({ role: "junior", member_tier: "paid", profile_completed: false })
     .eq("id", user.id);
+  // If she already paid, the way back leads straight into the community.
+  try {
+    const { reconcileSubscriberStatus } = await import("@/lib/payments/external");
+    await reconcileSubscriberStatus(user.id, user.email);
+  } catch (e) {
+    console.error("[join] revert reconcile failed:", user.id, e);
+  }
   revalidatePath("/", "layout");
   redirect("/join");
 }

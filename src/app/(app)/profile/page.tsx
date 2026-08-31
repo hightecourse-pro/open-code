@@ -8,6 +8,8 @@ import { DigestPreferences } from "@/components/patterns/digest-preferences";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { PortalVisibility } from "@/components/patterns/portal-visibility";
 import { requestMentorRole } from "./actions";
+import { switchMentorToMemberTrack } from "@/app/join/actions";
+import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { MENTOR_REQUEST_SUBJECT } from "@/lib/mentor-request";
 import Link from "next/link";
 import { Eye, Pencil } from "lucide-react";
@@ -232,6 +234,24 @@ export default async function ProfilePage({
               </button>
             </form>
           )}
+        </div>
+      )}
+
+      {profile.role === "mentor" && (
+        /* The way back (the owner, 1/9): a mentor may choose the regular
+           member track — the questionnaire reopens, a payer re-activates. */
+        <div className="border border-ink-200 bg-white rounded-[16px] p-4 flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-[220px] text-[13px] text-ink-700">
+            <b className="text-ink-1000">מעדיפה להיות חברה רגילה במסלול מנוי?</b> אפשר לעבור —
+            שאלון החברות ייפתח לך (מה שכבר מילאת יישמר), ואם כבר שילמת המנוי יחובר אוטומטית.
+          </div>
+          <ConfirmActionButton
+            action={switchMentorToMemberTrack}
+            message="לעבור למסלול חברה רגילה? הכתר יוסר ושאלון החברות ייפתח. אם יש לך תשלום פעיל — המנוי יחובר מיד."
+            className="font-display font-semibold text-[13px] px-4 py-2 rounded-md border-[1.5px] border-ink-300 text-ink-700 hover:border-brand-purple hover:text-brand-purple transition-colors"
+          >
+            מעבר למסלול מנוי
+          </ConfirmActionButton>
         </div>
       )}
 
