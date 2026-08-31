@@ -2321,6 +2321,31 @@ export async function approveMentorApplication(profileId: string): Promise<void>
 }
 
 /**
+ * Demote an APPROVED mentor back to a regular, not-subscribed member (the
+ * owner, 1/9): role junior on the paid track, pending (not active — active
+ * juniors are payers), and the member questionnaire reopens. Her mentor
+ * answers stay stored; assignments should be reassigned first if any.
+ */
+export async function demoteMentorToMember(profileId: string): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from("profiles")
+    .select("role")
+    .eq("id", profileId)
+    .maybeSingle();
+  if (p?.role !== "mentor") return;
+  await admin
+    .from("profiles")
+    .update({ role: "junior", member_tier: "paid", status: "pending", profile_completed: false })
+    .eq("id", profileId);
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/mentors");
+  revalidatePath("/members");
+}
+
+/**
  * Junk-account block (the owner, 1/9): a spam/garbage signup is locked all
  * the way — login banned, community access revoked (rejected) and hidden
  * from every member-facing list. Reversible from the same button.

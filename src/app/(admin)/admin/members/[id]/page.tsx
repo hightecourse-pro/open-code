@@ -10,7 +10,8 @@ import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
-import { sendPersonalEmail, setMemberHidden, setMemberJunk } from "@/app/(admin)/admin/actions";
+import { demoteMentorToMember, sendPersonalEmail, setMemberHidden, setMemberJunk } from "@/app/(admin)/admin/actions";
+import { SaveButton } from "@/components/patterns/save-button";
 import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
 import {
   EmploymentMentorAssign,
@@ -510,6 +511,16 @@ export default async function AdminMemberProfilePage({
         <div className="flex flex-col items-end gap-2">
           <MemberActions profileId={profile.id} status={profile.status} />
           {/* Team preview accounts: fully active, invisible to other members. */}
+          {/* An approved mentor can step back to a regular member. */}
+          {profile.role === "mentor" && (
+            <ConfirmActionButton
+              action={demoteMentorToMember.bind(null, profile.id)}
+              message="להפוך אותה למשתתפת רגילה ללא מנוי? הכתר יוסר, היא תחזור למסלול מנוי (ממתינה) ושאלון החברות ייפתח לה. אם יש לה ליוויים פעילים — כדאי להעביר אותם קודם."
+              className="text-[12px] font-semibold text-ink-500 hover:text-brand-purple"
+            >
+              הפיכה למשתתפת רגילה (הסרת מנטורית)
+            </ConfirmActionButton>
+          )}
           {/* Junk block: ban + reject + hide, one reversible action. */}
           <ConfirmActionButton
             action={setMemberJunk.bind(null, profile.id, profile.status !== "rejected")}
@@ -572,9 +583,12 @@ export default async function AdminMemberProfilePage({
             placeholder="ההודעה נשלחת אליה במייל מעוצב, מילה במילה — למשל הסבר אישי על החלטה, עידוד, או עדכון."
           />
           <div className="flex items-center gap-2">
-            <Button type="submit" size="sm">שליחת המייל</Button>
+            {/* SaveButton disables while sending — the double-send that hit
+                הדסה (two identical chat messages, 6s apart) came from a
+                feedback-less button. */}
+            <SaveButton label="שליחת המייל" />
             <span className="text-[11.5px] text-ink-500">
-              נשלח לכתובת המייל שאיתה נרשמה{email ? ` (${email})` : ""}.
+              נשלח לכתובת המייל שאיתה נרשמה{email ? ` (${email})` : ""} וגם לצ&apos;אט שלה איתך.
             </span>
           </div>
         </form>
