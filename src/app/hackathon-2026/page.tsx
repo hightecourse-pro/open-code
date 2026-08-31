@@ -141,9 +141,11 @@ const CHALLENGES: Challenge[] = [
 ];
 
 const STEPS = [
-  { emoji: "🎯", title: "בוחרות אתגר", body: "עוברות על ארבעת האתגרים ובוחרות את זה שמדליק אתכן.", tilt: "-rotate-2" },
-  { emoji: "📝", title: "ממלאות טופס בחירה", body: "רישום קצר — הטופס ייפתח כאן ברגע שההרשמה תעלה.", tilt: "rotate-1" },
-  { emoji: "📦", title: "מקבלות את החומרים", body: "לכל אתגר יישלחו תכנים ודוגמאות רלוונטיות, לפי הצורך.", tilt: "-rotate-1" },
+  { emoji: "🎯", title: "את בוחרת אתגר", body: "עוברת על ארבעת האתגרים ובוחרת את זה שמדליק אותך.", tilt: "-rotate-2" },
+  { emoji: "📝", title: "ממלאת טופס בחירה", body: "רישום קצר — הטופס ייפתח כאן ברגע שההרשמה תעלה.", tilt: "rotate-1" },
+  { emoji: "📦", title: "מקבלת את החומרים", body: "לאתגר שבחרת יישלחו אלייך תכנים ודוגמאות רלוונטיות.", tilt: "-rotate-1" },
+  { emoji: "🛠️", title: "מפתחת ויוצרת", body: "בונה את המנוע ואת הממשק — עם כלי ה-AI והמנטוריות שלצידך.", tilt: "rotate-2" },
+  { emoji: "🏆", title: "מתמודדת על הזכייה", body: "מציגה את הפתרון שלך מול השופטות והארגונים — ונלחמת על המקום הראשון.", tilt: "-rotate-1" },
 ];
 
 const TICKER = "🚀 האקתון AI קוד פתוח 2026 ✦ בונות פתרון אמיתי ✦ מנטוריות מלוות ✦ שת\"פים מהתעשייה ✦ ";
@@ -399,9 +401,9 @@ export default function Hackathon2026Page() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;נרשמות/&gt;</span>
-            <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">שלושה צעדים ואת בפנים</h2>
+            <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">חמישה צעדים ואת על הפודיום</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-5">
             {STEPS.map((s, i) => (
               <div
                 key={s.title}
@@ -421,7 +423,22 @@ export default function Hackathon2026Page() {
             ))}
           </div>
 
-          <div className="text-center mt-14 flex flex-col items-center gap-3 relative">
+          {/* the glittering finale */}
+          <div
+            className="mt-12 mx-auto max-w-xl bg-brand-gradient text-white text-center p-6 rotate-1 shadow-[6px_7px_0_0_#DDC9EC] relative overflow-hidden"
+            style={{ borderRadius: "28px 22px 30px 24px" }}
+          >
+            <Sparkle className="absolute top-3 right-6 w-5 h-5" color="#FFFFFF" />
+            <Sparkle className="absolute bottom-4 left-8 w-4 h-4" color="#F8D98C" delay="1.1s" />
+            <Sparkle className="absolute top-8 left-1/4 w-3 h-3" color="#FFFFFF" delay="0.5s" />
+            <div className="text-[30px]"><span className="h26-wiggle">🎉</span></div>
+            <div className="font-display font-black text-[22px] mt-1">אירוע סיום נוצץ ✨</div>
+            <div className="font-display font-bold text-[15px] mt-1 opacity-95">
+              באמצע חשוון — את מציגה, הקהילה חוגגת, והזוכות עולות לבמה 🏆
+            </div>
+          </div>
+
+          <div className="text-center mt-10 flex flex-col items-center gap-3 relative">
             <CurlyArrow className="w-12 h-14 absolute -top-12 right-[26%] rotate-[24deg] hidden sm:block" color="#7C3AED" />
             <span
               className="h26-bounce inline-flex items-center gap-2 bg-white border-2 border-dashed border-brand-pink/50 px-6 py-3 font-display font-bold text-[15px] text-ink-700 -rotate-1 shadow-[4px_5px_0_0_#F3C6DD]"
