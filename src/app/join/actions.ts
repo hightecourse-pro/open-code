@@ -90,10 +90,14 @@ export async function revertMentorApplication(): Promise<void> {
     .maybeSingle();
   if (!me || me.status === "active" || me.role !== "mentor") redirect("/join");
   // Same trigger story as applyAsMentor — the revert must also bypass it.
+  // profile_completed resets too, symmetrically: she may have completed the
+  // MENTOR questionnaire meanwhile, and carrying that "completed" back to the
+  // junior track produced a junior with no junior answers (מרים, 31/8) —
+  // the wizard reopens with her shared answers pre-filled.
   const { createAdminClient } = await import("@/lib/supabase/admin");
   await createAdminClient()
     .from("profiles")
-    .update({ role: "junior", member_tier: "paid" })
+    .update({ role: "junior", member_tier: "paid", profile_completed: false })
     .eq("id", user.id);
   revalidatePath("/", "layout");
   redirect("/join");
