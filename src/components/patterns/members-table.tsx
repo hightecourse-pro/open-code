@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, X, StickyNote, UserRound, Target, Star, Eye } from "lucide-react";
+import { Check, Copy, Search, X, StickyNote, UserRound, Target, Star, Eye } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { MemberActions } from "@/components/patterns/member-actions";
@@ -23,6 +23,32 @@ export interface MemberRow {
   vip_reason: string | null;
   internal_notes: string | null;
   created_at: string;
+  /** Contact details (the owner, 1/9): email with a copy button + phone. */
+  email?: string | null;
+  phone?: string | null;
+}
+
+/** Copies the email and confirms with a brief ✓. */
+function CopyButton({ text, title }: { text: string; title: string }) {
+  const [done, setDone] = useState(false);
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setDone(true);
+          setTimeout(() => setDone(false), 1500);
+        } catch {
+          /* clipboard unavailable — nothing to break */
+        }
+      }}
+      className="text-ink-400 hover:text-brand-purple cursor-pointer"
+    >
+      {done ? <Check size={12} className="text-success" /> : <Copy size={12} />}
+    </button>
+  );
 }
 
 /** One filterable profile parameter (built server-side from the questions). */
@@ -140,7 +166,7 @@ export function MembersTable({
         if (status && m.status !== status) return false;
         if (vip && !m.is_vip) return false;
         if (needle) {
-          const hay = `${m.full_name} ${m.specialization ?? ""} ${m.region ?? ""}`.toLowerCase();
+          const hay = `${m.full_name} ${m.specialization ?? ""} ${m.region ?? ""} ${m.email ?? ""} ${m.phone ?? ""}`.toLowerCase();
           if (!hay.includes(needle)) return false;
         }
         // Candidate finder: the server returned the ids that match ALL the
@@ -302,7 +328,7 @@ export function MembersTable({
         <table className="w-full border-collapse text-[13.5px]">
           <thead>
             <tr>
-              {["חברה", "תחום", "אזור", "הצטרפה", "תפקיד", "סטטוס", "CRM", "פעולות"].map((h) => (
+              {["חברה", "קשר", "תחום", "אזור", "הצטרפה", "תפקיד", "סטטוס", "CRM", "פעולות"].map((h) => (
                 <th key={h} className="text-right p-2 text-[11px] text-ink-500 uppercase font-semibold border-b border-ink-200">
                   {h}
                 </th>
@@ -348,6 +374,21 @@ export function MembersTable({
                     )}
                   </div>
                 </td>
+                <td className="p-2 border-b border-ink-100 text-[12px] whitespace-nowrap">
+                  {m.email ? (
+                    <span className="inline-flex items-center gap-1 text-ink-700" dir="ltr">
+                      {m.email}
+                      <CopyButton text={m.email} title="העתקת המייל" />
+                    </span>
+                  ) : (
+                    "—"
+                  )}
+                  {m.phone && (
+                    <div className="text-ink-500" dir="ltr">
+                      {m.phone}
+                    </div>
+                  )}
+                </td>
                 <td className="p-2 border-b border-ink-100 text-ink-700">{m.specialization || "—"}</td>
                 <td className="p-2 border-b border-ink-100 text-ink-700">{m.region || "—"}</td>
                 <td className="p-2 border-b border-ink-100 text-ink-500 whitespace-nowrap">
@@ -363,7 +404,7 @@ export function MembersTable({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-6 text-center text-ink-500">לא נמצאו חברות בסינון הזה.</td>
+                <td colSpan={9} className="p-6 text-center text-ink-500">לא נמצאו חברות בסינון הזה.</td>
               </tr>
             )}
           </tbody>

@@ -1504,6 +1504,8 @@ export interface Database {
       };
     };
     Functions: {
+      /** Admin-only: payers on the external list with no auth account yet. */
+      admin_unregistered_payers_count: { Args: Record<string, never>; Returns: number | null };
       is_admin: { Args: Record<string, never>; Returns: boolean };
       is_mentor: { Args: Record<string, never>; Returns: boolean };
       is_member: { Args: Record<string, never>; Returns: boolean };

@@ -80,6 +80,27 @@ export default async function AdminMembersPage({
 
   const crmOf = new Map((crm ?? []).map((c) => [c.profile_id, c]));
 
+  // Contact details per row (the owner, 1/9): emails from auth (paged — the
+  // default listUsers page is 50), phones from the phone answer.
+  const emailOf = new Map<string, string>();
+  for (let page = 1; ; page++) {
+    const { data: authPage } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    for (const u of authPage?.users ?? []) if (u.email) emailOf.set(u.id, u.email);
+    if (!authPage || authPage.users.length < 1000) break;
+  }
+  const phoneQ = (questions ?? []).find((q) => q.key === "phone");
+  const phoneOf = new Map<string, string>();
+  if (phoneQ) {
+    const { data: phones } = await admin
+      .from("profile_answers")
+      .select("profile_id, value")
+      .eq("question_id", phoneQ.id)
+      .limit(5000);
+    for (const p of phones ?? []) {
+      if (typeof p.value === "string" && p.value) phoneOf.set(p.profile_id, p.value);
+    }
+  }
+
   // Filter definitions come from the CONFIGURED options (taxonomies + the
   // question's own options). The one data-driven definition left is the
   // language chips — a single bounded query on that single question.
@@ -165,6 +186,8 @@ export default async function AdminMembersPage({
       vip_reason: c?.vip_reason ?? null,
       internal_notes: c?.internal_notes ?? m.internal_notes ?? null,
       created_at: m.created_at,
+      email: emailOf.get(m.id) ?? null,
+      phone: phoneOf.get(m.id) ?? null,
     };
   });
 

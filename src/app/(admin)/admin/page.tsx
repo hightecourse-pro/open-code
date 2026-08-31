@@ -13,22 +13,44 @@ export default async function AdminDashboardPage() {
   // a woman who joined without paying is simply a free member — she browses
   // immediately, nothing to approve. Payment (not an admin) activates a
   // subscriber; the approval queue below is mentors only.
-  const [active, pendingMentors, mentors, posts] = await Promise.all([
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("status", "active"),
-    supabase
-      .from("profiles")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "pending")
-      .eq("role", "mentor"),
-    supabase.from("profiles").select("*", { count: "exact", head: true }).eq("role", "mentor"),
-    supabase.from("posts").select("*", { count: "exact", head: true }),
-  ]);
+  const [subscribers, regulars, unregisteredPayers, pendingMentors, mentors, posts] =
+    await Promise.all([
+      // The directory view computes "really paying" (active paid / live sub /
+      // on the Nedarim payers list) — pending payers count as מנויות too.
+      supabase
+        .from("members_directory")
+        .select("*", { count: "exact", head: true })
+        .eq("is_subscriber", true),
+      // Regular members: in the community (active or pending), not paying,
+      // not mentors/team (the view masks unapproved mentors as juniors).
+      supabase
+        .from("members_directory")
+        .select("*", { count: "exact", head: true })
+        .eq("is_subscriber", false)
+        .eq("role", "junior"),
+      // Paid outside and never signed up — the definer function matches the
+      // payers list against auth accounts (null pre-migration → cube shows 0).
+      supabase.rpc("admin_unregistered_payers_count"),
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "pending")
+        .eq("role", "mentor"),
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "mentor")
+        .eq("status", "active"),
+      supabase.from("posts").select("*", { count: "exact", head: true }),
+    ]);
 
   // Each cube IS its filter (the tester's ask) — clicking lands on the list
   // it counts, already narrowed.
   const stats = [
-    { label: "חברות פעילות", value: active.count ?? 0, href: "/admin/members?status=active" },
-    { label: "מנטוריות לאישור", value: pendingMentors.count ?? 0, href: "/admin/members?status=pending" },
+    { label: "מנויות 💜", value: subscribers.count ?? 0, href: "/admin/members?status=active" },
+    { label: "משתתפות רגילות", value: regulars.count ?? 0, href: "/admin/members" },
+    { label: "שילמו וטרם נרשמו", value: (unregisteredPayers.data as number | null) ?? 0, href: "/admin/payments" },
+    { label: "מנטוריות לאישור", value: pendingMentors.count ?? 0, href: "/admin/mentors" },
     { label: "מנטוריות", value: mentors.count ?? 0, href: "/admin/mentors" },
     { label: "פוסטים בקהילה", value: posts.count ?? 0, href: "/forum" },
   ];
@@ -48,7 +70,7 @@ export default async function AdminDashboardPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">דשבורד</h1>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5">
         {stats.map((s) => (
           <Link
             key={s.label}

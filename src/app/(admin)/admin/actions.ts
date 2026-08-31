@@ -14,6 +14,7 @@ import {
   jobPublishedEmail,
   mentorApprovedEmail,
   mentorDeclinedEmail,
+  teamPersonalEmail,
   teamRepliedEmail,
   mentorAssignmentInviteEmail,
 } from "@/lib/email/templates";
@@ -2317,6 +2318,30 @@ export async function approveMentorApplication(profileId: string): Promise<void>
 
   revalidatePath("/admin/mentors");
   revalidatePath("/admin");
+}
+
+/**
+ * A personal email from the team to one member, from her file page (the
+ * owner, 1/9: "תן לי אפשרות לכתוב הודעה גם לאלה שדחיתי כבר") — a branded
+ * email carrying exactly the admin's words.
+ */
+export async function sendPersonalEmail(profileId: string, formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 4000);
+  if (!note) return;
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from("profiles")
+    .select("first_name, full_name")
+    .eq("id", profileId)
+    .maybeSingle();
+  const { data: authUser } = await admin.auth.admin.getUserById(profileId);
+  const email = authUser?.user?.email;
+  if (!email) return;
+  const mail = teamPersonalEmail(p?.first_name ?? p?.full_name?.split(" ")[0] ?? undefined, note);
+  const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+  if (!sent.ok) console.error("[members] personal email failed:", profileId, sent.error);
+  revalidatePath(`/admin/members/${profileId}`);
 }
 
 /**

@@ -5,12 +5,12 @@ import { ArrowRight, BookOpen, Briefcase, Download, FileText, Mail, PlayCircle, 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { Avatar, Badge } from "@/components/ui";
+import { Avatar, Badge, Button } from "@/components/ui";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
-import { setMemberHidden } from "@/app/(admin)/admin/actions";
+import { sendPersonalEmail, setMemberHidden } from "@/app/(admin)/admin/actions";
 import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
 import {
   EmploymentMentorAssign,
@@ -504,6 +504,31 @@ export default async function AdminMemberProfilePage({
             {profile.is_hidden ? "ביטול הסתרה מחברות" : "🙈 הסתרה מחברות (חשבון בדיקה)"}
           </ConfirmActionButton>
         </div>
+      </div>
+
+      {/* Personal email — a branded note carrying exactly the admin's words
+          (the owner, 1/9: for explaining past mentor declines and anything
+          else that deserves a personal touch). */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
+        <h3 className="font-display text-base font-bold flex items-center gap-1.5">
+          💌 מייל אישי ממך
+        </h3>
+        <form action={sendPersonalEmail.bind(null, profile.id)} className="flex flex-col gap-2">
+          <textarea
+            name="note"
+            required
+            rows={3}
+            maxLength={4000}
+            className="w-full rounded-md border border-ink-200 bg-white p-2.5 text-[13.5px] focus:outline-none focus:border-brand-purple"
+            placeholder="ההודעה נשלחת אליה במייל מעוצב, מילה במילה — למשל הסבר אישי על החלטה, עידוד, או עדכון."
+          />
+          <div className="flex items-center gap-2">
+            <Button type="submit" size="sm">שליחת המייל</Button>
+            <span className="text-[11.5px] text-ink-500">
+              נשלח לכתובת המייל שאיתה נרשמה{email ? ` (${email})` : ""}.
+            </span>
+          </div>
+        </form>
       </div>
 
       {/* Manual payment — the webhook-failed fallback. Kept next to the status

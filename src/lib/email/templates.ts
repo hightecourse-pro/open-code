@@ -631,6 +631,25 @@ export function mentorApprovedEmail(name?: string): BuiltEmail {
 }
 
 /**
+ * A free-form personal note from the team to one member (the owner, 1/9) —
+ * e.g. explaining a past mentor decline to someone rejected before the
+ * personal-note flow existed. The note IS the email.
+ */
+export function teamPersonalEmail(name: string | undefined, personalNote: string): BuiltEmail {
+  const note = escapeHtml(personalNote).replace(/\r?\n/g, "<br/>");
+  return {
+    subject: "הודעה אישית מצוות קוד פתוח 💜",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}רצינו לכתוב לך אישית`,
+      lines: [note],
+      ctaText: "כניסה לקהילה",
+      ctaUrl: `${SITE}/forum`,
+      footnote: "אפשר פשוט להשיב למייל הזה — אנחנו כאן 💜",
+    }),
+  };
+}
+
+/**
  * A mentor application was declined — with the admin's PERSONAL explanation
  * (the owner, 1/9). She stays a regular member and is invited to the paid
  * track; the personal note is the heart of the email.
