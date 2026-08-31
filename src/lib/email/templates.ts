@@ -630,6 +630,29 @@ export function mentorApprovedEmail(name?: string): BuiltEmail {
   };
 }
 
+/**
+ * A mentor application was declined — with the admin's PERSONAL explanation
+ * (the owner, 1/9). She stays a regular member and is invited to the paid
+ * track; the personal note is the heart of the email.
+ */
+export function mentorDeclinedEmail(name: string | undefined, personalNote: string): BuiltEmail {
+  const note = escapeHtml(personalNote).replace(/\r?\n/g, "<br/>");
+  return {
+    subject: "לגבי הבקשה שלך להצטרף כמנטורית 💜",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}תודה שביקשת להצטרף כמנטורית`,
+      lines: [
+        "עברנו על הבקשה שלך, והחלטנו שכרגע לא נצרף אותך לצוות המנטוריות. רצינו לכתוב לך את זה אישית:",
+        `<i>${note}</i>`,
+        "החשבון שלך נשאר איתנו כרגיל — את מוזמנת להצטרף לקהילה כחברה במסלול מנוי, עם הקורסים, הסשנים, המשרות וכל השאר.",
+      ],
+      ctaText: "להצטרפות לקהילה",
+      ctaUrl: `${SITE}/join`,
+      footnote: "אם משהו לא ברור — פשוט השיבי למייל הזה ונדבר 💜",
+    }),
+  };
+}
+
 // ---------------------------------------------------- subscription lifecycle
 
 /** Right after she cancels auto-renewal in the app. */

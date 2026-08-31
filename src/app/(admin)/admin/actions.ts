@@ -13,6 +13,7 @@ import {
   jobCandidatesEmail,
   jobPublishedEmail,
   mentorApprovedEmail,
+  mentorDeclinedEmail,
   teamRepliedEmail,
   mentorAssignmentInviteEmail,
 } from "@/lib/email/templates";
@@ -2318,18 +2319,41 @@ export async function approveMentorApplication(profileId: string): Promise<void>
   revalidatePath("/admin");
 }
 
-/** Decline a mentor application (no email — the admin usually writes to her). */
-export async function rejectMentorApplication(profileId: string): Promise<void> {
+/**
+ * Decline a mentor application (the owner, 1/9): the admin writes a PERSONAL
+ * note that goes to her by email, and she stays in the community as a regular
+ * (not-subscribed) member — role junior on the paid track, wizard reopened so
+ * she fills the member questionnaire.
+ */
+export async function rejectMentorApplication(profileId: string, formData: FormData): Promise<void> {
   await requireRole("admin");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 2000);
+  if (!note) return; // the personal explanation is the point — never silent
   const admin = createAdminClient();
   const { data: p } = await admin
     .from("profiles")
-    .select("id, role, status")
+    .select("id, role, status, first_name, full_name")
     .eq("id", profileId)
     .maybeSingle();
   if (!p || p.role !== "mentor" || p.status !== "pending") return;
-  await admin.from("profiles").update({ status: "rejected" }).eq("id", profileId);
+  await admin
+    .from("profiles")
+    .update({ role: "junior", member_tier: "paid", profile_completed: false })
+    .eq("id", profileId);
+
+  try {
+    const { data: authUser } = await admin.auth.admin.getUserById(profileId);
+    const email = authUser?.user?.email;
+    if (email) {
+      const mail = mentorDeclinedEmail(p.first_name ?? p.full_name?.split(" ")[0] ?? undefined, note);
+      await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+    }
+  } catch (e) {
+    console.error("[mentors] decline email failed:", profileId, e);
+  }
+
   revalidatePath("/admin/mentors");
+  revalidatePath("/admin");
 }
 
 // --------------------------------------------------------- member requests

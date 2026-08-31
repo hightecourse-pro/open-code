@@ -87,6 +87,7 @@ export default async function MembersPage({
               mentorWaiting={mentorWaiting}
               score={scores.get(member.id)?.score}
               subscriber={subscriberIds.has(member.id)}
+              viewerIsTeam={me.role === "admin"}
             />
           ),
         }))}

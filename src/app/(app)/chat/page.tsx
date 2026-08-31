@@ -136,20 +136,42 @@ export default async function ChatPage({
   ]);
 
   const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
+  // An unapproved mentor carries no mentor indication (the owner, 1/9) — she
+  // reads as a regular member everywhere until the team approves her.
+  for (const o of otherMap.values()) {
+    if (o.role === "mentor" && o.status !== "active") o.role = "junior";
+  }
   const myMentorIds = new Set(
     (assignments ?? []).map((a) => a.assigned_mentor_id).filter((id): id is string => !!id)
   );
   const activeOther = active ? otherMap.get(active.a_id === me.id ? active.b_id : active.a_id) : null;
 
-  // Members talk to each other — that is what the directory is for. The only
-  // limits: writing is part of the membership (a free member reads her history
-  // but doesn't send), and a thread with someone who has left the community
-  // stays readable rather than open.
+  // Who may be WRITTEN to (the owner, 1/9): the team writes to anyone still
+  // here; a member writes only to מנויות (real payers — pending included),
+  // approved mentors and the team. The directory view carries that truth.
   const subscriber = isSubscriber(me);
-  // Pending members are writable too (the directory lists them since 31/8) —
-  // only a thread with someone paused/rejected stays read-only.
-  const canSend =
-    subscriber && !!activeOther && (activeOther.status === "active" || activeOther.status === "pending");
+  const activeOtherId = activeOther?.id ?? null;
+  let otherWritable = false;
+  if (activeOtherId) {
+    if (me.role === "admin") {
+      otherWritable = activeOther!.status === "active" || activeOther!.status === "pending";
+    } else {
+      const { data: dir } = await supabase
+        .from("members_directory")
+        .select("role, is_subscriber")
+        .eq("id", activeOtherId)
+        .maybeSingle();
+      otherWritable = !!dir && (dir.role === "admin" || dir.role === "mentor" || dir.is_subscriber);
+    }
+  }
+  // True when the thread is locked because SHE isn't a subscriber — the one
+  // case that gets a clear explanation (the owner: "הודעה ברורה").
+  const otherNotSubscribed =
+    !!activeOther &&
+    !otherWritable &&
+    me.role !== "admin" &&
+    (activeOther.status === "active" || activeOther.status === "pending");
+  const canSend = subscriber && otherWritable;
 
   // Chronological again for display (fetched newest-first for the LIMIT).
   const messages = [...(newestMessages ?? [])].reverse();
@@ -363,10 +385,17 @@ export default async function ChatPage({
                         ? "ההתכתבות תיפתח עם אישור הבקשה שלך כמנטורית 💜"
                         : "ההתכתבות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜"}
                     </Link>
+                  ) : otherNotSubscribed ? (
+                    // A clear reason (the owner, 1/9): chat is a subscriber
+                    // benefit, so a thread with a member who isn't a מנויה
+                    // waits until she joins.
+                    <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
+                      התכתבות אפשרית רק עם מנויות הקהילה — היא עדיין לא מנויה, וברגע שתצטרף השיחה
+                      תיפתח 💜
+                    </div>
                   ) : (
-                    // Deliberately vague: why she can't write here is nobody
-                    // else's business — a member never learns another
-                    // member's status from us.
+                    // Deliberately vague for anyone who LEFT (paused/rejected):
+                    // why she can't write here is nobody else's business.
                     <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
                       אי אפשר לשלוח הודעות חדשות בשיחה הזו כרגע — היא נשמרת כאן במלואה 💜
                     </div>

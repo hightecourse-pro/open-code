@@ -50,13 +50,29 @@ export function MemberChatAction({
   canChat,
   className,
   mentorWaiting = false,
+  writable = true,
 }: {
   member: DirectoryMember;
   canChat: boolean;
   className?: string;
   /** A not-yet-active mentor is told about approval, never about paying. */
   mentorWaiting?: boolean;
+  /** May SHE be written to — מנויות, mentors and team only (the owner, 1/9). */
+  writable?: boolean;
 }) {
+  if (canChat && !writable) {
+    return (
+      <div
+        className={cn(
+          CHAT_BUTTON_CLASS,
+          "bg-ink-50 text-ink-500 border border-ink-200 cursor-default",
+          className
+        )}
+      >
+        <Lock size={14} /> התכתבות אפשרית רק עם מנויות 💜
+      </div>
+    );
+  }
   if (!canChat) {
     return (
       <Link
@@ -110,6 +126,7 @@ export function MemberCard({
   score,
   subscriber,
   mentorWaiting = false,
+  viewerIsTeam = false,
 }: {
   member: DirectoryMember;
   canChat: boolean;
@@ -119,8 +136,11 @@ export function MemberCard({
   subscriber?: boolean;
   /** The viewer is a not-yet-active mentor — approval copy, no pay pitch. */
   mentorWaiting?: boolean;
+  /** The team writes to anyone; members only to מנויות/mentors/team. */
+  viewerIsTeam?: boolean;
 }) {
   const isMentor = member.role === "mentor";
+  const writable = viewerIsTeam || member.role !== "junior" || subscriber === true;
 
   return (
     <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
@@ -160,7 +180,7 @@ export function MemberCard({
         <p className="text-[13.5px] text-ink-700 leading-relaxed line-clamp-2">{member.bio}</p>
       )}
 
-      <MemberChatAction member={member} canChat={canChat} mentorWaiting={mentorWaiting} className="mt-auto" />
+      <MemberChatAction member={member} canChat={canChat} mentorWaiting={mentorWaiting} writable={writable} className="mt-auto" />
     </div>
   );
 }

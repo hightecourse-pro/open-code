@@ -182,9 +182,36 @@ export default async function AdminMentorsPage() {
                 <form action={approveMentorApplication.bind(null, p.id)}>
                   <Button type="submit" size="sm">אישור 👑</Button>
                 </form>
-                <form action={rejectMentorApplication.bind(null, p.id)}>
-                  <Button type="submit" size="sm" variant="ghost">דחייה</Button>
-                </form>
+                {/* Declining requires a personal explanation — it goes to her
+                    by email, and she stays a regular (not-subscribed) member. */}
+                <details className="w-full">
+                  <summary className="cursor-pointer text-[12.5px] font-semibold text-ink-500 hover:text-danger list-none">
+                    דחייה…
+                  </summary>
+                  <form
+                    action={rejectMentorApplication.bind(null, p.id)}
+                    className="mt-2 flex flex-col gap-2 bg-ink-50 border border-ink-200 rounded-md p-3"
+                  >
+                    <label className="text-[12px] font-semibold text-ink-700" htmlFor={`reject-${p.id}`}>
+                      הודעה אישית שמסבירה את ההחלטה (נשלחת אליה במייל)
+                    </label>
+                    <textarea
+                      id={`reject-${p.id}`}
+                      name="note"
+                      required
+                      rows={3}
+                      maxLength={2000}
+                      className="w-full rounded-md border border-ink-200 bg-white p-2 text-[13px] focus:outline-none focus:border-brand-purple"
+                      placeholder="למשל: ראינו שהניסיון שלך עדיין בתחילת הדרך — נשמח שתגישי שוב בעוד שנה…"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button type="submit" size="sm" variant="ghost">שליחת הדחייה</Button>
+                      <span className="text-[11.5px] text-ink-500">
+                        היא נשארת משתתפת רגילה (לא מנויה) ותתבקש למלא את שאלון החברות.
+                      </span>
+                    </div>
+                  </form>
+                </details>
               </div>
             ))}
           </div>

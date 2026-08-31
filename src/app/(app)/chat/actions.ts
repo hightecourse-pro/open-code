@@ -90,11 +90,21 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     ? (await supabase.from("profiles").select("role, status").eq("id", otherId).single()).data
     : null;
   const other = otherRes.data ?? (otherFallback && { ...otherFallback, digest_frequency: "daily" });
-  // Pending members are part of the community (the directory shows them since
-  // 31/8) — only paused/rejected threads stay read-only.
   if (other?.status !== "active" && other?.status !== "pending") return;
   // Free members read their history but don't send.
   if (!me || !(me.status === "active" || me.role === "admin")) return;
+  // Who may be WRITTEN to (the owner, 1/9): the team writes to anyone still
+  // here; a member writes only to מנויות (real payers — pending included),
+  // approved mentors, and the team. The directory view is the single source
+  // of that truth (masked role + is_subscriber).
+  if (me.role !== "admin") {
+    const { data: dir } = await supabase
+      .from("members_directory")
+      .select("role, is_subscriber")
+      .eq("id", otherId)
+      .maybeSingle();
+    if (!dir || !(dir.role === "admin" || dir.role === "mentor" || dir.is_subscriber)) return;
+  }
 
   // The RECIPIENT decides whether an email goes out — never anyone's role.
   // This used to be `sender is junior && recipient is an active mentor`, from
@@ -183,19 +193,29 @@ export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
   } = await supabase.auth.getUser();
   if (!user) return [];
   const needle = q.trim().slice(0, 60);
-  let query = supabase
+  // The directory view is the searchable population (hidden/paused/rejected
+  // never appear). A regular member gets only who she may WRITE to — מנויות,
+  // approved mentors and the team; an admin reaches everyone listed.
+  const { data: meRow } = await supabase
     .from("profiles")
-    .select("id, full_name, specialization, avatar_initials")
-    // Pending members are reachable too — same population as the directory.
-    .in("status", ["active", "pending"])
-    // Team test accounts stay invisible to other members (see is_hidden).
-    .eq("is_hidden", false)
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  let query = supabase
+    .from("members_directory")
+    .select("id, full_name, specialization, avatar_initials, role, is_subscriber")
     .neq("id", user.id)
     .order("full_name", { ascending: true })
-    .limit(8);
+    .limit(24);
   if (needle) {
     query = query.or(`full_name.ilike.%${needle}%,specialization.ilike.%${needle}%`);
   }
   const { data } = await query;
-  return data ?? [];
+  const rows =
+    meRow?.role === "admin"
+      ? (data ?? [])
+      : (data ?? []).filter((m) => m.role === "admin" || m.role === "mentor" || m.is_subscriber);
+  return rows.slice(0, 8).map(({ id, full_name, specialization, avatar_initials }) => ({
+    id, full_name, specialization, avatar_initials,
+  }));
 }
