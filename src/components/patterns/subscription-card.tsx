@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CalendarClock, CreditCard, HeartCrack, RotateCcw } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
@@ -33,6 +34,7 @@ export function SubscriptionCard({
   canceledAt: string | null;
   priceShekels: number;
 }) {
+  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -45,12 +47,16 @@ export function SubscriptionCard({
       const res = await cancelRenewal();
       if (res?.error) setError(res.error);
       setConfirming(false);
+      // Pull the fresh server state in — the invoked-in-transition action
+      // does not repaint the page by itself ("חידוש מנוי בלחיצה לא עובד").
+      router.refresh();
     });
   }
   function doResume() {
     start(async () => {
       const res = await resumeRenewal();
       if (res?.error) setError(res.error);
+      router.refresh();
     });
   }
 
