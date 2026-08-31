@@ -130,7 +130,7 @@ const CHALLENGES: Challenge[] = [
     org: "משרד הבריאות · שיבא",
     emoji: "🧬",
     challenge:
-      "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים — סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלכן צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
+      "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים — סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
     samples: true,
     tilt: "md:-rotate-2",
     tint: "bg-white",
@@ -141,11 +141,45 @@ const CHALLENGES: Challenge[] = [
 ];
 
 const STEPS = [
-  { emoji: "🎯", title: "את בוחרת אתגר", body: "עוברת על ארבעת האתגרים ובוחרת את זה שמדליק אותך.", tilt: "-rotate-2" },
-  { emoji: "📝", title: "ממלאת טופס בחירה", body: "רישום קצר — הטופס ייפתח כאן ברגע שההרשמה תעלה.", tilt: "rotate-1" },
+  { emoji: "🎯", title: "בוחרת אתגר", body: "עוברת על ארבעת האתגרים ובוחרת את זה שמדליק אותך.", tilt: "-rotate-2" },
+  { emoji: "📝", title: "ממלאה טופס בחירה", body: "רישום קצר — הטופס ייפתח בקהילה ברגע שההרשמה תעלה.", tilt: "rotate-1" },
   { emoji: "📦", title: "מקבלת את החומרים", body: "לאתגר שבחרת יישלחו אלייך תכנים ודוגמאות רלוונטיות.", tilt: "-rotate-1" },
   { emoji: "🛠️", title: "מפתחת ויוצרת", body: "בונה את המנוע ואת הממשק — עם כלי ה-AI והמנטוריות שלצידך.", tilt: "rotate-2" },
-  { emoji: "🏆", title: "מתמודדת על הזכייה", body: "מציגה את הפתרון שלך מול השופטות והארגונים — ונלחמת על המקום הראשון.", tilt: "-rotate-1" },
+  { emoji: "🏆", title: "מתמודדת על הזכייה", body: "מגישה את הפתרון שעבדת עליו ונלחמת על המקום הראשון בארוע.", tilt: "-rotate-1" },
+];
+
+// How you approach an AI challenge — a zigzag doodle path, לשון נוכחת
+// (the owner, 31/8: redesign + "גם אם לא למדת קורס AI מלא").
+const APPROACH = [
+  {
+    emoji: "🗺️",
+    title: "מתייעצת עם ה-AI",
+    body: "זורקת לו את האתגר ומפרקת את הבעיה יחד איתו לצעדים קטנים — עוד לפני שורת קוד אחת.",
+    side: "self-start",
+    tilt: "-rotate-1",
+  },
+  {
+    emoji: "🎓",
+    title: "לא יודעת מאיפה להתחיל?",
+    body: "הסשנים של הקהילה הם בדיוק נקודת הפתיחה — סדר בעולמות ה-AI, פיתוח איג'נטים ועוד.",
+    side: "self-end",
+    tilt: "rotate-1",
+  },
+  {
+    emoji: "🧑‍🏫",
+    title: "בחרת שיטה? תני ל-AI ללמד אותך",
+    body: "ברגע שבחרת שיטה — בקשי מה-AI שילמד אותך איך בדיוק היא עובדת, צעד אחרי צעד. ככה יהיה לך הרבה יותר קל לפתור בעיות שתיתקלי בהן בדרך.",
+    side: "self-start",
+    tilt: "rotate-1",
+    highlight: true,
+  },
+  {
+    emoji: "🤖",
+    title: "בונה איג'נט",
+    body: "מנוע AI שמקבל קלט, חושב, ומחזיר פתרון — ומנטוריות מהקהילה ילוו אותך לאורך כל הדרך 💜",
+    side: "self-end",
+    tilt: "-rotate-1",
+  },
 ];
 
 const TICKER = "🚀 האקתון AI קוד פתוח 2026 ✦ בונות פתרון אמיתי ✦ מנטוריות מלוות ✦ שת\"פים מהתעשייה ✦ ";
@@ -165,7 +199,7 @@ export default function Hackathon2026Page() {
         @keyframes h26-wiggle { 0%,100%{ rotate:-7deg } 50%{ rotate:9deg } }
         @keyframes h26-draw-kf { to { stroke-dashoffset: 0 } }
         @keyframes h26-spin { from{ rotate:0deg } to{ rotate:360deg } }
-        @keyframes h26-marquee { from{ transform:translateX(0) } to{ transform:translateX(50%) } }
+        @keyframes h26-marquee { from{ transform:translateX(-50%) } to{ transform:translateX(0) } }
         @keyframes h26-bounce { 0%,100%{ translate:0 0 } 50%{ translate:0 -5px } }
         .h26-twinkle { animation: h26-twinkle 2.6s ease-in-out infinite; }
         .h26-float { animation: h26-float 4.5s ease-in-out infinite; }
@@ -198,6 +232,18 @@ export default function Hackathon2026Page() {
         <span aria-hidden className="h26-float absolute top-36 left-[5%] font-mono text-[13px] text-brand-purple/60 -rotate-12 select-none hidden sm:block" style={{ animationDelay: "1.2s" }}>
           {"agent.solve(realProblem)"}
         </span>
+        <span aria-hidden className="h26-float absolute top-64 right-[4%] font-mono text-[12.5px] text-brand-purple/50 -rotate-6 select-none hidden md:block" style={{ animationDelay: "0.6s" }}>
+          {"ai.teachMe(\"how-it-works\")"}
+        </span>
+        <span aria-hidden className="h26-float absolute bottom-24 left-[7%] font-mono text-[12.5px] text-brand-pink-deep/50 rotate-12 select-none hidden md:block" style={{ animationDelay: "1.8s" }}>
+          {"if (stuck) askMentor() 💜"}
+        </span>
+        <span aria-hidden className="h26-float absolute bottom-10 right-[14%] font-mono text-[12.5px] text-[#B48A0A]/60 -rotate-3 select-none hidden lg:block" style={{ animationDelay: "2.4s" }}>
+          {"deploy(\"cloud\") // ✨"}
+        </span>
+        <span aria-hidden className="h26-float absolute top-24 left-[16%] font-mono text-[12px] text-brand-purple/40 rotate-3 select-none hidden lg:block" style={{ animationDelay: "3s" }}>
+          {"const win = you.build()"}
+        </span>
 
         <div className="max-w-2xl mx-auto flex flex-col items-center gap-5">
           <Link href="/" className="-rotate-2 hover:rotate-0 transition-transform">
@@ -217,7 +263,7 @@ export default function Hackathon2026Page() {
             </span>
           </h1>
           <p className="t-body-lg text-ink-700 max-w-lg">
-            אתגרי AI אמיתיים מארגונים אמיתיים. בוחרות אתגר, בונות פתרון עובד — ואנחנו איתכן בכל
+            אתגרי AI אמיתיים מארגונים אמיתיים. בוחרת אתגר, בונה פתרון עובד — ואנחנו איתך בכל
             צעד.
           </p>
           <div className="flex items-center gap-2.5 flex-wrap justify-center">
@@ -239,11 +285,12 @@ export default function Hackathon2026Page() {
         </div>
       </section>
 
-      {/* code ticker strip */}
+      {/* code ticker strip — two identical halves, the track slides exactly one
+          half per cycle, so the loop is seamless and truly endless */}
       <div className="bg-brand-gradient py-2 overflow-hidden" dir="ltr" aria-hidden>
         <div className="h26-ticker-track flex whitespace-nowrap w-max" style={{ direction: "rtl" }}>
-          <span className="font-display font-bold text-white text-[14px] tracking-wide px-4">{TICKER.repeat(4)}</span>
-          <span className="font-display font-bold text-white text-[14px] tracking-wide px-4">{TICKER.repeat(4)}</span>
+          <span className="font-display font-bold text-white text-[14px] tracking-wide">{TICKER.repeat(6)}</span>
+          <span className="font-display font-bold text-white text-[14px] tracking-wide">{TICKER.repeat(6)}</span>
         </div>
       </div>
 
@@ -345,31 +392,59 @@ export default function Hackathon2026Page() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-4">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;איך ניגשים/&gt;</span>
-            <h2 className="font-display text-[30px] font-black mt-1 rotate-1">ככה ניגשים לאתגר AI</h2>
+            <h2 className="font-display text-[30px] font-black mt-1 rotate-1">ככה את ניגשת לאתגר AI</h2>
+            <p className="t-body text-ink-700 mt-1.5">
+              גם אם לא למדת קורס AI מלא <span className="h26-wiggle">😉</span> — ה-AI הוא גם הכלי וגם המורה שלך.
+            </p>
           </div>
-          <div className="flex justify-end pe-6 -mb-3 items-start">
-            <span className="font-display font-bold text-[14px] text-brand-purple -rotate-6 me-1 mt-2">מתחילות כאן</span>
+          <div className="flex justify-end pe-6 -mb-2 items-start">
+            <span className="font-display font-bold text-[14px] text-brand-purple -rotate-6 me-1 mt-2">מתחילה כאן</span>
             <SwirlArrow className="h26-float w-14 h-12" />
           </div>
-          <div
-            className="overflow-hidden border-2 border-ink-1000 md:-rotate-1 shadow-[8px_9px_0_0_#DDC9EC]"
-            style={{ borderRadius: "20px 26px 22px 26px" }}
-            dir="ltr"
-          >
-            <div className="bg-ink-1000 px-4 py-2.5 flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-brand-pink" />
-              <span className="w-3 h-3 rounded-full bg-[#F8D98C]" />
-              <span className="w-3 h-3 rounded-full bg-tint-mint" />
-              <span className="font-mono text-[12px] text-white/70 ms-3">open-code ~ hackathon</span>
-            </div>
-            <div className="bg-[#1B1430] p-5 font-mono text-[13.5px] leading-7 text-white/90" dir="rtl">
-              <p><span className="text-brand-pink">$</span> מתייעצות עם כלי AI על האתגר — מפרקות את הבעיה יחד איתו לצעדים</p>
-              <p><span className="text-brand-pink">$</span> בונות איג'נט: מנוע AI שמקבל קלט, חושב, ומחזיר פתרון</p>
-              <p><span className="text-brand-pink">$</span> לא יודעות מאיפה להתחיל? <b>הסשנים של הקהילה</b> הם בדיוק המקום — סדר בעולמות ה-AI, פיתוח איג'נטים ועוד</p>
-              <p><span className="text-brand-pink">$</span> מתחילות לבנות — ואנחנו נדאג למנטוריות שילוו אתכן לאורך הדרך 💜</p>
-              <p className="text-white/50">// טיפ: רישיון לכלי AI רציני כמו Claude Code שווה את זה — הוא בונה איתכן את הפרויקט</p>
-            </div>
+
+          {/* zigzag doodle path — each stop leans the other way, swirl arrows in between */}
+          <div className="flex flex-col">
+            {APPROACH.map((a, i) => (
+              <div key={a.title} className="flex flex-col">
+                <div
+                  className={`${a.side} ${a.tilt} hover:rotate-0 transition-transform w-full sm:w-[78%] border-2 p-5 flex gap-4 items-start ${
+                    a.highlight
+                      ? "bg-white border-brand-pink shadow-[6px_7px_0_0_#E0418D] relative"
+                      : "bg-white border-ink-900/10 shadow-[5px_6px_0_0_#EDE4F7]"
+                  }`}
+                  style={{ borderRadius: i % 2 ? "24px 20px 28px 22px" : "20px 28px 22px 26px" }}
+                >
+                  {a.highlight && <Sparkle className="absolute -top-3 -left-3 w-7 h-7" color="#E0418D" />}
+                  <span
+                    className={`w-12 h-12 text-[24px] flex items-center justify-center shrink-0 ${a.highlight ? "bg-brand-gradient" : "bg-tint-purple/60"} ${i % 2 ? "rotate-6" : "-rotate-6"}`}
+                    style={{ borderRadius: "48% 52% 55% 45% / 52% 45% 55% 48%" }}
+                  >
+                    <span className="h26-wiggle" style={{ animationDelay: `${i * 0.5}s` }}>{a.emoji}</span>
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block font-display font-black text-[16.5px] leading-snug">{a.title}</span>
+                    <span className="block t-body-sm text-ink-700 mt-1">{a.body}</span>
+                  </span>
+                </div>
+                {i < APPROACH.length - 1 && (
+                  <div className={`flex ${i % 2 ? "justify-start ps-[22%]" : "justify-end pe-[22%]"} -my-1.5`}>
+                    <SwirlArrow
+                      className={`h26-float w-12 h-10 ${i % 2 ? "-scale-x-100" : ""}`}
+                      color={i % 2 ? "#E0418D" : "#7C3AED"}
+                    />
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
+
+          {/* the code-flavored tip stays — one playful mono line */}
+          <p
+            className="font-mono text-[12.5px] text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-4 py-2.5 mt-8 w-fit mx-auto rotate-1"
+            style={{ borderRadius: "14px 18px 14px 20px" }}
+          >
+            {"// טיפ: רישיון לכלי AI רציני כמו Claude Code שווה את זה — הוא בונה איתך את הפרויקט 🚀"}
+          </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-12">
             <div
@@ -401,7 +476,7 @@ export default function Hackathon2026Page() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;נרשמות/&gt;</span>
-            <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">חמישה צעדים ואת על הפודיום</h2>
+            <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">5 צעדים — ויש לך פרויקט AI משמעותי משלך</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-5">
             {STEPS.map((s, i) => (
@@ -434,7 +509,7 @@ export default function Hackathon2026Page() {
             <div className="text-[30px]"><span className="h26-wiggle">🎉</span></div>
             <div className="font-display font-black text-[22px] mt-1">אירוע סיום נוצץ ✨</div>
             <div className="font-display font-bold text-[15px] mt-1 opacity-95">
-              באמצע חשוון — את מציגה, הקהילה חוגגת, והזוכות עולות לבמה 🏆
+              באמצע חשוון — הקהילה חוגגת, והזוכות עולות לבמה 🏆
             </div>
           </div>
 
@@ -444,7 +519,7 @@ export default function Hackathon2026Page() {
               className="h26-bounce inline-flex items-center gap-2 bg-white border-2 border-dashed border-brand-pink/50 px-6 py-3 font-display font-bold text-[15px] text-ink-700 -rotate-1 shadow-[4px_5px_0_0_#F3C6DD]"
               style={{ borderRadius: "999px" }}
             >
-              🔒 טופס הבחירה ייפתח כאן ממש בקרוב
+              🔒 טופס הבחירה ייפתח בקהילה ממש בקרוב
             </span>
             <p className="t-body-sm text-ink-500 max-w-md">
               ההשתתפות למנויות הקהילה בלבד — עוד לא איתנו?{" "}
