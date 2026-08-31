@@ -13,9 +13,12 @@ const PAGE = 500;
 export default async function MembersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; g?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, g } = await searchParams;
+  // The chip filter survives the round-trip to a member's page (?g= written
+  // client-side with replaceState) — validate to the known groups.
+  const initialGroup = ["subscriber", "mentor", "team"].includes(g ?? "") ? g! : "";
 
   const me = await requireCommunityAccess();
   const canChat = isSubscriber(me);
@@ -108,6 +111,7 @@ export default async function MembersPage({
       <MembersInstantList
         capped={false}
         initialQuery={(q ?? "").trim()}
+        initialGroup={initialGroup}
         items={members.map((member) => ({
           id: member.id,
           // One-click chips: the view's masked role means "mentor" is always
