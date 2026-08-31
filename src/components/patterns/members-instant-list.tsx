@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { InstantSearchInput, useInstantFilter, type InstantItem } from "./instant-filter";
 
 /** "נמצאו 12 משתתפות" while searching, plain "12 משתתפות" while browsing. */
@@ -33,8 +33,25 @@ export function MembersInstantList({
 
   // Keep the filters in the URL (replaceState — no navigation, no refetch), so
   // opening a member's card and pressing BACK lands on the same filtered list
-  // (member feedback, 1/9: "מתאפס לי הגדרות הסינון").
+  // (member feedback, 1/9: "מתאפס לי הגדרות הסינון"). Two halves:
+  // 1. On mount, ADOPT whatever the browser brought back in the URL — the
+  //    router cache serves the page with its original (stale) props, so the
+  //    address bar is the only survivor of the round trip.
   useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("q");
+    const g = sp.get("g");
+    if (q !== null) setNeedle(q);
+    if (g !== null && ["", "subscriber", "mentor", "team"].includes(g)) setGroup(g);
+  }, []);
+  // 2. Every later change writes itself back — skipping the mount run so the
+  //    empty initial state never wipes the URL before the adoption lands.
+  const urlSyncReady = useRef(false);
+  useEffect(() => {
+    if (!urlSyncReady.current) {
+      urlSyncReady.current = true;
+      return;
+    }
     const params = new URLSearchParams();
     if (needle.trim()) params.set("q", needle.trim());
     if (group) params.set("g", group);
