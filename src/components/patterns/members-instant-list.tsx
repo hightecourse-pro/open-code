@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { InstantSearchInput, useInstantFilter, type InstantItem } from "./instant-filter";
 
 /** "נמצאו 12 משתתפות" while searching, plain "12 משתתפות" while browsing. */
@@ -19,15 +19,28 @@ export function MembersInstantList({
   items,
   capped,
   initialQuery = "",
+  initialGroup = "",
 }: {
   items: InstantItem[];
   /** The browse list hit MAX_RESULTS — noted next to the count. */
   capped: boolean;
   initialQuery?: string;
+  initialGroup?: string;
 }) {
   const [needle, setNeedle] = useState(initialQuery);
   // One-click group chips (the owner, 1/9): צוות / מנויות / מנטוריות.
-  const [group, setGroup] = useState<string>("");
+  const [group, setGroup] = useState<string>(initialGroup);
+
+  // Keep the filters in the URL (replaceState — no navigation, no refetch), so
+  // opening a member's card and pressing BACK lands on the same filtered list
+  // (member feedback, 1/9: "מתאפס לי הגדרות הסינון").
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (needle.trim()) params.set("q", needle.trim());
+    if (group) params.set("g", group);
+    const qs = params.toString();
+    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+  }, [needle, group]);
   const searchFiltered = useInstantFilter(items, needle, (item) => item.haystack);
   const filtered = group ? searchFiltered.filter((i) => i.group === group) : searchFiltered;
   const searching = needle.trim().length > 0 || group !== "";
