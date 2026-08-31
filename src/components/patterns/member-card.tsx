@@ -180,12 +180,19 @@ export function MemberCard({
               </span>
             )}
           </span>
-          <MemberMeta member={member} city={city} />
-          {studyPlace && (
-            <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-500">
-              <GraduationCap size={13} className="shrink-0" />
-              {studyPlace}
-            </span>
+          {/* Team cards carry the badge alone (the owner, 31/8): no city, no
+              study place — a team member's personal details are not for the
+              directory. */}
+          {member.role !== "admin" && (
+            <>
+              <MemberMeta member={member} city={city} />
+              {studyPlace && (
+                <span className="inline-flex items-center gap-1 text-[12.5px] text-ink-500">
+                  <GraduationCap size={13} className="shrink-0" />
+                  {studyPlace}
+                </span>
+              )}
+            </>
           )}
         </div>
       </div>
