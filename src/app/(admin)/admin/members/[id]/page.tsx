@@ -135,6 +135,24 @@ export default async function AdminMemberProfilePage({
     .eq("profile_id", id)
     .maybeSingle();
   const workplace = privateRow?.workplace ?? null;
+  // Personal-email history (the owner, 1/9): what was already sent, by whom,
+  // shown above the compose box with a double-send warning. Errors (the table
+  // is pre-migration) fold to an empty list.
+  const { data: personalRows } = await supabase
+    .from("personal_emails")
+    .select("id, body, kind, created_at, sender_id")
+    .eq("profile_id", id)
+    .order("created_at", { ascending: false });
+  const senderIds = [...new Set((personalRows ?? []).map((r) => r.sender_id).filter((s): s is string => !!s))];
+  const { data: senders } = senderIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", senderIds)
+    : { data: [] };
+  const senderNameOf = new Map((senders ?? []).map((s) => [s.id, s.full_name]));
+  const sentEmails = (personalRows ?? []).map((r) => ({
+    ...r,
+    senderName: r.sender_id ? senderNameOf.get(r.sender_id) ?? null : null,
+  }));
+
   const isVip = crm?.is_vip ?? profile.is_vip ?? false;
   const vipReason = crm?.vip_reason ?? null;
   const internalNotes = crm?.internal_notes ?? profile.internal_notes ?? null;
@@ -525,6 +543,25 @@ export default async function AdminMemberProfilePage({
         <h3 className="font-display text-base font-bold flex items-center gap-1.5">
           💌 מייל אישי ממך
         </h3>
+        {sentEmails.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] rounded-md px-3 py-2">
+              ⚠️ כבר נשלח לה מייל אישי{sentEmails.length > 1 ? ` (${sentEmails.length} פעמים)` : ""} —
+              האחרון ב־{new Date(sentEmails[0].created_at).toLocaleDateString("he-IL")}. בדקי לפני
+              שליחה נוספת.
+            </div>
+            {sentEmails.map((e) => (
+              <div key={e.id} className="border border-ink-200 rounded-md p-3 bg-ink-50">
+                <div className="text-[11.5px] text-ink-500 mb-1">
+                  {e.kind === "mentor_decline" ? "הודעת דחייה כמנטורית" : "מייל אישי"} ·{" "}
+                  {new Date(e.created_at).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}
+                  {e.senderName ? ` · נשלח על ידי ${e.senderName}` : ""}
+                </div>
+                <div className="text-[13px] text-ink-900 whitespace-pre-wrap">{e.body}</div>
+              </div>
+            ))}
+          </div>
+        )}
         <form action={sendPersonalEmail.bind(null, profile.id)} className="flex flex-col gap-2">
           <textarea
             name="note"

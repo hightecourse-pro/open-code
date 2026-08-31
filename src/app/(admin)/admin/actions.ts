@@ -2389,6 +2389,9 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
   const mail = teamPersonalEmail(p?.first_name ?? p?.full_name?.split(" ")[0] ?? undefined, note, chatUrl);
   const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
   if (!sent.ok) console.error("[members] personal email failed:", profileId, sent.error);
+  // The record the owner asked for (1/9): what was sent, by whom, when — the
+  // file page shows it and warns before a double send.
+  await admin.from("personal_emails").insert({ profile_id: profileId, sender_id: me.id, body: note });
   revalidatePath(`/admin/members/${profileId}`);
 }
 
@@ -2399,7 +2402,7 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
  * she fills the member questionnaire.
  */
 export async function rejectMentorApplication(profileId: string, formData: FormData): Promise<void> {
-  await requireRole("admin");
+  const me = await requireRole("admin");
   const note = String(formData.get("note") ?? "").trim().slice(0, 2000);
   if (!note) return; // the personal explanation is the point — never silent
   const admin = createAdminClient();
@@ -2430,6 +2433,10 @@ export async function rejectMentorApplication(profileId: string, formData: FormD
   } catch (e) {
     console.error("[mentors] decline email failed:", profileId, e);
   }
+  // The decline note is a personal email too — same record, same visibility.
+  await admin
+    .from("personal_emails")
+    .insert({ profile_id: profileId, sender_id: me.id, kind: "mentor_decline", body: note });
 
   revalidatePath("/admin/mentors");
   revalidatePath("/admin");

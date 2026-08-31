@@ -1483,6 +1483,26 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["reports"]["Insert"]>;
         Relationships: [];
       };
+      personal_emails: {
+        Row: {
+          id: string;
+          profile_id: string;
+          sender_id: string | null;
+          kind: string; // 'personal' | 'mentor_decline'
+          body: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          sender_id?: string | null;
+          kind?: string;
+          body: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["personal_emails"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       /**
