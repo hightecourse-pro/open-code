@@ -2407,7 +2407,8 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
     convId = created?.id;
   }
   if (convId) {
-    await admin.from("messages").insert({ conversation_id: convId, sender_id: me.id, body: note });
+    // email_notified_at: this flow sends its OWN email — the grace cron skips it.
+    await admin.from("messages").insert({ conversation_id: convId, sender_id: me.id, body: note, email_notified_at: new Date().toISOString() });
     await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", convId);
   }
 
@@ -2531,6 +2532,8 @@ export async function replyToMemberRequest(
         conversation_id: convId,
         sender_id: me.id,
         body: `לגבי הבקשה שלך "${req.subject}": ${reply}`,
+        // This flow mails teamRepliedEmail itself — the grace cron skips it.
+        email_notified_at: new Date().toISOString(),
       });
       await admin
         .from("conversations")

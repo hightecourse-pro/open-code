@@ -5,8 +5,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, isSubscriber } from "@/lib/auth";
-import { sendResendEmail } from "@/lib/email/resend";
-import { newMessageEmail } from "@/lib/email/templates";
 import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
@@ -141,30 +139,6 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     if (!dir || !(dir.role === "admin" || dir.role === "mentor" || dir.is_subscriber)) return;
   }
 
-  // The RECIPIENT decides whether an email goes out — never anyone's role.
-  // This used to be `sender is junior && recipient is an active mentor`, from
-  // the days when a member could only write to a mentor. Members now message
-  // each other freely, so that role pair matched almost nothing and most
-  // messages notified nobody (BUG-002). What matters is that a message is
-  // waiting for HER: any active member gets the heads-up, mentor or not.
-  // The one voice that overrides us is her own — digest_frequency 'off' is
-  // "בלי מיילים" in her profile, so we stay quiet. 'daily'/'unread' both want
-  // to hear about waiting messages, and a missing value defaults to 'daily'
-  // (so this still behaves if the digest-prefs migration hasn't run).
-  const wantsEmail = (other.digest_frequency || "daily") !== "off";
-  // Still only on the first new (unread) message from this sender in this
-  // conversation, so a burst of messages doesn't become a burst of mail.
-  let isFirstNew = false;
-  if (wantsEmail) {
-    const { count } = await supabase
-      .from("messages")
-      .select("id", { count: "exact", head: true })
-      .eq("conversation_id", conversationId)
-      .eq("sender_id", user.id)
-      .is("read_at", null);
-    isFirstNew = (count ?? 0) === 0;
-  }
-
   // Quoting (the owner, 1/9): a reply carries the quoted message's id — only
   // if that message really lives in THIS conversation (her client can only
   // read it if she's a participant, so the select is the check).
@@ -197,30 +171,10 @@ export async function sendMessage(conversationId: string, formData: FormData) {
     .update({ last_message_at: new Date().toISOString() })
     .eq("id", conversationId);
 
-  if (!wantsEmail || !isFirstNew) {
-    // "she got no email" looks identical whether a gate closed or the send
-    // failed. Name the closed gate so the logs answer it in one look.
-    console.log("[chat email] skipped", { wantsEmail, isFirstNew });
-  } else {
-    try {
-      const admin = createAdminClient();
-      const { data: recipientUser } = await admin.auth.admin.getUserById(otherId);
-      const email = recipientUser?.user?.email;
-      if (email) {
-        const fromName = me?.first_name || me?.full_name?.split(" ")[0] || "חברה";
-        const built = newMessageEmail(fromName);
-        const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
-        // Surface failures in the server logs (RESEND_API_KEY missing, bounced
-        // address, …) — otherwise "she never got an email" is invisible.
-        if (!sent.ok) console.error("[chat email] send to recipient failed:", sent.error);
-      } else {
-        console.error("[chat email] recipient has no email address:", otherId);
-      }
-    } catch (e) {
-      // Email is best-effort — never block sending the message.
-      console.error("[chat email] failed:", e);
-    }
-  }
+  // NO immediate email (the owner, 1/9): the "מישהי כתבה לך" mail goes out
+  // from the 10-minute cron ONLY for messages that are ≥5 minutes old, still
+  // unread, and unanswered — an answered-in-time chat never emails at all.
+  // (See drainChatEmailGrace in the session-reminders cron route.)
 
   revalidatePath("/chat");
 }

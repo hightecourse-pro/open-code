@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResendEmail } from "@/lib/email/resend";
-import { jobPublishedEmail, sessionReminderEmail } from "@/lib/email/templates";
+import { jobPublishedEmail, newMessageEmail, sessionReminderEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 
 /**
@@ -253,6 +253,92 @@ async function drainJobEmails(admin: AdminClient) {
   return { sent, remaining: remaining ?? 0 };
 }
 
+/**
+ * Chat email grace (the owner, 1/9): "מישהי כתבה לך" goes out only for
+ * messages ≥5 minutes old that are still unread AND unanswered. One email per
+ * conversation-sender per tick; a burst of messages marks as one. Answered or
+ * read in time → marked handled silently, no email ever.
+ */
+async function drainChatEmailGrace(admin: ReturnType<typeof createAdminClient>) {
+  const cutoff = new Date(Date.now() - 5 * 60_000).toISOString();
+  const { data: pending, error } = await admin
+    .from("messages")
+    .select("id, conversation_id, sender_id, created_at")
+    .is("read_at", null)
+    .is("email_notified_at", null)
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(200);
+  // Pre-migration (missing column) folds to a no-op.
+  if (error || !pending?.length) return { sent: 0, skipped: 0 };
+
+  const convIds = [...new Set(pending.map((m) => m.conversation_id))];
+  const { data: convs } = await admin
+    .from("conversations")
+    .select("id, a_id, b_id")
+    .in("id", convIds);
+  const convOf = new Map((convs ?? []).map((c) => [c.id, c]));
+
+  // Group by (conversation, sender) — each group is one potential email.
+  const groups = new Map<string, typeof pending>();
+  for (const m of pending) {
+    const key = `${m.conversation_id}:${m.sender_id}`;
+    const arr = groups.get(key) ?? [];
+    arr.push(m);
+    groups.set(key, arr);
+  }
+
+  let sent = 0;
+  let skipped = 0;
+  const stamp = new Date().toISOString();
+  for (const group of groups.values()) {
+    const conv = convOf.get(group[0].conversation_id);
+    const ids = group.map((m) => m.id);
+    if (!conv) {
+      await admin.from("messages").update({ email_notified_at: stamp }).in("id", ids);
+      continue;
+    }
+    const senderId = group[0].sender_id;
+    const recipientId = conv.a_id === senderId ? conv.b_id : conv.a_id;
+    // "ולא עניתי": did the recipient write anything after the oldest waiting
+    // message? Then the conversation is alive — no email.
+    const { count: replied } = await admin
+      .from("messages")
+      .select("id", { count: "exact", head: true })
+      .eq("conversation_id", conv.id)
+      .eq("sender_id", recipientId)
+      .gt("created_at", group[0].created_at);
+    const { data: rp } = await admin
+      .from("profiles")
+      .select("digest_frequency")
+      .eq("id", recipientId)
+      .maybeSingle();
+    const wantsEmail = (rp?.digest_frequency || "daily") !== "off";
+    if ((replied ?? 0) === 0 && wantsEmail) {
+      try {
+        const { data: ru } = await admin.auth.admin.getUserById(recipientId);
+        const email = ru?.user?.email;
+        const { data: sp } = await admin
+          .from("profiles")
+          .select("first_name, full_name")
+          .eq("id", senderId)
+          .maybeSingle();
+        if (email) {
+          const built = newMessageEmail(sp?.first_name || sp?.full_name?.split(" ")[0] || "חברה");
+          const r = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+          if (r.ok) sent++;
+        }
+      } catch (e) {
+        console.error("[chat email grace] send failed:", recipientId, e);
+      }
+    } else {
+      skipped++;
+    }
+    await admin.from("messages").update({ email_notified_at: stamp }).in("id", ids);
+  }
+  return { sent, skipped };
+}
+
 export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -264,6 +350,7 @@ export async function GET(request: Request) {
   const enq = await enqueueDueReminders(admin, now);
   const reminders = await drainReminderQueue(admin);
   const jobEmails = await drainJobEmails(admin);
+  const chatEmails = await drainChatEmailGrace(admin);
 
-  return NextResponse.json({ ok: true, enqueued: enq.enqueued, reminders, jobEmails });
+  return NextResponse.json({ ok: true, enqueued: enq.enqueued, reminders, jobEmails, chatEmails });
 }

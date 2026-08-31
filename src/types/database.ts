@@ -1168,6 +1168,8 @@ export interface Database {
           reactions: Json;
           /** The quoted message (chat reply), when there is one. */
           reply_to_id: string | null;
+          /** Set once the grace-period email cron handled this message. */
+          email_notified_at: string | null;
         };
         Insert: {
           id?: string;
@@ -1178,6 +1180,7 @@ export interface Database {
           created_at?: string;
           reactions?: Json;
           reply_to_id?: string | null;
+          email_notified_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["messages"]["Insert"]>;
         Relationships: [];
