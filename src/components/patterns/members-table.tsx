@@ -28,6 +28,8 @@ export interface MemberRow {
   phone?: string | null;
   /** Splits "ממתינה" into its two honest kinds (the owner, 1/9). */
   profile_completed?: boolean;
+  /** Where she studied — replaces the specialization column (the owner, 1/9). */
+  study_place?: string | null;
 }
 
 /** Copies the email and confirms with a brief ✓. */
@@ -168,7 +170,7 @@ export function MembersTable({
         if (status && m.status !== status) return false;
         if (vip && !m.is_vip) return false;
         if (needle) {
-          const hay = `${m.full_name} ${m.specialization ?? ""} ${m.region ?? ""} ${m.email ?? ""} ${m.phone ?? ""}`.toLowerCase();
+          const hay = `${m.full_name} ${m.specialization ?? ""} ${m.region ?? ""} ${m.email ?? ""} ${m.phone ?? ""} ${m.study_place ?? ""}`.toLowerCase();
           if (!hay.includes(needle)) return false;
         }
         // Candidate finder: the server returned the ids that match ALL the
@@ -330,7 +332,7 @@ export function MembersTable({
         <table className="w-full border-collapse text-[13.5px]">
           <thead>
             <tr>
-              {["חברה", "קשר", "תחום", "אזור", "הצטרפה", "תפקיד", "סטטוס", "CRM", "פעולות"].map((h) => (
+              {["חברה", "קשר", "מקום לימודים", "אזור", "הצטרפה", "תפקיד", "סטטוס", "CRM", "פעולות"].map((h) => (
                 <th key={h} className="text-right p-2 text-[11px] text-ink-500 uppercase font-semibold border-b border-ink-200">
                   {h}
                 </th>
@@ -391,7 +393,7 @@ export function MembersTable({
                     </div>
                   )}
                 </td>
-                <td className="p-2 border-b border-ink-100 text-ink-700">{m.specialization || "—"}</td>
+                <td className="p-2 border-b border-ink-100 text-ink-700">{m.study_place || "—"}</td>
                 <td className="p-2 border-b border-ink-100 text-ink-700">{m.region || "—"}</td>
                 <td className="p-2 border-b border-ink-100 text-ink-500 whitespace-nowrap">
                   {new Date(m.created_at).toLocaleDateString("he-IL")}

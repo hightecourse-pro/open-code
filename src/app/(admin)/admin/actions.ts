@@ -2411,7 +2411,13 @@ export async function rejectMentorApplication(profileId: string, formData: FormD
   if (!p || p.role !== "mentor" || p.status !== "pending") return;
   await admin
     .from("profiles")
-    .update({ role: "junior", member_tier: "paid", profile_completed: false })
+    .update({
+      role: "junior",
+      member_tier: "paid",
+      profile_completed: false,
+      // The registry in ניהול מנטוריות lists past declines by this stamp.
+      mentor_declined_at: new Date().toISOString(),
+    })
     .eq("id", profileId);
 
   try {

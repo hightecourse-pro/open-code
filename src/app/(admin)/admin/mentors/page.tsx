@@ -18,6 +18,15 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminMentorsPage() {
   const supabase = await createClient();
+  // Past declines (mentor_declined_at) — the registry the owner asked for.
+  // Errors (pre-migration column) fold to an empty list.
+  const declinedPromise = supabase
+    .from("profiles")
+    .select("id, full_name, avatar_initials, mentor_declined_at")
+    .not("mentor_declined_at", "is", null)
+    .order("mentor_declined_at", { ascending: false })
+    .then((r) => r.data ?? []);
+
   const [{ data: mentors }, { data: pendingApps }, { data: candidates }] = await Promise.all([
     supabase
       .from("profiles")
@@ -47,6 +56,7 @@ export default async function AdminMentorsPage() {
 
   // Per-mentor accompaniment history + bonus ledger + admin log + CV links.
   const admin = createAdminClient();
+  const declined = await declinedPromise;
   const pendingIds = (pendingApps ?? []).map((p) => p.id);
   const cvOwnerIds = [...new Set([...mentorIds, ...pendingIds])];
   const [{ data: historyRows }, { data: bonusRows }, { data: logRows }, { data: cvDocs }] =
@@ -212,6 +222,32 @@ export default async function AdminMentorsPage() {
                     </div>
                   </form>
                 </details>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {declined.length > 0 && (
+        <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+          <h3 className="font-display text-base font-bold mb-1">נדחו כמנטוריות ({declined.length})</h3>
+          <p className="text-[12.5px] text-ink-500 mb-3">
+            נשארו בקהילה כמשתתפות רגילות. הודעה אישית נוספת אפשר לשלוח מכרטיס &quot;מייל אישי&quot; בתיק
+            החברה.
+          </p>
+          <div className="flex flex-col">
+            {declined.map((d) => (
+              <div key={d.id} className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0">
+                <Avatar size="sm" tone="pink" initials={d.avatar_initials || d.full_name.slice(0, 1)} />
+                <Link
+                  href={`/admin/members/${d.id}`}
+                  className="flex-1 font-medium text-ink-900 hover:text-brand-purple hover:underline"
+                >
+                  {d.full_name}
+                </Link>
+                <span className="text-[12px] text-ink-500 whitespace-nowrap">
+                  נדחתה ב־{d.mentor_declined_at ? new Date(d.mentor_declined_at).toLocaleDateString("he-IL") : "—"}
+                </span>
               </div>
             ))}
           </div>

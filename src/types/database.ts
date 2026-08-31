@@ -93,6 +93,9 @@ export interface Database {
           /** Team test/preview account: fully active for its owner, invisible
               to other members and to the employer portal. */
           is_hidden: boolean;
+          /** Stamped when a mentor application was declined — the registry
+              in ניהול מנטוריות lists these. */
+          mentor_declined_at: string | null;
           found_job: boolean;
           hired_via_us: boolean;
           hired_at: string | null;
@@ -121,6 +124,7 @@ export interface Database {
           digest_frequency?: string;
           portal_listed?: boolean;
           is_hidden?: boolean;
+          mentor_declined_at?: string | null;
           found_job?: boolean;
           hired_via_us?: boolean;
           hired_at?: string | null;

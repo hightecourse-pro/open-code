@@ -100,6 +100,25 @@ export default async function AdminMembersPage({
       if (typeof p.value === "string" && p.value) phoneOf.set(p.profile_id, p.value);
     }
   }
+  // Study place replaces the specialization column (the owner, 1/9) — stored
+  // as the select's VALUE; resolve to the human label, free-typed אחר as-is.
+  const studyQ = (questions ?? []).find((q) => q.key === "study_place");
+  const studyOf = new Map<string, string>();
+  if (studyQ) {
+    const labelOf = new Map(
+      (Array.isArray(studyQ.options) ? (studyQ.options as { value: string; label: string }[]) : []).map(
+        (o) => [o.value, o.label]
+      )
+    );
+    const { data: studies } = await admin
+      .from("profile_answers")
+      .select("profile_id, value")
+      .eq("question_id", studyQ.id)
+      .limit(5000);
+    for (const s of studies ?? []) {
+      if (typeof s.value === "string" && s.value) studyOf.set(s.profile_id, labelOf.get(s.value) ?? s.value);
+    }
+  }
 
   // Filter definitions come from the CONFIGURED options (taxonomies + the
   // question's own options). The one data-driven definition left is the
@@ -189,6 +208,7 @@ export default async function AdminMembersPage({
       email: emailOf.get(m.id) ?? null,
       phone: phoneOf.get(m.id) ?? null,
       profile_completed: m.profile_completed === true,
+      study_place: studyOf.get(m.id) ?? null,
     };
   });
 
