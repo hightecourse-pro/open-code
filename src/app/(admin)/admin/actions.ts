@@ -1255,6 +1255,10 @@ export interface AudienceFilters {
   experienced?: boolean;
   /** Also offer the job to mentors (senior roles) — per-job admin decision. */
   includeMentors?: boolean;
+  /** Also reach members still MID-questionnaire (the owner, 1/9: "צריך
+      לשלוח לכל מי שנכנסה") — they can't be criteria-matched (no answers
+      yet), so they join wholesale, criteria or not. */
+  includeIncomplete?: boolean;
 }
 
 export interface AudienceMember {
@@ -1312,6 +1316,32 @@ export async function previewAudience(
     });
   }
 
+  // Mid-questionnaire members join AFTER criteria (they have no answers to
+  // match) — the email nudges them to finish the wizard and apply.
+  if (filters.includeIncomplete) {
+    const { data: incomplete } = await admin
+      .from("profiles")
+      .select("id, full_name, specialization, region, is_experienced, status")
+      .eq("role", "junior")
+      .in("status", ["active", "pending"])
+      .eq("profile_completed", false);
+    const seen = new Set(members.map((m) => m.id));
+    for (const p of incomplete ?? []) {
+      if (seen.has(p.id)) continue;
+      members = [
+        ...members,
+        {
+          id: p.id,
+          full_name: p.full_name,
+          is_experienced: !!p.is_experienced,
+          status: p.status,
+          specialization: p.specialization ?? "באמצע השאלון",
+          region: p.region,
+        },
+      ];
+    }
+  }
+
   // VIP flags (member_crm is admin-only — this stays in admin surfaces, never
   // the portal). VIPs float to the top of the audience list.
   const { data: crm } = members.length
@@ -1357,7 +1387,10 @@ export async function publishJob(
   profileIds: string[],
   /** Hand-picked additions ("מעבר לקריטריונים") — recorded as source 'manual'
       so criteria-matched and hand-picked targets stay distinguishable. */
-  manualIds: string[] = []
+  manualIds: string[] = [],
+  /** Board-visible to the WHOLE community — future joiners included (the
+      owner, 1/9). Emails still go only to the selected audience. */
+  openToAll = false
 ): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number; queued?: number }> {
   await requireRole("admin");
   const admin = createAdminClient();
@@ -1393,6 +1426,7 @@ export async function publishJob(
     .update({
       pipeline_status: "published",
       status: "open",
+      open_to_all: openToAll,
       published_at: job.published_at ?? new Date().toISOString(),
     })
     .eq("id", jobId);

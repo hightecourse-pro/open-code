@@ -892,6 +892,7 @@ export interface Database {
       jobs: {
         Row: {
           id: string;
+          open_to_all: boolean;
           company: string;
           title: string;
           source: JobSource;
@@ -942,6 +943,7 @@ export interface Database {
           description_html?: string | null;
           published_at?: string | null;
           team_note?: string | null;
+          open_to_all?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["jobs"]["Insert"]>;
         Relationships: [];
