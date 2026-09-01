@@ -339,6 +339,93 @@ async function drainChatEmailGrace(admin: ReturnType<typeof createAdminClient>) 
   return { sent, skipped };
 }
 
+/**
+ * WhatsApp inbound messages nobody answered within 5 minutes (the owner,
+ * 1/9): email שרה, and — when the conversation was OPENED by a team member
+ * (a template send) — that team member too. Same grace idea as the chat:
+ * an answered-in-time message never emails at all.
+ */
+const WA_ALERT_EMAIL = "saraavi.ezra@gmail.com";
+async function drainWaEmailGrace(admin: ReturnType<typeof createAdminClient>) {
+  const cutoff = new Date(Date.now() - 5 * 60_000).toISOString();
+  const { data: pending, error } = await admin
+    .from("wa_messages")
+    .select("id, contact_id, body, created_at")
+    .eq("direction", "in")
+    .is("email_notified_at", null)
+    .lt("created_at", cutoff)
+    .order("created_at", { ascending: true })
+    .limit(100);
+  // Pre-migration (missing column) folds to a no-op.
+  if (error || !pending?.length) return { sent: 0, answered: 0 };
+
+  const contactIds = [...new Set(pending.map((m) => m.contact_id))];
+  const { data: contacts } = await admin
+    .from("wa_contacts")
+    .select("id, wa_id, display_name")
+    .in("id", contactIds);
+  const contactOf = new Map((contacts ?? []).map((ct) => [ct.id, ct]));
+
+  let sent = 0;
+  let answered = 0;
+  for (const contactId of contactIds) {
+    const msgs = pending.filter((m) => m.contact_id === contactId);
+    const oldest = msgs[0];
+    // Answered since? An outbound message NEWER than the oldest pending
+    // inbound closes the case quietly.
+    const { data: reply } = await admin
+      .from("wa_messages")
+      .select("id")
+      .eq("contact_id", contactId)
+      .eq("direction", "out")
+      .gt("created_at", oldest.created_at)
+      .limit(1)
+      .maybeSingle();
+    const ids = msgs.map((m) => m.id);
+    if (reply) {
+      answered += ids.length;
+      await admin.from("wa_messages").update({ email_notified_at: new Date().toISOString() }).in("id", ids);
+      continue;
+    }
+
+    const ct = contactOf.get(contactId);
+    const who = ct?.display_name ?? `+${ct?.wa_id ?? ""}`;
+    // The team member who opened this conversation, if it was team-opened.
+    const { data: opener } = await admin
+      .from("wa_messages")
+      .select("sent_by")
+      .eq("contact_id", contactId)
+      .eq("kind", "template")
+      .not("sent_by", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const recipients = new Set<string>([WA_ALERT_EMAIL]);
+    if (opener?.sent_by) {
+      const { data: emailRows } = await admin.rpc("member_emails", { p_ids: [opener.sent_by] });
+      const em = (emailRows as { id: string; email: string | null }[] | null)?.[0]?.email;
+      if (em) recipients.add(em);
+    }
+
+    const preview = msgs.map((m) => m.body.slice(0, 200)).join("<br/>");
+    const html = `
+      <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7">
+        <h2 style="color:#7C3AED">הודעת וואטסאפ ממתינה לך 💬</h2>
+        <p><b>${who}</b> כתבה למספר הקהילה ועוד לא נענתה:</p>
+        <blockquote style="border-right:3px solid #E0418D;padding-right:10px;color:#333">${preview}</blockquote>
+        <p><a href="https://app.opencode.org.il/admin/whatsapp?c=${contactId}">למענה במסך הוואטסאפ ←</a></p>
+      </div>`;
+    let delivered = false;
+    for (const to of recipients) {
+      const res = await sendResendEmail({ to, subject: `וואטסאפ מ${who} ממתין למענה`, html });
+      delivered = delivered || res.ok;
+    }
+    await admin.from("wa_messages").update({ email_notified_at: new Date().toISOString() }).in("id", ids);
+    if (delivered) sent += 1;
+  }
+  return { sent, answered };
+}
+
 export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -351,6 +438,7 @@ export async function GET(request: Request) {
   const reminders = await drainReminderQueue(admin);
   const jobEmails = await drainJobEmails(admin);
   const chatEmails = await drainChatEmailGrace(admin);
+  const waEmails = await drainWaEmailGrace(admin);
 
-  return NextResponse.json({ ok: true, enqueued: enq.enqueued, reminders, jobEmails, chatEmails });
+  return NextResponse.json({ ok: true, enqueued: enq.enqueued, reminders, jobEmails, chatEmails, waEmails });
 }

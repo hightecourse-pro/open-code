@@ -1527,6 +1527,7 @@ export interface Database {
           media_mime: string | null;
           filename: string | null;
           template_params: Json | null;
+          email_notified_at: string | null;
           wa_message_id: string | null;
           status: "received" | "sent" | "delivered" | "read" | "failed";
           template_name: string | null;
@@ -1545,6 +1546,7 @@ export interface Database {
           media_mime?: string | null;
           filename?: string | null;
           template_params?: Json | null;
+          email_notified_at?: string | null;
           wa_message_id?: string | null;
           status?: "received" | "sent" | "delivered" | "read" | "failed";
           template_name?: string | null;

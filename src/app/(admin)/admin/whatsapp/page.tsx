@@ -18,9 +18,10 @@ export default async function AdminWhatsAppPage({
 }: {
   searchParams: Promise<{ c?: string }>;
 }) {
-  await requireRole("admin");
+  const viewer = await requireRole("admin");
   const { c: activeId } = await searchParams;
   const admin = createAdminClient();
+  const viewerFirstName = viewer.first_name ?? viewer.full_name?.split(" ")[0] ?? "";
 
   const configured = getWaConfig() !== null;
   const webhookReady = !!getWaVerifyToken();
@@ -150,6 +151,7 @@ export default async function AdminWhatsAppPage({
         canSend={configured}
         members={memberOptions}
         templates={templates}
+        viewerFirstName={viewerFirstName}
       />
     </div>
   );

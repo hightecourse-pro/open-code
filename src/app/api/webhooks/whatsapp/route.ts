@@ -39,6 +39,7 @@ type WaInboundMessage = {
   text?: { body?: string };
   button?: { text?: string };
   interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } };
+  reaction?: { message_id?: string; emoji?: string };
   image?: WaMediaPayload;
   video?: WaMediaPayload;
   audio?: WaMediaPayload;
@@ -152,6 +153,35 @@ export async function POST(req: Request) {
             .select("id, display_name")
             .single();
           if (!contact) continue;
+          // An emoji reaction (the owner, 1/9: showed as an ugly placeholder)
+          // renders as a friendly line quoting what was reacted to. A removed
+          // reaction (empty emoji) is silently ignored.
+          if (m.type === "reaction") {
+            const emoji = m.reaction?.emoji ?? "";
+            if (!emoji) continue;
+            const { data: target } = m.reaction?.message_id
+              ? await admin
+                  .from("wa_messages")
+                  .select("body")
+                  .eq("wa_message_id", m.reaction.message_id)
+                  .maybeSingle()
+              : { data: null };
+            const quoted = target?.body ? ` על "${target.body.slice(0, 60)}"` : "";
+            await admin.from("wa_messages").upsert(
+              {
+                contact_id: contact.id,
+                direction: "in",
+                body: `הגיבה ${emoji}${quoted}`,
+                wa_message_id: m.id,
+                status: "received",
+                // Reactions never ring the 5-minute email bell.
+                email_notified_at: new Date().toISOString(),
+                raw: m as unknown as import("@/types/database").Json,
+              },
+              { onConflict: "wa_message_id", ignoreDuplicates: true }
+            );
+            continue;
+          }
           // Media rides along (the owner, 1/9: "כמו ווצאפ רגיל") — stored in
           // our bucket; a failed download degrades to a labeled placeholder.
           const mediaKind = MEDIA_KINDS.find((k) => m[k]?.id);

@@ -114,16 +114,28 @@ function MediaBubble({ m }: { m: WaMessageRow }) {
   );
 }
 
+/** Our four templates share one param convention — friendly labels + smart
+ *  defaults come from it (the owner, 1/9). */
+const OUR_PARAM_LABELS = ["שם הנמענת", "השם שלך", "תוכן ההודעה"];
+const OUR_TEMPLATE_HE: Record<string, string> = {
+  wa_opening_new: "שיחה חדשה",
+  wa_follow_up: "בהמשך לשיחתנו",
+  wa_reminder: "תזכורת ובקשת עדכון",
+  wa_general: "כללית",
+};
+
 /** The template-only door for NEW conversations (Meta's rule). */
 function NewChatDialog({
   members,
   templates,
   presetPhone,
+  viewerFirstName,
   onClose,
 }: {
   members: WaMemberOption[];
   templates: WaTemplateOption[];
   presetPhone?: string;
+  viewerFirstName: string;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -134,10 +146,17 @@ function NewChatDialog({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const tpl = templates.find((t) => t.name === tplName) ?? null;
+  const isOurs = !!tpl && tpl.name in OUR_TEMPLATE_HE && tpl.paramCount === 3;
 
   useEffect(() => {
-    setParams((p) => Array.from({ length: tpl?.paramCount ?? 0 }, (_, i) => p[i] ?? ""));
-  }, [tplName, tpl?.paramCount]);
+    // Sender defaults to the logged-in team member's first name (param 2 of
+    // our convention) — she overrides freely.
+    setParams((p) =>
+      Array.from({ length: tpl?.paramCount ?? 0 }, (_, i) =>
+        p[i] ?? (isOurs && i === 1 ? viewerFirstName : "")
+      )
+    );
+  }, [tplName, tpl?.paramCount, isOurs, viewerFirstName]);
 
   const matches = memberQuery.trim()
     ? members.filter((mm) => (mm.name + " " + mm.waId).includes(memberQuery.trim())).slice(0, 6)
@@ -181,6 +200,12 @@ function NewChatDialog({
                       onClick={() => {
                         setPhone(mm.waId);
                         setMemberQuery(mm.name);
+                        // Her first name lands in the name field of our
+                        // templates automatically (the owner, 1/9).
+                        if (isOurs) {
+                          const first = mm.name.split(" ")[0];
+                          setParams((p) => p.map((v, j) => (j === 0 && !v ? first : v)));
+                        }
                       }}
                       className="w-full text-start px-3 py-1.5 text-[13px] hover:bg-tint-purple/50 cursor-pointer flex justify-between gap-2"
                     >
@@ -207,7 +232,7 @@ function NewChatDialog({
                 className="w-full border border-ink-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-brand-purple"
               >
                 {templates.map((t) => (
-                  <option key={t.name} value={t.name}>{t.name}</option>
+                  <option key={t.name} value={t.name}>{OUR_TEMPLATE_HE[t.name] ?? t.name}</option>
                 ))}
               </select>
             </div>
@@ -219,7 +244,7 @@ function NewChatDialog({
                     key={i}
                     value={params[i] ?? ""}
                     onChange={(e) => setParams((p) => p.map((v, j) => (j === i ? e.target.value : v)))}
-                    placeholder={`שדה ${i + 1} בתבנית`}
+                    placeholder={isOurs ? OUR_PARAM_LABELS[i] : `שדה ${i + 1} בתבנית`}
                     className="w-full border border-ink-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-brand-purple"
                   />
                 ))}
@@ -270,6 +295,7 @@ export function WaInbox({
   canSend,
   members,
   templates,
+  viewerFirstName,
 }: {
   contacts: WaContactRow[];
   activeId: string | null;
@@ -277,6 +303,7 @@ export function WaInbox({
   canSend: boolean;
   members: WaMemberOption[];
   templates: WaTemplateOption[];
+  viewerFirstName: string;
 }) {
   const active = contacts.find((c) => c.id === activeId) ?? null;
   const [error, setError] = useState<string | null>(null);
@@ -380,6 +407,7 @@ export function WaInbox({
           members={members}
           templates={templates}
           presetPhone={newChat.presetPhone}
+          viewerFirstName={viewerFirstName}
           onClose={() => setNewChat(null)}
         />
       )}
