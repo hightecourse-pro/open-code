@@ -43,12 +43,16 @@ export interface WaTemplateOption {
 }
 
 /**
- * WhatsApp refuses Chrome's webm recordings — re-encode to MP3 in the
- * browser (decode → PCM → lamejs). Firefox/Safari formats pass through.
+ * Recordings ALWAYS re-encode to MP3 in the browser (decode → PCM → lamejs).
+ * MediaRecorder output is never trusted: Chrome's webm is refused outright,
+ * and its audio/mp4 is FRAGMENTED mp4 that Meta accepts and then fails with
+ * "Media upload error" (the owner, 1/9, three times). Only hand-attached
+ * files pass through by mime.
  */
-async function toWhatsAppAudio(file: File): Promise<File> {
+async function toWhatsAppAudio(file: File, opts?: { passthrough?: boolean }): Promise<File> {
   const base = file.type.split(";")[0];
-  if (["audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/amr"].includes(base)) return file;
+  if (opts?.passthrough && ["audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/amr"].includes(base))
+    return file;
   const mod = (await import("lamejs")) as { default?: { Mp3Encoder: new (ch: number, rate: number, kbps: number) => { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array } } } & Record<string, unknown>;
   const L = (mod.default ?? mod) as { Mp3Encoder: new (ch: number, rate: number, kbps: number) => { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array } };
   const ctx = new AudioContext();
