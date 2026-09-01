@@ -1255,6 +1255,10 @@ export interface AudienceFilters {
   experienced?: boolean;
   /** Also offer the job to mentors (senior roles) — per-job admin decision. */
   includeMentors?: boolean;
+  /** Also reach members still MID-questionnaire (the owner, 1/9: "צריך
+      לשלוח לכל מי שנכנסה") — they can't be criteria-matched (no answers
+      yet), so they join wholesale, criteria or not. */
+  includeIncomplete?: boolean;
 }
 
 export interface AudienceMember {
@@ -1310,6 +1314,32 @@ export async function previewAudience(
         return wanted.some((w) => have.includes(w));
       });
     });
+  }
+
+  // Mid-questionnaire members join AFTER criteria (they have no answers to
+  // match) — the email nudges them to finish the wizard and apply.
+  if (filters.includeIncomplete) {
+    const { data: incomplete } = await admin
+      .from("profiles")
+      .select("id, full_name, specialization, region, is_experienced, status")
+      .eq("role", "junior")
+      .in("status", ["active", "pending"])
+      .eq("profile_completed", false);
+    const seen = new Set(members.map((m) => m.id));
+    for (const p of incomplete ?? []) {
+      if (seen.has(p.id)) continue;
+      members = [
+        ...members,
+        {
+          id: p.id,
+          full_name: p.full_name,
+          is_experienced: !!p.is_experienced,
+          status: p.status,
+          specialization: p.specialization ?? "באמצע השאלון",
+          region: p.region,
+        },
+      ];
+    }
   }
 
   // VIP flags (member_crm is admin-only — this stays in admin surfaces, never

@@ -50,6 +50,7 @@ export function PublishPanel({
   const [valueQuery, setValueQuery] = useState("");
   const [exp, setExp] = useState<"all" | "yes" | "no">("all");
   const [incMentors, setIncMentors] = useState(false);
+  const [incIncomplete, setIncIncomplete] = useState(false);
   const [audience, setAudience] = useState<AudienceMember[] | null>(null);
   // The community-wide eligible pool (before criteria) — for honest empty states.
   const [pool, setPool] = useState<number | null>(null);
@@ -73,6 +74,7 @@ export function PublishPanel({
           criteria,
           experienced: exp === "all" ? undefined : exp === "yes",
           includeMentors: incMentors,
+          includeIncomplete: incIncomplete,
         });
         if (!res.members) {
           setError(res.error ?? "טעינת הקהל נכשלה. נסי שוב.");
@@ -89,7 +91,7 @@ export function PublishPanel({
       });
     }, PREVIEW_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [isDraft, jobId, criteria, exp, incMentors, startPreview]);
+  }, [isDraft, jobId, criteria, exp, incMentors, incIncomplete, startPreview]);
 
   const audienceIds = useMemo(() => new Set((audience ?? []).map((m) => m.id)), [audience]);
 
@@ -322,6 +324,17 @@ export function PublishPanel({
               className="accent-brand-purple"
             />
             לכלול גם מנטוריות (משרות לבעלות ניסיון)
+          </label>
+          {/* Everyone who signed up, mid-questionnaire included (the owner,
+              1/9) — they join wholesale, since there's nothing to match yet. */}
+          <label className="flex items-center gap-2 mt-2 text-[13px] text-ink-900 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={incIncomplete}
+              onChange={(e) => setIncIncomplete(e.target.checked)}
+              className="accent-brand-purple"
+            />
+            לכלול גם מי שעוד לא סיימה את השאלון (מצטרפות בלי התאמת קריטריונים)
           </label>
           <p className="text-[12px] text-ink-400 mt-2">
             בלי סימון קריטריונים נכללות כל הזמינות להשמה — הרשימה המלאה מופיעה למטה.
