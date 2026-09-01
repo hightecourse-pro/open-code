@@ -39,6 +39,37 @@ export interface WaTemplateOption {
   name: string;
   bodyText: string;
   paramCount: number;
+  status: string;
+}
+
+/**
+ * WhatsApp refuses Chrome's webm recordings — re-encode to MP3 in the
+ * browser (decode → PCM → lamejs). Firefox/Safari formats pass through.
+ */
+async function toWhatsAppAudio(file: File): Promise<File> {
+  const base = file.type.split(";")[0];
+  if (["audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/amr"].includes(base)) return file;
+  const mod = (await import("lamejs")) as { default?: { Mp3Encoder: new (ch: number, rate: number, kbps: number) => { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array } } } & Record<string, unknown>;
+  const L = (mod.default ?? mod) as { Mp3Encoder: new (ch: number, rate: number, kbps: number) => { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array } };
+  const ctx = new AudioContext();
+  const decoded = await ctx.decodeAudioData(await file.arrayBuffer());
+  void ctx.close();
+  const ch = decoded.getChannelData(0);
+  const samples = new Int16Array(ch.length);
+  for (let i = 0; i < ch.length; i++) {
+    const s = Math.max(-1, Math.min(1, ch[i]));
+    samples[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
+  }
+  const enc = new L.Mp3Encoder(1, decoded.sampleRate, 64);
+  const chunks: Uint8Array[] = [];
+  const FRAME = 1152;
+  for (let i = 0; i < samples.length; i += FRAME) {
+    const d = enc.encodeBuffer(samples.subarray(i, i + FRAME));
+    if (d.length) chunks.push(new Uint8Array(d));
+  }
+  const tail = enc.flush();
+  if (tail.length) chunks.push(new Uint8Array(tail));
+  return new File([new Blob(chunks as BlobPart[], { type: "audio/mpeg" })], "voice-note.mp3", { type: "audio/mpeg" });
 }
 
 const TIME_IL = new Intl.DateTimeFormat("he-IL", {
@@ -139,9 +170,10 @@ function NewChatDialog({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const approved = templates.filter((t) => t.status === "APPROVED");
   const [phone, setPhone] = useState(presetPhone ?? "");
   const [memberQuery, setMemberQuery] = useState("");
-  const [tplName, setTplName] = useState(templates[0]?.name ?? "");
+  const [tplName, setTplName] = useState(approved[0]?.name ?? "");
   const [params, setParams] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -177,9 +209,11 @@ function NewChatDialog({
           פתיחת שיחה יזומה נשלחת מתוך תבנית שאושרה במטא — ברגע שהיא עונה, הצ׳אט חופשי.
         </p>
 
-        {templates.length === 0 ? (
+        {approved.length === 0 ? (
           <div className="bg-tint-warm border border-[#F8D98C] rounded-[12px] p-3.5 text-[13px] text-ink-900">
-            אין עדיין תבניות מאושרות — נוסחי הפתיחה ממתינים לאישורך ואז יוגשו למטא. עד אז אפשר לענות רק לפניות נכנסות.
+            {templates.length > 0
+              ? `${templates.length} תבניות הוגשו וממתינות לאישור מטא (בדרך כלל שעות בודדות) — ברגע שיאושרו, השליחה תיפתח כאן אוטומטית. עד אז אפשר לענות רק לפניות נכנסות.`
+              : "אין עדיין תבניות — נוסחי הפתיחה יוגשו למטא ואז יופיעו כאן."}
           </div>
         ) : (
           <>
@@ -218,7 +252,7 @@ function NewChatDialog({
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="או מספר חופשי: 05X-XXXXXXX"
+                placeholder="או מספר חופשי (לקוחה, מגייסת…): 05X-XXXXXXX"
                 dir="ltr"
                 className="w-full border border-ink-200 rounded-md px-3 py-2 text-sm mt-2 text-left focus:outline-none focus:border-brand-purple"
               />
@@ -232,7 +266,9 @@ function NewChatDialog({
                 className="w-full border border-ink-200 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:border-brand-purple"
               >
                 {templates.map((t) => (
-                  <option key={t.name} value={t.name}>{OUR_TEMPLATE_HE[t.name] ?? t.name}</option>
+                  <option key={t.name} value={t.name} disabled={t.status !== "APPROVED"}>
+                    {(OUR_TEMPLATE_HE[t.name] ?? t.name) + (t.status !== "APPROVED" ? " (ממתינה לאישור מטא)" : "")}
+                  </option>
                 ))}
               </select>
             </div>
@@ -390,7 +426,11 @@ export function WaInbox({
         setRecording(false);
         const type = rec.mimeType.split(";")[0] || "audio/webm";
         const ext = type.includes("ogg") ? "ogg" : type.includes("mp4") ? "m4a" : "webm";
-        setAttachment(new File([new Blob(chunks, { type })], `voice-note.${ext}`, { type }));
+        const raw = new File([new Blob(chunks, { type })], `voice-note.${ext}`, { type });
+        // webm → mp3 happens here, before it ever reaches Meta.
+        toWhatsAppAudio(raw)
+          .then(setAttachment)
+          .catch(() => setError("עיבוד ההקלטה נכשל — נסי שוב"));
       };
       recorderRef.current = rec;
       rec.start();

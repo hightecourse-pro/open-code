@@ -76,10 +76,13 @@ export default async function AdminWhatsAppPage({
     }
   }
 
-  // Approved templates for the new-conversation dialog.
+  // Templates for the new-conversation dialog — pending ones ride along so
+  // the dialog can SAY they're awaiting Meta instead of looking empty
+  // (the owner, 1/9: "נראה שבשיחה חדשה אין תבניות").
   const templates: WaTemplateOption[] = (await listWaTemplates())
-    .filter((t) => t.status === "APPROVED")
-    .map((t) => ({ name: t.name, bodyText: t.bodyText, paramCount: t.paramCount }));
+    .filter((t) => t.status === "APPROVED" || t.status === "PENDING")
+    .filter((t) => t.name !== "hello_world")
+    .map((t) => ({ name: t.name, bodyText: t.bodyText, paramCount: t.paramCount, status: t.status }));
 
   const active = (contacts ?? []).find((ct) => ct.id === activeId) ?? null;
   const { data: messages } = active
