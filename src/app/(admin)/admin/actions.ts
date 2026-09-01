@@ -1387,7 +1387,10 @@ export async function publishJob(
   profileIds: string[],
   /** Hand-picked additions ("מעבר לקריטריונים") — recorded as source 'manual'
       so criteria-matched and hand-picked targets stay distinguishable. */
-  manualIds: string[] = []
+  manualIds: string[] = [],
+  /** Board-visible to the WHOLE community — future joiners included (the
+      owner, 1/9). Emails still go only to the selected audience. */
+  openToAll = false
 ): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number; queued?: number }> {
   await requireRole("admin");
   const admin = createAdminClient();
@@ -1423,6 +1426,7 @@ export async function publishJob(
     .update({
       pipeline_status: "published",
       status: "open",
+      open_to_all: openToAll,
       published_at: job.published_at ?? new Date().toISOString(),
     })
     .eq("id", jobId);

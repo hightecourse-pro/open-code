@@ -51,6 +51,7 @@ export function PublishPanel({
   const [exp, setExp] = useState<"all" | "yes" | "no">("all");
   const [incMentors, setIncMentors] = useState(false);
   const [incIncomplete, setIncIncomplete] = useState(false);
+  const [openAll, setOpenAll] = useState(false);
   const [audience, setAudience] = useState<AudienceMember[] | null>(null);
   // The community-wide eligible pool (before criteria) — for honest empty states.
   const [pool, setPool] = useState<number | null>(null);
@@ -179,7 +180,7 @@ export function PublishPanel({
     startPublish(async () => {
       // Hand-picked members are recorded as source 'manual', so the admin can
       // later tell who matched the criteria and who she added by name.
-      const res = await publishJob(jobId, ids, manualIds);
+      const res = await publishJob(jobId, ids, manualIds, openAll);
       if (!res.ok) {
         setError(res.error ?? "הפרסום נכשל. נסי שוב.");
         return;
@@ -335,6 +336,17 @@ export function PublishPanel({
               className="accent-brand-purple"
             />
             לכלול גם מי שעוד לא סיימה את השאלון (מצטרפות בלי התאמת קריטריונים)
+          </label>
+          {/* Board visibility beyond the audience — future joiners included
+              (the owner, 1/9: "האם המשרה תופיע גם למי שייכנס מחר?"). */}
+          <label className="flex items-center gap-2 mt-2 text-[13px] text-ink-900 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={openAll}
+              onChange={(e) => setOpenAll(e.target.checked)}
+              className="accent-brand-purple"
+            />
+            להציג בלוח המשרות לכל הקהילה — כולל מי שתצטרף בעתיד (מייל נשלח רק לקהל שנבחר)
           </label>
           <p className="text-[12px] text-ink-400 mt-2">
             בלי סימון קריטריונים נכללות כל הזמינות להשמה — הרשימה המלאה מופיעה למטה.
