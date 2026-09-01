@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getWaConfig, getWaVerifyToken, toWaId, waWindowLeftMs } from "@/lib/whatsapp";
+import { getWaConfig, getWaVerifyToken, listWaTemplates, toWaId, waWindowLeftMs } from "@/lib/whatsapp";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
-import { WaInbox, type WaContactRow, type WaMessageRow } from "./wa-inbox";
+import { WaInbox, type WaContactRow, type WaMemberOption, type WaMessageRow, type WaTemplateOption } from "./wa-inbox";
 
 export const metadata: Metadata = { title: "וואטסאפ" };
 
@@ -31,9 +31,11 @@ export default async function AdminWhatsAppPage({
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(500);
 
-  // A contact whose number matches a member's profile phone gets her name.
+  // Every member with a phone — names contacts in the list AND feeds the
+  // new-conversation picker (the owner, 1/9: "לשם מתוך רשימת הלקוחות").
   const memberNameOf = new Map<string, string>();
-  if (contacts?.length) {
+  const memberOptions: WaMemberOption[] = [];
+  {
     const { data: phoneQ } = await admin
       .from("config_questions")
       .select("id")
@@ -51,16 +53,20 @@ export default async function AdminWhatsAppPage({
         const wa = toWaId(p.value);
         if (wa) byWa.set(wa, p.profile_id);
       }
-      const matchedIds = [
-        ...new Set(contacts.map((ct) => byWa.get(ct.wa_id)).filter((x): x is string => !!x)),
-      ];
-      if (matchedIds.length) {
+      const waOfProfile = new Map([...byWa.entries()].map(([wa, pid]) => [pid, wa]));
+      if (waOfProfile.size) {
         const { data: profs } = await admin
           .from("profiles")
-          .select("id, full_name")
-          .in("id", matchedIds);
+          .select("id, full_name, status")
+          .in("id", [...waOfProfile.keys()])
+          .neq("status", "rejected");
         const nameById = new Map((profs ?? []).map((p) => [p.id, p.full_name]));
-        for (const ct of contacts) {
+        for (const p of profs ?? []) {
+          const wa = waOfProfile.get(p.id);
+          if (wa) memberOptions.push({ name: p.full_name, waId: wa });
+        }
+        memberOptions.sort((a, b) => a.name.localeCompare(b.name, "he"));
+        for (const ct of contacts ?? []) {
           const pid = byWa.get(ct.wa_id);
           const nm = pid ? nameById.get(pid) : null;
           if (nm) memberNameOf.set(ct.id, nm);
@@ -69,15 +75,33 @@ export default async function AdminWhatsAppPage({
     }
   }
 
+  // Approved templates for the new-conversation dialog.
+  const templates: WaTemplateOption[] = (await listWaTemplates())
+    .filter((t) => t.status === "APPROVED")
+    .map((t) => ({ name: t.name, bodyText: t.bodyText, paramCount: t.paramCount }));
+
   const active = (contacts ?? []).find((ct) => ct.id === activeId) ?? null;
   const { data: messages } = active
     ? await admin
         .from("wa_messages")
-        .select("id, direction, body, status, error, created_at")
+        .select("id, direction, body, status, error, created_at, kind, media_path, media_mime, filename")
         .eq("contact_id", active.id)
         .order("created_at", { ascending: true })
         .limit(500)
     : { data: [] };
+
+  // Short-lived signed URLs for the thread's media — the bucket is private.
+  const mediaUrlOf = new Map<string, string>();
+  const withMedia = (messages ?? []).filter((m) => m.media_path);
+  if (withMedia.length) {
+    const { data: signed } = await admin.storage
+      .from("wa-media")
+      .createSignedUrls(withMedia.map((m) => m.media_path!), 3600);
+    withMedia.forEach((m, i) => {
+      const u = signed?.[i]?.signedUrl;
+      if (u) mediaUrlOf.set(m.id, u);
+    });
+  }
 
   const rows: WaContactRow[] = (contacts ?? []).map((ct) => ({
     id: ct.id,
@@ -116,7 +140,17 @@ export default async function AdminWhatsAppPage({
         </div>
       )}
 
-      <WaInbox contacts={rows} activeId={active?.id ?? null} messages={(messages ?? []) as WaMessageRow[]} canSend={configured} />
+      <WaInbox
+        contacts={rows}
+        activeId={active?.id ?? null}
+        messages={(messages ?? []).map((m) => ({
+          ...(m as Omit<WaMessageRow, "mediaUrl">),
+          mediaUrl: mediaUrlOf.get(m.id) ?? null,
+        }))}
+        canSend={configured}
+        members={memberOptions}
+        templates={templates}
+      />
     </div>
   );
 }

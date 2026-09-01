@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
-import { getWaVerifyToken } from "@/lib/whatsapp";
+import { fetchWaMedia, getWaVerifyToken } from "@/lib/whatsapp";
 
 /**
  * Meta WhatsApp Cloud API webhook.
@@ -30,27 +30,75 @@ export async function GET(req: Request) {
   return NextResponse.json({ error: "verification failed" }, { status: 403 });
 }
 
+type WaMediaPayload = { id?: string; mime_type?: string; caption?: string; filename?: string };
+type WaInboundMessage = {
+  id: string;
+  from: string;
+  timestamp?: string;
+  type?: string;
+  text?: { body?: string };
+  button?: { text?: string };
+  interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } };
+  image?: WaMediaPayload;
+  video?: WaMediaPayload;
+  audio?: WaMediaPayload;
+  document?: WaMediaPayload;
+  sticker?: WaMediaPayload;
+};
 type WaWebhookValue = {
   contacts?: { wa_id: string; profile?: { name?: string } }[];
-  messages?: {
-    id: string;
-    from: string;
-    timestamp?: string;
-    type?: string;
-    text?: { body?: string };
-    button?: { text?: string };
-    interactive?: { button_reply?: { title?: string }; list_reply?: { title?: string } };
-  }[];
+  messages?: WaInboundMessage[];
   statuses?: { id: string; status?: string; errors?: { title?: string; message?: string }[] }[];
 };
 
+const MEDIA_KINDS = ["image", "video", "audio", "document", "sticker"] as const;
+type MediaKind = (typeof MEDIA_KINDS)[number];
+
 /** The human-readable body of any inbound message type we don't fully model. */
-function bodyOf(m: NonNullable<WaWebhookValue["messages"]>[number]): string {
+function bodyOf(m: WaInboundMessage): string {
   if (m.text?.body) return m.text.body;
   if (m.button?.text) return m.button.text;
   if (m.interactive?.button_reply?.title) return m.interactive.button_reply.title;
   if (m.interactive?.list_reply?.title) return m.interactive.list_reply.title;
-  return `[הודעת ${m.type ?? "מדיה"} — פתחי בוואטסאפ ווב אם צריך]`;
+  return "";
+}
+
+const EXT_OF: Record<string, string> = {
+  "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif",
+  "video/mp4": "mp4", "video/3gpp": "3gp",
+  "audio/ogg": "ogg", "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/aac": "aac", "audio/amr": "amr", "audio/webm": "webm",
+  "application/pdf": "pdf",
+};
+
+/**
+ * Pull a media message's file down from Meta (their links expire fast) and
+ * park it in the private wa-media bucket. Returns the stored path or null —
+ * a failed download degrades to a text placeholder, never a lost message.
+ */
+async function storeInboundMedia(
+  admin: ReturnType<typeof createAdminClient>,
+  m: WaInboundMessage,
+  kind: MediaKind
+): Promise<{ path: string; mime: string } | null> {
+  const payload = m[kind];
+  if (!payload?.id) return null;
+  const got = await fetchWaMedia(payload.id);
+  if (!got.ok) {
+    console.warn("[webhook/whatsapp] media fetch failed:", payload.id, got.error);
+    return null;
+  }
+  const mime = payload.mime_type?.split(";")[0] ?? got.mime.split(";")[0];
+  const ext = EXT_OF[mime] ?? "bin";
+  const path = `${m.from}/${m.id.replace(/[^\w.-]/g, "_")}.${ext}`;
+  const { error } = await admin.storage.from("wa-media").upload(path, got.data, {
+    contentType: mime,
+    upsert: true,
+  });
+  if (error) {
+    console.warn("[webhook/whatsapp] media store failed:", String(error.message));
+    return null;
+  }
+  return { path, mime };
 }
 
 export async function POST(req: Request) {
@@ -104,6 +152,18 @@ export async function POST(req: Request) {
             .select("id, display_name")
             .single();
           if (!contact) continue;
+          // Media rides along (the owner, 1/9: "כמו ווצאפ רגיל") — stored in
+          // our bucket; a failed download degrades to a labeled placeholder.
+          const mediaKind = MEDIA_KINDS.find((k) => m[k]?.id);
+          const stored = mediaKind ? await storeInboundMedia(admin, m, mediaKind) : null;
+          const caption = mediaKind ? m[mediaKind]?.caption ?? "" : "";
+          const KIND_HE: Record<MediaKind, string> = {
+            image: "תמונה", video: "סרטון", audio: "הקלטה קולית", document: "קובץ", sticker: "סטיקר",
+          };
+          const body =
+            bodyOf(m) ||
+            caption ||
+            (mediaKind ? `[${KIND_HE[mediaKind]}${stored ? "" : " — לא הצלחנו למשוך את הקובץ"}]` : "[הודעה]");
           // Idempotent on Meta's message id — redeliveries change nothing.
           await admin
             .from("wa_messages")
@@ -111,7 +171,11 @@ export async function POST(req: Request) {
               {
                 contact_id: contact.id,
                 direction: "in",
-                body: bodyOf(m).slice(0, 4000),
+                body: body.slice(0, 4000),
+                kind: mediaKind && stored ? mediaKind : "text",
+                media_path: stored?.path ?? null,
+                media_mime: stored?.mime ?? null,
+                filename: mediaKind === "document" ? m.document?.filename ?? null : null,
                 wa_message_id: m.id,
                 status: "received",
                 raw: m as unknown as import("@/types/database").Json,
@@ -122,7 +186,7 @@ export async function POST(req: Request) {
             kind: "whatsapp_inbound",
             severity: "info",
             title: `הודעת וואטסאפ חדשה מ${contact.display_name ?? m.from}`,
-            body: `${bodyOf(m).slice(0, 160)} — מענה במסך הוואטסאפ בניהול.`,
+            body: `${body.slice(0, 160)} — מענה במסך הוואטסאפ בניהול.`,
             context: { wa_id: m.from },
             // One alert per contact per hour — a burst is one conversation.
             dedupeKey: `wa:${m.from}:${new Date().toISOString().slice(0, 13)}`,

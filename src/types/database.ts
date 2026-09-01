@@ -1522,6 +1522,11 @@ export interface Database {
           contact_id: string;
           direction: "in" | "out";
           body: string;
+          kind: string;
+          media_path: string | null;
+          media_mime: string | null;
+          filename: string | null;
+          template_params: Json | null;
           wa_message_id: string | null;
           status: "received" | "sent" | "delivered" | "read" | "failed";
           template_name: string | null;
@@ -1535,6 +1540,11 @@ export interface Database {
           contact_id: string;
           direction: "in" | "out";
           body: string;
+          kind?: string;
+          media_path?: string | null;
+          media_mime?: string | null;
+          filename?: string | null;
+          template_params?: Json | null;
           wa_message_id?: string | null;
           status?: "received" | "sent" | "delivered" | "read" | "failed";
           template_name?: string | null;
