@@ -53,8 +53,12 @@ async function toWhatsAppAudio(file: File, opts?: { passthrough?: boolean }): Pr
   const base = file.type.split(";")[0];
   if (opts?.passthrough && ["audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/amr"].includes(base))
     return file;
-  const mod = (await import("lamejs")) as { default?: { Mp3Encoder: new (ch: number, rate: number, kbps: number) => { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array } } } & Record<string, unknown>;
-  const L = (mod.default ?? mod) as { Mp3Encoder: new (ch: number, rate: number, kbps: number) => { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array } };
+  type Encoder = { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array };
+  // The @breezystack fork — original lamejs crashes under bundlers with a
+  // missing-global error ("עיבוד ההקלטה נכשל", the owner, 1/9 23:37).
+  const L = (await import("@breezystack/lamejs")) as unknown as {
+    Mp3Encoder: new (ch: number, rate: number, kbps: number) => Encoder;
+  };
   const ctx = new AudioContext();
   const decoded = await ctx.decodeAudioData(await file.arrayBuffer());
   void ctx.close();
@@ -434,7 +438,7 @@ export function WaInbox({
         // webm → mp3 happens here, before it ever reaches Meta.
         toWhatsAppAudio(raw)
           .then(setAttachment)
-          .catch(() => setError("עיבוד ההקלטה נכשל — נסי שוב"));
+          .catch((e) => setError(`עיבוד ההקלטה נכשל — נסי שוב (${String(e).slice(0, 120)})`));
       };
       recorderRef.current = rec;
       rec.start();

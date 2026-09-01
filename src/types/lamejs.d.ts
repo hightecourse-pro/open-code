@@ -1,1 +1,1 @@
-declare module "lamejs";
+declare module "@breezystack/lamejs";
