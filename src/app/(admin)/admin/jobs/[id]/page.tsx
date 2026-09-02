@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, Pencil, UserCheck, UserPlus } from "lucide-react";
+import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, Pencil, Sparkles, UserCheck, UserPlus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadClientJob } from "@/lib/portal/jobs";
@@ -28,6 +28,8 @@ import { JobQuestionsManager } from "./job-questions";
 import { JobTabs, type JobTabDef } from "./job-tabs";
 import { PublishPanel } from "./publish-panel";
 import { ReviewCenter, type ReviewApplication } from "./review-center";
+import { CandidateFinder, type FinderCandidate } from "./candidate-finder";
+import { matchCandidates } from "@/lib/admin/candidate-match";
 import { SendCandidatesButton } from "./send-candidates-button";
 
 export const metadata: Metadata = { title: "ניהול משרה" };
@@ -110,7 +112,7 @@ export default async function AdminJobPage({
         .order("created_at", { ascending: false }),
       admin
         .from("profiles")
-        .select("id, full_name, specialization")
+        .select("id, full_name, specialization, region")
         .in("status", ["active", "pending"])
         .eq("role", "junior")
         .eq("profile_completed", true)
@@ -366,6 +368,7 @@ export default async function AdminJobPage({
     ...(job.source === "ours" ? [{ key: "publish", label: "פרסום" }] : []),
     { key: "questions", label: "שאלות", count: questionItems.length },
     { key: "review", label: "מועמדות", count: appList.length },
+    ...(job.source === "ours" ? [{ key: "finder", label: "איתור מתאימות" }] : []),
     { key: "client", label: "לקוח", count: curatedIds.length },
   ];
 
@@ -499,6 +502,64 @@ export default async function AdminJobPage({
         />
       </div>
     ) : null;
+
+  // The candidate finder (the owner, 2/9): everyone — applicants AND the
+  // whole community — scored by PRACTICAL tech only (never "שלמדת"),
+  // triaged in a table or one-by-one cards, with an optional AI pass.
+  let finderPanel: React.ReactNode = null;
+  if (job.source === "ours") {
+    const communityRows = members ?? [];
+    const finderIds = [...new Set([...communityRows.map((m) => m.id), ...applicantIds])];
+    const [matches, { data: reviewRows }] = await Promise.all([
+      matchCandidates(job.tech_tags ?? [], finderIds),
+      admin
+        .from("job_candidate_reviews")
+        .select("profile_id, status, ai_score, ai_reason")
+        .eq("job_id", id),
+    ]);
+    const reviewOf = new Map((reviewRows ?? []).map((r) => [r.profile_id, r]));
+    const appOf = new Map(appList.map((a) => [a.applicant_id, a]));
+    const communityInfo = new Map(communityRows.map((m) => [m.id, m]));
+    const finderCandidates: FinderCandidate[] = finderIds.map((pid) => {
+      const m = matches.get(pid);
+      const rv = reviewOf.get(pid);
+      const app = appOf.get(pid);
+      const base = communityInfo.get(pid) ?? profileOf.get(pid);
+      const ansObj = (app?.answers ?? {}) as Record<string, string>;
+      return {
+        profileId: pid,
+        name: base?.full_name ?? "חברת קהילה",
+        specialization: base?.specialization ?? null,
+        region: (base as { region?: string | null } | undefined)?.region ?? null,
+        years: m?.years ?? null,
+        score: m?.score ?? 0,
+        matched: m?.matched ?? [],
+        missing: m?.missing ?? [],
+        extra: m?.extra ?? [],
+        applied: !!app,
+        appliedAnswers: app
+          ? questionItems
+              .map((qi) => ({ q: qi.question, a: String(ansObj[qi.id] ?? "") }))
+              .filter((qa) => qa.a)
+          : [],
+        status: (rv?.status ?? "new") as "new" | "fit" | "maybe" | "no",
+        aiScore: rv?.ai_score ?? null,
+        aiReason: rv?.ai_reason ?? null,
+      };
+    });
+    finderPanel = (
+      <div className={cardClass}>
+        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+          <Sparkles size={16} className="text-brand-pink-deep" /> איתור המתאימות ביותר
+        </h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">
+          ציון ההתאמה נבנה מטכנולוגיות מניסיון <b>מעשי</b> בלבד — עבודות, פרקטיקום — לא ממה
+          שנלמד בקורסים. הסימונים (מתאימה/אולי/לא) נשמרים פר משרה, פנימיים בלבד.
+        </p>
+        <CandidateFinder jobId={job.id} candidates={finderCandidates} appliedCount={applicantIds.length} />
+      </div>
+    );
+  }
 
   // Application questions (required or optional)
   const questionsPanel = (
@@ -723,6 +784,7 @@ export default async function AdminJobPage({
           publish: publishPanel,
           questions: questionsPanel,
           review: reviewPanel,
+          finder: finderPanel,
           client: clientPanel,
         }}
       />

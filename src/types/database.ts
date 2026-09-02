@@ -1497,6 +1497,28 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["reports"]["Insert"]>;
         Relationships: [];
       };
+      job_candidate_reviews: {
+        Row: {
+          job_id: string;
+          profile_id: string;
+          status: "new" | "fit" | "maybe" | "no";
+          ai_score: number | null;
+          ai_reason: string | null;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          job_id: string;
+          profile_id: string;
+          status?: "new" | "fit" | "maybe" | "no";
+          ai_score?: number | null;
+          ai_reason?: string | null;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["job_candidate_reviews"]["Insert"]>;
+        Relationships: [];
+      };
       wa_contacts: {
         Row: {
           id: string;
