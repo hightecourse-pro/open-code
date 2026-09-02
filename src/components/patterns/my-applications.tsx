@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { HeartHandshake, Hourglass, Send } from "lucide-react";
 import type { ApplicationStatus } from "@/types/database";
 
@@ -22,6 +23,8 @@ export interface MyApplicationItem {
    * owner, 31/8: "רק הוגש ללקוח" is not "הסתיימו").
    */
   stageLabel: string | null;
+  /** Still editable — the team hasn't locked it (the owner, 2/9). */
+  editable?: boolean;
 }
 
 export interface MySubmittedItem {
@@ -63,12 +66,15 @@ function Row({
   appliedAt,
   closedLabel,
   stageLabel,
+  editHref,
 }: {
   title: string;
   pill: { label: string; cls: string };
   appliedAt?: string | null;
   closedLabel?: string | null;
   stageLabel?: string | null;
+  /** When set — the application is still open for edits/withdrawal. */
+  editHref?: string | null;
 }) {
   return (
     <div className="flex items-center gap-2.5 py-2 border-b border-ink-100 last:border-b-0 flex-wrap">
@@ -78,6 +84,11 @@ function Row({
           <span className="text-[11.5px] text-ink-400 ms-2" suppressHydrationWarning>
             הוגשה {DATE_HE.format(new Date(appliedAt))}
           </span>
+        )}
+        {editHref && (
+          <Link href={editHref} className="text-[11.5px] font-semibold text-brand-purple hover:underline ms-2">
+            עריכה / הסרה ✏️
+          </Link>
         )}
       </div>
       {(closedLabel ?? stageLabel) && (
@@ -169,7 +180,7 @@ export function MyApplications({
           hint="קורות החיים שלך אצל המעסיק — נעדכן אותך בכל צעד."
         >
           {forwarded.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} />
           ))}
           {submittedOpen.map((s) => (
             <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} stageLabel={s.stageLabel} />

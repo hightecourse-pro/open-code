@@ -102,7 +102,7 @@ export default async function AdminJobPage({
   ] = await Promise.all([
       admin
         .from("applications")
-        .select("id, applicant_id, submitted_at, status, admin_mark, admin_mark_reason, answers, cv_document_id, sent_to_client_at")
+        .select("id, applicant_id, submitted_at, status, admin_mark, admin_mark_reason, answers, cv_document_id, sent_to_client_at, edited_at, previous_versions")
         .eq("job_id", id)
         .order("submitted_at", { ascending: false }),
       admin
@@ -356,6 +356,17 @@ export default async function AdminJobPage({
       memberLabel: p?.role === "admin" ? ("team" as const) : p?.role === "mentor" ? ("mentor" as const) : null,
       isVip: vipSet.has(a.applicant_id),
       memberTags: crmTagsOf.get(a.applicant_id) ?? [],
+      editedAt: a.edited_at ?? null,
+      previousVersions: (Array.isArray(a.previous_versions) ? a.previous_versions : []).map(
+        (v) => {
+          const pv = v as { saved_at?: string; answers?: unknown; cv_document_id?: string | null };
+          return {
+            savedAt: pv.saved_at ?? "",
+            answers: parseAnswers(pv.answers),
+            cvChanged: (pv.cv_document_id ?? null) !== (a.cv_document_id ?? null),
+          };
+        }
+      ),
       crmNote: crmNoteOf.get(a.applicant_id) ?? null,
       adminNote: noteOf.get(a.id) ?? null,
     };

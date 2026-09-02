@@ -180,6 +180,13 @@ export default async function JobsPage({
           forwarded: candSet.has(a.job_id) || FORWARDED.includes(a.status),
           closedLabel: closedLabelOf(j),
           stageLabel: stageLabelOf(j),
+          // Editable until the team locks it (the owner, 2/9) — submitted,
+          // not yet forwarded, and the job is still taking submissions.
+          editable:
+            a.status === "submitted" &&
+            !candSet.has(a.job_id) &&
+            !closedLabelOf(j) &&
+            !stageLabelOf(j),
         }];
       });
       submittedForHer = candJobIds.flatMap((id) => {

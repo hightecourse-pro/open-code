@@ -73,6 +73,10 @@ export interface ReviewApplication {
   isVip: boolean;
   /** Internal profile tags (member_crm.internal_tags) — admin-only. */
   memberTags: string[];
+  /** She edited the application after submitting (the owner, 2/9). */
+  editedAt: string | null;
+  /** Outgoing snapshots, oldest first — what each edit replaced. */
+  previousVersions: { savedAt: string; answers: Record<string, string | number | string[]>; cvChanged: boolean }[];
   /** The team's general internal note about her (member_crm) — admin-only. */
   crmNote: string | null;
   /** Note tied to HER × THIS JOB (application_notes) — the table's הערה column. */
@@ -1470,6 +1474,11 @@ export function ReviewCenter({
                 )}
                 <p className="text-[12px] text-ink-500 mt-1.5">
                   הגישה ב־{fmtDate(selected.submittedAt)}
+                  {selected.editedAt && (
+                    <span className="ms-2 inline-flex items-center rounded-full bg-tint-warm text-[#8C5E0E] px-2 py-px text-[11px] font-bold">
+                      ✏️ נערכה {fmtDate(selected.editedAt)}
+                    </span>
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-1.5 shrink-0" role="group" aria-label="מעבר בין מועמדות">
@@ -1733,6 +1742,38 @@ export function ReviewCenter({
                   </div>
                 ));
               })()}
+
+              {/* Every version an edit replaced (the owner, 2/9: "לראות
+                  ערכים קודמים") — oldest first, collapsed by default. */}
+              {selected.previousVersions.length > 0 && (
+                <details className="rounded-md border border-[#F0DCA8] bg-tint-warm/40 px-3.5 py-2.5">
+                  <summary className="cursor-pointer text-[12.5px] font-bold text-[#8C5E0E]">
+                    גרסאות קודמות ({selected.previousVersions.length}) — מה היה לפני העריכות
+                  </summary>
+                  <div className="flex flex-col gap-3 mt-2.5">
+                    {selected.previousVersions.map((v, vi) => (
+                      <div key={vi} className="border-t border-[#F0DCA8] pt-2 flex flex-col gap-1.5">
+                        <div className="text-[11.5px] font-bold text-ink-500">
+                          גרסה עד {fmtDate(v.savedAt)}
+                          {v.cvChanged && " · קובץ קורות החיים הוחלף מאז"}
+                        </div>
+                        {Object.entries(v.answers).map(([k, val], ai) => {
+                          const label =
+                            k === "fit"
+                              ? FIT_QUESTION
+                              : questions.find((q) => q.id === k)?.question ?? "שאלה נוספת";
+                          return (
+                            <div key={ai} className="text-[12.5px]">
+                              <span className="font-semibold text-ink-700">{label}: </span>
+                              <span className="text-ink-900 whitespace-pre-wrap">{answerText(val)}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
             </div>
           </div>
         ) : (

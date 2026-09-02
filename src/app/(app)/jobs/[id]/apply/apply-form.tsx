@@ -7,7 +7,7 @@ import { FileText, Sparkles, Upload } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { QuestionAnswerType } from "@/types/database";
-import { submitApplication, type ApplyState } from "./actions";
+import { submitApplication, updateApplication, type ApplyState } from "./actions";
 
 export interface ApplyQuestion {
   id: string;
@@ -37,19 +37,33 @@ export function ApplyForm({
   jobId,
   questions,
   cvDocs,
+  edit = null,
 }: {
   jobId: string;
   questions: ApplyQuestion[];
   cvDocs: ApplyCvDoc[];
+  /** Edit mode (the owner, 2/9): prefilled from her live application; the
+      form UPDATES instead of creating, until the team locks it. */
+  edit?: { answers: Record<string, string | number | string[]>; fit: string; currentCvLabel: string | null } | null;
 }) {
   const [state, action, pending] = useActionState<ApplyState, FormData>(
-    submitApplication.bind(null, jobId),
+    (edit ? updateApplication : submitApplication).bind(null, jobId),
     {}
   );
   // Her marked default is the one that gets attached; without one, the newest.
   const defaultCv = cvDocs.find((d) => d.is_default) ?? null;
   const mainCv = defaultCv ?? cvDocs[0] ?? null;
-  const [cvMode, setCvMode] = useState<"main" | "upload">(mainCv ? "main" : "upload");
+  const [cvMode, setCvMode] = useState<"keep" | "main" | "upload">(
+    edit ? "keep" : mainCv ? "main" : "upload"
+  );
+  const prev = (id: string): string => {
+    const v = edit?.answers?.[id];
+    return typeof v === "string" || typeof v === "number" ? String(v) : "";
+  };
+  const prevMulti = (id: string): string[] => {
+    const v = edit?.answers?.[id];
+    return Array.isArray(v) ? v : [];
+  };
 
   const radioClass = (active: boolean) =>
     cn(
@@ -62,7 +76,7 @@ export function ApplyForm({
       {/* Half-filled answers survive a hop to another page (members, 2/9). */}
       {/* A successful submit REDIRECTS (the form is gone for good), so the
           stale draft just ages out on its 7-day TTL. */}
-      <FormDraft storageKey={`draft:apply:${jobId}`} />
+      {!edit && <FormDraft storageKey={`draft:apply:${jobId}`} />}
       {/* Friendly nudge — never blocking */}
       <div className="flex gap-2.5 items-start bg-tint-indigo border border-[#C9D2F0] rounded-md p-3 px-4 text-[13.5px] text-ink-700">
         <Sparkles size={18} className="text-brand-indigo shrink-0 mt-0.5" />
@@ -89,6 +103,7 @@ export function ApplyForm({
               inputMode="numeric"
               required={q.required !== false}
               placeholder="התשובה שלך במספר…"
+              defaultValue={prev(q.id)}
               className="max-w-52"
             />
           ) : q.answer_type === "select" ? (
@@ -102,6 +117,7 @@ export function ApplyForm({
                       name={`q_${q.id}`}
                       value={opt}
                       required={q.required !== false}
+                      defaultChecked={prev(q.id) === opt}
                       className="accent-[#E0418D] w-4 h-4"
                     />
                     {opt}
@@ -113,7 +129,7 @@ export function ApplyForm({
                 id={`q_${q.id}`}
                 name={`q_${q.id}`}
                 required={q.required !== false}
-                defaultValue=""
+                defaultValue={prev(q.id) || ""}
               >
                 <option value="" disabled>
                   בחרי…
@@ -131,7 +147,7 @@ export function ApplyForm({
             // attribute.
             <div className="flex flex-col gap-2 rounded-sm border border-ink-300 bg-ink-0 px-3.5 py-3">
               {q.options.map((opt) => (
-                <Checkbox key={opt} name={`q_${q.id}`} value={opt} label={opt} />
+                <Checkbox key={opt} name={`q_${q.id}`} value={opt} label={opt} defaultChecked={prevMulti(q.id).includes(opt)} />
               ))}
               <span className="text-xs text-ink-500">אפשר לסמן כמה</span>
             </div>
@@ -141,6 +157,7 @@ export function ApplyForm({
               name={`q_${q.id}`}
               required={q.required !== false}
               placeholder="התשובה שלך…"
+              defaultValue={prev(q.id)}
             />
           )}
         </Field>
@@ -156,6 +173,7 @@ export function ApplyForm({
           name="fit"
           required
           placeholder="ספרי בכמה משפטים למה דווקא את — זו ההזדמנות שלך לבלוט 💜"
+          defaultValue={edit?.fit ?? ""}
         />
       </Field>
 
@@ -169,6 +187,27 @@ export function ApplyForm({
           </Link>
         </p>
 
+        {edit && (
+          <label className={radioClass(cvMode === "keep")}>
+            <input
+              type="radio"
+              name="cv_mode"
+              value="keep"
+              checked={cvMode === "keep"}
+              onChange={() => setCvMode("keep")}
+              className="mt-1 accent-[#E0418D]"
+            />
+            <span className="flex-1">
+              <span className="flex items-center gap-1.5 font-semibold text-sm text-ink-900">
+                <FileText size={14} className="text-brand-purple" />
+                להשאיר את קורות החיים שכבר צירפת
+              </span>
+              {edit.currentCvLabel && (
+                <span className="block text-xs text-ink-500 mt-0.5">{edit.currentCvLabel}</span>
+              )}
+            </span>
+          </label>
+        )}
         {mainCv && (
           <label className={radioClass(cvMode === "main")}>
             <input
@@ -231,7 +270,7 @@ export function ApplyForm({
       {state.error && <Alert variant="danger">{state.error}</Alert>}
 
       <Button type="submit" disabled={pending} bracketed className="self-start">
-        {pending ? "שולחת את המועמדות…" : "שליחת המועמדות"}
+        {pending ? (edit ? "מעדכנת…" : "שולחת את המועמדות…") : edit ? "עדכון ההגשה 💜" : "שליחת המועמדות"}
       </Button>
     </form>
   );
