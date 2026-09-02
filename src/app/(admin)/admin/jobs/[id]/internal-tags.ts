@@ -4,4 +4,5 @@
 export const MEMBER_INTERNAL_TAGS = [
   "מפתחת AI ללקוח אמיתי",
   "מפתחת AI לפרויקטים עצמאיים",
+  "פיתוח מודלים",
 ] as const;
