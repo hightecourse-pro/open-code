@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { CrmManager, type CrmClientRow, type CrmJobRow } from "./crm-manager";
+import { CrmManager, type CrmClientRow, type CrmContact, type CrmHireRow, type CrmJobRow } from "./crm-manager";
 
 export const metadata: Metadata = { title: "CRM לקוחות" };
+export const dynamic = "force-dynamic";
 
 export default async function AdminCrmPage() {
   await requireRole("admin");
 
   const admin = createAdminClient();
-  const [{ data: clients }, { data: jobs }] = await Promise.all([
+  const [{ data: clients }, { data: jobs }, { data: contacts }, { data: hires }] = await Promise.all([
     // select("*") so the screen keeps rendering whether or not the CRM
     // migration has run (missing columns fall back below).
     admin.from("portal_clients").select("*").order("created_at", { ascending: false }),
@@ -18,6 +19,17 @@ export default async function AdminCrmPage() {
       .select("id, title, client_id, pipeline_status, created_at")
       .not("client_id", "is", null)
       .order("created_at", { ascending: false }),
+    admin
+      .from("client_contacts")
+      .select("id, client_id, name, display_name, email, phone, sort_order")
+      .order("sort_order", { ascending: true }),
+    // The hierarchy's bottom layer (the owner, 3/9): under each job, the
+    // women recruited for it — straight from the hires registry.
+    admin
+      .from("hires")
+      .select("id, client_id, job_id, full_name, profile_id, status, hired_at")
+      .not("client_id", "is", null)
+      .order("hired_at", { ascending: false }),
   ]);
 
   // Group each client's jobs for the expanded row (title + pipeline pill).
@@ -27,6 +39,25 @@ export default async function AdminCrmPage() {
     const list = jobsOf.get(j.client_id) ?? [];
     list.push({ id: j.id, title: j.title, pipeline_status: j.pipeline_status ?? "draft" });
     jobsOf.set(j.client_id, list);
+  }
+  const contactsOf = new Map<string, CrmContact[]>();
+  for (const c of contacts ?? []) {
+    const list = contactsOf.get(c.client_id) ?? [];
+    list.push({ id: c.id, name: c.name, display_name: c.display_name, email: c.email, phone: c.phone });
+    contactsOf.set(c.client_id, list);
+  }
+  const hiresOf = new Map<string, CrmHireRow[]>();
+  for (const h of hires ?? []) {
+    if (!h.client_id) continue;
+    const list = hiresOf.get(h.client_id) ?? [];
+    list.push({
+      id: h.id,
+      full_name: h.full_name,
+      profile_id: h.profile_id,
+      status: h.status,
+      job_id: h.job_id,
+    });
+    hiresOf.set(h.client_id, list);
   }
 
   const rows: CrmClientRow[] = (clients ?? []).map((c) => ({
@@ -39,8 +70,11 @@ export default async function AdminCrmPage() {
     // Pre-migration rows: clients with credentials are already "משרה בטיפול".
     crm_status: c.crm_status ?? (c.username ? "job_active" : "initial_call"),
     crm_notes: c.crm_notes ?? null,
+    address: (c as { address?: string | null }).address ?? null,
     created_at: c.created_at,
     jobs: jobsOf.get(c.id) ?? [],
+    contacts: contactsOf.get(c.id) ?? [],
+    hires: hiresOf.get(c.id) ?? [],
   }));
 
   return (
@@ -49,8 +83,8 @@ export default async function AdminCrmPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;CRM/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">לקוחות</h1>
         <p className="text-[13px] text-ink-500 mt-1.5">
-          כל הלקוחות והלידים במקום אחד — משיחה ראשונית ועד גיוס. לחצי על שורה
-          לעריכת פרטים, סטטוס והערות, ולצפייה במשרות של הלקוחה.
+          כל הלקוחות והלידים במקום אחד — משיחה ראשונית ועד גיוס. לחצי על שורה לעריכת
+          פרטים, אנשי הקשר, המשרות של הלקוחה — ומי גויסה לכל משרה.
         </p>
       </div>
 

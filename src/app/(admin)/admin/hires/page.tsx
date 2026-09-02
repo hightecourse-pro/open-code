@@ -34,13 +34,17 @@ export default async function AdminHiresPage() {
     }
   }
 
-  const { data: hires } = await supabase
-    .from("hires")
-    .select(
-      "id, profile_id, full_name, email, company, job_type, source, status, amount, payer, payer_institution, hired_at, created_at"
-    )
-    .order("hired_at", { ascending: false })
-    .limit(1000);
+  const [{ data: hires }, { data: clientRows }] = await Promise.all([
+    supabase
+      .from("hires")
+      .select(
+        "id, profile_id, full_name, email, company, job_type, source, status, amount, payer, payer_institution, hired_at, created_at, client_id"
+      )
+      .order("hired_at", { ascending: false })
+      .limit(1000),
+    // The company is picked from the clients registry, not typed (the owner, 3/9).
+    supabase.from("portal_clients").select("id, company_name").order("company_name"),
+  ]);
 
   // Who is she TODAY (the owner, 3/9: "לזהות מיד בכניסה") — every linked hire
   // gets her live community standing: מנויה, משתתפת רגילה, מנטורית, צוות.
@@ -78,6 +82,7 @@ export default async function AdminHiresPage() {
           ...h,
           membership: h.profile_id ? (membershipOf.get(h.profile_id) ?? "member") : "outside",
         }))}
+        clients={(clientRows ?? []).map((c) => ({ id: c.id, name: c.company_name }))}
         defaultDate={new Date().toISOString().slice(0, 10)}
       />
     </div>

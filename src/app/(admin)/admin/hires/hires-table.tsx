@@ -29,6 +29,7 @@ export interface HireRow {
   payer_institution: string | null;
   hired_at: string;
   created_at: string;
+  client_id: string | null;
   /** Live community standing, resolved server-side on entry (the owner, 3/9). */
   membership?: string;
 }
@@ -62,7 +63,20 @@ const MEMBERSHIP_HE: Record<string, { label: string; cls: string }> = {
 
 type SortKey = "hired_at" | "full_name" | "amount" | "status";
 
-export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDate: string }) {
+export interface ClientOption {
+  id: string;
+  name: string;
+}
+
+export function HiresTable({
+  hires,
+  clients,
+  defaultDate,
+}: {
+  hires: HireRow[];
+  clients: ClientOption[];
+  defaultDate: string;
+}) {
   const [addState, add, adding] = useActionState<HireFormState, FormData>(addExternalHire, {});
   const [showAdd, setShowAdd] = useState(false);
 
@@ -185,7 +199,8 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
       {showAdd && (
         <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
           <p className="text-[12.5px] text-ink-500">
-            השמה של מישהי שאינה חברת קהילה — לרישום ולבאנר החגיגי (60 יום מהתאריך).
+            השמה של מישהי שאינה חברת קהילה — לרישום ולבאנר החגיגי (60 יום מהתאריך). חסרה
+            חברה ברשימה? הוסיפי אותה קודם כליד ב<a href="/admin/crm" className="text-brand-purple font-semibold hover:underline">פייפליין הלקוחות</a>.
           </p>
           {addState.error && <Alert variant="danger">{addState.error}</Alert>}
           {addState.ok && <Alert variant="success">נוספה 🎉</Alert>}
@@ -196,8 +211,20 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
             <Field label="מייל" htmlFor="eh_email" className="w-52 max-w-full">
               <Input id="eh_email" name="email" type="email" dir="ltr" placeholder="email@example.com" />
             </Field>
-            <Field label="חברה" htmlFor="eh_company" className="w-44 max-w-full">
-              <Input id="eh_company" name="company" placeholder="שם החברה" />
+            <Field label="חברה (מרשימת הלקוחות)" htmlFor="eh_client" className="w-48 max-w-full">
+              <select
+                id="eh_client"
+                name="client_id"
+                className="w-full h-10 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
+                defaultValue=""
+              >
+                <option value="">— ללא חברה —</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </Field>
             <Field label="סוג משרה" htmlFor="eh_type" className="w-48 max-w-full">
               <select
@@ -226,7 +253,7 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
           (the owner, 3/9: "גורם גלילה משמאל לימין"). */}
       <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm divide-y divide-ink-100">
         {filtered.map((h) => (
-          <HireLine key={h.id} h={h} />
+          <HireLine key={h.id} h={h} clients={clients} />
         ))}
         {filtered.length === 0 && (
           <div className="px-4 py-8 text-center text-ink-500 text-[13px]">
@@ -238,7 +265,7 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
   );
 }
 
-function HireLine({ h }: { h: HireRow }) {
+function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
   const [, start] = useTransition();
   const [amount, setAmount] = useState(h.amount != null ? String(h.amount) : "");
   const [payer, setPayer] = useState(h.payer ?? "");
@@ -247,7 +274,7 @@ function HireLine({ h }: { h: HireRow }) {
   const [draft, setDraft] = useState({
     full_name: h.full_name,
     email: h.email ?? "",
-    company: h.company ?? "",
+    client_id: h.client_id ?? "",
     job_type: h.job_type ?? "",
     hired_at: h.hired_at.slice(0, 10),
   });
@@ -369,12 +396,20 @@ function HireLine({ h }: { h: HireRow }) {
               onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
             />
           </Field>
-          <Field label="חברה" htmlFor={`ec_${h.id}`} className="w-40 max-w-full">
-            <Input
+          <Field label="חברה (מרשימת הלקוחות)" htmlFor={`ec_${h.id}`} className="w-44 max-w-full">
+            <select
               id={`ec_${h.id}`}
-              value={draft.company}
-              onChange={(e) => setDraft((d) => ({ ...d, company: e.target.value }))}
-            />
+              value={draft.client_id}
+              onChange={(e) => setDraft((d) => ({ ...d, client_id: e.target.value }))}
+              className="w-full h-10 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
+            >
+              <option value="">— ללא חברה —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
           </Field>
           <Field label="סוג משרה" htmlFor={`et_${h.id}`} className="w-44 max-w-full">
             <select
