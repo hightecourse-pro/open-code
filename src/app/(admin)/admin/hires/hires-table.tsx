@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState, useTransition } from "react";
-import { Search } from "lucide-react";
+import { Pencil, Search } from "lucide-react";
 import { Alert, Button, Field, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import {
@@ -11,6 +11,7 @@ import {
   setHireInstitution,
   setHirePayer,
   setHireStatus,
+  updateHireDetails,
   type HireFormState,
 } from "./hires-actions";
 
@@ -28,6 +29,8 @@ export interface HireRow {
   payer_institution: string | null;
   hired_at: string;
   created_at: string;
+  /** Live community standing, resolved server-side on entry (the owner, 3/9). */
+  membership?: string;
 }
 
 const JOB_TYPE_HE: Record<string, string> = {
@@ -48,17 +51,24 @@ const STATUS_CLS: Record<string, string> = {
   paid: "bg-tint-mint text-success",
 };
 
+// Who she is in the community — detected live at page entry.
+const MEMBERSHIP_HE: Record<string, { label: string; cls: string }> = {
+  subscriber: { label: "מנויה 💜", cls: "bg-tint-pink text-brand-pink-deep" },
+  member: { label: "משתתפת רגילה", cls: "bg-tint-purple text-brand-purple" },
+  mentor: { label: "מנטורית 👑", cls: "bg-tint-warm text-[#8C5E0E]" },
+  team: { label: "צוות", cls: "bg-ink-900 text-white" },
+  outside: { label: "מחוץ לקהילה", cls: "bg-ink-100 text-ink-700" },
+};
+
 type SortKey = "hired_at" | "full_name" | "amount" | "status";
 
 export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDate: string }) {
   const [addState, add, adding] = useActionState<HireFormState, FormData>(addExternalHire, {});
   const [showAdd, setShowAdd] = useState(false);
-  const [, start] = useTransition();
 
-  // Fixed filters (the owner, 3/9: "סינונים, מיונים ופילטרים קבועים").
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [payerFilter, setPayerFilter] = useState<string>("all");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [memberFilter, setMemberFilter] = useState<string>("all");
   const [q, setQ] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("hired_at");
   const [sortAsc, setSortAsc] = useState(false);
@@ -75,7 +85,12 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
       (h) =>
         (statusFilter === "all" || h.status === statusFilter) &&
         (payerFilter === "all" || (payerFilter === "none" ? !h.payer : h.payer === payerFilter)) &&
-        (sourceFilter === "all" || h.source === sourceFilter) &&
+        (memberFilter === "all" ||
+          (memberFilter === "community"
+            ? h.membership !== "outside"
+            : memberFilter === "subscriber"
+              ? h.membership === "subscriber"
+              : h.membership === "outside")) &&
         (!needle ||
           h.full_name.includes(needle) ||
           (h.company ?? "").includes(needle) ||
@@ -91,29 +106,7 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
       return (new Date(a.hired_at).getTime() - new Date(b.hired_at).getTime()) * dir;
     });
     return rows;
-  }, [hires, statusFilter, payerFilter, sourceFilter, q, sortKey, sortAsc]);
-
-  function sortBy(key: SortKey) {
-    if (sortKey === key) setSortAsc((v) => !v);
-    else {
-      setSortKey(key);
-      setSortAsc(key === "full_name");
-    }
-  }
-
-  const th = (label: string, k?: SortKey) => (
-    <th
-      key={label}
-      className={cn(
-        "text-start text-[11.5px] font-bold text-ink-500 px-3 py-2 whitespace-nowrap",
-        k && "cursor-pointer hover:text-brand-purple select-none"
-      )}
-      onClick={k ? () => sortBy(k) : undefined}
-    >
-      {label}
-      {k && sortKey === k && <span className="ms-0.5">{sortAsc ? "▲" : "▼"}</span>}
-    </th>
-  );
+  }, [hires, statusFilter, payerFilter, memberFilter, q, sortKey, sortAsc]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -146,9 +139,19 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="חיפוש שם / חברה / מוסד…"
-            className="h-9 w-56 border border-ink-300 rounded-md ps-8 pe-3 text-sm bg-white"
+            className="h-9 w-52 border border-ink-300 rounded-md ps-8 pe-3 text-sm bg-white"
           />
         </div>
+        <select
+          value={memberFilter}
+          onChange={(e) => setMemberFilter(e.target.value)}
+          className="h-9 border border-ink-300 rounded-md px-2 text-sm bg-white"
+        >
+          <option value="all">שיוך — הכל</option>
+          <option value="subscriber">מנויות</option>
+          <option value="community">בקהילה (כולן)</option>
+          <option value="outside">מחוץ לקהילה</option>
+        </select>
         <select
           value={payerFilter}
           onChange={(e) => setPayerFilter(e.target.value)}
@@ -160,13 +163,19 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
           <option value="none">טרם נקבע</option>
         </select>
         <select
-          value={sourceFilter}
-          onChange={(e) => setSourceFilter(e.target.value)}
+          value={`${sortKey}:${sortAsc ? "a" : "d"}`}
+          onChange={(e) => {
+            const [k, d] = e.target.value.split(":");
+            setSortKey(k as SortKey);
+            setSortAsc(d === "a");
+          }}
           className="h-9 border border-ink-300 rounded-md px-2 text-sm bg-white"
         >
-          <option value="all">מקור — הכל</option>
-          <option value="community">חברות קהילה</option>
-          <option value="external">מחוץ לקהילה</option>
+          <option value="hired_at:d">מיון: חדש → ישן</option>
+          <option value="hired_at:a">מיון: ישן → חדש</option>
+          <option value="full_name:a">מיון: לפי שם</option>
+          <option value="amount:d">מיון: סכום גבוה → נמוך</option>
+          <option value="status:a">מיון: לפי סטטוס</option>
         </select>
         <Button type="button" size="sm" variant={showAdd ? "secondary" : "primary"} onClick={() => setShowAdd((v) => !v)}>
           {showAdd ? "סגירה" : "+ הוספה מחוץ לקהילה"}
@@ -213,87 +222,89 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
         </div>
       )}
 
-      <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-x-auto">
-        <table className="w-full text-sm min-w-[880px]">
-          <thead className="border-b border-ink-100">
-            <tr>
-              {th("שם", "full_name")}
-              {th("חברה")}
-              {th("סוג משרה")}
-              {th("מקור")}
-              {th("תאריך", "hired_at")}
-              {th("סטטוס", "status")}
-              {th("סכום", "amount")}
-              {th("מי משלמת")}
-              {th("")}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((h) => (
-              <HireLine key={h.id} h={h} start={start} />
-            ))}
-            {filtered.length === 0 && (
-              <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-ink-500 text-[13px]">
-                  אין גיוסים שמתאימים לסינון.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      {/* Stacked rows — everything visible, nothing scrolls sideways
+          (the owner, 3/9: "גורם גלילה משמאל לימין"). */}
+      <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm divide-y divide-ink-100">
+        {filtered.map((h) => (
+          <HireLine key={h.id} h={h} />
+        ))}
+        {filtered.length === 0 && (
+          <div className="px-4 py-8 text-center text-ink-500 text-[13px]">
+            אין גיוסים שמתאימים לסינון.
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function HireLine({ h, start }: { h: HireRow; start: (fn: () => void) => void }) {
+function HireLine({ h }: { h: HireRow }) {
+  const [, start] = useTransition();
   const [amount, setAmount] = useState(h.amount != null ? String(h.amount) : "");
   const [payer, setPayer] = useState(h.payer ?? "");
   const [institution, setInstitution] = useState(h.payer_institution ?? "");
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState({
+    full_name: h.full_name,
+    email: h.email ?? "",
+    company: h.company ?? "",
+    job_type: h.job_type ?? "",
+    hired_at: h.hired_at.slice(0, 10),
+  });
+  const membership = MEMBERSHIP_HE[h.membership ?? "outside"] ?? MEMBERSHIP_HE.outside;
 
   return (
-    <tr className="border-b border-ink-100 last:border-b-0 hover:bg-ink-50/50 align-middle">
-      <td className="px-3 py-2 whitespace-nowrap">
+    <div className="px-4 py-3 flex flex-col gap-2">
+      {/* Line 1: who + where + when + actions */}
+      <div className="flex items-center gap-2.5 flex-wrap">
         {h.profile_id ? (
           <a
             href={`/admin/members/${h.profile_id}`}
-            className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
+            className="font-semibold text-[14px] text-ink-900 hover:text-brand-purple hover:underline"
           >
             {h.full_name}
           </a>
         ) : (
-          <span className="font-semibold text-ink-900">{h.full_name}</span>
+          <span className="font-semibold text-[14px] text-ink-900">{h.full_name}</span>
         )}
-        {h.email && (
-          <div className="font-mono text-[10.5px] text-ink-400" dir="ltr">
-            {h.email}
-          </div>
-        )}
-      </td>
-      <td className="px-3 py-2 text-[13px] text-ink-700">{h.company ?? "—"}</td>
-      <td className="px-3 py-2 text-[12px] text-ink-700 whitespace-nowrap">
-        {h.job_type ? (JOB_TYPE_HE[h.job_type] ?? h.job_type) : "—"}
-      </td>
-      <td className="px-3 py-2">
-        <span
-          className={cn(
-            "text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap",
-            h.source === "community" ? "bg-tint-purple text-brand-purple" : "bg-ink-100 text-ink-700"
-          )}
-        >
-          {h.source === "community" ? "בקהילה" : "מחוץ לקהילה"}
+        <span className={cn("text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap", membership.cls)}>
+          {membership.label}
         </span>
-      </td>
-      <td className="px-3 py-2 text-[12.5px] text-ink-500 whitespace-nowrap">
-        {new Date(h.hired_at).toLocaleDateString("he-IL")}
-      </td>
-      <td className="px-3 py-2">
+        {h.company && <span className="text-[12.5px] text-ink-700">{h.company}</span>}
+        {h.job_type && JOB_TYPE_HE[h.job_type] && (
+          <span className="text-[11px] text-ink-500">{JOB_TYPE_HE[h.job_type]}</span>
+        )}
+        <span className="text-[12px] text-ink-400 whitespace-nowrap">
+          {new Date(h.hired_at).toLocaleDateString("he-IL")}
+        </span>
+        <span className="ms-auto flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-purple hover:underline"
+          >
+            <Pencil size={11} /> עריכה
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm(`להסיר את הגיוס של ${h.full_name}? הרישום יימחק לגמרי.`))
+                start(() => void deleteHire(h.id));
+            }}
+            className="text-[11.5px] text-ink-400 hover:text-danger underline"
+          >
+            הסרה
+          </button>
+        </span>
+      </div>
+
+      {/* Line 2: the billing trail */}
+      <div className="flex items-center gap-2 flex-wrap">
         <div className="flex gap-1">
           {STATUS_ORDER.map((s) => (
             <button
               key={s}
               type="button"
-              title={STATUS_HE[s]}
               onClick={() => start(() => void setHireStatus(h.id, s))}
               className={cn(
                 "text-[10.5px] font-bold px-2 py-1 rounded-full whitespace-nowrap transition-all",
@@ -304,59 +315,103 @@ function HireLine({ h, start }: { h: HireRow; start: (fn: () => void) => void })
             </button>
           ))}
         </div>
-      </td>
-      <td className="px-3 py-2">
         <input
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           onBlur={() => start(() => void setHireAmount(h.id, amount))}
-          placeholder="₪"
+          placeholder="סכום ₪"
           inputMode="decimal"
-          className="h-8 w-24 border border-ink-200 rounded-md px-2 text-[13px] bg-white text-start"
+          className="h-8 w-24 border border-ink-200 rounded-md px-2 text-[13px] bg-white"
           dir="ltr"
         />
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex flex-col gap-1">
-          <select
-            value={payer}
-            onChange={(e) => {
-              const v = e.target.value;
-              setPayer(v);
-              start(async () => {
-                const r = await setHirePayer(h.id, v);
-                if (v === "institution") setInstitution(r.institution ?? "");
-              });
-            }}
-            className="h-8 border border-ink-200 rounded-md px-1.5 text-[12px] bg-white"
-          >
-            <option value="">— טרם נקבע —</option>
-            <option value="institution">מוסד הלימודים</option>
-            <option value="member">המשתתפת</option>
-          </select>
-          {payer === "institution" && (
-            <input
-              value={institution}
-              onChange={(e) => setInstitution(e.target.value)}
-              onBlur={() => start(() => void setHireInstitution(h.id, institution))}
-              placeholder={h.profile_id ? "נמשך מהפרופיל…" : "שם המוסד"}
-              className="h-7 w-36 border border-ink-200 rounded-md px-2 text-[11.5px] bg-white"
-            />
-          )}
-        </div>
-      </td>
-      <td className="px-3 py-2 text-end">
-        <button
-          type="button"
-          onClick={() => {
-            if (confirm(`להסיר את הגיוס של ${h.full_name}? הרישום יימחק לגמרי.`))
-              start(() => void deleteHire(h.id));
+        <select
+          value={payer}
+          onChange={(e) => {
+            const v = e.target.value;
+            setPayer(v);
+            start(async () => {
+              const r = await setHirePayer(h.id, v);
+              if (v === "institution") setInstitution(r.institution ?? "");
+            });
           }}
-          className="text-[11.5px] text-ink-400 hover:text-danger underline"
+          className="h-8 border border-ink-200 rounded-md px-1.5 text-[12px] bg-white"
         >
-          הסרה
-        </button>
-      </td>
-    </tr>
+          <option value="">מי משלמת? — טרם נקבע</option>
+          <option value="institution">מוסד הלימודים</option>
+          <option value="member">המשתתפת</option>
+        </select>
+        {payer === "institution" && (
+          <input
+            value={institution}
+            onChange={(e) => setInstitution(e.target.value)}
+            onBlur={() => start(() => void setHireInstitution(h.id, institution))}
+            placeholder={h.profile_id ? "נמשך מהפרופיל…" : "שם המוסד"}
+            className="h-8 w-40 border border-ink-200 rounded-md px-2 text-[12px] bg-white"
+          />
+        )}
+      </div>
+
+      {/* Line 3: the full editor, on demand */}
+      {editing && (
+        <div className="flex items-end gap-2 flex-wrap bg-ink-50/60 border border-ink-100 rounded-md p-3">
+          <Field label="שם מלא" htmlFor={`en_${h.id}`} className="w-44 max-w-full">
+            <Input
+              id={`en_${h.id}`}
+              value={draft.full_name}
+              onChange={(e) => setDraft((d) => ({ ...d, full_name: e.target.value }))}
+            />
+          </Field>
+          <Field label="מייל" htmlFor={`ee_${h.id}`} className="w-52 max-w-full">
+            <Input
+              id={`ee_${h.id}`}
+              dir="ltr"
+              value={draft.email}
+              onChange={(e) => setDraft((d) => ({ ...d, email: e.target.value }))}
+            />
+          </Field>
+          <Field label="חברה" htmlFor={`ec_${h.id}`} className="w-40 max-w-full">
+            <Input
+              id={`ec_${h.id}`}
+              value={draft.company}
+              onChange={(e) => setDraft((d) => ({ ...d, company: e.target.value }))}
+            />
+          </Field>
+          <Field label="סוג משרה" htmlFor={`et_${h.id}`} className="w-44 max-w-full">
+            <select
+              id={`et_${h.id}`}
+              value={draft.job_type}
+              onChange={(e) => setDraft((d) => ({ ...d, job_type: e.target.value }))}
+              className="w-full h-10 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
+            >
+              <option value="">— לא צוין —</option>
+              <option value="practicum_placement">פרקטיקום ולאחריו השמה</option>
+              <option value="temp">משרה זמנית</option>
+              <option value="immediate">השמה מיידית</option>
+            </select>
+          </Field>
+          <Field label="מתי התחילה" htmlFor={`ed_${h.id}`} className="w-36 max-w-full">
+            <Input
+              id={`ed_${h.id}`}
+              type="date"
+              value={draft.hired_at}
+              onChange={(e) => setDraft((d) => ({ ...d, hired_at: e.target.value }))}
+            />
+          </Field>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() =>
+              start(async () => {
+                const r = await updateHireDetails(h.id, draft);
+                if (!r.error) setEditing(false);
+                else alert(r.error);
+              })
+            }
+          >
+            שמירה
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -109,3 +109,43 @@ export async function setHireInstitution(id: string, name: string): Promise<void
     .eq("id", id);
   revalidate();
 }
+
+/** Full row edit (the owner, 3/9: "אין עריכה על כל שורה"). */
+export async function updateHireDetails(
+  id: string,
+  details: { full_name: string; email: string; company: string; job_type: string; hired_at: string }
+): Promise<{ error?: string }> {
+  await requireRole("admin");
+  const full_name = details.full_name.trim().slice(0, 120);
+  if (!full_name) return { error: "השם לא יכול להישאר ריק." };
+  const email = details.email.trim().toLowerCase().slice(0, 200) || null;
+  const company = details.company.trim().slice(0, 200) || null;
+  const job_type = JOB_TYPES.includes(details.job_type) ? details.job_type : null;
+  const parsed = details.hired_at ? new Date(details.hired_at) : null;
+  const hired_at = parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : undefined;
+
+  const supabase = await createClient();
+  const { data: current } = await supabase.from("hires").select("email, profile_id").eq("id", id).maybeSingle();
+
+  // A new email may belong to a member — re-link on the spot.
+  let profile_id = current?.profile_id ?? null;
+  if (email && email !== current?.email) {
+    const { data: uid } = await createAdminClient().rpc("auth_user_id_by_email", { p_email: email });
+    profile_id = (uid as string | null) ?? profile_id;
+  }
+
+  await supabase
+    .from("hires")
+    .update({
+      full_name,
+      email,
+      company,
+      job_type,
+      profile_id,
+      ...(hired_at ? { hired_at } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  revalidate();
+  return {};
+}
