@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { Heart, MessageCircle, Bookmark, Flag, Send, Lock } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
@@ -68,10 +68,7 @@ export function PostInteractions({
   return (
     <div className="mt-3 pt-3 border-t border-ink-100">
       {(likerNames ?? []).length > 0 && (
-        <div className="text-[12px] text-ink-500 mb-1.5" title={likerNames!.join(", ")}>
-          💜 אהבו: {likerNames!.slice(0, 8).join(", ")}
-          {likerNames!.length > 8 && ` ועוד ${likerNames!.length - 8}`}
-        </div>
+        <LikersLine names={likerNames!} />
       )}
       <div className="flex gap-4 items-center">
         <button
@@ -205,6 +202,56 @@ export function PostInteractions({
               <span className="font-semibold text-brand-purple">לשדרוג ←</span>
             </Link>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * "אהבו: …" with the first names inline; tapping it opens a bubble with the
+ * FULL list (the owner, 3/9: "לא רואים את כולן"). The bubble closes on an
+ * outside click or by itself after a few seconds.
+ */
+function LikersLine({ names }: { names: string[] }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("click", onDocClick);
+    const timer = setTimeout(() => setOpen(false), 8000);
+    return () => {
+      document.removeEventListener("click", onDocClick);
+      clearTimeout(timer);
+    };
+  }, [open]);
+
+  return (
+    <div ref={boxRef} className="relative mb-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="text-[12px] text-ink-500 hover:text-brand-purple transition-colors text-start"
+        aria-expanded={open}
+      >
+        💜 אהבו: {names.slice(0, 4).join(", ")}
+        {names.length > 4 && (
+          <span className="font-semibold text-brand-purple"> ועוד {names.length - 4} — לכולן</span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-30 top-full mt-1 start-0 bg-white border border-ink-200 rounded-md shadow-lg p-3 min-w-[220px] max-w-[300px] max-h-[260px] overflow-y-auto">
+          <div className="text-[12px] font-bold text-brand-purple mb-1.5">💜 אהבו את הפוסט</div>
+          <ul className="flex flex-col gap-1">
+            {names.map((n, i) => (
+              <li key={i} className="text-[13px] text-ink-900">
+                {n}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

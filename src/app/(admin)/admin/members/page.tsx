@@ -7,7 +7,6 @@ import {
   type MemberRow,
   type FilterDef,
 } from "@/components/patterns/members-table";
-import { ManualHiresCard, type ManualHireRow } from "@/components/patterns/manual-hires-card";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 import {
   LANGUAGE_SKILLS_KEY,
@@ -60,23 +59,17 @@ export default async function AdminMembersPage({
   const supabase = await createClient();
   const admin = createAdminClient();
 
-  const [members, { data: questions }, { data: crm }, { data: manualHires }, taxonomyOptions] =
-    await Promise.all([
-      fetchAllProfiles(),
-      supabase
-        .from("config_questions")
-        .select("*")
-        .eq("active", true)
-        .order("sort_order", { ascending: true }),
-      // VIP + notes live in the admin-only member_crm table (empty pre-migration).
-      supabase.from("member_crm").select("profile_id, is_vip, vip_reason, internal_notes"),
-      // Off-community placements for the forum banner (admin-only table).
-      supabase
-        .from("manual_hires")
-        .select("id, full_name, hired_at, email, company, job_type, profile_id")
-        .order("hired_at", { ascending: false }),
-      getTaxonomyOptions(),
-    ]);
+  const [members, { data: questions }, { data: crm }, taxonomyOptions] = await Promise.all([
+    fetchAllProfiles(),
+    supabase
+      .from("config_questions")
+      .select("*")
+      .eq("active", true)
+      .order("sort_order", { ascending: true }),
+    // VIP + notes live in the admin-only member_crm table (empty pre-migration).
+    supabase.from("member_crm").select("profile_id, is_vip, vip_reason, internal_notes"),
+    getTaxonomyOptions(),
+  ]);
 
   const crmOf = new Map((crm ?? []).map((c) => [c.profile_id, c]));
 
@@ -269,10 +262,10 @@ export default async function AdminMembersPage({
 
       <MembersTable members={rows} filterDefs={filterDefs} initialStatus={initialStatus} />
 
-      <ManualHiresCard
-        hires={(manualHires ?? []) as ManualHireRow[]}
-        defaultDate={new Date().toISOString().slice(0, 10)}
-      />
+      {/* Placements moved to their own screen (the owner, 3/9). */}
+      <a href="/admin/hires" className="text-[13px] font-semibold text-brand-purple hover:underline self-start">
+        🎉 גיוסים — כל ההשמות, הסטטוסים והחיובים ←
+      </a>
     </div>
   );
 }

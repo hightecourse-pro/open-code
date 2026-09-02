@@ -329,6 +329,99 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["manual_hires"]["Insert"]>;
         Relationships: [];
       };
+      /** Central placements registry — community + external, with billing trail. */
+      hires: {
+        Row: {
+          id: string;
+          profile_id: string | null;
+          full_name: string;
+          email: string | null;
+          company: string | null;
+          job_type: string | null;
+          source: string;
+          status: string;
+          amount: number | null;
+          payer: string | null;
+          payer_institution: string | null;
+          hired_at: string;
+          notes: string | null;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id?: string | null;
+          full_name: string;
+          email?: string | null;
+          company?: string | null;
+          job_type?: string | null;
+          source?: string;
+          status?: string;
+          amount?: number | null;
+          payer?: string | null;
+          payer_institution?: string | null;
+          hired_at?: string;
+          notes?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["hires"]["Insert"]>;
+        Relationships: [];
+      };
+      /** The team's task list — manual entries and system-trigger routed ones. */
+      admin_tasks: {
+        Row: {
+          id: string;
+          title: string;
+          details: string | null;
+          link: string | null;
+          assignee_id: string | null;
+          status: string;
+          source: string;
+          trigger_key: string | null;
+          created_by: string | null;
+          created_at: string;
+          done_at: string | null;
+          done_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          details?: string | null;
+          link?: string | null;
+          assignee_id?: string | null;
+          status?: string;
+          source?: string;
+          trigger_key?: string | null;
+          created_by?: string | null;
+          created_at?: string;
+          done_at?: string | null;
+          done_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["admin_tasks"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Which system events open a task, and which team member always gets it. */
+      task_rules: {
+        Row: {
+          key: string;
+          label: string;
+          assignee_id: string | null;
+          enabled: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          label: string;
+          assignee_id?: string | null;
+          enabled?: boolean;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["task_rules"]["Insert"]>;
+        Relationships: [];
+      };
       /** Candidates a portal client marked as favorites. */
       portal_favorites: {
         Row: { client_id: string; profile_id: string; created_at: string };

@@ -4,6 +4,7 @@
 // and claim it the moment she signs up ("אם היא תיכנס נדע שהיא שילמה").
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { raiseAlert } from "@/lib/alerts";
 import { activateSubscription } from "./subscription";
 import type { Json, SubscriptionPlan } from "@/types/database";
@@ -66,6 +67,13 @@ export async function recordChargeFailure(
 
   let outcome: "charge_failure_recorded" | "charge_failure_unmatched" | "charge_failure_duplicate" =
     profileId ? "charge_failure_recorded" : "charge_failure_unmatched";
+  if (profileId) {
+    await fireTaskTrigger("payment_failed", {
+      title: `סירוב חיוב: ${name ?? email ?? "לא מזוהה"}`,
+      details: message || undefined,
+      link: "/admin/payments",
+    });
+  }
   if (profileId) {
     const { data: seen } = await admin
       .from("payments")

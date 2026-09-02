@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { recordCommunityHire, removeCommunityHireIfUnbilled } from "@/lib/admin/hires";
+import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -380,6 +382,18 @@ export async function setMemberEmployment(
   const { error } = await supabase.from("profiles").update(update).eq("id", profileId);
   if (error) return { error: "השמירה נכשלה. רענני את הדף ונסי שוב." };
 
+  // The hires registry follows the mark (the owner, 3/9): placed-by-us opens
+  // a גיוסים row; unmarking clears it only while nothing financial happened.
+  if (update.found_job && update.hired_via_us) {
+    await recordCommunityHire(profileId, update.hired_at ?? undefined);
+    await fireTaskTrigger("member_hired", {
+      title: "חברה סומנה כגויסה 🎉",
+      link: "/admin/hires",
+    });
+  } else {
+    await removeCommunityHireIfUnbilled(profileId);
+  }
+
   // The workplace name lives in member_private — other members must never be
   // able to read where she works (and for an internal job it IS the client).
   const { error: wpError } = await createAdminClient()
@@ -395,53 +409,8 @@ export async function setMemberEmployment(
   return { ok: true };
 }
 
-// -------------------------------------------------- manual hires (banner-only)
+// Off-community placements moved to /admin/hires (the owner, 3/9).
 
-/**
- * Add a woman placed via Open Code without ever joining the community — her
- * name (only) joins the forum's hired-celebration banner for 60 days.
- */
-export async function addManualHire(_prev: FormState, formData: FormData): Promise<FormState> {
-  const me = await requireRole("admin");
-
-  const full_name = String(formData.get("full_name") ?? "").trim().slice(0, 120);
-  if (!full_name) return { error: "כתבי את השם המלא." };
-  const dateRaw = String(formData.get("hired_at") ?? "").trim();
-  const parsed = dateRaw ? new Date(dateRaw) : new Date();
-  const hired_at = (Number.isNaN(parsed.getTime()) ? new Date() : parsed).toISOString();
-  // v2 fields (the owner, 2/9): email/company/type — and when the email
-  // already belongs to a member, the banner name becomes her card's link.
-  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200) || null;
-  const company = String(formData.get("company") ?? "").trim().slice(0, 200) || null;
-  const jobTypeRaw = String(formData.get("job_type") ?? "").trim();
-  const job_type = ["practicum_placement", "temp", "immediate"].includes(jobTypeRaw) ? jobTypeRaw : null;
-
-  const admin = createAdminClient();
-  let profile_id: string | null = null;
-  if (email) {
-    const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: email });
-    profile_id = (uid as string | null) ?? null;
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("manual_hires")
-    .insert({ full_name, hired_at, created_by: me.id, email, company, job_type, profile_id });
-  if (error) return { error: "לא הצלחנו להוסיף כרגע. נסי שוב." };
-
-  revalidatePath("/admin/members");
-  revalidatePath("/forum");
-  return { ok: true };
-}
-
-/** Remove an off-community hire from the banner list. */
-export async function deleteManualHire(id: string): Promise<void> {
-  await requireRole("admin");
-  const supabase = await createClient();
-  await supabase.from("manual_hires").delete().eq("id", id);
-  revalidatePath("/admin/members");
-  revalidatePath("/forum");
-}
 
 export type CrmState = { error?: string };
 
@@ -2094,6 +2063,11 @@ export async function updateApplicationPipeline(
       })
       .eq("id", app.applicant_id);
     if (hiredError) console.error("[pipeline] hired profile update failed:", hiredError);
+    await recordCommunityHire(app.applicant_id);
+    await fireTaskTrigger("member_hired", {
+      title: "חברה סומנה כגויסה 🎉",
+      link: "/admin/hires",
+    });
 
     // Where she works is team-only (member_private) — on an internal job the
     // company IS the client, and rule 1 says that name never leaves the team.

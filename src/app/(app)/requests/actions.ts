@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
+import { fireTaskTrigger } from "@/lib/admin/tasks";
 
 /**
  * The floating "יש לך בקשה?" widget: a message straight to the team. The row
@@ -28,6 +29,7 @@ export async function createMemberRequest(formData: FormData): Promise<{ error?:
   if (error || !created) return { error: "משהו השתבש — נסי שוב עוד רגע." };
   // Screenshots pasted/attached in the widget (the owner, 2/9).
   await linkAttachments(user.id, "request", created.id, attachmentIdsFrom(formData));
+  await fireTaskTrigger("new_request", { title: `פניה חדשה: ${subject}`, link: "/admin/requests" });
 
   // No alerts-center row (the owner, 2026-08-30): a member request lives ONLY
   // in פניות לצוות — the sidebar badge there is what says "something waits".
