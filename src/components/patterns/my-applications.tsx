@@ -168,7 +168,7 @@ export function MyApplications({
           hint="הצוות עובר על כל הגשה אישית ובוחר את המתאימות ביותר לכל משרה — לא כל הגשה מועברת ללקוח, וברגע שהמועמדות שלך עוברת תראי את זה כאן."
         >
           {inProgress.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} />
           ))}
         </Group>
       )}
@@ -180,7 +180,7 @@ export function MyApplications({
           hint="קורות החיים שלך אצל המעסיק — נעדכן אותך בכל צעד."
         >
           {forwarded.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
           ))}
           {submittedOpen.map((s) => (
             <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} stageLabel={s.stageLabel} />
