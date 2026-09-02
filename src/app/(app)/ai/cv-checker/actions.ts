@@ -20,6 +20,28 @@ const REASON_MSG: Record<AiReason, string> = {
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 export async function runCvCheck(_prev: CvState, formData: FormData): Promise<CvState> {
+  // Telemetry wrapper (2/9): 17 members with valid keys got no result and no
+  // recorded reason — every run now logs its outcome so support has a row.
+  const startedAt = Date.now();
+  const state = await runCvCheckInner(formData);
+  try {
+    const admin = createAdminClient();
+    const supa = await createClient();
+    const { data: { user } } = await supa.auth.getUser();
+    await admin.from("ai_tool_runs").insert({
+      tool: "cv_check",
+      profile_id: user?.id ?? null,
+      ok: !state.error,
+      error: state.error ? `${state.reason ? state.reason + ": " : ""}${state.error}`.slice(0, 300) : null,
+      meta: { ms: Date.now() - startedAt } as unknown as Json,
+    });
+  } catch {
+    /* never let telemetry break the tool */
+  }
+  return state;
+}
+
+async function runCvCheckInner(formData: FormData): Promise<CvState> {
   const me = await getProfile();
   if (!me || !isSubscriber(me)) {
     return { error: "כלי ה-AI נפתחים עם מנוי לקהילה 💜" };

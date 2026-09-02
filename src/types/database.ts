@@ -1533,6 +1533,27 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["job_candidate_reviews"]["Insert"]>;
         Relationships: [];
       };
+      ai_tool_runs: {
+        Row: {
+          id: string;
+          tool: string;
+          profile_id: string | null;
+          ok: boolean;
+          error: string | null;
+          meta: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          tool: string;
+          profile_id?: string | null;
+          ok: boolean;
+          error?: string | null;
+          meta?: Json | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["ai_tool_runs"]["Insert"]>;
+        Relationships: [];
+      };
       wa_contacts: {
         Row: {
           id: string;
