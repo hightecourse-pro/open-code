@@ -584,7 +584,10 @@ export function jobPublishedEmail(
 /** Short confirmation to a member right after she submits an application. */
 export function applyConfirmationEmail(name: string | undefined, jobTitle: string): BuiltEmail {
   return {
-    subject: "קיבלנו את המועמדות שלך 💜",
+    // The job title keeps every subject unique — identical subjects made
+    // Gmail THREAD consecutive confirmations and trim the second one's
+    // "repeated" body mid-card (the owner, 2/9: "המייל השני משובש").
+    subject: `קיבלנו את המועמדות שלך למשרת ${jobTitle} 💜`,
     html: renderEmail({
       heading: "קיבלנו את המועמדות שלך 💜",
       lines: [
