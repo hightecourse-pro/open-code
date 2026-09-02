@@ -26,6 +26,9 @@ async function recentlyHired(): Promise<HiredMember[]> {
       .from("profiles")
       .select("full_name, hired_at")
       .eq("found_job", true)
+      // OUR placements only (the owner, 2/9: "רק כאלה שאנחנו השמנו") — a
+      // member marking "מצאתי עבודה" herself celebrates privately, not here.
+      .eq("hired_via_us", true)
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false })
       .limit(6),

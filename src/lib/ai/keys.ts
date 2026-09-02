@@ -22,14 +22,14 @@ export async function listUserKeys(): Promise<KeyView[]> {
 }
 
 /** Decrypt and return the first usable key (server only — never sent to client). */
-export async function getUsableKey(): Promise<{ id: string; apiKey: string } | null> {
+export async function getUsableKey(): Promise<{ id: string; apiKey: string; lastUsedAt: string | null } | null> {
   const supabase = await createClient();
   // Google quotas reset daily, so an "exhausted" key is worth retrying —
   // prefer active keys, but fall back to exhausted ones instead of failing.
   // ("active" sorts before "exhausted" alphabetically.)
   const { data } = await supabase
     .from("user_ai_keys")
-    .select("id, key_cipher")
+    .select("id, key_cipher, last_used_at")
     .in("status", ["active", "exhausted"])
     .order("status", { ascending: true })
     .order("created_at", { ascending: true })
@@ -37,7 +37,7 @@ export async function getUsableKey(): Promise<{ id: string; apiKey: string } | n
     .maybeSingle();
   if (!data) return null;
   try {
-    return { id: data.id, apiKey: decryptSecret(data.key_cipher) };
+    return { id: data.id, apiKey: decryptSecret(data.key_cipher), lastUsedAt: data.last_used_at ?? null };
   } catch {
     return null;
   }
@@ -120,6 +120,19 @@ export async function withUserKey<T>(run: (apiKey: string) => Promise<T>): Promi
     }
     if (e instanceof InvalidKeyError) {
       await markKeyStatus(key.id, "invalid", "מפתח לא תקין");
+      return { ok: false, reason: "invalid" };
+    }
+    // Gemini 400 INVALID_ARGUMENT on a key that NEVER worked = the key
+    // itself (referrer-restricted, or not a Gemini/AI-Studio key at all) —
+    // אילה מילר, 2/9. Flag it so the UI tells her to mint a proper one
+    // instead of looping on "משהו השתבש".
+    const msg0 = e instanceof Error ? e.message : String(e);
+    if (/INVALID_ARGUMENT/i.test(msg0) && !key.lastUsedAt) {
+      await markKeyStatus(
+        key.id,
+        "invalid",
+        "המפתח לא מתאים ל-Gemini או מוגבל לאתר מסוים — צרי מפתח חדש ב-Google AI Studio בלי הגבלות"
+      );
       return { ok: false, reason: "invalid" };
     }
     // The generic branch used to swallow the cause entirely — when every model

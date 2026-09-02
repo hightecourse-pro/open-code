@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSubscriber, requireProfile } from "@/lib/auth";
 import { Avatar } from "@/components/ui";
+import { ChatSearch } from "@/components/patterns/chat-search";
 import { ChatThread } from "@/components/patterns/chat-thread";
 import { NewChatButton } from "@/components/patterns/new-chat-button";
 import { cn, timeAgo } from "@/lib/utils";
@@ -269,6 +270,14 @@ export default async function ChatPage({
       >
         {/* conversation list */}
         <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm min-h-0 max-h-[35dvh] md:max-h-none overflow-y-auto">
+          {listedConversations.length > 3 && (
+            <ChatSearch
+              items={listedConversations.map((c) => ({
+                id: c.id,
+                name: otherMap.get(c.a_id === me.id ? c.b_id : c.a_id)?.full_name ?? "חברה",
+              }))}
+            />
+          )}
           {listedConversations.length > 0 ? (
             listedConversations.map((c) => {
               const other = otherMap.get(c.a_id === me.id ? c.b_id : c.a_id);

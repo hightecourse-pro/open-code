@@ -74,6 +74,15 @@ export function RichTextEditor({
     }
   }
 
+  // Belt to the defaultValue's suspenders: once BOTH refs exist, mirror the
+  // (possibly seeded) editor into the hidden field.
+  useEffect(() => {
+    if (inputRef.current && areaRef.current) {
+      inputRef.current.value = areaRef.current.innerHTML;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function sync() {
     if (inputRef.current && areaRef.current) {
       inputRef.current.value = areaRef.current.innerHTML;
@@ -299,7 +308,11 @@ export function RichTextEditor({
     >
       {compact ? area : toolbar}
       {compact ? toolbar : area}
-      <input type="hidden" name={name} ref={inputRef} />
+      {/* defaultValue is LOAD-BEARING: the ref-callback seed above runs
+          before this input mounts (DOM order), so without it an untouched
+          field submitted "" and silently WIPED the stored answer on every
+          re-save (רבקי, 2/9 — bio/notes gone). */}
+      <input type="hidden" name={name} ref={inputRef} defaultValue={defaultValue ?? ""} />
     </div>
   );
 }
