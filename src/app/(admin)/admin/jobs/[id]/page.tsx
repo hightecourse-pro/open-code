@@ -32,6 +32,10 @@ import { CandidateFinder, type FinderCandidate } from "./candidate-finder";
 import { matchCandidates, studyInfoOf } from "@/lib/admin/candidate-match";
 import { SendCandidatesButton } from "./send-candidates-button";
 
+// Gemini rides a model-chain with retries — a stormy run outlives the platform
+// default window. Server actions inherit the page segment they POST from.
+export const maxDuration = 300;
+
 export const metadata: Metadata = { title: "ניהול משרה" };
 
 const cardClass = "bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm";

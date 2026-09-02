@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, FileText, Info, Lightbulb, TriangleAlert, X, Upload } from "lucide-react";
 import Link from "next/link";
 import { Alert, Button, Field, ProgressRing, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { runCvCheck, type CvState } from "@/app/(app)/ai/cv-checker/actions";
+import { latestCvReviewSince, runCvCheck, type CvState } from "@/app/(app)/ai/cv-checker/actions";
 
 export interface SavedCv {
   id: string;
@@ -20,8 +21,62 @@ const INSIGHT_STYLE = {
   tip: { icon: Lightbulb, cls: "bg-tint-purple text-brand-purple", label: "טיפ" },
 } as const;
 
-export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
-  const [state, action, pending] = useActionState<CvState, FormData>(runCvCheck, {});
+export function CvCheckerForm({
+  savedCvs = [],
+  latestReviewAt = null,
+}: {
+  savedCvs?: SavedCv[];
+  /** created_at of the newest review already on screen — the recovery poll's floor. */
+  latestReviewAt?: string | null;
+}) {
+  const router = useRouter();
+  const [state, setState] = useState<CvState>({});
+  // "background" = the request died mid-flight (filtered networks cut long
+  // connections around a minute) but the server keeps working and saves the
+  // result — so instead of an error we poll for the saved review (2/9, שפרה
+  // למברגר: two "failed" checks, both actually succeeded and persisted).
+  const [phase, setPhase] = useState<"idle" | "running" | "background">("idle");
+  const pending = phase !== "idle";
+
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (pending) return;
+    const fd = new FormData(e.currentTarget);
+    // The newest review already on screen is the recovery floor — a server
+    // timestamp, so a skewed client clock can't make the poll miss the result.
+    // router.refresh() below keeps it current after each successful run.
+    const floor = latestReviewAt;
+    setState({});
+    setPhase("running");
+    try {
+      const res = await runCvCheck({}, fd);
+      setState(res);
+      setPhase("idle");
+      if (res.analysis) router.refresh();
+    } catch {
+      setPhase("background");
+      for (let i = 0; i < 40; i++) {
+        await new Promise((r) => setTimeout(r, 8000));
+        try {
+          const found = await latestCvReviewSince(floor);
+          if (found?.analysis) {
+            setState(found);
+            setPhase("idle");
+            router.refresh();
+            return;
+          }
+        } catch {
+          /* the network is still flaky — keep polling */
+        }
+      }
+      setPhase("idle");
+      setState({
+        error:
+          "החיבור התנתק ולא הצלחנו למשוך את התוצאה. רענני את הדף בעוד כמה דקות — אם הבדיקה הצליחה, היא תופיע בהיסטוריה למטה.",
+      });
+    }
+  }
+
   const analysis = state.analysis;
   const hasSaved = savedCvs.length > 0;
   // Her saved CV is the default path — the whole point is not re-uploading a
@@ -44,7 +99,7 @@ export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
         </p>
       </div>
 
-      <form action={action} className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm flex flex-col gap-4">
         {state.error && (
           <Alert variant={state.reason ? "warn" : "danger"}>
             {state.error}
@@ -154,7 +209,24 @@ export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
 
         {/* The analysis takes real time (10-60s through Google) — a working
             animation says "בעבודה", not a frozen form (the owner, 2026-08-30). */}
-        {pending && (
+        {phase === "background" && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center gap-3 rounded-md border border-[#DDC9EC] bg-tint-purple px-4 py-3"
+          >
+            <span className="relative flex h-7 w-7 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-purple/25" />
+              <span className="relative inline-flex h-7 w-7 animate-spin rounded-full border-[2.5px] border-white border-t-brand-purple" />
+            </span>
+            <span className="text-[13px] text-ink-700 leading-snug">
+              <b className="font-display text-brand-purple">החיבור התנתק — אבל הבדיקה ממשיכה אצלנו ברקע 💜</b>
+              <br />
+              ברגע שהיא תסתיים, התוצאה תופיע כאן מעצמה. אל תסגרי את הדף.
+            </span>
+          </div>
+        )}
+        {phase === "running" && (
           <div
             role="status"
             aria-live="polite"
@@ -167,7 +239,7 @@ export function CvCheckerForm({ savedCvs = [] }: { savedCvs?: SavedCv[] }) {
             <span className="text-[13px] text-ink-700 leading-snug">
               <b className="font-display text-brand-purple">ה-AI קוראת את קורות החיים שלך ממש עכשיו…</b>
               <br />
-              זה לוקח עד דקה — שווה לחכות 💜
+              זה יכול לקחת דקה-שתיים — שווה לחכות 💜
             </span>
           </div>
         )}
