@@ -221,19 +221,35 @@ export function ApplyForm({
             <span className="flex-1">
               <span className="flex items-center gap-1.5 font-semibold text-sm text-ink-900">
                 <FileText size={14} className="text-brand-purple" />
-                {defaultCv ? "קורות החיים שסימנת כברירת מחדל" : "קורות החיים האחרונים שהעלית"}
+                {cvDocs.length > 1 ? "קורות חיים ששמורות אצלנו" : defaultCv ? "קורות החיים שסימנת כברירת מחדל" : "קורות החיים האחרונים שהעלית"}
               </span>
-              <span className="block text-xs text-ink-500 mt-0.5">
-                {mainCv.label}
-                {!defaultCv && (
-                  <>
-                    {" · "}
-                    <Link href="/cv" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
-                      לבחירת ברירת מחדל
-                    </Link>
-                  </>
-                )}
-              </span>
+              {/* Any saved document, not only the default (the owner, 3/9) */}
+              {cvMode === "main" && cvDocs.length > 1 ? (
+                <select
+                  name="cv_doc_id"
+                  defaultValue={mainCv.id}
+                  className="block mt-2 w-full max-w-[340px] h-9 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
+                >
+                  {cvDocs.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.label}
+                      {d.is_default ? " · ברירת המחדל שלך" : ""}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="block text-xs text-ink-500 mt-0.5">
+                  {mainCv.label}
+                  {!defaultCv && (
+                    <>
+                      {" · "}
+                      <Link href="/cv" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
+                        לבחירת ברירת מחדל
+                      </Link>
+                    </>
+                  )}
+                </span>
+              )}
             </span>
           </label>
         )}

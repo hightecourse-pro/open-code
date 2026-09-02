@@ -141,10 +141,24 @@ export async function submitApplication(
     if (docErr || !doc) return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
     cvId = doc.id;
   } else {
+    // An explicit pick from her saved documents (the owner, 3/9: "לא ניתן
+    // לבחור מבין הקו\"ח ששמורים") — validated as hers before it counts.
+    const pickedId = String(formData.get("cv_doc_id") ?? "").trim();
+    if (pickedId) {
+      const { data: picked } = await supabase
+        .from("cv_documents")
+        .select("id")
+        .eq("id", pickedId)
+        .eq("profile_id", user.id)
+        .maybeSingle();
+      cvId = picked?.id ?? null;
+    }
     // The CV she marked as default on /cv — never "whatever she uploaded last",
     // which could be a CV she tailored for a different job. Pre-migration the
     // column doesn't exist yet (42703), so newest-first stays the fallback.
-    const marked = await supabase
+    const marked = cvId
+      ? { error: null, data: { id: cvId } }
+      : await supabase
       .from("cv_documents")
       .select("id")
       .eq("profile_id", user.id)
@@ -320,13 +334,25 @@ export async function updateApplication(
     if (docErr || !doc) return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
     cvId = doc.id;
   } else if (cvMode === "main") {
-    const marked = await supabase
-      .from("cv_documents")
-      .select("id")
-      .eq("profile_id", user.id)
-      .eq("is_default", true)
-      .maybeSingle();
-    cvId = marked.error ? cvId : (marked.data?.id ?? cvId);
+    // Her explicit pick from the saved list wins; the marked default backs it.
+    const pickedId = String(formData.get("cv_doc_id") ?? "").trim();
+    if (pickedId) {
+      const { data: picked } = await supabase
+        .from("cv_documents")
+        .select("id")
+        .eq("id", pickedId)
+        .eq("profile_id", user.id)
+        .maybeSingle();
+      if (picked?.id) cvId = picked.id;
+    } else {
+      const marked = await supabase
+        .from("cv_documents")
+        .select("id")
+        .eq("profile_id", user.id)
+        .eq("is_default", true)
+        .maybeSingle();
+      cvId = marked.error ? cvId : (marked.data?.id ?? cvId);
+    }
   }
   if (!cvId) return { error: "אי אפשר לעדכן בלי קורות חיים 💜" };
 
