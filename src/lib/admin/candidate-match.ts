@@ -33,6 +33,7 @@ export interface StudyInfo {
   studyPlace: string | null;
   track: string | null;
   gradYear: string | null;
+  years: number | null;
 }
 
 /** Study facts for the finder card (the owner, 2/9): מוסד, מגמה, שנת סיום —
@@ -41,7 +42,7 @@ export async function studyInfoOf(profileIds: string[]): Promise<Map<string, Stu
   const admin = createAdminClient();
   const out = new Map<string, StudyInfo>();
   if (!profileIds.length) return out;
-  const KEYS = ["study_place", "track_specialization", "graduation_year"] as const;
+  const KEYS = ["study_place", "track_specialization", "graduation_year", "years_experience"] as const;
   const { data: questions } = await admin
     .from("config_questions")
     .select("id, key, options")
@@ -77,9 +78,15 @@ export async function studyInfoOf(profileIds: string[]): Promise<Map<string, Stu
         }
         return null;
       };
+      const cur = out.get(a.profile_id) ?? { studyPlace: null, track: null, gradYear: null, years: null };
+      if (q.key === "years_experience") {
+        const n = Number(a.value);
+        if (Number.isFinite(n)) cur.years = n;
+        out.set(a.profile_id, cur);
+        continue;
+      }
       const val = resolve(a.value);
       if (!val) continue;
-      const cur = out.get(a.profile_id) ?? { studyPlace: null, track: null, gradYear: null };
       if (q.key === "study_place") cur.studyPlace = val;
       else if (q.key === "track_specialization") cur.track = val;
       else if (q.key === "graduation_year") cur.gradYear = val;

@@ -36,6 +36,11 @@ export interface ReviewProfileSummary {
   specialization: string | null;
   region: string | null;
   isExperienced: boolean;
+  /** שנות ניסיון — rides the בעלת-ניסיון badge (the owner, 2/9). */
+  years: number | null;
+  studyPlace: string | null;
+  track: string | null;
+  gradYear: string | null;
 }
 
 export interface ReviewApplication {
@@ -1344,6 +1349,17 @@ export function ReviewCenter({
                     {a.profile?.specialization ?? "—"} · {fmtDate(a.submittedAt)}
                   </span>
                   <span className="flex flex-wrap gap-1">
+                    {/* Experience + region on the list rows (the owner, 2/9). */}
+                    {a.profile?.isExperienced && (
+                      <span className="rounded-full bg-tint-warm border border-[#F8D98C] px-2 py-0.5 text-[10.5px] font-bold text-[#8C5E0E]">
+                        ⭐ ניסיון{a.profile.years !== null ? ` ${a.profile.years} ש׳` : ""}
+                      </span>
+                    )}
+                    {a.profile?.region && (
+                      <span className="rounded-full bg-tint-purple/60 px-2 py-0.5 text-[10.5px] font-bold text-brand-purple">
+                        {a.profile.region}
+                      </span>
+                    )}
                     {mark && (
                       <span
                         className={cn(
@@ -1393,11 +1409,33 @@ export function ReviewCenter({
                   {selected.profile?.region && (
                     <Badge variant="indigo">{selected.profile.region}</Badge>
                   )}
-                  {selected.profile?.isExperienced && <Badge variant="mint">בעלת ניסיון</Badge>}
+                  {selected.profile?.isExperienced && (
+                    <Badge variant="mint">
+                      ⭐ בעלת ניסיון
+                      {selected.profile.years !== null ? ` · ${selected.profile.years} שנות ניסיון` : ""}
+                    </Badge>
+                  )}
                   {(selected.sentToClientAt || statusOf(selected) === "sent") && (
                     <Badge variant="pink">הוגשה ללקוח</Badge>
                   )}
                 </div>
+                {/* Study facts, front and center (the owner, 2/9). */}
+                {(selected.profile?.studyPlace || selected.profile?.track || selected.profile?.gradYear) && (
+                  <div className="mt-2 inline-flex flex-wrap items-center gap-x-4 gap-y-1 bg-tint-purple/40 border border-brand-purple/15 rounded-[10px] px-3 py-1.5 text-[12.5px]">
+                    <span>
+                      <span className="text-ink-500">🎓 מוסד: </span>
+                      <b className="text-ink-900">{selected.profile?.studyPlace ?? "—"}</b>
+                    </span>
+                    <span>
+                      <span className="text-ink-500">מגמה: </span>
+                      <b className="text-ink-900">{selected.profile?.track ?? "—"}</b>
+                    </span>
+                    <span>
+                      <span className="text-ink-500">שנת סיום: </span>
+                      <b className="text-ink-900 tabular-nums">{selected.profile?.gradYear ?? "—"}</b>
+                    </span>
+                  </div>
+                )}
                 <p className="text-[12px] text-ink-500 mt-1.5">
                   הגישה ב־{fmtDate(selected.submittedAt)}
                 </p>
@@ -1579,6 +1617,14 @@ export function ReviewCenter({
               ) : (
                 <span className="text-sm text-ink-500">אין קובץ קורות חיים.</span>
               )}
+              <a
+                href={`/admin/members/${selected.applicantId}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline"
+              >
+                לפרופיל המלא <ExternalLink size={12} aria-hidden />
+              </a>
               {isCurated(selected) ? (
                 <Badge variant="mint">נבחרה למשרה בפורטל ✓</Badge>
               ) : (

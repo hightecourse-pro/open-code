@@ -308,8 +308,11 @@ export default async function AdminJobPage({
     : { data: [] };
   const cvUrlOf = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
 
+  // Study facts + years for the review pane (the owner, 2/9: "בצורה בולטת").
+  const reviewStudy = await studyInfoOf(applicantIds);
   const reviewApplications: ReviewApplication[] = appList.map((a) => {
     const p = profileOf.get(a.applicant_id);
+    const study = reviewStudy.get(a.applicant_id);
     const path = cvPathOf.get(a.id);
     return {
       id: a.id,
@@ -327,6 +330,10 @@ export default async function AdminJobPage({
             specialization: p.specialization,
             region: p.region,
             isExperienced: p.is_experienced === true,
+            years: study?.years ?? null,
+            studyPlace: study?.studyPlace ?? null,
+            track: study?.track ?? null,
+            gradYear: study?.gradYear ?? null,
           }
         : null,
       curated: curatedSet.has(a.applicant_id),
