@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { requireCommunityAccess } from "@/lib/auth";
 import { Alert } from "@/components/ui";
 import { ApplyForm, type ApplyCvDoc } from "./apply-form";
+import { withdrawApplication } from "./actions";
+import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { AskTeamAboutJob } from "@/components/patterns/ask-team-about-job";
 
 export const metadata: Metadata = { title: "הגשת מועמדות" };
@@ -76,11 +78,18 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
     loadCvDocs(supabase, profile.id),
     supabase
       .from("applications")
-      .select("id")
+      .select("id, status, sent_to_client_at, answers, cv_document_id, edited_at")
       .eq("job_id", id)
       .eq("applicant_id", profile.id)
       .maybeSingle(),
   ]);
+
+  // Editable until the team locks it (sent to the client / status advanced).
+  const unlocked = existing ? existing.status === "submitted" && !existing.sent_to_client_at : false;
+  const existingAnswers = (existing?.answers ?? {}) as Record<string, string | number | string[]>;
+  const currentCv = existing?.cv_document_id
+    ? (cvDocs.find((d) => d.id === existing.cv_document_id)?.label ?? null)
+    : null;
 
   return (
     <div className="flex flex-col gap-5 max-w-[640px]">
@@ -126,13 +135,50 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
         </section>
       )}
 
-      {existing ? (
-        <Alert variant="info" title="כבר הגשת למשרה הזו 💜">
-          ההגשה שלך אצלנו — נעדכן אותך בכל התקדמות.{" "}
+      {existing && !unlocked ? (
+        <Alert variant="info" title="ההגשה שלך כבר בטיפול 💜">
+          המועמדות שלך הועברה הלאה — משלב זה אי אפשר לערוך אותה. נעדכן אותך בכל התקדמות.{" "}
           <Link href="/jobs" className="font-semibold underline">
             חזרה למשרות
           </Link>
         </Alert>
+      ) : existing && unlocked ? (
+        <>
+          <Alert variant="info" title="עריכת ההגשה שלך ✏️">
+            כבר הגשת למשרה הזו — עד שהצוות מקדם את ההגשה אפשר לעדכן תשובות, להחליף קורות
+            חיים או להסיר את ההגשה לגמרי.
+            {existing.edited_at && " (כבר ערכת אותה בעבר)"}
+          </Alert>
+          <ApplyForm
+            jobId={job.id}
+            questions={(questions ?? []).map((q) => ({
+              id: q.id,
+              question: q.question,
+              sort_order: q.sort_order,
+              required: q.required,
+              answer_type: q.answer_type ?? "paragraph",
+              options: Array.isArray(q.options)
+                ? q.options.filter((o): o is string => typeof o === "string")
+                : [],
+            }))}
+            cvDocs={cvDocs}
+            edit={{
+              answers: existingAnswers,
+              fit: typeof existingAnswers.fit === "string" ? existingAnswers.fit : "",
+              currentCvLabel: currentCv,
+            }}
+          />
+          <ConfirmActionButton
+            action={async () => {
+              "use server";
+              await withdrawApplication(job.id);
+            }}
+            message="להסיר את ההגשה למשרה הזו? היא תימחק לגמרי — ותמיד אפשר להגיש מחדש כל עוד המשרה פתוחה."
+            className="self-start text-[13px] font-semibold text-ink-500 hover:text-danger underline"
+          >
+            הסרת ההגשה שלי מהמשרה
+          </ConfirmActionButton>
+        </>
       ) : (
         <ApplyForm
           jobId={job.id}

@@ -206,3 +206,170 @@ export async function submitApplication(
   revalidatePath("/jobs");
   redirect("/jobs?applied=1");
 }
+
+/** An application is editable while the team hasn't locked it: still plain
+ *  "submitted" and not yet sent to the client (the owner, 2/9). */
+function isUnlocked(app: { status: string; sent_to_client_at: string | null }): boolean {
+  return app.status === "submitted" && !app.sent_to_client_at;
+}
+
+/**
+ * Edit an existing application — answers, fit, and optionally the CV — as
+ * long as it's unlocked. The outgoing version is snapshotted so the team can
+ * see exactly what changed (and when).
+ */
+export async function updateApplication(
+  jobId: string,
+  _prev: ApplyState,
+  formData: FormData
+): Promise<ApplyState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: job } = await supabase
+    .from("jobs")
+    .select("id, title, source, status, pipeline_status")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (!job || job.source !== "ours" || job.status !== "open" || job.pipeline_status !== "published") {
+    return { error: "המשרה כבר התקדמה לשלב הבא — אי אפשר לעדכן את ההגשה 💜" };
+  }
+
+  const { data: app } = await supabase
+    .from("applications")
+    .select("id, status, sent_to_client_at, answers, cv_document_id, previous_versions")
+    .eq("job_id", jobId)
+    .eq("applicant_id", user.id)
+    .maybeSingle();
+  if (!app) return { error: "לא נמצאה הגשה לעדכון." };
+  if (!isUnlocked(app)) {
+    return { error: "ההגשה שלך כבר בטיפול הצוות — אי אפשר לערוך אותה יותר 💜" };
+  }
+
+  // Same validation as a fresh submit — questions from the DB, never the form.
+  const { data: questions } = await supabase
+    .from("job_questions")
+    .select("id, question, required, answer_type, options")
+    .eq("job_id", jobId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+  const answers: Record<string, string | number | string[]> = {};
+  for (const q of questions ?? []) {
+    const required = q.required !== false;
+    const type: QuestionAnswerType = ANSWER_TYPES.includes(q.answer_type) ? q.answer_type : "paragraph";
+    const options = Array.isArray(q.options) ? q.options.filter((o): o is string => typeof o === "string") : [];
+    if (type === "multiselect") {
+      const values = formData.getAll(`q_${q.id}`).map((v) => String(v).trim()).filter(Boolean);
+      if (values.length === 0) {
+        if (required) return { error: `חסרה תשובה לשאלה: ${q.question}` };
+        continue;
+      }
+      if (!values.every((v) => options.includes(v))) return { error: `תשובה לא תקינה לשאלה: ${q.question}` };
+      answers[q.id] = values;
+      continue;
+    }
+    const v = String(formData.get(`q_${q.id}`) ?? "").trim();
+    if (!v) {
+      if (required) return { error: `חסרה תשובה לשאלה: ${q.question}` };
+      continue;
+    }
+    if (type === "number") {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return { error: `תשובה לא תקינה לשאלה: ${q.question}` };
+      answers[q.id] = n;
+    } else if (type === "select") {
+      if (!options.includes(v)) return { error: `תשובה לא תקינה לשאלה: ${q.question}` };
+      answers[q.id] = v;
+    } else {
+      answers[q.id] = v;
+    }
+  }
+  const fit = String(formData.get("fit") ?? "").trim();
+  if (!fit) return { error: "ספרי לנו למה את מתאימה למשרה — זו הדרך שלך לבלוט 💜" };
+  answers.fit = fit;
+
+  // CV: keep the attached one, switch to her main, or upload a fresh file.
+  let cvId: string | null = app.cv_document_id;
+  const cvMode = String(formData.get("cv_mode") ?? "keep");
+  if (cvMode === "upload") {
+    const file = formData.get("cv_file");
+    if (!(file instanceof File) || file.size === 0) return { error: "בחרי קובץ קורות חיים להעלאה." };
+    if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי — עד 10MB." };
+    const okType = /\.(pdf|docx?)$/i.test(file.name) || CV_TYPES.includes(file.type);
+    if (!okType) return { error: "אפשר להעלות רק PDF או Word (doc/docx)." };
+    const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+    const path = `${user.id}/${Date.now()}-${safeName}`;
+    const { error: upErr } = await supabase.storage
+      .from("cvs")
+      .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+    if (upErr) return { error: "העלאת הקובץ נכשלה. נסי שוב." };
+    const { data: doc, error: docErr } = await supabase
+      .from("cv_documents")
+      .insert({ profile_id: user.id, label: `מותאם: ${job.title}`, language: "job", file_path: path, file_name: file.name })
+      .select("id")
+      .single();
+    if (docErr || !doc) return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
+    cvId = doc.id;
+  } else if (cvMode === "main") {
+    const marked = await supabase
+      .from("cv_documents")
+      .select("id")
+      .eq("profile_id", user.id)
+      .eq("is_default", true)
+      .maybeSingle();
+    cvId = marked.error ? cvId : (marked.data?.id ?? cvId);
+  }
+  if (!cvId) return { error: "אי אפשר לעדכן בלי קורות חיים 💜" };
+
+  // Snapshot the outgoing version (capped — the story matters, not infinity).
+  const history = (Array.isArray(app.previous_versions) ? app.previous_versions : []) as Json[];
+  const snapshot = {
+    saved_at: new Date().toISOString(),
+    answers: app.answers,
+    cv_document_id: app.cv_document_id,
+  } as unknown as Json;
+  const nextHistory = [...history, snapshot].slice(-10);
+
+  // Members have no UPDATE policy on applications (by design) — ownership and
+  // the lock were just verified, so the write runs with the service role.
+  const { error } = await createAdminClient()
+    .from("applications")
+    .update({
+      answers: answers as unknown as Json,
+      cv_document_id: cvId,
+      edited_at: new Date().toISOString(),
+      previous_versions: nextHistory as unknown as Json,
+    })
+    .eq("id", app.id);
+  if (error) return { error: "העדכון נכשל. נסי שוב." };
+
+  revalidatePath("/jobs");
+  redirect("/jobs?edited=1");
+}
+
+/** Withdraw an unlocked application entirely (the owner, 2/9: "להסיר הגשה"). */
+export async function withdrawApplication(jobId: string): Promise<ApplyState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data: app } = await supabase
+    .from("applications")
+    .select("id, status, sent_to_client_at")
+    .eq("job_id", jobId)
+    .eq("applicant_id", user.id)
+    .maybeSingle();
+  if (!app) return { error: "לא נמצאה הגשה." };
+  if (!isUnlocked(app)) {
+    return { error: "ההגשה כבר בטיפול הצוות — אי אפשר להסיר אותה. אפשר לפנות אלינו מהכפתור הצף 💜" };
+  }
+  const { error } = await createAdminClient().from("applications").delete().eq("id", app.id);
+  if (error) return { error: "ההסרה נכשלה. נסי שוב." };
+  revalidatePath("/jobs");
+  redirect("/jobs?withdrawn=1");
+}

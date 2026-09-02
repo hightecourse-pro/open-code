@@ -973,6 +973,8 @@ export interface Database {
           admin_mark: "optional" | "not_fit" | "approved" | null;
           admin_mark_reason: string | null;
           sent_to_client_at: string | null;
+          edited_at: string | null;
+          previous_versions: Json;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -986,6 +988,8 @@ export interface Database {
           admin_mark?: "optional" | "not_fit" | "approved" | null;
           admin_mark_reason?: string | null;
           sent_to_client_at?: string | null;
+          edited_at?: string | null;
+          previous_versions?: Json;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
         Relationships: [];
