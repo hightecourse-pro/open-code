@@ -101,8 +101,9 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
     }
   }
 
-  const Th = ({ label, k }: { label: string; k?: SortKey }) => (
+  const th = (label: string, k?: SortKey) => (
     <th
+      key={label}
       className={cn(
         "text-start text-[11.5px] font-bold text-ink-500 px-3 py-2 whitespace-nowrap",
         k && "cursor-pointer hover:text-brand-purple select-none"
@@ -216,15 +217,15 @@ export function HiresTable({ hires, defaultDate }: { hires: HireRow[]; defaultDa
         <table className="w-full text-sm min-w-[880px]">
           <thead className="border-b border-ink-100">
             <tr>
-              <Th label="שם" k="full_name" />
-              <Th label="חברה" />
-              <Th label="סוג משרה" />
-              <Th label="מקור" />
-              <Th label="תאריך" k="hired_at" />
-              <Th label="סטטוס" k="status" />
-              <Th label="סכום" k="amount" />
-              <Th label="מי משלמת" />
-              <Th label="" />
+              {th("שם", "full_name")}
+              {th("חברה")}
+              {th("סוג משרה")}
+              {th("מקור")}
+              {th("תאריך", "hired_at")}
+              {th("סטטוס", "status")}
+              {th("סכום", "amount")}
+              {th("מי משלמת")}
+              {th("")}
             </tr>
           </thead>
           <tbody>
