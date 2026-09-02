@@ -14,7 +14,17 @@ export const dynamic = "force-dynamic";
 
 const has = (name: string) => Boolean(process.env[name]?.trim());
 
-export async function GET() {
+export async function GET(req: Request) {
+  // The detail map is a reconnaissance gift to strangers (a member noticed,
+  // 2/9): env-var names, project ref, commit. PUBLIC gets a bare pulse; the
+  // full map answers only to the internal secret.
+  const url = new URL(req.url);
+  const provided = url.searchParams.get("key") ?? req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
+  const secret = process.env.CRON_SECRET ?? "";
+  if (!secret || provided !== secret) {
+    return NextResponse.json({ ok: true });
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   const supabaseRef = supabaseUrl.match(/https?:\/\/([a-z0-9]+)\.supabase\./)?.[1] ?? null;
 

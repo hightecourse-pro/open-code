@@ -30,9 +30,16 @@ export default async function AdminRequestsPage() {
 
   const ids = [...new Set((requests ?? []).map((r) => r.profile_id))];
   const { data: members } = ids.length
-    ? await supabase.from("profiles").select("id, full_name").in("id", ids)
+    ? await supabase.from("profiles").select("id, full_name, status, member_tier, role").in("id", ids)
     : { data: [] };
   const nameOf = new Map((members ?? []).map((m) => [m.id, m.full_name]));
+  // מנויה badge (the owner, 2/9) — paying junior; team/mentor labeled apart.
+  const subscriberOf = new Map(
+    (members ?? []).map((m) => [
+      m.id,
+      m.role === "junior" && m.status === "active" && m.member_tier === "paid",
+    ])
+  );
 
   const settingOf = new Map((settings ?? []).map((s) => [s.key, s.value]));
   const teamNames = ((settingOf.get("team_names") as { names?: string[] } | undefined)?.names ?? []).filter(
@@ -46,6 +53,7 @@ export default async function AdminRequestsPage() {
     id: r.id,
     profile_id: r.profile_id,
     memberName: nameOf.get(r.profile_id) ?? "חברת קהילה",
+    isSubscriber: subscriberOf.get(r.profile_id) ?? false,
     subject: r.subject,
     body: r.body,
     status: r.status,

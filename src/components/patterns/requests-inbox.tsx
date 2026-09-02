@@ -10,6 +10,8 @@ export interface InboxRequest {
   id: string;
   profile_id: string;
   memberName: string;
+  /** Paying member — the מנויה pill (the owner, 2/9). */
+  isSubscriber?: boolean;
   subject: string;
   body: string;
   status: string;
@@ -95,6 +97,11 @@ function OpenRequestCard({
         className="w-full text-start px-4 py-3 flex items-center gap-2.5 flex-wrap cursor-pointer hover:bg-tint-purple/30"
       >
         <span className="font-semibold text-ink-900">{r.memberName}</span>
+        {r.isSubscriber && (
+          <span className="text-[10.5px] font-bold bg-tint-pink text-brand-pink-deep px-2 py-0.5 rounded-full">
+            מנויה
+          </span>
+        )}
         <Badge variant="purple">{r.subject}</Badge>
         <span className="text-[11.5px] text-ink-500">
           {relativeHe(r.created_at)}
