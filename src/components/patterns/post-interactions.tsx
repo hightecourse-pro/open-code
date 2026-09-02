@@ -28,6 +28,7 @@ export interface PostInteractionsProps {
   postId: string;
   likeCount: number;
   liked: boolean;
+  likerNames?: string[];
   saved: boolean;
   comments: PostComment[];
   /** Free members read the thread but don't take part in it. */
@@ -40,6 +41,7 @@ export function PostInteractions({
   postId,
   likeCount,
   liked,
+  likerNames,
   saved,
   comments,
   canWrite = true,
@@ -65,6 +67,12 @@ export function PostInteractions({
 
   return (
     <div className="mt-3 pt-3 border-t border-ink-100">
+      {(likerNames ?? []).length > 0 && (
+        <div className="text-[12px] text-ink-500 mb-1.5" title={likerNames!.join(", ")}>
+          💜 אהבו: {likerNames!.slice(0, 8).join(", ")}
+          {likerNames!.length > 8 && ` ועוד ${likerNames!.length - 8}`}
+        </div>
+      )}
       <div className="flex gap-4 items-center">
         <button
           type="button"
