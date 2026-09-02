@@ -82,7 +82,7 @@ export default async function ChatPage({
     otherIds.length
       ? supabase
           .from("profiles")
-          .select("id, full_name, avatar_initials, role, status, specialization")
+          .select("id, full_name, avatar_initials, role, status, specialization, member_tier")
           .in("id", otherIds)
       : Promise.resolve({ data: [] }),
     // Which of these women is the mentor an admin actually matched her with —
@@ -152,6 +152,10 @@ export default async function ChatPage({
   // approved mentors and the team. The directory view carries that truth.
   const subscriber = isSubscriber(me);
   const activeOtherId = activeOther?.id ?? null;
+  // מנויה indication for the admin viewer only (the owner, 2/9) — a real paid
+  // member: junior + active + paid tier. Members never see each other's tier.
+  const isPaidMember = (o?: { role: string; status: string; member_tier?: string | null }) =>
+    me.role === "admin" && !!o && o.role === "junior" && o.status === "active" && o.member_tier === "paid";
   let otherWritable = false;
   if (activeOtherId) {
     if (me.role === "admin") {
@@ -306,6 +310,11 @@ export default async function ChatPage({
                         {other?.full_name ?? "חברה"}
                       </span>
                       {other && myMentorIds.has(other.id) && <span className="text-[10px]">👑</span>}
+                      {isPaidMember(other) && (
+                        <span className="text-[9.5px] font-bold bg-tint-pink text-brand-pink-deep px-1.5 py-px rounded-full shrink-0">
+                          מנויה
+                        </span>
+                      )}
                       <span className="ms-auto text-[10.5px] text-ink-400 shrink-0">
                         {timeAgo(c.last_message_at)}
                       </span>
@@ -373,6 +382,11 @@ export default async function ChatPage({
                           👑 מנטורית
                         </span>
                       )
+                    )}
+                    {isPaidMember(activeOther) && (
+                      <span className="text-[10.5px] font-bold bg-tint-pink text-brand-pink-deep px-2 py-0.5 rounded-full">
+                        מנויה 💜
+                      </span>
                     )}
                   </div>
                   <div className="text-[12.5px] text-ink-500 truncate">{activeSubtitle}</div>

@@ -28,6 +28,7 @@ export interface PostInteractionsProps {
   postId: string;
   likeCount: number;
   liked: boolean;
+  likerNames?: string[];
   saved: boolean;
   comments: PostComment[];
   /** Free members read the thread but don't take part in it. */
@@ -40,6 +41,7 @@ export function PostInteractions({
   postId,
   likeCount,
   liked,
+  likerNames,
   saved,
   comments,
   canWrite = true,
@@ -79,6 +81,12 @@ export function PostInteractions({
           <Heart size={16} fill={like.on ? "currentColor" : "none"} />
           אהבתי{like.count > 0 ? ` · ${like.count}` : ""}
         </button>
+        {(likerNames ?? []).length > 0 && (
+          <span className="text-[11.5px] text-ink-400 -ms-2 truncate max-w-[280px]" title={likerNames!.join(", ")}>
+            💜 {likerNames!.slice(0, 4).join(", ")}
+            {likerNames!.length > 4 && ` +${likerNames!.length - 4}`}
+          </span>
+        )}
 
         <button
           type="button"

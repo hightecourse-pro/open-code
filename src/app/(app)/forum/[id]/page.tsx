@@ -61,6 +61,20 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
   // every 20-second refresh. Reactions: only HER two rows + the trigger-kept
   // like_count on the post — never every reaction row.
   const COMMENTS_CAP = 200;
+  // Who liked (the owner, 2/9: "לא רואה מי לחץ אהבתי") — names are shown to
+  // everyone; a like is a public gesture.
+  const { data: likeRows } = await supabase
+    .from("reactions")
+    .select("profile_id")
+    .eq("post_id", post.id)
+    .eq("kind", "like")
+    .limit(200);
+  const likerIds = [...new Set((likeRows ?? []).map((l) => l.profile_id))];
+  const { data: likerProfiles } = likerIds.length
+    ? await supabase.from("profiles").select("id, full_name").in("id", likerIds)
+    : { data: [] };
+  const likerNames = (likerProfiles ?? []).map((l) => l.full_name).filter(Boolean);
+
   const [{ data: myReactions }, { data: commentsDesc }, { data: railRows }] = await Promise.all([
     user
       ? supabase
@@ -116,6 +130,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
 
   const mine = new Set((myReactions ?? []).map((r) => r.kind));
   const feedPost: FeedPost = {
+    likerNames,
     id: post.id,
     body: post.body,
     intent: post.intent,

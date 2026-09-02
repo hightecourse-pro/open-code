@@ -27,6 +27,8 @@ export interface FeedPost {
   } | null;
   likeCount?: number;
   liked?: boolean;
+  /** Who liked — full names, shown under the buttons (the owner, 2/9). */
+  likerNames?: string[];
   saved?: boolean;
   comments?: PostComment[];
 }
@@ -104,6 +106,7 @@ export function PostCard({
         postId={post.id}
         likeCount={post.likeCount ?? 0}
         liked={post.liked ?? false}
+        likerNames={post.likerNames}
         saved={post.saved ?? false}
         comments={post.comments ?? []}
         canWrite={canWrite}
