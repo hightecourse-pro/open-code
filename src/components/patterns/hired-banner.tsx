@@ -103,7 +103,7 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
               >
                 🎊{" "}
                 {current.profileId ? (
-                  <Link href={`/members/${current.profileId}`} className="underline hover:opacity-80">
+                  <Link href={`/members/${current.profileId}`} className="text-white underline decoration-white/70 hover:opacity-80">
                     {current.full_name}
                   </Link>
                 ) : (

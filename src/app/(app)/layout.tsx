@@ -32,13 +32,13 @@ async function recentlyHired(): Promise<HiredMember[]> {
       .eq("hired_via_us", true)
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false })
-      .limit(6),
+      .limit(30),
     admin
       .from("manual_hires")
       .select("id, full_name, hired_at, email, profile_id")
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false })
-      .limit(6),
+      .limit(30),
   ]);
   // An off-community hire whose email joined the community since — link her
   // lazily, once, and remember it (the owner, 2/9: "אם נכנסו לקהילה אחרי
@@ -58,7 +58,9 @@ async function recentlyHired(): Promise<HiredMember[]> {
   ]
     .filter((h) => !!h.hired_at)
     .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
-    .slice(0, 6)
+    // Everyone in the 60-day window — the banner rotates, so many names cost
+    // nothing (the owner, 2/9: "למה רואים רק 6 כשהכנסתי 11?").
+    .slice(0, 30)
     .map((h) => ({ full_name: h.full_name, profileId: h.profileId ?? null }));
 }
 
