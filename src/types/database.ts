@@ -385,6 +385,7 @@ export interface Database {
           is_vip: boolean;
           vip_reason: string | null;
           internal_notes: string | null;
+          internal_tags: string[];
           updated_at: string;
         };
         Insert: {
@@ -392,6 +393,7 @@ export interface Database {
           is_vip?: boolean;
           vip_reason?: string | null;
           internal_notes?: string | null;
+          internal_tags?: string[];
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["member_crm"]["Insert"]>;

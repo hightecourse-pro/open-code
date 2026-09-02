@@ -229,9 +229,20 @@ export default async function AdminJobPage({
   const { data: crmRows } = applicantIds.length
     ? await admin
         .from("member_crm")
-        .select("profile_id, is_vip, internal_notes")
+        .select("profile_id, is_vip, internal_notes, internal_tags")
         .in("profile_id", applicantIds)
-    : { data: [] as { profile_id: string; is_vip: boolean; internal_notes: string | null }[] };
+    : {
+        data: [] as {
+          profile_id: string;
+          is_vip: boolean;
+          internal_notes: string | null;
+          internal_tags: string[] | null;
+        }[],
+      };
+  // Internal profile tags (the owner, 2/9) — admin-only, never member/client.
+  const crmTagsOf = new Map(
+    (crmRows ?? []).map((c) => [c.profile_id, (c as { internal_tags?: string[] | null }).internal_tags ?? []])
+  );
   const vipSet = new Set(
     (crmRows ?? []).filter((c) => c.is_vip === true).map((c) => c.profile_id)
   );
@@ -344,6 +355,7 @@ export default async function AdminJobPage({
       isSubscriber: p?.status === "active" && p.member_tier === "paid" && p.role === "junior",
       memberLabel: p?.role === "admin" ? ("team" as const) : p?.role === "mentor" ? ("mentor" as const) : null,
       isVip: vipSet.has(a.applicant_id),
+      memberTags: crmTagsOf.get(a.applicant_id) ?? [],
       crmNote: crmNoteOf.get(a.applicant_id) ?? null,
       adminNote: noteOf.get(a.id) ?? null,
     };
