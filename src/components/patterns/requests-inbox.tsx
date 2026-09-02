@@ -12,6 +12,8 @@ export interface InboxRequest {
   memberName: string;
   /** Paying member — the מנויה pill (the owner, 2/9). */
   isSubscriber?: boolean;
+  /** Screenshots she pasted into the widget (the owner, 2/9). */
+  attachments?: { id: string; url: string; fileName: string; isImage: boolean }[];
   subject: string;
   body: string;
   status: string;
@@ -120,6 +122,22 @@ function OpenRequestCard({
       {expanded && (
         <div className="px-4 pb-4 flex flex-col gap-2.5 border-t border-ink-100 pt-3">
           <p className="text-[13.5px] text-ink-700 whitespace-pre-wrap">{r.body}</p>
+          {(r.attachments ?? []).length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {r.attachments!.map((a) =>
+                a.isImage ? (
+                  <a key={a.id} href={a.url} target="_blank" rel="noreferrer" title={a.fileName}>
+                    {/* eslint-disable-next-line @next/next/no-img-element -- signed URL */}
+                    <img src={a.url} alt={a.fileName} className="h-28 rounded-lg border border-ink-200 object-cover" />
+                  </a>
+                ) : (
+                  <a key={a.id} href={a.url} target="_blank" rel="noreferrer" className="text-[12.5px] font-semibold text-brand-purple underline">
+                    📎 {a.fileName}
+                  </a>
+                )
+              )}
+            </div>
+          )}
           <div className="flex items-center gap-3 flex-wrap text-[12.5px]">
             <Link
               href={`/admin/members/${r.profile_id}`}

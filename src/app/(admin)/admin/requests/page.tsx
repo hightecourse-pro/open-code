@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { attachmentsFor } from "@/lib/attachments";
 import { requireRole } from "@/lib/auth";
 import {
   RequestsInbox,
@@ -41,6 +42,8 @@ export default async function AdminRequestsPage() {
     ])
   );
 
+  const attachOf = await attachmentsFor("request", (requests ?? []).map((r) => r.id));
+
   const settingOf = new Map((settings ?? []).map((s) => [s.key, s.value]));
   const teamNames = ((settingOf.get("team_names") as { names?: string[] } | undefined)?.names ?? []).filter(
     (n): n is string => typeof n === "string"
@@ -54,6 +57,12 @@ export default async function AdminRequestsPage() {
     profile_id: r.profile_id,
     memberName: nameOf.get(r.profile_id) ?? "חברת קהילה",
     isSubscriber: subscriberOf.get(r.profile_id) ?? false,
+    attachments: (attachOf.get(r.id) ?? []).map((a) => ({
+      id: a.id,
+      url: a.url,
+      fileName: a.fileName,
+      isImage: a.isImage,
+    })),
     subject: r.subject,
     body: r.body,
     status: r.status,
