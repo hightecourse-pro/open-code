@@ -67,6 +67,12 @@ export function PostInteractions({
 
   return (
     <div className="mt-3 pt-3 border-t border-ink-100">
+      {(likerNames ?? []).length > 0 && (
+        <div className="text-[12px] text-ink-500 mb-1.5" title={likerNames!.join(", ")}>
+          💜 אהבו: {likerNames!.slice(0, 8).join(", ")}
+          {likerNames!.length > 8 && ` ועוד ${likerNames!.length - 8}`}
+        </div>
+      )}
       <div className="flex gap-4 items-center">
         <button
           type="button"
@@ -81,12 +87,6 @@ export function PostInteractions({
           <Heart size={16} fill={like.on ? "currentColor" : "none"} />
           אהבתי{like.count > 0 ? ` · ${like.count}` : ""}
         </button>
-        {(likerNames ?? []).length > 0 && (
-          <span className="text-[11.5px] text-ink-400 -ms-2 truncate max-w-[280px]" title={likerNames!.join(", ")}>
-            💜 {likerNames!.slice(0, 4).join(", ")}
-            {likerNames!.length > 4 && ` +${likerNames!.length - 4}`}
-          </span>
-        )}
 
         <button
           type="button"
