@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { raiseAlert } from "@/lib/alerts";
 import { reconcileSubscriberStatus } from "@/lib/payments/external";
 import { redirect } from "next/navigation";
@@ -405,6 +406,13 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     }
   }
 
+  // First-ever completion fires the new-member trigger (never on re-saves).
+  const { data: beforeSave } = await supabase
+    .from("profiles")
+    .select("profile_completed")
+    .eq("id", user.id)
+    .maybeSingle();
+
   await supabase
     .from("profiles")
     .update({
@@ -416,6 +424,13 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       profile_completed: true,
     })
     .eq("id", user.id);
+
+  if (!beforeSave?.profile_completed) {
+    await fireTaskTrigger("new_member", {
+      title: `חברה חדשה השלימה שאלון: ${fullName}`,
+      link: `/admin/members/${user.id}`,
+    });
+  }
 
   // Change-tracked save: one read of what's already stored, then upserts only
   // for answers whose value actually changed (or is brand new) — so a row's

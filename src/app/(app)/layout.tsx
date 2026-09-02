@@ -20,48 +20,28 @@ import { createAdminClient } from "@/lib/supabase/admin";
  */
 async function recentlyHired(): Promise<HiredMember[]> {
   const hiredSince = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-  const supabase = await createClient();
   const admin = createAdminClient();
-  const [{ data: hiredMembers }, { data: manualHires }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, hired_at")
-      .eq("found_job", true)
-      // OUR placements only (the owner, 2/9: "רק כאלה שאנחנו השמנו") — a
-      // member marking "מצאתי עבודה" herself celebrates privately, not here.
-      .eq("hired_via_us", true)
-      .gte("hired_at", hiredSince)
-      .order("hired_at", { ascending: false })
-      .limit(30),
-    admin
-      .from("manual_hires")
-      .select("id, full_name, hired_at, email, profile_id")
-      .gte("hired_at", hiredSince)
-      .order("hired_at", { ascending: false })
-      .limit(30),
-  ]);
+  // The hires registry (3/9) is the single source: community rows are inserted
+  // the moment a member is marked placed-by-us, external ones from /admin/hires.
+  // No cap (the owner, 3/9: "אל תיתן הגבלת כמות") — the banner rotates.
+  const { data: hires } = await admin
+    .from("hires")
+    .select("id, full_name, hired_at, email, profile_id")
+    .gte("hired_at", hiredSince)
+    .order("hired_at", { ascending: false });
+  const rows = hires ?? [];
   // An off-community hire whose email joined the community since — link her
   // lazily, once, and remember it (the owner, 2/9: "אם נכנסו לקהילה אחרי
-  // שיהפוך ללינק"). At most a handful of rows inside the 60-day window.
-  const manual = manualHires ?? [];
-  for (const h of manual) {
+  // שיהפוך ללינק").
+  for (const h of rows) {
     if (h.profile_id || !h.email) continue;
     const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: h.email });
     if (uid) {
       h.profile_id = uid as string;
-      await admin.from("manual_hires").update({ profile_id: h.profile_id }).eq("id", h.id);
+      await admin.from("hires").update({ profile_id: h.profile_id }).eq("id", h.id);
     }
   }
-  return [
-    ...(hiredMembers ?? []).map((h) => ({ full_name: h.full_name, hired_at: h.hired_at, profileId: h.id })),
-    ...manual.map((h) => ({ full_name: h.full_name, hired_at: h.hired_at, profileId: h.profile_id })),
-  ]
-    .filter((h) => !!h.hired_at)
-    .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
-    // Everyone in the 60-day window — the banner rotates, so many names cost
-    // nothing (the owner, 2/9: "למה רואים רק 6 כשהכנסתי 11?").
-    .slice(0, 30)
-    .map((h) => ({ full_name: h.full_name, profileId: h.profileId ?? null }));
+  return rows.map((h) => ({ full_name: h.full_name, profileId: h.profile_id ?? null }));
 }
 
 /**

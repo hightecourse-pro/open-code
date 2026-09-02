@@ -97,9 +97,11 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
               <div className="font-display font-black text-[15px]">
                 מזל טוב לחברות שלנו שמתחילות עבודה :)
               </div>
+              {/* Name enlarged, and no i/N counter — how many were hired is
+                  the team's business, not the banner's (the owner, 3/9). */}
               <div
                 key={current.full_name}
-                className="text-[14px] font-bold opacity-95 animate-[hired-swap_.5s_ease]"
+                className="text-[17px] font-display font-black animate-[hired-swap_.5s_ease]"
               >
                 🎊{" "}
                 {current.profileId ? (
@@ -110,11 +112,6 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
                   current.full_name
                 )}{" "}
                 🎊
-                {many && (
-                  <span className="text-[11px] opacity-70 ms-1.5">
-                    {(nameIdx % members.length) + 1}/{members.length}
-                  </span>
-                )}
               </div>
               <style>{`@keyframes hired-swap { from { opacity: 0; translate: 0 6px } to { opacity: 1; translate: 0 0 } }`}</style>
               <div className="text-[12px] opacity-85">

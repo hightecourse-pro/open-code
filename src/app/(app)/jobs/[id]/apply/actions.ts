@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResendEmail } from "@/lib/email/resend";
+import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { applyConfirmationEmail } from "@/lib/email/templates";
 import type { Json, QuestionAnswerType } from "@/types/database";
 
@@ -185,6 +186,11 @@ export async function submitApplication(
     if (error?.code === "23505") return { error: "כבר הגשת למשרה הזו 💜" };
     if (error) return { error: "ההגשה נכשלה. נסי שוב." };
   }
+
+  await fireTaskTrigger("new_application", {
+    title: `הגשה חדשה למשרת ${job.title}`,
+    link: `/admin/jobs/${jobId}`,
+  });
 
   // Best-effort confirmation email — the application is already in.
   try {

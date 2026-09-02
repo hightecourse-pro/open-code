@@ -26,6 +26,8 @@ import {
   MessageSquareText,
   Users,
   type LucideIcon,
+  ListTodo,
+  PartyPopper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,7 @@ const SECTIONS: AdminNavSection[] = [
       { href: "/admin", label: "דשבורד", icon: LayoutDashboard },
       { href: "/admin/members", label: "חברות", icon: Users },
       { href: "/admin/requests", label: "פניות לצוות", icon: Inbox },
+      { href: "/admin/tasks", label: "משימות", icon: ListTodo },
     ],
   },
   {
@@ -56,6 +59,7 @@ const SECTIONS: AdminNavSection[] = [
       { href: "/admin/jobs", label: "משרות", icon: Briefcase },
       { href: "/admin/submissions", label: "רשימת הגשות", icon: ClipboardList },
       { href: "/admin/cv-files", label: "קורות חיים", icon: FileText },
+      { href: "/admin/hires", label: "גיוסים", icon: PartyPopper },
       { href: "/admin/crm", label: "פייפליין לקוחות", icon: ContactRound },
       { href: "/admin/clients", label: "גישת לקוחות לפורטל", icon: Building2 },
     ],

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -56,6 +57,10 @@ export async function requestMentor(
   if (error) {
     return { error: "לא הצלחנו לשלוח את הבקשה כרגע. בואי ננסה שוב." };
   }
+  await fireTaskTrigger("mentor_request", {
+    title: `בקשת ליווי חדשה מ${me.full_name}`,
+    link: "/admin/mentor-requests",
+  });
 
   try {
     const { data: profile } = await supabase
