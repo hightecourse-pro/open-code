@@ -29,6 +29,66 @@ function keyify(raw: string): string {
   return raw.trim().toLowerCase().replace(/[\s._\-/]+/g, "");
 }
 
+export interface StudyInfo {
+  studyPlace: string | null;
+  track: string | null;
+  gradYear: string | null;
+}
+
+/** Study facts for the finder card (the owner, 2/9): מוסד, מגמה, שנת סיום —
+ *  select VALUES resolved to their display labels. */
+export async function studyInfoOf(profileIds: string[]): Promise<Map<string, StudyInfo>> {
+  const admin = createAdminClient();
+  const out = new Map<string, StudyInfo>();
+  if (!profileIds.length) return out;
+  const KEYS = ["study_place", "track_specialization", "graduation_year"] as const;
+  const { data: questions } = await admin
+    .from("config_questions")
+    .select("id, key, options")
+    .in("key", [...KEYS]);
+  if (!questions?.length) return out;
+  const byId = new Map(
+    questions.map((q) => [
+      q.id,
+      {
+        key: q.key,
+        labelOf: new Map(
+          (Array.isArray(q.options) ? (q.options as unknown as { value: string; label: string }[]) : []).map(
+            (o) => [o.value, o.label]
+          )
+        ),
+      },
+    ])
+  );
+  for (let i = 0; i < profileIds.length; i += 300) {
+    const { data } = await admin
+      .from("profile_answers")
+      .select("profile_id, question_id, value")
+      .in("question_id", questions.map((q) => q.id))
+      .in("profile_id", profileIds.slice(i, i + 300));
+    for (const a of data ?? []) {
+      const q = byId.get(a.question_id);
+      if (!q) continue;
+      const resolve = (v: unknown): string | null => {
+        if (typeof v === "string" && v) return q.labelOf.get(v) ?? v;
+        if (Array.isArray(v)) {
+          const vals = v.filter((x): x is string => typeof x === "string").map((x) => q.labelOf.get(x) ?? x);
+          return vals.length ? vals.join(", ") : null;
+        }
+        return null;
+      };
+      const val = resolve(a.value);
+      if (!val) continue;
+      const cur = out.get(a.profile_id) ?? { studyPlace: null, track: null, gradYear: null };
+      if (q.key === "study_place") cur.studyPlace = val;
+      else if (q.key === "track_specialization") cur.track = val;
+      else if (q.key === "graduation_year") cur.gradYear = val;
+      out.set(a.profile_id, cur);
+    }
+  }
+  return out;
+}
+
 export async function matchCandidates(
   jobTechTags: string[],
   profileIds: string[]

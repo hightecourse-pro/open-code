@@ -29,7 +29,7 @@ import { JobTabs, type JobTabDef } from "./job-tabs";
 import { PublishPanel } from "./publish-panel";
 import { ReviewCenter, type ReviewApplication } from "./review-center";
 import { CandidateFinder, type FinderCandidate } from "./candidate-finder";
-import { matchCandidates } from "@/lib/admin/candidate-match";
+import { matchCandidates, studyInfoOf } from "@/lib/admin/candidate-match";
 import { SendCandidatesButton } from "./send-candidates-button";
 
 export const metadata: Metadata = { title: "ניהול משרה" };
@@ -112,7 +112,7 @@ export default async function AdminJobPage({
         .order("created_at", { ascending: false }),
       admin
         .from("profiles")
-        .select("id, full_name, specialization, region")
+        .select("id, full_name, specialization, region, is_experienced")
         .in("status", ["active", "pending"])
         .eq("role", "junior")
         .eq("profile_completed", true)
@@ -510,8 +510,9 @@ export default async function AdminJobPage({
   if (job.source === "ours") {
     const communityRows = members ?? [];
     const finderIds = [...new Set([...communityRows.map((m) => m.id), ...applicantIds])];
-    const [matches, { data: reviewRows }] = await Promise.all([
+    const [matches, studyInfo, { data: reviewRows }] = await Promise.all([
       matchCandidates(job.tech_tags ?? [], finderIds),
+      studyInfoOf(finderIds),
       admin
         .from("job_candidate_reviews")
         .select("profile_id, status, ai_score, ai_reason")
@@ -526,11 +527,16 @@ export default async function AdminJobPage({
       const app = appOf.get(pid);
       const base = communityInfo.get(pid) ?? profileOf.get(pid);
       const ansObj = (app?.answers ?? {}) as Record<string, string>;
+      const study = studyInfo.get(pid);
       return {
         profileId: pid,
         name: base?.full_name ?? "חברת קהילה",
         specialization: base?.specialization ?? null,
         region: (base as { region?: string | null } | undefined)?.region ?? null,
+        experienced: (base as { is_experienced?: boolean | null } | undefined)?.is_experienced === true,
+        studyPlace: study?.studyPlace ?? null,
+        track: study?.track ?? null,
+        gradYear: study?.gradYear ?? null,
         years: m?.years ?? null,
         score: m?.score ?? 0,
         matched: m?.matched ?? [],
