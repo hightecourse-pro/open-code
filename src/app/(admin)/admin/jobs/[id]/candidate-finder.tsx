@@ -10,6 +10,10 @@ export interface FinderCandidate {
   name: string;
   specialization: string | null;
   region: string | null;
+  experienced: boolean;
+  studyPlace: string | null;
+  track: string | null;
+  gradYear: string | null;
   years: number | null;
   score: number;
   matched: string[];
@@ -330,30 +334,61 @@ export function CandidateFinder({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <div className="text-[12px] text-ink-400">
                   {cardIndex! + 1} מתוך {filtered.length}
                   {card.applied && <span className="ms-2 text-brand-pink-deep font-bold">· הגישה מועמדות</span>}
                 </div>
-                <h3 className="font-display font-black text-[22px]">
-                  <a href={`/admin/members/${card.profileId}`} target="_blank" rel="noopener noreferrer" className="hover:text-brand-purple">
-                    {card.name}
-                  </a>
-                </h3>
+                <h3 className="font-display font-black text-[22px]">{card.name}</h3>
                 <div className="text-[13px] text-ink-500">
-                  {[card.specialization, card.region, card.years !== null ? `${card.years} שנות ניסיון` : null]
-                    .filter(Boolean)
-                    .join(" · ") || "—"}
+                  {[card.specialization, card.region].filter(Boolean).join(" · ") || "—"}
                 </div>
-              </div>
-              <div className="text-center shrink-0">
-                <div className="font-display font-black text-[26px] text-brand-purple tabular-nums">{card.score}%</div>
-                <div className="text-[11px] text-ink-400">התאמה מעשית</div>
-                {card.aiScore !== null && (
-                  <div className="text-[12px] mt-1 tabular-nums">
-                    AI: <b>{card.aiScore}</b>
+                {/* Experience — loud when it's real (the owner, 2/9). */}
+                {card.experienced ? (
+                  <div className="inline-flex items-center gap-1.5 mt-1.5 bg-tint-warm border border-[#F8D98C] text-[#8C5E0E] rounded-full px-3 py-1 text-[13px] font-bold">
+                    ⭐ בעלת ניסיון{card.years !== null ? ` · ${card.years} שנות ניסיון` : ""}
                   </div>
+                ) : (
+                  card.years !== null &&
+                  card.years > 0 && (
+                    <div className="text-[12.5px] text-ink-700 mt-1">{card.years} שנות ניסיון</div>
+                  )
                 )}
+              </div>
+              <div className="text-center shrink-0 flex flex-col items-center gap-1.5">
+                <div>
+                  <div className="font-display font-black text-[26px] text-brand-purple tabular-nums">{card.score}%</div>
+                  <div className="text-[11px] text-ink-400">התאמה מעשית</div>
+                  {card.aiScore !== null && (
+                    <div className="text-[12px] mt-1 tabular-nums">
+                      AI: <b>{card.aiScore}</b>
+                    </div>
+                  )}
+                </div>
+                <a
+                  href={`/admin/members/${card.profileId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-display font-semibold text-[12.5px] px-3.5 py-1.5 rounded-md border-[1.5px] border-brand-purple text-brand-purple hover:bg-tint-purple transition-colors whitespace-nowrap"
+                >
+                  לפרופיל המלא ←
+                </a>
+              </div>
+            </div>
+
+            {/* The study facts, front and center (the owner, 2/9). */}
+            <div className="grid grid-cols-3 gap-2 bg-tint-purple/40 border border-brand-purple/15 rounded-[12px] px-3.5 py-2.5 text-center">
+              <div>
+                <div className="text-[11px] text-ink-500">🎓 מוסד לימודים</div>
+                <div className="text-[13.5px] font-bold text-ink-900">{card.studyPlace ?? "—"}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-ink-500">מגמה</div>
+                <div className="text-[13.5px] font-bold text-ink-900">{card.track ?? "—"}</div>
+              </div>
+              <div>
+                <div className="text-[11px] text-ink-500">שנת סיום</div>
+                <div className="text-[13.5px] font-bold text-ink-900 tabular-nums">{card.gradYear ?? "—"}</div>
               </div>
             </div>
 
