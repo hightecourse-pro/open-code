@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withPoolKey } from "@/lib/ai/system-keys";
 import { geminiJson } from "@/lib/ai/gemini";
+import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 
 export type TriageStatus = "new" | "fit" | "maybe" | "no";
 
@@ -27,6 +28,32 @@ export async function setCandidateStatus(
     { onConflict: "job_id,profile_id" }
   );
   revalidatePath(`/admin/jobs/${jobId}`);
+  return { ok: true };
+}
+
+/** Toggle one internal tag on HER profile (member_crm.internal_tags). */
+export async function toggleMemberInternalTag(
+  profileId: string,
+  tag: string,
+  on: boolean
+): Promise<{ ok: boolean; error?: string }> {
+  await requireRole("admin");
+  if (!(MEMBER_INTERNAL_TAGS as readonly string[]).includes(tag)) {
+    return { ok: false, error: "תגית לא מוכרת" };
+  }
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("member_crm")
+    .select("internal_tags")
+    .eq("profile_id", profileId)
+    .maybeSingle();
+  const current = new Set(((existing?.internal_tags as string[] | null) ?? []).filter(Boolean));
+  if (on) current.add(tag);
+  else current.delete(tag);
+  const { error } = await admin
+    .from("member_crm")
+    .upsert({ profile_id: profileId, internal_tags: [...current] }, { onConflict: "profile_id" });
+  if (error) return { ok: false, error: "השמירה נכשלה — ייתכן שחסרה המיגרציה" };
   return { ok: true };
 }
 

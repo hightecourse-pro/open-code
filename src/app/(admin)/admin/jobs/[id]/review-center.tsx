@@ -22,6 +22,8 @@ import {
   updateApplicationPipeline,
 } from "@/app/(admin)/admin/actions";
 import type { AdminMark, PipelineStatus } from "@/app/(admin)/admin/actions";
+import { toggleMemberInternalTag } from "./finder-actions";
+import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
 
 // ----------------------------------------------------------------- data types
@@ -69,6 +71,8 @@ export interface ReviewApplication {
   isSubscriber: boolean;
   /** VIP from the admin-only member_crm — internal indication only. */
   isVip: boolean;
+  /** Internal profile tags (member_crm.internal_tags) — admin-only. */
+  memberTags: string[];
   /** The team's general internal note about her (member_crm) — admin-only. */
   crmNote: string | null;
   /** Note tied to HER × THIS JOB (application_notes) — the table's הערה column. */
@@ -286,6 +290,11 @@ export function ReviewCenter({
   const [statuses, setStatuses] = useState<Record<string, string>>({});
   const [curatedLocal, setCuratedLocal] = useState<Set<string>>(() => new Set());
   const [actionError, setActionError] = useState<string | null>(null);
+  // A loud "it saved" line — the not_fit row vanishes from the default view
+  // the moment it's marked, which read as "לא נשמר" (the owner, 2/9).
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
+  // Internal profile tags (member_crm) — optimistic per member.
+  const [tagsLocal, setTagsLocal] = useState<Record<string, string[]>>({});
   // The inline "why not fit" box — open for at most one application at a time.
   const [reasonEditor, setReasonEditor] = useState<{ id: string; draft: string } | null>(null);
   const [, startTransition] = useTransition();
@@ -540,6 +549,28 @@ export function ReviewCenter({
         setMarks((prev) => ({ ...prev, [app.id]: prevMark }));
         setReasons((prev) => ({ ...prev, [app.id]: prevReason }));
         setActionError(res.error);
+      } else {
+        setSavedFlash(
+          `נשמר ✓ ${app.profile?.fullName ?? "המועמדת"} סומנה "לא מתאימה"${clean ? " עם ההערה" : ""} — היא עברה ל"לא רלוונטיות" (מוסתרות כברירת מחדל; הסימון וההערה פנימיים לגמרי).`
+        );
+        setTimeout(() => setSavedFlash(null), 7000);
+      }
+    });
+  }
+
+  // ------------------------------------------- internal profile tags (crm)
+  const tagsOf = (app: ReviewApplication): string[] =>
+    tagsLocal[app.applicantId] ?? app.memberTags;
+  function toggleTag(app: ReviewApplication, tag: string) {
+    const current = tagsOf(app);
+    const on = !current.includes(tag);
+    const next = on ? [...current, tag] : current.filter((t) => t !== tag);
+    setTagsLocal((prev) => ({ ...prev, [app.applicantId]: next }));
+    startTransition(async () => {
+      const res = await toggleMemberInternalTag(app.applicantId, tag, on);
+      if (!res.ok) {
+        setTagsLocal((prev) => ({ ...prev, [app.applicantId]: current }));
+        setActionError(res.error ?? "שמירת התגית נכשלה");
       }
     });
   }
@@ -957,6 +988,7 @@ export function ReviewCenter({
       )}
 
       {actionError && <Alert variant="danger">{actionError}</Alert>}
+      {savedFlash && <Alert variant="success">{savedFlash}</Alert>}
 
       {/* ------------------------------------------------- bulk action bar */}
       {visibleSelection.size > 0 && (
@@ -1563,6 +1595,36 @@ export function ReviewCenter({
                   </div>
                 )
               )}
+            </div>
+
+            {/* Internal profile tags — saved on HER, ride to every job,
+                admin-only (the owner, 2/9). */}
+            <div>
+              <div className="text-[12px] font-bold text-ink-700 mb-1.5">
+                תגיות פרופיל פנימיות — נשמרות עליה לכל המשרות (חסוי, רק במערכת הניהול)
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {MEMBER_INTERNAL_TAGS.map((tag) => {
+                  const active = tagsOf(selected).includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => toggleTag(selected, tag)}
+                      className={cn(
+                        "rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors cursor-pointer",
+                        active
+                          ? "bg-tint-purple border-brand-purple text-brand-purple"
+                          : "border-ink-200 bg-ink-0 text-ink-500 hover:text-ink-900 hover:border-ink-400"
+                      )}
+                    >
+                      {active ? "✓ " : ""}
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* pipeline status */}
