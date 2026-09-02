@@ -409,11 +409,24 @@ export async function addManualHire(_prev: FormState, formData: FormData): Promi
   const dateRaw = String(formData.get("hired_at") ?? "").trim();
   const parsed = dateRaw ? new Date(dateRaw) : new Date();
   const hired_at = (Number.isNaN(parsed.getTime()) ? new Date() : parsed).toISOString();
+  // v2 fields (the owner, 2/9): email/company/type — and when the email
+  // already belongs to a member, the banner name becomes her card's link.
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200) || null;
+  const company = String(formData.get("company") ?? "").trim().slice(0, 200) || null;
+  const jobTypeRaw = String(formData.get("job_type") ?? "").trim();
+  const job_type = ["practicum_placement", "temp", "immediate"].includes(jobTypeRaw) ? jobTypeRaw : null;
+
+  const admin = createAdminClient();
+  let profile_id: string | null = null;
+  if (email) {
+    const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: email });
+    profile_id = (uid as string | null) ?? null;
+  }
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("manual_hires")
-    .insert({ full_name, hired_at, created_by: me.id });
+    .insert({ full_name, hired_at, created_by: me.id, email, company, job_type, profile_id });
   if (error) return { error: "לא הצלחנו להוסיף כרגע. נסי שוב." };
 
   revalidatePath("/admin/members");

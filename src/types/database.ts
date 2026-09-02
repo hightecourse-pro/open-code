@@ -310,6 +310,10 @@ export interface Database {
           hired_at: string;
           created_at: string;
           created_by: string | null;
+          email: string | null;
+          company: string | null;
+          job_type: string | null;
+          profile_id: string | null;
         };
         Insert: {
           id?: string;
@@ -317,6 +321,10 @@ export interface Database {
           hired_at?: string;
           created_at?: string;
           created_by?: string | null;
+          email?: string | null;
+          company?: string | null;
+          job_type?: string | null;
+          profile_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["manual_hires"]["Insert"]>;
         Relationships: [];
@@ -632,7 +640,7 @@ export interface Database {
         Row: {
           id: string;
           profile_id: string;
-          context: "post" | "comment" | "message" | null;
+          context: "post" | "comment" | "message" | "request" | null;
           context_id: string | null;
           file_path: string;
           file_name: string;
@@ -643,7 +651,7 @@ export interface Database {
         Insert: {
           id?: string;
           profile_id: string;
-          context?: "post" | "comment" | "message" | null;
+          context?: "post" | "comment" | "message" | "request" | null;
           context_id?: string | null;
           file_path: string;
           file_name: string;

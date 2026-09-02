@@ -21,10 +21,11 @@ import { createAdminClient } from "@/lib/supabase/admin";
 async function recentlyHired(): Promise<HiredMember[]> {
   const hiredSince = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
   const supabase = await createClient();
+  const admin = createAdminClient();
   const [{ data: hiredMembers }, { data: manualHires }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("full_name, hired_at")
+      .select("id, full_name, hired_at")
       .eq("found_job", true)
       // OUR placements only (the owner, 2/9: "רק כאלה שאנחנו השמנו") — a
       // member marking "מצאתי עבודה" herself celebrates privately, not here.
@@ -32,18 +33,33 @@ async function recentlyHired(): Promise<HiredMember[]> {
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false })
       .limit(6),
-    createAdminClient()
+    admin
       .from("manual_hires")
-      .select("full_name, hired_at")
+      .select("id, full_name, hired_at, email, profile_id")
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false })
       .limit(6),
   ]);
-  return [...(hiredMembers ?? []), ...(manualHires ?? [])]
+  // An off-community hire whose email joined the community since — link her
+  // lazily, once, and remember it (the owner, 2/9: "אם נכנסו לקהילה אחרי
+  // שיהפוך ללינק"). At most a handful of rows inside the 60-day window.
+  const manual = manualHires ?? [];
+  for (const h of manual) {
+    if (h.profile_id || !h.email) continue;
+    const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: h.email });
+    if (uid) {
+      h.profile_id = uid as string;
+      await admin.from("manual_hires").update({ profile_id: h.profile_id }).eq("id", h.id);
+    }
+  }
+  return [
+    ...(hiredMembers ?? []).map((h) => ({ full_name: h.full_name, hired_at: h.hired_at, profileId: h.id })),
+    ...manual.map((h) => ({ full_name: h.full_name, hired_at: h.hired_at, profileId: h.profile_id })),
+  ]
     .filter((h) => !!h.hired_at)
     .sort((a, b) => new Date(b.hired_at!).getTime() - new Date(a.hired_at!).getTime())
     .slice(0, 6)
-    .map((h) => ({ full_name: h.full_name }));
+    .map((h) => ({ full_name: h.full_name, profileId: h.profileId ?? null }));
 }
 
 /**

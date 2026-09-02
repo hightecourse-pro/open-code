@@ -1,10 +1,13 @@
 "use client";
 
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
 import { Minus } from "lucide-react";
 
 export interface HiredMember {
   full_name: string;
+  /** Her member card, when she's in the community — the name links to it. */
+  profileId?: string | null;
 }
 
 /**
@@ -50,7 +53,18 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
   const [override, setOverride] = useState<boolean | null>(null);
   const minimized = override ?? storedMin;
 
+  // One name at a time, gently rotating (the owner, 2/9: "אנימציה שהשמות
+  // מתחלפים") — only when there is actually more than one to rotate.
+  const [nameIdx, setNameIdx] = useState(0);
+  const many = members.length > 1;
+  useEffect(() => {
+    if (!many || minimized) return;
+    const id = setInterval(() => setNameIdx((i) => (i + 1) % members.length), 3500);
+    return () => clearInterval(id);
+  }, [many, minimized, members.length]);
+
   if (members.length === 0) return null;
+  const current = members[nameIdx % members.length];
 
   function toggle(next: boolean) {
     setOverride(next);
@@ -83,7 +97,26 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
               <div className="font-display font-black text-[15px]">
                 מזל טוב לחברות שלנו שמתחילות עבודה :)
               </div>
-              <div className="text-[13px] font-semibold opacity-95">🎊 {names} 🎊</div>
+              <div
+                key={current.full_name}
+                className="text-[14px] font-bold opacity-95 animate-[hired-swap_.5s_ease]"
+              >
+                🎊{" "}
+                {current.profileId ? (
+                  <Link href={`/members/${current.profileId}`} className="underline hover:opacity-80">
+                    {current.full_name}
+                  </Link>
+                ) : (
+                  current.full_name
+                )}{" "}
+                🎊
+                {many && (
+                  <span className="text-[11px] opacity-70 ms-1.5">
+                    {(nameIdx % members.length) + 1}/{members.length}
+                  </span>
+                )}
+              </div>
+              <style>{`@keyframes hired-swap { from { opacity: 0; translate: 0 6px } to { opacity: 1; translate: 0 0 } }`}</style>
               <div className="text-[12px] opacity-85">
                 כל הקהילה מרימה איתן כוסית — שתהיה הצלחה ענקית 💜
               </div>

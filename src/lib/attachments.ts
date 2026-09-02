@@ -31,7 +31,7 @@ const SIGN_TTL_SECONDS = 60 * 60;
  * every screen that calls this already fetched those parents under RLS.
  */
 export async function attachmentsFor(
-  context: "post" | "comment" | "message",
+  context: "post" | "comment" | "message" | "request",
   contextIds: string[]
 ): Promise<Map<string, AttachmentView[]>> {
   const out = new Map<string, AttachmentView[]>();
@@ -75,7 +75,7 @@ export async function attachmentsFor(
  */
 export async function linkAttachments(
   profileId: string,
-  context: "post" | "comment" | "message",
+  context: "post" | "comment" | "message" | "request",
   contextId: string,
   attachmentIds: string[]
 ): Promise<void> {

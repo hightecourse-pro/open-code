@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
+import { AttachmentPicker } from "@/components/patterns/attachment-picker";
 import { createMemberRequest } from "@/app/(app)/requests/actions";
 
 export interface MyRequestRow {
@@ -136,9 +137,11 @@ export function MemberRequestWidget({
               <Field label="נושא" htmlFor="req-subject">
                 <Input key={subjectPrefill} id="req-subject" name="subject" required maxLength={120} placeholder="על מה מדובר?" defaultValue={subjectPrefill} />
               </Field>
-              <Field label="מה תרצי לספר לנו?" htmlFor="req-body">
-                <Textarea id="req-body" name="body" required rows={3} placeholder="בקשה, שאלה, רעיון — הכול מתקבל 💜" />
-              </Field>
+              <AttachmentPicker>
+                <Field label="מה תרצי לספר לנו?" htmlFor="req-body">
+                  <Textarea id="req-body" name="body" required rows={3} placeholder="בקשה, שאלה, רעיון — הכול מתקבל 💜 אפשר גם להדביק צילום מסך" />
+                </Field>
+              </AttachmentPicker>
               <Button type="submit" size="sm" disabled={pending} className="self-start">
                 {pending ? "שולח…" : "שליחה לצוות"}
               </Button>

@@ -73,7 +73,7 @@ export default async function AdminMembersPage({
       // Off-community placements for the forum banner (admin-only table).
       supabase
         .from("manual_hires")
-        .select("id, full_name, hired_at")
+        .select("id, full_name, hired_at, email, company, job_type, profile_id")
         .order("hired_at", { ascending: false }),
       getTaxonomyOptions(),
     ]);
