@@ -41,6 +41,42 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
   return state;
 }
 
+/**
+ * Recovery poll: filtered networks (2/9, שפרה למברגר) cut the long analysis
+ * request around a minute with a 504 — while the server finishes and saves the
+ * review. The client then polls here for a review newer than the newest one it
+ * rendered, and shows the saved result instead of an error. Server timestamps
+ * on both sides, so a skewed client clock can't miss it.
+ */
+export async function latestCvReviewSince(afterIso: string | null): Promise<CvState | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  let q = supabase
+    .from("cv_reviews")
+    .select("score, summary, insights, job_fit, created_at")
+    .eq("profile_id", user.id)
+    .eq("source", "ai")
+    .order("created_at", { ascending: false })
+    .limit(1);
+  // No history yet → any review is this run's; still window it so a stale
+  // row can never masquerade as a fresh result.
+  q = q.gt("created_at", afterIso ?? new Date(Date.now() - 15 * 60_000).toISOString());
+  const { data: row } = await q.maybeSingle();
+  if (!row || typeof row.score !== "number") return null;
+
+  const analysis: CvAnalysis = {
+    score: row.score,
+    summary: row.summary ?? "",
+    insights: Array.isArray(row.insights) ? (row.insights as unknown as CvAnalysis["insights"]) : [],
+    job_fit: (row.job_fit ?? null) as CvAnalysis["job_fit"],
+  };
+  return { analysis };
+}
+
 async function runCvCheckInner(formData: FormData): Promise<CvState> {
   const me = await getProfile();
   if (!me || !isSubscriber(me)) {

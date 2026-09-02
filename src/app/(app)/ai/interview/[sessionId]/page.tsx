@@ -6,6 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { Alert, Button, ProgressRing } from "@/components/ui";
 import { InterviewThread } from "@/components/patterns/interview-thread";
 
+// Gemini rides a model-chain with retries — a stormy run outlives the platform
+// default window. Server actions inherit the page segment they POST from.
+export const maxDuration = 300;
+
 export const metadata: Metadata = { title: "ראיון" };
 
 // The simulator is temporarily offline (2026-08-29) — old session links land

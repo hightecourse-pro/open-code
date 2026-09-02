@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Mic, Sparkles } from "lucide-react";
 import { requireCommunityAccess } from "@/lib/auth";
 
+// Gemini rides a model-chain with retries — a stormy run outlives the platform
+// default window. Server actions inherit the page segment they POST from.
+export const maxDuration = 300;
+
 export const metadata: Metadata = { title: "סימולטור ראיונות" };
 
 /**

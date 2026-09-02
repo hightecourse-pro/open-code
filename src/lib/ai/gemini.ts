@@ -5,6 +5,11 @@
 
 export class QuotaError extends Error {}
 export class InvalidKeyError extends Error {}
+// A 400/403 that is NOT a key problem — the request itself was rejected
+// ("Invalid JSON payload", unsupported field on this model). Deterministic per
+// model: worth trying the next model in the chain, but re-sending the same
+// request in later retry rounds just burns 8-26s per call for the same answer.
+export class RequestShapeError extends Error {}
 // The model returned no usable text — almost always the newer flash models
 // spending the whole output budget on internal "thinking" and hitting
 // MAX_TOKENS before writing the answer. Transient: retried like a 503.
@@ -76,12 +81,16 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
   };
   if (opts.system) body.systemInstruction = { parts: [{ text: opts.system }] };
 
+  // A single call must never hang open-endedly: members sit behind filtered
+  // networks that quietly drop long connections, and one stuck attempt used to
+  // stall the whole chain. 55s comfortably covers a slow free-tier generation.
   const res = await fetch(
     `${BASE}/${model}:generateContent?key=${encodeURIComponent(opts.apiKey)}`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(55_000),
     }
   );
 
@@ -95,7 +104,7 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
     if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED|API_KEY_SERVICE_BLOCKED/i.test(text)) {
       throw new InvalidKeyError("Gemini key invalid");
     }
-    throw new Error(`Gemini ${res.status}: ${text.slice(0, 160)}`);
+    throw new RequestShapeError(`Gemini ${res.status}: ${text.slice(0, 160)}`);
   }
   if (!res.ok) throw new Error(`Gemini ${res.status}`);
 
@@ -136,7 +145,9 @@ async function generate(opts: GenerateOptions): Promise<string> {
         // An invalid key fails the same way on every model — stop immediately.
         if (e instanceof InvalidKeyError) throw e;
         if (e instanceof QuotaError) sawQuota = true;
-        else sawTransient = true;
+        // A rejected request shape is deterministic: the next model may still
+        // accept it, but replaying identical calls in later rounds won't.
+        else if (!(e instanceof RequestShapeError)) sawTransient = true;
         lastError = e;
       }
     }

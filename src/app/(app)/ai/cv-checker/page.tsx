@@ -10,8 +10,9 @@ import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 export const metadata: Metadata = { title: "בודקת קורות חיים" };
 
 // The analysis rides through Google's 503 storms (model chain + waits between
-// retry rounds) — the default function window cuts that journey short.
-export const maxDuration = 120;
+// retry rounds) — the default function window cuts that journey short. Pinned
+// high: real runs measured at 69-115s (telemetry, 2/9) even on healthy keys.
+export const maxDuration = 300;
 
 export default async function CvCheckerPage() {
   const profile = await requireCommunityAccess();
@@ -91,7 +92,7 @@ export default async function CvCheckerPage() {
   return (
     <div className="flex flex-col gap-5">
       <AiKeyBanner hasKey={hasKey} next="/ai/cv-checker" />
-      <CvCheckerForm savedCvs={savedCvs} />
+      <CvCheckerForm savedCvs={savedCvs} latestReviewAt={pastReviews?.[0]?.created_at ?? null} />
 
       <CvHistoryList
         entries={(pastReviews ?? []).map((r) => ({
