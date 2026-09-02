@@ -10,6 +10,7 @@ import { claimExternalApplications } from "@/lib/claim-external";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { unstable_cache } from "next/cache";
 
 /**
  * Women who recently started a job — the whole community celebrates, on every
@@ -18,31 +19,44 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * service role; banner names are public by design). Names only — a member's
  * workplace is never shown to other members.
  */
-async function recentlyHired(): Promise<HiredMember[]> {
-  const hiredSince = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
-  const admin = createAdminClient();
-  // The hires registry (3/9) is the single source: community rows are inserted
-  // the moment a member is marked placed-by-us, external ones from /admin/hires.
-  // No cap (the owner, 3/9: "אל תיתן הגבלת כמות") — the banner rotates.
-  const { data: hires } = await admin
-    .from("hires")
-    .select("id, full_name, hired_at, email, profile_id")
-    .gte("hired_at", hiredSince)
-    .order("hired_at", { ascending: false });
-  const rows = hires ?? [];
-  // An off-community hire whose email joined the community since — link her
-  // lazily, once, and remember it (the owner, 2/9: "אם נכנסו לקהילה אחרי
-  // שיהפוך ללינק").
-  for (const h of rows) {
-    if (h.profile_id || !h.email) continue;
-    const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: h.email });
-    if (uid) {
-      h.profile_id = uid as string;
-      await admin.from("hires").update({ profile_id: h.profile_id }).eq("id", h.id);
-    }
-  }
-  return rows.map((h) => ({ full_name: h.full_name, profileId: h.profile_id ?? null }));
-}
+
+// Config flag, identical for everyone — one query a minute instead of one per
+// page render (the Vercel cost round, 3/9).
+const launchNudgeFlag = unstable_cache(
+  async (): Promise<boolean> => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("app_settings")
+      .select("value")
+      .eq("key", "launch_nudge")
+      .maybeSingle();
+    // Missing row = on; the admin turns it off in הגדרות.
+    return (data?.value as { on?: boolean } | null)?.on !== false;
+  },
+  ["launch-nudge"],
+  { revalidate: 60 }
+);
+
+// The same list for every member — cached for a minute so the auto-refresh
+// polls of the whole community share ONE query instead of one each (the
+// Vercel cost round, 3/9). Email→profile linking happens on /admin/hires.
+const recentlyHired = unstable_cache(
+  async (): Promise<HiredMember[]> => {
+    const hiredSince = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+    const admin = createAdminClient();
+    // The hires registry (3/9) is the single source: community rows are
+    // inserted the moment a member is marked placed-by-us, external ones from
+    // /admin/hires. No cap (the owner, 3/9) — the banner rotates.
+    const { data: hires } = await admin
+      .from("hires")
+      .select("full_name, profile_id")
+      .gte("hired_at", hiredSince)
+      .order("hired_at", { ascending: false });
+    return (hires ?? []).map((h) => ({ full_name: h.full_name, profileId: h.profile_id ?? null }));
+  },
+  ["recently-hired"],
+  { revalidate: 60 }
+);
 
 /**
  * Messages waiting for her — the same rule the daily digest counts by: in one
@@ -127,16 +141,7 @@ export default async function AuthenticatedLayout({
   const [feedbackAspects, hired, launchNudgeOn] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
-    (async () => {
-      const supabase = await createClient();
-      const { data } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "launch_nudge")
-        .maybeSingle();
-      // Missing row = on; the admin turns it off in הגדרות.
-      return (data?.value as { on?: boolean } | null)?.on !== false;
-    })(),
+    launchNudgeFlag(),
     // Position matters: the claim's undefined must stay OUT of the
     // destructured slots above.
     (async () => {
