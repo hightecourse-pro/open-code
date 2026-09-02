@@ -8,6 +8,7 @@ import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import { applyAsMentor } from "@/app/join/actions";
 import { FIELD_VALIDATORS } from "@/lib/validators";
 import { RichTextEditor } from "@/components/patterns/rich-text-editor";
+import { FormDraft } from "@/components/patterns/form-draft";
 import { LinksListEditor } from "@/components/patterns/links-list-editor";
 import { groupBySection } from "@/lib/profile-sections";
 import { CITIES } from "@/data/cities";
@@ -776,6 +777,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           <option key={c} value={c} />
         ))}
       </datalist>
+      {/* Auto-save (members, 2/9): what she typed survives leaving the page.
+          Cleared the moment a save succeeds — the server is the truth then. */}
+      <FormDraft storageKey="draft:profile" clear={state.ok === true} />
       <div ref={alertRef}>
         {state.error && <Alert variant="danger">{state.error}</Alert>}
         {state.ok && <Alert variant="success">הפרופיל נשמר ✓</Alert>}

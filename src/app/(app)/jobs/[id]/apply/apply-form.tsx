@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { FormDraft } from "@/components/patterns/form-draft";
 import Link from "next/link";
 import { FileText, Sparkles, Upload } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
@@ -58,6 +59,10 @@ export function ApplyForm({
 
   return (
     <form action={action} className="flex flex-col gap-5">
+      {/* Half-filled answers survive a hop to another page (members, 2/9). */}
+      {/* A successful submit REDIRECTS (the form is gone for good), so the
+          stale draft just ages out on its 7-day TTL. */}
+      <FormDraft storageKey={`draft:apply:${jobId}`} />
       {/* Friendly nudge — never blocking */}
       <div className="flex gap-2.5 items-start bg-tint-indigo border border-[#C9D2F0] rounded-md p-3 px-4 text-[13.5px] text-ink-700">
         <Sparkles size={18} className="text-brand-indigo shrink-0 mt-0.5" />
