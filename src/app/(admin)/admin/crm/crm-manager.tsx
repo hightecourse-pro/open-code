@@ -1,11 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Briefcase, Building2, ChevronDown, KeyRound, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Briefcase, Building2, ChevronDown, Eye, EyeOff, KeyRound, Search, Users, X, Zap } from "lucide-react";
 import { Alert, Badge, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn, timeAgo } from "@/lib/utils";
 import { createCrmLead, updateCrmClient, type FormState } from "../actions";
+import { assignHireToJob, quickCreateJobForClient } from "./crm-actions";
+import { setJobVisibility } from "../actions";
 import type { BadgeProps } from "@/components/ui";
 import type { ClientCrmStatus, JobPipelineStatus } from "@/types/database";
 
@@ -13,6 +16,23 @@ export interface CrmJobRow {
   id: string;
   title: string;
   pipeline_status: JobPipelineStatus;
+  is_visible: boolean;
+}
+
+export interface CrmContact {
+  id: string;
+  name: string;
+  display_name: string | null;
+  email: string | null;
+  phone: string | null;
+}
+
+export interface CrmHireRow {
+  id: string;
+  full_name: string;
+  profile_id: string | null;
+  status: string;
+  job_id: string | null;
 }
 
 export interface CrmClientRow {
@@ -25,8 +45,11 @@ export interface CrmClientRow {
   contact_email: string | null;
   crm_status: ClientCrmStatus;
   crm_notes: string | null;
+  address: string | null;
   created_at: string;
   jobs: CrmJobRow[];
+  contacts: CrmContact[];
+  hires: CrmHireRow[];
 }
 
 type BadgeVariant = NonNullable<BadgeProps["variant"]>;
@@ -125,6 +148,49 @@ function ClientEditForm({ client }: { client: CrmClientRow }) {
   );
 }
 
+const HIRE_STATUS: Record<string, { label: string; cls: string }> = {
+  started: { label: "התחילה עבודה", cls: "bg-tint-purple text-brand-purple" },
+  invoice_sent: { label: "נשלח חשבונית", cls: "bg-tint-warm text-[#8C5E0E]" },
+  paid: { label: "שולם", cls: "bg-tint-mint text-success" },
+};
+
+/** One hired woman under a job — name, billing status, and a move control. */
+function HireChipRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) {
+  const [, start] = useTransition();
+  const st = HIRE_STATUS[hire.status] ?? HIRE_STATUS.started;
+  return (
+    <div className="flex items-center gap-2 py-1 ps-5 flex-wrap">
+      <span className="text-ink-300">↳</span>
+      {hire.profile_id ? (
+        <a
+          href={`/admin/members/${hire.profile_id}`}
+          className="text-[13px] font-medium text-ink-900 hover:text-brand-purple hover:underline"
+        >
+          {hire.full_name}
+        </a>
+      ) : (
+        <span className="text-[13px] font-medium text-ink-900">{hire.full_name}</span>
+      )}
+      <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>
+      {/* Move her between the client's jobs (the owner, 3/9) */}
+      {jobs.length > 1 && (
+        <select
+          value={hire.job_id ?? ""}
+          onChange={(e) => start(() => void assignHireToJob(hire.id, e.target.value || null))}
+          className="ms-auto h-7 border border-ink-200 rounded-md px-1.5 text-[11px] bg-white text-ink-500"
+        >
+          <option value="">ללא משרה</option>
+          {jobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.title}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
 /** One client — collapsed summary row that expands to edit + jobs. */
 function ClientRow({ client }: { client: CrmClientRow }) {
   const [open, setOpen] = useState(false);
@@ -174,6 +240,12 @@ function ClientRow({ client }: { client: CrmClientRow }) {
             <Briefcase size={12} className="shrink-0" />
             {client.jobs.length} משרות
           </div>
+          {client.hires.length > 0 && (
+            <div className="inline-flex items-center gap-1 text-brand-pink-deep font-semibold">
+              <Users size={12} className="shrink-0" />
+              {client.hires.length} גויסו
+            </div>
+          )}
           <div>{timeAgo(client.created_at)}</div>
         </div>
 
@@ -196,38 +268,89 @@ function ClientRow({ client }: { client: CrmClientRow }) {
 
           <ClientEditForm client={client} />
 
+          {(client.contacts.length > 0 || client.address) && (
+            <div>
+              <div className="text-xs font-semibold text-ink-700 mb-1">
+                אנשי הקשר {client.address && <span className="font-normal text-ink-400">· {client.address}</span>}
+              </div>
+              <div className="flex flex-col">
+                {client.contacts.map((ct) => (
+                  <div key={ct.id} className="flex items-center gap-2 py-1 text-[12.5px] flex-wrap">
+                    <span className="font-semibold text-ink-900">{ct.name}</span>
+                    {ct.display_name && ct.display_name !== ct.name && (
+                      <span className="text-ink-500">({ct.display_name})</span>
+                    )}
+                    {ct.email && (
+                      <a href={`mailto:${ct.email}`} dir="ltr" className="font-mono text-[11.5px] text-brand-purple hover:underline">
+                        {ct.email}
+                      </a>
+                    )}
+                    {ct.phone && (
+                      <span dir="ltr" className="font-mono text-[11.5px] text-ink-500">
+                        {ct.phone}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
-            <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center justify-between gap-2 mb-1.5 flex-wrap">
               <div className="text-xs font-semibold text-ink-700">
                 המשרות של {client.company_name} ({client.jobs.length})
               </div>
-              <Link
-                href={`/admin/jobs?client=${client.id}`}
-                className="text-xs font-semibold text-brand-purple hover:text-brand-pink-deep transition-colors"
-              >
-                + משרה חדשה ללקוח
-              </Link>
+              <span className="flex items-center gap-3">
+                <QuickJobButton clientId={client.id} />
+                <Link
+                  href={`/admin/jobs?client=${client.id}`}
+                  className="text-xs font-semibold text-brand-purple hover:text-brand-pink-deep transition-colors"
+                >
+                  + משרה מלאה
+                </Link>
+              </span>
             </div>
             {client.jobs.length > 0 ? (
               <div className="flex flex-col">
                 {client.jobs.map((j) => {
                   const p = PIPELINE[j.pipeline_status] ?? PIPELINE.draft;
+                  const jobHires = client.hires.filter((h) => h.job_id === j.id);
                   return (
-                    <Link
-                      key={j.id}
-                      href={`/admin/jobs/${j.id}`}
-                      className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0 group"
-                    >
-                      <span className="flex-1 min-w-0 truncate text-sm text-ink-900 group-hover:text-brand-purple transition-colors">
-                        {j.title}
-                      </span>
-                      <Badge variant={p.variant}>{p.label}</Badge>
-                    </Link>
+                    <div key={j.id} className="border-b border-ink-100 last:border-b-0 py-1">
+                      <div className="flex items-center gap-2 py-1">
+                        <Link href={`/admin/jobs/${j.id}`} className="flex-1 min-w-0 flex items-center gap-2 group">
+                          <span className="min-w-0 truncate text-sm text-ink-900 group-hover:text-brand-purple transition-colors">
+                            {j.title}
+                          </span>
+                          {!j.is_visible && (
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-px text-[10px] font-bold bg-ink-900 text-white">
+                              <EyeOff size={9} /> מוסתרת
+                            </span>
+                          )}
+                          <Badge variant={p.variant}>{p.label}</Badge>
+                        </Link>
+                        <JobEyeButton jobId={j.id} visible={j.is_visible} />
+                      </div>
+                      {jobHires.map((h) => (
+                        <HireChipRow key={h.id} hire={h} jobs={client.jobs} />
+                      ))}
+                    </div>
                   );
                 })}
               </div>
             ) : (
               <p className="text-ink-500 text-sm py-1">אין משרות ללקוחה הזו עדיין.</p>
+            )}
+            {client.hires.some((h) => !h.job_id || !client.jobs.find((j) => j.id === h.job_id)) && (
+              <div className="mt-2">
+                <div className="text-xs font-semibold text-ink-700 mb-0.5">גויסו — עדיין בלי שיוך למשרה</div>
+                {client.hires
+                  .filter((h) => !h.job_id || !client.jobs.find((j) => j.id === h.job_id))
+                  .map((h) => (
+                    <HireAssignRow key={h.id} hire={h} jobs={client.jobs} />
+                  ))}
+              </div>
             )}
           </div>
         </div>
@@ -236,9 +359,75 @@ function ClientRow({ client }: { client: CrmClientRow }) {
   );
 }
 
+/** A hire not attached to any job yet — pick one of the client's jobs. */
+function HireAssignRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) {
+  const [, start] = useTransition();
+  const st = HIRE_STATUS[hire.status] ?? HIRE_STATUS.started;
+  return (
+    <div className="flex items-center gap-2 py-1 flex-wrap">
+      <span className="text-[13px] font-medium text-ink-900">{hire.full_name}</span>
+      <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded-full", st.cls)}>{st.label}</span>
+      {jobs.length > 0 && (
+        <select
+          value=""
+          onChange={(e) => e.target.value && start(() => void assignHireToJob(hire.id, e.target.value))}
+          className="h-7 border border-ink-200 rounded-md px-1.5 text-[11px] bg-white text-ink-500"
+        >
+          <option value="">שיוך למשרה…</option>
+          {jobs.map((j) => (
+            <option key={j.id} value={j.id}>
+              {j.title}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
+  );
+}
+
+/** Show/hide on the members' board — one click on the row (the owner, 3/9). */
+function JobEyeButton({ jobId, visible }: { jobId: string; visible: boolean }) {
+  const [, start] = useTransition();
+  return (
+    <button
+      type="button"
+      onClick={() => start(() => void setJobVisibility(jobId, !visible))}
+      title={visible ? "הסתרה מלוח המשרות" : "הצגה בלוח המשרות"}
+      className="shrink-0 text-ink-300 hover:text-brand-purple p-1"
+    >
+      {visible ? <Eye size={14} /> : <EyeOff size={14} />}
+    </button>
+  );
+}
+
+/** One click, one draft job — hidden from the board until she publishes. */
+function QuickJobButton({ clientId }: { clientId: string }) {
+  const router = useRouter();
+  const [pending, start] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() =>
+        start(async () => {
+          const r = await quickCreateJobForClient(clientId);
+          if (r.jobId) router.push(`/admin/jobs/${r.jobId}`);
+          else if (r.error) alert(r.error);
+        })
+      }
+      className="inline-flex items-center gap-1 text-xs font-semibold text-brand-purple hover:text-brand-pink-deep transition-colors disabled:opacity-50"
+    >
+      <Zap size={12} /> {pending ? "יוצרת…" : "יצירת משרה מהירה"}
+    </button>
+  );
+}
+
 export function CrmManager({ clients }: { clients: CrmClientRow[] }) {
   const [state, action, pending] = useActionState<FormState, FormData>(createCrmLead, {});
   const formRef = useRef<HTMLFormElement>(null);
+  // The list is the screen; adding a lead lives behind a button (the owner,
+  // 3/9: "כדי שיראו מיד את הטבלה").
+  const [showAdd, setShowAdd] = useState(false);
 
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<ClientCrmStatus | "all">("all");
@@ -273,7 +462,8 @@ export function CrmManager({ clients }: { clients: CrmClientRow[] }) {
 
   return (
     <>
-      {/* add lead */}
+      {/* add lead — behind the top button so the pipeline shows first */}
+      {showAdd && (
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">הוספת ליד</h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
@@ -304,6 +494,7 @@ export function CrmManager({ clients }: { clients: CrmClientRow[] }) {
           </Button>
         </form>
       </div>
+      )}
 
       {/* search / filter / sort */}
       <div className="bg-white border border-ink-200 rounded-md p-3 flex flex-wrap gap-2 items-center shadow-sm">
@@ -358,6 +549,9 @@ export function CrmManager({ clients }: { clients: CrmClientRow[] }) {
           <option value="newest">חדשות קודם</option>
           <option value="name">לפי שם החברה</option>
         </select>
+        <Button type="button" size="sm" variant={showAdd ? "secondary" : "primary"} onClick={() => setShowAdd((v) => !v)}>
+          {showAdd ? "סגירה" : "+ הוספת ליד"}
+        </Button>
       </div>
 
       {/* pipeline list */}
@@ -376,7 +570,7 @@ export function CrmManager({ clients }: { clients: CrmClientRow[] }) {
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <Building2 size={28} className="text-ink-300" />
             <p className="text-ink-500 text-sm">
-              {clients.length === 0 ? "אין עדיין לקוחות. הוסיפי את הליד הראשון למעלה." : "אין תוצאות לסינון הזה."}
+              {clients.length === 0 ? "אין עדיין לקוחות. הוסיפי את הליד הראשון בכפתור למעלה." : "אין תוצאות לסינון הזה."}
             </p>
           </div>
         )}

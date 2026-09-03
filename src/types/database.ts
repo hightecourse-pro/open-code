@@ -193,6 +193,8 @@ export interface Database {
         Row: {
           id: string;
           company_name: string;
+          company_number?: string | null;
+          address?: string | null;
           /** Null until the client reaches "job_active" and portal access is assigned. */
           username: string | null;
           /** Encrypted (reversible) password — admin can re-read it. */
@@ -214,6 +216,8 @@ export interface Database {
         Insert: {
           id?: string;
           company_name: string;
+          company_number?: string | null;
+          address?: string | null;
           username?: string | null;
           password_enc?: string | null;
           password_hash?: string | null;
@@ -345,6 +349,8 @@ export interface Database {
           payer_institution: string | null;
           hired_at: string;
           notes: string | null;
+          client_id: string | null;
+          job_id: string | null;
           created_by: string | null;
           created_at: string;
           updated_at: string;
@@ -363,11 +369,38 @@ export interface Database {
           payer_institution?: string | null;
           hired_at?: string;
           notes?: string | null;
+          client_id?: string | null;
+          job_id?: string | null;
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["hires"]["Insert"]>;
+        Relationships: [];
+      };
+      /** A client's people — the owner's sheet carries up to four per company. */
+      client_contacts: {
+        Row: {
+          id: string;
+          client_id: string;
+          name: string;
+          display_name: string | null;
+          email: string | null;
+          phone: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          client_id: string;
+          name: string;
+          display_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["client_contacts"]["Insert"]>;
         Relationships: [];
       };
       /** The team's task list — manual entries and system-trigger routed ones. */

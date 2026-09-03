@@ -1064,6 +1064,17 @@ export async function setJobStatus(jobId: string, open: boolean): Promise<void> 
   revalidatePath("/jobs");
 }
 
+/** Hide/show a job on the members' board without touching its status
+    (the owner, 3/9: "אפשרות נוחה להסתיר כל משרה"). */
+export async function setJobVisibility(jobId: string, visible: boolean): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase.from("jobs").update({ is_visible: visible }).eq("id", jobId);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin/crm");
+  revalidatePath("/jobs");
+}
+
 /** Bulk close/reopen/delete — the PM's checkbox actions on several jobs. */
 export async function bulkJobs(jobIds: string[], op: "close" | "open" | "delete"): Promise<void> {
   await requireRole("admin");

@@ -26,7 +26,6 @@ export async function addExternalHire(_prev: HireFormState, formData: FormData):
   const parsed = dateRaw ? new Date(dateRaw) : new Date();
   const hired_at = (Number.isNaN(parsed.getTime()) ? new Date() : parsed).toISOString();
   const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200) || null;
-  const company = String(formData.get("company") ?? "").trim().slice(0, 200) || null;
   const jobTypeRaw = String(formData.get("job_type") ?? "").trim();
   const job_type = JOB_TYPES.includes(jobTypeRaw) ? jobTypeRaw : null;
 
@@ -38,9 +37,17 @@ export async function addExternalHire(_prev: HireFormState, formData: FormData):
   }
 
   const supabase = await createClient();
+  // The company comes from the clients registry (the owner, 3/9) — the name
+  // is denormalized for display, the id is the link.
+  const client_id = String(formData.get("client_id") ?? "").trim() || null;
+  let company: string | null = null;
+  if (client_id) {
+    const { data: c } = await supabase.from("portal_clients").select("company_name").eq("id", client_id).maybeSingle();
+    company = c?.company_name ?? null;
+  }
   const { error } = await supabase
     .from("hires")
-    .insert({ full_name, hired_at, created_by: me.id, email, company, job_type, profile_id, source: "external" });
+    .insert({ full_name, hired_at, created_by: me.id, email, company, client_id, job_type, profile_id, source: "external" });
   if (error) return { error: "לא הצלחנו להוסיף כרגע. נסי שוב." };
 
   revalidate();
@@ -108,4 +115,51 @@ export async function setHireInstitution(id: string, name: string): Promise<void
     .update({ payer_institution: name.trim().slice(0, 200) || null, updated_at: new Date().toISOString() })
     .eq("id", id);
   revalidate();
+}
+
+/** Full row edit (the owner, 3/9: "אין עריכה על כל שורה"). */
+export async function updateHireDetails(
+  id: string,
+  details: { full_name: string; email: string; client_id: string; job_type: string; hired_at: string }
+): Promise<{ error?: string }> {
+  await requireRole("admin");
+  const full_name = details.full_name.trim().slice(0, 120);
+  if (!full_name) return { error: "השם לא יכול להישאר ריק." };
+  const email = details.email.trim().toLowerCase().slice(0, 200) || null;
+  const client_id = details.client_id.trim() || null;
+  const job_type = JOB_TYPES.includes(details.job_type) ? details.job_type : null;
+  const parsed = details.hired_at ? new Date(details.hired_at) : null;
+  const hired_at = parsed && !Number.isNaN(parsed.getTime()) ? parsed.toISOString() : undefined;
+
+  const supabase = await createClient();
+  const { data: current } = await supabase.from("hires").select("email, profile_id").eq("id", id).maybeSingle();
+
+  // A new email may belong to a member — re-link on the spot.
+  let profile_id = current?.profile_id ?? null;
+  if (email && email !== current?.email) {
+    const { data: uid } = await createAdminClient().rpc("auth_user_id_by_email", { p_email: email });
+    profile_id = (uid as string | null) ?? profile_id;
+  }
+
+  let company: string | null = null;
+  if (client_id) {
+    const { data: c } = await supabase.from("portal_clients").select("company_name").eq("id", client_id).maybeSingle();
+    company = c?.company_name ?? null;
+  }
+
+  await supabase
+    .from("hires")
+    .update({
+      full_name,
+      email,
+      company,
+      client_id,
+      job_type,
+      profile_id,
+      ...(hired_at ? { hired_at } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  revalidate();
+  return {};
 }
