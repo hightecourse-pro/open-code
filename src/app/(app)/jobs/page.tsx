@@ -73,6 +73,9 @@ export default async function JobsPage({
   const jobsQuery = supabase
     .from("jobs")
     .select(JOB_CARD_COLUMNS)
+    // RLS lets an admin see hidden jobs — but on the member board that only
+    // confuses (the owner, 3/9: "למה משרה מוסתרת כתובה אצלי בלוח").
+    .eq("is_visible", true)
     .eq("source", activeTab)
     .eq("status", "open")
     .limit(150);

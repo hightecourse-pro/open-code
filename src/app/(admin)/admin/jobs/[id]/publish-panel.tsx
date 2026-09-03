@@ -536,10 +536,16 @@ export function PublishPanel({
       <div className="flex items-center gap-3 flex-wrap pt-1 border-t border-ink-100">
         <Button onClick={onPublish} disabled={publishing || selectedCount === 0}>
           <Megaphone size={15} />
-          {publishing ? "מפרסם ושולח מיילים…" : `פרסום המשרה ל־${selectedCount} חברות`}
+          {publishing
+            ? "מפרסם ושולח מיילים…"
+            : openAll
+              ? `פרסום לכל הקהילה · מייל ל־${selectedCount} חברות`
+              : `פרסום המשרה ל־${selectedCount} חברות`}
         </Button>
         <span className="text-[12px] text-ink-500">
-          הפרסום פותח את המשרה לקהל שנבחר ושולח לכל אחת מייל אישי.
+          {openAll
+            ? "המשרה תופיע בלוח לכל הקהילה — כולל מי שתצטרף בעתיד; המייל נשלח רק לקהל שנבחר."
+            : "הפרסום פותח את המשרה לקהל שנבחר ושולח לכל אחת מייל אישי."}
         </span>
       </div>
     </div>
