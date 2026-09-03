@@ -13,6 +13,8 @@ import { ConfirmActionButton } from "@/components/patterns/confirm-action-button
 import { demoteMentorToMember, sendPersonalEmail, setMemberHidden, setMemberJunk } from "@/app/(admin)/admin/actions";
 import { SaveButton } from "@/components/patterns/save-button";
 import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
+import { MemberSubscriptionPanel } from "@/components/patterns/member-subscription-panel";
+import { kevaIdsFor } from "@/lib/payments/subscription";
 import {
   EmploymentMentorAssign,
   MemberEmploymentForm,
@@ -602,6 +604,28 @@ export default async function AdminMemberProfilePage({
           💳 רישום תשלום ידני
         </h3>
         <ManualPaymentForm profileId={profile.id} />
+      </div>
+
+      {/* Subscription + Nedarim standing order (the owner, 3/9) */}
+      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
+        <h3 className="font-display text-base font-bold flex items-center gap-1.5">
+          🧾 מנוי והוראת קבע
+        </h3>
+        <MemberSubscriptionPanel
+          profileId={profile.id}
+          memberTier={profile.member_tier ?? null}
+          subStatus={await (async () => {
+            const { data: sub } = await createAdminClient()
+              .from("subscriptions")
+              .select("status")
+              .eq("profile_id", profile.id)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            return sub?.status ?? null;
+          })()}
+          kevaIds={await kevaIdsFor(profile.id)}
+        />
       </div>
 
       {/* Employment — admin-editable, incl. retroactive hired-via-us marking */}

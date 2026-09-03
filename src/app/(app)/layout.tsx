@@ -50,12 +50,15 @@ const recentlyHired = unstable_cache(
     const { data: hires } = await admin
       .from("hires")
       .select("full_name, profile_id")
+      .eq("show_in_banner", true)
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false });
     return (hires ?? []).map((h) => ({ full_name: h.full_name, profileId: h.profile_id ?? null }));
   },
   ["recently-hired"],
-  { revalidate: 60 }
+  // The tag lets the hires screen bust this shared cache the moment a name
+  // is pulled from the banner — no stale minute.
+  { revalidate: 60, tags: ["recently-hired"] }
 );
 
 /**

@@ -8,6 +8,7 @@ import {
   addExternalHire,
   deleteHire,
   setHireAmount,
+  setHireBanner,
   setHireInstitution,
   setHirePayer,
   setHireStatus,
@@ -30,6 +31,7 @@ export interface HireRow {
   hired_at: string;
   created_at: string;
   client_id: string | null;
+  show_in_banner: boolean;
   /** Live community standing, resolved server-side on entry (the owner, 3/9). */
   membership?: string;
 }
@@ -305,6 +307,17 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
           {new Date(h.hired_at).toLocaleDateString("he-IL")}
         </span>
         <span className="ms-auto flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => start(() => void setHireBanner(h.id, !h.show_in_banner))}
+            title={h.show_in_banner ? "הסרה מהבאנר החגיגי" : "החזרה לבאנר החגיגי"}
+            className={cn(
+              "text-[11.5px] font-semibold hover:underline",
+              h.show_in_banner ? "text-ink-400" : "text-brand-pink-deep"
+            )}
+          >
+            {h.show_in_banner ? "🎉 בבאנר · הסרה" : "🚫 הוסר מהבאנר · החזרה"}
+          </button>
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}

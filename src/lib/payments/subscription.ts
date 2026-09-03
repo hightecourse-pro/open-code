@@ -160,3 +160,26 @@ export async function deactivateSubscription(profileId: string) {
     console.error("[drive] deactivation queue failed:", e);
   }
 }
+
+/**
+ * Every Nedarim keva id we ever recorded for her — raw.KevaId from live
+ * webhooks plus the digits of "keva-X"/"nedarim-keva-X" provider ids from the
+ * imported list. Newest payment first, so the first id is the live order.
+ */
+export async function kevaIdsFor(profileId: string): Promise<string[]> {
+  const admin = createAdminClient();
+  const { data: pays } = await admin
+    .from("payments")
+    .select("provider_payment_id, raw")
+    .eq("profile_id", profileId)
+    .order("paid_at", { ascending: false })
+    .limit(50);
+  const seen: string[] = [];
+  for (const pay of pays ?? []) {
+    const k = (pay.raw as Record<string, unknown> | null)?.KevaId;
+    if (k && !seen.includes(String(k))) seen.push(String(k));
+    const m = /keva-(\d+)/.exec(pay.provider_payment_id ?? "");
+    if (m && !seen.includes(m[1])) seen.push(m[1]);
+  }
+  return seen;
+}
