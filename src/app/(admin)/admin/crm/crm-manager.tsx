@@ -74,6 +74,7 @@ const PIPELINE: Record<JobPipelineStatus, { label: string; variant: BadgeVariant
   candidates_sent: { label: "נשלחו מועמדות", variant: "purple" },
   interviews: { label: "ראיונות", variant: "warm" },
   hired: { label: "גויס", variant: "mint" },
+  hired_direct: { label: "גויס ללא פרסום", variant: "mint" },
   closed_no_hire: { label: "נסגר ללא גיוס", variant: "pink" },
 };
 

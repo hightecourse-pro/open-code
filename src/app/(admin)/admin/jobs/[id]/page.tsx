@@ -51,6 +51,7 @@ const PIPELINE: Record<
   candidates_sent: { label: "נשלחו מועמדות", variant: "indigo" },
   interviews: { label: "ראיונות", variant: "warm" },
   hired: { label: "גויס", variant: "grad" },
+  hired_direct: { label: "גויס ללא פרסום", variant: "mint" },
   closed_no_hire: { label: "נסגר ללא גיוס", variant: "pink" },
 };
 
@@ -135,7 +136,7 @@ export default async function AdminJobPage({
       admin
         .from("portal_clients")
         .select("id, company_name")
-        .eq("is_active", true)
+        
         .order("company_name", { ascending: true }),
       // The publish panel's criteria palette — only "ours" jobs render it.
       job.source === "ours" ? buildAudienceCatalogue() : Promise.resolve([]),
@@ -445,7 +446,7 @@ export default async function AdminJobPage({
           the admin's call; only "interviews" moves automatically. */}
       {job.source === "ours" && (
         <div className="mt-4 pt-3 border-t border-ink-100 flex items-center gap-2 flex-wrap">
-          {job.pipeline_status === "hired" || job.pipeline_status === "closed_no_hire" ? (
+          {job.pipeline_status === "hired" || job.pipeline_status === "hired_direct" || job.pipeline_status === "closed_no_hire" ? (
             <>
               <Badge variant={job.pipeline_status === "hired" ? "grad" : "pink"}>
                 {job.pipeline_status === "hired" ? "המשרה גויסה 🎉" : "נסגרה ללא גיוס"}

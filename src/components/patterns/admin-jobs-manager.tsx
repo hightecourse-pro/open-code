@@ -26,7 +26,7 @@ const DATE_HE = new Intl.DateTimeFormat("he-IL", {
 /** The lifecycle stage a job files under (the PM's grouping). */
 type Stage = "draft" | "active" | "process" | "done";
 function stageOf(j: AdminJob): Stage {
-  if (j.pipeline_status === "hired" || j.pipeline_status === "closed_no_hire") return "done";
+  if (j.pipeline_status === "hired" || j.pipeline_status === "hired_direct" || j.pipeline_status === "closed_no_hire") return "done";
   if (j.status === "closed" && j.pipeline_status !== "draft") return "done";
   if (j.pipeline_status === "draft") return "draft";
   if (j.pipeline_status === "candidates_sent" || j.pipeline_status === "interviews") return "process";

@@ -72,6 +72,7 @@ const PIPELINE: Record<
   candidates_sent: { label: "נשלחו מועמדות", variant: "indigo" },
   interviews: { label: "ראיונות", variant: "warm" },
   hired: { label: "גויס", variant: "grad" },
+  hired_direct: { label: "גויס ללא פרסום", variant: "mint" },
   closed_no_hire: { label: "נסגר ללא גיוס", variant: "gray" },
 };
 
