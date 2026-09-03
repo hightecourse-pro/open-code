@@ -1419,6 +1419,10 @@ export async function publishJob(
     .update({
       pipeline_status: "published",
       status: "open",
+      // Publishing IS the request to be seen — a quick-created job is born
+      // hidden and stayed hidden through publish (וורדפרס, 3/9: members
+      // "couldn't see" a published job).
+      is_visible: true,
       open_to_all: openToAll,
       published_at: job.published_at ?? new Date().toISOString(),
     })

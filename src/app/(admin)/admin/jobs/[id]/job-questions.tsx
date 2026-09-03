@@ -198,15 +198,18 @@ export function JobQuestionsManager({
   jobId: string;
   questions: JobQuestionItem[];
 }) {
+  // seq remounts the add-form fields after every successful add, so a new
+  // question never inherits the previous one's options (the owner, 3/9).
+  const [seq, setSeq] = useState(0);
   const [state, action, pending] = useActionState<FormState, FormData>(
-    addJobQuestion.bind(null, jobId),
+    async (prev, formData) => {
+      const r = await addJobQuestion(jobId, prev, formData);
+      if (r.ok) setSeq((n) => n + 1);
+      return r;
+    },
     {}
   );
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newType, setNewType] = useState<QuestionAnswerType>("paragraph");
-  // Choice options are composed one by one, Google-Forms style.
-  const [draftOptions, setDraftOptions] = useState<string[]>([]);
-  const isChoice = newType === "select" || newType === "multiselect";
 
   return (
     <div className="flex flex-col gap-3">
@@ -296,34 +299,47 @@ export function JobQuestionsManager({
 
       <form action={action} className="flex flex-col gap-2">
         {state.error && <Alert variant="danger">{state.error}</Alert>}
-        <div className="flex items-center gap-2 flex-wrap">
-          <Input
-            name="question"
-            placeholder="למשל: ספרי על פרויקט שבנית בטכנולוגיה של המשרה…"
-            required
-            className="flex-1 min-w-52"
-          />
-          <Select
-            name="answer_type"
-            value={newType}
-            onChange={(e) => setNewType(e.target.value as QuestionAnswerType)}
-            className="w-auto shrink-0"
-            aria-label="סוג התשובה"
-          >
-            {ANSWER_TYPE_OPTIONS.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
-            ))}
-          </Select>
-          {/* Checkbox present in the form data = required; unchecked = רשות. */}
-          <Checkbox name="required" label="שאלת חובה" defaultChecked className="shrink-0" />
-          <Button type="submit" size="sm" disabled={pending} className="shrink-0">
-            {pending ? "מוסיף…" : "הוספת שאלה"}
-          </Button>
-        </div>
-        {isChoice && <OptionsEditor options={draftOptions} setOptions={setDraftOptions} />}
+        <AddQuestionFields key={seq} pending={pending} />
       </form>
     </div>
+  );
+}
+
+/** The add-form fields — remounted (fresh state) after every successful add. */
+function AddQuestionFields({ pending }: { pending: boolean }) {
+  const [newType, setNewType] = useState<QuestionAnswerType>("paragraph");
+  // Choice options are composed one by one, Google-Forms style.
+  const [draftOptions, setDraftOptions] = useState<string[]>([]);
+  const isChoice = newType === "select" || newType === "multiselect";
+  return (
+    <>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Input
+          name="question"
+          placeholder="למשל: ספרי על פרויקט שבנית בטכנולוגיה של המשרה…"
+          required
+          className="flex-1 min-w-52"
+        />
+        <Select
+          name="answer_type"
+          value={newType}
+          onChange={(e) => setNewType(e.target.value as QuestionAnswerType)}
+          className="w-auto shrink-0"
+          aria-label="סוג התשובה"
+        >
+          {ANSWER_TYPE_OPTIONS.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </Select>
+        {/* Checkbox present in the form data = required; unchecked = רשות. */}
+        <Checkbox name="required" label="שאלת חובה" defaultChecked className="shrink-0" />
+        <Button type="submit" size="sm" disabled={pending} className="shrink-0">
+          {pending ? "מוסיף…" : "הוספת שאלה"}
+        </Button>
+      </div>
+      {isChoice && <OptionsEditor options={draftOptions} setOptions={setDraftOptions} />}
+    </>
   );
 }
