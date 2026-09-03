@@ -38,7 +38,7 @@ export default async function AdminHiresPage() {
     supabase
       .from("hires")
       .select(
-        "id, profile_id, full_name, email, company, job_type, source, status, amount, payer, payer_institution, hired_at, created_at, client_id"
+        "id, profile_id, full_name, email, company, job_type, source, status, amount, payer, payer_institution, hired_at, created_at, client_id, show_in_banner"
       )
       .order("hired_at", { ascending: false })
       .limit(1000),

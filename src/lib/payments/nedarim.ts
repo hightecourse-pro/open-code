@@ -123,3 +123,45 @@ export function parseNedarimCallback(params: Record<string, string>): ParsedCall
     amountAgorot: Number.isFinite(amount) ? amount : null,
   };
 }
+
+// ---------------------------------------------------------------- keva API
+// Nedarim's keva management (their support, 3/9): DeleteKeva cancels a
+// standing order for good, DisableKeva freezes it, EnableKevaNew reactivates
+// a frozen one. All take MosadId + ApiPassword + KevaId.
+const NEDARIM_MANAGE_URL = "https://matara.pro/nedarimplus/Reports/Manage3.aspx";
+
+export type KevaAction = "DisableKeva" | "EnableKevaNew" | "DeleteKeva";
+
+export async function nedarimKevaAction(
+  action: KevaAction,
+  kevaId: string
+): Promise<{ ok: boolean; detail: string }> {
+  // Staging shares the REAL Nedarim account — a test click must never touch a
+  // real standing order. Same guard philosophy as the email allowlist.
+  if (process.env.VERCEL_ENV !== "production") {
+    return { ok: false, detail: "מגן סטייג'ינג: פעולות על הוראות קבע רצות רק בפרודקשן." };
+  }
+  const cfg = getNedarimConfig();
+  if (!cfg) return { ok: false, detail: "Nedarim אינו מוגדר בסביבה הזו." };
+
+  try {
+    const res = await fetch(NEDARIM_MANAGE_URL, {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        Action: action,
+        MosadId: cfg.mosadId,
+        ApiPassword: cfg.apiValid,
+        KevaId: kevaId,
+      }).toString(),
+      signal: AbortSignal.timeout(30_000),
+    });
+    const text = (await res.text()).slice(0, 500);
+    // Their responses are terse text/JSON; anything that smells like an error
+    // is surfaced verbatim so the admin sees Nedarim's own words.
+    const looksBad = !res.ok || /error|שגיא|fail|לא נמצא|invalid/i.test(text);
+    return { ok: !looksBad, detail: text || `HTTP ${res.status}` };
+  } catch (e) {
+    return { ok: false, detail: `הקריאה לנדרים נכשלה: ${e instanceof Error ? e.message : "שגיאה"}` };
+  }
+}

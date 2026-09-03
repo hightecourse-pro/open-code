@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
@@ -52,6 +52,7 @@ const STATUSES = ["started", "invoice_sent", "paid"];
 function revalidate() {
   revalidatePath("/admin/hires");
   revalidatePath("/forum"); // the celebration banner
+  revalidateTag("recently-hired", "max"); // the banner's shared 60s cache
 }
 
 /** Off-community placement — kept exactly like the old banner-only flow. */
@@ -207,4 +208,15 @@ export async function updateHireDetails(
     .eq("id", id);
   revalidate();
   return {};
+}
+
+/** Keep the record, leave the party (the owner, 3/9: "הסרה מהבאנר"). */
+export async function setHireBanner(id: string, show: boolean): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("hires")
+    .update({ show_in_banner: show, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  revalidate();
 }

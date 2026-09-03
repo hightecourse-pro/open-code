@@ -22,6 +22,7 @@ import {
 } from "@/lib/email/templates";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
 import { queueRevokeAll } from "@/lib/drive-shares";
+import { raiseAlert } from "@/lib/alerts";
 import { activateSubscription } from "@/lib/payments/subscription";
 import { loadAudiencePools } from "@/lib/admin/audience";
 import { loadClientJob } from "@/lib/portal/jobs";
@@ -2540,7 +2541,7 @@ export async function replyToMemberRequest(
   const admin = createAdminClient();
   const { data: req } = await admin
     .from("member_requests")
-    .select("id, profile_id, subject, status")
+    .select("id, profile_id, subject, body, status")
     .eq("id", requestId)
     .maybeSingle();
   if (!req || req.status !== "open") return;
@@ -2564,10 +2565,15 @@ export async function replyToMemberRequest(
       convId = created?.id;
     }
     if (convId) {
+      // The FULL question rides with the answer (the owner, 3/9: "אני כבר
+      // לא זוכרת מה היתה השאלה") — days may pass between asking and answering.
+      const questionQuote = [`📝 פנית אלינו: "${req.subject}"`, req.body ? String(req.body) : null]
+        .filter(Boolean)
+        .join("\n");
       await admin.from("messages").insert({
         conversation_id: convId,
         sender_id: me.id,
-        body: `לגבי הבקשה שלך "${req.subject}": ${reply}`,
+        body: `${questionQuote}\n\n💬 התשובה שלנו:\n${reply}`,
         // This flow mails teamRepliedEmail itself — the grace cron skips it.
         email_notified_at: new Date().toISOString(),
       });
@@ -2642,4 +2648,69 @@ export async function saveInboxSettings(formData: FormData): Promise<void> {
     .from("app_settings")
     .upsert({ key: "canned_replies", value: { items: canned } as never }, { onConflict: "key" });
   revalidatePath("/admin/requests");
+}
+
+// -------------------------------------------------- subscription + keva ops
+
+/**
+ * Cancel a member's subscription from OUR side (the owner, 3/9: "לבטל מנוי
+ * מהמערכת, כשתשלום נכשל למשל"): subscription rows → canceled, tier → free,
+ * Drive access queued for revoke. Nedarim is NOT touched here — the standing
+ * order has its own buttons.
+ */
+export async function adminCancelSubscription(profileId: string): Promise<{ error?: string }> {
+  const me = await requireRole("admin");
+  const admin = createAdminClient();
+
+  const { error: subErr } = await admin
+    .from("subscriptions")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("profile_id", profileId)
+    .in("status", ["active", "trialing", "past_due"]);
+  if (subErr) return { error: "ביטול המנוי נכשל — נסי שוב." };
+
+  await admin.from("profiles").update({ member_tier: "free" }).eq("id", profileId);
+  try {
+    const { queueRevokeAll } = await import("@/lib/drive-shares");
+    await queueRevokeAll(profileId);
+  } catch (e) {
+    console.error("[admin cancel] drive revoke queue failed:", e);
+  }
+
+  const { data: who } = await admin.from("profiles").select("full_name").eq("id", profileId).maybeSingle();
+  await raiseAlert({
+    kind: "subscription_admin_canceled",
+    severity: "warning",
+    title: `המנוי של ${who?.full_name ?? profileId} בוטל ידנית`,
+    body: `בוטל על ידי חברת צוות מתוך המערכת. אם יש הוראת קבע פעילה בנדרים — יש לטפל בה בנפרד (כפתורי ההו"ק בעמוד החברה).`,
+    dedupeKey: `admin-cancel-${profileId}`,
+  });
+
+  console.log("[admin cancel] subscription canceled", { profileId, by: me.id });
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
+  return {};
+}
+
+/**
+ * Nedarim standing-order controls (their support, 3/9): freeze, reactivate,
+ * or permanently delete a keva by id. Production-only inside the lib; the raw
+ * Nedarim reply is surfaced to the admin verbatim.
+ */
+export async function adminKevaAction(
+  kevaId: string,
+  action: "DisableKeva" | "EnableKevaNew" | "DeleteKeva"
+): Promise<{ ok: boolean; detail: string }> {
+  const me = await requireRole("admin");
+  const { nedarimKevaAction } = await import("@/lib/payments/nedarim");
+  const result = await nedarimKevaAction(action, kevaId);
+  console.log("[keva]", action, kevaId, "by", me.id, "→", result.ok, result.detail.slice(0, 120));
+  await raiseAlert({
+    kind: "keva_action",
+    severity: "warning",
+    title: `פעולת הו"ק בנדרים: ${action} על ${kevaId} — ${result.ok ? "הצליחה" : "נכשלה"}`,
+    body: result.detail.slice(0, 300),
+    dedupeKey: `keva-${action}-${kevaId}-${result.ok}`,
+  });
+  return result;
 }
