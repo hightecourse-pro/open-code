@@ -31,6 +31,8 @@ import type { AudienceCatalogueField } from "@/lib/admin/audience";
 export interface ReviewQuestion {
   id: string;
   question: string;
+  /** Choice options — the fuel for the filter-by-answer control (3/9). */
+  options?: string[];
 }
 
 export interface ReviewProfileSummary {
@@ -271,6 +273,10 @@ export function ReviewCenter({
 }) {
   const [query, setQuery] = useState("");
   const [markFilter, setMarkFilter] = useState<"all" | "none" | AdminMark>("all");
+  // Filter by a specific answer to a per-job question (the owner, 3/9:
+  // "לסנן לפי תשובה מסוימת ולסמן לא מתאימה גורף") — then select-all + bulk.
+  const [answerQ, setAnswerQ] = useState<string>("");
+  const [answerV, setAnswerV] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   // מנויות / VIP one-click filters (Shira: clear counts + easy filtering).
   const [tierFilter, setTierFilter] = useState<"all" | "subscribers" | "vip">("all");
@@ -386,6 +392,11 @@ export function ReviewCenter({
       if (markFilter === "none" && m !== null) return false;
       if (markFilter !== "all" && markFilter !== "none" && m !== markFilter) return false;
       if (statusFilter !== "all" && statusOf(a) !== statusFilter) return false;
+      if (answerQ && answerV) {
+        const ans = a.answers?.[answerQ];
+        const match = Array.isArray(ans) ? ans.includes(answerV) : String(ans ?? "") === answerV;
+        if (!match) return false;
+      }
       if (tierFilter === "subscribers" && !a.isSubscriber) return false;
       if (tierFilter === "vip" && !a.isVip) return false;
       if (wanted.length > 0) {
@@ -411,6 +422,8 @@ export function ReviewCenter({
     notFitVisible,
     markOf,
     statusOf,
+    answerQ,
+    answerV,
   ]);
 
   // The effective selection is only ever the visible rows — a filter change
@@ -855,6 +868,55 @@ export function ReviewCenter({
             </option>
           ))}
         </Select>
+        {questions.some((q) => (q.options ?? []).length > 0) && (
+          <>
+            <Select
+              value={answerQ}
+              onChange={(e) => {
+                setAnswerQ(e.target.value);
+                setAnswerV("");
+              }}
+              className="w-auto max-w-[220px] py-2"
+              aria-label="סינון לפי שאלה"
+            >
+              <option value="">סינון לפי תשובה…</option>
+              {questions
+                .filter((q) => (q.options ?? []).length > 0)
+                .map((q) => (
+                  <option key={q.id} value={q.id}>
+                    {q.question.slice(0, 40)}
+                  </option>
+                ))}
+            </Select>
+            {answerQ && (
+              <Select
+                value={answerV}
+                onChange={(e) => setAnswerV(e.target.value)}
+                className="w-auto max-w-[180px] py-2"
+                aria-label="הערך לסינון"
+              >
+                <option value="">— בחרי תשובה —</option>
+                {(questions.find((q) => q.id === answerQ)?.options ?? []).map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </Select>
+            )}
+            {answerQ && answerV && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAnswerQ("");
+                  setAnswerV("");
+                }}
+                className="text-[12px] font-semibold text-brand-purple hover:underline"
+              >
+                ניקוי הסינון ✕
+              </button>
+            )}
+          </>
+        )}
         <Checkbox
           checked={showNotFit}
           onChange={(e) => setShowNotFit(e.target.checked)}
