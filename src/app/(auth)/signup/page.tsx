@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { EmailInput } from "../email-input";
 import Link from "next/link";
 import { signUp, type AuthState } from "../actions";
 import { Alert, Button, Field, Input, PasswordInput } from "@/components/ui";
@@ -24,7 +25,7 @@ export default function SignupPage() {
             <Input id="full_name" name="full_name" required autoComplete="name" />
           </Field>
           <Field label="אימייל" htmlFor="email">
-            <Input id="email" name="email" type="email" required dir="ltr" autoComplete="email" />
+            <EmailInput id="email" name="email"  required dir="ltr" autoComplete="email" />
           </Field>
           <Field label="סיסמה" htmlFor="password">
             <PasswordInput id="password" name="password" required autoComplete="new-password" minLength={8} />

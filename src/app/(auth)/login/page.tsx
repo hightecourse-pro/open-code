@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useActionState } from "react";
+import { EmailInput } from "../email-input";
 import Link from "next/link";
 import { signIn, type AuthState } from "../actions";
 import { Alert, Button, Field, Input, PasswordInput } from "@/components/ui";
@@ -40,7 +41,7 @@ export default function LoginPage({
 
       <form action={action} className="flex flex-col gap-4">
         <Field label="אימייל" htmlFor="email">
-          <Input id="email" name="email" type="email" required dir="ltr" autoComplete="email" />
+          <EmailInput id="email" name="email"  required dir="ltr" autoComplete="email" />
         </Field>
         <Field label="סיסמה" htmlFor="password">
           <PasswordInput id="password" name="password" required autoComplete="current-password" />

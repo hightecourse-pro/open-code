@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { EmailInput } from "../email-input";
 import Link from "next/link";
 import { requestPasswordReset, type AuthState } from "../actions";
 import { Alert, Button, Field, Input } from "@/components/ui";
@@ -21,7 +22,7 @@ export default function ForgotPasswordPage() {
       {!state.message && (
         <form action={action} className="flex flex-col gap-4">
           <Field label="אימייל" htmlFor="email">
-            <Input id="email" name="email" type="email" required dir="ltr" autoComplete="email" />
+            <EmailInput id="email" name="email"  required dir="ltr" autoComplete="email" />
           </Field>
           <Button type="submit" disabled={pending} className="w-full">
             {pending ? "שולח…" : "שליחת קישור לאיפוס"}
