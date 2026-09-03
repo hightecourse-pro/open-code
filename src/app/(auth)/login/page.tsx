@@ -1,9 +1,10 @@
 "use client";
 
 import { use, useActionState } from "react";
+import { EmailInput } from "../email-input";
 import Link from "next/link";
 import { signIn, type AuthState } from "../actions";
-import { Alert, Button, Field, Input, PasswordInput } from "@/components/ui";
+import { Alert, Button, Field, PasswordInput } from "@/components/ui";
 
 // A spent link means something different depending on which mail it came from,
 // and "פג תוקף" on a confirmation she already completed reads like a bug.
@@ -40,7 +41,7 @@ export default function LoginPage({
 
       <form action={action} className="flex flex-col gap-4">
         <Field label="אימייל" htmlFor="email">
-          <Input id="email" name="email" type="email" required dir="ltr" autoComplete="email" />
+          <EmailInput id="email" name="email"  required dir="ltr" autoComplete="email" />
         </Field>
         <Field label="סיסמה" htmlFor="password">
           <PasswordInput id="password" name="password" required autoComplete="current-password" />
