@@ -12,7 +12,10 @@ export function AdminShell({
   requestsBadge?: number;
 }) {
   return (
-    <div className="min-h-screen bg-ink-50 grid grid-cols-1 lg:grid-cols-[240px_1fr]">
+    // translate="no": Chrome auto-translate rewraps text nodes and React then
+    // crashes on reconciliation (insertBefore NotFoundError — the owner hit it
+    // clicking an internal tag, 3/9). The admin screens are Hebrew-only tools.
+    <div translate="no" className="notranslate min-h-screen bg-ink-50 grid grid-cols-1 lg:grid-cols-[240px_1fr]">
       <div className="hidden lg:block">
         <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} />
       </div>

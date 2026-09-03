@@ -22,7 +22,7 @@ import {
   updateApplicationPipeline,
 } from "@/app/(admin)/admin/actions";
 import type { AdminMark, PipelineStatus } from "@/app/(admin)/admin/actions";
-import { toggleMemberInternalTag } from "./finder-actions";
+import { saveMemberInternalNote, toggleMemberInternalTag } from "./finder-actions";
 import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
 
@@ -1493,6 +1493,9 @@ export function ReviewCenter({
         {/* detail pane */}
         {selected ? (
           <div className="rounded-[14px] border border-ink-200 bg-ink-0 p-4 flex flex-col gap-4">
+            {/* Internal note, front and center while flipping through
+                candidates (the owner, 3/9) — admin-only, rides on HER. */}
+            <MemberNoteBox key={selected.applicantId} app={selected} />
             {/* header + prev/next */}
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
@@ -1569,11 +1572,7 @@ export function ReviewCenter({
             </div>
 
             {/* The team's general note about her (from her member page). */}
-            {selected.crmNote && (
-              <p className="text-[13px] text-ink-700 bg-tint-warm border border-[#F0DCA8] rounded-md px-3 py-2 whitespace-pre-wrap">
-                <b className="text-[#8C5E0E]">הערה פנימית עליה (ממסך החברות):</b> {selected.crmNote}
-              </p>
-            )}
+{/* the note now lives at the TOP of the pane, editable */}
 
             {/* client feedback (from the portal) */}
             {selected.clientFeedback &&
@@ -1690,8 +1689,8 @@ export function ReviewCenter({
                           : "border-ink-200 bg-ink-0 text-ink-500 hover:text-ink-900 hover:border-ink-400"
                       )}
                     >
-                      {active ? "✓ " : ""}
-                      {tag}
+                      {active && <span aria-hidden>✓ </span>}
+                      <span>{tag}</span>
                     </button>
                   );
                 })}
@@ -1940,4 +1939,46 @@ function exportCsv(
   a.download = `applicants-${jobTitle.replace(/[^\w\u0590-\u05FF-]+/g, "_")}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+/** The cross-job internal note — visible and editable at the top of the pane. */
+function MemberNoteBox({ app }: { app: ReviewApplication }) {
+  const [note, setNote] = useState(app.crmNote ?? "");
+  const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [saving, startSave] = useTransition();
+  const dirty = note !== (app.crmNote ?? "");
+  return (
+    <div className="rounded-[10px] border border-crown-gold-soft bg-tint-warm/40 p-3">
+      <div className="flex items-center gap-2 mb-1">
+        <span className="text-[12px] font-bold text-[#8C5E0E]">🔒 הערה פנימית עליה (לכל המשרות, רק במערכת הניהול)</span>
+        {savedAt && !dirty && <span className="text-[11px] font-bold text-success">נשמר ✓</span>}
+      </div>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={note || dirty ? 2 : 1}
+        maxLength={2000}
+        placeholder="למשל: ראיינו אותה בעבר, חזקה בצד לקוח, לחזור אליה על משרות תוכן…"
+        className="w-full rounded-md border border-ink-200 bg-white px-2.5 py-1.5 text-[13px] focus:outline-none focus:border-brand-purple resize-y"
+      />
+      {dirty && (
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() =>
+            startSave(async () => {
+              const res = await saveMemberInternalNote(app.applicantId, note);
+              if (res.ok) {
+                app.crmNote = note;
+                setSavedAt(Date.now());
+              }
+            })
+          }
+          className="mt-1 text-[12px] font-bold text-brand-purple hover:underline disabled:opacity-50"
+        >
+          {saving ? "שומרת…" : "שמירת ההערה"}
+        </button>
+      )}
+    </div>
+  );
 }
