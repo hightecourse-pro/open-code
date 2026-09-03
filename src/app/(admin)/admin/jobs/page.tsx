@@ -31,7 +31,7 @@ export default async function AdminJobsPage({
   const { data: clientRows } = await createAdminClient()
     .from("portal_clients")
     .select("id, company_name")
-    .eq("is_active", true)
+    
     .order("company_name", { ascending: true });
   const clients: PortalClientOption[] = (clientRows ?? []).map((c) => ({
     id: c.id,

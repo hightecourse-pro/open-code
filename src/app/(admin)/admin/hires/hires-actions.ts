@@ -6,6 +6,44 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
 import { studyInfoOf } from "@/lib/admin/candidate-match";
 
+
+/**
+ * Every hire linked to a client hangs under a job (the owner, 3/9) — when no
+ * job was chosen, she lands on the client's generic one, born hidden.
+ */
+async function genericJobFor(clientId: string): Promise<string | null> {
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("jobs")
+    .select("id")
+    .eq("client_id", clientId)
+    .eq("pipeline_status", "hired_direct")
+    .limit(1)
+    .maybeSingle();
+  if (existing) return existing.id;
+  const { data: client } = await supabase
+    .from("portal_clients")
+    .select("company_name")
+    .eq("id", clientId)
+    .maybeSingle();
+  if (!client) return null;
+  const { data: job } = await supabase
+    .from("jobs")
+    .insert({
+      title: `משרה כללית — ${client.company_name}`,
+      company: client.company_name,
+      client_id: clientId,
+      source: "ours",
+      status: "closed",
+      pipeline_status: "hired_direct",
+      is_visible: false,
+      description: "משרה שנוצרה אוטומטית לרישום גיוסים — אפשר לערוך את הפרטים.",
+    })
+    .select("id")
+    .single();
+  return job?.id ?? null;
+}
+
 export type HireFormState = { error?: string; ok?: boolean };
 
 const JOB_TYPES = ["practicum_placement", "temp", "immediate"];
@@ -45,9 +83,10 @@ export async function addExternalHire(_prev: HireFormState, formData: FormData):
     const { data: c } = await supabase.from("portal_clients").select("company_name").eq("id", client_id).maybeSingle();
     company = c?.company_name ?? null;
   }
+  const job_id = client_id ? await genericJobFor(client_id) : null;
   const { error } = await supabase
     .from("hires")
-    .insert({ full_name, hired_at, created_by: me.id, email, company, client_id, job_type, profile_id, source: "external" });
+    .insert({ full_name, hired_at, created_by: me.id, email, company, client_id, job_id, job_type, profile_id, source: "external" });
   if (error) return { error: "לא הצלחנו להוסיף כרגע. נסי שוב." };
 
   revalidate();
@@ -147,6 +186,11 @@ export async function updateHireDetails(
     company = c?.company_name ?? null;
   }
 
+  const { data: cur } = await supabase.from("hires").select("job_id, client_id").eq("id", id).maybeSingle();
+  let job_id = cur?.job_id ?? null;
+  if (client_id && client_id !== cur?.client_id) job_id = await genericJobFor(client_id);
+  else if (!client_id) job_id = null;
+
   await supabase
     .from("hires")
     .update({
@@ -154,6 +198,7 @@ export async function updateHireDetails(
       email,
       company,
       client_id,
+      job_id,
       job_type,
       profile_id,
       ...(hired_at ? { hired_at } : {}),
