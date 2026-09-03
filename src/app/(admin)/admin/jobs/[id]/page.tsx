@@ -632,7 +632,7 @@ export default async function AdminJobPage({
         jobTitle={job.title}
         teamNote={job.team_note ?? null}
         applications={reviewApplications}
-        questions={questionItems.map((q) => ({ id: q.id, question: q.question }))}
+        questions={questionItems.map((q) => ({ id: q.id, question: q.question, options: q.options }))}
         criteriaCatalogue={applicantCatalogue}
         criteriaPools={applicantPools}
       />
