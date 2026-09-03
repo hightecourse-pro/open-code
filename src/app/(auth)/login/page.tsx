@@ -4,7 +4,7 @@ import { use, useActionState } from "react";
 import { EmailInput } from "../email-input";
 import Link from "next/link";
 import { signIn, type AuthState } from "../actions";
-import { Alert, Button, Field, Input, PasswordInput } from "@/components/ui";
+import { Alert, Button, Field, PasswordInput } from "@/components/ui";
 
 // A spent link means something different depending on which mail it came from,
 // and "פג תוקף" on a confirmation she already completed reads like a bug.

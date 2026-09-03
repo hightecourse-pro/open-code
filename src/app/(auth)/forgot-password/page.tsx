@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { EmailInput } from "../email-input";
 import Link from "next/link";
 import { requestPasswordReset, type AuthState } from "../actions";
-import { Alert, Button, Field, Input } from "@/components/ui";
+import { Alert, Button, Field } from "@/components/ui";
 
 export default function ForgotPasswordPage() {
   const [state, action, pending] = useActionState<AuthState, FormData>(requestPasswordReset, {});
