@@ -16,7 +16,7 @@ export default async function AdminCrmPage() {
     admin.from("portal_clients").select("*").order("created_at", { ascending: false }),
     admin
       .from("jobs")
-      .select("id, title, client_id, pipeline_status, created_at")
+      .select("id, title, client_id, pipeline_status, created_at, is_visible")
       .not("client_id", "is", null)
       .order("created_at", { ascending: false }),
     admin
@@ -37,7 +37,7 @@ export default async function AdminCrmPage() {
   for (const j of jobs ?? []) {
     if (!j.client_id) continue;
     const list = jobsOf.get(j.client_id) ?? [];
-    list.push({ id: j.id, title: j.title, pipeline_status: j.pipeline_status ?? "draft" });
+    list.push({ id: j.id, title: j.title, pipeline_status: j.pipeline_status ?? "draft", is_visible: j.is_visible !== false });
     jobsOf.set(j.client_id, list);
   }
   const contactsOf = new Map<string, CrmContact[]>();

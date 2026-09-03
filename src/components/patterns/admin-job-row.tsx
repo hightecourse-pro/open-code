@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Pencil, Lock, Unlock, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Pencil, Lock, Unlock, Trash2 } from "lucide-react";
 import { Badge, Checkbox } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { setJobStatus, deleteJob } from "@/app/(admin)/admin/actions";
+import { setJobStatus, setJobVisibility, deleteJob } from "@/app/(admin)/admin/actions";
 import { ConfirmActionButton } from "./confirm-action-button";
 import type {
   EmploymentType,
@@ -25,6 +25,7 @@ export interface AdminJob {
   external_url: string | null;
   description: string;
   description_html: string | null;
+  is_visible?: boolean;
   status: JobStatus;
   client_id: string | null;
   job_kind: JobKind;
@@ -144,6 +145,11 @@ export function AdminJobRow({
           <span className="shrink-0 rounded-full px-2 py-px text-[10.5px] font-semibold bg-ink-100 text-ink-500">
             {job.source === "ours" ? "שלנו" : "שוק"}
           </span>
+          {job.is_visible === false && (
+            <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-px text-[10.5px] font-bold bg-ink-900 text-white">
+              <EyeOff size={10} /> מוסתרת
+            </span>
+          )}
         </div>
         <div className="text-xs text-ink-500 truncate mt-0.5">
           {job.company} · {kindLabel}
@@ -204,6 +210,15 @@ export function AdminJobRow({
         >
           <Pencil size={15} />
         </Link>
+        <form action={setJobVisibility.bind(null, job.id, job.is_visible === false)}>
+          <button
+            type="submit"
+            className="text-ink-300 hover:text-brand-purple p-1.5"
+            title={job.is_visible === false ? "הצגה בלוח המשרות" : "הסתרה מלוח המשרות"}
+          >
+            {job.is_visible === false ? <EyeOff size={15} /> : <Eye size={15} />}
+          </button>
+        </form>
         <form action={setJobStatus.bind(null, job.id, job.status !== "open")}>
           <button
             type="submit"

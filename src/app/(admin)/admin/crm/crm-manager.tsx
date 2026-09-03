@@ -3,11 +3,12 @@
 import { useActionState, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Briefcase, Building2, ChevronDown, KeyRound, Search, Users, X, Zap } from "lucide-react";
+import { Briefcase, Building2, ChevronDown, Eye, EyeOff, KeyRound, Search, Users, X, Zap } from "lucide-react";
 import { Alert, Badge, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn, timeAgo } from "@/lib/utils";
 import { createCrmLead, updateCrmClient, type FormState } from "../actions";
 import { assignHireToJob, quickCreateJobForClient } from "./crm-actions";
+import { setJobVisibility } from "../actions";
 import type { BadgeProps } from "@/components/ui";
 import type { ClientCrmStatus, JobPipelineStatus } from "@/types/database";
 
@@ -15,6 +16,7 @@ export interface CrmJobRow {
   id: string;
   title: string;
   pipeline_status: JobPipelineStatus;
+  is_visible: boolean;
 }
 
 export interface CrmContact {
@@ -316,12 +318,20 @@ function ClientRow({ client }: { client: CrmClientRow }) {
                   const jobHires = client.hires.filter((h) => h.job_id === j.id);
                   return (
                     <div key={j.id} className="border-b border-ink-100 last:border-b-0 py-1">
-                      <Link href={`/admin/jobs/${j.id}`} className="flex items-center gap-3 py-1 group">
-                        <span className="flex-1 min-w-0 truncate text-sm text-ink-900 group-hover:text-brand-purple transition-colors">
-                          {j.title}
-                        </span>
-                        <Badge variant={p.variant}>{p.label}</Badge>
-                      </Link>
+                      <div className="flex items-center gap-2 py-1">
+                        <Link href={`/admin/jobs/${j.id}`} className="flex-1 min-w-0 flex items-center gap-2 group">
+                          <span className="min-w-0 truncate text-sm text-ink-900 group-hover:text-brand-purple transition-colors">
+                            {j.title}
+                          </span>
+                          {!j.is_visible && (
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-px text-[10px] font-bold bg-ink-900 text-white">
+                              <EyeOff size={9} /> מוסתרת
+                            </span>
+                          )}
+                          <Badge variant={p.variant}>{p.label}</Badge>
+                        </Link>
+                        <JobEyeButton jobId={j.id} visible={j.is_visible} />
+                      </div>
                       {jobHires.map((h) => (
                         <HireChipRow key={h.id} hire={h} jobs={client.jobs} />
                       ))}
@@ -372,6 +382,21 @@ function HireAssignRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) 
         </select>
       )}
     </div>
+  );
+}
+
+/** Show/hide on the members' board — one click on the row (the owner, 3/9). */
+function JobEyeButton({ jobId, visible }: { jobId: string; visible: boolean }) {
+  const [, start] = useTransition();
+  return (
+    <button
+      type="button"
+      onClick={() => start(() => void setJobVisibility(jobId, !visible))}
+      title={visible ? "הסתרה מלוח המשרות" : "הצגה בלוח המשרות"}
+      className="shrink-0 text-ink-300 hover:text-brand-purple p-1"
+    >
+      {visible ? <Eye size={14} /> : <EyeOff size={14} />}
+    </button>
   );
 }
 
