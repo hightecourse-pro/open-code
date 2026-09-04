@@ -57,6 +57,20 @@ export async function toggleMemberInternalTag(
   return { ok: true };
 }
 
+/** The cross-job internal note, editable right in the review pane (3/9). */
+export async function saveMemberInternalNote(
+  profileId: string,
+  note: string
+): Promise<{ ok: boolean; error?: string }> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("member_crm")
+    .upsert({ profile_id: profileId, internal_notes: note.trim().slice(0, 2000) || null }, { onConflict: "profile_id" });
+  if (error) return { ok: false, error: "השמירה נכשלה — נסי שוב." };
+  return { ok: true };
+}
+
 const AI_BATCH_LIMIT = 60;
 
 const AI_SCHEMA = {
