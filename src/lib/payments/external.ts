@@ -208,11 +208,14 @@ export async function reconcileSubscriberStatus(
   const admin = createAdminClient();
   const { data: p } = await admin
     .from("profiles")
-    .select("status, role")
+    .select("status, role, member_tier")
     .eq("id", profileId)
     .maybeSingle();
   if (!p || p.role !== "junior") return false;
-  if (p.status === "active") return true;
+  // Active alone is not subscriber-hood: a member whose subscription was
+  // canceled stays active on the FREE tier — and she is exactly who needs
+  // the checkout this reconcile used to bounce away (אסתי, 5/9).
+  if (p.status === "active") return p.member_tier === "paid";
   if (p.status !== "pending") return false;
   const { data: sub } = await admin
     .from("subscriptions")
