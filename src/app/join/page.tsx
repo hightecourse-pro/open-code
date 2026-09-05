@@ -88,7 +88,11 @@ export default async function JoinPage({
     }
   }
 
-  const isMentorTier = profile.member_tier === "free";
+  // The mentor track is marked by ROLE, not tier: choosing it sets
+  // role=mentor (join/actions.ts). Tier free alone also describes a regular
+  // member whose subscription was canceled — אסתי, 5/9, hit the mentor
+  // application screen here instead of the checkout she asked for.
+  const isMentorTier = profile.role === "mentor";
 
   // Free tier (mentors) are approval-based; rejected members get a message.
   if (isMentorTier || profile.status === "rejected") {
