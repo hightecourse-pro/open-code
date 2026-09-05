@@ -245,6 +245,13 @@ export default async function AdminJobPage({
         }[],
       };
   // Internal profile tags (the owner, 2/9) — admin-only, never member/client.
+  // חוות דעת המערכת על ניסיון ה-AI (the owner, 5/9) — נכתבות בניתוח לילי.
+  const { data: assessRows } = await createAdminClient()
+    .from("application_assessments")
+    .select("application_id, ai_domain, experience_context, company, depth, verdict")
+    .in("application_id", (applications ?? []).map((a) => a.id));
+  const assessOf = new Map((assessRows ?? []).map((r) => [r.application_id, r]));
+
   const crmTagsOf = new Map(
     (crmRows ?? []).map((c) => [c.profile_id, (c as { internal_tags?: string[] | null }).internal_tags ?? []])
   );
@@ -361,6 +368,18 @@ export default async function AdminJobPage({
       memberLabel: p?.role === "admin" ? ("team" as const) : p?.role === "mentor" ? ("mentor" as const) : null,
       isVip: vipSet.has(a.applicant_id),
       memberTags: crmTagsOf.get(a.applicant_id) ?? [],
+      assessment: (() => {
+        const r = assessOf.get(a.id);
+        return r
+          ? {
+              aiDomain: r.ai_domain,
+              context: r.experience_context,
+              company: r.company,
+              depth: r.depth,
+              verdict: r.verdict,
+            }
+          : null;
+      })(),
       editedAt: a.edited_at ?? null,
       previousVersions: (Array.isArray(a.previous_versions) ? a.previous_versions : []).map(
         (v) => {
