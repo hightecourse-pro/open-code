@@ -405,6 +405,29 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["client_contacts"]["Insert"]>;
         Relationships: [];
       };
+      /** Claude's nightly AI-experience read per application (admin-only). */
+      application_assessments: {
+        Row: {
+          application_id: string;
+          ai_domain: string | null;
+          experience_context: string | null;
+          company: string | null;
+          depth: string | null;
+          verdict: string | null;
+          analyzed_at: string;
+        };
+        Insert: {
+          application_id: string;
+          ai_domain?: string | null;
+          experience_context?: string | null;
+          company?: string | null;
+          depth?: string | null;
+          verdict?: string | null;
+          analyzed_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["application_assessments"]["Insert"]>;
+        Relationships: [];
+      };
       /** The team's task list — manual entries and system-trigger routed ones. */
       admin_tasks: {
         Row: {

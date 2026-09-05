@@ -75,6 +75,14 @@ export interface ReviewApplication {
   isVip: boolean;
   /** Internal profile tags (member_crm.internal_tags) — admin-only. */
   memberTags: string[];
+  /** Claude's nightly read of profile+CV+answers (the owner, 5/9). */
+  assessment: {
+    aiDomain: string | null;
+    context: string | null;
+    company: string | null;
+    depth: string | null;
+    verdict: string | null;
+  } | null;
   /** She edited the application after submitting (the owner, 2/9). */
   editedAt: string | null;
   /** Outgoing snapshots, oldest first — what each edit replaced. */
@@ -1447,6 +1455,12 @@ export function ReviewCenter({
                     {a.profile?.specialization ?? "—"} · {fmtDate(a.submittedAt)}
                   </span>
                   <span className="flex flex-wrap gap-1">
+                    {/* חוות דעת המערכת — צ'יפ מהיר לסריקה (the owner, 5/9). */}
+                    {a.assessment?.depth && ASSESS_DEPTH[a.assessment.depth] && (
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-bold", ASSESS_DEPTH[a.assessment.depth].cls)}>
+                        🧠 {a.assessment.aiDomain === "classic" ? "קלאסי" : a.assessment.aiDomain === "ml" ? "ML" : a.assessment.aiDomain === "basic" ? "בסיסי" : "—"} · {ASSESS_DEPTH[a.assessment.depth].label}
+                      </span>
+                    )}
                     {/* Experience + region on the list rows (the owner, 2/9). */}
                     {a.profile?.isExperienced && (
                       <span className="rounded-full bg-tint-warm border border-[#F8D98C] px-2 py-0.5 text-[10.5px] font-bold text-[#8C5E0E]">
@@ -1496,6 +1510,7 @@ export function ReviewCenter({
             {/* Internal note, front and center while flipping through
                 candidates (the owner, 3/9) — admin-only, rides on HER. */}
             <MemberNoteBox key={selected.applicantId} app={selected} />
+            {selected.assessment && <AssessmentBox a={selected.assessment} />}
             {/* header + prev/next */}
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
@@ -1939,6 +1954,48 @@ function exportCsv(
   a.download = `applicants-${jobTitle.replace(/[^\w\u0590-\u05FF-]+/g, "_")}.csv`;
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+const ASSESS_DOMAIN: Record<string, { label: string; cls: string }> = {
+  classic: { label: "פיתוח AI קלאסי (RAG/Agents)", cls: "bg-tint-purple text-brand-purple" },
+  ml: { label: "פיתוח ML", cls: "bg-tint-indigo text-brand-indigo" },
+  basic: { label: "AI בסיסי (API בלבד)", cls: "bg-tint-warm text-[#8C5E0E]" },
+  none: { label: "ללא ניסיון AI מעשי", cls: "bg-ink-100 text-ink-500" },
+};
+const ASSESS_CONTEXT: Record<string, { label: string; cls: string }> = {
+  work: { label: "בוטקמפ / פרקטיקום / עבודה", cls: "bg-tint-mint text-success" },
+  studies: { label: "פרויקטים מלימודים בלבד", cls: "bg-tint-warm text-[#8C5E0E]" },
+  none: { label: "ללא ניסיון מעשי", cls: "bg-ink-100 text-ink-500" },
+};
+const ASSESS_DEPTH: Record<string, { label: string; cls: string }> = {
+  solid: { label: "מבינה לעומק ✓", cls: "bg-tint-mint text-success" },
+  basic: { label: "הבנה בסיסית", cls: "bg-tint-warm text-[#8C5E0E]" },
+  fluff: { label: "⚠️ תשובות מנופחות", cls: "bg-danger-bg text-danger" },
+};
+
+/** חוות דעת המערכת — הקטלוגים + טקסט חופשי (the owner, 5/9). */
+function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> }) {
+  const dom = a.aiDomain ? ASSESS_DOMAIN[a.aiDomain] : null;
+  const ctx = a.context ? ASSESS_CONTEXT[a.context] : null;
+  const dep = a.depth ? ASSESS_DEPTH[a.depth] : null;
+  return (
+    <div className="rounded-[10px] border border-brand-purple/25 bg-tint-purple/25 p-3">
+      <div className="text-[12px] font-bold text-brand-purple mb-1.5">
+        🧠 חוות דעת המערכת — קריאה של הפרופיל, הקו״ח והתשובות (פנימי בלבד)
+      </div>
+      <div className="flex flex-wrap gap-1.5 mb-1.5">
+        {dom && <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full", dom.cls)}>{dom.label}</span>}
+        {ctx && <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full", ctx.cls)}>{ctx.label}</span>}
+        {dep && <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full", dep.cls)}>{dep.label}</span>}
+        {a.company && (
+          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-ink-0 border border-ink-200 text-ink-700">
+            🏢 {a.company}
+          </span>
+        )}
+      </div>
+      {a.verdict && <p className="text-[13px] text-ink-900 leading-relaxed">{a.verdict}</p>}
+    </div>
+  );
 }
 
 /** The cross-job internal note — visible and editable at the top of the pane. */
