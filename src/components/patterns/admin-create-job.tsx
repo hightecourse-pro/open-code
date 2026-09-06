@@ -235,6 +235,7 @@ export function AdminCreateJob({
               id="j-pct"
               name="practicum_percent"
               type="number"
+              step="any"
               min={1}
               max={100}
               placeholder="למשל 15"
