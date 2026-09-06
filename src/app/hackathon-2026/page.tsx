@@ -1,10 +1,10 @@
-// האקתון AI קוד פתוח 2026 — the standalone event page (the owner, 1/9).
+// האקתון AI קוד פתוח 2026 - the standalone event page (the owner, 1/9).
 // UNLINKED on purpose: reachable by direct URL only, until the owner decides
 // to link it from the community hackathon page (and possibly open it up
 // externally). Design round 3 (the owner: "יותר שובב, חיצים מאוירים
-// מסולסלים, אנימציות") — curly drawn arrows, floating sparkles, breathing
+// מסולסלים, אנימציות") - curly drawn arrows, floating sparkles, breathing
 // blobs, a wobbling core, a code ticker; prefers-reduced-motion stills it all.
-// Hero/ticker/challenges live in shared.tsx — kept identical with /partners.
+// Hero/ticker/challenges live in shared.tsx - kept identical with /partners.
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
@@ -22,38 +22,38 @@ import {
 
 export const metadata: Metadata = {
   title: "האקתון AI קוד פתוח 2026",
-  description: "אתגרי AI אמיתיים מהתעשייה — בונות פתרון, אנחנו מלוות. למנויות הקהילה.",
+  description: "אתגרי AI אמיתיים מהתעשייה - בונות פתרון, אנחנו מלוות. למנויות הקהילה.",
 };
 
 const STEPS = [
   { emoji: "🎯", title: "בוחרת אתגר", body: "עוברת על ארבעת האתגרים ובוחרת את זה שמדליק אותך.", tilt: "-rotate-2" },
-  { emoji: "📝", title: "ממלאה טופס בחירה", body: "רישום קצר — הטופס ייפתח בקהילה ברגע שההרשמה תעלה.", tilt: "rotate-1" },
+  { emoji: "📝", title: "ממלאה טופס בחירה", body: "רישום קצר - הטופס ייפתח בקהילה ברגע שההרשמה תעלה.", tilt: "rotate-1" },
   { emoji: "📦", title: "מקבלת את החומרים", body: "לאתגר שבחרת יישלחו אלייך תכנים ודוגמאות רלוונטיות.", tilt: "-rotate-1" },
-  { emoji: "🛠️", title: "מפתחת ויוצרת", body: "בונה את המנוע ואת הממשק — עם כלי ה-AI והמנטוריות שלצידך.", tilt: "rotate-2" },
+  { emoji: "🛠️", title: "מפתחת ויוצרת", body: "בונה את המנוע ואת הממשק - עם כלי ה-AI והמנטוריות שלצידך.", tilt: "rotate-2" },
   { emoji: "🏆", title: "מתמודדת על הזכייה", body: "מגישה את הפתרון שעבדת עליו ונלחמת על המקום הראשון בארוע.", tilt: "-rotate-1" },
 ];
 
-// How you approach an AI challenge — a zigzag doodle path, לשון נוכחת
+// How you approach an AI challenge - a zigzag doodle path, לשון נוכחת
 // (the owner, 31/8: redesign + "גם אם לא למדת קורס AI מלא").
 const APPROACH = [
   {
     emoji: "🗺️",
     title: "מתייעצת עם ה-AI",
-    body: "זורקת לו את האתגר ומפרקת את הבעיה יחד איתו לצעדים קטנים — עוד לפני שורת קוד אחת.",
+    body: "זורקת לו את האתגר ומפרקת את הבעיה יחד איתו לצעדים קטנים - עוד לפני שורת קוד אחת.",
     side: "self-start",
     tilt: "-rotate-1",
   },
   {
     emoji: "🎓",
     title: "לא יודעת מאיפה להתחיל?",
-    body: "הסשנים של הקהילה הם בדיוק נקודת הפתיחה — סדר בעולמות ה-AI, פיתוח איג'נטים ועוד.",
+    body: "הסשנים של הקהילה הם בדיוק נקודת הפתיחה - סדר בעולמות ה-AI, פיתוח איג'נטים ועוד.",
     side: "self-end",
     tilt: "rotate-1",
   },
   {
     emoji: "🧑‍🏫",
     title: "בחרת שיטה? תני ל-AI ללמד אותך",
-    body: "ברגע שבחרת שיטה — בקשי מה-AI שילמד אותך איך בדיוק היא עובדת, צעד אחרי צעד. ככה יהיה לך הרבה יותר קל לפתור בעיות שתיתקלי בהן בדרך.",
+    body: "ברגע שבחרת שיטה - בקשי מה-AI שילמד אותך איך בדיוק היא עובדת, צעד אחרי צעד. ככה יהיה לך הרבה יותר קל לפתור בעיות שתיתקלי בהן בדרך.",
     side: "self-start",
     tilt: "rotate-1",
     highlight: true,
@@ -61,7 +61,7 @@ const APPROACH = [
   {
     emoji: "🤖",
     title: "בונה איג'נט",
-    body: "מנוע AI שמקבל קלט, חושב, ומחזיר פתרון — ומנטוריות מהקהילה ילוו אותך לאורך כל הדרך 💜",
+    body: "מנוע AI שמקבל קלט, חושב, ומחזיר פתרון - ומנטוריות מהקהילה ילוו אותך לאורך כל הדרך 💜",
     side: "self-end",
     tilt: "-rotate-1",
   },
@@ -84,7 +84,7 @@ export default function Hackathon2026Page() {
             <span className="font-mono text-xs text-brand-pink-deep">&lt;איך ניגשים/&gt;</span>
             <h2 className="font-display text-[30px] font-black mt-1 rotate-1">ככה את ניגשת לאתגר AI</h2>
             <p className="t-body text-ink-700 mt-1.5">
-              גם אם לא למדת קורס AI מלא <span className="h26-wiggle">😉</span> — ה-AI הוא גם הכלי וגם המורה שלך.
+              גם אם לא למדת קורס AI מלא <span className="h26-wiggle">😉</span> - ה-AI הוא גם הכלי וגם המורה שלך.
             </p>
           </div>
           <div className="flex justify-start ps-6 -mb-2 items-start">
@@ -92,7 +92,7 @@ export default function Hackathon2026Page() {
             <SwirlArrow className="h26-float w-14 h-12 -scale-x-100" />
           </div>
 
-          {/* zigzag doodle path — each stop leans the other way, swirl arrows in between */}
+          {/* zigzag doodle path - each stop leans the other way, swirl arrows in between */}
           <div className="flex flex-col">
             {APPROACH.map((a, i) => (
               <div key={a.title} className="flex flex-col">
@@ -128,15 +128,15 @@ export default function Hackathon2026Page() {
             ))}
           </div>
 
-          {/* the code-flavored tip stays — one playful mono line */}
+          {/* the code-flavored tip stays - one playful mono line */}
           <p
             className="font-mono text-[15.5px] text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-4 py-2.5 mt-8 w-fit mx-auto rotate-1"
             style={{ borderRadius: "14px 18px 14px 20px" }}
           >
-            {"// טיפ: רישיון לכלי AI רציני כמו Claude Code שווה את זה — הוא בונה איתך את הפרויקט 🚀"}
+            {"// טיפ: רישיון לכלי AI רציני כמו Claude Code שווה את זה - הוא בונה איתך את הפרויקט 🚀"}
           </p>
 
-          {/* מה בונים? — the two halves of the project, joined by a drawn plus
+          {/* מה בונים? - the two halves of the project, joined by a drawn plus
               (the owner, 31/8: add the question with a curly arrow + redesign) */}
           <div className="mt-16 relative">
             <Sparkle className="absolute -top-2 left-[12%] w-5 h-5" color="#E0418D" delay="0.7s" />
@@ -160,7 +160,7 @@ export default function Hackathon2026Page() {
                   <span className="h26-wiggle">🧠</span>
                 </span>
                 <h3 className="font-display font-black text-[17px] mt-2">מנוע AI</h3>
-                <p className="t-body text-ink-700 mt-1">הלב של הפרויקט — מקבל את הבעיה של הארגון ומחזיר פתרון אמיתי.</p>
+                <p className="t-body text-ink-700 mt-1">הלב של הפרויקט - מקבל את הבעיה של הארגון ומחזיר פתרון אמיתי.</p>
               </div>
 
               <div className="flex items-center justify-center shrink-0">
@@ -183,7 +183,7 @@ export default function Hackathon2026Page() {
                   <span className="h26-float inline-block">☁️</span>
                 </span>
                 <h3 className="font-display font-black text-[17px] mt-2">ממשק בענן</h3>
-                <p className="t-body text-ink-700 mt-1">UI שאפשר לגשת אליו מכל מקום ולראות את הפתרון עובד — ככה השופטות והארגון פוגשים אותו.</p>
+                <p className="t-body text-ink-700 mt-1">UI שאפשר לגשת אליו מכל מקום ולראות את הפתרון עובד - ככה השופטות והארגון פוגשים אותו.</p>
               </div>
             </div>
 
@@ -203,7 +203,7 @@ export default function Hackathon2026Page() {
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;נרשמות/&gt;</span>
-            <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">5 צעדים — ויש לך פרויקט AI משמעותי משלך</h2>
+            <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">5 צעדים - ויש לך פרויקט AI משמעותי משלך</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-5">
             {STEPS.map((s, i) => (
@@ -236,7 +236,7 @@ export default function Hackathon2026Page() {
             <div className="text-[30px]"><span className="h26-wiggle">🎉</span></div>
             <div className="font-display font-black text-[22px] mt-1">אירוע סיום נוצץ ✨</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              באמצע חשוון — הקהילה חוגגת, והזוכות עולות לבמה 🏆
+              באמצע חשוון - הקהילה חוגגת, והזוכות עולות לבמה 🏆
             </div>
           </div>
 
@@ -249,7 +249,7 @@ export default function Hackathon2026Page() {
               🔒 טופס הבחירה ייפתח בקהילה ממש בקרוב
             </span>
             <p className="t-body text-ink-500 max-w-md">
-              ההשתתפות למנויות הקהילה בלבד — עוד לא איתנו?{" "}
+              ההשתתפות למנויות הקהילה בלבד - עוד לא איתנו?{" "}
               <Link href="/join" className="font-semibold text-brand-purple hover:underline">
                 מצטרפות כאן
               </Link>{" "}

@@ -1,6 +1,6 @@
 // The shared half of the hackathon 2026 pages: the main page and the
 // partners page must stay IDENTICAL from the hero through the challenges
-// (the owner, 6/9) — so hero, ticker, challenges, doodles and the animation
+// (the owner, 6/9) - so hero, ticker, challenges, doodles and the animation
 // styles live here and both routes render them from one source.
 import Link from "next/link";
 import { Logo } from "@/components/ui";
@@ -52,7 +52,7 @@ export function Scribble({ className }: { className?: string }) {
   );
 }
 
-/** CURLY drawn arrow — loops once on its way down. */
+/** CURLY drawn arrow - loops once on its way down. */
 export function CurlyArrow({ className, color = "#E0418D" }: { className?: string; color?: string }) {
   return (
     <svg viewBox="0 0 90 110" fill="none" aria-hidden className={className}>
@@ -111,7 +111,7 @@ type Challenge = {
   org: string | null;
   emoji: string;
   challenge?: string;
-  /** A revealed partner whose challenge lands later — logo card, no details. */
+  /** A revealed partner whose challenge lands later - logo card, no details. */
   teaser?: string;
   samples?: boolean;
   /** Round badge logo (replaces the emoji blob in the card header). */
@@ -128,7 +128,7 @@ const CHALLENGES: Challenge[] = [
     org: "משרד הבריאות · המרכז הרפואי שיבא",
     emoji: "🧬",
     challenge:
-      "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים — סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
+      "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים - סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
     samples: true,
     badgeLogo: "/hackathon-2026/logo-virology.png",
     partnerLogo: "/hackathon-2026/logo-moh.jpg",
@@ -144,7 +144,7 @@ const TICKER = "🚀 האקתון AI קוד פתוח 2026 ✦ בונות פתר�
 
 /* ---------------------------------------------------------------- pieces */
 
-/** Page-scoped playfulness — stilled entirely under reduced motion. */
+/** Page-scoped playfulness - stilled entirely under reduced motion. */
 export function H26Style() {
   return (
     <style>{`
@@ -178,7 +178,7 @@ export function H26Style() {
   );
 }
 
-/** The hero — same design on both pages; the subtitle line and badge pills
+/** The hero - same design on both pages; the subtitle line and badge pills
     speak to the page's audience (the owner, 6/9: אחרי החגים / למנויות בלבד
     are not what a partner cares about). */
 export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
@@ -231,7 +231,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
           <p className="t-body-lg text-ink-700 max-w-lg">
             אתגרי AI אמיתיים מהתעשייה.
             <span className="block mt-1">עשרות מפתחות מהקהילה בונות פתרון עובד לאתגר שלכם</span>
-            <span className="block font-bold text-ink-900">ואתם פוגשים יכולות מוכחות — לא קורות חיים! 🎯</span>
+            <span className="block font-bold text-ink-900">ואתם פוגשים יכולות מוכחות - לא קורות חיים! 🎯</span>
           </p>
         ) : (
           <p className="t-body-lg text-ink-700 max-w-lg">
@@ -250,7 +250,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
                 👩‍💻 עשרות מפתחות AI
               </span>
               <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-                🏆 ערב גמר — הפתרונות על הבמה
+                🏆 ערב גמר - הפתרונות על הבמה
               </span>
             </>
           ) : (
@@ -277,7 +277,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
   );
 }
 
-/** Code ticker strip — two identical halves, the track slides exactly one
+/** Code ticker strip - two identical halves, the track slides exactly one
     half per cycle, so the loop is seamless and truly endless. */
 export function TickerStrip() {
   return (
@@ -290,7 +290,7 @@ export function TickerStrip() {
   );
 }
 
-/** The four challenges, orbiting the core — identical on both pages. */
+/** The four challenges, orbiting the core - identical on both pages. */
 export function ChallengesSection() {
   return (
     <section className="px-6 pt-10 pb-20 bg-[#FBF7FF] relative">
@@ -303,7 +303,7 @@ export function ChallengesSection() {
             ארבעה שת״פים. ארבעה אתגרים.
           </h2>
           <p className="t-body text-ink-700 mt-1">
-            כל ארגון מביא בעיה אמיתית מהשטח — לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
+            כל ארגון מביא בעיה אמיתית מהשטח - לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
           </p>
         </div>
 
@@ -370,7 +370,7 @@ export function ChallengesSection() {
                           className="inline-flex w-fit items-center gap-1.5 text-[15.5px] font-semibold text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-3 py-1.5 rotate-1"
                           style={{ borderRadius: "12px 16px 12px 18px" }}
                         >
-                          📄 טפסי דוגמה להורדה — יעלו כאן עם פתיחת ההרשמה
+                          📄 טפסי דוגמה להורדה - יעלו כאן עם פתיחת ההרשמה
                         </span>
                       )}
                     </div>

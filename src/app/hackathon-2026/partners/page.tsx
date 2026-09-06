@@ -1,7 +1,7 @@
-// האקתון AI 2026 — the partners & sponsors variant (the owner, 6/9):
+// האקתון AI 2026 - the partners & sponsors variant (the owner, 6/9):
 // identical to the main page from the hero through the challenges (both
 // render shared.tsx), and where the main page tells a junior how she
-// participates, this one explains the value of the event to a partner —
+// participates, this one explains the value of the event to a partner -
 // in the same playful doodle style. Goal: recruiting partnerships.
 import type { Metadata } from "next";
 import {
@@ -18,24 +18,24 @@ import {
 } from "../shared";
 
 export const metadata: Metadata = {
-  title: "האקתון AI קוד פתוח 2026 — לשותפים ולספונסרים",
-  description: "אתגר אמיתי שלכם, עשרות מפתחות AI, ופתרונות עובדים — בואו להיות שותפים.",
+  title: "האקתון AI קוד פתוח 2026 - לשותפים ולספונסרים",
+  description: "אתגר אמיתי שלכם, עשרות מפתחות AI, ופתרונות עובדים - בואו להיות שותפים.",
 };
 
 // The value story, told as the same zigzag doodle path the main page uses
-// for "ככה את ניגשת לאתגר" — here it answers the partner's question.
+// for "ככה את ניגשת לאתגר" - here it answers the partner's question.
 const VALUE_PATH = [
   {
     emoji: "🤔",
     title: "איך ג׳וניורית מוכיחה מה היא באמת יודעת?",
-    body: "זו השאלה שבלב האתגר של ג׳וניוריות בהייטק — אין שנתיים ניסיון בקורות החיים, אבל יש יכולות אמיתיות.",
+    body: "זו השאלה שבלב האתגר של ג׳וניוריות בהייטק - אין שנתיים ניסיון בקורות החיים, אבל יש יכולות אמיתיות.",
     side: "self-start",
     tilt: "-rotate-1",
   },
   {
     emoji: "💡",
     title: "התשובה שלנו: מוכיחים במעשים",
-    body: "ההאקתון הופך כל ג׳וניורית בקהילה למפתחת AI רלוונטית — עם פתרון עובד שמדבר בשמה, במקום עוד שורה בקורות החיים.",
+    body: "ההאקתון הופך כל ג׳וניורית בקהילה למפתחת AI רלוונטית - עם פתרון עובד שמדבר בשמה, במקום עוד שורה בקורות החיים.",
     side: "self-end",
     tilt: "rotate-1",
     highlight: true,
@@ -43,23 +43,23 @@ const VALUE_PATH = [
   {
     emoji: "🧩",
     title: "דרך אחת להיות בפנים: מביאים אתגר",
-    body: "בעיה אמיתית מהשטח שלכם — מסמכים, דאטה, תהליך שמבקש אוטומציה. אנחנו עוזרות למסגר אותה כאתגר, ועשרות מפתחות בונות לה פתרון עובד.",
+    body: "בעיה אמיתית מהשטח שלכם - מסמכים, דאטה, תהליך שמבקש אוטומציה. אנחנו עוזרות למסגר אותה כאתגר, ועשרות מפתחות בונות לה פתרון עובד.",
     side: "self-start",
     tilt: "rotate-1",
   },
   {
     emoji: "🧲",
     title: "ודרך שנייה: באים לגייס",
-    body: "פוגשים את המפתחות דרך הפתרונות שהן בנו — יכולות מוכחות במקום קורות חיים. בערב הגמר, או ישירות דרכנו 💜",
+    body: "פוגשים את המפתחות דרך הפתרונות שהן בנו - יכולות מוכחות במקום קורות חיים. בערב הגמר, או ישירות דרכנו 💜",
     side: "self-end",
     tilt: "-rotate-1",
   },
 ];
 
 const VALUE_CARDS = [
-  { emoji: "🔍", title: "גישה מוקדמת לטאלנט", body: "אתם פוגשים את המפתחות החזקות לפני כולם — לא דרך קורות חיים, דרך פתרונות עובדים שהן בנו במו ידיהן.", tilt: "-rotate-2" },
-  { emoji: "⚡", title: "עשרות זוויות על בעיה אחת", body: "אותו אתגר, פתרונות שונים — מגוון גישות הנדסיות שקשה להשיג בכל דרך אחרת.", tilt: "rotate-1" },
-  { emoji: "💜", title: "שותפות עם משמעות", body: "שער כניסה להייטק לנשים חרדיות מוכשרות — סיפור השפעה אמיתי שהשם שלכם חתום עליו.", tilt: "-rotate-1" },
+  { emoji: "🔍", title: "גישה מוקדמת לטאלנט", body: "אתם פוגשים את המפתחות החזקות לפני כולם - לא דרך קורות חיים, דרך פתרונות עובדים שהן בנו במו ידיהן.", tilt: "-rotate-2" },
+  { emoji: "⚡", title: "עשרות זוויות על בעיה אחת", body: "אותו אתגר, פתרונות שונים - מגוון גישות הנדסיות שקשה להשיג בכל דרך אחרת.", tilt: "rotate-1" },
+  { emoji: "💜", title: "שותפות עם משמעות", body: "שער כניסה להייטק לנשים חרדיות מוכשרות - סיפור השפעה אמיתי שהשם שלכם חתום עליו.", tilt: "-rotate-1" },
 ];
 
 const WA_LINK =
@@ -82,7 +82,7 @@ export default function HackathonPartnersPage() {
             <span className="font-mono text-xs text-brand-pink-deep">&lt;לשותפים/&gt;</span>
             <h2 className="font-display text-[30px] font-black mt-1 rotate-1">למה כדאי לכם להיות בפנים?</h2>
             <p className="t-body text-ink-700 mt-1.5">
-              רגע לפני המספרים והלוגואים — הסיפור האמיתי <span className="h26-wiggle">👀</span>
+              רגע לפני המספרים והלוגואים - הסיפור האמיתי <span className="h26-wiggle">👀</span>
             </p>
           </div>
           <div className="flex justify-start ps-6 -mb-2 items-start">
@@ -90,7 +90,7 @@ export default function HackathonPartnersPage() {
             <SwirlArrow className="h26-float w-14 h-12 -scale-x-100" />
           </div>
 
-          {/* zigzag doodle path — the question, the answer, and your part in it */}
+          {/* zigzag doodle path - the question, the answer, and your part in it */}
           <div className="flex flex-col">
             {VALUE_PATH.map((a, i) => (
               <div key={a.title} className="flex flex-col">
@@ -134,7 +134,7 @@ export default function HackathonPartnersPage() {
             {"// bring(realChallenge) => meet(provenTalent) 🚀"}
           </p>
 
-          {/* the simple math — same plus-doodle as "מה בונים?" on the main page */}
+          {/* the simple math - same plus-doodle as "מה בונים?" on the main page */}
           <div className="mt-16 relative">
             <Sparkle className="absolute -top-2 left-[12%] w-5 h-5" color="#E0418D" delay="0.7s" />
             <div className="flex items-end justify-center gap-1 mb-2">
@@ -157,7 +157,7 @@ export default function HackathonPartnersPage() {
                   <span className="h26-wiggle">🧩</span>
                 </span>
                 <h3 className="font-display font-black text-[17px] mt-2">אתגר אמיתי שלכם</h3>
-                <p className="t-body text-ink-700 mt-1">בעיה מהשטח — מסמכים, דאטה, תהליך שמחכה לאוטומציה.</p>
+                <p className="t-body text-ink-700 mt-1">בעיה מהשטח - מסמכים, דאטה, תהליך שמחכה לאוטומציה.</p>
               </div>
 
               <div className="flex items-center justify-center shrink-0">
@@ -180,7 +180,7 @@ export default function HackathonPartnersPage() {
                   <span className="h26-wiggle">👩‍💻</span>
                 </span>
                 <h3 className="font-display font-black text-[17px] mt-2">עשרות מפתחות AI</h3>
-                <p className="t-body text-ink-700 mt-1">כל אחת בונה מנוע AI וממשק בענן — בליווי מנטוריות מהתעשייה.</p>
+                <p className="t-body text-ink-700 mt-1">כל אחת בונה מנוע AI וממשק בענן - בליווי מנטוריות מהתעשייה.</p>
               </div>
             </div>
 
@@ -221,7 +221,7 @@ export default function HackathonPartnersPage() {
             ))}
           </div>
 
-          {/* the glittering finale — the partnership ask */}
+          {/* the glittering finale - the partnership ask */}
           <div
             className="mt-12 mx-auto max-w-xl bg-brand-gradient text-white text-center p-6 rotate-1 shadow-[6px_7px_0_0_#DDC9EC] relative overflow-hidden"
             style={{ borderRadius: "28px 22px 30px 24px" }}
@@ -232,7 +232,7 @@ export default function HackathonPartnersPage() {
             <div className="text-[30px]"><span className="h26-wiggle">🤝</span></div>
             <div className="font-display font-black text-[22px] mt-1">אתגר על הבמה? באים לגייס? ✨</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              מקומות השותפות לאירוע מוגבלים — נשמח לתפור יחד את השותפות שנכונה לכם 🏆
+              מקומות השותפות לאירוע מוגבלים - נשמח לתפור יחד את השותפות שנכונה לכם 🏆
             </div>
           </div>
 
