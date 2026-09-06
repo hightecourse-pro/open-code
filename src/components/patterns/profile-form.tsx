@@ -396,9 +396,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       const draftFd = new FormData(formRef.current!);
       draftFd.set("__draft", "1");
       draftFd.delete("cv_file"); // the heavy upload stays for the real submit
-      void saveProfile({}, draftFd).catch(() => {});
-    } catch {
-      /* draft is best-effort */
+      startTransition(() => {
+        void saveProfile({}, draftFd).then(
+          () => console.debug("[draft] step saved"),
+          (e) => console.debug("[draft] failed", e)
+        );
+      });
+    } catch (e) {
+      console.debug("[draft] sync error", e);
     }
     setStep(Math.min(cur + 1, totalSteps - 1));
   }
