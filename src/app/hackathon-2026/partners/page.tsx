@@ -190,7 +190,8 @@ export default function HackathonPartnersPage() {
                 className={`border-2 border-ink-900/10 p-5 text-center ${v.tilt} hover:rotate-0 transition-transform ${v.look}`}
                 style={{ borderRadius: i % 2 ? "20px 26px 22px 28px" : "26px 20px 28px 22px" }}
               >
-                <h3 className="font-display font-black text-[17px]">{v.title}</h3>\n                <Squiggle className="w-16 mx-auto -mt-0.5" />
+                <h3 className="font-display font-black text-[17px]">{v.title}</h3>
+                <Squiggle className="w-16 mx-auto -mt-0.5" />
                 <p className="t-body text-ink-700 mt-1">{v.body}</p>
               </div>
             ))}
