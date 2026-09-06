@@ -106,7 +106,7 @@ export function Wave({ flip = false, tint = "#FDF3F9" }: { flip?: boolean; tint?
 
 /* ---------------------------------------------------------------- content */
 
-type Challenge = {
+export type Challenge = {
   short: string;
   org: string | null;
   emoji: string;
@@ -122,7 +122,7 @@ type Challenge = {
   tint: string;
 };
 
-const CHALLENGES: Challenge[] = [
+export const CHALLENGES: Challenge[] = [
   {
     short: "המעבדה המרכזית לנגיפים",
     org: "משרד הבריאות · המרכז הרפואי שיבא",
