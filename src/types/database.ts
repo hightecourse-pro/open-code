@@ -1054,6 +1054,7 @@ export interface Database {
         Row: {
           id: string;
           open_to_all: boolean;
+          open_to_experienced: boolean;
           company: string;
           title: string;
           source: JobSource;
@@ -1105,6 +1106,7 @@ export interface Database {
           published_at?: string | null;
           team_note?: string | null;
           open_to_all?: boolean;
+          open_to_experienced?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["jobs"]["Insert"]>;
         Relationships: [];
