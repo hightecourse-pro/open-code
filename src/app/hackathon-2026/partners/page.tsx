@@ -26,14 +26,12 @@ export const metadata: Metadata = {
 // for "ככה את ניגשת לאתגר" - here it answers the partner's question.
 const VALUE_PATH = [
   {
-    emoji: "🤔",
     title: "איך ג׳וניורית מוכיחה מה היא באמת יודעת?",
     body: "זו השאלה שבלב האתגר של ג׳וניוריות בהייטק - אין שנתיים ניסיון בקורות החיים, אבל יש יכולות אמיתיות.",
     side: "self-start",
     tilt: "-rotate-1",
   },
   {
-    emoji: "💡",
     title: "התשובה שלנו: מוכיחים במעשים",
     body: "ההאקתון הופך כל ג׳וניורית בקהילה למפתחת AI רלוונטית - עם פתרון עובד שמדבר בשמה, במקום עוד שורה בקורות החיים.",
     side: "self-end",
@@ -41,25 +39,23 @@ const VALUE_PATH = [
     highlight: true,
   },
   {
-    emoji: "🧩",
-    title: "דרך אחת להיות בפנים: מביאים אתגר",
-    body: "בעיה אמיתית מהשטח שלכם - מסמכים, דאטה, תהליך שמבקש אוטומציה. אנחנו עוזרות למסגר אותה כאתגר, ועשרות מפתחות בונות לה פתרון עובד.",
+    title: "וכאן אתם נכנסים לתמונה",
+    body: "אתגר אמיתי מהשטח שלכם, חסות לאירוע או ליווי מקצועי - לכל ארגון יש דרך משלו להיות שותף למהלך.",
     side: "self-start",
     tilt: "rotate-1",
   },
   {
-    emoji: "🧲",
-    title: "ודרך שנייה: באים לגייס",
-    body: "פוגשים את המפתחות דרך הפתרונות שהן בנו - יכולות מוכחות במקום קורות חיים. בערב הגמר, או ישירות דרכנו",
+    title: "ערב הגמר: הפתרונות על הבמה",
+    body: "אתם רואים פתרונות עובדים ופוגשים את המפתחות שבנו אותם - ומי שגם מגייס, פוגש יכולות מוכחות במקום קורות חיים.",
     side: "self-end",
     tilt: "-rotate-1",
   },
 ];
 
 const VALUE_CARDS = [
-  { emoji: "🔍", title: "גישה מוקדמת לטאלנט", body: "אתם פוגשים את המפתחות החזקות לפני כולם - לא דרך קורות חיים, דרך פתרונות עובדים שהן בנו במו ידיהן.", tilt: "-rotate-2" },
-  { emoji: "⚡", title: "עשרות זוויות על בעיה אחת", body: "אותו אתגר, פתרונות שונים - מגוון גישות הנדסיות שקשה להשיג בכל דרך אחרת.", tilt: "rotate-1" },
-  { emoji: "💜", title: "שותפות עם משמעות", body: "שער כניסה להייטק לנשים חרדיות מוכשרות - סיפור השפעה אמיתי שהשם שלכם חתום עליו.", tilt: "-rotate-1" },
+  { title: "שותפות עם משמעות", body: "שער כניסה להייטק לנשים חרדיות מוכשרות - סיפור השפעה אמיתי שהשם שלכם חתום עליו.", tilt: "-rotate-2" },
+  { title: "עשרות זוויות על בעיה אחת", body: "אותו אתגר, פתרונות שונים - מגוון גישות הנדסיות שקשה להשיג בכל דרך אחרת.", tilt: "rotate-1" },
+  { title: "פגישה עם הטאלנט הבא", body: "מי שמגייס פוגש את המפתחות החזקות לפני כולם - דרך פתרונות עובדים, לא קורות חיים.", tilt: "-rotate-1" },
 ];
 
 const WA_LINK =
@@ -103,12 +99,6 @@ export default function HackathonPartnersPage() {
                   style={{ borderRadius: i % 2 ? "24px 20px 28px 22px" : "20px 28px 22px 26px" }}
                 >
                   {a.highlight && <Sparkle className="absolute -top-3 -left-3 w-7 h-7" color="#E0418D" />}
-                  <span
-                    className={`w-12 h-12 text-[24px] flex items-center justify-center shrink-0 ${a.highlight ? "bg-brand-gradient" : "bg-tint-purple/60"} ${i % 2 ? "rotate-6" : "-rotate-6"}`}
-                    style={{ borderRadius: "48% 52% 55% 45% / 52% 45% 55% 48%" }}
-                  >
-                    <span className="h26-wiggle" style={{ animationDelay: `${i * 0.5}s` }}>{a.emoji}</span>
-                  </span>
                   <span className="flex-1 min-w-0">
                     <span className="block font-display font-black text-[20px] leading-snug">{a.title}</span>
                     <span className="block t-body text-ink-700 mt-1">{a.body}</span>
@@ -150,12 +140,6 @@ export default function HackathonPartnersPage() {
                 className="flex-1 max-w-xs mx-auto sm:mx-0 bg-tint-purple/50 border-2 border-brand-purple/40 p-5 text-center -rotate-2 hover:rotate-0 transition-transform shadow-[6px_7px_0_0_#DDC9EC]"
                 style={{ borderRadius: "30px 22px 34px 24px" }}
               >
-                <span
-                  className="w-14 h-14 mx-auto bg-white border-2 border-brand-purple/30 text-[28px] flex items-center justify-center -rotate-6"
-                  style={{ borderRadius: "52% 48% 45% 55% / 48% 55% 45% 52%" }}
-                >
-                  <span className="h26-wiggle">🧩</span>
-                </span>
                 <h3 className="font-display font-black text-[17px] mt-2">אתגר אמיתי שלכם</h3>
                 <p className="t-body text-ink-700 mt-1">בעיה מהשטח - מסמכים, דאטה, תהליך שמחכה לאוטומציה.</p>
               </div>
@@ -173,12 +157,6 @@ export default function HackathonPartnersPage() {
                 className="flex-1 max-w-xs mx-auto sm:mx-0 bg-tint-pink/40 border-2 border-brand-pink/40 p-5 text-center rotate-2 hover:rotate-0 transition-transform shadow-[6px_7px_0_0_#F3C6DD]"
                 style={{ borderRadius: "22px 32px 24px 30px" }}
               >
-                <span
-                  className="w-14 h-14 mx-auto bg-white border-2 border-brand-pink/30 text-[28px] flex items-center justify-center rotate-6"
-                  style={{ borderRadius: "45% 55% 52% 48% / 55% 45% 52% 48%" }}
-                >
-                  <span className="h26-wiggle">👩‍💻</span>
-                </span>
                 <h3 className="font-display font-black text-[17px] mt-2">עשרות מפתחות AI</h3>
                 <p className="t-body text-ink-700 mt-1">כל אחת בונה מנוע AI וממשק בענן - בליווי מנטוריות מהתעשייה.</p>
               </div>
@@ -209,13 +187,7 @@ export default function HackathonPartnersPage() {
                 className={`bg-white border-2 border-ink-900/10 p-5 text-center ${v.tilt} hover:rotate-0 transition-transform shadow-[4px_5px_0_0_#EDE4F7]`}
                 style={{ borderRadius: i % 2 ? "20px 26px 22px 28px" : "26px 20px 28px 22px" }}
               >
-                <div
-                  className="w-11 h-11 mx-auto bg-brand-gradient text-white text-[22px] flex items-center justify-center rotate-6"
-                  style={{ borderRadius: "48% 52% 55% 45% / 50% 45% 55% 50%" }}
-                >
-                  <span className="h26-wiggle" style={{ animationDelay: `${i * 0.6}s` }}>{v.emoji}</span>
-                </div>
-                <h3 className="font-display font-black text-[17px] mt-2">{v.title}</h3>
+                <h3 className="font-display font-black text-[17px]">{v.title}</h3>
                 <p className="t-body text-ink-700 mt-1">{v.body}</p>
               </div>
             ))}
@@ -229,10 +201,9 @@ export default function HackathonPartnersPage() {
             <Sparkle className="absolute top-3 right-6 w-5 h-5" color="#FFFFFF" />
             <Sparkle className="absolute bottom-4 left-8 w-4 h-4" color="#F8D98C" delay="1.1s" />
             <Sparkle className="absolute top-8 left-1/4 w-3 h-3" color="#FFFFFF" delay="0.5s" />
-            <div className="text-[30px]"><span className="h26-wiggle">🤝</span></div>
-            <div className="font-display font-black text-[22px] mt-1">אתגר על הבמה? באים לגייס?</div>
+                        <div className="font-display font-black text-[22px] mt-1">רוצים להיות שותפים למהלך?</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              מקומות השותפות לאירוע מוגבלים - נשמח לתפור יחד את השותפות שנכונה לכם
+              אתגר, חסות או רעיון אחר - נשמח לתפור יחד את השותפות שנכונה לכם
             </div>
           </div>
 
