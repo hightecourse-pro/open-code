@@ -119,7 +119,13 @@ type Challenge = {
   org: string | null;
   emoji: string;
   challenge?: string;
+  /** A revealed partner whose challenge lands later — logo card, no details. */
+  teaser?: string;
   samples?: boolean;
+  /** Round badge logo (replaces the emoji blob in the card header). */
+  badgeLogo?: string;
+  /** Wide partner logo shown inside/under the card. */
+  partnerLogo?: string;
   tilt: string;
   tint: string;
 };
@@ -127,15 +133,25 @@ type Challenge = {
 const CHALLENGES: Challenge[] = [
   {
     short: "המעבדה המרכזית לנגיפים",
-    org: "משרד הבריאות · שיבא",
+    org: "משרד הבריאות · המרכז הרפואי שיבא",
     emoji: "🧬",
     challenge:
       "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים — סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
     samples: true,
+    badgeLogo: "/hackathon-2026/logo-virology.png",
+    partnerLogo: "/hackathon-2026/logo-moh.jpg",
     tilt: "md:-rotate-2",
     tint: "bg-white",
   },
-  { short: "שת\"פ יוכרז בקרוב", org: null, emoji: "🤫", tilt: "md:rotate-2", tint: "bg-tint-purple/40" },
+  {
+    short: "שטראוס",
+    org: "אתגר בשיתוף קבוצת שטראוס",
+    emoji: "🍫",
+    teaser: "האתגר המלא נחשף ממש בקרוב — מבטיחות ששווה לחכות 🤫",
+    badgeLogo: "/hackathon-2026/logo-strauss.png",
+    tilt: "md:rotate-2",
+    tint: "bg-white",
+  },
   { short: "שת\"פ יוכרז בקרוב", org: null, emoji: "🎁", tilt: "md:rotate-1", tint: "bg-tint-warm/50" },
   { short: "שת\"פ יוכרז בקרוב", org: null, emoji: "🚀", tilt: "md:-rotate-1", tint: "bg-tint-mint/40" },
 ];
@@ -226,22 +242,22 @@ export default function Hackathon2026Page() {
         <Sparkle className="absolute top-48 left-[8%] w-4 h-4" color="#E0418D" delay="0.8s" />
         <Sparkle className="absolute bottom-16 right-[22%] w-5 h-5" color="#F0B429" delay="1.5s" />
         <Sparkle className="absolute bottom-32 left-[18%] w-3.5 h-3.5" delay="2.1s" />
-        <span aria-hidden className="h26-float absolute top-10 right-[6%] font-mono text-[13px] text-brand-pink-deep/60 rotate-6 select-none hidden sm:block">
+        <span aria-hidden className="h26-float absolute top-10 right-[6%] font-mono text-[14.5px] text-brand-pink-deep/60 rotate-6 select-none hidden sm:block">
           {"while (challenge) { build(); }"}
         </span>
-        <span aria-hidden className="h26-float absolute top-36 left-[5%] font-mono text-[13px] text-brand-purple/60 -rotate-12 select-none hidden sm:block" style={{ animationDelay: "1.2s" }}>
+        <span aria-hidden className="h26-float absolute top-36 left-[5%] font-mono text-[14.5px] text-brand-purple/60 -rotate-12 select-none hidden sm:block" style={{ animationDelay: "1.2s" }}>
           {"agent.solve(realProblem)"}
         </span>
-        <span aria-hidden className="h26-float absolute top-64 right-[4%] font-mono text-[12.5px] text-brand-purple/50 -rotate-6 select-none hidden md:block" style={{ animationDelay: "0.6s" }}>
+        <span aria-hidden className="h26-float absolute top-64 right-[4%] font-mono text-[14px] text-brand-purple/50 -rotate-6 select-none hidden md:block" style={{ animationDelay: "0.6s" }}>
           {"ai.teachMe(\"how-it-works\")"}
         </span>
-        <span aria-hidden className="h26-float absolute bottom-24 left-[7%] font-mono text-[12.5px] text-brand-pink-deep/50 rotate-12 select-none hidden md:block" style={{ animationDelay: "1.8s" }}>
+        <span aria-hidden className="h26-float absolute bottom-24 left-[7%] font-mono text-[14px] text-brand-pink-deep/50 rotate-12 select-none hidden md:block" style={{ animationDelay: "1.8s" }}>
           {"if (stuck) askMentor() 💜"}
         </span>
-        <span aria-hidden className="h26-float absolute bottom-10 right-[14%] font-mono text-[12.5px] text-[#B48A0A]/60 -rotate-3 select-none hidden lg:block" style={{ animationDelay: "2.4s" }}>
+        <span aria-hidden className="h26-float absolute bottom-10 right-[14%] font-mono text-[14px] text-[#B48A0A]/60 -rotate-3 select-none hidden lg:block" style={{ animationDelay: "2.4s" }}>
           {"deploy(\"cloud\") // ✨"}
         </span>
-        <span aria-hidden className="h26-float absolute top-24 left-[16%] font-mono text-[12px] text-brand-purple/40 rotate-3 select-none hidden lg:block" style={{ animationDelay: "3s" }}>
+        <span aria-hidden className="h26-float absolute top-24 left-[16%] font-mono text-[13.5px] text-brand-purple/40 rotate-3 select-none hidden lg:block" style={{ animationDelay: "3s" }}>
           {"const win = you.build()"}
         </span>
 
@@ -268,19 +284,19 @@ export default function Hackathon2026Page() {
             <span className="block font-bold text-ink-900">ומתמודדת על המקום הראשון! 🏆</span>
           </p>
           <div className="flex items-center gap-2.5 flex-wrap justify-center">
-            <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[13px] font-bold shadow-md">
+            <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[14.5px] font-bold shadow-md">
               📅 אחרי החגים
             </span>
-            <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[13px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
+            <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[14.5px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
               💜 למנויות הקהילה בלבד
             </span>
-            <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[13px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
+            <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[14.5px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
               🏆 שת"פים מהתעשייה
             </span>
           </div>
           {/* curly arrow inviting the scroll down to the challenges */}
           <div className="flex items-start gap-1 mt-1">
-            <span className="font-display font-bold text-[14.5px] text-brand-pink-deep rotate-6 mt-1">האתגרים כאן למטה</span>
+            <span className="font-display font-bold text-[16px] text-brand-pink-deep rotate-6 mt-1">האתגרים כאן למטה</span>
             <CurlyArrow className="h26-float w-14 h-16" />
           </div>
         </div>
@@ -324,7 +340,7 @@ export default function Hackathon2026Page() {
                 style={{ borderRadius: "58% 42% 45% 55% / 48% 55% 45% 52%" }}
               >
                 <span className="text-[22px] leading-none">AI</span>
-                <span className="text-[13px] mt-0.5">2026</span>
+                <span className="text-[14.5px] mt-0.5">2026</span>
               </div>
             </div>
 
@@ -337,24 +353,40 @@ export default function Hackathon2026Page() {
                       style={{ borderRadius: "22px 26px 20px 28px" }}
                     >
                       <summary className="list-none cursor-pointer p-5 flex items-center gap-3.5 [&::-webkit-details-marker]:hidden">
-                        <span
-                          className="w-12 h-12 bg-brand-gradient text-white text-[22px] flex items-center justify-center shrink-0 -rotate-6"
-                          style={{ borderRadius: "45% 55% 52% 48% / 50% 46% 54% 50%" }}
-                        >
-                          <span className="h26-wiggle">{c.emoji}</span>
-                        </span>
+                        {c.badgeLogo ? (
+                          <span className="w-14 h-14 shrink-0 -rotate-6 rounded-full overflow-hidden bg-white border-2 border-brand-pink/30 shadow-[3px_3px_0_0_#F3C6DD] flex items-center justify-center p-1">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={c.badgeLogo} alt={c.short} className="w-full h-full object-contain" />
+                          </span>
+                        ) : (
+                          <span
+                            className="w-12 h-12 bg-brand-gradient text-white text-[22px] flex items-center justify-center shrink-0 -rotate-6"
+                            style={{ borderRadius: "45% 55% 52% 48% / 50% 46% 54% 50%" }}
+                          >
+                            <span className="h26-wiggle">{c.emoji}</span>
+                          </span>
+                        )}
                         <span className="flex-1 min-w-0">
-                          <span className="block font-display font-black text-[16.5px] leading-tight">{c.short}</span>
-                          {c.org && <span className="block text-[12.5px] text-ink-500 mt-0.5">{c.org}</span>}
+                          <span className="block font-display font-black text-[18px] leading-tight">{c.short}</span>
+                          {c.org && <span className="block text-[14px] text-ink-500 mt-0.5">{c.org}</span>}
                         </span>
                         <span className="font-mono text-brand-pink-deep text-sm group-open:rotate-90 transition-transform">&gt;</span>
                       </summary>
                       <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
-                        <div className="font-mono text-[11.5px] text-brand-pink-deep">// האתגר</div>
-                        <p className="t-body-sm text-ink-900 leading-relaxed">{c.challenge}</p>
+                        <div className="font-mono text-[13px] text-brand-pink-deep">// האתגר</div>
+                        <p className="t-body text-ink-900 leading-relaxed">{c.challenge}</p>
+                        {c.partnerLogo && (
+                          <div className="flex items-center gap-3 flex-wrap">
+                            <span className="font-mono text-[13.5px] text-ink-400">בשיתוף:</span>
+                            <span className="bg-white border border-ink-100 rounded-[14px] px-3 py-1.5 rotate-[-1deg] shadow-sm">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={c.partnerLogo} alt={c.org ?? ""} className="h-11 w-auto" />
+                            </span>
+                          </div>
+                        )}
                         {c.samples && (
                           <span
-                            className="inline-flex w-fit items-center gap-1.5 text-[12.5px] font-semibold text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-3 py-1.5 rotate-1"
+                            className="inline-flex w-fit items-center gap-1.5 text-[14px] font-semibold text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-3 py-1.5 rotate-1"
                             style={{ borderRadius: "12px 16px 12px 18px" }}
                           >
                             📄 טפסי דוגמה להורדה — יעלו כאן עם פתיחת ההרשמה
@@ -362,6 +394,23 @@ export default function Hackathon2026Page() {
                         )}
                       </div>
                     </details>
+                  ) : c.teaser ? (
+                    <div
+                      className={`${c.tint} border-2 border-ink-900/10 shadow-[4px_5px_0_0_#CFE6D8] p-5 flex items-center gap-4`}
+                      style={{ borderRadius: "22px 28px 20px 26px" }}
+                    >
+                      <span className="w-16 h-16 shrink-0 rotate-3 rounded-full overflow-hidden bg-white border-2 border-ink-100 shadow-sm flex items-center justify-center p-1.5">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={c.badgeLogo} alt={c.short} className="w-full h-full object-contain" />
+                      </span>
+                      <span className="flex-1 min-w-0">
+                        <span className="block font-display font-black text-[19px] leading-tight">{c.short}</span>
+                        {c.org && <span className="block text-[14px] text-ink-500 mt-0.5">{c.org}</span>}
+                        <span className="mt-1.5 inline-flex items-center gap-1.5 text-[15px] font-semibold text-brand-pink-deep bg-tint-pink px-2.5 py-1 rounded-full rotate-[-1deg]">
+                          {c.teaser}
+                        </span>
+                      </span>
+                    </div>
                   ) : (
                     <div
                       className={`${c.tint} border-2 border-dashed border-ink-300/70 p-5 flex items-center gap-3.5`}
@@ -374,8 +423,8 @@ export default function Hackathon2026Page() {
                         <span className="h26-wiggle" style={{ animationDelay: `${i * 0.5}s` }}>{c.emoji}</span>
                       </span>
                       <span className="flex-1">
-                        <span className="block font-display font-black text-[16.5px] text-ink-500">{c.short}</span>
-                        <span className="block text-[12.5px] text-ink-400 mt-0.5">האתגר בדרך…</span>
+                        <span className="block font-display font-black text-[18px] text-ink-500">{c.short}</span>
+                        <span className="block text-[14px] text-ink-400 mt-0.5">האתגר בדרך…</span>
                       </span>
                     </div>
                   )}
@@ -423,8 +472,8 @@ export default function Hackathon2026Page() {
                     <span className="h26-wiggle" style={{ animationDelay: `${i * 0.5}s` }}>{a.emoji}</span>
                   </span>
                   <span className="flex-1 min-w-0">
-                    <span className="block font-display font-black text-[16.5px] leading-snug">{a.title}</span>
-                    <span className="block t-body-sm text-ink-700 mt-1">{a.body}</span>
+                    <span className="block font-display font-black text-[18px] leading-snug">{a.title}</span>
+                    <span className="block t-body text-ink-700 mt-1">{a.body}</span>
                   </span>
                 </div>
                 {i < APPROACH.length - 1 && (
@@ -441,7 +490,7 @@ export default function Hackathon2026Page() {
 
           {/* the code-flavored tip stays — one playful mono line */}
           <p
-            className="font-mono text-[12.5px] text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-4 py-2.5 mt-8 w-fit mx-auto rotate-1"
+            className="font-mono text-[14px] text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-4 py-2.5 mt-8 w-fit mx-auto rotate-1"
             style={{ borderRadius: "14px 18px 14px 20px" }}
           >
             {"// טיפ: רישיון לכלי AI רציני כמו Claude Code שווה את זה — הוא בונה איתך את הפרויקט 🚀"}
@@ -471,7 +520,7 @@ export default function Hackathon2026Page() {
                   <span className="h26-wiggle">🧠</span>
                 </span>
                 <h3 className="font-display font-black text-[17px] mt-2">מנוע AI</h3>
-                <p className="t-body-sm text-ink-700 mt-1">הלב של הפרויקט — מקבל את הבעיה של הארגון ומחזיר פתרון אמיתי.</p>
+                <p className="t-body text-ink-700 mt-1">הלב של הפרויקט — מקבל את הבעיה של הארגון ומחזיר פתרון אמיתי.</p>
               </div>
 
               <div className="flex items-center justify-center shrink-0">
@@ -494,7 +543,7 @@ export default function Hackathon2026Page() {
                   <span className="h26-float inline-block">☁️</span>
                 </span>
                 <h3 className="font-display font-black text-[17px] mt-2">ממשק בענן</h3>
-                <p className="t-body-sm text-ink-700 mt-1">UI שאפשר לגשת אליו מכל מקום ולראות את הפתרון עובד — ככה השופטות והארגון פוגשים אותו.</p>
+                <p className="t-body text-ink-700 mt-1">UI שאפשר לגשת אליו מכל מקום ולראות את הפתרון עובד — ככה השופטות והארגון פוגשים אותו.</p>
               </div>
             </div>
 
@@ -531,7 +580,7 @@ export default function Hackathon2026Page() {
                 </div>
                 <div className="text-[24px] mt-2"><span className="h26-wiggle" style={{ animationDelay: `${i * 0.6}s` }}>{s.emoji}</span></div>
                 <h3 className="font-display font-black text-[15.5px] mt-1">{s.title}</h3>
-                <p className="t-body-sm text-ink-700 mt-1">{s.body}</p>
+                <p className="t-body text-ink-700 mt-1">{s.body}</p>
               </div>
             ))}
           </div>
@@ -559,7 +608,7 @@ export default function Hackathon2026Page() {
             >
               🔒 טופס הבחירה ייפתח בקהילה ממש בקרוב
             </span>
-            <p className="t-body-sm text-ink-500 max-w-md">
+            <p className="t-body text-ink-500 max-w-md">
               ההשתתפות למנויות הקהילה בלבד — עוד לא איתנו?{" "}
               <Link href="/join" className="font-semibold text-brand-purple hover:underline">
                 מצטרפות כאן
@@ -572,7 +621,7 @@ export default function Hackathon2026Page() {
 
       <footer className="px-6 py-8 text-center text-ink-500 text-sm border-t border-ink-200 bg-white">
         קוד פתוח · השמה. הכשרה. תרבות 💜 ·{" "}
-        <span className="font-mono text-[12px] text-brand-pink-deep">האקתון AI 2026</span>
+        <span className="font-mono text-[13.5px] text-brand-pink-deep">האקתון AI 2026</span>
       </footer>
     </main>
   );
