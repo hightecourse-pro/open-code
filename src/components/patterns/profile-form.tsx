@@ -88,7 +88,24 @@ const ROW_GROUPS: string[][] = [
 // that the member never sees in that order.
 
 export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, allowMentorTrack = false, initialExperienced = null }: ProfileFormProps) {
-  const [state, action, pending] = useActionState<ProfileState, FormData>(saveProfile, {});
+  // The wizard's save carries her CV FILE — on filtered networks the proxy
+  // can kill the large upload mid-flight, and an uncaught dispatch rejection
+  // crashed straight to the משהו-השתבש boundary with nothing saved (רות,
+  // 5/9). Catch it: her answers stay in the form, she just retries.
+  const [state, action, pending] = useActionState<ProfileState, FormData>(
+    async (prev, formData) => {
+      try {
+        return (await saveProfile(prev, formData)) ?? prev;
+      } catch (e) {
+        if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+        return {
+          error:
+            "החיבור התנתק בזמן השליחה — זה קורה לפעמים ברשתות מסוננות כשמעלים קובץ. כל מה שמילאת נשמר כאן בטופס: פשוט לחצי שוב על סיום ושמירה. אם זה חוזר על עצמו, נסי קובץ קורות חיים קטן יותר.",
+        };
+      }
+    },
+    {}
+  );
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   const [cvFileName, setCvFileName] = useState<string | null>(null);
