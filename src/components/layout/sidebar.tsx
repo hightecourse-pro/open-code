@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   BookOpen,
@@ -96,6 +97,25 @@ const DEFAULT_USER: SidebarUser = {
 export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
   const pathname = usePathname();
 
+  // "חדש" on the hackathon item until her first visit (the owner, 7/9) —
+  // remembered per browser; entering the page clears it for good.
+  const [hackathonSeen, setHackathonSeen] = useState(true);
+  useEffect(() => {
+    // Deferred a tick — the set-state-in-effect rule (same treatment as the
+    // error boundary's healing flag).
+    const t = setTimeout(() => {
+      try {
+        if (pathname === "/hackathon" || pathname.startsWith("/hackathon/")) {
+          localStorage.setItem("oc-hackathon-seen", "1");
+          setHackathonSeen(true);
+        } else {
+          setHackathonSeen(localStorage.getItem("oc-hackathon-seen") === "1");
+        }
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
+  }, [pathname]);
+
   return (
     <nav className="bg-white border-e border-ink-200 p-3 pt-3 flex flex-col gap-1 sticky top-0 h-screen overflow-y-auto">
       <Link href="/forum" className="px-2 mb-1 block w-fit" aria-label="קוד פתוח">
@@ -121,6 +141,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
             const label =
               item.href === "/mentor" && user.isMentor ? "הליוויים שלי" : item.label;
             const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : item.badge?.toString();
+            const isNew = item.href === "/hackathon" && !hackathonSeen;
             return (
               <Link
                 key={item.href}
@@ -138,8 +159,18 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
               >
                 <Icon size={16} className="shrink-0" />
                 <span>{label}</span>
-                {(locked || badge) && (
+                {(locked || badge || isNew) && (
                   <span className="ms-auto flex items-center gap-1.5">
+                    {isNew && (
+                      <span
+                        className={cn(
+                          "px-2 py-px rounded-full text-[10.5px] font-bold",
+                          active ? "bg-white/25 text-white" : "bg-brand-gradient text-white"
+                        )}
+                      >
+                        חדש
+                      </span>
+                    )}
                     {locked && (
                       <Lock size={13} className={cn("shrink-0", active ? "text-white/80" : "text-ink-400")} />
                     )}
