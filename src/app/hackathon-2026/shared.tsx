@@ -230,8 +230,8 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
         {variant === "partners" ? (
           <p className="t-body-lg text-ink-700 max-w-lg">
             אתגרי AI אמיתיים מהתעשייה.
-            <span className="block mt-1">עשרות מפתחות מהקהילה בונות פתרון עובד לאתגר שלכם</span>
-            <span className="block font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, כספונסרים וכנותני אתגר.</span>
+            <span className="block mt-1">עשרות ג׳וניוריות מוכשרות בונות פתרון עובד לאתגר שלכם</span>
+            <span className="block font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, מגייסים או כנותני אתגר</span>
           </p>
         ) : (
           <p className="t-body-lg text-ink-700 max-w-lg">
