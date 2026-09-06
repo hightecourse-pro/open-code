@@ -1,6 +1,6 @@
 // The shared half of the hackathon 2026 pages: the main page and the
 // partners page must stay IDENTICAL from the hero through the challenges
-// (the owner, 6/9) — so hero, ticker, challenges, doodles and the animation
+// (the owner, 6/9) - so hero, ticker, challenges, doodles and the animation
 // styles live here and both routes render them from one source.
 import Link from "next/link";
 import { Logo } from "@/components/ui";
@@ -52,7 +52,7 @@ export function Scribble({ className }: { className?: string }) {
   );
 }
 
-/** CURLY drawn arrow — loops once on its way down. */
+/** CURLY drawn arrow - loops once on its way down. */
 export function CurlyArrow({ className, color = "#E0418D" }: { className?: string; color?: string }) {
   return (
     <svg viewBox="0 0 90 110" fill="none" aria-hidden className={className}>
@@ -111,7 +111,7 @@ type Challenge = {
   org: string | null;
   emoji: string;
   challenge?: string;
-  /** A revealed partner whose challenge lands later — logo card, no details. */
+  /** A revealed partner whose challenge lands later - logo card, no details. */
   teaser?: string;
   samples?: boolean;
   /** Round badge logo (replaces the emoji blob in the card header). */
@@ -128,7 +128,7 @@ const CHALLENGES: Challenge[] = [
     org: "משרד הבריאות · המרכז הרפואי שיבא",
     emoji: "🧬",
     challenge:
-      "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים — סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
+      "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים - סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
     samples: true,
     badgeLogo: "/hackathon-2026/logo-virology.png",
     partnerLogo: "/hackathon-2026/logo-moh.jpg",
@@ -144,7 +144,7 @@ const TICKER = "🚀 האקתון AI קוד פתוח 2026 ✦ בונות פתר�
 
 /* ---------------------------------------------------------------- pieces */
 
-/** Page-scoped playfulness — stilled entirely under reduced motion. */
+/** Page-scoped playfulness - stilled entirely under reduced motion. */
 export function H26Style() {
   return (
     <style>{`
@@ -178,8 +178,10 @@ export function H26Style() {
   );
 }
 
-/** The hero — identical on both pages. */
-export function HeroSection() {
+/** The hero - same design on both pages; the subtitle line and badge pills
+    speak to the page's audience (the owner, 6/9: אחרי החגים / למנויות בלבד
+    are not what a partner cares about). */
+export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
     <section className="relative px-6 pt-14 pb-16 text-center">
       <div className="bg-brand-glow absolute inset-0 -z-10" />
@@ -225,21 +227,45 @@ export function HeroSection() {
             2026
           </span>
         </h1>
-        <p className="t-body-lg text-ink-700 max-w-lg">
-          אתגרי AI אמיתיים מהתעשייה.
-          <span className="block mt-1">בהאקתון הזה את בוחרת את האתגר שהכי מלהיב אותך</span>
-          <span className="block font-bold text-ink-900">ומתמודדת על המקום הראשון! 🏆</span>
-        </p>
+        {variant === "partners" ? (
+          <p className="t-body-lg text-ink-700 max-w-lg">
+            אתגרי AI אמיתיים מהתעשייה.
+            <span className="block mt-1">עשרות מפתחות מהקהילה בונות פתרון עובד לאתגר שלכם</span>
+            <span className="block font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, כספונסרים וכנותני אתגר.</span>
+          </p>
+        ) : (
+          <p className="t-body-lg text-ink-700 max-w-lg">
+            אתגרי AI אמיתיים מהתעשייה.
+            <span className="block mt-1">בהאקתון הזה את בוחרת את האתגר שהכי מלהיב אותך</span>
+            <span className="block font-bold text-ink-900">ומתמודדת על המקום הראשון! 🏆</span>
+          </p>
+        )}
         <div className="flex items-center gap-2.5 flex-wrap justify-center">
-          <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
-            📅 אחרי החגים
-          </span>
-          <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
-            💜 למנויות הקהילה בלבד
-          </span>
-          <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-            🏆 שת״פים מהתעשייה
-          </span>
+          {variant === "partners" ? (
+            <>
+              <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
+                אתגר אמיתי מהשטח שלכם
+              </span>
+              <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
+                עשרות מפתחות AI
+              </span>
+              <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
+                ערב גמר - הפתרונות על הבמה
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
+                📅 אחרי החגים
+              </span>
+              <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
+                💜 למנויות הקהילה בלבד
+              </span>
+              <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
+                🏆 שת״פים מהתעשייה
+              </span>
+            </>
+          )}
         </div>
         {/* curly arrow inviting the scroll down to the challenges */}
         <div className="flex items-start gap-1 mt-1">
@@ -251,7 +277,7 @@ export function HeroSection() {
   );
 }
 
-/** Code ticker strip — two identical halves, the track slides exactly one
+/** Code ticker strip - two identical halves, the track slides exactly one
     half per cycle, so the loop is seamless and truly endless. */
 export function TickerStrip() {
   return (
@@ -264,7 +290,7 @@ export function TickerStrip() {
   );
 }
 
-/** The four challenges, orbiting the core — identical on both pages. */
+/** The four challenges, orbiting the core - identical on both pages. */
 export function ChallengesSection() {
   return (
     <section className="px-6 pt-10 pb-20 bg-[#FBF7FF] relative">
@@ -277,7 +303,7 @@ export function ChallengesSection() {
             ארבעה שת״פים. ארבעה אתגרים.
           </h2>
           <p className="t-body text-ink-700 mt-1">
-            כל ארגון מביא בעיה אמיתית מהשטח — לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
+            כל ארגון מביא בעיה אמיתית מהשטח - לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
           </p>
         </div>
 
@@ -331,8 +357,7 @@ export function ChallengesSection() {
                       <div className="font-mono text-[14.5px] text-brand-pink-deep">{"// האתגר"}</div>
                       <p className="t-body text-ink-900 leading-relaxed">{c.challenge}</p>
                       {c.partnerLogo && (
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="font-mono text-[16px] text-ink-400">בשיתוף:</span>
+                        <div className="flex items-center justify-center gap-3 flex-wrap">
                           <span className="bg-white border border-ink-100 rounded-[16px] px-5 py-3 rotate-[-1deg] shadow-sm">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={c.partnerLogo} alt={c.org ?? ""} className="h-20 w-auto max-w-full" />
@@ -344,7 +369,7 @@ export function ChallengesSection() {
                           className="inline-flex w-fit items-center gap-1.5 text-[15.5px] font-semibold text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-3 py-1.5 rotate-1"
                           style={{ borderRadius: "12px 16px 12px 18px" }}
                         >
-                          📄 טפסי דוגמה להורדה — יעלו כאן עם פתיחת ההרשמה
+                          📄 טפסי דוגמה להורדה - יעלו כאן עם פתיחת ההרשמה
                         </span>
                       )}
                     </div>
