@@ -283,7 +283,7 @@ export default function Hackathon2026Page() {
               💜 למנויות הקהילה בלבד
             </span>
             <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-              🏆 שת"פים מהתעשייה
+              🏆 שת״פים מהתעשייה
             </span>
           </div>
           {/* curly arrow inviting the scroll down to the challenges */}
@@ -311,7 +311,7 @@ export default function Hackathon2026Page() {
           <div className="text-center mb-14">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;אתגרים/&gt;</span>
             <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
-              ארבעה שת"פים. ארבעה אתגרים.
+              ארבעה שת״פים. ארבעה אתגרים.
             </h2>
             <p className="t-body text-ink-700 mt-1">
               כל ארגון מביא בעיה אמיתית מהשטח — לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
@@ -365,7 +365,7 @@ export default function Hackathon2026Page() {
                         <span className="font-mono text-brand-pink-deep text-sm group-open:rotate-90 transition-transform">&gt;</span>
                       </summary>
                       <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
-                        <div className="font-mono text-[14.5px] text-brand-pink-deep">// האתגר</div>
+                        <div className="font-mono text-[14.5px] text-brand-pink-deep">{"// האתגר"}</div>
                         <p className="t-body text-ink-900 leading-relaxed">{c.challenge}</p>
                         {c.partnerLogo && (
                           <div className="flex items-center gap-3 flex-wrap">
@@ -439,9 +439,9 @@ export default function Hackathon2026Page() {
               גם אם לא למדת קורס AI מלא <span className="h26-wiggle">😉</span> — ה-AI הוא גם הכלי וגם המורה שלך.
             </p>
           </div>
-          <div className="flex justify-end pe-6 -mb-2 items-start">
-            <span className="font-display font-bold text-[15.5px] text-brand-purple -rotate-6 me-1 mt-2">מתחילה כאן</span>
-            <SwirlArrow className="h26-float w-14 h-12" />
+          <div className="flex justify-start ps-6 -mb-2 items-start">
+            <span className="font-display font-bold text-[15.5px] text-brand-purple rotate-6 ms-1 mt-2">מתחילה כאן</span>
+            <SwirlArrow className="h26-float w-14 h-12 -scale-x-100" />
           </div>
 
           {/* zigzag doodle path — each stop leans the other way, swirl arrows in between */}
