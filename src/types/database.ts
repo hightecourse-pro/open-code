@@ -428,6 +428,25 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["application_assessments"]["Insert"]>;
         Relationships: [];
       };
+      /** Why a submitted candidate did not continue, per (job, candidate). */
+      submission_outcomes: {
+        Row: {
+          job_id: string;
+          profile_id: string;
+          note: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          job_id: string;
+          profile_id: string;
+          note?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["submission_outcomes"]["Insert"]>;
+        Relationships: [];
+      };
       /** The team's task list — manual entries and system-trigger routed ones. */
       admin_tasks: {
         Row: {

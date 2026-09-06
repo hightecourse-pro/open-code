@@ -22,7 +22,7 @@ import {
   updateApplicationPipeline,
 } from "@/app/(admin)/admin/actions";
 import type { AdminMark, PipelineStatus } from "@/app/(admin)/admin/actions";
-import { saveMemberInternalNote, toggleMemberInternalTag } from "./finder-actions";
+import { saveMemberInternalNote, saveSubmissionOutcome, toggleMemberInternalTag } from "./finder-actions";
 import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
 
@@ -75,6 +75,16 @@ export interface ReviewApplication {
   isVip: boolean;
   /** Internal profile tags (member_crm.internal_tags) — admin-only. */
   memberTags: string[];
+  /** Every place WE submitted her to, with the per-place outcome note (7/9). */
+  forwards: {
+    jobId: string;
+    title: string;
+    company: string | null;
+    when: string | null;
+    status: string | null;
+    note: string | null;
+    isCurrent: boolean;
+  }[];
   /** Claude's nightly read of profile+CV+answers (the owner, 5/9). */
   assessment: {
     aiDomain: string | null;
@@ -285,6 +295,8 @@ export function ReviewCenter({
   // "לסנן לפי תשובה מסוימת ולסמן לא מתאימה גורף") — then select-all + bulk.
   const [answerQ, setAnswerQ] = useState<string>("");
   const [answerV, setAnswerV] = useState<string>("");
+  // Filter by seminary / study institution (the owner, 7/9).
+  const [seminarFilter, setSeminarFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   // מנויות / VIP one-click filters (Shira: clear counts + easy filtering).
   const [tierFilter, setTierFilter] = useState<"all" | "subscribers" | "vip">("all");
@@ -383,6 +395,15 @@ export function ReviewCenter({
   // the default hide turn that filter into an empty list.
   const notFitVisible = showNotFit || markFilter === "not_fit";
 
+  const seminarOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of applications) {
+      const sp = a.profile?.studyPlace;
+      if (sp) counts.set(sp, (counts.get(sp) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0], "he"));
+  }, [applications]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     // OR within one criterion, AND across criteria — same semantics as
@@ -405,6 +426,7 @@ export function ReviewCenter({
         const match = Array.isArray(ans) ? ans.includes(answerV) : String(ans ?? "") === answerV;
         if (!match) return false;
       }
+      if (seminarFilter !== "all" && (a.profile?.studyPlace ?? "") !== seminarFilter) return false;
       if (tierFilter === "subscribers" && !a.isSubscriber) return false;
       if (tierFilter === "vip" && !a.isVip) return false;
       if (wanted.length > 0) {
@@ -432,6 +454,7 @@ export function ReviewCenter({
     statusOf,
     answerQ,
     answerV,
+    seminarFilter,
   ]);
 
   // The effective selection is only ever the visible rows — a filter change
@@ -873,6 +896,19 @@ export function ReviewCenter({
           {["submitted", "in_review", "sent", "interview", "exam", "hired", "declined"].map((s) => (
             <option key={s} value={s}>
               {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={seminarFilter}
+          onChange={(e) => setSeminarFilter(e.target.value)}
+          className="w-auto max-w-[210px] py-2"
+          aria-label="סינון לפי מוסד לימודים"
+        >
+          <option value="all">🎓 כל המוסדות</option>
+          {seminarOptions.map(([sp, n]) => (
+            <option key={sp} value={sp}>
+              {sp} ({n})
             </option>
           ))}
         </Select>
@@ -1511,6 +1547,7 @@ export function ReviewCenter({
                 candidates (the owner, 3/9) — admin-only, rides on HER. */}
             <MemberNoteBox key={selected.applicantId} app={selected} />
             {selected.assessment && <AssessmentBox a={selected.assessment} />}
+            <ForwardsBox key={`fwd-${selected.id}`} app={selected} />
             {/* header + prev/next */}
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="min-w-0">
@@ -1994,6 +2031,83 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
         )}
       </div>
       {a.verdict && <p className="text-[13px] text-ink-900 leading-relaxed">{a.verdict}</p>}
+    </div>
+  );
+}
+
+/** "הוגשה ל-N מקומות" — prominent count; click opens the list with a
+ *  per-place note on why she did not continue (the owner, 7/9). */
+function ForwardsBox({ app }: { app: ReviewApplication }) {
+  const [open, setOpen] = useState(false);
+  if (app.forwards.length === 0) return null;
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1.5 rounded-full bg-brand-gradient text-white text-[12.5px] font-bold px-3.5 py-1.5 hover:brightness-105 cursor-pointer"
+      >
+        📤 הוגשה על ידינו ל־{app.forwards.length} {app.forwards.length === 1 ? "משרה" : "משרות"}
+        <span className="opacity-80">{open ? "▴" : "▾"}</span>
+      </button>
+      {open && (
+        <div className="mt-2 rounded-[10px] border border-ink-200 bg-ink-0 divide-y divide-ink-100">
+          {app.forwards.map((f) => (
+            <ForwardRow key={f.jobId} app={app} f={f} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ForwardRow({ app, f }: { app: ReviewApplication; f: ReviewApplication["forwards"][number] }) {
+  const [note, setNote] = useState(f.note ?? "");
+  const [saved, setSaved] = useState(false);
+  const [saving, startSave] = useTransition();
+  const dirty = note !== (f.note ?? "");
+  return (
+    <div className="p-2.5 flex flex-col gap-1">
+      <div className="flex items-center gap-2 flex-wrap text-[13px]">
+        <a href={`/admin/jobs/${f.jobId}`} className="font-semibold text-ink-900 hover:text-brand-purple hover:underline">
+          {f.title}
+        </a>
+        {f.company && <span className="text-ink-500">· {f.company}</span>}
+        {f.isCurrent && (
+          <span className="text-[10px] font-bold bg-tint-purple text-brand-purple px-1.5 py-0.5 rounded-full">המשרה הזו</span>
+        )}
+        {f.status && STATUS_LABEL[f.status] && (
+          <span className="text-[10.5px] text-ink-500">{STATUS_LABEL[f.status]}</span>
+        )}
+        {f.when && <span className="ms-auto text-[11px] text-ink-400">{fmtDate(f.when)}</span>}
+      </div>
+      <div className="flex items-start gap-1.5">
+        <textarea
+          value={note}
+          onChange={(e) => { setNote(e.target.value); setSaved(false); }}
+          rows={1}
+          maxLength={1000}
+          placeholder="למה לא המשיכה / לא נבחרה כאן…"
+          className="flex-1 rounded-md border border-ink-200 bg-white px-2 py-1 text-[12.5px] focus:outline-none focus:border-brand-purple resize-y"
+        />
+        {dirty && (
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() =>
+              startSave(async () => {
+                const r = await saveSubmissionOutcome(f.jobId, app.applicantId, note);
+                if (r.ok) { f.note = note; setSaved(true); }
+              })
+            }
+            className="text-[11.5px] font-bold text-brand-purple hover:underline disabled:opacity-50 mt-1"
+          >
+            {saving ? "שומרת…" : "שמירה"}
+          </button>
+        )}
+        {saved && !dirty && <span className="text-[11px] font-bold text-success mt-1">✓</span>}
+      </div>
     </div>
   );
 }
