@@ -88,7 +88,7 @@ export default async function ForumPage({
       }
       let topicsQuery = supabase
         .from("posts")
-        .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, author_id, reply_count, like_count, last_reply_at")
+        .select("id, title, body, intent, tech_tags, is_official, is_pinned, created_at, author_id, reply_count, like_count, last_reply_at")
         .eq("kind", "forum");
       if (savedOnly) topicsQuery = topicsQuery.in("id", savedIds);
       const { data } = await topicsQuery
@@ -115,9 +115,22 @@ export default async function ForumPage({
   const authors = (authorRows ?? []) as ProfileLite[];
   const authorMap = new Map(authors.map((a) => [a.id, a]));
 
+  // Her read stamps for the listed topics — a topic is "new" when its latest
+  // activity is younger than her last visit to it, or when she never opened
+  // it and the activity happened after she joined (Rachel Weinberger, 6/9).
+  const { data: readRows } = posts.length
+    ? await supabase
+        .from("post_reads")
+        .select("post_id, read_at")
+        .eq("profile_id", profile.id)
+        .in("post_id", posts.map((p) => p.id))
+    : { data: [] };
+  const readAt = new Map((readRows ?? []).map((r) => [r.post_id, r.read_at]));
+  const joinedAt = profile.created_at ?? new Date(0).toISOString();
+
   const topics: ForumTopic[] = posts.map((p) => ({
     id: p.id,
-    title: topicTitle(p.body),
+    title: p.title?.trim() || topicTitle(p.body),
     intent: p.intent,
     tech_tags: p.tech_tags,
     is_official: p.is_official,
@@ -127,6 +140,11 @@ export default async function ForumPage({
     author: authorMap.get(p.author_id) ?? null,
     replyCount: p.reply_count ?? 0,
     likeCount: p.like_count ?? 0,
+    // Her own topic counts as read at creation — but new replies to it still
+    // light up like any other unread activity.
+    unread:
+      (p.last_reply_at ?? p.created_at) >
+      (readAt.get(p.id) ?? (p.author_id === profile.id ? p.created_at : joinedAt)),
   }));
   // Pinned stay on top; inside each group the freshest conversation wins.
   topics.sort((a, b) => {
@@ -193,9 +211,8 @@ export default async function ForumPage({
         }
         items={topics.map((t) => ({
           id: t.id,
-          // She searches the whole body ("בנושא או בתוכן") — the visible row
-          // title is just its first line.
-          haystack: bodyById.get(t.id) ?? t.title,
+          // She searches the subject AND the body's opening ("בנושא או בתוכן").
+          haystack: [t.title, bodyById.get(t.id) ?? ""].join("\n"),
           node: <ForumTopicRow topic={t} />,
         }))}
       />
