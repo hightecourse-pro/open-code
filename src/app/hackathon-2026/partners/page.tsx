@@ -101,8 +101,8 @@ export default function HackathonPartnersPage() {
       </section>
 
       {/* ── the answer: a bold statement band ──────────────────────────── */}
-      <section className="relative overflow-hidden bg-brand-gradient text-white py-3">
-        <div className="hp-ticker-track flex whitespace-nowrap w-max" aria-hidden>
+      <section className="relative overflow-hidden bg-brand-gradient text-white py-3" dir="ltr">
+        <div className="hp-ticker-track flex whitespace-nowrap w-max" style={{ direction: "rtl" }} aria-hidden>
           {Array.from({ length: 2 }).map((_, i) => (
             <span key={i} className="flex items-center gap-6 px-3 font-display font-bold text-[16px]">
               <span>✦ כל ג׳וניורית — מפתחת AI</span>
