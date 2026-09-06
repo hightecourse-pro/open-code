@@ -96,11 +96,14 @@ export function ApplyForm({
           htmlFor={q.answer_type === "multiselect" ? undefined : `q_${q.id}`}
         >
           {q.answer_type === "number" ? (
+            // step="any": the browser's default step=1 rejects 3.5 שנות ניסיון
+            // (same fix as the profile wizard, 1/9; the owner hit it here 6/9)
             <Input
               id={`q_${q.id}`}
               name={`q_${q.id}`}
               type="number"
-              inputMode="numeric"
+              step="any"
+              inputMode="decimal"
               required={q.required !== false}
               placeholder="התשובה שלך במספר…"
               defaultValue={prev(q.id)}

@@ -91,6 +91,7 @@ export function JobDetailsForm({
             <Input
               name="practicum_percent"
               type="number"
+              step="any"
               min={1}
               max={100}
               defaultValue={job.practicum_percent ?? ""}
