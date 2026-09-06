@@ -231,7 +231,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
           <p className="t-body-lg text-ink-700 max-w-lg">
             אתגרי AI אמיתיים מהתעשייה.
             <span className="block mt-1">עשרות מפתחות מהקהילה בונות פתרון עובד לאתגר שלכם</span>
-            <span className="block font-bold text-ink-900">ואתם פוגשים יכולות מוכחות - לא קורות חיים! 🎯</span>
+            <span className="block font-bold text-ink-900">ואתם פוגשים יכולות מוכחות - לא קורות חיים!</span>
           </p>
         ) : (
           <p className="t-body-lg text-ink-700 max-w-lg">
@@ -244,13 +244,13 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
           {variant === "partners" ? (
             <>
               <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
-                🧩 אתגר אמיתי מהשטח שלכם
+                אתגר אמיתי מהשטח שלכם
               </span>
               <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
-                👩‍💻 עשרות מפתחות AI
+                עשרות מפתחות AI
               </span>
               <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-                🏆 ערב גמר - הפתרונות על הבמה
+                ערב גמר - הפתרונות על הבמה
               </span>
             </>
           ) : (

@@ -50,7 +50,7 @@ const VALUE_PATH = [
   {
     emoji: "🧲",
     title: "ודרך שנייה: באים לגייס",
-    body: "פוגשים את המפתחות דרך הפתרונות שהן בנו - יכולות מוכחות במקום קורות חיים. בערב הגמר, או ישירות דרכנו 💜",
+    body: "פוגשים את המפתחות דרך הפתרונות שהן בנו - יכולות מוכחות במקום קורות חיים. בערב הגמר, או ישירות דרכנו",
     side: "self-end",
     tilt: "-rotate-1",
   },
@@ -82,7 +82,7 @@ export default function HackathonPartnersPage() {
             <span className="font-mono text-xs text-brand-pink-deep">&lt;לשותפים/&gt;</span>
             <h2 className="font-display text-[30px] font-black mt-1 rotate-1">למה כדאי לכם להיות בפנים?</h2>
             <p className="t-body text-ink-700 mt-1.5">
-              רגע לפני המספרים והלוגואים - הסיפור האמיתי <span className="h26-wiggle">👀</span>
+              רגע לפני המספרים והלוגואים - הסיפור האמיתי.
             </p>
           </div>
           <div className="flex justify-start ps-6 -mb-2 items-start">
@@ -131,7 +131,7 @@ export default function HackathonPartnersPage() {
             className="font-mono text-[15.5px] text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-4 py-2.5 mt-8 w-fit mx-auto rotate-1"
             style={{ borderRadius: "14px 18px 14px 20px" }}
           >
-            {"// bring(realChallenge) => meet(provenTalent) 🚀"}
+            {"// bring(realChallenge) => meet(provenTalent)"}
           </p>
 
           {/* the simple math - same plus-doodle as "מה בונים?" on the main page */}
@@ -230,9 +230,9 @@ export default function HackathonPartnersPage() {
             <Sparkle className="absolute bottom-4 left-8 w-4 h-4" color="#F8D98C" delay="1.1s" />
             <Sparkle className="absolute top-8 left-1/4 w-3 h-3" color="#FFFFFF" delay="0.5s" />
             <div className="text-[30px]"><span className="h26-wiggle">🤝</span></div>
-            <div className="font-display font-black text-[22px] mt-1">אתגר על הבמה? באים לגייס? ✨</div>
+            <div className="font-display font-black text-[22px] mt-1">אתגר על הבמה? באים לגייס?</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              מקומות השותפות לאירוע מוגבלים - נשמח לתפור יחד את השותפות שנכונה לכם 🏆
+              מקומות השותפות לאירוע מוגבלים - נשמח לתפור יחד את השותפות שנכונה לכם
             </div>
           </div>
 
@@ -245,7 +245,7 @@ export default function HackathonPartnersPage() {
               className="h26-bounce inline-flex items-center gap-2 bg-brand-gradient text-white px-7 py-3.5 font-display font-bold text-[17.5px] -rotate-1 shadow-glow-pink hover:brightness-105 transition-[filter]"
               style={{ borderRadius: "999px" }}
             >
-              💬 דברו איתנו על שותפות
+              דברו איתנו על שותפות
             </a>
             <p className="font-mono text-[14px] text-ink-500" dir="ltr">
               02-580-0296 ·{" "}
