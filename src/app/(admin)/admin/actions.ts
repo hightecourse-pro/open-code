@@ -1384,7 +1384,10 @@ export async function publishJob(
   manualIds: string[] = [],
   /** Board-visible to the WHOLE community — future joiners included (the
       owner, 1/9). Emails still go only to the selected audience. */
-  openToAll = false
+  openToAll = false,
+  /** Board-visible to every EXPERIENCED member — future joiners included
+      (the owner, 6/9). */
+  openToExperienced = false
 ): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number; queued?: number }> {
   await requireRole("admin");
   const admin = createAdminClient();
@@ -1425,6 +1428,7 @@ export async function publishJob(
       // "couldn't see" a published job).
       is_visible: true,
       open_to_all: openToAll,
+      open_to_experienced: openToExperienced,
       published_at: job.published_at ?? new Date().toISOString(),
     })
     .eq("id", jobId);
