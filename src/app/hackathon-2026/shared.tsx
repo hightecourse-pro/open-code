@@ -358,7 +358,6 @@ export function ChallengesSection() {
                       <p className="t-body text-ink-900 leading-relaxed">{c.challenge}</p>
                       {c.partnerLogo && (
                         <div className="flex items-center gap-3 flex-wrap">
-                          <span className="font-mono text-[16px] text-ink-400">בשיתוף:</span>
                           <span className="bg-white border border-ink-100 rounded-[16px] px-5 py-3 rotate-[-1deg] shadow-sm">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={c.partnerLogo} alt={c.org ?? ""} className="h-20 w-auto max-w-full" />
