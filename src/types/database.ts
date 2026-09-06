@@ -750,6 +750,8 @@ export interface Database {
           kind: PostKind;
           intent: PostIntent;
           body: string;
+          /** Explicit subject line (6/9); null falls back to the body's first line. */
+          title: string | null;
           tech_tags: string[];
           is_official: boolean;
           is_pinned: boolean;
@@ -767,6 +769,7 @@ export interface Database {
           kind?: PostKind;
           intent?: PostIntent;
           body: string;
+          title?: string | null;
           tech_tags?: string[];
           is_official?: boolean;
           is_pinned?: boolean;
@@ -774,6 +777,21 @@ export interface Database {
           status?: PostStatus;
         };
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;
+        Relationships: [];
+      };
+      /** Which forum topics each member has opened, and when (6/9). */
+      post_reads: {
+        Row: {
+          profile_id: string;
+          post_id: string;
+          read_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          post_id: string;
+          read_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["post_reads"]["Insert"]>;
         Relationships: [];
       };
       comments: {

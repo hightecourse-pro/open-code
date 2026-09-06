@@ -183,6 +183,9 @@ export async function createPost(
     ? (intentRaw as PostIntent)
     : "knowledge";
   const kind: PostKind = String(formData.get("kind") ?? "feed") === "forum" ? "forum" : "feed";
+  // Optional explicit subject (the owner, 6/9) — empty stays null and the
+  // list keeps deriving a title from the body's first line.
+  const title = String(formData.get("title") ?? "").trim().slice(0, 120) || null;
 
   const attachIds = attachmentIdsFrom(formData);
   if (plain.length < 2 && attachIds.length === 0) return { error: "כתבי משהו קצר לפני ששולחים 🙂" };
@@ -197,7 +200,7 @@ export async function createPost(
 
   const { data: createdPost, error } = await supabase
     .from("posts")
-    .insert({ author_id: user.id, body, intent, kind })
+    .insert({ author_id: user.id, body, intent, kind, title })
     .select("id")
     .single();
 

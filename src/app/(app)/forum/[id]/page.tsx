@@ -29,7 +29,7 @@ const loadPost = cache(async (id: string) => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("posts")
-    .select("id, body, intent, tech_tags, is_official, is_pinned, created_at, edited_at, author_id, like_count")
+    .select("id, title, body, intent, tech_tags, is_official, is_pinned, created_at, edited_at, author_id, like_count")
     .eq("id", id)
     .eq("kind", "forum")
     .maybeSingle();
@@ -43,7 +43,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const post = await loadPost(id);
-  return { title: post ? topicTitle(post.body, 60) : "פורום" };
+  return { title: post ? post.title?.trim() || topicTitle(post.body, 60) : "פורום" };
 }
 
 export default async function ForumTopicPage({ params }: { params: Promise<{ id: string }> }) {
@@ -55,6 +55,17 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
 
   const post = await loadPost(id);
   if (!post) notFound();
+
+  // Opening the topic is reading it — stamp her read state so the list can
+  // stop marking it "חדש" (Rachel Weinberger, 6/9). Own-rows RLS.
+  if (user) {
+    await supabase
+      .from("post_reads")
+      .upsert(
+        { profile_id: user.id, post_id: post.id, read_at: new Date().toISOString() },
+        { onConflict: "profile_id,post_id" }
+      );
+  }
 
   // A hot topic at scale can hold hundreds of long replies — cap the load to
   // the newest 200 (rendered oldest-first) instead of shipping the archive on
@@ -93,7 +104,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     // forum stays one click away in a rail beside it (wide screens only).
     supabase
       .from("posts")
-      .select("id, body, is_pinned, created_at")
+      .select("id, title, body, is_pinned, created_at")
       .eq("kind", "forum")
       .order("is_pinned", { ascending: false })
       .order("created_at", { ascending: false })
@@ -150,7 +161,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
 
   const rail = (railRows ?? []).map((t) => ({
     id: t.id,
-    title: topicTitle(t.body, 60),
+    title: t.title?.trim() || topicTitle(t.body, 60),
     pinned: t.is_pinned,
   }));
 
@@ -195,7 +206,15 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
             שיחה ארוכה במיוחד — מוצגות {COMMENTS_CAP} התגובות האחרונות.
           </p>
         )}
-        <PostCard post={feedPost} canWrite={canWrite} defaultOpenComments />
+        <div className="min-w-0">
+          {/* The explicit subject, when the author wrote one (6/9). */}
+          {post.title?.trim() && (
+            <h1 className="font-display text-[22px] font-black text-ink-1000 mb-2.5 leading-snug">
+              {post.title.trim()}
+            </h1>
+          )}
+          <PostCard post={feedPost} canWrite={canWrite} defaultOpenComments />
+        </div>
       </div>
       {/* A conversation, not a page: replies from other members show up on
           their own. Faster than the topic list — here she is actively waiting

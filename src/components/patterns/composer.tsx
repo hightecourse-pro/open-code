@@ -57,6 +57,14 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
       <form ref={formRef} action={action}>
         <input type="hidden" name="intent" value={intent} />
         <input type="hidden" name="kind" value={kind} />
+        {kind === "forum" && (
+          <input
+            name="title"
+            maxLength={120}
+            placeholder="נושא הפוסט — כותרת קצרה (לא חובה)"
+            className="w-full rounded-md border border-ink-300 bg-ink-0 px-3 py-2 text-sm font-semibold text-ink-1000 placeholder:font-normal placeholder:text-ink-400 focus:outline-none focus:border-brand-purple mb-2"
+          />
+        )}
         <div onInput={() => published && setPublished(false)}>
           <AttachmentPicker key={attachEpoch}>
             <RichTextEditor

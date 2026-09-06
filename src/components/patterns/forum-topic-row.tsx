@@ -30,6 +30,8 @@ export interface ForumTopic {
   } | null;
   replyCount: number;
   likeCount: number;
+  /** Activity she hasn't seen yet — new topic, or new replies since her visit. */
+  unread?: boolean;
 }
 
 /** A topic's list title — the first line of the post's words, kept short. */
@@ -49,7 +51,10 @@ export function ForumTopicRow({ topic }: { topic: ForumTopic }) {
   return (
     <Link
       href={`/forum/${topic.id}`}
-      className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-ink-50 transition-colors group"
+      className={cn(
+        "flex items-center gap-3.5 px-4 py-3.5 hover:bg-ink-50 transition-colors group",
+        topic.unread && "bg-tint-purple/25"
+      )}
     >
       <Avatar
         initials={author?.avatar_initials || author?.full_name?.slice(0, 1) || "ק"}
@@ -60,9 +65,20 @@ export function ForumTopicRow({ topic }: { topic: ForumTopic }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
           {topic.is_pinned && <Pin size={13} className="text-brand-pink-deep shrink-0" />}
+          {topic.unread && (
+            <span
+              className="w-2 h-2 rounded-full bg-brand-gradient shrink-0"
+              title="חדש מאז הביקור האחרון שלך"
+            />
+          )}
           <span className="font-display font-bold text-[15px] text-ink-1000 group-hover:text-brand-purple transition-colors truncate">
             {topic.title}
           </span>
+          {topic.unread && (
+            <span className="bg-brand-gradient text-white px-2 py-px rounded-full text-[10px] font-bold shrink-0">
+              חדש
+            </span>
+          )}
           {isStaff && (
             <span className="bg-ink-1000 text-white px-2 py-px rounded-full text-[10px] font-bold shrink-0">
               צוות
