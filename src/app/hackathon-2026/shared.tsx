@@ -178,8 +178,10 @@ export function H26Style() {
   );
 }
 
-/** The hero — identical on both pages. */
-export function HeroSection() {
+/** The hero — same design on both pages; the subtitle line and badge pills
+    speak to the page's audience (the owner, 6/9: אחרי החגים / למנויות בלבד
+    are not what a partner cares about). */
+export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
     <section className="relative px-6 pt-14 pb-16 text-center">
       <div className="bg-brand-glow absolute inset-0 -z-10" />
@@ -225,21 +227,45 @@ export function HeroSection() {
             2026
           </span>
         </h1>
-        <p className="t-body-lg text-ink-700 max-w-lg">
-          אתגרי AI אמיתיים מהתעשייה.
-          <span className="block mt-1">בהאקתון הזה את בוחרת את האתגר שהכי מלהיב אותך</span>
-          <span className="block font-bold text-ink-900">ומתמודדת על המקום הראשון! 🏆</span>
-        </p>
+        {variant === "partners" ? (
+          <p className="t-body-lg text-ink-700 max-w-lg">
+            אתגרי AI אמיתיים מהתעשייה.
+            <span className="block mt-1">עשרות מפתחות מהקהילה בונות פתרון עובד לאתגר שלכם</span>
+            <span className="block font-bold text-ink-900">ואתם פוגשים יכולות מוכחות — לא קורות חיים! 🎯</span>
+          </p>
+        ) : (
+          <p className="t-body-lg text-ink-700 max-w-lg">
+            אתגרי AI אמיתיים מהתעשייה.
+            <span className="block mt-1">בהאקתון הזה את בוחרת את האתגר שהכי מלהיב אותך</span>
+            <span className="block font-bold text-ink-900">ומתמודדת על המקום הראשון! 🏆</span>
+          </p>
+        )}
         <div className="flex items-center gap-2.5 flex-wrap justify-center">
-          <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
-            📅 אחרי החגים
-          </span>
-          <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
-            💜 למנויות הקהילה בלבד
-          </span>
-          <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-            🏆 שת״פים מהתעשייה
-          </span>
+          {variant === "partners" ? (
+            <>
+              <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
+                🧩 אתגר אמיתי מהשטח שלכם
+              </span>
+              <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
+                👩‍💻 עשרות מפתחות AI
+              </span>
+              <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
+                🏆 ערב גמר — הפתרונות על הבמה
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
+                📅 אחרי החגים
+              </span>
+              <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
+                💜 למנויות הקהילה בלבד
+              </span>
+              <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
+                🏆 שת״פים מהתעשייה
+              </span>
+            </>
+          )}
         </div>
         {/* curly arrow inviting the scroll down to the challenges */}
         <div className="flex items-start gap-1 mt-1">

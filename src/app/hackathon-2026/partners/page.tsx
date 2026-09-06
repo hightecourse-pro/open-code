@@ -69,7 +69,7 @@ export default function HackathonPartnersPage() {
   return (
     <main className="min-h-full bg-white text-ink-1000 overflow-x-hidden">
       <H26Style />
-      <HeroSection />
+      <HeroSection variant="partners" />
       <TickerStrip />
       <ChallengesSection />
 
@@ -248,7 +248,10 @@ export default function HackathonPartnersPage() {
               💬 דברו איתנו על שותפות
             </a>
             <p className="font-mono text-[14px] text-ink-500" dir="ltr">
-              02-580-0296 · opencode.org.il
+              02-580-0296 ·{" "}
+              <a href="mailto:office@opencode.org.il" className="hover:text-brand-purple hover:underline">
+                office@opencode.org.il
+              </a>
             </p>
           </div>
         </div>
