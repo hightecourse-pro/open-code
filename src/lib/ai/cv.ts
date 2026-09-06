@@ -1,4 +1,4 @@
-import { geminiJson } from "./gemini";
+import { geminiJson, todayLineHe } from "./gemini";
 
 export interface CvInsight {
   type: "good" | "warn" | "bad" | "tip";
@@ -62,7 +62,7 @@ export async function analyzeCv(
 
   return geminiJson<CvAnalysis>({
     apiKey,
-    system: SYSTEM,
+    system: SYSTEM + "\n" + todayLineHe(),
     contents: [{ role: "user", text: user }],
     jsonSchema: SCHEMA,
     maxOutputTokens: 4096,
@@ -81,7 +81,7 @@ export async function analyzeCvPdf(
 
   return geminiJson<CvAnalysis>({
     apiKey,
-    system: SYSTEM,
+    system: SYSTEM + "\n" + todayLineHe(),
     contents: [
       { role: "user", text: user, inlineData: { mimeType: "application/pdf", data: pdfBase64 } },
     ],

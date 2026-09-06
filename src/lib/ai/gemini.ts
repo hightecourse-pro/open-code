@@ -188,3 +188,14 @@ export async function verifyGeminiKey(apiKey: string): Promise<boolean> {
     return !(e instanceof Error && /Gemini 4\d\d/.test(e.message));
   }
 }
+
+/**
+ * Models live behind a knowledge cutoff and assume it is 2024/2025 — a CV
+ * with a 2026 job then gets flagged as "chronological confusion" (members,
+ * 6/9). Every experience-reasoning prompt appends today's real date.
+ */
+export function todayLineHe(): string {
+  const now = new Date();
+  const d = new Intl.DateTimeFormat("he-IL", { dateStyle: "long" }).format(now);
+  return `התאריך היום: ${d} (שנת ${now.getFullYear()}). תאריכים בקורות חיים או בניסיון שהם בעבר או בהווה ביחס להיום — תקינים לחלוטין; אין לסמן שנים עדכניות כטעות או כ"תאריך עתידי".`;
+}

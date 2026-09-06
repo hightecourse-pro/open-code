@@ -390,6 +390,18 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       return;
     }
     setErrors({});
+    // Server-side step draft (the owner, 6/9): whatever is filled so far is
+    // saved quietly — a lost final submit costs nothing (רות, 5/9).
+    try {
+      const draftFd = new FormData(formRef.current!);
+      draftFd.set("__draft", "1");
+      draftFd.delete("cv_file"); // the heavy upload stays for the real submit
+      startTransition(() => {
+        void saveProfile({}, draftFd).catch(() => {});
+      });
+    } catch {
+      /* draft is best-effort */
+    }
     setStep(Math.min(cur + 1, totalSteps - 1));
   }
   function back() {
@@ -802,6 +814,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
         {state.ok && <Alert variant="success">הפרופיל נשמר ✓</Alert>}
       </div>
 
+      <p className="text-[11px] text-ink-400 -mb-3">✓ התשובות נשמרות אוטומטית אחרי כל שלב</p>
       {/* progress */}
       <div className="flex items-center gap-1.5">
         {Array.from({ length: totalSteps }).map((_, i) => (

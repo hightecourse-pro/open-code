@@ -125,7 +125,9 @@ export async function aiRankCandidates(
   const batch = candidates.slice(0, AI_BATCH_LIMIT);
   if (!batch.length) return { ok: false, error: "אין מועמדות לדירוג" };
 
-  const prompt = `משרה: ${job.title}
+  const { todayLineHe } = await import("@/lib/ai/gemini");
+  const prompt = `${todayLineHe()}
+משרה: ${job.title}
 טכנולוגיות נדרשות: ${(job.tech_tags ?? []).join(", ")}
 תיאור: ${jobText}
 

@@ -154,9 +154,15 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Draft mode (the owner, 6/9: "תשמור את הטיוטה לכל אחת בכל שלב"): every
+  // step-advance saves whatever is filled so far — no required checks, no CV
+  // gate, no completion flip, no redirect. A dropped final submit (רות) then
+  // costs nothing: her answers already live on the server.
+  const draft = formData.get("__draft") === "1";
+
   const firstName = String(formData.get("first_name") ?? "").trim();
   const lastName = String(formData.get("last_name") ?? "").trim();
-  if (firstName.length < 1 || lastName.length < 1) {
+  if (!draft && (firstName.length < 1 || lastName.length < 1)) {
     return { error: "נשמח לדעת איך קוראים לך 🙂 (שם פרטי ושם משפחה)" };
   }
   const fullName = `${firstName} ${lastName}`.trim();
@@ -357,19 +363,25 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     }
     if (q.required && empty) missing.push(q.label_he);
     const check = FIELD_VALIDATORS[q.key];
+    let badValue = false;
     if (check && typeof value === "string") {
       const msg = check(value);
-      if (msg) invalid.push(msg);
+      if (msg) {
+        invalid.push(msg);
+        badValue = true;
+      }
     }
-    answered.push({ question_id: q.id, value });
+    // A draft never persists a value that failed validation — it will be
+    // caught properly at the real submit.
+    if (!(draft && badValue)) answered.push({ question_id: q.id, value });
   }
 
-  if (invalid.length > 0) {
+  if (!draft && invalid.length > 0) {
     return { error: invalid.join(" · ") };
   }
   // Staff accounts aren't community members — don't hold their save hostage
   // on member-intake required fields.
-  if (missing.length > 0 && before?.role !== "admin") {
+  if (!draft && missing.length > 0 && before?.role !== "admin") {
     return { error: `כמעט סיימנו 🙂 נשארו כמה שדות חובה: ${missing.slice(0, 6).join(", ")}` };
   }
 
@@ -377,7 +389,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   // in with the wizard lands in her documents like any other upload. Mentors
   // included since 2026-08-28 (Shira — the team reviews a mentor's CV in her
   // application); only staff accounts are exempt.
-  if (before?.role !== "admin") {
+  if (!draft && before?.role !== "admin") {
     const { count: cvCount } = await supabase
       .from("cv_documents")
       .select("id", { count: "exact", head: true })
@@ -413,23 +425,38 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     .eq("id", user.id)
     .maybeSingle();
 
-  await supabase
-    .from("profiles")
-    .update({
-      first_name: firstName,
-      last_name: lastName,
-      full_name: fullName,
-      avatar_initials: firstName.slice(0, 1),
-      is_experienced: hasExperience,
-      profile_completed: true,
-    })
-    .eq("id", user.id);
+  if (draft) {
+    // Names ride along when present; completion stays untouched.
+    if (firstName && lastName) {
+      await supabase
+        .from("profiles")
+        .update({
+          first_name: firstName,
+          last_name: lastName,
+          full_name: fullName,
+          avatar_initials: firstName.slice(0, 1),
+        })
+        .eq("id", user.id);
+    }
+  } else {
+    await supabase
+      .from("profiles")
+      .update({
+        first_name: firstName,
+        last_name: lastName,
+        full_name: fullName,
+        avatar_initials: firstName.slice(0, 1),
+        is_experienced: hasExperience,
+        profile_completed: true,
+      })
+      .eq("id", user.id);
 
-  if (!beforeSave?.profile_completed) {
-    await fireTaskTrigger("new_member", {
-      title: `חברה חדשה השלימה שאלון: ${fullName}`,
-      link: `/admin/members/${user.id}`,
-    });
+    if (!beforeSave?.profile_completed) {
+      await fireTaskTrigger("new_member", {
+        title: `חברה חדשה השלימה שאלון: ${fullName}`,
+        link: `/admin/members/${user.id}`,
+      });
+    }
   }
 
   // Change-tracked save: one read of what's already stored, then upserts only
@@ -524,6 +551,8 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       await supabase.from("profiles").update(patch).eq("id", user.id);
     }
   }
+
+  if (draft) return { ok: true };
 
   revalidatePath("/profile");
   // On first completion, the natural next step is the membership decision —
