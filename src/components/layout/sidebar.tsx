@@ -101,14 +101,19 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
   // remembered per browser; entering the page clears it for good.
   const [hackathonSeen, setHackathonSeen] = useState(true);
   useEffect(() => {
-    try {
-      if (pathname === "/hackathon" || pathname.startsWith("/hackathon/")) {
-        localStorage.setItem("oc-hackathon-seen", "1");
-        setHackathonSeen(true);
-      } else {
-        setHackathonSeen(localStorage.getItem("oc-hackathon-seen") === "1");
-      }
-    } catch {}
+    // Deferred a tick — the set-state-in-effect rule (same treatment as the
+    // error boundary's healing flag).
+    const t = setTimeout(() => {
+      try {
+        if (pathname === "/hackathon" || pathname.startsWith("/hackathon/")) {
+          localStorage.setItem("oc-hackathon-seen", "1");
+          setHackathonSeen(true);
+        } else {
+          setHackathonSeen(localStorage.getItem("oc-hackathon-seen") === "1");
+        }
+      } catch {}
+    }, 0);
+    return () => clearTimeout(t);
   }, [pathname]);
 
   return (

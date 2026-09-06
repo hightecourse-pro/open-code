@@ -151,13 +151,16 @@ export default async function HackathonPage() {
         ) : (
           <>
             <p className="t-body-sm text-ink-700 mt-1.5">
-              בחירת אתגר, הורדת החומרים וההשתתפות בהאקתון פתוחות למנויות הקהילה בלבד 💜
+              ההשתתפות בהאקתון, בחירת האתגר והורדת החומרים - למנויות הקהילה.
+            </p>
+            <p className="font-display font-bold text-[15px] text-ink-1000 mt-2">
+              רוצה להשתתף? הצטרפי 💜
             </p>
             <Link
               href="/join"
-              className="inline-flex items-center gap-1.5 mt-3 text-[13.5px] font-bold text-white bg-brand-gradient px-4 py-2 rounded-full hover:brightness-105 transition-[filter]"
+              className="inline-flex items-center gap-1.5 mt-2.5 text-[13.5px] font-bold text-white bg-brand-gradient px-4 py-2 rounded-full hover:brightness-105 transition-[filter]"
             >
-              לשדרוג המנוי <ArrowLeft size={14} />
+              להצטרפות <ArrowLeft size={14} />
             </Link>
           </>
         )}
