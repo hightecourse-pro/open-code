@@ -33,7 +33,7 @@ export default async function HackathonPage() {
           קוד פתוח 2026
         </h1>
         <p className="t-body-sm text-ink-700 mt-1">
-          אתגרים אמיתיים מהתעשייה, מנטוריות שמלוות - ובמה להוכיח מה את באמת יודעת.
+          אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.
         </p>
       </div>
 
@@ -45,9 +45,6 @@ export default async function HackathonPage() {
           את בוחרת אתגר. בונה מנוע AI וממשק. עולה על הבמה 🏆
         </div>
         <div className="flex items-center gap-2 flex-wrap mt-3">
-          <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
-            📅 אחרי החגים
-          </span>
           <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
             💜 למנויות הקהילה
           </span>
