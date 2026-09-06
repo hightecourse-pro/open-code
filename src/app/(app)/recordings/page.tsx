@@ -157,57 +157,72 @@ export default async function RecordingsPage() {
                   >
                     <Lock size={13} /> נפתח עם מנוי
                   </Link>
-                ) : links.length > 0 || (materialsBySession.get(s.id)?.length ?? 0) > 0 || materialsUrl(s) ? (
-                  // The first press opens her Drive access to this session's
-                  // recordings; from then on the player is simply here.
-                  <ContentGate
-                    ownerType="session"
-                    ownerId={s.id}
-                    unlocked={unlockedSessions.has(s.id)}
-                    variant="inline"
-                    label="צפייה"
-                  >
-                    <div className="flex flex-col gap-2 w-full">
-                      {links.length > 0 ? (
-                        <SessionWatch sessionId={s.id} links={links.map((l) => ({ id: l.id, url: l.url }))} />
-                      ) : (
+                ) : (() => {
+                    const hasMaterials = (materialsBySession.get(s.id)?.length ?? 0) > 0 || materialsUrl(s);
+                    const materialsRow = hasMaterials ? (
+                      <span className="flex flex-wrap items-center gap-2 text-[12.5px]">
+                        <span className="font-semibold text-ink-700">חומרים:</span>
+                        {(materialsBySession.get(s.id) ?? []).map((m) => (
+                          <a
+                            key={m.id}
+                            href={m.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1 hover:bg-tint-indigo"
+                          >
+                            {m.title} <ExternalLink size={11} />
+                          </a>
+                        ))}
+                        {materialsUrl(s) && (
+                          <a
+                            href={materialsUrl(s)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1 hover:bg-tint-indigo"
+                          >
+                            חומרי הסשן <ExternalLink size={11} />
+                          </a>
+                        )}
+                      </span>
+                    ) : null;
+                    return links.length > 0 ? (
+                      // The first press opens her Drive access to this session's
+                      // recordings; from then on the player is simply here.
+                      <ContentGate
+                        ownerType="session"
+                        ownerId={s.id}
+                        unlocked={unlockedSessions.has(s.id)}
+                        variant="inline"
+                        label="צפייה"
+                      >
+                        <div className="flex flex-col gap-2 w-full">
+                          <SessionWatch sessionId={s.id} links={links.map((l) => ({ id: l.id, url: l.url }))} />
+                          {materialsRow}
+                        </div>
+                      </ContentGate>
+                    ) : (
+                      // No recording yet: say so upfront — no "צפייה" button that
+                      // opens onto nothing (the owner, 6/9). Materials, when they
+                      // exist, still sit behind the Drive-access gate they need,
+                      // under a label that promises exactly what it opens.
+                      <div className="flex flex-col gap-2 items-start">
                         <span className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-500">
                           <Hourglass size={13} /> ההקלטה תעלה בקרוב
                         </span>
-                      )}
-                      {((materialsBySession.get(s.id)?.length ?? 0) > 0 || materialsUrl(s)) && (
-                        <span className="flex flex-wrap items-center gap-2 text-[12.5px]">
-                          <span className="font-semibold text-ink-700">חומרים:</span>
-                          {(materialsBySession.get(s.id) ?? []).map((m) => (
-                            <a
-                              key={m.id}
-                              href={m.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1 hover:bg-tint-indigo"
-                            >
-                              {m.title} <ExternalLink size={11} />
-                            </a>
-                          ))}
-                          {materialsUrl(s) && (
-                            <a
-                              href={materialsUrl(s)!}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1 hover:bg-tint-indigo"
-                            >
-                              חומרי הסשן <ExternalLink size={11} />
-                            </a>
-                          )}
-                        </span>
-                      )}
-                    </div>
-                  </ContentGate>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 text-[12.5px] text-ink-500">
-                    <Hourglass size={13} /> ההקלטה תעלה בקרוב
-                  </span>
-                )}
+                        {hasMaterials && (
+                          <ContentGate
+                            ownerType="session"
+                            ownerId={s.id}
+                            unlocked={unlockedSessions.has(s.id)}
+                            variant="inline"
+                            label="פתיחת חומרי הסשן"
+                          >
+                            {materialsRow}
+                          </ContentGate>
+                        )}
+                      </div>
+                    );
+                  })()}
               </div>
             );
           })}
