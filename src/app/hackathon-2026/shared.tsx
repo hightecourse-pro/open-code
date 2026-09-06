@@ -230,7 +230,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
         {variant === "partners" ? (
           <p className="t-body-lg text-ink-700 max-w-lg">
             <span className="block font-bold text-ink-900">יש אצלכם תהליך ידני שמחכה לאוטומציה? בעיה מהשטח שאף ספרינט לא מגיע אליה?</span>
-            <span className="block mt-1">עשרות מפתחות AI מוכשרות בונות לכם פתרון עובד - מוכן להצגה, מוכן לבחינה.</span>
+            <span className="block mt-1">עשרות מפתחות AI מוכשרות בונות לכם פתרון עובד - מוכן להצגה.</span>
             <span className="block mt-1 font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, מגייסים או כנותני אתגר</span>
           </p>
         ) : (
