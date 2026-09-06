@@ -71,6 +71,28 @@ export async function saveMemberInternalNote(
   return { ok: true };
 }
 
+/** The team's note on why she did not continue at a given place (7/9). */
+export async function saveSubmissionOutcome(
+  jobId: string,
+  profileId: string,
+  note: string
+): Promise<{ ok: boolean; error?: string }> {
+  const me = await requireRole("admin");
+  const admin = createAdminClient();
+  const { error } = await admin.from("submission_outcomes").upsert(
+    {
+      job_id: jobId,
+      profile_id: profileId,
+      note: note.trim().slice(0, 1000) || null,
+      updated_at: new Date().toISOString(),
+      updated_by: me.id,
+    },
+    { onConflict: "job_id,profile_id" }
+  );
+  if (error) return { ok: false, error: "השמירה נכשלה — נסי שוב." };
+  return { ok: true };
+}
+
 const AI_BATCH_LIMIT = 60;
 
 const AI_SCHEMA = {

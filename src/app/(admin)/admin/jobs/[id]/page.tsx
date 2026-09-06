@@ -252,6 +252,47 @@ export default async function AdminJobPage({
     .in("application_id", (applications ?? []).map((a) => a.id));
   const assessOf = new Map((assessRows ?? []).map((r) => [r.application_id, r]));
 
+  // Everywhere WE submitted each applicant (the owner, 7/9) — application
+  // forwards + proactive job_candidates rows, across ALL jobs, with the
+  // per-place outcome note.
+  const applicantIdsAll = [...new Set((applications ?? []).map((a) => a.applicant_id))];
+  const fwd: Map<string, { jobId: string; when: string | null; status: string | null }[]> = new Map();
+  if (applicantIdsAll.length) {
+    const [{ data: fwdApps }, { data: fwdCands }] = await Promise.all([
+      admin
+        .from("applications")
+        .select("applicant_id, job_id, status, sent_to_client_at")
+        .in("applicant_id", applicantIdsAll)
+        .or("sent_to_client_at.not.is.null,status.in.(sent,interview,exam,hired)"),
+      admin
+        .from("job_candidates")
+        .select("profile_id, job_id, sent_at, created_at")
+        .in("profile_id", applicantIdsAll),
+    ]);
+    for (const f of fwdApps ?? []) {
+      const l = fwd.get(f.applicant_id) ?? [];
+      l.push({ jobId: f.job_id, when: f.sent_to_client_at, status: f.status });
+      fwd.set(f.applicant_id, l);
+    }
+    for (const f of fwdCands ?? []) {
+      const l = fwd.get(f.profile_id) ?? [];
+      if (!l.some((x) => x.jobId === f.job_id)) l.push({ jobId: f.job_id, when: f.sent_at ?? f.created_at, status: null });
+      fwd.set(f.profile_id, l);
+    }
+  }
+  const fwdJobIds = [...new Set([...fwd.values()].flat().map((f) => f.jobId))];
+  const { data: fwdJobs } = fwdJobIds.length
+    ? await admin.from("jobs").select("id, title, company").in("id", fwdJobIds)
+    : { data: [] };
+  const fwdJobOf = new Map((fwdJobs ?? []).map((j) => [j.id, j]));
+  const { data: outcomes } = applicantIdsAll.length
+    ? await admin
+        .from("submission_outcomes")
+        .select("job_id, profile_id, note")
+        .in("profile_id", applicantIdsAll)
+    : { data: [] };
+  const outcomeOf = new Map((outcomes ?? []).map((o) => [`${o.job_id}:${o.profile_id}`, o.note]));
+
   const crmTagsOf = new Map(
     (crmRows ?? []).map((c) => [c.profile_id, (c as { internal_tags?: string[] | null }).internal_tags ?? []])
   );
@@ -368,6 +409,17 @@ export default async function AdminJobPage({
       memberLabel: p?.role === "admin" ? ("team" as const) : p?.role === "mentor" ? ("mentor" as const) : null,
       isVip: vipSet.has(a.applicant_id),
       memberTags: crmTagsOf.get(a.applicant_id) ?? [],
+      forwards: (fwd.get(a.applicant_id) ?? [])
+        .map((f) => ({
+          jobId: f.jobId,
+          title: fwdJobOf.get(f.jobId)?.title ?? "משרה",
+          company: fwdJobOf.get(f.jobId)?.company ?? null,
+          when: f.when,
+          status: f.status,
+          note: outcomeOf.get(`${f.jobId}:${a.applicant_id}`) ?? null,
+          isCurrent: f.jobId === job.id,
+        }))
+        .sort((x, y) => (y.when ?? "").localeCompare(x.when ?? "")),
       assessment: (() => {
         const r = assessOf.get(a.id);
         return r
