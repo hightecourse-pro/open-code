@@ -285,6 +285,8 @@ export function ReviewCenter({
   // "לסנן לפי תשובה מסוימת ולסמן לא מתאימה גורף") — then select-all + bulk.
   const [answerQ, setAnswerQ] = useState<string>("");
   const [answerV, setAnswerV] = useState<string>("");
+  // Filter by seminary / study institution (the owner, 7/9).
+  const [seminarFilter, setSeminarFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   // מנויות / VIP one-click filters (Shira: clear counts + easy filtering).
   const [tierFilter, setTierFilter] = useState<"all" | "subscribers" | "vip">("all");
@@ -383,6 +385,15 @@ export function ReviewCenter({
   // the default hide turn that filter into an empty list.
   const notFitVisible = showNotFit || markFilter === "not_fit";
 
+  const seminarOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const a of applications) {
+      const sp = a.profile?.studyPlace;
+      if (sp) counts.set(sp, (counts.get(sp) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((x, y) => y[1] - x[1] || x[0].localeCompare(y[0], "he"));
+  }, [applications]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     // OR within one criterion, AND across criteria — same semantics as
@@ -405,6 +416,7 @@ export function ReviewCenter({
         const match = Array.isArray(ans) ? ans.includes(answerV) : String(ans ?? "") === answerV;
         if (!match) return false;
       }
+      if (seminarFilter !== "all" && (a.profile?.studyPlace ?? "") !== seminarFilter) return false;
       if (tierFilter === "subscribers" && !a.isSubscriber) return false;
       if (tierFilter === "vip" && !a.isVip) return false;
       if (wanted.length > 0) {
@@ -432,6 +444,7 @@ export function ReviewCenter({
     statusOf,
     answerQ,
     answerV,
+    seminarFilter,
   ]);
 
   // The effective selection is only ever the visible rows — a filter change
@@ -873,6 +886,19 @@ export function ReviewCenter({
           {["submitted", "in_review", "sent", "interview", "exam", "hired", "declined"].map((s) => (
             <option key={s} value={s}>
               {STATUS_LABEL[s]}
+            </option>
+          ))}
+        </Select>
+        <Select
+          value={seminarFilter}
+          onChange={(e) => setSeminarFilter(e.target.value)}
+          className="w-auto max-w-[210px] py-2"
+          aria-label="סינון לפי מוסד לימודים"
+        >
+          <option value="all">🎓 כל המוסדות</option>
+          {seminarOptions.map(([sp, n]) => (
+            <option key={sp} value={sp}>
+              {sp} ({n})
             </option>
           ))}
         </Select>
