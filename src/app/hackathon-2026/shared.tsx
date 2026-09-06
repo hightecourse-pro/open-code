@@ -229,9 +229,9 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
         </h1>
         {variant === "partners" ? (
           <p className="t-body-lg text-ink-700 max-w-lg">
-            אתגרי AI אמיתיים מהתעשייה.
-            <span className="block mt-1">עשרות ג׳וניוריות מוכשרות בונות פתרון עובד לאתגר שלכם</span>
-            <span className="block font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, מגייסים או כנותני אתגר</span>
+            <span className="block font-bold text-ink-900">יש אצלכם תהליך ידני שמחכה לאוטומציה? בעיה מהשטח שאף ספרינט לא מגיע אליה?</span>
+            <span className="block mt-1">עשרות מפתחות AI מוכשרות בונות לכם פתרון עובד - מוכן להצגה.</span>
+            <span className="block mt-1 font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, מגייסים או כנותני אתגר</span>
           </p>
         ) : (
           <p className="t-body-lg text-ink-700 max-w-lg">
@@ -290,8 +290,9 @@ export function TickerStrip() {
   );
 }
 
-/** The four challenges, orbiting the core - identical on both pages. */
-export function ChallengesSection() {
+/** The four challenges, orbiting the core - same design on both pages; the
+    partners variant sells the scarcity: only 4 slots, 3 left (7/9). */
+export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
     <section className="px-6 pt-10 pb-20 bg-[#FBF7FF] relative">
       <Sparkle className="absolute top-16 left-[10%] w-5 h-5" color="#E0418D" delay="0.6s" />
@@ -299,12 +300,25 @@ export function ChallengesSection() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-14">
           <span className="font-mono text-xs text-brand-pink-deep">&lt;אתגרים/&gt;</span>
-          <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
-            ארבעה שת״פים. ארבעה אתגרים.
-          </h2>
-          <p className="t-body text-ink-700 mt-1">
-            כל ארגון מביא בעיה אמיתית מהשטח - לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
-          </p>
+          {variant === "partners" ? (
+            <>
+              <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
+                רק 4 ארגונים נכנסים להאקתון הזה
+              </h2>
+              <p className="t-body text-ink-700 mt-1">
+                המקום הראשון כבר נתפס - <span className="font-bold text-brand-pink-deep">נשארו 3</span>
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
+                ארבעה שת״פים. ארבעה אתגרים.
+              </h2>
+              <p className="t-body text-ink-700 mt-1">
+                כל ארגון מביא בעיה אמיתית מהשטח - לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
+              </p>
+            </>
+          )}
         </div>
 
         <div className="relative">
@@ -403,8 +417,16 @@ export function ChallengesSection() {
                       <span className="h26-wiggle" style={{ animationDelay: `${i * 0.5}s` }}>{c.emoji}</span>
                     </span>
                     <span className="flex-1">
-                      <span className="block font-display font-black text-[20px] text-ink-500">{c.short}</span>
-                      <span className="block text-[15.5px] text-ink-400 mt-0.5">האתגר בדרך…</span>
+                      <span className="block font-display font-black text-[20px] text-ink-500">
+                        {variant === "partners" ? "המקום הזה יכול להיות שלכם" : c.short}
+                      </span>
+                      {variant === "partners" ? (
+                        <span className="mt-1 inline-flex items-center text-[13px] font-bold text-[#1B7A4B] bg-tint-mint px-2.5 py-0.5 rounded-full">
+                          פנוי
+                        </span>
+                      ) : (
+                        <span className="block text-[15.5px] text-ink-400 mt-0.5">האתגר בדרך…</span>
+                      )}
                     </span>
                   </div>
                 )}

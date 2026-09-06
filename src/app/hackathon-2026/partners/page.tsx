@@ -27,14 +27,14 @@ export const metadata: Metadata = {
 const VALUE_PATH = [
   {
     title: "איך ג׳וניורית מוכיחה מה היא באמת יודעת?",
-    body: "זו השאלה שבלב האתגר של ג׳וניוריות בהייטק - אין שנתיים ניסיון בקורות החיים, אבל יש יכולות אמיתיות.",
+    body: "משבר הג׳וניורים בהייטק אמיתי: בלי ניסיון לא מקבלים עבודה, ובלי עבודה אין מאיפה להביא ניסיון. ודווקא לג׳וניוריות שלנו יש יכולות אמיתיות.",
     side: "self-start",
     tilt: "-rotate-1",
     look: "bg-tint-pink/40 border-ink-900/10 shadow-[5px_6px_0_0_#F3C6DD]",
   },
   {
-    title: "התשובה שלנו: מוכיחים במעשים",
-    body: "ההאקתון הופך כל ג׳וניורית בקהילה למפתחת AI רלוונטית - עם פתרון עובד שמדבר בשמה, במקום עוד שורה בקורות החיים.",
+    title: "עם פתרון עובד. לא עם עוד שורה בקורות החיים.",
+    body: "בהאקתון היא בונה מנוע AI לבעיה אמיתית מהתעשייה - והתוצאה מדברת בעד עצמה.",
     side: "self-end",
     tilt: "rotate-1",
     highlight: true,
@@ -57,7 +57,7 @@ const VALUE_PATH = [
 ];
 
 const VALUE_CARDS = [
-  { title: "שותפות עם משמעות", body: "שער כניסה להייטק לנשים חרדיות מוכשרות - סיפור השפעה אמיתי שהשם שלכם חתום עליו.", tilt: "-rotate-2", look: "bg-tint-purple/40 shadow-[4px_5px_0_0_#DDC9EC]" },
+  { title: "שותפות עם משמעות", body: "השותפות שלכם היא תרומה אמיתית לפתרון משבר הג׳וניורים - שער כניסה להייטק לנשים מוכשרות, וסיפור השפעה שהשם שלכם חתום עליו.", tilt: "-rotate-2", look: "bg-tint-purple/40 shadow-[4px_5px_0_0_#DDC9EC]" },
   { title: "עשרות זוויות על בעיה אחת", body: "אותו אתגר, פתרונות שונים - מגוון גישות הנדסיות שקשה להשיג בכל דרך אחרת.", tilt: "rotate-1", look: "bg-tint-warm/50 shadow-[4px_5px_0_0_#EBD9AE]" },
   { title: "פגישה עם הטאלנט הבא", body: "מי שמגייס פוגש את המפתחות החזקות לפני כולם - דרך פתרונות עובדים, לא קורות חיים.", tilt: "-rotate-1", look: "bg-tint-pink/40 shadow-[4px_5px_0_0_#F3C6DD]" },
 ];
@@ -71,7 +71,7 @@ export default function HackathonPartnersPage() {
       <H26Style />
       <HeroSection variant="partners" />
       <TickerStrip />
-      <ChallengesSection />
+      <ChallengesSection variant="partners" />
 
       <Wave flip tint="#FBF7FF" />
 
@@ -207,7 +207,7 @@ export default function HackathonPartnersPage() {
             <Sparkle className="absolute top-8 left-1/4 w-3 h-3" color="#FFFFFF" delay="0.5s" />
                         <div className="font-display font-black text-[22px] mt-1">רוצים להיות שותפים למהלך?</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              אתגר, חסות או רעיון אחר - נשמח לתפור יחד את השותפות שנכונה לכם
+              נשארו 3 מקומות - אתגר, חסות או רעיון אחר, נשמח לתפור יחד את השותפות שנכונה לכם
             </div>
           </div>
 
