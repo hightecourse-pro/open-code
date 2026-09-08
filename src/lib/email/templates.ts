@@ -320,7 +320,7 @@ export function jobRegretEmail(jobTitle: string, name: string | undefined, subsc
  * applicant whose CV was forwarded to the employer, including the placement-fee
  * note.
  */
-export function jobSubmittedEmail(jobTitle: string): BuiltEmail {
+export function jobSubmittedEmail(jobTitle: string, seminarFunded = false): BuiltEmail {
   return {
     subject: `קוד פתוח מגישה אותך למשרה ${jobTitle}`,
     html: renderEmail({
@@ -328,7 +328,11 @@ export function jobSubmittedEmail(jobTitle: string): BuiltEmail {
       lines: [
         `רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרת <b>${jobTitle}</b> :)`,
         `עמותת קוד פתוח משקיעה משאבים רבים כדי לאתר משרות בתקופה כל כך מאתגרת.`,
-        `העלות המינימלית שלנו לכל משרה כזו היא 2500 ש"ח, ולכן אנחנו גובים את הסכום הזה לאחר כל השמה מוצלחת בעז"ה (התשלום לאחר הודעת הקבלה לארגון)`,
+        // אהל אברהם (הרב וולף) graduates of תשפ"ה-תשפ"ו: the seminary pays per
+        // its agreement — the placement-fee paragraph is replaced (the owner, 8/9).
+        seminarFunded
+          ? `במידה ותתקבלי למשרה התשלום הוא מטעם הסמינר לפי ההסכם מולם.`
+          : `העלות המינימלית שלנו לכל משרה כזו היא 2500 ש"ח, ולכן אנחנו גובים את הסכום הזה לאחר כל השמה מוצלחת בעז"ה (התשלום לאחר הודעת הקבלה לארגון)`,
         `נשמח לקבל עדכון כשיצרו איתך קשר לראיון או מבחן`,
         `מאחלות לך הצלחה וסייעתא דשמיא,<br/>צוות קוד פתוח`,
       ],
