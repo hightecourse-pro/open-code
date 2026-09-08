@@ -25,8 +25,10 @@ export function MobileNav({
   const pathname = usePathname();
 
   // Navigating closes the drawer — she tapped a destination, not a menu state.
+  // (Deferred a tick for the set-state-in-effect rule.)
   useEffect(() => {
-    setOpen(false);
+    const t = setTimeout(() => setOpen(false), 0);
+    return () => clearTimeout(t);
   }, [pathname]);
 
   // No background scroll while the drawer is up.
