@@ -2007,6 +2007,15 @@ export async function setJobSubmissionsClosed(jobId: string, closed: boolean): P
   if (!job || job.source !== "ours" || job.status !== "open") return;
   if (closed && job.pipeline_status === "published") {
     await admin.from("jobs").update({ pipeline_status: "candidates_sent" }).eq("id", jobId);
+    // Closing the round IS the moment everyone hears from us (the owner, 8/9):
+    // forwarded women get "הגשנו אותך", the rest get the regret email. Stamps
+    // make this idempotent; the ✉️ button in the review center completes any
+    // failures or late applicants.
+    try {
+      await sendJobOutcomeEmails(jobId);
+    } catch (e) {
+      console.error("[outcome emails on close] failed:", e);
+    }
   } else if (!closed && (job.pipeline_status === "candidates_sent" || job.pipeline_status === "interviews")) {
     await admin.from("jobs").update({ pipeline_status: "published" }).eq("id", jobId);
   }
