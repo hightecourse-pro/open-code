@@ -1,5 +1,6 @@
 import * as React from "react";
 import { AdminSidebar } from "./admin-sidebar";
+import { MobileNav } from "./mobile-nav";
 
 /** Admin layout: dark 240px sidebar on the right + main content. */
 export function AdminShell({
@@ -15,11 +16,16 @@ export function AdminShell({
     // translate="no": Chrome auto-translate rewraps text nodes and React then
     // crashes on reconciliation (insertBefore NotFoundError — the owner hit it
     // clicking an internal tag, 3/9). The admin screens are Hebrew-only tools.
-    <div translate="no" className="notranslate min-h-screen bg-ink-50 grid grid-cols-1 lg:grid-cols-[240px_1fr]">
-      <div className="hidden lg:block">
+    <div translate="no" className="notranslate min-h-screen bg-ink-50">
+      <MobileNav homeHref="/admin" dark>
         <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} />
+      </MobileNav>
+      <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr]">
+        <div className="hidden lg:block">
+          <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} />
+        </div>
+        <main className="px-6 py-7 md:px-8">{children}</main>
       </div>
-      <main className="px-6 py-7 md:px-8">{children}</main>
     </div>
   );
 }
