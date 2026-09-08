@@ -841,6 +841,15 @@ export function ReviewCenter({
             }}
             className="border-[#BFE4D1] bg-tint-mint text-[#0F6E4A]"
           />
+          {counts.approved > 0 && (
+            <a
+              href={`/admin/jobs/${jobId}/cvs`}
+              className="self-center inline-flex items-center gap-1.5 rounded-full border border-[#BFE4D1] bg-tint-mint text-[#0F6E4A] text-[12.5px] font-bold px-3 py-1.5 hover:brightness-95"
+              title="מוריד קובץ ZIP עם קורות החיים של כל המאושרות סופית"
+            >
+              ⬇ הורדת קו״ח המאושרות ({counts.approved})
+            </a>
+          )}
           <Stat
             label="הוגשו סופית"
             value={counts.sentToClient}
