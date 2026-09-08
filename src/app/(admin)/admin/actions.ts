@@ -13,6 +13,8 @@ import {
   applicationStatusEmail,
   candidateSubmittedEmail,
   jobCandidatesEmail,
+  jobRegretEmail,
+  jobSubmittedEmail,
   jobPublishedEmail,
   mentorApprovedEmail,
   mentorDeclinedEmail,
@@ -2717,4 +2719,123 @@ export async function adminKevaAction(
     dedupeKey: `keva-${action}-${kevaId}-${result.ok}`,
   });
   return result;
+}
+
+// ------------------------------------------------- outcome emails (8/9)
+
+/**
+ * One button closes the loop with every applicant of a job (the owner, 8/9):
+ * whoever was forwarded to the employer gets the "הגשנו אותך" email (with the
+ * placement-fee note), and everyone else who was not finally approved gets the
+ * regret email — subscribers with the extra family line. Each application is
+ * stamped after a successful send, so re-clicking only reaches whoever is
+ * still missing (a failed batch can simply be retried).
+ */
+export async function sendJobOutcomeEmails(
+  jobId: string
+): Promise<{ ok: boolean; submitted: number; regrets: number; skipped: number; failed: number; error?: string }> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+
+  const { data: job } = await admin.from("jobs").select("id, title, source").eq("id", jobId).maybeSingle();
+  if (!job || job.source !== "ours") {
+    return { ok: false, submitted: 0, regrets: 0, skipped: 0, failed: 0, error: "המשרה לא נמצאה." };
+  }
+
+  const { data: apps } = await admin
+    .from("applications")
+    .select("id, applicant_id, status, admin_mark, sent_to_client_at, outcome_email_sent_at")
+    .eq("job_id", jobId);
+
+  const FORWARDED = new Set(["sent", "interview", "exam", "hired"]);
+  type Kind = "submitted" | "regret";
+  const targets: { appId: string; applicantId: string; kind: Kind }[] = [];
+  let skipped = 0;
+  for (const a of apps ?? []) {
+    if (a.outcome_email_sent_at) {
+      skipped++;
+      continue;
+    }
+    if (FORWARDED.has(a.status) || a.sent_to_client_at) {
+      targets.push({ appId: a.id, applicantId: a.applicant_id, kind: "submitted" });
+    } else if (a.admin_mark !== "approved" && a.status !== "draft" && a.status !== "declined") {
+      // Finally-approved women are still in play and drafts never applied —
+      // neither belongs in a regret email.
+      targets.push({ appId: a.id, applicantId: a.applicant_id, kind: "regret" });
+    }
+  }
+  if (targets.length === 0) return { ok: true, submitted: 0, regrets: 0, skipped, failed: 0 };
+
+  const ids = [...new Set(targets.map((t) => t.applicantId))];
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, first_name, full_name, member_tier, status")
+    .in("id", ids);
+  const profileOf = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  // אהל אברהם (הרב וולף) graduates of תשפ"ה/תשפ"ו: the seminary covers the
+  // placement fee per its agreement, and their "הגשנו אותך" email says so
+  // instead of the fee paragraph (the owner, 8/9).
+  const FUNDED_SEMINAR = "הרב וולף - אהל אברהם - בני ברק";
+  const FUNDED_YEARS = new Set(["5785", "5786"]);
+  const seminarFunded = new Set<string>();
+  {
+    const { data: qs } = await admin
+      .from("config_questions")
+      .select("id, key")
+      .in("key", ["study_place", "graduation_year"]);
+    const qIds = (qs ?? []).map((q) => q.id);
+    if (qIds.length) {
+      const { data: answers } = await admin
+        .from("profile_answers")
+        .select("profile_id, question_id, value")
+        .in("question_id", qIds)
+        .in("profile_id", ids);
+      const keyOf = new Map((qs ?? []).map((q) => [q.id, q.key]));
+      const byProfile = new Map<string, { study?: string; year?: string }>();
+      for (const a of answers ?? []) {
+        const cur = byProfile.get(a.profile_id) ?? {};
+        const v = typeof a.value === "string" ? a.value : String(a.value ?? "");
+        if (keyOf.get(a.question_id) === "study_place") cur.study = v;
+        else cur.year = v;
+        byProfile.set(a.profile_id, cur);
+      }
+      for (const [pid, v] of byProfile) {
+        if (v.study === FUNDED_SEMINAR && v.year && FUNDED_YEARS.has(v.year)) seminarFunded.add(pid);
+      }
+    }
+  }
+
+  let submitted = 0;
+  let regrets = 0;
+  let failed = 0;
+  for (const t of targets) {
+    const p = profileOf.get(t.applicantId);
+    const { data: authUser } = await admin.auth.admin.getUserById(t.applicantId);
+    const email = authUser?.user?.email;
+    if (!email) {
+      failed++;
+      continue;
+    }
+    const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
+    const built =
+      t.kind === "submitted"
+        ? jobSubmittedEmail(job.title, seminarFunded.has(t.applicantId))
+        : jobRegretEmail(job.title, name, p?.member_tier === "paid" && p?.status === "active");
+    const sent = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
+    if (sent.ok) {
+      await admin
+        .from("applications")
+        .update({ outcome_email_sent_at: new Date().toISOString() })
+        .eq("id", t.appId);
+      if (t.kind === "submitted") submitted++;
+      else regrets++;
+    } else {
+      failed++;
+      console.error("[outcome email] send failed:", sent.error);
+    }
+  }
+
+  revalidatePath(`/admin/jobs/${jobId}`);
+  return { ok: true, submitted, regrets, skipped, failed };
 }
