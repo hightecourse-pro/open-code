@@ -535,7 +535,7 @@ export default async function AdminJobPage({
               {job.pipeline_status === "published" && (
                 <ConfirmActionButton
                   action={setJobSubmissionsClosed.bind(null, job.id, true)}
-                  message="לסגור את המשרה להגשות חדשות? היא תישאר פתוחה אצלך, החברות יראו שהיא התקדמה לשלב הבא ולא יוכלו להגיש עוד."
+                  message='לסגור את המשרה להגשות חדשות? היא תישאר פתוחה אצלך, החברות יראו שהיא התקדמה לשלב הבא ולא יוכלו להגיש עוד. בנוסף יישלחו המיילים: "הגשנו אותך" למי שהוגשה למעסיק, ומייל עדכון למי שלא אושרה סופית.'
                   className="inline-flex items-center rounded-full border border-ink-300 text-ink-700 text-[12.5px] font-semibold px-3.5 py-1.5 hover:border-brand-purple hover:text-brand-purple transition-colors"
                 >
                   סגירה להגשות — המועמדות אצל המעסיק
