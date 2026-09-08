@@ -294,6 +294,48 @@ export function driveEmailRequestEmail(name?: string): BuiltEmail {
 }
 
 /** Tell the team a portal client just marked a candidate for an interview. */
+/**
+ * End-of-review regret email — the owner's exact wording (8/9). Sent to every
+ * applicant who was not finally approved once the review round closes.
+ */
+export function jobRegretEmail(jobTitle: string, name: string | undefined, subscriber: boolean): BuiltEmail {
+  const lines = [
+    `תודה על הגשת המועמדות למשרה <b>${jobTitle}</b>`,
+    `לאחר בחינת כלל המועמדות - התקדמנו בינתיים עם מועמדות אחרות שהיו מדויקות יותר לפרופיל המשרה.`,
+    `חשוב לציין שעברנו אחת אחת וציינו לעצמינו את החוזקות שיכולות להתאים בעז"ה למשרה הבאה.`,
+  ];
+  if (subscriber) lines.push(`ראינו שאת מנויה לקהילה וזה בהחלט מכניס אותך למשפחה :)`);
+  lines.push(
+    `בעז"ה יהיו עוד הזדמנויות ואנחנו מתפללות להיות שליחות טובות`,
+    `הרבה הצלחה,<br/>צוות קוד פתוח`
+  );
+  return {
+    subject: `עדכון לגבי משרה - ${jobTitle}`,
+    html: renderEmail({ heading: `שלום ${name ?? ""}`.trim() + ",", lines }),
+  };
+}
+
+/**
+ * "We submitted you" email — the owner's exact wording (8/9). Sent to every
+ * applicant whose CV was forwarded to the employer, including the placement-fee
+ * note.
+ */
+export function jobSubmittedEmail(jobTitle: string): BuiltEmail {
+  return {
+    subject: `קוד פתוח מגישה אותך למשרה ${jobTitle}`,
+    html: renderEmail({
+      heading: "שלום לך,",
+      lines: [
+        `רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרת <b>${jobTitle}</b> :)`,
+        `עמותת קוד פתוח משקיעה משאבים רבים כדי לאתר משרות בתקופה כל כך מאתגרת.`,
+        `העלות המינימלית שלנו לכל משרה כזו היא 2500 ש"ח, ולכן אנחנו גובים את הסכום הזה לאחר כל השמה מוצלחת בעז"ה (התשלום לאחר הודעת הקבלה לארגון)`,
+        `נשמח לקבל עדכון כשיצרו איתך קשר לראיון או מבחן`,
+        `מאחלות לך הצלחה וסייעתא דשמיא,<br/>צוות קוד פתוח`,
+      ],
+    }),
+  };
+}
+
 export function clientInterviewEmail(
   companyName: string,
   candidateName: string,

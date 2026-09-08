@@ -1165,6 +1165,8 @@ export interface Database {
           sent_to_client_at: string | null;
           edited_at: string | null;
           previous_versions: Json;
+          /** When the end-of-review outcome email went out (regret / submitted). */
+          outcome_email_sent_at: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -1180,6 +1182,7 @@ export interface Database {
           sent_to_client_at?: string | null;
           edited_at?: string | null;
           previous_versions?: Json;
+          outcome_email_sent_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["applications"]["Insert"]>;
         Relationships: [];

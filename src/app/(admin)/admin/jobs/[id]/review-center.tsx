@@ -16,6 +16,7 @@ import { Alert, Badge, Button, Checkbox, Input, Select, Textarea } from "@/compo
 import { cn } from "@/lib/utils";
 import {
   addJobCandidate,
+  sendJobOutcomeEmails,
   setApplicationMark,
   setApplicationMarkBulk,
   setApplicationNote,
@@ -850,6 +851,7 @@ export function ReviewCenter({
               ⬇ הורדת קו״ח המאושרות ({counts.approved})
             </a>
           )}
+          <OutcomeEmailsButton jobId={jobId} />
           <Stat
             label="הוגשו סופית"
             value={counts.sentToClient}
@@ -2041,6 +2043,45 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
       </div>
       {a.verdict && <p className="text-[13px] text-ink-900 leading-relaxed">{a.verdict}</p>}
     </div>
+  );
+}
+
+/** One click closes the loop by email (the owner, 8/9): whoever went to the
+ *  employer gets "הגשנו אותך" (with the placement-fee note), everyone else who
+ *  was not finally approved gets the regret email. Stamped per application —
+ *  a second click reaches only whoever is still missing. */
+function OutcomeEmailsButton({ jobId }: { jobId: string }) {
+  const [result, setResult] = useState<string | null>(null);
+  const [sending, startSending] = useTransition();
+  return (
+    <span className="self-center inline-flex items-center gap-2">
+      <button
+        type="button"
+        disabled={sending}
+        onClick={() => {
+          if (
+            !window.confirm(
+              'לשלוח עכשיו מייל סיכום לכל המועמדות במשרה?\n· מי שהוגשה למעסיק תקבל את מייל "הגשנו אותך" (כולל דמי ההשמה)\n· מי שלא אושרה סופית תקבל את מייל העדכון\nמי שכבר קיבלה מייל - לא תקבל שוב.'
+            )
+          )
+            return;
+          startSending(async () => {
+            const r = await sendJobOutcomeEmails(jobId);
+            if (!r.ok) setResult(r.error ?? "משהו השתבש — נסי שוב.");
+            else
+              setResult(
+                `נשלחו: ${r.submitted} "הגשנו אותך" · ${r.regrets} עדכון` +
+                  (r.skipped ? ` · ${r.skipped} כבר קיבלו` : "") +
+                  (r.failed ? ` · ${r.failed} נכשלו (לחיצה נוספת תשלים)` : "")
+              );
+          });
+        }}
+        className="rounded-full border border-[#DDC9EC] bg-tint-purple text-brand-purple text-[12.5px] font-bold px-3 py-1.5 hover:brightness-95 disabled:opacity-50 cursor-pointer"
+      >
+        {sending ? "שולח מיילים…" : "✉️ מייל סיכום לכל המועמדות"}
+      </button>
+      {result && <span className="text-[12px] font-semibold text-ink-700">{result}</span>}
+    </span>
   );
 }
 
