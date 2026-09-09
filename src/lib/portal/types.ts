@@ -39,6 +39,8 @@ export interface CandidateSummary {
   initials: string;
   specialization: string | null;
   region: string | null;
+  /** City label from the questionnaire — shown beside/instead of the region. */
+  city: string | null;
   headline: string[];
   isExperienced: boolean;
   /** Surfaced only when the recruiter explicitly toggled mentors on. */

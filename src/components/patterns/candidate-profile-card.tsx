@@ -273,10 +273,10 @@ export function CandidateProfileCard({
                 {headerExtra && <div className="shrink-0 print:hidden">{headerExtra}</div>}
               </div>
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                {candidate.region && (
+                {(candidate.city || candidate.region) && (
                   <span className="t-body-sm inline-flex items-center gap-1.5 text-ink-700">
                     <MapPin size={15} className="text-ink-500" />
-                    {candidate.region}
+                    {[candidate.city, candidate.region].filter(Boolean).join(" · ")}
                   </span>
                 )}
                 {candidate.isExperienced && (
@@ -317,7 +317,7 @@ export function CandidateProfileCard({
               <div className="t-micro mb-1.5 font-bold text-brand-pink-deep uppercase">קצת עליי</div>
               <MessageBody
                 body={candidate.bio}
-                className="t-body max-w-[75ch] whitespace-pre-line leading-relaxed text-ink-900"
+                className="t-body whitespace-pre-line leading-relaxed text-ink-900"
               />
             </div>
           )}
@@ -341,7 +341,7 @@ export function CandidateProfileCard({
                 <p className="t-caption -mt-2 mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
                 <ul
                   className={cn(
-                    "grid grid-cols-1 gap-3",
+                    "grid grid-cols-1 gap-3 items-start",
                     candidate.links.length > 1 && "sm:grid-cols-2"
                   )}
                 >
@@ -353,7 +353,7 @@ export function CandidateProfileCard({
                           href={link.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-ink-200 bg-white transition-shadow duration-150 hover:no-underline hover:shadow-md"
+                          className="group flex flex-col overflow-hidden rounded-[14px] border border-ink-200 bg-white transition-shadow duration-150 hover:no-underline hover:shadow-md"
                         >
                           {thumb && (
                             <span className="block aspect-[16/9] overflow-hidden border-b border-ink-100 bg-ink-50">
