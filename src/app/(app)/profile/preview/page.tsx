@@ -10,6 +10,7 @@ import { ArrowRight, Eye } from "lucide-react";
 import { Alert } from "@/components/ui";
 import { loadCandidates } from "@/lib/portal/candidates";
 import { CandidateProfileCard } from "@/components/patterns/candidate-profile-card";
+import { siteThumbs } from "@/lib/site-thumbs";
 import { requireCommunityAccess } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "תצוגה מקדימה — הפורטל" };
@@ -50,7 +51,7 @@ export default async function ProfilePreviewPage() {
             : "כדי להופיע בפורטל צריך פרופיל מלא וסטטוס פעיל. ברגע שזה קורה — המגייסות רואות אותך."}
         </Alert>
       ) : (
-        <CandidateProfileCard candidate={me} />
+        <CandidateProfileCard candidate={me} thumbs={await siteThumbs(me.links.map((l) => l.url))} />
       )}
     </div>
   );

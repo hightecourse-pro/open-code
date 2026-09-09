@@ -18,6 +18,7 @@ import { candidateSentJobs, type SentCandidateJob } from "@/lib/portal/jobs";
 import { CandidateFeedback } from "@/components/portal/candidate-feedback";
 import { FavoriteButton } from "@/components/portal/favorite-button";
 import { portalClient, requirePortalClient } from "@/app/portal/session";
+import { siteThumbs } from "@/lib/site-thumbs";
 
 /**
  * loadCandidates() is a whole-list read; cache() collapses the metadata pass
@@ -81,6 +82,8 @@ export default async function CandidateProfilePage({
 
   const favs = await favoriteIds(client.id);
   const cvHref = `/portal/candidate/${candidate.id}/cv`;
+  // Inline screenshots for her live projects (Netfree-safe data URIs).
+  const thumbs = await siteThumbs(candidate.links.map((l) => l.url));
 
   return (
     <div className="flex flex-col gap-6 pb-24 lg:pb-0">
@@ -111,6 +114,7 @@ export default async function CandidateProfilePage({
               favorite star rides in as page-specific chrome. */}
           <CandidateProfileCard
             candidate={candidate}
+            thumbs={thumbs}
             headerExtra={<FavoriteButton profileId={candidate.id} initial={favs.has(candidate.id)} />}
           />
 
