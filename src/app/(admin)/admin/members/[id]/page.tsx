@@ -9,7 +9,7 @@ import { Avatar, Badge, Button } from "@/components/ui";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { isRichHtml } from "@/lib/rich-text-lite";
-import { adminDisplayName } from "@/lib/names";
+import { nameWithPrevSurname } from "@/lib/names";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
@@ -304,6 +304,11 @@ export default async function AdminMemberProfilePage({
   for (const c of extraCourses ?? []) contentTitleOf.set(`course:${c.id}`, c.title);
 
   const answerMap = new Map((answers ?? []).map((a) => [a.question_id, a.value]));
+  // Her maiden name, when she gave one — the header carries it in parentheses
+  // (the owner, 9/9: the team knows her seminary records by it).
+  const prevSurnameQ = (questions ?? []).find((q) => q.key === "prev_surname");
+  const prevSurnameRaw = prevSurnameQ ? answerMap.get(prevSurnameQ.id) : null;
+  const prevSurname = typeof prevSurnameRaw === "string" ? prevSurnameRaw : null;
 
   // Answers she changed after first filling them in (internal admin info —
   // must never surface in the employer portal or member views).
@@ -469,7 +474,7 @@ export default async function AdminMemberProfilePage({
           initials={profile.avatar_initials || profile.full_name.slice(0, 1) || "ק"}
         />
         <div className="flex-1 min-w-[200px]">
-          <h1 className="font-display text-[24px] font-black text-ink-1000">{adminDisplayName(profile)}</h1>
+          <h1 className="font-display text-[24px] font-black text-ink-1000">{nameWithPrevSurname(profile.full_name, prevSurname)}</h1>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <Link
               href={`/admin/members/${profile.id}/profile`}

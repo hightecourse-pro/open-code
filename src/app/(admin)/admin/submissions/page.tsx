@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { ClipboardList } from "lucide-react";
 import { requireRole } from "@/lib/auth";
-import { adminDisplayName } from "@/lib/names";
+import { nameWithPrevSurname } from "@/lib/names";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SubmissionsTable, type SubmissionRow } from "./submissions-table";
 
@@ -34,12 +34,12 @@ export default async function AdminSubmissionsPage() {
         ? admin.from("jobs").select("id, title, company, client_id").in("id", jobIds)
         : Promise.resolve({ data: [] }),
       profileIds.length
-        ? admin.from("profiles").select("id, full_name, first_name, last_name, specialization").in("id", profileIds)
+        ? admin.from("profiles").select("id, full_name, specialization").in("id", profileIds)
         : Promise.resolve({ data: [] }),
       admin
         .from("config_questions")
         .select("id, key")
-        .in("key", ["study_place", "graduation_year", "phone"]),
+        .in("key", ["study_place", "graduation_year", "phone", "prev_surname"]),
       profileIds.length
         ? admin.from("member_crm").select("profile_id, internal_notes").in("profile_id", profileIds)
         : Promise.resolve({ data: [] }),
@@ -93,7 +93,7 @@ export default async function AdminSubmissionsPage() {
       id: a.id,
       profileId: a.applicant_id,
       jobId: a.job_id,
-      name: p ? adminDisplayName(p) : "חברת קהילה",
+      name: nameWithPrevSurname(p?.full_name, answerOf(a.applicant_id, "prev_surname")),
       specialization: p?.specialization ?? "",
       studyPlace: answerOf(a.applicant_id, "study_place"),
       graduationYear: answerOf(a.applicant_id, "graduation_year"),
