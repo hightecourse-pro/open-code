@@ -23,10 +23,11 @@ type Icon = React.ComponentType<{ size?: number; className?: string }>;
  * member view and the employer portal, so they can never drift apart again
  * (the owner, 31/8: "זה אמור להיות זהה אחד לאחד").
  *
- * Layout is a bento grid: card sizes play along and across by how much each
- * group actually says, instead of identical cards stacked one under the
- * other. Only employer-relevant data appears — work-mode preferences and
- * "what she's looking for" stop mattering the moment we submitted her.
+ * Design round (the owner, 9/9: "לא נעים לעין ולא מייצג ולא יכול להחליף
+ * קורות חיים"): the bento became a proper CV — a strong identity header with
+ * "קצת עליי" featured, a main column that reads like a resume (experience as
+ * a timeline, then the practical work, then live projects), and a compact
+ * skills sidebar. No stranded half-empty cards.
  */
 const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: string[] }[] = [
   {
@@ -79,6 +80,9 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
   },
 ];
 
+/** The resume's main column — the story; everything else sits in the sidebar. */
+const MAIN_TITLES = new Set(["ניסיון תעסוקתי", "התנסות מעשית"]);
+
 /**
  * Her preferences, not her qualifications — an employer reading a submitted
  * profile has no business with these (the owner, 31/8: "גם רמת ההיברידיות
@@ -121,59 +125,6 @@ function groupFields(candidate: CandidateDetail) {
   return groups;
 }
 
-/** How much a group has to SAY — that is what earns it a wider card. */
-function groupWeight(items: CandidateField[]): number {
-  let w = 0;
-  for (const f of items) {
-    if (f.kind === "experience") w += Math.max(3, (f.entries?.length ?? 1) * 3);
-    else if (f.kind === "chips") w += 1 + Math.floor(f.values.length / 8);
-    else if (f.kind === "links") w += 1;
-    else w += f.values.join(" ").length > 120 ? 3 : 1.5;
-  }
-  return w;
-}
-
-/**
- * Row-packed spans: every xl row totals exactly 12 columns, so the bento can
- * never leave a card stranded beside a hole (the owner, 31/8: "הכשרה
- * ולימודים תקוע"). Base spans come from content weight; the last card of
- * each row stretches to close it.
- */
-function packSpans(weights: number[]): number[] {
-  const total = weights.length;
-  const base = weights.map((w) => {
-    if (total <= 1) return 12;
-    if (total === 2) return 6;
-    if (total === 3) return 4;
-    return w >= 6 ? 7 : w >= 3 ? 5 : 4;
-  });
-  const spans = [...base];
-  let rowStart = 0;
-  let acc = 0;
-  for (let i = 0; i < spans.length; i++) {
-    if (acc + spans[i] > 12) {
-      spans[i - 1] += 12 - acc; // stretch the row's last card to the edge
-      rowStart = i;
-      acc = 0;
-    }
-    acc += spans[i];
-  }
-  if (acc > 0 && acc < 12) spans[spans.length - 1] += 12 - acc;
-  void rowStart;
-  return spans;
-}
-
-// Tailwind needs literal class names — a static lookup instead of template
-// interpolation (which the compiler would never see).
-const XL_SPAN: Record<number, string> = {
-  4: "xl:col-span-4", 5: "xl:col-span-5", 6: "xl:col-span-6", 7: "xl:col-span-7",
-  8: "xl:col-span-8", 9: "xl:col-span-9", 10: "xl:col-span-10", 11: "xl:col-span-11", 12: "xl:col-span-12",
-};
-function spanClasses(xl: number): string {
-  const md = xl >= 7 ? "md:col-span-6" : "md:col-span-3";
-  return `${md} ${XL_SPAN[Math.min(12, Math.max(4, xl))] ?? "xl:col-span-6"}`;
-}
-
 const TONE_BUBBLE: Record<string, string> = {
   purple: "bg-tint-purple text-brand-purple",
   mint: "bg-tint-mint text-[#1B7A4B]",
@@ -192,6 +143,24 @@ function prettyUrl(url: string): string {
   }
 }
 
+/** A section's title row: icon bubble, title, and a hairline that closes the line. */
+function SectionHead({ icon: IconCmp, title, tone }: { icon: Icon; title: string; tone?: string | null }) {
+  return (
+    <div className="mb-4 flex items-center gap-2.5">
+      <span
+        className={cn(
+          "flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px]",
+          TONE_BUBBLE[tone ?? "purple"] ?? TONE_BUBBLE.purple
+        )}
+      >
+        <IconCmp size={15} />
+      </span>
+      <h2 className="font-display text-[17px] font-black text-ink-1000">{title}</h2>
+      <span aria-hidden className="h-px min-w-4 flex-1 bg-ink-200/80" />
+    </div>
+  );
+}
+
 export function CandidateProfileCard({
   candidate,
   headerExtra,
@@ -208,241 +177,259 @@ export function CandidateProfileCard({
   teamContact?: { phone?: string | null; email?: string | null };
 }) {
   const groups = groupFields(candidate);
+  const mainGroups = groups.filter((g) => MAIN_TITLES.has(g.title));
+  const sideGroups = groups.filter((g) => !MAIN_TITLES.has(g.title));
   const hasLinks = candidate.links.length > 0;
-  const cardWeights = [
-    ...(hasLinks ? [candidate.links.length > 2 ? 6 : 3] : []),
-    ...groups.map((g) => groupWeight(g.items)),
-  ];
-  const packed = packSpans(cardWeights);
-  const linksSpan = hasLinks ? packed[0] : 0;
-  const groupSpans = hasLinks ? packed.slice(1) : packed;
+  const hasMain = mainGroups.length > 0 || hasLinks;
+
   return (
-    <div className="flex flex-col gap-4">
-      {/* ------------------------------------------------------- hero card */}
-      <header className="overflow-hidden rounded-[18px] border border-ink-200 bg-white shadow-sm print:border-ink-100 print:shadow-none">
-        <div aria-hidden className="bg-brand-gradient h-1.5" />
-        <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-start sm:p-7">
-          <Avatar
-            initials={candidate.initials}
-            size="xl"
-            tone="pink"
-            className="h-20 w-20 text-[30px] shadow-glow-pink"
-          />
-          <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדת/&gt;</span>
-                <h1 className="font-display mt-1 text-[28px] leading-tight font-black text-ink-1000 sm:text-[32px]">
-                  {candidate.name}
-                </h1>
+    <div className="flex flex-col gap-5">
+      {/* ------------------------------------------------------- identity */}
+      <header className="overflow-hidden rounded-[20px] border border-ink-200 bg-white shadow-sm print:border-ink-100 print:shadow-none">
+        <div aria-hidden className="bg-brand-gradient h-2" />
+        <div className="p-6 sm:p-8">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-7">
+            <div className="relative shrink-0">
+              <div aria-hidden className="absolute -inset-2 rounded-full bg-tint-pink/50 blur-md print:hidden" />
+              <Avatar
+                initials={candidate.initials}
+                size="xl"
+                tone="pink"
+                className="relative h-[88px] w-[88px] text-[32px] shadow-glow-pink"
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדת/&gt;</span>
+                  <h1 className="font-display mt-0.5 text-[30px] leading-tight font-black text-ink-1000 sm:text-[34px]">
+                    {candidate.name}
+                  </h1>
+                  {candidate.specialization && (
+                    <div className="font-display mt-1 text-[16.5px] font-bold text-brand-purple">
+                      {candidate.specialization}
+                    </div>
+                  )}
+                </div>
+                {headerExtra && <div className="shrink-0 print:hidden">{headerExtra}</div>}
               </div>
-              {headerExtra && <div className="shrink-0 print:hidden">{headerExtra}</div>}
-            </div>
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-2">
-              {candidate.specialization && (
-                <span className="font-display text-[15px] font-bold text-brand-purple">
-                  {candidate.specialization}
-                </span>
-              )}
-              {candidate.region && (
-                <span className="t-body-sm inline-flex items-center gap-1.5">
-                  <MapPin size={15} className="text-ink-500" />
-                  {candidate.region}
-                </span>
-              )}
-              {candidate.isExperienced && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-crown-gold-soft bg-tint-warm px-3 py-[5px] text-xs font-semibold text-crown-gold">
-                  <BadgeCheck size={14} />
-                  בעלת ניסיון בתעשייה
-                </span>
-              )}
-            </div>
-            {teamContact && (teamContact.phone || teamContact.email) && (
-              <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
-                {teamContact.phone && (
-                  <a
-                    href={`tel:${teamContact.phone}`}
-                    dir="ltr"
-                    className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-900 hover:text-brand-purple"
-                  >
-                    <Phone size={14} className="text-brand-purple" />
-                    {teamContact.phone}
-                  </a>
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                {candidate.region && (
+                  <span className="t-body-sm inline-flex items-center gap-1.5 text-ink-700">
+                    <MapPin size={15} className="text-ink-500" />
+                    {candidate.region}
+                  </span>
                 )}
-                {teamContact.email && (
-                  <a
-                    href={`mailto:${teamContact.email}`}
-                    dir="ltr"
-                    className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-900 hover:text-brand-purple"
-                  >
-                    <Mail size={14} className="text-brand-purple" />
-                    {teamContact.email}
-                  </a>
+                {candidate.isExperienced && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-crown-gold-soft bg-tint-warm px-3 py-[5px] text-xs font-semibold text-crown-gold">
+                    <BadgeCheck size={14} />
+                    בעלת ניסיון בתעשייה
+                  </span>
                 )}
               </div>
-            )}
-            {candidate.bio && (
-              <MessageBody body={candidate.bio} className="t-body mt-4 max-w-[68ch] whitespace-pre-line text-ink-900" />
-            )}
-            {/* The header tech chips are gone (the owner, 1/9: "זה מיותר") —
-                they were just the first six dev_tech values, and the real
-                skills cards below tell the full story anyway. The compact
-                portal SEARCH card keeps its chips (a list needs a scent). */}
+              {teamContact && (teamContact.phone || teamContact.email) && (
+                <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                  {teamContact.phone && (
+                    <a
+                      href={`tel:${teamContact.phone}`}
+                      dir="ltr"
+                      className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-900 hover:text-brand-purple"
+                    >
+                      <Phone size={14} className="text-brand-purple" />
+                      {teamContact.phone}
+                    </a>
+                  )}
+                  {teamContact.email && (
+                    <a
+                      href={`mailto:${teamContact.email}`}
+                      dir="ltr"
+                      className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-ink-900 hover:text-brand-purple"
+                    >
+                      <Mail size={14} className="text-brand-purple" />
+                      {teamContact.email}
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+          {candidate.bio && (
+            <div className="mt-6 rounded-[14px] border-s-[3px] border-brand-pink bg-ink-50/70 p-4 sm:p-5">
+              <div className="t-micro mb-1.5 font-bold text-brand-pink-deep uppercase">קצת עליי</div>
+              <MessageBody
+                body={candidate.bio}
+                className="t-body max-w-[75ch] whitespace-pre-line leading-relaxed text-ink-900"
+              />
+            </div>
+          )}
         </div>
       </header>
 
-      {/* -------------------------------------------------------- the bento */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-6 xl:grid-cols-12 md:[grid-auto-flow:dense]">
-        {candidate.links.length > 0 && (
-          <section
-            className={cn(
-              "rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 break-inside-avoid",
-              spanClasses(linksSpan)
-            )}
-          >
-            <h2 className="font-display mb-1 flex items-center gap-2.5 text-[16px] font-bold text-ink-1000">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-brand-purple">
-                <Code2 size={15} />
-              </span>
-              פרויקטים וקוד
-            </h2>
-            <p className="t-caption mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
-            <ul
-              className={cn(
-                "grid gap-2.5 grid-cols-1",
-                linksSpan >= 8 && candidate.links.length > 2 && "xl:grid-cols-2"
-              )}
-            >
-              {candidate.links.map((link) => (
-                <li key={`${link.label}-${link.url}`}>
-                  <a
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group flex items-center gap-3 rounded-[14px] border border-ink-200 bg-white px-3.5 py-2.5 transition-shadow duration-150 hover:no-underline hover:shadow-md"
-                  >
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tint-purple text-brand-purple">
-                      <ExternalLink size={14} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold text-ink-1000 group-hover:text-brand-purple">
-                        {link.label}
-                      </span>
-                      {link.note && (
-                        <span className="block text-[12px] text-ink-700 leading-snug">{link.note}</span>
-                      )}
-                      <span dir="ltr" className="t-caption block truncate text-start">
-                        {prettyUrl(link.url)}
-                      </span>
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </section>
+      {/* -------------------------------------------------- resume columns */}
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-5 items-start",
+          hasMain && sideGroups.length > 0 && "lg:grid-cols-[minmax(0,7fr)_minmax(0,4fr)]"
         )}
+      >
+        {hasMain && (
+          <div className="flex flex-col gap-5">
+            {mainGroups.map((group) => (
+              <section
+                key={group.title}
+                className="rounded-[18px] border border-ink-200 bg-white p-5 sm:p-6 shadow-sm break-inside-avoid print:shadow-none"
+              >
+                <SectionHead icon={group.icon} title={group.title} tone={group.tone} />
+                <div className="flex flex-col gap-4">
+                  {group.items.map((field) => (
+                    <MainField key={field.key} field={field} tone={group.tone} />
+                  ))}
+                </div>
+              </section>
+            ))}
 
-        {groups.map((group, gi) => {
-          return (
-            <section
-              key={group.title}
-              className={cn(
-                "rounded-[18px] border border-ink-200 bg-white p-5 shadow-sm break-inside-avoid print:shadow-none",
-                spanClasses(groupSpans[gi] ?? 6)
-              )}
-            >
-              <h2 className="font-display mb-4 flex items-center gap-2.5 text-[16px] font-bold text-ink-1000">
-                <span
+            {hasLinks && (
+              <section className="rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 sm:p-6 break-inside-avoid">
+                <SectionHead icon={Code2} title="פרויקטים וקוד" tone="purple" />
+                <p className="t-caption -mt-2 mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
+                <ul
                   className={cn(
-                    "flex h-8 w-8 items-center justify-center rounded-full",
-                    TONE_BUBBLE[group.tone ?? "purple"] ?? TONE_BUBBLE.purple
+                    "grid grid-cols-1 gap-2.5",
+                    candidate.links.length > 2 && "xl:grid-cols-2"
                   )}
                 >
-                  <group.icon size={15} />
-                </span>
-                {group.title}
-              </h2>
-              <dl className="flex flex-col gap-4">
-                {group.items.map((field) => (
-                  <FieldRow key={field.key} field={field} tone={group.tone} />
-                ))}
-              </dl>
-            </section>
-          );
-        })}
-      </div>
+                  {candidate.links.map((link) => (
+                    <li key={`${link.label}-${link.url}`}>
+                      <a
+                        href={link.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group flex items-center gap-3 rounded-[14px] border border-ink-200 bg-white px-3.5 py-2.5 transition-shadow duration-150 hover:no-underline hover:shadow-md"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tint-purple text-brand-purple">
+                          <ExternalLink size={14} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-semibold text-ink-1000 group-hover:text-brand-purple">
+                            {link.label}
+                          </span>
+                          {link.note && (
+                            <span className="block text-[12px] leading-snug text-ink-700">{link.note}</span>
+                          )}
+                          <span dir="ltr" className="t-caption block truncate text-start">
+                            {prettyUrl(link.url)}
+                          </span>
+                        </span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+          </div>
+        )}
 
-      {groups.length === 0 && candidate.links.length === 0 && (
-        <p className="t-body-sm rounded-[18px] border border-dashed border-ink-200 bg-white p-6 text-center">
-          עוד אין כאן הרבה — ככל שהפרופיל מלא יותר, כך המגייסות רואות יותר.
-        </p>
-      )}
+        {sideGroups.length > 0 && (
+          <aside className="flex flex-col gap-5">
+            {sideGroups.map((group) => (
+              <section
+                key={group.title}
+                className="rounded-[18px] border border-ink-200 bg-white p-5 shadow-sm break-inside-avoid print:shadow-none"
+              >
+                <SectionHead icon={group.icon} title={group.title} tone={group.tone} />
+                <dl className="flex flex-col gap-3.5">
+                  {group.items.map((field) => (
+                    <SideField key={field.key} field={field} tone={group.tone} />
+                  ))}
+                </dl>
+              </section>
+            ))}
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
 
-function FieldRow({ field, tone }: { field: CandidateField; tone: BadgeProps["variant"] }) {
+/** Experience-style entries as a timeline; anything else falls back to SideField. */
+function MainField({ field, tone }: { field: CandidateField; tone: BadgeProps["variant"] }) {
+  if (field.kind !== "experience") {
+    return (
+      <dl>
+        <SideField field={field} tone={tone} />
+      </dl>
+    );
+  }
+  return (
+    <div>
+      {field.label !== "ניסיון תעסוקתי" && field.label !== "התנסות מעשית" && (
+        <div className="t-micro mb-2 font-semibold text-ink-700 uppercase">{field.label}</div>
+      )}
+      <ol className="relative ms-1.5 flex flex-col gap-5 border-s-2 border-ink-100 ps-5">
+        {(field.entries ?? []).map((entry, i) => (
+          <li key={`${entry.place}-${i}`} className="relative">
+            <span
+              aria-hidden
+              className="absolute -start-[27px] top-1.5 h-3 w-3 rounded-full bg-brand-gradient ring-4 ring-white"
+            />
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <div className="min-w-0">
+                {entry.role && (
+                  <div className="text-[15.5px] font-bold leading-tight text-ink-1000">{entry.role}</div>
+                )}
+                <div className="text-[14px] font-semibold leading-snug text-brand-purple">
+                  {entry.place}
+                  {entry.kindLabel && (
+                    <span className="ms-2 text-[11.5px] font-semibold text-ink-500">· {entry.kindLabel}</span>
+                  )}
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {entry.current && (
+                  <span className="whitespace-nowrap rounded-full bg-tint-mint px-2 py-0.5 text-[10.5px] font-bold text-[#0F6E4A]">
+                    מקום נוכחי/אחרון
+                  </span>
+                )}
+                {entry.range && (
+                  <span dir="ltr" className="whitespace-nowrap text-[12.5px] font-semibold tabular-nums text-ink-500">
+                    {entry.range}
+                  </span>
+                )}
+              </div>
+            </div>
+            {entry.tech.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {entry.tech.map((t) => (
+                  <Badge key={t} variant="tech">
+                    {t}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            {entry.description && (
+              <MessageBody
+                body={entry.description}
+                className="t-body-sm mt-2 max-w-[70ch] whitespace-pre-line text-ink-900"
+              />
+            )}
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function SideField({ field, tone }: { field: CandidateField; tone: BadgeProps["variant"] }) {
   return (
     <div className="break-inside-avoid">
       <dt className="t-micro mb-1.5 font-semibold text-ink-700 uppercase">{field.label}</dt>
       <dd>
-        {field.kind === "experience" ? (
-          <div className="flex flex-col gap-2.5">
-            {(field.entries ?? []).map((entry, i) => (
-              <div
-                key={`${entry.place}-${i}`}
-                className="rounded-[14px] border border-ink-100 bg-ink-0/60 p-3.5"
-              >
-                <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                  <div className="min-w-0">
-                    {entry.role && (
-                      <div className="text-[15px] font-bold text-brand-purple leading-tight">{entry.role}</div>
-                    )}
-                    <div className="text-[14.5px] font-bold text-ink-1000 leading-snug">
-                      {entry.place}
-                      {entry.kindLabel && (
-                        <span className="ms-2 text-[11.5px] font-semibold text-ink-500">· {entry.kindLabel}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {entry.current && (
-                      <span className="text-[10.5px] font-bold bg-tint-mint text-[#0F6E4A] px-2 py-0.5 rounded-full whitespace-nowrap">
-                        מקום נוכחי/אחרון
-                      </span>
-                    )}
-                    {entry.range && (
-                      <span dir="ltr" className="text-[12.5px] font-semibold text-ink-500 tabular-nums whitespace-nowrap">
-                        {entry.range}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                {entry.tech.length > 0 && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {entry.tech.map((t) => (
-                      <Badge key={t} variant="tech">
-                        {t}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-                {entry.description && (
-                  <MessageBody
-                    body={entry.description}
-                    className="t-body-sm mt-2.5 max-w-[68ch] whitespace-pre-line text-ink-900 border-t border-ink-100 pt-2.5"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        ) : field.kind === "chips" ? (
+        {field.kind === "chips" ? (
           field.chipGroups && field.chipGroups.length > 1 ? (
             <div className="flex flex-col gap-2.5">
               {field.chipGroups.map((g) => (
                 <div key={g.name}>
-                  <div className="text-[11px] font-bold text-ink-500 mb-1">{g.name}</div>
+                  <div className="mb-1 text-[11px] font-bold text-ink-500">{g.name}</div>
                   <div className="flex flex-wrap gap-1.5">
                     {g.values.map((value) => (
                       <Badge key={value} variant={tone}>
@@ -453,6 +440,9 @@ function FieldRow({ field, tone }: { field: CandidateField; tone: BadgeProps["va
                 </div>
               ))}
             </div>
+          ) : field.values.length === 1 ? (
+            // A lone select answer reads as a fact, not a tag cloud.
+            <div className="t-body-sm font-semibold text-ink-900">{field.values[0]}</div>
           ) : (
             <div className="flex flex-wrap gap-1.5">
               {field.values.map((value) => (
@@ -478,9 +468,9 @@ function FieldRow({ field, tone }: { field: CandidateField; tone: BadgeProps["va
             ))}
           </div>
         ) : field.values.length === 1 ? (
-          <MessageBody body={field.values[0]} className="t-body-sm max-w-[68ch] whitespace-pre-line text-ink-900" />
+          <MessageBody body={field.values[0]} className="t-body-sm max-w-[70ch] whitespace-pre-line text-ink-900" />
         ) : (
-          <div className="t-body-sm max-w-[68ch] whitespace-pre-line text-ink-900">
+          <div className="t-body-sm max-w-[70ch] whitespace-pre-line text-ink-900">
             {field.values.join(" · ")}
           </div>
         )}
