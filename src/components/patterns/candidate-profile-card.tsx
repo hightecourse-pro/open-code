@@ -15,6 +15,7 @@ import { Avatar, Badge, type BadgeProps } from "@/components/ui";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { cn } from "@/lib/utils";
 import type { CandidateDetail, CandidateField } from "@/lib/portal/candidates";
+import type { ExperienceEntryDisplay } from "@/lib/portal/types";
 
 type Icon = React.ComponentType<{ size?: number; className?: string }>;
 
@@ -116,13 +117,55 @@ function groupFields(candidate: CandidateDetail) {
   const groups = GROUPS.map((group) => {
     const items = fields.filter((f) => group.keys.includes(f.key));
     for (const item of items) claimed.add(item.key);
-    return { ...group, items };
+    return { ...group, items: [...items] };
   }).filter((group) => group.items.length > 0);
   const rest = fields.filter((f) => !claimed.has(f.key));
   if (rest.length > 0) {
     groups.push({ title: "מידע נוסף", icon: Info, tone: "purple", keys: [], items: rest });
   }
+  foldPracticumIntoTimeline(groups);
   return groups;
+}
+
+/**
+ * The practicum answers arrive as five separate fields — but on a CV they are
+ * ONE experience entry (the owner, 9/9: "הפרקטיקום צריך להיכנס ברצף ההתנסות
+ * המעשית"): employer, kind, period, tech and description fold into a single
+ * timeline stop, and the yes/no field disappears (the entry itself says it).
+ */
+function foldPracticumIntoTimeline(groups: { title: string; items: CandidateField[] }[]) {
+  const group = groups.find((g) => g.title === "התנסות מעשית");
+  if (!group) return;
+  const take = (key: string): CandidateField | undefined => {
+    const i = group.items.findIndex((f) => f.key === key);
+    return i >= 0 ? group.items.splice(i, 1)[0] : undefined;
+  };
+  const first = (f?: CandidateField): string => f?.values?.[0]?.trim() ?? "";
+  take("practicum_done");
+  const kind = first(take("practicum_kind"));
+  const employer = first(take("practicum_employer"));
+  const period = first(take("practicum_period"));
+  const tech = take("practicum_tech");
+  const description = first(take("practicum_description"));
+  if (!employer && !kind && !description) return;
+  const entry: ExperienceEntryDisplay = {
+    headline: [employer || kind, period].filter(Boolean).join(" · "),
+    place: employer || kind || "פרקטיקום",
+    kindLabel: employer ? kind || "פרקטיקום" : undefined,
+    range: period,
+    tech: tech?.values ?? [],
+    description,
+  };
+  const timeline = group.items.find((f) => f.kind === "experience");
+  if (timeline) timeline.entries = [...(timeline.entries ?? []), entry];
+  else
+    group.items.push({
+      key: "practicum_entry",
+      label: "",
+      values: [entry.headline],
+      kind: "experience",
+      entries: [entry],
+    });
 }
 
 const TONE_BUBBLE: Record<string, string> = {
@@ -140,6 +183,22 @@ function prettyUrl(url: string): string {
     return `${parsed.hostname.replace(/^www\./, "")}${path}`;
   } catch {
     return url;
+  }
+}
+
+/**
+ * A live site gets a screenshot thumbnail (the owner, 9/9: "ריבוע עם תמונת
+ * מסך של האתר") via WordPress mShots — a free public screenshot service; the
+ * first request may show its "generating" placeholder until the shot is
+ * cached. Code hosts skip the thumbnail (a repo page says nothing visual).
+ */
+function siteThumbUrl(url: string): string | null {
+  try {
+    const host = new URL(url).hostname;
+    if (/(^|\.)(github\.com|gitlab\.com|bitbucket\.org)$/.test(host)) return null;
+    return `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=640`;
+  } catch {
+    return null;
   }
 }
 
@@ -274,6 +333,63 @@ export function CandidateProfileCard({
       >
         {hasMain && (
           <div className="flex flex-col gap-5">
+            {/* The proof leads (the owner, 9/9: "דוגמאות קוד/פרויקטים —
+                תעלה יותר למעלה"): live work first, history after. */}
+            {hasLinks && (
+              <section className="rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 sm:p-6 break-inside-avoid">
+                <SectionHead icon={Code2} title="פרויקטים וקוד" tone="purple" />
+                <p className="t-caption -mt-2 mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
+                <ul
+                  className={cn(
+                    "grid grid-cols-1 gap-3",
+                    candidate.links.length > 1 && "sm:grid-cols-2"
+                  )}
+                >
+                  {candidate.links.map((link) => {
+                    const thumb = siteThumbUrl(link.url);
+                    return (
+                      <li key={`${link.label}-${link.url}`}>
+                        <a
+                          href={link.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-ink-200 bg-white transition-shadow duration-150 hover:no-underline hover:shadow-md"
+                        >
+                          {thumb && (
+                            <span className="block aspect-[16/9] overflow-hidden border-b border-ink-100 bg-ink-50">
+                              {/* eslint-disable-next-line @next/next/no-img-element -- external screenshot service */}
+                              <img
+                                src={thumb}
+                                alt={`תצוגה של ${link.label}`}
+                                loading="lazy"
+                                className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+                              />
+                            </span>
+                          )}
+                          <span className="flex items-center gap-3 px-3.5 py-2.5">
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tint-purple text-brand-purple">
+                              <ExternalLink size={14} />
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold text-ink-1000 group-hover:text-brand-purple">
+                                {link.label}
+                              </span>
+                              {link.note && (
+                                <span className="block text-[12px] leading-snug text-ink-700">{link.note}</span>
+                              )}
+                              <span dir="ltr" className="t-caption block truncate text-start">
+                                {prettyUrl(link.url)}
+                              </span>
+                            </span>
+                          </span>
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
+            )}
+
             {mainGroups.map((group) => (
               <section
                 key={group.title}
@@ -287,45 +403,6 @@ export function CandidateProfileCard({
                 </div>
               </section>
             ))}
-
-            {hasLinks && (
-              <section className="rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 sm:p-6 break-inside-avoid">
-                <SectionHead icon={Code2} title="פרויקטים וקוד" tone="purple" />
-                <p className="t-caption -mt-2 mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
-                <ul
-                  className={cn(
-                    "grid grid-cols-1 gap-2.5",
-                    candidate.links.length > 2 && "xl:grid-cols-2"
-                  )}
-                >
-                  {candidate.links.map((link) => (
-                    <li key={`${link.label}-${link.url}`}>
-                      <a
-                        href={link.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group flex items-center gap-3 rounded-[14px] border border-ink-200 bg-white px-3.5 py-2.5 transition-shadow duration-150 hover:no-underline hover:shadow-md"
-                      >
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tint-purple text-brand-purple">
-                          <ExternalLink size={14} />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-semibold text-ink-1000 group-hover:text-brand-purple">
-                            {link.label}
-                          </span>
-                          {link.note && (
-                            <span className="block text-[12px] leading-snug text-ink-700">{link.note}</span>
-                          )}
-                          <span dir="ltr" className="t-caption block truncate text-start">
-                            {prettyUrl(link.url)}
-                          </span>
-                        </span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
           </div>
         )}
 
@@ -362,7 +439,7 @@ function MainField({ field, tone }: { field: CandidateField; tone: BadgeProps["v
   }
   return (
     <div>
-      {field.label !== "ניסיון תעסוקתי" && field.label !== "התנסות מעשית" && (
+      {field.label && field.label !== "ניסיון תעסוקתי" && field.label !== "התנסות מעשית" && (
         <div className="t-micro mb-2 font-semibold text-ink-700 uppercase">{field.label}</div>
       )}
       <ol className="relative ms-1.5 flex flex-col gap-5 border-s-2 border-ink-100 ps-5">
