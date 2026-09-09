@@ -32,7 +32,12 @@ export function MessageBody({
       // Sanitized at save AND here at render: bodies stored while detection
       // was start-anchored bypassed the save gate, so the renderer must never
       // trust the stored string alone.
-      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(body) }}
+      //
+      // Raw newlines inside HTML are insignificant whitespace — but callers
+      // that also render plain text pass whitespace-pre-line, which turned a
+      // Word-paste's wrap points into mid-sentence breaks (Lea Fefer's
+      // profile, 9/9). Collapsed here; real breaks are <br>/<p> anyway.
+      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(body.replace(/\s*\n\s*/g, " ")) }}
     />
   );
 }

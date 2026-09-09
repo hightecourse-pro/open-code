@@ -47,7 +47,7 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
     ],
   },
   {
-    title: "התנסות מעשית",
+    title: "ניסיון מעשי",
     icon: FlaskConical,
     tone: "mint",
     keys: [
@@ -82,7 +82,7 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
 ];
 
 /** The resume's main column — the story; everything else sits in the sidebar. */
-const MAIN_TITLES = new Set(["ניסיון תעסוקתי", "התנסות מעשית"]);
+const MAIN_TITLES = new Set(["ניסיון תעסוקתי", "ניסיון מעשי"]);
 
 /**
  * Her preferences, not her qualifications — an employer reading a submitted
@@ -134,7 +134,7 @@ function groupFields(candidate: CandidateDetail) {
  * timeline stop, and the yes/no field disappears (the entry itself says it).
  */
 function foldPracticumIntoTimeline(groups: { title: string; items: CandidateField[] }[]) {
-  const group = groups.find((g) => g.title === "התנסות מעשית");
+  const group = groups.find((g) => g.title === "ניסיון מעשי");
   if (!group) return;
   const take = (key: string): CandidateField | undefined => {
     const i = group.items.findIndex((f) => f.key === key);
