@@ -377,6 +377,31 @@ export async function loadCandidates(opts?: {
     byMember.set(a.profile_id, m);
   }
 
+  // Her city for the header (the owner, 9/9: "למה אין עיר מגורים?") — the
+  // select's stored VALUE resolved to its label. Deliberately fetched outside
+  // the employer_visible gate: it is location display only, shown exactly
+  // where the region already shows.
+  const cityOf = new Map<string, string>();
+  {
+    const { data: cityQ } = await admin
+      .from("config_questions")
+      .select("id, options")
+      .eq("key", "city")
+      .maybeSingle();
+    if (cityQ) {
+      const labelOf = new Map(
+        (Array.isArray(cityQ.options)
+          ? (cityQ.options as unknown as { value: string; label: string }[])
+          : []
+        ).map((o) => [o.value, o.label])
+      );
+      for (const a of answers) {
+        if (a.question_id !== cityQ.id) continue;
+        if (typeof a.value === "string" && a.value) cityOf.set(a.profile_id, labelOf.get(a.value) ?? a.value);
+      }
+    }
+  }
+
   const candidates: CandidateDetail[] = listed.map((p) => {
     const mine = byMember.get(p.id) ?? new Map();
     const fields: CandidateField[] = [];
@@ -412,6 +437,7 @@ export async function loadCandidates(opts?: {
       initials: p.avatar_initials || p.full_name?.slice(0, 1) || "ק",
       specialization: showSpecialization ? p.specialization : null,
       region: showRegion ? p.region : null,
+      city: showRegion ? (cityOf.get(p.id) ?? null) : null,
       bio: showBio ? p.bio : null,
       isExperienced: !!p.is_experienced,
       isMentor: p.role === "mentor",
