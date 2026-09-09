@@ -48,8 +48,13 @@ export async function uploadAttachment(
   }
 
   // Her own folder, an unguessable name, the original name kept for display.
+  // The storage KEY must stay ASCII — Supabase rejects Hebrew letters in
+  // object keys, which is exactly how "צילום מסך….png" failed while a pasted
+  // "image.png" sailed through (the owner + a member, 8/9). Only the key is
+  // neutral; the Hebrew name lives on in the attachments row.
   const safeName = file.name.replace(/[^\p{L}\p{N}.\-_ ]/gu, "").slice(-80) || "קובץ";
-  const path = `${profile.id}/${crypto.randomUUID()}-${safeName}`;
+  const ext = /\.[A-Za-z0-9]{1,8}$/.exec(file.name)?.[0].toLowerCase() ?? "";
+  const path = `${profile.id}/${crypto.randomUUID()}${ext}`;
 
   const supabase = await createClient();
   const { error: upErr } = await supabase.storage

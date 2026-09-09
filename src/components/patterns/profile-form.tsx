@@ -683,6 +683,12 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
               label={q.label_he}
               onChange={(e) => setBools((b) => ({ ...b, [q.key]: e.target.checked }))}
             />
+            {/* Seminary-agreement note — juniors only (the owner, 9/9). */}
+            {!hasExperience && (
+              <p className="text-[12px] text-ink-500 mt-1.5 ps-6">
+                במידה ויש הסכם עם הסמינר שלך - התשלום הוא דרך הסמינר לפי ההסכם מולם
+              </p>
+            )}
             {err && <p className="text-danger text-xs mt-1.5">{err}</p>}
           </div>
         );
