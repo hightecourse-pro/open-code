@@ -779,6 +779,25 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["posts"]["Insert"]>;
         Relationships: [];
       };
+      /** Cached live-site screenshots inlined as base64 (Netfree-safe, 9/9). */
+      site_thumbnails: {
+        Row: {
+          url_hash: string;
+          url: string;
+          content_type: string;
+          data_base64: string;
+          fetched_at: string;
+        };
+        Insert: {
+          url_hash: string;
+          url: string;
+          content_type: string;
+          data_base64: string;
+          fetched_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["site_thumbnails"]["Insert"]>;
+        Relationships: [];
+      };
       /** Which forum topics each member has opened, and when (6/9). */
       post_reads: {
         Row: {

@@ -11,6 +11,7 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { loadCandidates } from "@/lib/portal/candidates";
 import { CandidateProfileCard } from "@/components/patterns/candidate-profile-card";
+import { siteThumbs } from "@/lib/site-thumbs";
 
 export const metadata: Metadata = { title: "הפרופיל המלא" };
 export const dynamic = "force-dynamic";
@@ -85,7 +86,7 @@ export default async function AdminMemberProfilePage({
           <b>הפרופיל המלא</b> — כמו שמגייסת רואה, בתוספת טלפון ומייל שמוצגים לצוות בלבד.
         </span>
       </div>
-      <CandidateProfileCard candidate={member} teamContact={{ phone, email }} />
+      <CandidateProfileCard candidate={member} teamContact={{ phone, email }} thumbs={await siteThumbs(member.links.map((l) => l.url))} />
     </div>
   );
 }

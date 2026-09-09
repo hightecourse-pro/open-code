@@ -562,6 +562,24 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
         typeof raw === "string" ? htmlToPlainText(raw).trim() : "";
       await supabase.from("profiles").update({ bio: text || null }).eq("id", user.id);
     }
+
+    // Warm the live-project screenshot cache (9/9) — best effort, never
+    // holding her save; the profile view generates whatever this missed.
+    const linkQs = ["live_links", "ai_project_links"].map((k) => qByKey.get(k)).filter(Boolean);
+    const urls: string[] = [];
+    for (const q of linkQs) {
+      const raw = answered.find((a) => a.question_id === q!.id)?.value;
+      if (Array.isArray(raw)) {
+        for (const item of raw) {
+          const u = typeof item === "string" ? item : (item as { url?: string })?.url;
+          if (typeof u === "string" && u.startsWith("http")) urls.push(u);
+        }
+      }
+    }
+    if (urls.length) {
+      const { siteThumbs } = await import("@/lib/site-thumbs");
+      void siteThumbs(urls).catch(() => {});
+    }
   }
 
   if (draft) return { ok: true };

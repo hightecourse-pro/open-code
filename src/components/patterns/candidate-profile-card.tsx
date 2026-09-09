@@ -186,19 +186,13 @@ function prettyUrl(url: string): string {
   }
 }
 
-/**
- * A live site gets a screenshot thumbnail (the owner, 9/9: "ריבוע עם תמונת
- * מסך של האתר") via WordPress mShots — a free public screenshot service; the
- * first request may show its "generating" placeholder until the shot is
- * cached. Code hosts skip the thumbnail (a repo page says nothing visual).
- */
-function siteThumbUrl(url: string): string | null {
+/** A code-host link — listed under קוד, never given a screenshot tile. */
+function isRepoUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname;
-    if (/(^|\.)(github\.com|gitlab\.com|bitbucket\.org)$/.test(host)) return null;
-    return `https://s0.wp.com/mshots/v1/${encodeURIComponent(url)}?w=640`;
+    return /(^|\.)(github\.com|gitlab\.com|bitbucket\.org)$/.test(host);
   } catch {
-    return null;
+    return true; // an unparseable "url" has nothing to screenshot either
   }
 }
 
@@ -224,6 +218,7 @@ export function CandidateProfileCard({
   candidate,
   headerExtra,
   teamContact,
+  thumbs,
 }: {
   candidate: CandidateDetail;
   /** Page-specific control in the header corner (e.g. the portal's favorite star). */
@@ -234,6 +229,11 @@ export function CandidateProfileCard({
    * provide it, so nothing here can leak to a client.
    */
   teamContact?: { phone?: string | null; email?: string | null };
+  /**
+   * url → base64 data URI of a live-site screenshot (lib/site-thumbs) —
+   * inlined so Netfree has no external image to intercept (9/9).
+   */
+  thumbs?: Record<string, string>;
 }) {
   const groups = groupFields(candidate);
   const mainGroups = groups.filter((g) => MAIN_TITLES.has(g.title));
@@ -339,54 +339,7 @@ export function CandidateProfileCard({
               <section className="rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 sm:p-6 break-inside-avoid">
                 <SectionHead icon={Code2} title="פרויקטים וקוד" tone="purple" />
                 <p className="t-caption -mt-2 mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
-                <ul
-                  className={cn(
-                    "grid grid-cols-1 gap-3 items-start",
-                    candidate.links.length > 1 && "sm:grid-cols-2"
-                  )}
-                >
-                  {candidate.links.map((link) => {
-                    const thumb = siteThumbUrl(link.url);
-                    return (
-                      <li key={`${link.label}-${link.url}`}>
-                        <a
-                          href={link.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group flex flex-col overflow-hidden rounded-[14px] border border-ink-200 bg-white transition-shadow duration-150 hover:no-underline hover:shadow-md"
-                        >
-                          {thumb && (
-                            <span className="block aspect-[16/9] overflow-hidden border-b border-ink-100 bg-ink-50">
-                              {/* eslint-disable-next-line @next/next/no-img-element -- external screenshot service */}
-                              <img
-                                src={thumb}
-                                alt={`תצוגה של ${link.label}`}
-                                loading="lazy"
-                                className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
-                              />
-                            </span>
-                          )}
-                          <span className="flex items-center gap-3 px-3.5 py-2.5">
-                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-tint-purple text-brand-purple">
-                              <ExternalLink size={14} />
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm font-semibold text-ink-1000 group-hover:text-brand-purple">
-                                {link.label}
-                              </span>
-                              {link.note && (
-                                <span className="block text-[12px] leading-snug text-ink-700">{link.note}</span>
-                              )}
-                              <span dir="ltr" className="t-caption block truncate text-start">
-                                {prettyUrl(link.url)}
-                              </span>
-                            </span>
-                          </span>
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
+                <ProjectLinks links={candidate.links} thumbs={thumbs} />
               </section>
             )}
 
@@ -424,6 +377,101 @@ export function CandidateProfileCard({
           </aside>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The projects area, in two symmetric halves (the owner, 9/9: "הקוביות לא
+ * סימטריות ומעורבב גיט ופרויקטים חיים"): live sites as uniform screenshot
+ * tiles (a compact preview strip — never a full-bleed banner), code repos as
+ * uniform list rows below.
+ */
+function ProjectLinks({
+  links,
+  thumbs,
+}: {
+  links: CandidateDetail["links"];
+  thumbs?: Record<string, string>;
+}) {
+  const live = links.filter((l) => !isRepoUrl(l.url));
+  const repos = links.filter((l) => isRepoUrl(l.url));
+  return (
+    <div className="flex flex-col gap-4">
+      {live.length > 0 && (
+        <ul className={cn("grid grid-cols-1 gap-3", live.length > 1 && "sm:grid-cols-2")}>
+          {live.map((link) => {
+            const thumb = thumbs?.[link.url];
+            return (
+              <li key={`${link.label}-${link.url}`} className="h-full">
+                <a
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-ink-200 bg-white transition-shadow duration-150 hover:no-underline hover:shadow-md"
+                >
+                  <span className="block h-24 shrink-0 overflow-hidden border-b border-ink-100 bg-ink-50">
+                    {thumb ? (
+                      // eslint-disable-next-line @next/next/no-img-element -- inline data URI
+                      <img
+                        src={thumb}
+                        alt={`תצוגה של ${link.label}`}
+                        className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      // Same-size stand-in while the screenshot bakes — the
+                      // tiles stay symmetric either way.
+                      <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-tint-purple to-tint-pink">
+                        <ExternalLink size={22} className="text-brand-purple/50" />
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex flex-1 items-center gap-2.5 px-3 py-2">
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[13.5px] font-semibold text-ink-1000 group-hover:text-brand-purple">
+                        {link.label}
+                      </span>
+                      <span dir="ltr" className="t-caption block truncate text-start">
+                        {prettyUrl(link.url)}
+                      </span>
+                    </span>
+                    <ExternalLink size={14} className="shrink-0 text-brand-purple" />
+                  </span>
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      {repos.length > 0 && (
+        <ul className="flex flex-col gap-2">
+          {repos.map((link) => (
+            <li key={`${link.label}-${link.url}`}>
+              <a
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group flex items-center gap-3 rounded-[12px] border border-ink-200 bg-white px-3.5 py-2.5 transition-shadow duration-150 hover:no-underline hover:shadow-md"
+              >
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink-100 text-ink-900">
+                  <Code2 size={14} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-ink-1000 group-hover:text-brand-purple">
+                    {link.label}
+                  </span>
+                  {link.note && (
+                    <span className="block text-[12px] leading-snug text-ink-700">{link.note}</span>
+                  )}
+                  <span dir="ltr" className="t-caption block truncate text-start">
+                    {prettyUrl(link.url)}
+                  </span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
