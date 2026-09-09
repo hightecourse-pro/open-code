@@ -550,6 +550,18 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       for (const key of wants) patch[key] = labelOf(key);
       await supabase.from("profiles").update(patch).eq("id", user.id);
     }
+
+    // The "קצת על עצמי" answer too — the community library and the portal
+    // header read profiles.bio, and until now (9/9) NOTHING ever wrote it:
+    // all 226 members with a bio answer had an empty card. Stored as plain
+    // text — every reader renders it as-is.
+    const bioQ = qByKey.get("bio");
+    if (bioQ && answeredIds.has(bioQ.id)) {
+      const raw = answered.find((a) => a.question_id === bioQ.id)?.value;
+      const text =
+        typeof raw === "string" ? htmlToPlainText(raw).trim() : "";
+      await supabase.from("profiles").update({ bio: text || null }).eq("id", user.id);
+    }
   }
 
   if (draft) return { ok: true };
