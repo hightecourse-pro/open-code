@@ -1870,7 +1870,6 @@ export interface Database {
           specialization: string | null;
           region: string | null;
           role: UserRole;
-          bio: string | null;
           created_at: string;
           /** Really paying — activated paid / live sub / Nedarim payers list. */
           is_subscriber: boolean;
