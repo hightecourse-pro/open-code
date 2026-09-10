@@ -59,6 +59,14 @@ export function ChatSearch({ items }: { items: ChatSearchItem[] }) {
         }}
         placeholder="חיפוש שיחה לפי שם… 🔍"
         aria-label="חיפוש שיחה לפי שם"
+        // Keep password/passkey extensions out of this field — their injected
+        // widgets corrupt React's DOM (the 10/9 new-chat crash family).
+        type="search"
+        autoComplete="off"
+        data-1p-ignore
+        data-lpignore="true"
+        data-bwignore="true"
+        data-form-type="other"
         className="w-full border border-ink-200 rounded-md px-3 py-1.5 text-[13px] focus:outline-none focus:border-brand-purple"
       />
       {open && matches.length > 0 && (
