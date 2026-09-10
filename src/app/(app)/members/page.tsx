@@ -1,50 +1,52 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { MemberCard, type DirectoryMember } from "@/components/patterns/member-card";
-import { MembersInstantList } from "@/components/patterns/members-instant-list";
+import { MembersInstantList, type GroupCounts } from "@/components/patterns/members-instant-list";
 import { mentorScores } from "@/lib/mentor-score";
+import type { InstantItem } from "@/components/patterns/instant-filter";
 
 export const metadata: Metadata = { title: "המשתתפות שלנו" };
 
 /** PostgREST page size — the loop below walks pages until it drains. */
 const PAGE = 500;
+/** What the first paint carries while the full list streams in behind it. */
+const FIRST_CHUNK = 60;
 
-export default async function MembersPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ q?: string; g?: string }>;
-}) {
-  const { q, g } = await searchParams;
-  // The chip filter survives the round-trip to a member's page (?g= written
-  // client-side with replaceState) — validate to the known groups.
-  const initialGroup = ["subscriber", "mentor", "team"].includes(g ?? "") ? g! : "";
+interface Viewer {
+  id: string;
+  canChat: boolean;
+  mentorWaiting: boolean;
+  isTeam: boolean;
+}
 
-  const me = await requireCommunityAccess();
-  const canChat = isSubscriber(me);
-  const mentorWaiting = me.role === "mentor" && !canChat;
+/**
+ * Load directory members (optionally only the first chunk) with everything the
+ * card shows: score, study place, city, the מנויה badge. Shared by the instant
+ * first paint and the full streamed list — same enrichment, different size.
+ */
+async function loadDirectoryItems(
+  viewer: Viewer,
+  serverNeedle: string,
+  limit?: number
+): Promise<InstantItem[]> {
   const supabase = await createClient();
 
   // members_directory — never `profiles`: the view carries no `status` or
   // `member_tier`; the ONE payment fact it exposes is the deliberate
   // is_subscriber badge. Since 31/8 it lists pending members too — the owner:
   // "אמורים לראות את כולן".
-  // (Before the migration runs this returns nothing and the empty state shows.)
-  //
-  // The WHOLE directory loads, paged behind the scenes (the owner, 1/9:
-  // "תביא את המספר המלא, אם נדרש בפייג'ינג נסתר") — the old 200-row cap
-  // silently hid everyone past the first page. The search box still filters
-  // client-side over what is now the complete list; ?q= from old links keeps
-  // narrowing on the server too.
-  const serverNeedle = (q ?? "").trim().slice(0, 60);
   const data: DirectoryMember[] = [];
   for (let from = 0; ; from += PAGE) {
+    const pageSize = limit ? Math.min(PAGE, limit - data.length) : PAGE;
+    if (pageSize <= 0) break;
     let pageQuery = supabase
       .from("members_directory")
       .select("id, full_name, first_name, avatar_initials, specialization, region, role, created_at, is_subscriber")
-      .neq("id", me.id)
+      .neq("id", viewer.id)
       .order("full_name", { ascending: true })
-      .range(from, from + PAGE - 1);
+      .range(from, from + pageSize - 1);
     if (serverNeedle) {
       pageQuery = pageQuery.or(
         `full_name.ilike.%${serverNeedle}%,specialization.ilike.%${serverNeedle}%,region.ilike.%${serverNeedle}%`
@@ -52,7 +54,7 @@ export default async function MembersPage({
     }
     const { data: page } = await pageQuery;
     data.push(...((page ?? []) as DirectoryMember[]));
-    if (!page || page.length < PAGE) break;
+    if (!page || page.length < pageSize || (limit && data.length >= limit)) break;
   }
   // Hebrew alphabetical — the database collation isn't necessarily Hebrew-aware.
   const members: DirectoryMember[] = data.sort((a, b) => a.full_name.localeCompare(b.full_name, "he"));
@@ -96,6 +98,104 @@ export default async function MembersPage({
   // PENDING member who already paid is labeled מנויה too (the owner's ask).
   const subscriberIds = new Set(members.filter((m) => m.is_subscriber === true).map((m) => m.id));
 
+  return members.map((member) => ({
+    id: member.id,
+    // One-click chips: the view's masked role means "mentor" is always
+    // an APPROVED mentor; מנויות = the honest is_subscriber badge.
+    group:
+      member.role === "admin"
+        ? "team"
+        : member.role === "mentor"
+          ? "mentor"
+          : subscriberIds.has(member.id)
+            ? "subscriber"
+            : "member",
+    haystack: [member.full_name, member.specialization ?? "", member.region ?? "", cityOf.get(member.id) ?? "", studyOf.get(member.id) ?? ""].join(" "),
+    node: (
+      <MemberCard
+        member={member}
+        canChat={viewer.canChat}
+        mentorWaiting={viewer.mentorWaiting}
+        score={scores.get(member.id)?.score}
+        subscriber={subscriberIds.has(member.id)}
+        viewerIsTeam={viewer.isTeam}
+        studyPlace={studyOf.get(member.id) ?? null}
+        city={cityOf.get(member.id) ?? null}
+      />
+    ),
+  }));
+}
+
+/** The complete directory, streamed in behind the instant first chunk. */
+async function FullDirectory({
+  viewer,
+  serverNeedle,
+  counts,
+  initialQuery,
+  initialGroup,
+}: {
+  viewer: Viewer;
+  serverNeedle: string;
+  counts: GroupCounts;
+  initialQuery: string;
+  initialGroup: string;
+}) {
+  const items = await loadDirectoryItems(viewer, serverNeedle);
+  return (
+    <MembersInstantList
+      capped={false}
+      counts={counts}
+      initialQuery={initialQuery}
+      initialGroup={initialGroup}
+      items={items}
+    />
+  );
+}
+
+export default async function MembersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; g?: string }>;
+}) {
+  const { q, g } = await searchParams;
+  // The chip filter survives the round-trip to a member's page (?g= written
+  // client-side with replaceState) — validate to the known groups.
+  const initialGroup = ["subscriber", "mentor", "team"].includes(g ?? "") ? g! : "";
+
+  const me = await requireCommunityAccess();
+  const viewer: Viewer = {
+    id: me.id,
+    canChat: isSubscriber(me),
+    mentorWaiting: me.role === "mentor" && !isSubscriber(me),
+    isTeam: me.role === "admin",
+  };
+  const serverNeedle = (q ?? "").trim().slice(0, 60);
+  const supabase = await createClient();
+
+  // The TRUE numbers, fetched up front (the owner, 10/9: "רק שהמספרים הנכונים
+  // תשלוף מראש") — cheap head-counts on the view, so the chips are right from
+  // the first paint even while most of the list is still streaming in.
+  const countBase = () =>
+    supabase.from("members_directory").select("id", { count: "exact", head: true }).neq("id", me.id);
+  const [{ count: allC }, { count: mentorC }, { count: teamC }, { count: subC }] = await Promise.all([
+    countBase(),
+    countBase().eq("role", "mentor"),
+    countBase().eq("role", "admin"),
+    countBase().eq("role", "junior").eq("is_subscriber", true),
+  ]);
+  const counts: GroupCounts = {
+    all: allC ?? 0,
+    mentor: mentorC ?? 0,
+    team: teamC ?? 0,
+    subscriber: subC ?? 0,
+  };
+
+  // The first chunk renders IMMEDIATELY (the owner, 10/9: "לא יכול להיות
+  // שנכנסים ורואים ריק") — the rest of the directory streams in behind it
+  // via Suspense and replaces the list when ready.
+  const firstItems = await loadDirectoryItems(viewer, serverNeedle, FIRST_CHUNK);
+  const partial = counts.all > firstItems.length;
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -108,37 +208,36 @@ export default async function MembersPage({
 
       {/* Instant search — she types, the cards narrow, nothing navigates.
           An incoming ?q= from an old link still pre-fills the box. */}
-      <MembersInstantList
-        capped={false}
-        initialQuery={(q ?? "").trim()}
-        initialGroup={initialGroup}
-        items={members.map((member) => ({
-          id: member.id,
-          // One-click chips: the view's masked role means "mentor" is always
-          // an APPROVED mentor; מנויות = the honest is_subscriber badge.
-          group:
-            member.role === "admin"
-              ? "team"
-              : member.role === "mentor"
-                ? "mentor"
-                : subscriberIds.has(member.id)
-                  ? "subscriber"
-                  : "member",
-          haystack: [member.full_name, member.specialization ?? "", member.region ?? "", cityOf.get(member.id) ?? "", studyOf.get(member.id) ?? ""].join(" "),
-          node: (
-            <MemberCard
-              member={member}
-              canChat={canChat}
-              mentorWaiting={mentorWaiting}
-              score={scores.get(member.id)?.score}
-              subscriber={subscriberIds.has(member.id)}
-              viewerIsTeam={me.role === "admin"}
-              studyPlace={studyOf.get(member.id) ?? null}
-              city={cityOf.get(member.id) ?? null}
+      {partial ? (
+        <Suspense
+          fallback={
+            <MembersInstantList
+              capped={false}
+              counts={counts}
+              loadingAll
+              initialQuery={(q ?? "").trim()}
+              initialGroup={initialGroup}
+              items={firstItems}
             />
-          ),
-        }))}
-      />
+          }
+        >
+          <FullDirectory
+            viewer={viewer}
+            serverNeedle={serverNeedle}
+            counts={counts}
+            initialQuery={(q ?? "").trim()}
+            initialGroup={initialGroup}
+          />
+        </Suspense>
+      ) : (
+        <MembersInstantList
+          capped={false}
+          counts={counts}
+          initialQuery={(q ?? "").trim()}
+          initialGroup={initialGroup}
+          items={firstItems}
+        />
+      )}
     </div>
   );
 }
