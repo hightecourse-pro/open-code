@@ -623,8 +623,6 @@ export interface Database {
           current_period_end: string | null;
           started_at: string;
           canceled_at: string | null;
-          /** She turned renewal off — the period runs out and ends. */
-          cancel_at_period_end: boolean | null;
           /** The "מסתיים בעוד יומיים" reminder went out (once). */
           ending_reminder_sent_at: string | null;
           /** The "המנוי הסתיים" notice went out (once). */
@@ -641,7 +639,6 @@ export interface Database {
           current_period_end?: string | null;
           started_at?: string;
           canceled_at?: string | null;
-          cancel_at_period_end?: boolean | null;
           ending_reminder_sent_at?: string | null;
           ended_email_sent_at?: string | null;
         };

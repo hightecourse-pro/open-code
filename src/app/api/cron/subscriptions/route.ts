@@ -77,17 +77,18 @@ export async function GET(request: Request) {
   const ids = [...new Set(toExpire.map((s) => s.profile_id))];
 
   // -------------------------------------------- reminders (2 days ahead)
-  // Only subscriptions that are actually ENDING get one: renewal turned off,
-  // or already failing payment. An auto-renewing member's period just rolls.
+  // Only subscriptions that are actually ENDING get one: renewal turned off
+  // (canceled_at set while still active — cancelRenewal's marker), or already
+  // failing payment. An auto-renewing member's period just rolls.
   const { data: endingSoon } = await admin
     .from("subscriptions")
-    .select("id, profile_id, current_period_end, status, cancel_at_period_end, ending_reminder_sent_at")
+    .select("id, profile_id, current_period_end, status, canceled_at, ending_reminder_sent_at")
     .in("status", ["active", "trialing", "past_due"])
     .is("ending_reminder_sent_at", null)
     .not("current_period_end", "is", null)
     .gt("current_period_end", now.toISOString())
     .lt("current_period_end", new Date(now.getTime() + 8 * 24 * 3600 * 1000).toISOString())
-    .or("cancel_at_period_end.eq.true,status.eq.past_due");
+    .or("canceled_at.not.is.null,status.eq.past_due");
   const reminderDue = (endingSoon ?? []).filter((s) => {
     const endDay = ymdIL(new Date(s.current_period_end as string));
     // Ideal = two days before the end; Shabbat/chag moves it earlier.
