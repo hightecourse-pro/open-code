@@ -24,7 +24,10 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
     .from("cv_documents")
     .select("id", { count: "exact", head: true })
     .eq("profile_id", profile.id);
-  const requireCv = (cvCount ?? 0) === 0;
+  // A junior must leave a CV; a mentor is warmly encouraged, never blocked
+  // (the owner, 10/9 — was required for all since 28/8).
+  const requireCv = profile.role !== "mentor" && (cvCount ?? 0) === 0;
+  const cvOptional = profile.role === "mentor" && (cvCount ?? 0) === 0;
 
   const [{ data: questions }, { data: answers }, taxonomyOptions] = await Promise.all([
     supabase
@@ -73,6 +76,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           answers={answerMap}
           taxonomyOptions={taxonomyOptions}
           requireCv={requireCv}
+          cvOptional={cvOptional}
           allowMentorTrack={profile.role === "junior" && profile.status !== "active"}
         />
         {profile.role === "mentor" && profile.status !== "active" && (

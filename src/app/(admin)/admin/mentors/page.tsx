@@ -113,6 +113,32 @@ export default async function AdminMentorsPage() {
     return p ? (cvUrlOfPath.get(p) ?? null) : null;
   };
 
+  // City on the row (the owner, 10/9: "עיר מגורים למנטורית כמו לשאר") -
+  // the select answer resolved to its label.
+  const cityOf = new Map<string, string>();
+  {
+    const { data: cityQ } = await admin
+      .from("config_questions")
+      .select("id, options")
+      .eq("key", "city")
+      .maybeSingle();
+    if (cityQ && (mentors ?? []).length) {
+      const labelOf = new Map(
+        (Array.isArray(cityQ.options) ? (cityQ.options as unknown as { value: string; label: string }[]) : []).map(
+          (o) => [o.value, o.label]
+        )
+      );
+      const { data: cityAns } = await admin
+        .from("profile_answers")
+        .select("profile_id, value")
+        .eq("question_id", cityQ.id)
+        .in("profile_id", (mentors ?? []).map((m) => m.id));
+      for (const a of cityAns ?? []) {
+        if (typeof a.value === "string" && a.value) cityOf.set(a.profile_id, labelOf.get(a.value) ?? a.value);
+      }
+    }
+  }
+
   const rows: MentorRowData[] = (mentors ?? []).map((m) => {
     const history = (historyRows ?? [])
       .filter((h) => h.assigned_mentor_id === m.id)
@@ -131,6 +157,7 @@ export default async function AdminMentorsPage() {
       full_name: m.full_name,
       avatar_initials: m.avatar_initials,
       specialization: m.specialization,
+      city: cityOf.get(m.id) ?? null,
       created_at: m.created_at,
       mentor_available: m.mentor_available !== false,
       activeLoad,

@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUser } from "@/lib/auth";
 import { techKey } from "@/lib/tech-match";
+import { TabLinks } from "@/components/patterns/tab-links";
 import { EXPERIENCE_KEYS, parseExperienceEntries } from "@/lib/experience-entries";
 import { Alert } from "@/components/ui";
 import { JobCard } from "@/components/patterns/job-card";
@@ -385,23 +386,13 @@ export default async function JobsPage({
 
       {/* The PM's four clear views — always visible, one row. */}
       <div className="flex gap-1.5 flex-wrap">
-        {VIEWS.map((v) => {
-          const active = v.id === view;
-          return (
-            <a
-              key={v.id}
-              href={boardHref({ view: v.id })}
-              className={
-                "rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors " +
-                (active
-                  ? "bg-brand-gradient border-transparent text-white shadow-glow-pink"
-                  : "bg-white border-ink-200 text-ink-700 hover:border-brand-purple")
-              }
-            >
-              {v.label}
-            </a>
-          );
-        })}
+        <TabLinks
+          items={VIEWS.map((v) => ({ id: v.id, href: boardHref({ view: v.id }), label: v.label }))}
+          activeId={view}
+          baseClass="rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors"
+          activeClass="bg-brand-gradient border-transparent text-white shadow-glow-pink"
+          idleClass="bg-white border-ink-200 text-ink-700 hover:border-brand-purple"
+        />
       </div>
 
       {view === "fit" && (
@@ -456,24 +447,13 @@ export default async function JobsPage({
             }))}
             controls={
               <div className="flex gap-1.5">
-                {TABS.map((tab) => {
-                  const active = tab.id === activeTab;
-                  return (
-                    <a
-                      key={tab.id}
-                      href={boardHref({ type: tab.id })}
-                      title={tab.desc}
-                      className={
-                        "rounded-md px-3.5 py-1.5 text-[12.5px] font-semibold border-[1.5px] transition-all " +
-                        (active
-                          ? "border-transparent bg-ink-1000 text-white"
-                          : "border-ink-200 bg-white text-ink-700 hover:border-brand-purple")
-                      }
-                    >
-                      {tab.label}
-                    </a>
-                  );
-                })}
+                <TabLinks
+                  items={TABS.map((tab) => ({ id: tab.id, href: boardHref({ type: tab.id }), label: tab.label, title: tab.desc }))}
+                  activeId={activeTab}
+                  baseClass="rounded-md px-3.5 py-1.5 text-[12.5px] font-semibold border-[1.5px] transition-all"
+                  activeClass="border-transparent bg-ink-1000 text-white"
+                  idleClass="border-ink-200 bg-white text-ink-700 hover:border-brand-purple"
+                />
               </div>
             }
             emptyFallback={

@@ -34,6 +34,7 @@ export interface MentorRowData {
   full_name: string;
   avatar_initials: string | null;
   specialization: string | null;
+  city: string | null;
   created_at: string;
   mentor_available: boolean;
   activeLoad: number;
@@ -102,6 +103,12 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
             {m.score.bonus !== 0 && <> · {m.score.bonus} בונוס</>}
             <span className="text-ink-300"> · </span>
             הצטרפה <span dir="ltr">{FULL_DATE.format(new Date(m.created_at))}</span>
+            {m.city && (
+              <>
+                <span className="text-ink-300"> · </span>
+                📍 {m.city}
+              </>
+            )}
           </div>
         </div>
         {m.specialization && <Badge variant="tech">{m.specialization}</Badge>}
