@@ -6,6 +6,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const ANSWER_POINTS = 5;
 export const ASSIGNMENT_POINTS = 25;
+/** One accompanied hackathon project — awarded via the bonus ledger's
+ *  one-click button in ניהול מנטוריות (the owner, 10/9). */
+export const HACKATHON_POINTS = 25;
 
 export interface MentorScore {
   answers: number;
