@@ -70,6 +70,12 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           .
         </p>
         <ProfileForm
+          // Remount on a track switch (the mentor door / the revert button):
+          // React otherwise KEEPS the wizard's state across the server
+          // re-render, and the junior gate's unanswered expChoice=null carried
+          // into the mentor question set (which has no gate to answer) leaves
+          // zero steps and a dead "הבא" — the owner's stuck wizard, 10/9.
+          key={profile.role}
           firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}
           lastName={profile.last_name ?? profile.full_name?.split(" ").slice(1).join(" ") ?? ""}
           questions={questions ?? []}
