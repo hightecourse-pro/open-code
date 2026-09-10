@@ -748,6 +748,28 @@ export function subscriptionCanceledEmail(name: string | undefined, activeUntil:
   };
 }
 
+/**
+ * Two days before a subscription that is NOT renewing ends (the owner, 10/9).
+ * Carries the explicit end date, so when Shabbat/chag shifts the send day
+ * earlier the wording stays exactly true.
+ */
+export function subscriptionEndingSoonEmail(name: string | undefined, endDateLine: string): BuiltEmail {
+  return {
+    subject: `המנוי שלך מסתיים ב${endDateLine} — עוד אפשר להישאר 💜`,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}תזכורת קטנה 💜`,
+      lines: [
+        `המנוי שלך בקוד פתוח מסתיים ב<b>${endDateLine}</b>.`,
+        "עד אז הכול פתוח כרגיל. אם תרצי להמשיך איתנו — חידוש בלחיצה אחת, והכול נשאר בדיוק כמו שהוא.",
+        "אם לא — הגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI תיסגר עם סיום המנוי, ואת תמיד מוזמנת לחזור.",
+      ],
+      ctaText: "להמשך המנוי",
+      ctaUrl: `${SITE}/subscription`,
+      footnote: "יש שאלה על המנוי או על החיוב? כתבי לנו ונעזור.",
+    }),
+  };
+}
+
 /** The day the subscription actually ends (sent by the daily cron). */
 export function subscriptionEndedEmail(name: string | undefined): BuiltEmail {
   return {

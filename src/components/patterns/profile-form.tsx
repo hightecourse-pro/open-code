@@ -43,6 +43,8 @@ export interface ProfileFormProps {
   taxonomyOptions?: Partial<Record<TaxonomyKind, Option[]>>;
   /** She has no CV yet — the final step collects one, required (PM rule). */
   requireCv?: boolean;
+  /** Show the CV upload as recommended-but-optional (mentors, 10/9). */
+  cvOptional?: boolean;
   /** First-time signup may switch to the mentor track from the gate step. */
   allowMentorTrack?: boolean;
   /**
@@ -87,7 +89,7 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, allowMentorTrack = false, initialExperienced = null }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, initialExperienced = null }: ProfileFormProps) {
   // The wizard's save carries her CV FILE — on filtered networks the proxy
   // can kill the large upload mid-flight, and an uncaught dispatch rejection
   // crashed straight to the משהו-השתבש boundary with nothing saved (רות,
@@ -935,10 +937,10 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
 
       {/* At least one CV is part of a complete profile (PM rule). Mounted with
           the form so the file submits; visible only on the final step. */}
-      {requireCv && (
+      {(requireCv || cvOptional) && (
         <div className={cn("flex flex-col gap-1.5", cur === totalSteps - 1 && expChoice !== null ? "" : "hidden")}>
           <span className="text-xs font-semibold text-ink-700">
-            קורות חיים (חובה — לפחות קובץ אחד)
+            {requireCv ? "קורות חיים (חובה — לפחות קובץ אחד)" : "קורות חיים (לא חובה — אבל מומלץ מאוד 💜)"}
           </span>
           <label
             htmlFor="profile_cv_file"

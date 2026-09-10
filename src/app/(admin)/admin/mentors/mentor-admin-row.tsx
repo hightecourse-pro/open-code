@@ -7,6 +7,7 @@ import { Avatar, Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { cancelMentorRole, setMentorAvailability } from "@/app/(admin)/admin/actions";
 import { addMentorBonus } from "./actions";
+import { HACKATHON_POINTS } from "@/lib/mentor-score";
 
 export interface MentorHistoryRow {
   id: string;
@@ -33,6 +34,7 @@ export interface MentorRowData {
   full_name: string;
   avatar_initials: string | null;
   specialization: string | null;
+  city: string | null;
   created_at: string;
   mentor_available: boolean;
   activeLoad: number;
@@ -101,6 +103,12 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
             {m.score.bonus !== 0 && <> · {m.score.bonus} בונוס</>}
             <span className="text-ink-300"> · </span>
             הצטרפה <span dir="ltr">{FULL_DATE.format(new Date(m.created_at))}</span>
+            {m.city && (
+              <>
+                <span className="text-ink-300"> · </span>
+                📍 {m.city}
+              </>
+            )}
           </div>
         </div>
         {m.specialization && <Badge variant="tech">{m.specialization}</Badge>}
@@ -270,6 +278,24 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
           </label>
           <Button type="submit" size="sm" disabled={pending}>
             {pending ? "מוסיפה…" : "הוספת בונוס 🎁"}
+          </Button>
+          {/* One click per accompanied hackathon project (the owner, 10/9). */}
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={pending}
+            onClick={() =>
+              start(async () => {
+                const fd = new FormData();
+                fd.set("points", String(HACKATHON_POINTS));
+                fd.set("reason", "ליווי פרויקט בהאקתון");
+                await addMentorBonus(m.id, fd);
+                setBonusOpen(false);
+              })
+            }
+          >
+            🏆 ליווי בהאקתון +{HACKATHON_POINTS}
           </Button>
         </form>
       )}

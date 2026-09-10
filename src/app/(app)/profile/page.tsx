@@ -101,7 +101,10 @@ export default async function ProfilePage({
     .eq("profile_id", profile.id);
   // At least one CV for every member INCLUDING mentors (the owner, 30/8) —
   // only staff accounts are exempt (the server enforces the same rule).
-  const requireCv = profile.role !== "admin" && (cvCount ?? 0) === 0;
+  // A junior must leave a CV; a mentor is warmly encouraged, never blocked
+  // (the owner, 10/9).
+  const requireCv = profile.role === "junior" && (cvCount ?? 0) === 0;
+  const cvOptional = profile.role === "mentor" && (cvCount ?? 0) === 0;
 
   // Resolve the assigned mentor's name for the employment card.
   let employmentMentorName: string | null = null;
@@ -168,6 +171,7 @@ export default async function ProfilePage({
           answers={answerMap}
           taxonomyOptions={taxonomyOptions}
           requireCv={requireCv}
+          cvOptional={cvOptional}
           // A completed profile is never asked the experience gate afresh —
           // profiles.is_experienced stands in when no answer row exists.
           initialExperienced={profile.profile_completed ? profile.is_experienced === true : null}

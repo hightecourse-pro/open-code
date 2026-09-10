@@ -177,6 +177,34 @@ export default async function MentorPage() {
   const mentors = mentorRows ?? [];
   const hasMentor = mentors.length > 0;
 
+  // Her mentor's city (the owner, 10/9) - answers are not member-readable,
+  // so the label resolves through the service role, exactly like the
+  // members-library cards.
+  const mentorCityOf = new Map<string, string>();
+  if (mentors.length) {
+    const adminC = createAdminClient();
+    const { data: cityQ } = await adminC
+      .from("config_questions")
+      .select("id, options")
+      .eq("key", "city")
+      .maybeSingle();
+    if (cityQ) {
+      const labelOf = new Map(
+        (Array.isArray(cityQ.options) ? (cityQ.options as unknown as { value: string; label: string }[]) : []).map(
+          (o) => [o.value, o.label]
+        )
+      );
+      const { data: cityAns } = await adminC
+        .from("profile_answers")
+        .select("profile_id, value")
+        .eq("question_id", cityQ.id)
+        .in("profile_id", mentors.map((m) => m.id));
+      for (const a of cityAns ?? []) {
+        if (typeof a.value === "string" && a.value) mentorCityOf.set(a.profile_id, labelOf.get(a.value) ?? a.value);
+      }
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div>
@@ -222,7 +250,12 @@ export default async function MentorPage() {
                 <Avatar size="lg" tone="gold" crown initials={m.avatar_initials || m.full_name.slice(0, 1)} />
                 <div>
                   <div className="font-display font-bold text-ink-1000">{m.full_name}</div>
-                  {m.specialization && <Badge variant="purple">{m.specialization}</Badge>}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {m.specialization && <Badge variant="purple">{m.specialization}</Badge>}
+                    {mentorCityOf.get(m.id) && (
+                      <span className="text-[12px] text-ink-500">📍 {mentorCityOf.get(m.id)}</span>
+                    )}
+                  </div>
                 </div>
               </div>
               {m.bio && <p className="text-[13.5px] text-ink-700 leading-relaxed line-clamp-3">{m.bio}</p>}

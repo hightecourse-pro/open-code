@@ -623,6 +623,10 @@ export interface Database {
           current_period_end: string | null;
           started_at: string;
           canceled_at: string | null;
+          /** The "מסתיים בעוד יומיים" reminder went out (once). */
+          ending_reminder_sent_at: string | null;
+          /** The "המנוי הסתיים" notice went out (once). */
+          ended_email_sent_at: string | null;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -635,6 +639,8 @@ export interface Database {
           current_period_end?: string | null;
           started_at?: string;
           canceled_at?: string | null;
+          ending_reminder_sent_at?: string | null;
+          ended_email_sent_at?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["subscriptions"]["Insert"]>;
         Relationships: [];

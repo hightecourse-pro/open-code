@@ -397,8 +397,15 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     if ((cvCount ?? 0) === 0) {
       const cvFile = formData.get("cv_file");
       if (!(cvFile instanceof File) || cvFile.size === 0) {
-        return { error: "כמעט סיימנו 🙂 חסר רק קובץ קורות חיים — העלי אחד בשלב האחרון של השאלון." };
+        // Mentors: recommended, never required (the owner, 10/9) — a mentor
+        // without a file simply completes; one she DID attach still saves.
+        if (before?.role === "mentor") {
+          // fall through to the rest of the save with no CV
+        } else {
+          return { error: "כמעט סיימנו 🙂 חסר רק קובץ קורות חיים — העלי אחד בשלב האחרון של השאלון." };
+        }
       }
+      if (cvFile instanceof File && cvFile.size > 0) {
       if (cvFile.size > 10 * 1024 * 1024) return { error: "קובץ קורות החיים גדול מדי — עד 10MB." };
       if (!/\.(pdf|docx?)$/i.test(cvFile.name)) {
         return { error: "קורות חיים אפשר להעלות רק כ-PDF או Word (doc/docx)." };
@@ -415,6 +422,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       let { error: docErr } = await supabase.from("cv_documents").insert({ ...row, is_default: true });
       if (docErr) ({ error: docErr } = await supabase.from("cv_documents").insert(row));
       if (docErr) return { error: "קורות החיים עלו אבל לא נשמרו. נסי שוב." };
+      }
     }
   }
 
