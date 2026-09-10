@@ -155,5 +155,7 @@ export async function revertMentorApplication(): Promise<void> {
  */
 export async function revertMentorFromWizard(): Promise<void> {
   await revertMentor();
-  redirect("/");
+  // Into the app, not the marketing homepage: the incomplete profile puts the
+  // regular questionnaire right up, as the button's confirm copy promises.
+  redirect("/forum");
 }
