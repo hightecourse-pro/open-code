@@ -67,6 +67,16 @@ export function NewChatButton() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="עם מי לדבר? חפשי לפי שם או תחום…"
+            // Password/passkey extensions inject their widgets into freshly
+            // focused inputs and corrupt React's DOM (the owner's crash,
+            // 10/9 — passkeys-inject.js all over her console). These are the
+            // standard leave-me-alone hints the major ones respect.
+            type="search"
+            autoComplete="off"
+            data-1p-ignore
+            data-lpignore="true"
+            data-bwignore="true"
+            data-form-type="other"
             className="w-full text-[13px] border border-ink-300 rounded-md px-3 py-2 outline-none focus:border-brand-purple"
           />
           <div className="flex flex-col max-h-64 overflow-y-auto">
