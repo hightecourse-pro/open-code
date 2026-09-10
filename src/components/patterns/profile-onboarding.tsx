@@ -56,19 +56,37 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
             </h1>
           </div>
         </div>
-        <p className="t-body-sm text-ink-500 mb-5">
-          המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות — ולבחור הזדמנויות במיוחד בשבילך.
-          תמיד תוכלי לעדכן הכול מעמוד הפרופיל. מסירת הפרטים אינה חובה חוקית; מה שמיועד למעסיקות
-          יוצג להן רק כשנגיש אותך למשרה — הכול מפורט ב
-          <a
-            href="/privacy"
-            target="_blank"
-            className="font-semibold text-brand-purple hover:underline"
-          >
-            מדיניות הפרטיות
-          </a>
-          .
-        </p>
+        {/* The intro speaks to HER track — a mentor is here to give, not to be
+            placed (the owner, 10/9: "מה קשור המלל הזה למנטורית?"). */}
+        {profile.role === "mentor" ? (
+          <p className="t-body-sm text-ink-500 mb-5">
+            המידע הזה עוזר לנו להכיר אותך — במה את חזקה ואיך תרצי לתרום — כדי לחבר אלייך את
+            הג׳וניוריות הנכונות. תמיד תוכלי לעדכן הכול מעמוד הפרופיל. מסירת הפרטים אינה חובה
+            חוקית — הכול מפורט ב
+            <a
+              href="/privacy"
+              target="_blank"
+              className="font-semibold text-brand-purple hover:underline"
+            >
+              מדיניות הפרטיות
+            </a>
+            .
+          </p>
+        ) : (
+          <p className="t-body-sm text-ink-500 mb-5">
+            המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות — ולבחור הזדמנויות במיוחד בשבילך.
+            תמיד תוכלי לעדכן הכול מעמוד הפרופיל. מסירת הפרטים אינה חובה חוקית; מה שמיועד למעסיקות
+            יוצג להן רק כשנגיש אותך למשרה — הכול מפורט ב
+            <a
+              href="/privacy"
+              target="_blank"
+              className="font-semibold text-brand-purple hover:underline"
+            >
+              מדיניות הפרטיות
+            </a>
+            .
+          </p>
+        )}
         <ProfileForm
           // Remount on a track switch (the mentor door / the revert button):
           // React otherwise KEEPS the wizard's state across the server
@@ -84,6 +102,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           requireCv={requireCv}
           cvOptional={cvOptional}
           allowMentorTrack={profile.role === "junior" && profile.status !== "active"}
+          mentorTrack={profile.role === "mentor"}
         />
         {profile.role === "mentor" && profile.status !== "active" && (
           /* The way out at EVERY stage (the owner, 31/8): a mis-click on the
