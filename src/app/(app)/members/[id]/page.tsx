@@ -76,7 +76,7 @@ async function loadMember(id: string): Promise<DirectoryMember | null> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("members_directory")
-    .select("id, full_name, first_name, avatar_initials, specialization, region, role, bio, created_at")
+    .select("id, full_name, first_name, avatar_initials, specialization, region, role, created_at")
     .eq("id", id)
     .maybeSingle();
   return data ?? null;
@@ -177,11 +177,8 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        {member.bio && (
-          <p className="text-[14.5px] text-ink-700 leading-relaxed whitespace-pre-wrap">
-            {member.bio}
-          </p>
-        )}
+        {/* קצת על עצמי stays off members' eyes — it belongs to the admin and
+            the employer-facing candidate profile only (the owner, 10/9). */}
 
         {isMentor && spotlight && (
           <div className="border border-[#EAD9A8] bg-tint-warm/50 rounded-md p-4 flex flex-col gap-2.5">

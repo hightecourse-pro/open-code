@@ -41,7 +41,7 @@ export default async function MembersPage({
   for (let from = 0; ; from += PAGE) {
     let pageQuery = supabase
       .from("members_directory")
-      .select("id, full_name, first_name, avatar_initials, specialization, region, role, bio, created_at, is_subscriber")
+      .select("id, full_name, first_name, avatar_initials, specialization, region, role, created_at, is_subscriber")
       .neq("id", me.id)
       .order("full_name", { ascending: true })
       .range(from, from + PAGE - 1);

@@ -19,7 +19,6 @@ export interface DirectoryMember {
   specialization: string | null;
   region: string | null;
   role: UserRole;
-  bio: string | null;
   created_at: string;
   /** Really paying (activated paid / live subscription / on the Nedarim
       payers list) — computed in the view; optional for narrower selects. */
@@ -196,10 +195,6 @@ export function MemberCard({
           )}
         </div>
       </div>
-
-      {member.bio && (
-        <p className="text-[13.5px] text-ink-700 leading-relaxed line-clamp-2">{member.bio}</p>
-      )}
 
       <MemberChatAction member={member} canChat={canChat} mentorWaiting={mentorWaiting} writable={writable} className="mt-auto" />
     </div>

@@ -171,7 +171,7 @@ export default async function MentorPage() {
   const { data: mentorRows } = assignedIds.length
     ? await supabase
         .from("members_directory")
-        .select("id, full_name, avatar_initials, specialization, bio")
+        .select("id, full_name, avatar_initials, specialization")
         .in("id", assignedIds)
     : { data: [] };
   const mentors = mentorRows ?? [];
@@ -258,7 +258,6 @@ export default async function MentorPage() {
                   </div>
                 </div>
               </div>
-              {m.bio && <p className="text-[13.5px] text-ink-700 leading-relaxed line-clamp-3">{m.bio}</p>}
               {subscriber ? (
                 <form action={startConversation.bind(null, m.id)} className="mt-auto">
                   <button
