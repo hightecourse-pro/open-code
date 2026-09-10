@@ -2,10 +2,10 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronDown, FileText, Gift, PauseCircle, PlayCircle, Search } from "lucide-react";
+import { ChevronDown, FileText, Gift, Mail, PauseCircle, PlayCircle, Search } from "lucide-react";
 import { Avatar, Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { cancelMentorRole, setMentorAvailability } from "@/app/(admin)/admin/actions";
+import { cancelMentorRole, sendPersonalEmail, setMentorAvailability } from "@/app/(admin)/admin/actions";
 import { addMentorBonus } from "./actions";
 import { HACKATHON_POINTS } from "@/lib/mentor-score";
 
@@ -75,6 +75,9 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
   const [bonusOpen, setBonusOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [mailOpen, setMailOpen] = useState(false);
+  const [mailText, setMailText] = useState("");
+  const [mailSent, setMailSent] = useState(false);
   const [pending, start] = useTransition();
 
   const toggleAvailability = () => {
@@ -149,6 +152,15 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
         </button>
         <button
           type="button"
+          onClick={() => setMailOpen((v) => !v)}
+          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline cursor-pointer"
+          title="מייל אישי — מופיע גם בצ'אט שלה עם הצוות"
+        >
+          <Mail size={13} /> מייל
+        </button>
+        {mailSent && !mailOpen && <span className="text-[11.5px] font-semibold text-success">נשלח ✓</span>}
+        <button
+          type="button"
           disabled={pending}
           onClick={toggleAvailability}
           className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-ink-500 hover:text-ink-900 cursor-pointer"
@@ -172,6 +184,49 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
           ביטול המינוי
         </button>
       </div>
+
+      {mailOpen && (
+        <div className="bg-ink-50 border border-ink-200 rounded-md p-3 mt-2 flex flex-col gap-2">
+          <p className="text-[12px] text-ink-500">
+            ההודעה נשלחת אליה במייל ממותג ומופיעה גם בצ&apos;אט שלה עם הצוות — התשובה שלה תגיע אלייך לצ&apos;אט.
+          </p>
+          <textarea
+            value={mailText}
+            onChange={(e) => setMailText(e.target.value)}
+            rows={3}
+            maxLength={4000}
+            className="w-full rounded-md border border-ink-200 bg-white p-2 text-[13px] focus:outline-none focus:border-brand-purple"
+            placeholder={`מה תרצי לכתוב ל${m.full_name.split(" ")[0]}?`}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending || !mailText.trim()}
+              onClick={() => {
+                const fd = new FormData();
+                fd.set("note", mailText);
+                start(() =>
+                  sendPersonalEmail(m.id, fd).then(() => {
+                    setMailText("");
+                    setMailOpen(false);
+                    setMailSent(true);
+                  })
+                );
+              }}
+            >
+              {pending ? "שולח…" : "שליחה"}
+            </Button>
+            <button
+              type="button"
+              onClick={() => setMailOpen(false)}
+              className="text-[12px] text-ink-500 hover:text-ink-900 cursor-pointer"
+            >
+              ביטול
+            </button>
+          </div>
+        </div>
+      )}
 
       {cancelOpen && (
         <div className="bg-danger-bg/60 border border-[#F2BBC8] rounded-md p-3 mt-2 flex flex-col gap-2">

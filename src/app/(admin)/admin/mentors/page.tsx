@@ -6,10 +6,13 @@ import { Avatar, Badge, Button } from "@/components/ui";
 import { ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
+import { langLevelLabel, parseLangSkills } from "@/lib/language-skills";
+import { MessageBody } from "@/components/patterns/rich-text";
 import { MentorsList, type MentorRowData } from "./mentor-admin-row";
 import {
   approveMentorApplication,
   rejectMentorApplication,
+  sendPersonalEmail,
   setMemberRoleAction,
 } from "../actions";
 
@@ -139,6 +142,86 @@ export default async function AdminMentorsPage() {
     }
   }
 
+  // Everything she needs IN FRONT OF HER to approve (the owner, 10/9: "אני לא
+  // רואה מול העיניים את כל הנתונים כדי לאשר") — the applicant's questionnaire
+  // answers laid out on the card itself, not a click away in the file.
+  type Fact = { label: string; value: string };
+  const factsOf = new Map<string, Fact[]>();
+  const bioOf = new Map<string, string>();
+  const notesOf = new Map<string, string>();
+  if (pendingIds.length) {
+    const [{ data: pendingQs }, { data: pendingAns }] = await Promise.all([
+      admin
+        .from("config_questions")
+        .select("id, key, label_he, field_type, options, sort_order")
+        .in("scope", ["all", "mentor"])
+        .eq("active", true)
+        .order("sort_order"),
+      admin
+        .from("profile_answers")
+        .select("profile_id, question_id, value")
+        .in("profile_id", pendingIds),
+    ]);
+    const emailOf = new Map<string, string>();
+    for (const pid of pendingIds) {
+      const { data: au } = await admin.auth.admin.getUserById(pid);
+      if (au?.user?.email) emailOf.set(pid, au.user.email);
+    }
+    const qById = new Map((pendingQs ?? []).map((q) => [q.id, q]));
+    const qByKey = new Map((pendingQs ?? []).map((q) => [q.key, q]));
+    const valueOf = new Map<string, Map<string, unknown>>(); // pid -> key -> value
+    for (const a of pendingAns ?? []) {
+      const q = qById.get(a.question_id);
+      if (!q) continue;
+      if (!valueOf.has(a.profile_id)) valueOf.set(a.profile_id, new Map());
+      valueOf.get(a.profile_id)!.set(q.key, a.value);
+    }
+    // Reading order: the mentor questions carry the decision — they lead.
+    const FACT_KEYS = [
+      "mentor_workplace", "mentor_years", "mentor_tech", "mentor_ai_experience",
+      "mentor_contribution", "city", "phone", "language_skills", "github",
+    ];
+    const fmt = (key: string, v: unknown): string | null => {
+      if (v == null) return null;
+      if (key === "language_skills") {
+        const s = parseLangSkills(v).map((x) => `${x.lang}: ${langLevelLabel(x.level)}`).join(" · ");
+        return s || null;
+      }
+      const q = qByKey.get(key);
+      const labelOf = new Map(
+        (Array.isArray(q?.options) ? (q!.options as unknown as { value: string; label: string }[]) : []).map(
+          (o) => [o.value, o.label]
+        )
+      );
+      if (Array.isArray(v)) {
+        if (v.length === 0) return null;
+        if (typeof v[0] === "object" && v[0] !== null)
+          return (v as { url?: string }[]).map((x) => x.url).filter(Boolean).join(" · ") || null;
+        return (v as unknown[]).map((x) => labelOf.get(String(x)) ?? String(x)).join(" · ");
+      }
+      const s = String(v).trim();
+      if (!s) return null;
+      return labelOf.get(s) ?? s;
+    };
+    for (const pid of pendingIds) {
+      const mine = valueOf.get(pid) ?? new Map<string, unknown>();
+      const facts: Fact[] = [];
+      for (const key of FACT_KEYS) {
+        const q = qByKey.get(key);
+        if (!q) continue;
+        const val = fmt(key, mine.get(key));
+        if (val) facts.push({ label: q.label_he, value: val });
+      }
+      const email = emailOf.get(pid);
+      if (email) facts.push({ label: "מייל", value: email });
+      factsOf.set(pid, facts);
+      const bio = mine.get("bio");
+      if (typeof bio === "string" && bio.trim()) bioOf.set(pid, bio);
+      const notes = mine.get("notes_for_us");
+      if (typeof notes === "string" && notes.trim()) notesOf.set(pid, notes);
+    }
+  }
+
   const rows: MentorRowData[] = (mentors ?? []).map((m) => {
     const history = (historyRows ?? [])
       .filter((h) => h.assigned_mentor_id === m.id)
@@ -219,6 +302,56 @@ export default async function AdminMentorsPage() {
                 <form action={approveMentorApplication.bind(null, p.id)}>
                   <Button type="submit" size="sm">אישור 👑</Button>
                 </form>
+
+                {/* The whole application at a glance — approving straight off
+                    the card, without opening the file (the owner, 10/9). */}
+                {(factsOf.get(p.id) ?? []).length > 0 && (
+                  <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 bg-tint-warm/40 border border-[#EAD9A8] rounded-md p-3">
+                    {factsOf.get(p.id)!.map((f) => (
+                      <div key={f.label} className="min-w-0">
+                        <div className="text-[11px] text-ink-500">{f.label}</div>
+                        <div className="text-[12.5px] font-medium text-ink-900 break-words">{f.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {bioOf.has(p.id) && (
+                  <div className="w-full text-[12.5px] text-ink-800">
+                    <span className="text-[11px] text-ink-500 block">קצת עליה</span>
+                    <MessageBody body={bioOf.get(p.id)!} />
+                  </div>
+                )}
+                {notesOf.has(p.id) && (
+                  <div className="w-full text-[12.5px] text-ink-800">
+                    <span className="text-[11px] text-ink-500 block">עוד משהו שכתבה לנו</span>
+                    <MessageBody body={notesOf.get(p.id)!} />
+                  </div>
+                )}
+
+                {/* A personal word before (or instead of) the decision — the
+                    branded email that ALSO lands in her chat with the team. */}
+                <details className="w-full">
+                  <summary className="cursor-pointer text-[12.5px] font-semibold text-brand-purple hover:underline list-none">
+                    ✉️ מייל אישי (מופיע גם בצ&apos;אט שלה)
+                  </summary>
+                  <form
+                    action={sendPersonalEmail.bind(null, p.id)}
+                    className="mt-2 flex flex-col gap-2 bg-ink-50 border border-ink-200 rounded-md p-3"
+                  >
+                    <textarea
+                      name="note"
+                      required
+                      rows={3}
+                      maxLength={4000}
+                      className="w-full rounded-md border border-ink-200 bg-white p-2 text-[13px] focus:outline-none focus:border-brand-purple"
+                      placeholder="ההודעה נשלחת אליה במייל ממותג ומופיעה גם בצ'אט שלה עם הצוות — התשובה שלה תגיע אלייך לצ'אט."
+                    />
+                    <div>
+                      <Button type="submit" size="sm">שליחה</Button>
+                    </div>
+                  </form>
+                </details>
+
                 {/* Declining requires a personal explanation — it goes to her
                     by email, and she stays a regular (not-subscribed) member. */}
                 <details className="w-full">
