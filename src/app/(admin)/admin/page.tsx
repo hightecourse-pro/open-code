@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Avatar } from "@/components/ui";
-import { MemberActions } from "@/components/patterns/member-actions";
+import { PendingMentorApplications } from "./mentors/pending-applications";
 
 export const metadata: Metadata = { title: "דשבורד אדמין" };
 
@@ -55,14 +54,6 @@ export default async function AdminDashboardPage() {
     { label: "פוסטים בקהילה", value: posts.count ?? 0, href: "/forum" },
   ];
 
-  const { data: pendingMembers } = await supabase
-    .from("profiles")
-    .select("id, full_name, avatar_initials, specialization, status")
-    .eq("status", "pending")
-    .eq("role", "mentor")
-    .order("created_at", { ascending: true })
-    .limit(8);
-
   return (
     <div className="flex flex-col gap-6">
       <div>
@@ -85,46 +76,22 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
-      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold flex items-center gap-2 mb-1">
-          מנטוריות חדשות לאישור
-          {(pendingMembers?.length ?? 0) > 0 && (
-            <span className="bg-tint-pink text-brand-pink-deep px-2 py-px rounded-full text-[11px] font-bold">
-              {pendingMembers!.length}
-            </span>
-          )}
-        </h3>
-        <p className="text-[12.5px] text-ink-500 mb-3.5">
-          רק הצטרפות כמנטורית עוברת אישור צוות — חברה שנרשמה בלי מנוי נכנסת מיד, בלי אישור.
-        </p>
-
-        {pendingMembers && pendingMembers.length > 0 ? (
-          <div className="flex flex-col">
-            {pendingMembers.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0"
-              >
-                <Avatar size="xs" initials={m.avatar_initials || m.full_name.slice(0, 1) || "ק"} />
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-ink-900 truncate">{m.full_name || "—"}</div>
-                  <div className="text-xs text-ink-500">{m.specialization || "חברה חדשה"}</div>
-                </div>
-                <MemberActions profileId={m.id} status={m.status} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-ink-500 py-4 text-center">אין כרגע מנטוריות שממתינות לאישור 🎉</p>
-        )}
-
-        <Link
-          href="/admin/members"
-          className="inline-block mt-3 text-sm text-brand-purple font-semibold"
-        >
-          לכל החברות ←
-        </Link>
-      </div>
+      {/* The SAME rich approval card as /admin/mentors (the owner, 10/9:
+          "תסדר לי בדשבורד את אישור המנטוריות") — one component, so approving
+          here also sends her the אושרת email. */}
+      <PendingMentorApplications
+        heading="מנטוריות חדשות לאישור"
+        sub="רק הצטרפות כמנטורית עוברת אישור צוות — חברה שנרשמה בלי מנוי נכנסת מיד, בלי אישור."
+        showEmpty
+        footer={
+          <Link
+            href="/admin/mentors"
+            className="inline-block mt-3 text-sm text-brand-purple font-semibold"
+          >
+            לניהול מנטוריות ←
+          </Link>
+        }
+      />
     </div>
   );
 }
