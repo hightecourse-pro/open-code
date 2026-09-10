@@ -10,20 +10,39 @@ function countLabel(count: number, searching: boolean): string {
   return `${searching ? "נמצאו " : ""}${count} משתתפות`;
 }
 
+/** The true group sizes, counted server-side up front (the owner, 10/9). */
+export interface GroupCounts {
+  all: number;
+  subscriber: number;
+  mentor: number;
+  team: number;
+}
+
 /**
  * The directory with instant search: cards arrive server-rendered, and typing
  * filters them in place — by name, specialization or region — with no
  * navigation and no URL writes.
+ *
+ * While the full list still streams in (loadingAll), the chips carry the
+ * authoritative `counts` from the server — never the size of the partial
+ * chunk. The needle and chip survive the stream-in swap through the URL
+ * (replaceState + mount adoption below).
  */
 export function MembersInstantList({
   items,
   capped,
+  counts,
+  loadingAll = false,
   initialQuery = "",
   initialGroup = "",
 }: {
   items: InstantItem[];
   /** The browse list hit MAX_RESULTS — noted next to the count. */
   capped: boolean;
+  /** Server-counted group sizes; falls back to counting the loaded items. */
+  counts?: GroupCounts;
+  /** Only the first chunk is here — the rest is streaming in behind. */
+  loadingAll?: boolean;
   initialQuery?: string;
   initialGroup?: string;
 }) {
@@ -63,10 +82,10 @@ export function MembersInstantList({
   const searching = needle.trim().length > 0 || group !== "";
   const countOf = (g: string) => items.filter((i) => i.group === g).length;
   const CHIPS: { id: string; label: string }[] = [
-    { id: "", label: `כולן (${items.length})` },
-    { id: "subscriber", label: `מנויות 💜 (${countOf("subscriber")})` },
-    { id: "mentor", label: `מנטוריות 👑 (${countOf("mentor")})` },
-    { id: "team", label: `צוות (${countOf("team")})` },
+    { id: "", label: `כולן (${counts?.all ?? items.length})` },
+    { id: "subscriber", label: `מנויות 💜 (${counts?.subscriber ?? countOf("subscriber")})` },
+    { id: "mentor", label: `מנטוריות 👑 (${counts?.mentor ?? countOf("mentor")})` },
+    { id: "team", label: `צוות (${counts?.team ?? countOf("team")})` },
   ];
 
   return (
@@ -97,8 +116,9 @@ export function MembersInstantList({
         </div>
         <div className="flex items-center gap-3 flex-wrap text-[12.5px] text-ink-500">
           <span>
-            {countLabel(filtered.length, searching)}
+            {countLabel(loadingAll && !searching && counts ? counts.all : filtered.length, searching)}
             {capped && !searching && " ראשונות — החיפוש יביא אותך ישר למי שאת מחפשת"}
+            {loadingAll && " · כולן בדרך — הרשימה המלאה נטענת ברקע…"}
           </span>
           {searching && (
             <button
@@ -117,7 +137,7 @@ export function MembersInstantList({
           {searching
             ? "לא מצאנו משתתפת שמתאימה לחיפוש בין המשתתפות שנטענו 💜"
             : "רשימת המשתתפות עוד מתמלאת — בקרוב תמצאי כאן את כל מי שאיתנו 💜"}
-          {searching && capped && (
+          {searching && (capped || loadingAll) && (
             // The instant filter only sees the loaded page; the whole
             // community is one server search away.
             <a
