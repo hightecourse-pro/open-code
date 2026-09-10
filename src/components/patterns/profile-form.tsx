@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Sparkles, Rocket, Plus, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Crown, Sparkles, Rocket, Plus, X } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
@@ -47,6 +47,8 @@ export interface ProfileFormProps {
   cvOptional?: boolean;
   /** First-time signup may switch to the mentor track from the gate step. */
   allowMentorTrack?: boolean;
+  /** She is on the mentor questionnaire — the copy talks contribution, not placement. */
+  mentorTrack?: boolean;
   /**
    * Fallback for the experience gate when no per-question answer row exists
    * (profiles completed by older/other paths store only profiles.is_experienced).
@@ -89,7 +91,7 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, initialExperienced = null }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, mentorTrack = false, initialExperienced = null }: ProfileFormProps) {
   // The wizard's save carries her CV FILE — on filtered networks the proxy
   // can kill the large upload mid-flight, and an uncaught dispatch rejection
   // crashed straight to the משהו-השתבש boundary with nothing saved (רות,
@@ -429,7 +431,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   const stepTitle = cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;
   const stepHint =
     cur === 0
-      ? "ספרי לנו מאיפה את מגיעה — ואנחנו נתאים לך את השאלות."
+      ? mentorTrack
+        ? "נשמח להכיר אותך — ולשמוע איך תרצי ללוות ולתרום 💜"
+        : "ספרי לנו מאיפה את מגיעה — ואנחנו נתאים לך את השאלות."
       : sectionSteps[cur - 1].hint;
 
   // ---- a single question field ----
@@ -868,7 +872,10 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
         {gate && (
           <div className="flex flex-col gap-2">
             <span className="text-xs font-semibold text-ink-700">{gate.label_he}</span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* The mentor door sits IN the grid as an equal third card (the
+                owner, 10/9: "לא מספיק ברור בהתחלה שמנטורית זה עוד בחירה") —
+                a tucked-away note below the fold read as fine print. */}
+            <div className={cn("grid grid-cols-1 gap-3", allowMentorTrack ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
               <button
                 type="button"
                 onClick={() => {
@@ -903,28 +910,26 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                 <div className="font-display font-bold text-ink-1000">יש לי ניסיון</div>
                 <div className="text-[12.5px] text-ink-500 mt-0.5">ניסיון אמיתי בתעשייה מעל שנה (גם אם כרגע בין עבודות)</div>
               </button>
+              {/* The third door: the mentor track. Switches her to the free
+                  approval track and reloads this wizard as the mentor
+                  questionnaire. NOT a nested <form> — HTML drops an inner form
+                  silently, which made this button dead once. */}
+              {allowMentorTrack && (
+                <button
+                  type="button"
+                  onClick={() => startTransition(() => applyAsMentor())}
+                  className="text-start rounded-[14px] border border-[#EAD9A8] bg-tint-warm/60 p-4 transition-all hover:border-[#E5A93C]"
+                >
+                  <Crown size={18} className="text-[#B07C1F] mb-1.5" />
+                  <div className="font-display font-bold text-ink-1000">מגיעה בתור מנטורית</div>
+                  <div className="text-[12.5px] text-ink-500 mt-0.5">מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. נעבור לשאלון מנטוריות קצר</div>
+                </button>
+              )}
             </div>
             {/* submit the gate answer with the rest of the form */}
             {expChoice === true && <input type="hidden" name={`q_${gate.id}`} value="on" />}
             {gateError && <span className="text-danger text-xs">בחרי אחת מהאפשרויות כדי להמשיך 🙂</span>}
           </div>
-        )}
-
-        {/* The mentor door, right at the first step (PM: offer it on first
-            entry). Switches her to the free approval track and reloads this
-            wizard as the mentor questionnaire. NOT a nested <form> — HTML
-            drops an inner form silently, which made this button dead. */}
-        {allowMentorTrack && (
-          <button
-            type="button"
-            onClick={() => startTransition(() => applyAsMentor())}
-            className="w-full text-start rounded-[14px] border border-[#EAD9A8] bg-tint-warm/60 p-4 mt-1 transition-all hover:border-[#E5A93C] cursor-pointer"
-          >
-            <div className="font-display font-bold text-ink-1000">מגיעה בתור מנטורית? 👑</div>
-            <div className="text-[12.5px] text-ink-500 mt-0.5">
-              מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. לחיצה תחליף לשאלון מנטוריות קצר.
-            </div>
-          </button>
         )}
       </div>
 

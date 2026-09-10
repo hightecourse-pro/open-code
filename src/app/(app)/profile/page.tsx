@@ -172,6 +172,7 @@ export default async function ProfilePage({
           taxonomyOptions={taxonomyOptions}
           requireCv={requireCv}
           cvOptional={cvOptional}
+          mentorTrack={profile.role === "mentor"}
           // A completed profile is never asked the experience gate afresh —
           // profiles.is_experienced stands in when no answer row exists.
           initialExperienced={profile.profile_completed ? profile.is_experienced === true : null}
