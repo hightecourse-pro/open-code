@@ -4,17 +4,23 @@ import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deactivateSubscription } from "@/lib/payments/subscription";
 import { sendResendEmail } from "@/lib/email/resend";
-import { subscriptionEndedEmail } from "@/lib/email/templates";
+import { subscriptionEndedEmail, subscriptionEndingSoonEmail } from "@/lib/email/templates";
+import { backToEligible, hebDateLine, isEmailDay, shiftDay, ymdIL } from "@/lib/il-calendar";
 import { processShareQueue } from "@/lib/drive-shares";
 
 /**
- * Daily maintenance. Two jobs in one endpoint because the Hobby plan allows
- * only once-a-day crons, so we can't afford a separate schedule per task:
- *   1. Expire subscriptions past their paid period (member → paused, Drive
- *      access queued for removal).
- *   2. Action the Drive share queue (grant/revoke access). Between daily runs,
- *      the "סנכרון עכשיו" button in /admin/shares does it on demand.
+ * Daily maintenance (multiple jobs in one endpoint because the Hobby plan
+ * allows only once-a-day crons). The subscription lifecycle (the owner, 10/9):
  *
+ *   1. Two days BEFORE a non-renewing subscription ends — a reminder email.
+ *      A send-day that lands on Shabbat/chag moves EARLIER; the copy carries
+ *      the explicit end date, so moved wording stays true.
+ *   2. The day AFTER the period ends — access is blocked ("הסתיים ב-14,
+ *      ב-15 הכל חסום"). Blocking runs every day; it is automatic, not mail.
+ *   3. The "המנוי הסתיים" email — on the first email-eligible day after the
+ *      block (never on Shabbat/chag).
+ *
+ * Plus the Drive share queue and attachment hygiene.
  * Scheduled daily in vercel.json; also callable with ?secret=CRON_SECRET.
  */
 export const dynamic = "force-dynamic";
@@ -43,44 +49,85 @@ export async function GET(request: Request) {
   }
   const dryRun = new URL(request.url).searchParams.get("dry") === "1";
 
-  // A few days of slack before cutting anyone off: a renewal charge that is
-  // late, or a webhook that got dropped, must not strip a paying member.
-  const GRACE_DAYS = 3;
-  const cutoff = new Date(Date.now() - GRACE_DAYS * 24 * 3600 * 1000).toISOString();
-
   const admin = createAdminClient();
-  const { data: expired, error } = await admin
+  const now = new Date();
+  const todayIL = ymdIL(now);
+  const emailDay = isEmailDay(todayIL);
+
+  // ---------------------------------------------------------------- expire
+  // Blocked from the day AFTER the period's calendar day (Israel time): a
+  // subscription whose end date was yesterday or earlier is deactivated now.
+  const { data: endedRows, error } = await admin
     .from("subscriptions")
     .select("profile_id, current_period_end")
     // Every live state, not just 'active' — a stale 'trialing' or 'past_due'
     // row would otherwise keep access forever.
     .in("status", ["active", "trialing", "past_due"])
     .not("current_period_end", "is", null)
-    .lt("current_period_end", cutoff)
+    .lt("current_period_end", now.toISOString())
     .order("current_period_end", { ascending: true })
     .limit(50);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  const ids = [...new Set((expired ?? []).map((s) => s.profile_id))];
-  // The dry run reports the real backlog so a first run is never a surprise.
+  const toExpire = (endedRows ?? []).filter(
+    (s) => ymdIL(new Date(s.current_period_end as string)) < todayIL
+  );
+  const ids = [...new Set(toExpire.map((s) => s.profile_id))];
+
+  // -------------------------------------------- reminders (2 days ahead)
+  // Only subscriptions that are actually ENDING get one: renewal turned off,
+  // or already failing payment. An auto-renewing member's period just rolls.
+  const { data: endingSoon } = await admin
+    .from("subscriptions")
+    .select("id, profile_id, current_period_end, status, cancel_at_period_end, ending_reminder_sent_at")
+    .in("status", ["active", "trialing", "past_due"])
+    .is("ending_reminder_sent_at", null)
+    .not("current_period_end", "is", null)
+    .gt("current_period_end", now.toISOString())
+    .lt("current_period_end", new Date(now.getTime() + 8 * 24 * 3600 * 1000).toISOString())
+    .or("cancel_at_period_end.eq.true,status.eq.past_due");
+  const reminderDue = (endingSoon ?? []).filter((s) => {
+    const endDay = ymdIL(new Date(s.current_period_end as string));
+    // Ideal = two days before the end; Shabbat/chag moves it earlier.
+    const sendDay = backToEligible(shiftDay(endDay, -2));
+    return todayIL >= sendDay;
+  });
+
+  // ---------------------------- ended emails (first eligible day after)
+  const { data: endedUnmailed } = await admin
+    .from("subscriptions")
+    .select("id, profile_id, canceled_at")
+    .eq("status", "canceled")
+    .is("ended_email_sent_at", null)
+    .not("canceled_at", "is", null)
+    .gt("canceled_at", new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString())
+    .limit(50);
+
   if (dryRun) {
-    const { count } = await admin
-      .from("subscriptions")
-      .select("profile_id", { count: "exact", head: true })
-      .in("status", ["active", "trialing", "past_due"])
-      .not("current_period_end", "is", null)
-      .lt("current_period_end", cutoff);
-    return NextResponse.json({ dryRun: true, graceDays: GRACE_DAYS, backlog: count ?? 0, thisRun: ids.length });
+    return NextResponse.json({
+      dryRun: true,
+      todayIL,
+      emailDay,
+      expiring: ids.length,
+      remindersDue: reminderDue.length,
+      endedEmailsDue: (endedUnmailed ?? []).length,
+    });
   }
 
-  // Names and emails for the whole batch in two set-based calls — the loop
-  // used to make three round trips per expired member.
-  const [{ data: whoRows }, { data: emailRows }] = ids.length
+  // Names and emails for everyone this run touches, in two set-based calls.
+  const everyone = [
+    ...new Set([
+      ...ids,
+      ...reminderDue.map((s) => s.profile_id),
+      ...(endedUnmailed ?? []).map((s) => s.profile_id),
+    ]),
+  ];
+  const [{ data: whoRows }, { data: emailRows }] = everyone.length
     ? await Promise.all([
-        admin.from("profiles").select("id, full_name, first_name").in("id", ids),
-        admin.rpc("member_emails", { p_ids: ids }),
+        admin.from("profiles").select("id, full_name, first_name").in("id", everyone),
+        admin.rpc("member_emails", { p_ids: everyone }),
       ])
     : [{ data: [] }, { data: [] }];
   const whoOf = new Map((whoRows ?? []).map((p) => [p.id, p]));
@@ -88,36 +135,104 @@ export async function GET(request: Request) {
     ((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email])
   );
 
+  // 1. reminders — email-eligible days only
+  let remindersSent = 0;
+  if (emailDay) {
+    for (const s of reminderDue) {
+      try {
+        const email = emailOf.get(s.profile_id);
+        if (!email) continue;
+        const endDay = ymdIL(new Date(s.current_period_end as string));
+        const mail = subscriptionEndingSoonEmail(
+          whoOf.get(s.profile_id)?.first_name ?? undefined,
+          hebDateLine(endDay)
+        );
+        const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+        if (sent.ok) {
+          await admin
+            .from("subscriptions")
+            .update({ ending_reminder_sent_at: now.toISOString() })
+            .eq("id", s.id);
+          remindersSent++;
+        }
+      } catch (e) {
+        console.error("[subscriptions] reminder failed:", s.profile_id, e);
+      }
+    }
+  }
+
+  // 2. expire — every day, Shabbat included (an automatic gate, not mail)
   let expiredCount = 0;
   for (const profileId of ids) {
     try {
       await deactivateSubscription(profileId);
       expiredCount++;
-      // A subscription that reached expiry+grace with no renewal recorded is
+      // A subscription that reached expiry with no renewal recorded is
       // exactly the case the owner asked to SEE: either she truly stopped
       // paying, or a renewal callback never arrived while the card kept being
       // charged. Both deserve a row in the alerts center, per member.
       const who = whoOf.get(profileId);
-      // The ending-day email she was promised: what closed, and the way back.
-      try {
-        const email = emailOf.get(profileId);
-        if (email) {
-          const mail = subscriptionEndedEmail(who?.first_name ?? undefined);
-          await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
-        }
-      } catch (e) {
-        console.error("[subscriptions] ended email failed:", profileId, e);
-      }
       await raiseAlert({
         kind: "subscription_expired",
         severity: "warning",
         title: `המנוי של ${who?.full_name ?? profileId} פג בלי חידוש — הועברה להשהיה`,
-        body: "לא נרשם תשלום מחדש אחרי תקופת החסד. אם היא כן חויבה בכרטיס — זה חידוש שלא דווח, וצריך לרשום אותו ידנית בדף שלה.",
+        body: "לא נרשם תשלום מחדש. אם היא כן חויבה בכרטיס — זה חידוש שלא דווח, וצריך לרשום אותו ידנית בדף שלה.",
         context: { profileId },
         dedupeKey: `sub-expired:${profileId}`,
       });
     } catch (e) {
       console.error("[subscriptions] expire failed:", profileId, e);
+    }
+  }
+
+  // 3. ended emails — the first eligible day on/after the block
+  let endedEmailsSent = 0;
+  if (emailDay) {
+    for (const s of endedUnmailed ?? []) {
+      try {
+        const email = emailOf.get(s.profile_id);
+        if (!email) continue;
+        const mail = subscriptionEndedEmail(whoOf.get(s.profile_id)?.first_name ?? undefined);
+        const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+        if (sent.ok) {
+          await admin
+            .from("subscriptions")
+            .update({ ended_email_sent_at: now.toISOString() })
+            .eq("id", s.id);
+          endedEmailsSent++;
+        }
+      } catch (e) {
+        console.error("[subscriptions] ended email failed:", s.profile_id, e);
+      }
+    }
+    // Freshly expired this run: their notice goes out right now too (today is
+    // eligible — otherwise the next eligible run picks them up above).
+    for (const profileId of ids) {
+      try {
+        const email = emailOf.get(profileId);
+        if (!email) continue;
+        const { data: row } = await admin
+          .from("subscriptions")
+          .select("id")
+          .eq("profile_id", profileId)
+          .eq("status", "canceled")
+          .is("ended_email_sent_at", null)
+          .order("canceled_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!row) continue;
+        const mail = subscriptionEndedEmail(whoOf.get(profileId)?.first_name ?? undefined);
+        const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+        if (sent.ok) {
+          await admin
+            .from("subscriptions")
+            .update({ ended_email_sent_at: now.toISOString() })
+            .eq("id", row.id);
+          endedEmailsSent++;
+        }
+      } catch (e) {
+        console.error("[subscriptions] ended email (fresh) failed:", profileId, e);
+      }
     }
   }
 
@@ -153,8 +268,11 @@ export async function GET(request: Request) {
   // Bounded per run; the rest are picked up by tomorrow's run.
   return NextResponse.json({
     ok: true,
+    todayIL,
+    emailDay,
     expired: expiredCount,
-    remaining: ids.length - expiredCount,
+    remindersSent,
+    endedEmailsSent,
     drive,
     attachmentsSwept,
   });
