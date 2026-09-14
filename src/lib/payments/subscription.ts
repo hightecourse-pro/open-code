@@ -108,6 +108,43 @@ export async function activateSubscription(input: ActivateInput) {
     }
   }
 
+  // Keep the Nedarim registry current from the callbacks themselves (the
+  // owner, 14/9: "בפעמים הבאות תקבל מהקולבק, לא תצטרך מאקסל") — a keva's
+  // FIRST callback marks its start date; later charges only refresh the
+  // contact fields. The one-time Excel load seeded the history; from here
+  // the registry maintains itself.
+  if (newKeva) {
+    try {
+      const rawRec = input.raw as Record<string, string> | null;
+      const { data: knownKeva } = await admin
+        .from("nedarim_kevas")
+        .select("keva_id")
+        .eq("keva_id", String(newKeva))
+        .maybeSingle();
+      if (knownKeva) {
+        await admin
+          .from("nedarim_kevas")
+          .update({
+            client_name: rawRec?.ClientName || null,
+            email: rawRec?.Mail?.toLowerCase() || null,
+            amount_agorot: input.amountAgorot ?? null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("keva_id", String(newKeva));
+      } else {
+        await admin.from("nedarim_kevas").insert({
+          keva_id: String(newKeva),
+          client_name: rawRec?.ClientName || null,
+          email: rawRec?.Mail?.toLowerCase() || null,
+          start_date: new Date().toISOString().slice(0, 10),
+          amount_agorot: input.amountAgorot ?? null,
+        });
+      }
+    } catch (e) {
+      console.error("[payments] keva registry update failed:", e);
+    }
+  }
+
   // Record the payment.
   await admin.from("payments").insert({
     subscription_id: subscriptionId,
