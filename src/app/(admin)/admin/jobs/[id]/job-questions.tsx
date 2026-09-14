@@ -213,6 +213,11 @@ export function JobQuestionsManager({
 
   return (
     <div className="flex flex-col gap-3">
+      {/* The owner (14/9): "לא ברור מתי שמירה אוטומטית ומתי צריך כפתור" — this
+          tab says it out loud, once, at the top. */}
+      <p className="text-[12px] text-ink-700 bg-tint-mint/60 border border-[#B7E3B0] rounded-md px-3 py-2">
+        ✓ הכל כאן נשמר מיד — הוספה, עריכה, מחיקה וסידור נשמרים ברגע הלחיצה. אין כפתור שמירה נוסף.
+      </p>
       {questions.length > 0 ? (
         <ol className="flex flex-col">
           {questions.map((q, i) => (
@@ -299,6 +304,10 @@ export function JobQuestionsManager({
 
       <form action={action} className="flex flex-col gap-2">
         {state.error && <Alert variant="danger">{state.error}</Alert>}
+        {/* Loud confirmation per add — "הוספתי ולא נשמר" must never be a doubt. */}
+        {seq > 0 && !state.error && !pending && (
+          <p className="text-[12.5px] font-semibold text-success">השאלה נוספה ונשמרה ✓</p>
+        )}
         <AddQuestionFields key={seq} pending={pending} />
       </form>
     </div>
@@ -335,7 +344,14 @@ function AddQuestionFields({ pending }: { pending: boolean }) {
         </Select>
         {/* Checkbox present in the form data = required; unchecked = רשות. */}
         <Checkbox name="required" label="שאלת חובה" defaultChecked className="shrink-0" />
-        <Button type="submit" size="sm" disabled={pending} className="shrink-0">
+        {/* A choice question can't leave without its options — the server used
+            to silently coerce it to a paragraph, which read as "לא נשמר". */}
+        <Button
+          type="submit"
+          size="sm"
+          disabled={pending || (isChoice && draftOptions.length < 2)}
+          className="shrink-0"
+        >
           {pending ? "מוסיף…" : "הוספת שאלה"}
         </Button>
       </div>

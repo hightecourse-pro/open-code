@@ -153,6 +153,11 @@ export function JobDetailsForm({
       <Field label="דרישות המשרה (תיאור מעוצב)">
         <RichTextEditor name="description_html" defaultValue={job.description_html} />
       </Field>
+      {/* Unlike the questions tab (instant), THIS form waits for the button —
+          say so where her eyes are (the owner, 14/9). */}
+      <p className="text-[12px] text-ink-500">
+        השינויים בטופס הזה נשמרים רק בלחיצה על ״שמירת פרטי המשרה״.
+      </p>
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "שומר…" : "שמירת פרטי המשרה"}
       </Button>
