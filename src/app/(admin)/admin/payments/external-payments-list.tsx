@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import { ChevronDown, ShieldAlert, Trash2, UserCheck } from "lucide-react";
 import { Badge, Button, Select } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { approveExternalPayment, assignExternalPayment, deleteExternalPayment } from "./actions";
 
 export interface ExternalPaymentRow {
@@ -36,7 +35,7 @@ function waitingDays(iso: string): number {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
 }
 
-function AssignControl({ id, members }: { id: string; members: MemberOption[] }) {
+function AssignControl({ ids, members }: { ids: string[]; members: MemberOption[] }) {
   const [profileId, setProfileId] = useState("");
   const [pending, start] = useTransition();
   return (
@@ -59,14 +58,31 @@ function AssignControl({ id, members }: { id: string; members: MemberOption[] })
         disabled={!profileId || pending}
         onClick={() => {
           const name = members.find((m) => m.id === profileId)?.label ?? "";
-          if (!window.confirm(`לשייך את התשלום ל-${name} ולהפעיל לה מנוי?`)) return;
-          start(() => void assignExternalPayment(id, profileId));
+          const what = ids.length === 1 ? "התשלום" : `${ids.length} החיובים`;
+          if (!window.confirm(`לשייך את ${what} ל-${name} ולהפעיל לה מנוי?`)) return;
+          start(async () => {
+            // Her charges travel together — one שיוך covers the whole group.
+            for (const id of ids) await assignExternalPayment(id, profileId);
+          });
         }}
       >
         {pending ? "משייכת…" : "שיוך ✓"}
       </Button>
     </span>
   );
+}
+
+/** One woman's waiting charges, folded into a single row (the owner, 14/9:
+ *  "שהכל יראה מסודר בלי כפילויות"). */
+interface WaitingGroup {
+  key: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  rows: ExternalPaymentRow[];
+  totalAgorot: number;
+  firstAt: string;
+  lastAt: string;
 }
 
 export function ExternalPaymentsList({
@@ -79,78 +95,142 @@ export function ExternalPaymentsList({
   members: MemberOption[];
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [, start] = useTransition();
+  const [pendingDelete, start] = useTransition();
+
+  // One row per woman: all her waiting charges folded together, keyed by the
+  // keva's email (name as fallback). needs_review rows stay individual — each
+  // must be approved on its own merits.
+  const reviewRows = waiting.filter((p) => p.needs_review);
+  // Plain computation, no memo — a couple dozen rows, and the compiler
+  // handles the rest.
+  const groups: WaitingGroup[] = (() => {
+    const m = new Map<string, WaitingGroup>();
+    for (const p of waiting) {
+      if (p.needs_review) continue;
+      const key = (p.email ?? p.client_name ?? p.id).toLowerCase().trim();
+      let g = m.get(key);
+      if (!g) {
+        g = {
+          key,
+          name: p.client_name ?? "ללא שם",
+          email: p.email,
+          phone: p.phone,
+          rows: [],
+          totalAgorot: 0,
+          firstAt: p.created_at,
+          lastAt: p.created_at,
+        };
+        m.set(key, g);
+      }
+      g.rows.push(p);
+      g.totalAgorot += p.amount_agorot ?? 0;
+      if (p.created_at < g.firstAt) g.firstAt = p.created_at;
+      if (p.created_at > g.lastAt) g.lastAt = p.created_at;
+      if (!g.name || g.name === "ללא שם") g.name = p.client_name ?? g.name;
+    }
+    return [...m.values()].sort((a, b) => a.name.localeCompare(b.name, "he"));
+  })();
 
   return (
     <div className="flex flex-col gap-4">
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">
-          מחכות לבעלים ({waiting.length})
+          מחכות לבעלים ({groups.length + reviewRows.length})
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          תשלומים שנקלטו בלי חשבון תואם. ברגע שהיא נרשמת עם אותו מייל — ההפעלה אוטומטית; שילמה
-          במייל אחד ונרשמה באחר? שייכי ידנית.
+          תשלומים שנקלטו בלי חשבון תואם — שורה אחת לכל משלמת, גם כשיש לה כמה חיובים. ברגע שהיא
+          נרשמת עם אותו מייל ההפעלה אוטומטית; שילמה במייל אחד ונרשמה באחר? שייכי ידנית.
         </p>
         <div className="flex flex-col">
-          {waiting.map((p) => {
-            const days = waitingDays(p.created_at);
+          {reviewRows.map((p) => (
+            <div key={p.id} className="py-3 border-b border-ink-100 last:border-b-0 flex items-center gap-3 flex-wrap">
+              <div className="flex-1 min-w-[220px]">
+                <div className="font-medium text-ink-900 flex items-center gap-2 flex-wrap">
+                  {p.client_name ?? "ללא שם"}
+                  <span className="font-display font-bold text-brand-purple">
+                    {((p.amount_agorot ?? 0) / 100).toFixed(0)} ₪
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-tint-warm border border-[#F0DCA8] text-[#8C5E0E] px-2 py-0.5 text-[11px] font-bold">
+                    <ShieldAlert size={11} /> ממתין לאישור — מקור לא מזוהה
+                  </span>
+                </div>
+                <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-2.5 flex-wrap">
+                  {p.email && <span dir="ltr">{p.email}</span>}
+                  <span className="text-ink-400" dir="ltr">{p.provider_payment_id}</span>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      "לאשר את התשלום? ודאי קודם שהוא מופיע בקונסולת נדרים פלוס. אחרי האישור הוא יתנהג כתשלום רגיל (הפעלה אוטומטית לפי מייל)."
+                    )
+                  )
+                    return;
+                  start(() => void approveExternalPayment(p.id));
+                }}
+              >
+                אישור התשלום ✓
+              </Button>
+            </div>
+          ))}
+          {groups.map((g) => {
+            const days = waitingDays(g.firstAt);
             return (
-              <div key={p.id} className="py-3 border-b border-ink-100 last:border-b-0 flex items-center gap-3 flex-wrap">
+              <div key={g.key} className="py-3 border-b border-ink-100 last:border-b-0 flex items-center gap-3 flex-wrap">
                 <div className="flex-1 min-w-[220px]">
                   <div className="font-medium text-ink-900 flex items-center gap-2 flex-wrap">
-                    {p.client_name ?? "ללא שם"}
+                    {g.name}
                     <span className="font-display font-bold text-brand-purple">
-                      {((p.amount_agorot ?? 0) / 100).toFixed(0)} ₪
+                      {(g.totalAgorot / 100).toFixed(0)} ₪
                     </span>
-                    {p.needs_review && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-tint-warm border border-[#F0DCA8] text-[#8C5E0E] px-2 py-0.5 text-[11px] font-bold">
-                        <ShieldAlert size={11} /> ממתין לאישור — מקור לא מזוהה
-                      </span>
+                    {g.rows.length > 1 && (
+                      <Badge variant="purple">{g.rows.length} חיובים</Badge>
                     )}
                   </div>
                   <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-2.5 flex-wrap">
-                    {p.email && <span dir="ltr">{p.email}</span>}
-                    {p.phone && <span dir="ltr">{p.phone}</span>}
+                    {g.email && <span dir="ltr">{g.email}</span>}
+                    {g.phone && <span dir="ltr">{g.phone}</span>}
                     <span className="tabular-nums">
-                      התקבל {DATE_HE.format(new Date(p.created_at))} · מחכה{" "}
-                      {days === 0 ? "מהיום" : days === 1 ? "יום" : `${days} ימים`}
+                      מחכה {days === 0 ? "מהיום" : days === 1 ? "יום" : `${days} ימים`}
+                      {" · "}
+                      {g.rows.length > 1
+                        ? `${DATE_HE.format(new Date(g.firstAt))}–${DATE_HE.format(new Date(g.lastAt))}`
+                        : DATE_HE.format(new Date(g.firstAt))}
                     </span>
                     <span className="text-ink-400" dir="ltr">
-                      {p.provider_payment_id}
+                      {g.rows.map((r) => r.provider_payment_id).join(" · ")}
                     </span>
                   </div>
                 </div>
-                {p.needs_review ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => {
-                      if (
-                        !window.confirm(
-                          "לאשר את התשלום? ודאי קודם שהוא מופיע בקונסולת נדרים פלוס. אחרי האישור הוא יתנהג כתשלום רגיל (הפעלה אוטומטית לפי מייל)."
-                        )
-                      )
-                        return;
-                      start(() => void approveExternalPayment(p.id));
-                    }}
-                  >
-                    אישור התשלום ✓
-                  </Button>
-                ) : (
-                  <AssignControl id={p.id} members={members} />
-                )}
-                <ConfirmActionButton
-                  action={deleteExternalPayment.bind(null, p.id)}
-                  message={`למחוק את התשלום של ${p.client_name ?? "ללא שם"} (${p.provider_payment_id})? מוחקים רק תשלום שזוכה או שגוי — הפעולה אינה ניתנת לביטול.`}
+                <AssignControl ids={g.rows.map((r) => r.id)} members={members} />
+                <button
+                  type="button"
                   title="מחיקה"
-                  className="text-ink-300 hover:text-danger p-1.5"
+                  disabled={pendingDelete}
+                  onClick={() => {
+                    const what =
+                      g.rows.length === 1 ? "התשלום" : `${g.rows.length} החיובים`;
+                    if (
+                      !window.confirm(
+                        `למחוק את ${what} של ${g.name}? מוחקים רק תשלום שזוכה או שגוי — הפעולה אינה ניתנת לביטול.`
+                      )
+                    )
+                      return;
+                    start(async () => {
+                      for (const r of g.rows) await deleteExternalPayment(r.id);
+                    });
+                  }}
+                  className="text-ink-300 hover:text-danger p-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Trash2 size={15} />
-                </ConfirmActionButton>
+                </button>
               </div>
             );
           })}
-          {waiting.length === 0 && (
+          {groups.length === 0 && reviewRows.length === 0 && (
             <p className="text-ink-500 text-sm py-3">אין תשלומים שמחכים — הכול משויך 💜</p>
           )}
         </div>
