@@ -225,6 +225,15 @@ export async function addSessionMaterial(id: string, formData: FormData): Promis
     url,
     sort_order: (max?.sort_order ?? 0) + 1,
   });
+  // A file added after members were already shared must reach them too —
+  // the sessions-manager add paths skipped this requeue while the generic
+  // content screen had it, so סשן 3's recording (added 9/9) never reached
+  // the 54 members marked shared on the 6-8/9 materials (the owner, 14/9).
+  try {
+    await requeueOwnerForSharedMembers("session", id);
+  } catch (e) {
+    console.error("[drive] session material requeue failed:", e);
+  }
   revalidatePath("/admin/sessions");
   revalidatePath("/recordings");
   revalidatePath("/events");
@@ -253,6 +262,13 @@ export async function addSessionVideo(id: string, formData: FormData): Promise<v
     url,
     sort_order: (max?.sort_order ?? 0) + 1,
   });
+  // The recording usually lands AFTER everyone was shared on the materials —
+  // requeue so the worker grants the new file to them too (סשן 3, 14/9).
+  try {
+    await requeueOwnerForSharedMembers("session", id);
+  } catch (e) {
+    console.error("[drive] session video requeue failed:", e);
+  }
   revalidatePath("/admin/sessions");
   revalidatePath("/recordings");
   revalidatePath("/events");
@@ -303,6 +319,15 @@ export async function setSessionRecording(id: string, formData: FormData): Promi
       url,
       sort_order: 0,
     });
+  }
+  if (url) {
+    // New or replaced recording — the already-shared members need the grant
+    // on THIS file too (the sessions-manager paths skipped this; סשן 3, 14/9).
+    try {
+      await requeueOwnerForSharedMembers("session", id);
+    } catch (e) {
+      console.error("[drive] session recording requeue failed:", e);
+    }
   }
   revalidatePath("/admin/sessions");
   revalidatePath("/admin/content");
