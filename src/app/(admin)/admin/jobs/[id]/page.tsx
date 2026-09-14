@@ -252,6 +252,39 @@ export default async function AdminJobPage({
     .in("application_id", (applications ?? []).map((a) => a.id));
   const assessOf = new Map((assessRows ?? []).map((r) => [r.application_id, r]));
 
+  // חוות דעת הרכזות מהמוסדות (the owner, 14/9) — team-only, rides on the
+  // applicant across every job she applies to.
+  const coordReviewsOf = new Map<string, ReviewApplication["coordinatorReviews"]>();
+  {
+    const coordAdmin = createAdminClient();
+    const ids = [...new Set((applications ?? []).map((a) => a.applicant_id))];
+    const { data: coordRows } = ids.length
+      ? await coordAdmin
+          .from("coordinator_reviews")
+          .select("profile_id, contact_id, communication, talent, note, found_job, found_job_place")
+          .in("profile_id", ids)
+      : { data: [] };
+    const contactIds = [...new Set((coordRows ?? []).map((r) => r.contact_id))];
+    const { data: coordContacts } = contactIds.length
+      ? await coordAdmin.from("institution_contacts").select("id, full_name").in("id", contactIds)
+      : { data: [] };
+    const coordNameOf = new Map((coordContacts ?? []).map((c) => [c.id, c.full_name]));
+    for (const r of coordRows ?? []) {
+      // Empty shells (a row saved with nothing in it) don't earn a chip.
+      if (r.communication === null && r.talent === null && !r.note && r.found_job === null) continue;
+      const l = coordReviewsOf.get(r.profile_id) ?? [];
+      l.push({
+        coordinator: coordNameOf.get(r.contact_id) ?? "רכזת",
+        communication: r.communication,
+        talent: r.talent,
+        note: r.note,
+        foundJob: r.found_job,
+        foundJobPlace: r.found_job_place,
+      });
+      coordReviewsOf.set(r.profile_id, l);
+    }
+  }
+
   // Everywhere WE submitted each applicant (the owner, 7/9) — application
   // forwards + proactive job_candidates rows, across ALL jobs, with the
   // per-place outcome note.
@@ -432,6 +465,7 @@ export default async function AdminJobPage({
             }
           : null;
       })(),
+      coordinatorReviews: coordReviewsOf.get(a.applicant_id) ?? [],
       editedAt: a.edited_at ?? null,
       previousVersions: (Array.isArray(a.previous_versions) ? a.previous_versions : []).map(
         (v) => {

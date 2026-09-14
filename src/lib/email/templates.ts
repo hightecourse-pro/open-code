@@ -631,6 +631,40 @@ export function jobPublishedEmail(
   };
 }
 
+/** The coordinator-portal OTP (the owner, 14/9: "כניסה ב-OTP בלבד"). */
+export function coordinatorOtpEmail(code: string): BuiltEmail {
+  return {
+    subject: `${code} — קוד הכניסה שלך לאזור הרכזות`,
+    html: renderEmail({
+      heading: "קוד הכניסה שלך 🔑",
+      lines: [
+        "הקוד לכניסה לאזור האישי של רכזות המוסדות בקוד פתוח:",
+        `<div style="font-size:28px;font-weight:800;letter-spacing:6px;direction:ltr;text-align:center">${escapeHtml(code)}</div>`,
+        "הקוד תקף ל-10 דקות. אם לא ביקשת אותו - אפשר להתעלם מהמייל.",
+      ],
+    }),
+  };
+}
+
+/** A personal email from the team to an institution contact. */
+export function contactPersonalEmail(
+  name: string | undefined,
+  body: string,
+  subject?: string
+): BuiltEmail {
+  return {
+    subject: subject?.trim() || "הודעה מצוות קוד פתוח 💜",
+    html: renderEmail({
+      heading: subject?.trim() || "הודעה מצוות קוד פתוח 💜",
+      lines: [
+        `${name ? `שלום ${escapeHtml(name)}, ` : "שלום, "}`,
+        escapeHtml(body).replace(/\n/g, "<br />"),
+        `לשאלות אפשר לכתוב לנו ל-<b dir="ltr">office@opencode.org.il</b>`,
+      ],
+    }),
+  };
+}
+
 /**
  * The invite for a woman who PAYS through Nedarim but never opened an account
  * (the owner, 14/9) — her subscription is live, everything waits behind a

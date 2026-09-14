@@ -94,6 +94,18 @@ export interface ReviewApplication {
     depth: string | null;
     verdict: string | null;
   } | null;
+  /**
+   * What her institution's coordinator(s) wrote about her (the owner, 14/9) —
+   * team-only, shown while going over applicants and filterable.
+   */
+  coordinatorReviews: {
+    coordinator: string;
+    communication: number | null;
+    talent: number | null;
+    note: string | null;
+    foundJob: boolean | null;
+    foundJobPlace: string | null;
+  }[];
   /** She edited the application after submitting (the owner, 2/9). */
   editedAt: string | null;
   /** Outgoing snapshots, oldest first — what each edit replaced. */
@@ -298,6 +310,8 @@ export function ReviewCenter({
   const [answerV, setAnswerV] = useState<string>("");
   // Filter by seminary / study institution (the owner, 7/9).
   const [seminarFilter, setSeminarFilter] = useState<string>("all");
+  // Filter by coordinator review (the owner, 14/9: "ניתן לסנן לפיה").
+  const [coordFilter, setCoordFilter] = useState<"all" | "has" | "high" | "none">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   // מנויות / VIP one-click filters (Shira: clear counts + easy filtering).
   const [tierFilter, setTierFilter] = useState<"all" | "subscribers" | "vip">("all");
@@ -428,6 +442,17 @@ export function ReviewCenter({
         if (!match) return false;
       }
       if (seminarFilter !== "all" && (a.profile?.studyPlace ?? "") !== seminarFilter) return false;
+      if (coordFilter !== "all") {
+        const revs = a.coordinatorReviews ?? [];
+        if (coordFilter === "has" && revs.length === 0) return false;
+        if (coordFilter === "none" && revs.length > 0) return false;
+        // "High" = some coordinator scored her 4+ on communication or talent.
+        if (
+          coordFilter === "high" &&
+          !revs.some((r) => (r.communication ?? 0) >= 4 || (r.talent ?? 0) >= 4)
+        )
+          return false;
+      }
       if (tierFilter === "subscribers" && !a.isSubscriber) return false;
       if (tierFilter === "vip" && !a.isVip) return false;
       if (wanted.length > 0) {
@@ -456,6 +481,7 @@ export function ReviewCenter({
     answerQ,
     answerV,
     seminarFilter,
+    coordFilter,
   ]);
 
   // The effective selection is only ever the visible rows — a filter change
@@ -923,6 +949,19 @@ export function ReviewCenter({
             </option>
           ))}
         </Select>
+        {applications.some((a) => (a.coordinatorReviews ?? []).length > 0) && (
+          <Select
+            value={coordFilter}
+            onChange={(e) => setCoordFilter(e.target.value as typeof coordFilter)}
+            className="w-auto min-w-[150px] py-2"
+            aria-label="סינון לפי חוות דעת רכזת"
+          >
+            <option value="all">⭐ חוות דעת רכזת</option>
+            <option value="has">יש חוות דעת</option>
+            <option value="high">דירוג 4-5</option>
+            <option value="none">בלי חוות דעת</option>
+          </Select>
+        )}
         {questions.some((q) => (q.options ?? []).length > 0) && (
           <>
             <Select
@@ -1508,6 +1547,18 @@ export function ReviewCenter({
                         🧠 {a.assessment.aiDomain === "classic" ? "קלאסי" : a.assessment.aiDomain === "ml" ? "ML" : a.assessment.aiDomain === "basic" ? "בסיסי" : "—"} · {ASSESS_DEPTH[a.assessment.depth].label}
                       </span>
                     )}
+                    {/* חוות דעת הרכזת — נראית במעבר מהיר (the owner, 14/9). */}
+                    {(a.coordinatorReviews ?? []).length > 0 && (
+                      <span className="rounded-full bg-tint-purple px-2 py-0.5 text-[10.5px] font-bold text-brand-purple border border-[#DDC9EC]">
+                        🎓 רכזת{(() => {
+                          const best = Math.max(
+                            0,
+                            ...a.coordinatorReviews.flatMap((r) => [r.communication ?? 0, r.talent ?? 0])
+                          );
+                          return best > 0 ? ` ${best}/5` : "";
+                        })()}
+                      </span>
+                    )}
                     {/* Experience + region on the list rows (the owner, 2/9). */}
                     {a.profile?.isExperienced && (
                       <span className="rounded-full bg-tint-warm border border-[#F8D98C] px-2 py-0.5 text-[10.5px] font-bold text-[#8C5E0E]">
@@ -1558,6 +1609,9 @@ export function ReviewCenter({
                 candidates (the owner, 3/9) — admin-only, rides on HER. */}
             <MemberNoteBox key={selected.applicantId} app={selected} />
             {selected.assessment && <AssessmentBox a={selected.assessment} />}
+            {(selected.coordinatorReviews ?? []).length > 0 && (
+              <CoordinatorReviewsBox reviews={selected.coordinatorReviews} />
+            )}
             <ForwardsBox key={`fwd-${selected.id}`} app={selected} />
             {/* header + prev/next */}
             <div className="flex items-start justify-between gap-3 flex-wrap">
@@ -2042,6 +2096,46 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
         )}
       </div>
       {a.verdict && <p className="text-[13px] text-ink-900 leading-relaxed">{a.verdict}</p>}
+    </div>
+  );
+}
+
+/** What her institution's coordinator wrote (the owner, 14/9) — team-only. */
+function CoordinatorReviewsBox({
+  reviews,
+}: {
+  reviews: ReviewApplication["coordinatorReviews"];
+}) {
+  return (
+    <div className="rounded-[10px] border border-crown-gold-soft bg-tint-warm/40 p-3">
+      <div className="text-[12px] font-bold text-[#8C5E0E] mb-1.5">
+        🎓 חוות דעת הרכזת מהמוסד (פנימי בלבד)
+      </div>
+      <div className="flex flex-col gap-2">
+        {reviews.map((r, i) => (
+          <div key={i} className="text-[13px] text-ink-900">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-bold">{r.coordinator}</span>
+              {r.communication !== null && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-ink-0 border border-ink-200 text-ink-700">
+                  תקשורת {r.communication}/5
+                </span>
+              )}
+              {r.talent !== null && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-ink-0 border border-ink-200 text-ink-700">
+                  כישרון {r.talent}/5
+                </span>
+              )}
+              {r.foundJob === true && (
+                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-tint-mint text-success">
+                  לדבריה מצאה עבודה{r.foundJobPlace ? ` — ${r.foundJobPlace}` : ""}
+                </span>
+              )}
+            </div>
+            {r.note && <p className="leading-relaxed mt-0.5 whitespace-pre-wrap">{r.note}</p>}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
