@@ -1218,6 +1218,31 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["saved_jobs"]["Insert"]>;
         Relationships: [];
       };
+      /** The Nedarim standing-orders registry, loaded from the owner's export. */
+      nedarim_kevas: {
+        Row: {
+          keva_id: string;
+          client_name: string | null;
+          email: string | null;
+          start_date: string | null;
+          end_date: string | null;
+          charges_limit: string | null;
+          amount_agorot: number | null;
+          updated_at: string;
+        };
+        Insert: {
+          keva_id: string;
+          client_name?: string | null;
+          email?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          charges_limit?: string | null;
+          amount_agorot?: number | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["nedarim_kevas"]["Insert"]>;
+        Relationships: [];
+      };
       /** Jobs a member hid from HER board (member feedback, 14/9). */
       hidden_jobs: {
         Row: { job_id: string; profile_id: string; created_at: string };

@@ -56,14 +56,19 @@ export async function GET() {
   await requireRole("admin");
   const admin = createAdminClient();
 
-  const [{ data: externals }, { data: pays }, { data: subs }] = await Promise.all([
+  const [{ data: externals }, { data: pays }, { data: subs }, { data: kevaRegistry }] = await Promise.all([
     admin.from("external_payments").select("*").eq("needs_review", false),
     admin
       .from("payments")
       .select("profile_id, provider_payment_id, amount_agorot, paid_at, raw")
       .eq("status", "succeeded"),
     admin.from("subscriptions").select("profile_id, status, current_period_end, canceled_at"),
+    // The Nedarim export the owner loads — the authoritative keva start dates.
+    admin.from("nedarim_kevas").select("keva_id, start_date, end_date"),
   ]);
+  const registryOf = new Map(
+    (kevaRegistry ?? []).map((k) => [k.keva_id, k])
+  );
 
   // email (lowercased) → auth user id, for matching the imported list to members.
   const emailToId = new Map<string, string>();
@@ -164,7 +169,11 @@ export async function GET() {
         r.email,
         r.phone,
         r.newestKeva ?? "—",
-        r.nedarimCreated || "—",
+        // From the owner's Nedarim export first; the 2/9 import's CreatedDate
+        // is the fallback for kevas that left the export since.
+        (r.newestKeva && registryOf.get(r.newestKeva)?.start_date
+          ? IL_DATE.format(new Date(registryOf.get(r.newestKeva)!.start_date + "T12:00:00Z"))
+          : r.nedarimCreated || "—"),
         r.firstSeen ? IL_DATE.format(r.firstSeen) : "—",
         r.lastSeen ? IL_DATE.format(r.lastSeen) : "—",
         r.chargeDays.size,
