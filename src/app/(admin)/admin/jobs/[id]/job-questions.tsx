@@ -11,6 +11,7 @@ import {
   type FormState,
 } from "@/app/(admin)/admin/actions";
 import type { QuestionAnswerType } from "@/types/database";
+import { NO_PM_PROPS } from "@/lib/pm-guard";
 
 // Google-Forms-style answer types — labels and badge colors are shared with
 // the create-job builder so the two screens always speak the same language.
@@ -87,6 +88,7 @@ function OptionsEditor({
       )}
       <div className="flex items-center gap-2">
         <Input
+          {...NO_PM_PROPS}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           placeholder="הקלידי אפשרות ולחצי Enter…"
@@ -125,10 +127,14 @@ function QuestionEditForm({
 }) {
   const [state, action, pending] = useActionState<FormState, FormData>(
     async (prev, formData) => {
-      const result = await updateJobQuestion(question.id, jobId, prev, formData);
-      // A successful save closes the editor (the list refreshes via revalidate).
-      if (result.ok) onClose();
-      return result;
+      try {
+        const result = await updateJobQuestion(question.id, jobId, prev, formData);
+        // A successful save closes the editor (the list refreshes via revalidate).
+        if (result.ok) onClose();
+        return result;
+      } catch {
+        return { error: "השמירה לא הגיעה לשרת — רענני את הדף ונסי שוב 💜" };
+      }
     },
     {}
   );
@@ -141,6 +147,7 @@ function QuestionEditForm({
       {state.error && <Alert variant="danger">{state.error}</Alert>}
       <div className="flex items-center gap-2 flex-wrap">
         <Input
+          {...NO_PM_PROPS}
           name="question"
           defaultValue={question.question}
           required
@@ -203,9 +210,15 @@ export function JobQuestionsManager({
   const [seq, setSeq] = useState(0);
   const [state, action, pending] = useActionState<FormState, FormData>(
     async (prev, formData) => {
-      const r = await addJobQuestion(jobId, prev, formData);
-      if (r.ok) setSeq((n) => n + 1);
-      return r;
+      try {
+        const r = await addJobQuestion(jobId, prev, formData);
+        if (r.ok) setSeq((n) => n + 1);
+        return r;
+      } catch {
+        // A rejected dispatch (a tab from before a deploy, a killed request)
+        // must say so — a silent failure reads as "לא נשמר" (the owner, 14/9).
+        return { error: "השמירה לא הגיעה לשרת — רענני את הדף ונסי שוב 💜" };
+      }
     },
     {}
   );
@@ -324,6 +337,7 @@ function AddQuestionFields({ pending }: { pending: boolean }) {
     <>
       <div className="flex items-center gap-2 flex-wrap">
         <Input
+          {...NO_PM_PROPS}
           name="question"
           placeholder="למשל: ספרי על פרויקט שבנית בטכנולוגיה של המשרה…"
           required
