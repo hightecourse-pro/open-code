@@ -103,6 +103,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           cvOptional={cvOptional}
           allowMentorTrack={profile.role === "junior" && profile.status !== "active"}
           mentorTrack={profile.role === "mentor"}
+          draftStaleAfter={profile.updated_at ?? null}
         />
         {profile.role === "mentor" && profile.status !== "active" && (
           /* The way out at EVERY stage (the owner, 31/8): a mis-click on the

@@ -173,6 +173,7 @@ export default async function ProfilePage({
           requireCv={requireCv}
           cvOptional={cvOptional}
           mentorTrack={profile.role === "mentor"}
+          draftStaleAfter={profile.updated_at ?? null}
           // A completed profile is never asked the experience gate afresh —
           // profiles.is_experienced stands in when no answer row exists.
           initialExperienced={profile.profile_completed ? profile.is_experienced === true : null}

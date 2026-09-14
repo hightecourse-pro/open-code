@@ -23,7 +23,21 @@ interface DraftShape {
   rich: Record<string, string>;
 }
 
-export function FormDraft({ storageKey, clear = false }: { storageKey: string; clear?: boolean }) {
+export function FormDraft({
+  storageKey,
+  clear = false,
+  staleAfter,
+}: {
+  storageKey: string;
+  clear?: boolean;
+  /**
+   * The record's last successful save time (ISO). A draft OLDER than it
+   * predates a save that already happened — restoring it would resurrect
+   * old text over the truth (the member's "לא שומר שינויים", 14/9). Such a
+   * draft is dropped instead of restored.
+   */
+  staleAfter?: string | null;
+}) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [restoredAt, setRestoredAt] = useState<number | null>(null);
 
@@ -58,7 +72,12 @@ export function FormDraft({ storageKey, clear = false }: { storageKey: string; c
       const raw = localStorage.getItem(storageKey);
       if (raw) {
         const draft = JSON.parse(raw) as DraftShape;
-        if (Date.now() - draft.t < TTL_MS) {
+        const staleMs = staleAfter ? Date.parse(staleAfter) : 0;
+        if (staleMs && draft.t < staleMs) {
+          // The form was saved AFTER this draft was written — the server is
+          // the newer truth; the leftover draft must not overwrite it.
+          localStorage.removeItem(storageKey);
+        } else if (Date.now() - draft.t < TTL_MS) {
           for (const el of form.elements) {
             if (!isSafeField(el)) continue;
             if (el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio")) {
@@ -114,7 +133,7 @@ export function FormDraft({ storageKey, clear = false }: { storageKey: string; c
       form.removeEventListener("change", onInput);
       if (timer) clearTimeout(timer);
     };
-  }, [storageKey, clear]);
+  }, [storageKey, clear, staleAfter]);
 
   return (
     <span ref={anchorRef} className="contents">

@@ -49,6 +49,8 @@ export interface ProfileFormProps {
   allowMentorTrack?: boolean;
   /** She is on the mentor questionnaire — the copy talks contribution, not placement. */
   mentorTrack?: boolean;
+  /** profiles.updated_at — a local draft older than it is dropped, not restored. */
+  draftStaleAfter?: string | null;
   /**
    * Fallback for the experience gate when no per-question answer row exists
    * (profiles completed by older/other paths store only profiles.is_experienced).
@@ -91,7 +93,7 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, mentorTrack = false, initialExperienced = null }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, mentorTrack = false, initialExperienced = null, draftStaleAfter = null }: ProfileFormProps) {
   // The wizard's save carries her CV FILE — on filtered networks the proxy
   // can kill the large upload mid-flight, and an uncaught dispatch rejection
   // crashed straight to the משהו-השתבש boundary with nothing saved (רות,
@@ -427,6 +429,11 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     prevStep.current = cur;
     alertRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
   }, [cur]);
+  // A save error must land in front of her eyes — she saves from the LAST
+  // step, the alert renders at the TOP (the member's "לא שומר", 14/9).
+  useEffect(() => {
+    if (state.error) alertRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+  }, [state.error]);
 
   const stepTitle = cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;
   const stepHint =
@@ -820,7 +827,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       </datalist>
       {/* Auto-save (members, 2/9): what she typed survives leaving the page.
           Cleared the moment a save succeeds — the server is the truth then. */}
-      <FormDraft storageKey="draft:profile" clear={state.ok === true} />
+      <FormDraft storageKey="draft:profile" clear={state.ok === true} staleAfter={draftStaleAfter} />
       <div ref={alertRef}>
         {state.error && <Alert variant="danger">{state.error}</Alert>}
         {state.ok && <Alert variant="success">הפרופיל נשמר ✓</Alert>}
