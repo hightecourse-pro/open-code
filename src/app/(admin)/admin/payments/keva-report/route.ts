@@ -9,6 +9,18 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
+// Team / test identities the owner asked OUT of the report (14/9) — their
+// kevas are internal plumbing, not subscriber money.
+const EXCLUDED_EMAILS = new Set([
+  "tehilab2002@gmail.com",
+  "4122799@gmail.com",
+  "18yudit@gmail.com",
+  "e5800296@gmail.com",
+  "3125915@gmail.com",
+  "bt0556756461@gmail.com",
+  "office@opencode.org.il",
+]);
+
 const IL_DATE = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
   month: "2-digit",
@@ -156,6 +168,7 @@ export async function GET() {
   ];
   const lines = [header.map(csvCell).join(",")];
   for (const r of rows) {
+    if (EXCLUDED_EMAILS.has((r.email ?? "").toLowerCase().trim())) continue;
     const prof = r.profileId ? profOf.get(r.profileId) : null;
     const sub = r.profileId ? subOf.get(r.profileId) : null;
     const renewal =
