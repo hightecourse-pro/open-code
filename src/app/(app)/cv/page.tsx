@@ -6,6 +6,7 @@ import { getUser } from "@/lib/auth";
 import { Badge } from "@/components/ui";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { CvUploadForm } from "@/components/patterns/cv-upload-form";
+import { CvName } from "@/components/patterns/cv-name";
 import { deleteCv, setDefaultCv } from "./actions";
 import type { CvLanguage } from "@/types/database";
 
@@ -77,10 +78,7 @@ export default async function CvPage() {
               return (
                 <div key={d.id} className="flex items-center gap-3 py-3 border-b border-ink-100 last:border-b-0">
                   <FileText size={18} className="text-brand-purple shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-ink-900 truncate">{d.label}</div>
-                    <div className="text-[11px] text-ink-500 truncate">{d.file_name}</div>
-                  </div>
+                  <CvName id={d.id} label={d.label} fileName={d.file_name ?? ""} />
                   <Badge variant={lang.variant}>{lang.label}</Badge>
                   {canMarkDefault &&
                     (d.is_default ? (

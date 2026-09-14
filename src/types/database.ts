@@ -1218,6 +1218,13 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["saved_jobs"]["Insert"]>;
         Relationships: [];
       };
+      /** Jobs a member hid from HER board (member feedback, 14/9). */
+      hidden_jobs: {
+        Row: { job_id: string; profile_id: string; created_at: string };
+        Insert: { job_id: string; profile_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hidden_jobs"]["Insert"]>;
+        Relationships: [];
+      };
       job_offers: {
         Row: { id: string; job_id: string; profile_id: string; sent_at: string };
         Insert: { id?: string; job_id: string; profile_id: string; sent_at?: string };

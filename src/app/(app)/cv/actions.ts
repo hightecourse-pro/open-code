@@ -114,6 +114,24 @@ export async function setDefaultCv(id: string): Promise<void> {
   revalidatePath("/jobs");
 }
 
+/** Rename a CV document's display label (member feedback, 14/9). Owner only. */
+export async function renameCv(id: string, formData: FormData): Promise<void> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  const label = String(formData.get("label") ?? "").trim().slice(0, 120);
+  if (!label) return;
+  await supabase
+    .from("cv_documents")
+    .update({ label })
+    .eq("id", id)
+    .eq("profile_id", user.id);
+  revalidatePath("/cv");
+  revalidatePath("/jobs");
+}
+
 /** Delete a CV document (storage object + row). Owner only. */
 export async function deleteCv(id: string): Promise<void> {
   const supabase = await createClient();

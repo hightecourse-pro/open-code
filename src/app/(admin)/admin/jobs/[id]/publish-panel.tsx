@@ -50,7 +50,9 @@ export function PublishPanel({
   const [valueQuery, setValueQuery] = useState("");
   const [exp, setExp] = useState<"all" | "yes" | "no">("all");
   const [incMentors, setIncMentors] = useState(false);
-  const [incIncomplete, setIncIncomplete] = useState(false);
+  // Every job goes to EVERYONE by default, mid-questionnaire included (the
+  // owner, 14/9: "לשלוח לכולן, גם מי שבאמצע למלא שאלון") — unchecking narrows.
+  const [incIncomplete, setIncIncomplete] = useState(true);
   const [openAll, setOpenAll] = useState(false);
   const [openExp, setOpenExp] = useState(false);
   const [audience, setAudience] = useState<AudienceMember[] | null>(null);

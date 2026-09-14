@@ -29,7 +29,7 @@ const TABS: { id: JobSource; label: string; desc: string }[] = [
 ];
 
 /** The PM's four clear views. `fit=1` from old links maps to "fit". */
-type BoardView = "all" | "fit" | "saved" | "mine";
+type BoardView = "all" | "fit" | "saved" | "mine" | "hidden";
 
 export default async function JobsPage({
   searchParams,
@@ -43,7 +43,7 @@ export default async function JobsPage({
   // the box as its initial value, and the client filter takes it from there.
   const initialQuery = (q ?? "").trim().slice(0, 60);
   const view: BoardView =
-    viewRaw === "fit" || viewRaw === "saved" || viewRaw === "mine"
+    viewRaw === "fit" || viewRaw === "saved" || viewRaw === "mine" || viewRaw === "hidden"
       ? viewRaw
       : fit === "1"
         ? "fit"
@@ -89,6 +89,7 @@ export default async function JobsPage({
     { data: techTax },
     { data: questions },
     { data: myTargets },
+    { data: myHides },
   ] = await Promise.all([
     // Cast: the card renders only these columns; the omitted admin-side fields
     // (target_criteria, posted_by, is_visible…) never reach the member UI.
@@ -108,9 +109,12 @@ export default async function JobsPage({
       .in("kind", ["tech", "specialization"]),
     supabase.from("config_questions").select("id, key, taxonomy_kind, options").eq("active", true),
     user ? supabase.from("job_targets").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
+    // Before the hidden_jobs migration runs this errors — data null, no hides.
+    user ? supabase.from("hidden_jobs").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
   ]);
 
   const savedIds = new Set((saved ?? []).map((s) => s.job_id));
+  const hiddenIds = new Set((myHides ?? []).map((h) => h.job_id));
   const appStatusByJob = new Map((myApplications ?? []).map((a) => [a.job_id, a.status]));
   const appliedAtByJob = new Map((myApplications ?? []).map((a) => [a.job_id, a.created_at]));
 
@@ -286,14 +290,27 @@ export default async function JobsPage({
   // applied to LEAVES the board (tester round 2026-08-26 — it lives in
   // "ההגשות שלי" with its status; on the board it was duplication). The
   // targeted section drops it for the same reason.
-  const boardJobs = (jobs ?? []).filter(
+  const boardAll = (jobs ?? []).filter(
     (j) => !targetedSet.has(j.id) && !appStatusByJob.has(j.id)
   );
+  // Jobs she hid leave HER board (member feedback, 14/9) — they live in the
+  // "הוסתרו" view, always one click from coming back. The personally-targeted
+  // section is hideable too — the eye is on those cards as well.
+  const hiddenBoardJobs = [
+    ...boardAll.filter((j) => hiddenIds.has(j.id)),
+    ...targetedJobs.filter((j) => hiddenIds.has(j.id) && !appStatusByJob.has(j.id)),
+  ];
+  const boardJobs = boardAll.filter((j) => !hiddenIds.has(j.id));
+  const targetedVisible = targetedJobs.filter((j) => !hiddenIds.has(j.id));
   // "מתאימות לי" no longer hides the rest of the board — the PM's point was
   // that the two views looked identical. The non-matching jobs stay, dimmed
   // and un-appliable, so the difference between the views is visible.
   const viewJobs =
-    view === "saved" ? boardJobs.filter((j) => savedIds.has(j.id)) : boardJobs;
+    view === "saved"
+      ? boardJobs.filter((j) => savedIds.has(j.id))
+      : view === "hidden"
+        ? hiddenBoardJobs
+        : boardJobs;
   const sortedJobs = viewJobs
     .slice()
     .sort((a, b) => {
@@ -343,6 +360,7 @@ export default async function JobsPage({
     // board keeps every job open. A job she already applied to is never
     // dimmed — she's in its process, disabled styling would read as a rejection.
     ineligible: view === "fit" && matchedTags(job).length === 0 && !appStatusByJob.has(job.id),
+    hidden: hiddenIds.has(job.id),
   });
 
   const VIEWS: { id: BoardView; label: string }[] = [
@@ -350,6 +368,10 @@ export default async function JobsPage({
     { id: "fit", label: `מתאימות לי (${fitCount})` },
     { id: "saved", label: `נשמרו (${savedCount})` },
     { id: "mine", label: `ההגשות שלי (${mineCount})` },
+    // Appears only once something is hidden — the promised way back.
+    ...(hiddenBoardJobs.length > 0 || view === "hidden"
+      ? [{ id: "hidden" as const, label: `הוסתרו (${hiddenBoardJobs.length})` }]
+      : []),
   ];
 
   return (
@@ -401,6 +423,11 @@ export default async function JobsPage({
           מבקשות קריטריונים אחרים.
         </p>
       )}
+      {view === "hidden" && (
+        <p className="text-[12.5px] text-ink-500 -mt-1.5">
+          משרות שהסתרת מהלוח שלך — הן מוסתרות רק אצלך, ולחיצה על העין מחזירה משרה ללוח.
+        </p>
+      )}
 
       {view === "mine" ? (
         <MyApplications applications={myAppItems} submitted={submittedForHer} />
@@ -415,7 +442,7 @@ export default async function JobsPage({
             initialQuery={initialQuery}
             fitOnly={fitOnly}
             facets={facets}
-            targeted={targetedJobs.map((job) => ({
+            targeted={(view === "hidden" ? [] : targetedVisible).map((job) => ({
               id: job.id,
               haystack: [job.title, job.description.slice(0, 300), job.tech_tags.join(" ")].join(" "),
               tech: job.tech_tags,

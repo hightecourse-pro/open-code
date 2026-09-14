@@ -64,6 +64,24 @@ export function RichTextEditor({
   const inputRef = useRef<HTMLInputElement>(null);
   const seededRef = useRef(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  // The palette must close without picking (member feedback, 14/9: "אין לי
+  // איך לצאת מהחלון") — a click anywhere else, or Escape, dismisses it.
+  useEffect(() => {
+    if (!emojiOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!toolbarRef.current?.contains(e.target as Node)) setEmojiOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setEmojiOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [emojiOpen]);
 
   function seed(node: HTMLDivElement | null) {
     areaRef.current = node;
@@ -203,6 +221,7 @@ export function RichTextEditor({
 
   const toolbar = (
     <div
+      ref={toolbarRef}
       className={cn(
         "relative flex items-center gap-0.5 px-1.5 py-1",
         compact ? "border-t border-ink-100" : "border-b border-ink-200"
