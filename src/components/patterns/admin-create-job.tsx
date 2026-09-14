@@ -410,6 +410,11 @@ export function AdminCreateJob({
         </div>
       )}
 
+      {/* The owner (14/9): make the save model explicit — on THIS screen
+          nothing persists until the one big button. */}
+      <p className="text-[12.5px] text-ink-700 bg-tint-warm/60 border border-[#EAD9A8] rounded-md px-3 py-2 w-fit">
+        💡 שום דבר לא נשמר עדיין — הפרטים והשאלות שהוספת נשמרים יחד, בלחיצה אחת על ״הוספת משרה״.
+      </p>
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "מוסיף…" : "הוספת משרה"}
       </Button>
