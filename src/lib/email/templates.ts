@@ -631,6 +631,29 @@ export function jobPublishedEmail(
   };
 }
 
+/**
+ * The invite for a woman who PAYS through Nedarim but never opened an account
+ * (the owner, 14/9) — her subscription is live, everything waits behind a
+ * signup. The one crucial instruction: register with the SAME email the keva
+ * carries, so the payment attaches automatically.
+ */
+export function unregisteredPayerInviteEmail(name: string | undefined, payEmail: string): BuiltEmail {
+  return {
+    subject: "הקהילה של קוד פתוח מחכה לך 💜",
+    html: renderEmail({
+      heading: "הקהילה מחכה לך 💜",
+      lines: [
+        `${name ? `היי ${escapeHtml(name)}, ` : "היי, "}המקום שלך בקהילת קוד פתוח מוכן - נשאר רק לפתוח את החשבון.`,
+        "בפנים מחכות לך: פורום הקהילה, קורסים והקלטות, לוח המשרות, ליווי אישי וכלי ה-AI - וקהילה שלמה של מפתחות שכבר בדרך.",
+        `חשוב: הירשמי עם הכתובת <b dir="ltr">${escapeHtml(payEmail)}</b> - ככה החשבון שלך יזוהה וייפתח לך הכול אוטומטית.`,
+        `יש שאלה או שמשהו לא מסתדר? כתבי לנו ל-<b dir="ltr">office@opencode.org.il</b> ונעזור 💜`,
+      ],
+      ctaText: "לפתיחת החשבון שלי",
+      ctaUrl: `${SITE}/signup`,
+    }),
+  };
+}
+
 /** Short confirmation to a member right after she submits an application. */
 export function applyConfirmationEmail(name: string | undefined, jobTitle: string): BuiltEmail {
   return {
