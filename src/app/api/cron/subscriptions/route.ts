@@ -237,6 +237,45 @@ export async function GET(request: Request) {
     }
   }
 
+  // 4. reconcile — the safety net for torn states (אסתי רוזנשטיין, 14/9): a
+  // live subscription is proof of payment, so a junior carrying one must be
+  // member_tier=paid. Any path that downgraded her (failed keva, cancel)
+  // followed by a successful charge left her paying-but-locked. Heals in the
+  // member's favor only — the reverse (paid tier, no sub) is legitimate for
+  // external-payments members and is never touched. The alert keeps the
+  // underlying tearing path visible instead of silently patched.
+  let reconciled = 0;
+  try {
+    const { data: liveSubs } = await admin
+      .from("subscriptions")
+      .select("profile_id")
+      .in("status", ["active", "trialing"])
+      .limit(500);
+    const liveIds = [...new Set((liveSubs ?? []).map((s) => s.profile_id))];
+    if (liveIds.length) {
+      const { data: torn } = await admin
+        .from("profiles")
+        .select("id, full_name, member_tier")
+        .in("id", liveIds)
+        .eq("role", "junior")
+        .neq("member_tier", "paid");
+      for (const p of torn ?? []) {
+        await admin.from("profiles").update({ member_tier: "paid" }).eq("id", p.id);
+        reconciled++;
+        await raiseAlert({
+          kind: "subscription_reconciled",
+          severity: "warning",
+          title: `${p.full_name} שילמה אבל הייתה מסומנת ${p.member_tier} — תוקן אוטומטית ל-paid`,
+          body: "יש לה מנוי חי אבל הפרופיל לא היה מסומן כמנויה — כנראה שרשרת של כשל חיוב ואז חיוב מוצלח. הגישה הוחזרה לה אוטומטית; אם זה חוזר על עצמו אצל חברות נוספות, יש מסלול שקורע את המצב ושווה לחקור.",
+          context: { profileId: p.id, previousTier: p.member_tier },
+          dedupeKey: `sub-reconciled:${p.id}:${todayIL}`,
+        });
+      }
+    }
+  } catch (e) {
+    console.error("[subscriptions] reconcile failed:", e);
+  }
+
   // …then action the Drive share queue (grants + revocations).
   let drive;
   try {
@@ -274,6 +313,7 @@ export async function GET(request: Request) {
     expired: expiredCount,
     remindersSent,
     endedEmailsSent,
+    reconciled,
     drive,
     attachmentsSwept,
   });

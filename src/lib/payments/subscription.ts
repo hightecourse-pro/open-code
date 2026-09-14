@@ -120,8 +120,17 @@ export async function activateSubscription(input: ActivateInput) {
     raw: (input.raw ?? null) as never,
   });
 
-  // Activate the member.
+  // Activate the member — and RE-assert the paid tier: a junior who was
+  // downgraded to free mid-lifecycle (failed keva, cancel) and then charged
+  // successfully again stayed free forever, locked out while paying
+  // (אסתי רוזנשטיין, 14/9 — this update used to touch status only).
+  // Mentors and team never pay, so only a junior's tier follows her money.
   await admin.from("profiles").update({ status: "active" }).eq("id", input.profileId);
+  await admin
+    .from("profiles")
+    .update({ member_tier: "paid" })
+    .eq("id", input.profileId)
+    .eq("role", "junior");
 
   // No Drive work here, by design. Activation only decides what she MAY open;
   // the access itself is created when she opens it (ensureAccess). That also
