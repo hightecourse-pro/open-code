@@ -88,6 +88,11 @@ export async function GET() {
   for (const u of usersPage?.users ?? []) {
     if (u.email) emailToId.set(u.email.toLowerCase(), u.id);
   }
+  // The excluded identities by ACCOUNT too — a charge captured without an
+  // email in its raw still resolves to the profile and must drop with it.
+  const excludedProfileIds = new Set(
+    [...EXCLUDED_EMAILS].map((e) => emailToId.get(e)).filter(Boolean)
+  );
 
   const members = new Map<string, MemberRow>();
   const rowFor = (key: string): MemberRow => {
@@ -169,6 +174,7 @@ export async function GET() {
   const lines = [header.map(csvCell).join(",")];
   for (const r of rows) {
     if (EXCLUDED_EMAILS.has((r.email ?? "").toLowerCase().trim())) continue;
+    if (r.profileId && excludedProfileIds.has(r.profileId)) continue;
     const prof = r.profileId ? profOf.get(r.profileId) : null;
     const sub = r.profileId ? subOf.get(r.profileId) : null;
     const renewal =
