@@ -294,9 +294,14 @@ export default async function JobsPage({
     (j) => !targetedSet.has(j.id) && !appStatusByJob.has(j.id)
   );
   // Jobs she hid leave HER board (member feedback, 14/9) — they live in the
-  // "הוסתרו" view, always one click from coming back.
-  const hiddenBoardJobs = boardAll.filter((j) => hiddenIds.has(j.id));
+  // "הוסתרו" view, always one click from coming back. The personally-targeted
+  // section is hideable too — the eye is on those cards as well.
+  const hiddenBoardJobs = [
+    ...boardAll.filter((j) => hiddenIds.has(j.id)),
+    ...targetedJobs.filter((j) => hiddenIds.has(j.id) && !appStatusByJob.has(j.id)),
+  ];
   const boardJobs = boardAll.filter((j) => !hiddenIds.has(j.id));
+  const targetedVisible = targetedJobs.filter((j) => !hiddenIds.has(j.id));
   // "מתאימות לי" no longer hides the rest of the board — the PM's point was
   // that the two views looked identical. The non-matching jobs stay, dimmed
   // and un-appliable, so the difference between the views is visible.
@@ -437,7 +442,7 @@ export default async function JobsPage({
             initialQuery={initialQuery}
             fitOnly={fitOnly}
             facets={facets}
-            targeted={(view === "hidden" ? [] : targetedJobs).map((job) => ({
+            targeted={(view === "hidden" ? [] : targetedVisible).map((job) => ({
               id: job.id,
               haystack: [job.title, job.description.slice(0, 300), job.tech_tags.join(" ")].join(" "),
               tech: job.tech_tags,
