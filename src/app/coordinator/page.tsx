@@ -54,6 +54,7 @@ export default async function CoordinatorDashboard() {
 
   const yearLabel = (v: string | null) => (v ? (labels.years.get(v) ?? v) : "ללא שנת סיום");
   const certLabel = (v: string | null) => (v ? (labels.certificates.get(v) ?? v) : "");
+  const placeLabel = (v: string) => labels.places.get(v) ?? v;
 
   // institution → year (newest first) → [certificate →] graduates.
   const byInstitution = new Map<string, Graduate[]>();
@@ -112,7 +113,9 @@ export default async function CoordinatorDashboard() {
           <Logo width={100} />
           <div className="flex-1 min-w-0">
             <div className="font-display font-bold text-ink-1000 truncate">שלום {me.full_name.split(" ")[0]} 💜</div>
-            <div className="text-[11.5px] text-ink-500 truncate">{me.institutions.join(" · ")}</div>
+            <div className="text-[11.5px] text-ink-500 truncate">
+              {me.institutions.map(placeLabel).join(" · ")}
+            </div>
           </div>
           <form action={coordinatorLogout}>
             <Button type="submit" size="sm" variant="ghost">
@@ -135,7 +138,7 @@ export default async function CoordinatorDashboard() {
             <section key={inst} className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
               <h2 className="font-display text-lg font-bold text-ink-1000 flex items-center gap-2">
                 <GraduationCap size={18} className="text-brand-purple" />
-                הבוגרות שלך{byInstitution.size > 1 ? ` — ${inst}` : ""} ({list.length})
+                הבוגרות שלך{byInstitution.size > 1 ? ` — ${placeLabel(inst)}` : ""} ({list.length})
               </h2>
               <p className="text-[12px] text-ink-500 mb-2">לחיצה על בוגרת פותחת את הפרופיל שלה ואת חוות הדעת.</p>
               {groupYears(list).map(([year, inYear]) => (

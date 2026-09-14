@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { startTransition, useActionState, useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { saveCoordinatorReview, type ReviewState } from "../../actions";
 import type { CoordinatorReview } from "@/lib/coordinator-data";
@@ -31,7 +31,17 @@ export function CoordinatorReviewForm({
   );
 
   return (
-    <form action={action} className="flex flex-col gap-3">
+    // Submitted through onSubmit (not the form action prop) on purpose: the
+    // built-in post-action form reset blanks the <select>s, which reads as
+    // "לא נשמר" a second after a successful save.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => action(data));
+      }}
+      className="flex flex-col gap-3"
+    >
       {state.error && <Alert variant="danger">{state.error}</Alert>}
       {state.ok && <Alert variant="success">חוות הדעת נשמרה ✓ תודה!</Alert>}
 

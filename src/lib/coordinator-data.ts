@@ -32,22 +32,28 @@ export interface CoordinatorReview {
 export interface OptionLabels {
   years: Map<string, string>;
   certificates: Map<string, string>;
+  /** study_place option value → label (values are codes on some envs). */
+  places: Map<string, string>;
 }
 
-/** Option labels for graduation years and certificates. */
+/** Option labels for graduation years, certificates and institutions. */
 export async function loadOptionLabels(): Promise<OptionLabels> {
   const admin = createAdminClient();
   const { data } = await admin
     .from("config_questions")
     .select("key, options")
-    .in("key", ["graduation_year", "certificate"]);
+    .in("key", ["graduation_year", "certificate", "study_place"]);
   const mapOf = (key: string) =>
     new Map(
       ((data ?? []).find((q) => q.key === key)?.options as { value: string; label: string }[] | null ?? []).map(
         (o) => [o.value, o.label]
       )
     );
-  return { years: mapOf("graduation_year"), certificates: mapOf("certificate") };
+  return {
+    years: mapOf("graduation_year"),
+    certificates: mapOf("certificate"),
+    places: mapOf("study_place"),
+  };
 }
 
 /** All graduates of the given institutions (rejected/hidden stay out). */
