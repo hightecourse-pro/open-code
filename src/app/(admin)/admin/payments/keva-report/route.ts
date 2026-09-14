@@ -22,7 +22,10 @@ interface MemberRow {
   name: string;
   email: string;
   phone: string;
-  kevas: Set<string>;
+  /** The CURRENT keva only (the owner, 14/9: "מעניין רק החדש") — the id
+      seen on her most recent activity; a replaced card's old id drops off. */
+  newestKeva: string | null;
+  newestKevaAt: number;
   nedarimCreated: string; // earliest CreatedDate from the imported list
   chargeDays: Set<string>;
   firstSeen: Date | null;
@@ -53,14 +56,19 @@ export async function GET() {
   await requireRole("admin");
   const admin = createAdminClient();
 
-  const [{ data: externals }, { data: pays }, { data: subs }] = await Promise.all([
+  const [{ data: externals }, { data: pays }, { data: subs }, { data: kevaRegistry }] = await Promise.all([
     admin.from("external_payments").select("*").eq("needs_review", false),
     admin
       .from("payments")
       .select("profile_id, provider_payment_id, amount_agorot, paid_at, raw")
       .eq("status", "succeeded"),
     admin.from("subscriptions").select("profile_id, status, current_period_end, canceled_at"),
+    // The Nedarim export the owner loads — the authoritative keva start dates.
+    admin.from("nedarim_kevas").select("keva_id, start_date, end_date"),
   ]);
+  const registryOf = new Map(
+    (kevaRegistry ?? []).map((k) => [k.keva_id, k])
+  );
 
   // email (lowercased) → auth user id, for matching the imported list to members.
   const emailToId = new Map<string, string>();
@@ -75,7 +83,7 @@ export async function GET() {
     if (!r) {
       r = {
         key, profileId: key.startsWith("ext:") ? null : key,
-        name: "", email: "", phone: "", kevas: new Set(),
+        name: "", email: "", phone: "", newestKeva: null, newestKevaAt: 0,
         nedarimCreated: "", chargeDays: new Set(),
         firstSeen: null, lastSeen: null, amountAgorot: null,
       };
@@ -97,7 +105,13 @@ export async function GET() {
     r.phone = r.phone || ep.phone || "";
     r.amountAgorot = r.amountAgorot ?? ep.amount_agorot;
     const kid = kevaOf(raw, ep.provider_payment_id);
-    if (kid) r.kevas.add(kid);
+    if (kid) {
+      const at = new Date(ep.created_at as string).getTime();
+      if (at > r.newestKevaAt) {
+        r.newestKeva = kid;
+        r.newestKevaAt = at;
+      }
+    }
     const created = raw.CreatedDate ?? "";
     if (created && (!r.nedarimCreated || created < r.nedarimCreated)) r.nedarimCreated = created;
   }
@@ -107,8 +121,11 @@ export async function GET() {
     const raw = (p.raw ?? {}) as Record<string, string>;
     const r = rowFor(p.profile_id);
     const kid = kevaOf(raw, p.provider_payment_id);
-    if (kid) r.kevas.add(kid);
     const at = new Date(p.paid_at as string);
+    if (kid && at.getTime() > r.newestKevaAt) {
+      r.newestKeva = kid;
+      r.newestKevaAt = at.getTime();
+    }
     r.chargeDays.add(at.toISOString().slice(0, 10));
     if (!r.firstSeen || at < r.firstSeen) r.firstSeen = at;
     if (!r.lastSeen || at > r.lastSeen) r.lastSeen = at;
@@ -133,7 +150,7 @@ export async function GET() {
   });
 
   const header = [
-    "שם", "מייל", "טלפון", "מזהי קבע", "תחילת הקבע (נדרים)",
+    "שם", "מייל", "טלפון", "מזהה קבע", "תחילת הקבע (נדרים)",
     "חיוב ראשון שנקלט", "חיוב אחרון שנקלט", "חיובים שנקלטו",
     "משולם עד", "חידוש", "סטטוס חברה", "סכום ₪",
   ];
@@ -151,8 +168,12 @@ export async function GET() {
         prof?.full_name || r.name || "—",
         r.email,
         r.phone,
-        [...r.kevas].join(" · ") || "—",
-        r.nedarimCreated || "—",
+        r.newestKeva ?? "—",
+        // From the owner's Nedarim export first; the 2/9 import's CreatedDate
+        // is the fallback for kevas that left the export since.
+        (r.newestKeva && registryOf.get(r.newestKeva)?.start_date
+          ? IL_DATE.format(new Date(registryOf.get(r.newestKeva)!.start_date + "T12:00:00Z"))
+          : r.nedarimCreated || "—"),
         r.firstSeen ? IL_DATE.format(r.firstSeen) : "—",
         r.lastSeen ? IL_DATE.format(r.lastSeen) : "—",
         r.chargeDays.size,
