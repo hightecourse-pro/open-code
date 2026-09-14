@@ -115,6 +115,23 @@ export function ChatThread({
   const [editing, setEditing] = useState<{ id: string; original: string } | null>(null);
   // Which message's emoji palette is open, and optimistic reaction overlays.
   const [pickerFor, setPickerFor] = useState<string | null>(null);
+  // The reaction palette closes on any click elsewhere or Escape (member
+  // feedback, 14/9) — not only by picking or re-clicking the toggle.
+  useEffect(() => {
+    if (!pickerFor) return;
+    const onDown = (e: PointerEvent) => {
+      if (!(e.target as Element | null)?.closest?.("[data-reaction-ui]")) setPickerFor(null);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setPickerFor(null);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [pickerFor]);
   const [localReactions, setLocalReactions] = useState<Record<string, Record<string, string>>>({});
   const byId = new Map(bubbles.map((b) => [b.id, b]));
   /** The quoted snippet a bubble shows — flattened words, capped. */
@@ -287,6 +304,7 @@ export function ChatThread({
                     {reactAction && (
                       <button
                         type="button"
+                        data-reaction-ui
                         aria-label="הוספת תגובה"
                         onClick={() => setPickerFor(pickerFor === m.id ? null : m.id)}
                         className="w-6 h-6 rounded-full text-[13px] text-ink-400 hover:bg-ink-100 cursor-pointer"
@@ -328,6 +346,7 @@ export function ChatThread({
               </div>
               {pickerFor === m.id && reactAction && (
                 <div
+                  data-reaction-ui
                   className={cn(
                     "flex gap-1 bg-white border border-ink-200 rounded-full px-2 py-1 shadow-md mt-1 z-10",
                     !mine && "ms-[30px]"

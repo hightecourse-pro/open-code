@@ -20,6 +20,28 @@ export async function toggleSaveJob(jobId: string, save: boolean) {
 }
 
 /**
+ * Hide a job from HER board only (member feedback, 14/9: "להסיר אותן מהלוח
+ * האישי שלי") — reversible from the "הוסתרו" view. Nothing else changes: the
+ * job stays live for everyone else and in her "ההגשות שלי" if she applied.
+ */
+export async function toggleHideJob(jobId: string, hide: boolean) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  if (hide) {
+    await supabase
+      .from("hidden_jobs")
+      .upsert({ job_id: jobId, profile_id: user.id }, { onConflict: "job_id,profile_id", ignoreDuplicates: true });
+  } else {
+    await supabase.from("hidden_jobs").delete().eq("job_id", jobId).eq("profile_id", user.id);
+  }
+  revalidatePath("/jobs");
+}
+
+/**
  * One-click apply — for MARKET jobs only. An internal job ('ours') always goes
  * through the wizard at /jobs/[id]/apply, which validates her answers to the
  * job's questions against the DB; letting this action create those applications

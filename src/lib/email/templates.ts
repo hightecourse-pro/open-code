@@ -610,11 +610,12 @@ export function jobPublishedEmail(
   applyUrl: string
 ): BuiltEmail {
   return {
-    subject: "משרה חדשה במיוחד בשבילך 💼",
+    // The title keeps subjects unique so Gmail never threads different jobs.
+    subject: `משרה חדשה: ${jobTitle} 💼`,
     html: renderEmail({
-      heading: "משרה חדשה במיוחד בשבילך 💼",
+      heading: "משרה חדשה בקוד פתוח 💼",
       lines: [
-        `${name ? `היי ${escapeHtml(name)}, ` : "היי, "}חשבנו עלייך! פתחנו משרה חדשה שנראית לנו מתאימה בדיוק לך:`,
+        `${name ? `היי ${escapeHtml(name)}, ` : "היי, "}פתחנו משרה חדשה בלוח המשרות:`,
         // The client's name is confidential — the role speaks for itself.
         `<b>${escapeHtml(jobTitle)}</b> · משרה בלעדית דרך קוד פתוח`,
         ...(descriptionText ? [escapeHtml(descriptionText)] : []),
@@ -622,7 +623,10 @@ export function jobPublishedEmail(
       ],
       ctaText: "לצפייה והגשה",
       ctaUrl: applyUrl,
-      footnote: "המשרה פורסמה לקבוצה מצומצמת של חברות שמתאימות לה — שווה להגיש מוקדם.",
+      // Every job now goes to everyone, by the members' own request (the
+      // owner's copy, 14/9) — the email says so instead of implying targeting.
+      footnote:
+        "לבקשת המשתתפות, כרגע אנחנו שולחות כל משרה לכולן — את מוזמנת להגיש מועמדות רק אם את מתאימה לדרישות המשרה ואת אכן מעוניינת בה 💜",
     }),
   };
 }

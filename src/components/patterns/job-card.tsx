@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Bookmark, Check, ExternalLink, MapPin, Briefcase, Sparkles, Crown, CalendarDays } from "lucide-react";
+import { Bookmark, Check, ExternalLink, Eye, EyeOff, MapPin, Briefcase, Sparkles, Crown, CalendarDays } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui";
 import { cn, timeAgo } from "@/lib/utils";
-import { applyToJob, toggleSaveJob } from "@/app/(app)/jobs/actions";
+import { applyToJob, toggleHideJob, toggleSaveJob } from "@/app/(app)/jobs/actions";
 import type { ApplicationStatus, EmploymentType, Job } from "@/types/database";
 
 const EMPLOYMENT: Record<EmploymentType, string> = {
@@ -65,6 +66,9 @@ export interface JobCardProps {
    * to — the PM wants the difference between the views to be felt.
    */
   ineligible?: boolean;
+  /** She hid this job from her board (member feedback, 14/9) — the card
+      offers the way back instead of the hide button. */
+  hidden?: boolean;
 }
 
 const APPLIED_DATE = new Intl.DateTimeFormat("he-IL", {
@@ -89,7 +93,9 @@ export function JobCard({
   matchedTags = [],
   subscriber = true,
   ineligible = false,
+  hidden = false,
 }: JobCardProps) {
+  const router = useRouter();
   const [isSaved, setSaved] = useState(saved);
   const [hasApplied, setApplied] = useState(applied);
   const [applyError, setApplyError] = useState<string | null>(null);
@@ -110,6 +116,15 @@ export function JobCard({
     const next = !isSaved;
     setSaved(next);
     start(() => void toggleSaveJob(job.id, next));
+  }
+
+  function onToggleHide() {
+    // The server excludes (or re-includes) the job on refresh — the board
+    // updates itself; no optimistic vanishing that could mislead on failure.
+    start(async () => {
+      await toggleHideJob(job.id, !hidden);
+      router.refresh();
+    });
   }
 
   function onApply() {
@@ -153,6 +168,15 @@ export function JobCard({
             {job.title}
           </div>
         </div>
+        <button
+          type="button"
+          onClick={onToggleHide}
+          title={hidden ? "החזרה ללוח שלי" : "לא רלוונטי לי — הסתרה מהלוח שלי (הפיך)"}
+          aria-label={hidden ? "החזרת המשרה ללוח" : "הסתרת המשרה מהלוח שלי"}
+          className="w-[28px] h-[28px] rounded-full flex items-center justify-center shrink-0 border bg-ink-50 border-ink-200 text-ink-400 hover:text-brand-purple transition-colors"
+        >
+          {hidden ? <Eye size={12} /> : <EyeOff size={12} />}
+        </button>
         <button
           type="button"
           onClick={onSave}
