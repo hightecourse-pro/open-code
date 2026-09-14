@@ -10,6 +10,7 @@ import {
   ANSWER_TYPE_OPTIONS,
 } from "@/app/(admin)/admin/jobs/[id]/job-questions";
 import type { QuestionAnswerType } from "@/types/database";
+import { NO_PM_PROPS } from "@/lib/pm-guard";
 import { RichTextEditor } from "./rich-text-editor";
 import type { PortalClientOption } from "./admin-job-row";
 import { JOB_KIND_OPTIONS } from "./admin-job-row";
@@ -327,6 +328,7 @@ export function AdminCreateJob({
           ))}
           <div className="flex items-center gap-2 flex-wrap">
             <Input
+              {...NO_PM_PROPS}
               value={newQuestion}
               onChange={(e) => setNewQuestion(e.target.value)}
               placeholder="למשל: כמה שנות ניסיון יש לך ב-React?"
@@ -384,6 +386,7 @@ export function AdminCreateJob({
               )}
               <div className="flex items-center gap-2">
                 <Input
+                  {...NO_PM_PROPS}
                   value={optionDraft}
                   onChange={(e) => setOptionDraft(e.target.value)}
                   placeholder="הקלידי אפשרות ולחצי Enter…"
