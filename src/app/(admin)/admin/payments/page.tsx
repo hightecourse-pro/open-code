@@ -46,12 +46,22 @@ export default async function AdminExternalPaymentsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <span className="font-mono text-xs text-brand-pink-deep">&lt;תשלומים/&gt;</span>
-        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">תשלומים חיצוניים</h1>
-        <p className="t-body-sm text-ink-500">
-          תשלומים שהגיעו מנדרים פלוס בלי לעבור דרך האתר — מי מחכה, ממתי, ולמי לשייך.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;תשלומים/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">תשלומים חיצוניים</h1>
+          <p className="t-body-sm text-ink-500">
+            תשלומים שהגיעו מנדרים פלוס בלי לעבור דרך האתר — מי מחכה, ממתי, ולמי לשייך.
+          </p>
+        </div>
+        {/* One row per keva: Nedarim's own start/next dates next to what the
+            system recorded (the owner, 14/9). */}
+        <a
+          href="/admin/payments/keva-report"
+          className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md border-[1.5px] border-brand-purple text-brand-purple hover:bg-tint-purple transition-colors"
+        >
+          ⬇️ דוח הוראות קבע (CSV)
+        </a>
       </div>
 
       <ExternalPaymentsList
