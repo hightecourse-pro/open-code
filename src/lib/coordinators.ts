@@ -5,6 +5,7 @@
 // created for a coordinator.
 
 import crypto from "crypto";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -80,8 +81,9 @@ export async function endCoordinatorSession(): Promise<void> {
   });
 }
 
-/** The signed-in coordinator with her institutions, or null. */
-export async function getCoordinator(): Promise<Coordinator | null> {
+/** The signed-in coordinator with her institutions, or null. Memoized per
+ *  request — the portal layout and its pages both ask. */
+export const getCoordinator = cache(async (): Promise<Coordinator | null> => {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
@@ -101,7 +103,7 @@ export async function getCoordinator(): Promise<Coordinator | null> {
     phone: contact.phone ?? null,
     institutions: (links ?? []).map((l) => l.institution),
   };
-}
+});
 
 // ------------------------------------------------------------------- OTP
 

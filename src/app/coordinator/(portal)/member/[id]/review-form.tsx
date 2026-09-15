@@ -2,7 +2,7 @@
 
 import { startTransition, useActionState, useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
-import { saveCoordinatorReview, type ReviewState } from "../../actions";
+import { saveCoordinatorReview, type ReviewState } from "../../../actions";
 import type { CoordinatorReview } from "@/lib/coordinator-data";
 
 const SCALE = [
