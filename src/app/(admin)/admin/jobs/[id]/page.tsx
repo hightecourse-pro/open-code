@@ -407,6 +407,35 @@ export default async function AdminJobPage({
 
   // Study facts + years for the review pane (the owner, 2/9: "בצורה בולטת").
   const reviewStudy = await studyInfoOf(applicantIds);
+
+  // עיר מגורים לצד האזור (the owner, 15/9: "שיופיע בצורה בולטת גם עיר
+  // מגורים") — the city select's stored VALUE resolved to its label.
+  const cityOf = new Map<string, string>();
+  if (applicantIds.length) {
+    const cityAdmin = createAdminClient();
+    const { data: cityQ } = await cityAdmin
+      .from("config_questions")
+      .select("id, options")
+      .eq("key", "city")
+      .maybeSingle();
+    if (cityQ) {
+      const labelOf = new Map(
+        (Array.isArray(cityQ.options)
+          ? (cityQ.options as unknown as { value: string; label: string }[])
+          : []
+        ).map((o) => [o.value, o.label])
+      );
+      const { data: cityRows } = await cityAdmin
+        .from("profile_answers")
+        .select("profile_id, value")
+        .eq("question_id", cityQ.id)
+        .in("profile_id", applicantIds);
+      for (const r of cityRows ?? []) {
+        if (typeof r.value === "string" && r.value)
+          cityOf.set(r.profile_id, labelOf.get(r.value) ?? r.value);
+      }
+    }
+  }
   const reviewApplications: ReviewApplication[] = appList.map((a) => {
     const p = profileOf.get(a.applicant_id);
     const study = reviewStudy.get(a.applicant_id);
@@ -425,6 +454,7 @@ export default async function AdminJobPage({
         ? {
             fullName: p.full_name,
             specialization: p.specialization,
+            city: cityOf.get(a.applicant_id) ?? null,
             region: p.region,
             isExperienced: p.is_experienced === true,
             years: study?.years ?? null,
