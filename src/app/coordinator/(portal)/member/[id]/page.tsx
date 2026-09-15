@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
-import { Avatar, Badge, Logo } from "@/components/ui";
+import { Avatar, Badge } from "@/components/ui";
 import { getCoordinator } from "@/lib/coordinators";
 import {
   loadGraduates,
@@ -39,20 +39,13 @@ export default async function CoordinatorMemberPage({
   const candidate = candidates.find((c) => c.id === id) ?? null;
 
   return (
-    <div className="min-h-screen bg-ink-50" dir="rtl">
-      <header className="bg-white border-b border-ink-200">
-        <div className="max-w-4xl mx-auto px-4 py-3 flex items-center gap-3">
-          <Logo width={100} />
-          <Link
-            href="/coordinator"
-            className="ms-auto inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple hover:underline"
-          >
-            חזרה לכל הבוגרות <ArrowRight size={14} />
-          </Link>
-        </div>
-      </header>
-
-      <main className="max-w-4xl mx-auto px-4 py-6 flex flex-col gap-5">
+    <div className="flex flex-col gap-5">
+      <Link
+        href="/coordinator"
+        className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple hover:underline w-fit"
+      >
+        חזרה לכל הבוגרות <ArrowRight size={14} />
+      </Link>
         {/* ─────────────────────────── the review — the reason she is here */}
         <section className="bg-white border border-[#DDC9EC] rounded-[18px] p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
@@ -81,7 +74,6 @@ export default async function CoordinatorMemberPage({
             הפרופיל המלא שלה יופיע כאן ברגע שתסיים למלא את השאלון בקהילה.
           </section>
         )}
-      </main>
     </div>
   );
 }

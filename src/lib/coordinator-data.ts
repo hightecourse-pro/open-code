@@ -90,7 +90,7 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
   const [{ data: profs }, { data: yearRows }, { data: certRows }] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, full_name, avatar_initials, specialization, status, found_job, is_hidden")
+      .select("id, full_name, avatar_initials, specialization, status, role, found_job, is_hidden")
       .in("id", ids),
     qid("graduation_year")
       ? admin.from("profile_answers").select("profile_id, value").eq("question_id", qid("graduation_year")!).in("profile_id", ids)
@@ -103,7 +103,9 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
   const certOf = new Map((certRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null]));
 
   return (profs ?? [])
-    .filter((p) => p.status !== "rejected" && p.is_hidden !== true)
+    // Graduates only (the owner, 15/9: "אין צורך שהמנטוריות יופיעו בבוגרות")
+    // — mentors and staff who once studied there are not her placement story.
+    .filter((p) => p.role === "junior" && p.status !== "rejected" && p.is_hidden !== true)
     .map((p) => ({
       id: p.id,
       full_name: p.full_name,
@@ -137,41 +139,45 @@ export interface CoordinatorJob {
   applicants: { id: string; full_name: string; status: string }[];
 }
 
-/** Our published jobs + which of HER graduates applied to each. */
+/**
+ * Only jobs HER graduates actually applied to through the site (the owner,
+ * 15/9: "משרות רק את אלה שההגשות בוצעו דרך האתר") — an application row IS a
+ * through-the-site submission, so the list starts from her applications.
+ */
 export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<CoordinatorJob[]> {
+  if (graduateIds.length === 0) return [];
   const admin = createAdminClient();
-  const { data: jobs } = await admin
-    .from("jobs")
-    .select("id, title, status, pipeline_status, published_at")
-    .eq("source", "ours")
-    .neq("pipeline_status", "draft")
-    .order("published_at", { ascending: false, nullsFirst: false })
-    .limit(60);
-  if (!jobs?.length) return [];
+  const { data: apps } = await admin
+    .from("applications")
+    .select("job_id, applicant_id, status")
+    .in("applicant_id", graduateIds)
+    .neq("status", "draft");
+  if (!apps?.length) return [];
 
-  const { data: apps } = graduateIds.length
-    ? await admin
-        .from("applications")
-        .select("job_id, applicant_id, status")
-        .in("applicant_id", graduateIds)
-        .in("job_id", jobs.map((j) => j.id))
-        .neq("status", "draft")
-    : { data: [] };
-  const { data: names } = graduateIds.length
-    ? await admin.from("profiles").select("id, full_name").in("id", graduateIds)
-    : { data: [] };
+  const jobIds = [...new Set(apps.map((a) => a.job_id))];
+  const [{ data: jobs }, { data: names }] = await Promise.all([
+    admin
+      .from("jobs")
+      .select("id, title, status, pipeline_status, published_at")
+      .in("id", jobIds)
+      .neq("pipeline_status", "draft")
+      .order("published_at", { ascending: false, nullsFirst: false }),
+    admin.from("profiles").select("id, full_name").in("id", [...new Set(apps.map((a) => a.applicant_id))]),
+  ]);
   const nameOf = new Map((names ?? []).map((p) => [p.id, p.full_name]));
 
-  return jobs.map((j) => ({
-    id: j.id,
-    title: j.title,
-    status: j.status,
-    pipeline_status: j.pipeline_status,
-    published_at: j.published_at,
-    applicants: (apps ?? [])
-      .filter((a) => a.job_id === j.id)
-      .map((a) => ({ id: a.applicant_id, full_name: nameOf.get(a.applicant_id) ?? "בוגרת", status: a.status })),
-  }));
+  return (jobs ?? [])
+    .map((j) => ({
+      id: j.id,
+      title: j.title,
+      status: j.status,
+      pipeline_status: j.pipeline_status,
+      published_at: j.published_at,
+      applicants: apps
+        .filter((a) => a.job_id === j.id)
+        .map((a) => ({ id: a.applicant_id, full_name: nameOf.get(a.applicant_id) ?? "בוגרת", status: a.status })),
+    }))
+    .filter((j) => j.applicants.length > 0);
 }
 
 export interface CoordinatorHire {
