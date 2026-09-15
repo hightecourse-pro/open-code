@@ -39,6 +39,8 @@ export interface ReviewQuestion {
 export interface ReviewProfileSummary {
   fullName: string;
   specialization: string | null;
+  /** עיר מגורים — לצד האזור, בולט (the owner, 15/9). */
+  city: string | null;
   region: string | null;
   isExperienced: boolean;
   /** שנות ניסיון — rides the בעלת-ניסיון badge (the owner, 2/9). */
@@ -1416,7 +1418,7 @@ export function ReviewCenter({
                         {a.profile?.specialization ?? "—"}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
-                        {a.profile?.region ?? "—"}
+                        {[a.profile?.city, a.profile?.region].filter(Boolean).join(" · ") || "—"}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
                         {a.profile?.isExperienced ? "בעלת ניסיון" : "—"}
@@ -1565,9 +1567,9 @@ export function ReviewCenter({
                         ⭐ ניסיון{a.profile.years !== null ? ` ${a.profile.years} ש׳` : ""}
                       </span>
                     )}
-                    {a.profile?.region && (
+                    {(a.profile?.city || a.profile?.region) && (
                       <span className="rounded-full bg-tint-purple/60 px-2 py-0.5 text-[10.5px] font-bold text-brand-purple">
-                        {a.profile.region}
+                        📍 {[a.profile?.city, a.profile?.region].filter(Boolean).join(" · ")}
                       </span>
                     )}
                     {mark && (
@@ -1624,8 +1626,10 @@ export function ReviewCenter({
                   {selected.profile?.specialization && (
                     <Badge variant="purple">{selected.profile.specialization}</Badge>
                   )}
-                  {selected.profile?.region && (
-                    <Badge variant="indigo">{selected.profile.region}</Badge>
+                  {(selected.profile?.city || selected.profile?.region) && (
+                    <Badge variant="indigo">
+                      📍 {[selected.profile?.city, selected.profile?.region].filter(Boolean).join(" · ")}
+                    </Badge>
                   )}
                   {selected.profile?.isExperienced && (
                     <Badge variant="mint">
@@ -2027,6 +2031,7 @@ function exportCsv(
   const header = [
     "שם",
     "התמחות",
+    "עיר",
     "אזור",
     "מנויה",
     "VIP",
@@ -2039,6 +2044,7 @@ function exportCsv(
   const rows = list.map((a) => [
     a.profile?.fullName ?? "",
     a.profile?.specialization ?? "",
+    a.profile?.city ?? "",
     a.profile?.region ?? "",
     a.isSubscriber ? "כן" : "לא",
     a.isVip ? "כן" : "לא",
