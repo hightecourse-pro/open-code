@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useActionState } from "react";
-import { Mail, Pencil, Phone, Plus, Send, Trash2 } from "lucide-react";
+import { Eye, Mail, Pencil, Phone, Plus, Send, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Checkbox, Field, Input, Textarea } from "@/components/ui";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import {
   deleteContact,
   saveContact,
   sendContactEmail,
+  viewAsCoordinator,
   type ContactEmailState,
   type ContactFormState,
 } from "./actions";
@@ -168,6 +169,16 @@ export function ContactsManager({
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
+                    <form action={viewAsCoordinator.bind(null, c.id)}>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        variant="secondary"
+                        title="פותח את האזור האישי בדיוק כפי שהיא רואה אותו"
+                      >
+                        <Eye size={14} /> תצוגה כרכזת
+                      </Button>
+                    </form>
                     <Button size="sm" variant="secondary" onClick={() => setComposing(composing === c.id ? null : c.id)}>
                       <Mail size={14} /> שליחת מייל
                     </Button>

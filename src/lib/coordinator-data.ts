@@ -3,6 +3,34 @@
 // only) after the signed session already proved who she is.
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { nameWithPrevSurname } from "@/lib/names";
+
+/**
+ * Display names for the coordinator portal: "שם (שם משפחה קודם)" whenever a
+ * previous surname exists (the owner, 15/9: seminary records live under the
+ * maiden name — "הוא צריך תמיד להופיע בסוגריים").
+ */
+async function displayNamesOf(profileIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (profileIds.length === 0) return out;
+  const admin = createAdminClient();
+  const { data: q } = await admin
+    .from("config_questions")
+    .select("id")
+    .eq("key", "prev_surname")
+    .maybeSingle();
+  const [{ data: profs }, { data: prevRows }] = await Promise.all([
+    admin.from("profiles").select("id, full_name").in("id", profileIds),
+    q
+      ? admin.from("profile_answers").select("profile_id, value").eq("question_id", q.id).in("profile_id", profileIds)
+      : Promise.resolve({ data: [] as { profile_id: string; value: unknown }[] }),
+  ]);
+  const prevOf = new Map(
+    (prevRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null])
+  );
+  for (const p of profs ?? []) out.set(p.id, nameWithPrevSurname(p.full_name, prevOf.get(p.id)));
+  return out;
+}
 
 export interface Graduate {
   id: string;
@@ -102,13 +130,14 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
   const yearOf = new Map((yearRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null]));
   const certOf = new Map((certRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null]));
 
+  const nameOf = await displayNamesOf(ids);
   return (profs ?? [])
     // Graduates only (the owner, 15/9: "אין צורך שהמנטוריות יופיעו בבוגרות")
     // — mentors and staff who once studied there are not her placement story.
     .filter((p) => p.role === "junior" && p.status !== "rejected" && p.is_hidden !== true)
     .map((p) => ({
       id: p.id,
-      full_name: p.full_name,
+      full_name: nameOf.get(p.id) ?? p.full_name,
       avatar_initials: p.avatar_initials,
       specialization: p.specialization,
       status: p.status,
@@ -154,48 +183,81 @@ export interface CoordinatorJob {
 export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<CoordinatorJob[]> {
   if (graduateIds.length === 0) return [];
   const admin = createAdminClient();
-  const { data: apps } = await admin
-    .from("applications")
-    .select("job_id, applicant_id, status, sent_to_client_at")
-    .in("applicant_id", graduateIds)
-    .neq("status", "draft");
-  if (!apps?.length) return [];
+  // Two roads to a job row: she applied through the site, or WE submitted
+  // her proactively (job_candidates with a sent stamp). "הוגשה ע"י קוד פתוח"
+  // = any of: the client-send stamp, a post-send status, the team's אישור
+  // סופי (submissions often go out by plain email, leaving only the mark —
+  // the owner, 15/9: תמר פוקס/עדינה טיטלבוים), or a stamped curation row.
+  const [{ data: apps }, { data: sentCands }] = await Promise.all([
+    admin
+      .from("applications")
+      .select("job_id, applicant_id, status, sent_to_client_at, admin_mark")
+      .in("applicant_id", graduateIds)
+      .neq("status", "draft"),
+    admin
+      .from("job_candidates")
+      .select("job_id, profile_id, sent_at")
+      .in("profile_id", graduateIds)
+      .not("sent_at", "is", null),
+  ]);
+  if (!apps?.length && !sentCands?.length) return [];
 
-  const jobIds = [...new Set(apps.map((a) => a.job_id))];
-  const [{ data: jobs }, { data: names }] = await Promise.all([
+  const jcSent = new Set((sentCands ?? []).map((c) => `${c.job_id}:${c.profile_id}`));
+  const jobIds = [
+    ...new Set([...(apps ?? []).map((a) => a.job_id), ...(sentCands ?? []).map((c) => c.job_id)]),
+  ];
+  const applicantIds = [
+    ...new Set([...(apps ?? []).map((a) => a.applicant_id), ...(sentCands ?? []).map((c) => c.profile_id)]),
+  ];
+  const [{ data: jobs }, nameOf] = await Promise.all([
     admin
       .from("jobs")
       .select("id, title, status, pipeline_status, published_at, source, company, location, employment_type, description, description_html")
       .in("id", jobIds)
       .neq("pipeline_status", "draft")
       .order("published_at", { ascending: false, nullsFirst: false }),
-    admin.from("profiles").select("id, full_name").in("id", [...new Set(apps.map((a) => a.applicant_id))]),
+    displayNamesOf(applicantIds),
   ]);
-  const nameOf = new Map((names ?? []).map((p) => [p.id, p.full_name]));
   const { htmlToPlainText } = await import("@/lib/rich-text");
 
   return (jobs ?? [])
-    .map((j) => ({
-      id: j.id,
-      title: j.title,
-      status: j.status,
-      pipeline_status: j.pipeline_status,
-      published_at: j.published_at,
-      company: j.source !== "ours" ? (j.company ?? null) : null,
-      location: j.location ?? null,
-      employment_type: j.employment_type ?? null,
-      descriptionText: j.description_html
-        ? htmlToPlainText(j.description_html)
-        : (j.description ?? ""),
-      applicants: apps
-        .filter((a) => a.job_id === j.id)
-        .map((a) => ({
-          id: a.applicant_id,
-          full_name: nameOf.get(a.applicant_id) ?? "בוגרת",
-          status: a.status,
-          sentByUs: !!a.sent_to_client_at || ["sent", "interview", "exam", "hired"].includes(a.status),
-        })),
-    }))
+    .map((j) => {
+      const jobApps = (apps ?? []).filter((a) => a.job_id === j.id);
+      const applicants = jobApps.map((a) => ({
+        id: a.applicant_id,
+        full_name: nameOf.get(a.applicant_id) ?? "בוגרת",
+        status: a.status,
+        sentByUs:
+          !!a.sent_to_client_at ||
+          ["sent", "interview", "exam", "hired"].includes(a.status) ||
+          a.admin_mark === "approved" ||
+          jcSent.has(`${j.id}:${a.applicant_id}`),
+      }));
+      // Proactively-submitted graduates who never applied themselves.
+      for (const c of (sentCands ?? []).filter((c) => c.job_id === j.id)) {
+        if (applicants.some((a) => a.id === c.profile_id)) continue;
+        applicants.push({
+          id: c.profile_id,
+          full_name: nameOf.get(c.profile_id) ?? "בוגרת",
+          status: "sent",
+          sentByUs: true,
+        });
+      }
+      return {
+        id: j.id,
+        title: j.title,
+        status: j.status,
+        pipeline_status: j.pipeline_status,
+        published_at: j.published_at,
+        company: j.source !== "ours" ? (j.company ?? null) : null,
+        location: j.location ?? null,
+        employment_type: j.employment_type ?? null,
+        descriptionText: j.description_html
+          ? htmlToPlainText(j.description_html)
+          : (j.description ?? ""),
+        applicants,
+      };
+    })
     .filter((j) => j.applicants.length > 0);
 }
 
@@ -213,5 +275,11 @@ export async function loadHires(graduateIds: string[]): Promise<CoordinatorHire[
     .select("full_name, hired_at, profile_id")
     .in("profile_id", graduateIds)
     .order("hired_at", { ascending: false, nullsFirst: false });
-  return (data ?? []).map((h) => ({ full_name: h.full_name, hired_at: h.hired_at }));
+  const nameOf = await displayNamesOf(
+    [...new Set((data ?? []).map((h) => h.profile_id).filter((v): v is string => !!v))]
+  );
+  return (data ?? []).map((h) => ({
+    full_name: (h.profile_id ? nameOf.get(h.profile_id) : null) ?? h.full_name,
+    hired_at: h.hired_at,
+  }));
 }

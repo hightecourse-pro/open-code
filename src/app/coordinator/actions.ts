@@ -47,6 +47,21 @@ export async function coordinatorLogout(): Promise<void> {
   redirect("/coordinator/login");
 }
 
+/** Leave the admin's "view as coordinator" mode — back to the admin screen. */
+export async function exitAdminView(): Promise<void> {
+  await endCoordinatorSession();
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  jar.set("oc_coord_admin", "", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/coordinator",
+    maxAge: 0,
+  });
+  redirect("/admin/coordinators");
+}
+
 export type ReviewState = { error?: string; ok?: boolean };
 
 /**

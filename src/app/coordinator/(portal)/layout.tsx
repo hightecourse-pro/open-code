@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { LogOut } from "lucide-react";
 import { Button, Logo } from "@/components/ui";
 import { getCoordinator } from "@/lib/coordinators";
 import { loadOptionLabels } from "@/lib/coordinator-data";
-import { coordinatorLogout } from "../actions";
+import { coordinatorLogout, exitAdminView } from "../actions";
 import { CoordinatorNav } from "./nav";
 
 /**
@@ -20,9 +21,25 @@ export default async function CoordinatorPortalLayout({
   if (!me) redirect("/coordinator/login");
   const labels = await loadOptionLabels();
   const placeLabel = (v: string) => labels.places.get(v) ?? v;
+  const adminView = (await cookies()).get("oc_coord_admin")?.value === "1";
 
   return (
     <div className="min-h-screen bg-ink-50" dir="rtl">
+      {adminView && (
+        <div className="bg-[#8C5E0E] text-white text-[12.5px] font-semibold">
+          <div className="max-w-4xl mx-auto px-4 py-1.5 flex items-center gap-3 flex-wrap">
+            <span>
+              👁 תצוגת ניהול — כך רואה את האזור {me.full_name}. פעולות כאן (כמו שמירת חוות דעת)
+              נעשות בשמה.
+            </span>
+            <form action={exitAdminView} className="ms-auto">
+              <button type="submit" className="underline font-bold cursor-pointer">
+                חזרה לניהול
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
       <header className="bg-white border-b border-ink-200 sticky top-0 z-20">
         <div className="max-w-4xl mx-auto px-4 pt-3 flex items-center gap-3">
           <Logo width={100} />
