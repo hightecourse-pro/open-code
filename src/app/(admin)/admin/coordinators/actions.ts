@@ -1,10 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { contactPersonalEmail } from "@/lib/email/templates";
 import { sendResendEmail } from "@/lib/email/resend";
+import { startCoordinatorSession } from "@/lib/coordinators";
 
 export type ContactFormState = { error?: string; ok?: boolean };
 
@@ -64,6 +67,33 @@ export async function deleteContact(id: string): Promise<void> {
   const admin = createAdminClient();
   await admin.from("institution_contacts").delete().eq("id", id);
   revalidatePath("/admin/coordinators");
+}
+
+/**
+ * See the portal exactly as one coordinator sees it (the owner, 15/9):
+ * admin-only — opens a real coordinator session for that contact plus a
+ * display marker so the portal shows the "תצוגת ניהול" strip. Anything done
+ * there (a saved review) is done in her name.
+ */
+export async function viewAsCoordinator(contactId: string): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: contact } = await admin
+    .from("institution_contacts")
+    .select("id")
+    .eq("id", contactId)
+    .maybeSingle();
+  if (!contact) return;
+  await startCoordinatorSession(contactId);
+  const jar = await cookies();
+  jar.set("oc_coord_admin", "1", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/coordinator",
+    maxAge: 60 * 60 * 24 * 7,
+  });
+  redirect("/coordinator");
 }
 
 export type ContactEmailState = { error?: string; ok?: boolean };
