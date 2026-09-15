@@ -174,8 +174,9 @@ export default async function HackathonPage() {
         <Sparkle className="absolute top-3 right-5 w-4 h-4" delay="0.4s" />
         <Sparkle className="absolute bottom-3 left-6 w-4 h-4" color="#F0B429" delay="1.4s" />
         <div className="font-display font-black text-[17px] text-ink-1000">אירוע סיום נוצץ ✨</div>
+        <p className="t-body-sm font-bold text-ink-900 mt-1">יום רביעי | 28/10 | י״ז חשוון</p>
         <p className="t-body-sm text-ink-700 mt-1">
-          באמצע חשוון - הקהילה חוגגת, והזוכות עולות לבמה 🏆 כל הפרטים, ההכנה והצעדים{" "}
+          הקהילה חוגגת, והזוכות עולות לבמה 🏆 כל הפרטים, ההכנה והצעדים{" "}
           <a href="/hackathon-2026" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-purple hover:underline">
             בדף האירוע המלא
           </a>

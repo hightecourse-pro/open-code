@@ -236,7 +236,10 @@ export default function Hackathon2026Page() {
             <div className="text-[30px]"><span className="h26-wiggle">🎉</span></div>
             <div className="font-display font-black text-[22px] mt-1">אירוע סיום נוצץ ✨</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              באמצע חשוון - הקהילה חוגגת, והזוכות עולות לבמה 🏆
+              יום רביעי | 28/10 | י״ז חשוון
+            </div>
+            <div className="font-display font-bold text-[15px] mt-0.5 opacity-90">
+              הקהילה חוגגת, והזוכות עולות לבמה 🏆
             </div>
           </div>
 

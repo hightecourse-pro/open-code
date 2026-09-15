@@ -250,7 +250,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
                 עשרות מפתחות AI
               </span>
               <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-                ערב גמר - הפתרונות על הבמה
+                ערב גמר יום רביעי 28/10 | י״ז חשוון
               </span>
             </>
           ) : (
