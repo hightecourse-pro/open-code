@@ -32,19 +32,54 @@ export default async function AdminHiresPage() {
       const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: h.email! });
       if (uid) await admin.from("hires").update({ profile_id: uid as string }).eq("id", h.id);
     }
+
+    // Seminary self-fill (the owner, 15/9): a linked hire without a seminary
+    // pulls it from her own questionnaire on the next admin visit.
+    const { data: noSem } = await admin
+      .from("hires")
+      .select("id, profile_id")
+      .is("seminary", null)
+      .not("profile_id", "is", null)
+      .limit(50);
+    if (noSem?.length) {
+      const { data: semQ } = await admin
+        .from("config_questions")
+        .select("id")
+        .eq("key", "study_place")
+        .maybeSingle();
+      if (semQ) {
+        const { data: semRows } = await admin
+          .from("profile_answers")
+          .select("profile_id, value")
+          .eq("question_id", semQ.id)
+          .in("profile_id", noSem.map((h) => h.profile_id!));
+        const semOf = new Map(
+          (semRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : ""])
+        );
+        for (const h of noSem) {
+          const sem = semOf.get(h.profile_id!);
+          if (sem) await admin.from("hires").update({ seminary: sem }).eq("id", h.id);
+        }
+      }
+    }
   }
 
-  const [{ data: hires }, { data: clientRows }] = await Promise.all([
+  const [{ data: hires }, { data: clientRows }, { data: placeQ }] = await Promise.all([
     supabase
       .from("hires")
       .select(
-        "id, profile_id, full_name, email, company, job_type, source, status, amount, payer, payer_institution, hired_at, created_at, client_id, show_in_banner"
+        "id, profile_id, full_name, email, company, job_type, source, status, amount, payer, payer_institution, seminary, hired_at, created_at, client_id, show_in_banner"
       )
       .order("hired_at", { ascending: false })
       .limit(1000),
     // The company is picked from the clients registry, not typed (the owner, 3/9).
     supabase.from("portal_clients").select("id, company_name").order("company_name"),
+    // Seminary suggestions come from the study_place options (free text allowed).
+    createAdminClient().from("config_questions").select("options").eq("key", "study_place").maybeSingle(),
   ]);
+  const seminaryOptions = (
+    (placeQ?.options as { value: string; label: string }[] | null) ?? []
+  ).map((o) => o.label);
 
   // Who is she TODAY (the owner, 3/9: "לזהות מיד בכניסה") — every linked hire
   // gets her live community standing: מנויה, משתתפת רגילה, מנטורית, צוות.
@@ -83,6 +118,7 @@ export default async function AdminHiresPage() {
           membership: h.profile_id ? (membershipOf.get(h.profile_id) ?? "member") : "outside",
         }))}
         clients={(clientRows ?? []).map((c) => ({ id: c.id, name: c.company_name }))}
+        seminaryOptions={seminaryOptions}
         defaultDate={new Date().toISOString().slice(0, 10)}
       />
     </div>

@@ -146,6 +146,17 @@ export async function setHirePayer(id: string, payer: string): Promise<{ institu
   return { institution: payer_institution };
 }
 
+/** The hired woman's seminary — prominent + editable on every row (15/9). */
+export async function setHireSeminary(id: string, name: string): Promise<void> {
+  await requireRole("admin");
+  const supabase = await createClient();
+  await supabase
+    .from("hires")
+    .update({ seminary: name.trim().slice(0, 200) || null, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  revalidate();
+}
+
 /** Manual institution name — for external hires with no profile to read from. */
 export async function setHireInstitution(id: string, name: string): Promise<void> {
   await requireRole("admin");

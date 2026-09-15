@@ -347,6 +347,7 @@ export interface Database {
           amount: number | null;
           payer: string | null;
           payer_institution: string | null;
+          seminary: string | null;
           hired_at: string;
           notes: string | null;
           client_id: string | null;
@@ -368,6 +369,7 @@ export interface Database {
           amount?: number | null;
           payer?: string | null;
           payer_institution?: string | null;
+          seminary?: string | null;
           hired_at?: string;
           notes?: string | null;
           client_id?: string | null;
