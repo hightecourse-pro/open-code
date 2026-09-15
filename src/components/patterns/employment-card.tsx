@@ -63,8 +63,10 @@ export function EmploymentCard({
             />
           </Field>
         )}
+        {/* Not plain "שמירה" (15/9): members mid-profile-edit pressed this
+            thinking it saved the questionnaire above. */}
         <Button type="submit" size="sm" disabled={saving} className="w-fit">
-          {saving ? "שומר…" : "שמירה"}
+          {saving ? "שומר…" : "עדכון סטטוס התעסוקה"}
         </Button>
       </form>
 

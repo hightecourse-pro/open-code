@@ -160,9 +160,9 @@ export default async function ProfilePage({
           <Pencil size={17} className="text-brand-purple" /> כאן מעדכנים את הפרופיל
         </h2>
         <p className="t-body-sm text-ink-500 mb-4">
-          עוברים שלב-שלב עם &quot;הבא&quot;, משנים מה שרוצים, ובשלב האחרון לוחצות{" "}
-          <b>&quot;סיום ושמירה&quot;</b> — שום דבר לא נשמר לפני זה. המידע עוזר לנו להתאים לך
-          משרות, קורסים ומנטוריות.
+          עוברים שלב-שלב עם &quot;הבא&quot;, משנים מה שרוצים, ולוחצות{" "}
+          <b>&quot;שמירת השינויים&quot;</b> — הכפתור נמצא בכל שלב, ואפשר לשמור מכל מקום.
+          המידע עוזר לנו להתאים לך משרות, קורסים ומנטוריות.
         </p>
         <ProfileForm
           firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}
@@ -174,6 +174,7 @@ export default async function ProfilePage({
           cvOptional={cvOptional}
           mentorTrack={profile.role === "mentor"}
           draftStaleAfter={profile.updated_at ?? null}
+          saveEveryStep={profile.profile_completed === true}
           // A completed profile is never asked the experience gate afresh —
           // profiles.is_experienced stands in when no answer row exists.
           initialExperienced={profile.profile_completed ? profile.is_experienced === true : null}

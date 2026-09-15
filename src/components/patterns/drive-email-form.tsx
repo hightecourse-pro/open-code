@@ -59,7 +59,7 @@ export function DriveEmailForm({
           />
         </Field>
         <Button type="submit" disabled={pending} className="w-fit">
-          {pending ? "שומר…" : "שמירה"}
+          {pending ? "שומר…" : "שמירת הכתובת"}
         </Button>
       </form>
     </div>
