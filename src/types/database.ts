@@ -1218,6 +1218,49 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["saved_jobs"]["Insert"]>;
         Relationships: [];
       };
+      /** Institution contact people (רכזות) — the coordinator portal's users. */
+      institution_contacts: {
+        Row: { id: string; full_name: string; email: string; phone: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; full_name: string; email: string; phone?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["institution_contacts"]["Insert"]>;
+        Relationships: [];
+      };
+      /** contact ↔ institution (study_place value) — many to many. */
+      institution_contact_links: {
+        Row: { contact_id: string; institution: string };
+        Insert: { contact_id: string; institution: string };
+        Update: Partial<Database["public"]["Tables"]["institution_contact_links"]["Insert"]>;
+        Relationships: [];
+      };
+      /** A coordinator's private assessment of one graduate. */
+      coordinator_reviews: {
+        Row: {
+          id: string; contact_id: string; profile_id: string;
+          communication: number | null; talent: number | null; note: string | null;
+          found_job: boolean | null; found_job_place: string | null;
+          created_at: string; updated_at: string;
+        };
+        Insert: {
+          id?: string; contact_id: string; profile_id: string;
+          communication?: number | null; talent?: number | null; note?: string | null;
+          found_job?: boolean | null; found_job_place?: string | null;
+          created_at?: string; updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["coordinator_reviews"]["Insert"]>;
+        Relationships: [];
+      };
+      coordinator_otp: {
+        Row: { email: string; code_hash: string; expires_at: string; attempts: number; created_at: string };
+        Insert: { email: string; code_hash: string; expires_at: string; attempts?: number; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["coordinator_otp"]["Insert"]>;
+        Relationships: [];
+      };
+      contact_emails: {
+        Row: { id: string; contact_id: string; subject: string | null; body: string; created_at: string };
+        Insert: { id?: string; contact_id: string; subject?: string | null; body: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["contact_emails"]["Insert"]>;
+        Relationships: [];
+      };
       /** The Nedarim standing-orders registry, loaded from the owner's export. */
       nedarim_kevas: {
         Row: {

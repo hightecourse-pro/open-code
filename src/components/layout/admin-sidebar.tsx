@@ -15,6 +15,7 @@ import {
   ContactRound,
   Crown,
   FileText,
+  GraduationCap,
   HeartHandshake,
   Inbox,
   KeyRound,
@@ -62,6 +63,7 @@ const SECTIONS: AdminNavSection[] = [
       { href: "/admin/hires", label: "גיוסים", icon: PartyPopper },
       { href: "/admin/crm", label: "פייפליין לקוחות", icon: ContactRound },
       { href: "/admin/clients", label: "גישת לקוחות לפורטל", icon: Building2 },
+      { href: "/admin/coordinators", label: "רכזות מוסדות", icon: GraduationCap },
     ],
   },
   {
