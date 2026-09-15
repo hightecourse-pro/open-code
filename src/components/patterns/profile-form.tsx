@@ -57,6 +57,13 @@ export interface ProfileFormProps {
    * Without it a returning member is forced to "choose again".
    */
   initialExperienced?: boolean | null;
+  /**
+   * A completed profile being EDITED (15/9): every step carries a real
+   * "שמירת השינויים" submit — members edit one field mid-wizard, press the
+   * nearest "שמירה", and used to lose the edit (only the last step saved;
+   * the local draft masked the loss on her own device).
+   */
+  saveEveryStep?: boolean;
 }
 
 // Long free text becomes RICH text (the owner, 31/8: "בטקסט חופשי ארוך צריך
@@ -93,7 +100,7 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, mentorTrack = false, initialExperienced = null, draftStaleAfter = null }: ProfileFormProps) {
+export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, mentorTrack = false, initialExperienced = null, draftStaleAfter = null, saveEveryStep = false }: ProfileFormProps) {
   // The wizard's save carries her CV FILE — on filtered networks the proxy
   // can kill the large upload mid-flight, and an uncaught dispatch rejection
   // crashed straight to the משהו-השתבש boundary with nothing saved (רות,
@@ -119,7 +126,10 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
 
   // A server-side save error must be seen — scroll it into view.
   useEffect(() => {
-    if (state.error) alertRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Success scrolls too (15/9): a mid-step save renders the ✓ at the form
+    // top — off-screen from step 5, which read as "לא נשמר".
+    if (state.error || state.ok)
+      alertRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [state]);
 
   const gate = questions.find((q) => q.key === "has_experience");
@@ -804,15 +814,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       // the reset. Enter on an earlier step advances instead of submitting.
       onSubmit={(e) => {
         e.preventDefault();
-        if (cur < totalSteps - 1 || expChoice === null) {
+        // The mid-step "שמירת השינויים" button (15/9) declares itself via the
+        // submitter — everything else (Enter included) keeps advancing.
+        const saveNow =
+          (e.nativeEvent as SubmitEvent).submitter?.getAttribute("data-save-now") === "1";
+        if (!saveNow && (cur < totalSteps - 1 || expChoice === null)) {
           next();
           return;
         }
-        if (!validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
+        if (cur > 0 && !validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
         const fd = new FormData(e.currentTarget);
         // The CV gate, client-side too: the server refuses without one, but the
-        // red frame here beats a round trip.
-        if (requireCv && !(fd.get("cv_file") instanceof File && (fd.get("cv_file") as File).size > 0)) {
+        // red frame here beats a round trip. (Mid-step saves of a completed
+        // profile never require a CV — she already has one.)
+        if (!saveNow && requireCv && !(fd.get("cv_file") instanceof File && (fd.get("cv_file") as File).size > 0)) {
           setCvError(true);
           return;
         }
@@ -1016,9 +1031,24 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             browser fired the form action against a half-finished form —
             skipping the final step's validation entirely (BUG-020B). */}
         {cur < totalSteps - 1 || expChoice === null ? (
-          <Button key="next" type="button" onClick={next}>
-            הבא <ChevronLeft size={16} />
-          </Button>
+          <span className="flex items-center gap-2">
+            {/* Editing an already-complete profile: a REAL save on every step
+                (15/9) — "מילאתי ולחצתי שמירה" must mean saved, from anywhere. */}
+            {saveEveryStep && expChoice !== null && (
+              <Button
+                key="save-now"
+                type="submit"
+                variant="secondary"
+                disabled={pending}
+                {...({ "data-save-now": "1" } as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+              >
+                {pending ? "שומר…" : "שמירת השינויים ✓"}
+              </Button>
+            )}
+            <Button key="next" type="button" onClick={next}>
+              הבא <ChevronLeft size={16} />
+            </Button>
+          </span>
         ) : (
           <Button key="submit" type="submit" disabled={pending}>
             {pending ? "שומר…" : "סיום ושמירה ✓"}
