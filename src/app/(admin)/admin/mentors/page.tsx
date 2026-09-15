@@ -8,6 +8,7 @@ import { mentorReasonLabel } from "@/lib/mentor-requests";
 import { MentorsList, type MentorRowData } from "./mentor-admin-row";
 import { PendingMentorApplications } from "./pending-applications";
 import { AppointMentorPicker } from "./appoint-mentor";
+import { JobTabs } from "../jobs/[id]/job-tabs";
 
 export const metadata: Metadata = { title: "ניהול מנטוריות" };
 export const dynamic = "force-dynamic";
@@ -30,13 +31,13 @@ export default async function AdminMentorsPage() {
       .eq("role", "mentor")
       .eq("status", "active")
       .order("full_name"),
-    // ALL active juniors — the compact picker searches by name, so the old
-    // first-50 cap (which silently hid everyone past נ׳) is gone.
+    // ALL juniors, active AND pending — a paid member whose account is still
+    // pending (Esti Affen, 15/9) must be appointable; appointing activates.
     supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, full_name, status")
       .eq("role", "junior")
-      .eq("status", "active")
+      .in("status", ["active", "pending"])
       .order("full_name"),
   ]);
 
@@ -161,66 +162,97 @@ export default async function AdminMentorsPage() {
     };
   });
 
+  // Pending-applications count for the tab label (the section itself loads
+  // its own data; the count keeps the menu honest).
+  const { count: pendingCount } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", "mentor")
+    .eq("status", "pending");
+
+  // One internal menu instead of section-after-section scrolling (the owner,
+  // 15/9: "המסך הזה לא מאורגן טוב… היה צריך תפריט פנימי").
+  const tabs = [
+    { key: "active", label: "מנטוריות פעילות", count: mentors?.length ?? 0 },
+    { key: "applications", label: "בקשות הצטרפות", count: pendingCount ?? 0 },
+    { key: "appoint", label: "מינוי מנטורית" },
+    ...(declined.length > 0 ? [{ key: "declined", label: "נדחו", count: declined.length }] : []),
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מנטוריות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול מנטוריות</h1>
       </div>
 
-      <PendingMentorApplications
-        heading="בקשות הצטרפות כמנטורית"
-        sub="אישור שולח לה מייל ופותח לה את הקהילה — בלי מנוי ובלי תשלום."
-      />
-
-      {declined.length > 0 && (
-        <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-          <h3 className="font-display text-base font-bold mb-1">נדחו כמנטוריות ({declined.length})</h3>
-          <p className="text-[12.5px] text-ink-500 mb-3">
-            נשארו בקהילה כמשתתפות רגילות. הודעה אישית נוספת אפשר לשלוח מכרטיס &quot;מייל אישי&quot; בתיק
-            החברה.
-          </p>
-          <div className="flex flex-col">
-            {declined.map((d) => (
-              <div key={d.id} className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0">
-                <Avatar size="sm" tone="pink" initials={d.avatar_initials || d.full_name.slice(0, 1)} />
-                <Link
-                  href={`/admin/members/${d.id}`}
-                  className="flex-1 font-medium text-ink-900 hover:text-brand-purple hover:underline"
-                >
-                  {d.full_name}
-                </Link>
-                <span className="text-[12px] text-ink-500 whitespace-nowrap">
-                  נדחתה ב־{d.mentor_declined_at ? new Date(d.mentor_declined_at).toLocaleDateString("he-IL") : "—"}
-                </span>
+      <JobTabs
+        tabs={tabs}
+        initialTab={(pendingCount ?? 0) > 0 ? "applications" : "active"}
+        panels={{
+          applications: (
+            <PendingMentorApplications
+              heading="בקשות הצטרפות כמנטורית"
+              sub="אישור שולח לה מייל ופותח לה את הקהילה — בלי מנוי ובלי תשלום."
+            />
+          ),
+          active: (
+            <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+              <h3 className="font-display text-base font-bold mb-1">מנטוריות פעילות ({mentors?.length ?? 0})</h3>
+              <p className="text-[12.5px] text-ink-500 mb-3">
+                הניקוד גלוי לכל הקהילה: {ANSWER_POINTS} נק&#39; על תשובה בפורום · {ASSIGNMENT_POINTS} נק&#39; על
+                ליווי שאושר · ובונוסים ידניים על תרומה (סשנים, האקתונים…).
+              </p>
+              {rows.length > 0 ? (
+                <MentorsList mentors={rows} />
+              ) : (
+                <p className="text-ink-500 text-sm">עדיין אין מנטוריות. מנים בלשונית &quot;מינוי מנטורית&quot;.</p>
+              )}
+            </div>
+          ),
+          appoint: (
+            <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+              <h3 className="font-display text-base font-bold mb-1">מינוי חברה כמנטורית</h3>
+              <p className="text-[12.5px] text-ink-500 mb-3">
+                חברה שאת רוצה להכתיר בעצמך — בלי שהיא הגישה בקשה. גם חברה שחשבונה עדיין ממתין
+                מופיעה כאן; המינוי מאשר ומפעיל אותה.
+              </p>
+              <AppointMentorPicker
+                candidates={(candidates ?? []).map((c) => ({
+                  id: c.id,
+                  name: c.full_name,
+                  pending: c.status === "pending",
+                }))}
+              />
+            </div>
+          ),
+          declined: (
+            <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
+              <h3 className="font-display text-base font-bold mb-1">נדחו כמנטוריות ({declined.length})</h3>
+              <p className="text-[12.5px] text-ink-500 mb-3">
+                נשארו בקהילה כמשתתפות רגילות. הודעה אישית נוספת אפשר לשלוח מכרטיס &quot;מייל אישי&quot; בתיק
+                החברה.
+              </p>
+              <div className="flex flex-col">
+                {declined.map((d) => (
+                  <div key={d.id} className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0">
+                    <Avatar size="sm" tone="pink" initials={d.avatar_initials || d.full_name.slice(0, 1)} />
+                    <Link
+                      href={`/admin/members/${d.id}`}
+                      className="flex-1 font-medium text-ink-900 hover:text-brand-purple hover:underline"
+                    >
+                      {d.full_name}
+                    </Link>
+                    <span className="text-[12px] text-ink-500 whitespace-nowrap">
+                      נדחתה ב־{d.mentor_declined_at ? new Date(d.mentor_declined_at).toLocaleDateString("he-IL") : "—"}
+                    </span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">מנטוריות פעילות ({mentors?.length ?? 0})</h3>
-        <p className="text-[12.5px] text-ink-500 mb-3">
-          הניקוד גלוי לכל הקהילה: {ANSWER_POINTS} נק&#39; על תשובה בפורום · {ASSIGNMENT_POINTS} נק&#39; על
-          ליווי שאושר · ובונוסים ידניים על תרומה (סשנים, האקתונים…).
-        </p>
-        {rows.length > 0 ? (
-          <MentorsList mentors={rows} />
-        ) : (
-          <p className="text-ink-500 text-sm">עדיין אין מנטוריות. בחרי חברה פעילה מהרשימה למטה.</p>
-        )}
-      </div>
-
-      <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-1">מינוי חברה כמנטורית</h3>
-        <p className="text-[12.5px] text-ink-500 mb-3">
-          חברה פעילה שאת רוצה להכתיר בעצמך — בלי שהיא הגישה בקשה.
-        </p>
-        <AppointMentorPicker
-          candidates={(candidates ?? []).map((c) => ({ id: c.id, name: c.full_name }))}
-        />
-      </div>
+            </div>
+          ),
+        }}
+      />
     </div>
   );
 }

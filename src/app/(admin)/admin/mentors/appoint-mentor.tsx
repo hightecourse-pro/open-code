@@ -2,17 +2,18 @@
 
 import { useState, useTransition } from "react";
 import { Search } from "lucide-react";
-import { setMemberRoleAction } from "@/app/(admin)/admin/actions";
+import { appointMentorAction } from "@/app/(admin)/admin/actions";
 
 /**
  * Appointing a member as a mentor, compactly: type her name, appoint in one
  * click. Replaces the 50-row button wall (the owner, 10/9: "לא נח ותופס
- * מידי הרבה מקום").
+ * מידי הרבה מקום"). Pending members are offered too (the owner, 15/9: Esti
+ * Affen — paid but pending — was unfindable); appointing one activates her.
  */
 export function AppointMentorPicker({
   candidates,
 }: {
-  candidates: { id: string; name: string }[];
+  candidates: { id: string; name: string; pending?: boolean }[];
 }) {
   const [q, setQ] = useState("");
   const [appointed, setAppointed] = useState<string | null>(null);
@@ -30,7 +31,7 @@ export function AppointMentorPicker({
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="חיפוש חברה פעילה לפי שם…"
+          placeholder="חיפוש חברה לפי שם…"
           className="w-full text-[13px] border border-ink-200 rounded-md px-3 py-2 pe-9 outline-none focus:border-brand-purple bg-white"
         />
       </div>
@@ -38,21 +39,28 @@ export function AppointMentorPicker({
         <p className="text-[12px] text-ink-400">הקלידי שם — המינוי בלחיצה אחת ליד ההתאמה.</p>
       )}
       {needle && matches.length === 0 && (
-        <p className="text-[12.5px] text-ink-500">לא נמצאה חברה פעילה בשם הזה.</p>
+        <p className="text-[12.5px] text-ink-500">לא נמצאה חברה בשם הזה.</p>
       )}
       {matches.map((c) => (
         <div
           key={c.id}
           className="flex items-center justify-between gap-3 py-1.5 border-b border-ink-100 last:border-b-0 text-[13px]"
         >
-          <span className="font-medium text-ink-900 truncate">{c.name}</span>
+          <span className="font-medium text-ink-900 truncate">
+            {c.name}
+            {c.pending && (
+              <span className="ms-2 text-[11px] font-semibold text-[#8C5E0E] bg-tint-warm rounded-full px-2 py-0.5">
+                חשבון ממתין — המינוי יפעיל אותו
+              </span>
+            )}
+          </span>
           <button
             type="button"
             disabled={pending}
             onClick={() => {
               if (!confirm(`למנות את ${c.name} כמנטורית? 👑`)) return;
               start(() =>
-                Promise.resolve(setMemberRoleAction(c.id, "mentor")).then(() => setAppointed(c.name))
+                Promise.resolve(appointMentorAction(c.id)).then(() => setAppointed(c.name))
               );
             }}
             className="shrink-0 text-[12.5px] font-semibold text-brand-purple hover:underline cursor-pointer disabled:opacity-50"

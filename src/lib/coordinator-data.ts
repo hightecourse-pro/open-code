@@ -135,8 +135,15 @@ export interface CoordinatorJob {
   status: string;
   pipeline_status: string;
   published_at: string | null;
-  /** HER graduates who applied — names only. */
-  applicants: { id: string; full_name: string; status: string }[];
+  /** Company only for market jobs — client names of OUR jobs stay private,
+   *  exactly like the member board. */
+  company: string | null;
+  location: string | null;
+  employment_type: string | null;
+  /** The job description as plain text (the owner, 15/9: "לא כתוב את פרטי המשרה"). */
+  descriptionText: string;
+  /** HER graduates who applied. sentByUs = we forwarded her to the employer. */
+  applicants: { id: string; full_name: string; status: string; sentByUs: boolean }[];
 }
 
 /**
@@ -149,7 +156,7 @@ export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<
   const admin = createAdminClient();
   const { data: apps } = await admin
     .from("applications")
-    .select("job_id, applicant_id, status")
+    .select("job_id, applicant_id, status, sent_to_client_at")
     .in("applicant_id", graduateIds)
     .neq("status", "draft");
   if (!apps?.length) return [];
@@ -158,13 +165,14 @@ export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<
   const [{ data: jobs }, { data: names }] = await Promise.all([
     admin
       .from("jobs")
-      .select("id, title, status, pipeline_status, published_at")
+      .select("id, title, status, pipeline_status, published_at, source, company, location, employment_type, description, description_html")
       .in("id", jobIds)
       .neq("pipeline_status", "draft")
       .order("published_at", { ascending: false, nullsFirst: false }),
     admin.from("profiles").select("id, full_name").in("id", [...new Set(apps.map((a) => a.applicant_id))]),
   ]);
   const nameOf = new Map((names ?? []).map((p) => [p.id, p.full_name]));
+  const { htmlToPlainText } = await import("@/lib/rich-text");
 
   return (jobs ?? [])
     .map((j) => ({
@@ -173,9 +181,20 @@ export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<
       status: j.status,
       pipeline_status: j.pipeline_status,
       published_at: j.published_at,
+      company: j.source !== "ours" ? (j.company ?? null) : null,
+      location: j.location ?? null,
+      employment_type: j.employment_type ?? null,
+      descriptionText: j.description_html
+        ? htmlToPlainText(j.description_html)
+        : (j.description ?? ""),
       applicants: apps
         .filter((a) => a.job_id === j.id)
-        .map((a) => ({ id: a.applicant_id, full_name: nameOf.get(a.applicant_id) ?? "בוגרת", status: a.status })),
+        .map((a) => ({
+          id: a.applicant_id,
+          full_name: nameOf.get(a.applicant_id) ?? "בוגרת",
+          status: a.status,
+          sentByUs: !!a.sent_to_client_at || ["sent", "interview", "exam", "hired"].includes(a.status),
+        })),
     }))
     .filter((j) => j.applicants.length > 0);
 }

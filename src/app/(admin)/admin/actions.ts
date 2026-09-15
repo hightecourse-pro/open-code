@@ -56,6 +56,29 @@ export async function setMemberRoleAction(id: string, role: UserRole): Promise<v
 }
 
 /**
+ * Crown a member as mentor from the picker (the owner, 15/9: Esti Affen was
+ * invisible — a paid member whose account is still pending). The appointment
+ * IS the approval, so a pending account goes active with it; her tier is left
+ * untouched — a paying member keeps her subscription.
+ */
+export async function appointMentorAction(id: string): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: p } = await admin
+    .from("profiles")
+    .select("id, role, status")
+    .eq("id", id)
+    .maybeSingle();
+  if (!p || p.role !== "junior" || !["active", "pending"].includes(p.status)) return;
+  await admin
+    .from("profiles")
+    .update({ role: "mentor", ...(p.status === "pending" ? { status: "active" } : {}) })
+    .eq("id", id);
+  revalidatePath("/admin/mentors");
+  revalidatePath("/admin/members");
+}
+
+/**
  * Resolve or dismiss a report. Resolving ("טופל") also removes the reported
  * content from the community — that's what handling a report means.
  */
