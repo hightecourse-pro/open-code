@@ -814,15 +814,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       // the reset. Enter on an earlier step advances instead of submitting.
       onSubmit={(e) => {
         e.preventDefault();
-        if (cur < totalSteps - 1 || expChoice === null) {
+        // The mid-step "שמירת השינויים" button (15/9) declares itself via the
+        // submitter — everything else (Enter included) keeps advancing.
+        const saveNow =
+          (e.nativeEvent as SubmitEvent).submitter?.getAttribute("data-save-now") === "1";
+        if (!saveNow && (cur < totalSteps - 1 || expChoice === null)) {
           next();
           return;
         }
-        if (!validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
+        if (cur > 0 && !validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
         const fd = new FormData(e.currentTarget);
         // The CV gate, client-side too: the server refuses without one, but the
-        // red frame here beats a round trip.
-        if (requireCv && !(fd.get("cv_file") instanceof File && (fd.get("cv_file") as File).size > 0)) {
+        // red frame here beats a round trip. (Mid-step saves of a completed
+        // profile never require a CV — she already has one.)
+        if (!saveNow && requireCv && !(fd.get("cv_file") instanceof File && (fd.get("cv_file") as File).size > 0)) {
           setCvError(true);
           return;
         }
@@ -1030,7 +1035,13 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             {/* Editing an already-complete profile: a REAL save on every step
                 (15/9) — "מילאתי ולחצתי שמירה" must mean saved, from anywhere. */}
             {saveEveryStep && expChoice !== null && (
-              <Button key="save-now" type="submit" variant="secondary" disabled={pending}>
+              <Button
+                key="save-now"
+                type="submit"
+                variant="secondary"
+                disabled={pending}
+                {...({ "data-save-now": "1" } as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+              >
                 {pending ? "שומר…" : "שמירת השינויים ✓"}
               </Button>
             )}
