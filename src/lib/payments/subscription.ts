@@ -229,3 +229,22 @@ export async function kevaIdsFor(profileId: string): Promise<string[]> {
   }
   return seen;
 }
+
+/**
+ * Did this renewal-off state come from a CHARGE-LIMITED Nedarim keva (the
+ * 14/9 sync) rather than her own cancel click? Member-facing copy must never
+ * say "ביטלת" for these (נחמה וולפא, 15/9).
+ */
+export async function renewalOffFromLimitedKeva(sub: {
+  canceled_at: string | null;
+  provider_sub_id: string | null;
+}): Promise<boolean> {
+  if (!sub.canceled_at || !sub.provider_sub_id?.startsWith("nedarim-keva-")) return false;
+  const kevaId = sub.provider_sub_id.replace("nedarim-keva-", "");
+  const { data } = await createAdminClient()
+    .from("nedarim_kevas")
+    .select("end_date")
+    .eq("keva_id", kevaId)
+    .maybeSingle();
+  return !!data?.end_date;
+}

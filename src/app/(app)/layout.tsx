@@ -185,12 +185,15 @@ export default async function AuthenticatedLayout({
 
   // She turned auto-renewal off but is still inside the paid period — a quiet
   // standing reminder of the end date, with the way back one click away.
+  // A charge-limited keva gets its own neutral wording ("ביטלת" alarmed
+  // נחמה וולפא, 15/9 — she never canceled anything).
   let cancelNotice: string | null = null;
+  let cancelNoticeLimitedKeva = false;
   if (subscriber && profile.role === "junior") {
     const supabase = await createClient();
     const { data: sub } = await supabase
       .from("subscriptions")
-      .select("status, canceled_at, current_period_end")
+      .select("status, canceled_at, current_period_end, provider_sub_id")
       .eq("profile_id", profile.id)
       .maybeSingle();
     if (sub?.status === "active" && sub.canceled_at && sub.current_period_end) {
@@ -199,6 +202,8 @@ export default async function AuthenticatedLayout({
         month: "long",
         timeZone: "Asia/Jerusalem",
       }).format(new Date(sub.current_period_end));
+      const { renewalOffFromLimitedKeva } = await import("@/lib/payments/subscription");
+      cancelNoticeLimitedKeva = await renewalOffFromLimitedKeva(sub);
     }
   }
 
@@ -226,7 +231,19 @@ export default async function AuthenticatedLayout({
           aspects={feedbackAspects}
         />
       )}
-      {cancelNotice && (
+      {cancelNotice && cancelNoticeLimitedKeva && (
+        <Link
+          href="/subscription"
+          className="flex items-center gap-2.5 bg-tint-purple/50 border border-[#DDC9EC] rounded-md p-3 px-4 mb-5 text-[13.5px] text-brand-purple hover:border-brand-purple transition-colors"
+        >
+          <span className="flex-1">
+            המנוי שלך משולם עד <b>{cancelNotice}</b> לפי הוראת הקבע שלך — אפשר להמשיך אותו
+            בלחיצה 💜
+          </span>
+          <span className="font-display font-semibold whitespace-nowrap">למנוי שלי ←</span>
+        </Link>
+      )}
+      {cancelNotice && !cancelNoticeLimitedKeva && (
         <Link
           href="/profile"
           className="flex items-center gap-2.5 bg-tint-warm border border-[#F8D98C] rounded-md p-3 px-4 mb-5 text-[13.5px] text-[#8C5E0E] hover:border-[#E5A93C] transition-colors"

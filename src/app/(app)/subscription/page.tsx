@@ -47,15 +47,9 @@ export default async function SubscriptionPage() {
   // not something SHE did — the card must not say "ביטלת" (the owner, 16/9,
   // after נחמה וולפא was alarmed by exactly that wording).
   let limitedKeva = false;
-  if (subscription?.canceled_at && subscription.provider_sub_id?.startsWith("nedarim-keva-")) {
-    const kevaId = subscription.provider_sub_id.replace("nedarim-keva-", "");
-    const { createAdminClient } = await import("@/lib/supabase/admin");
-    const { data: keva } = await createAdminClient()
-      .from("nedarim_kevas")
-      .select("end_date")
-      .eq("keva_id", kevaId)
-      .maybeSingle();
-    limitedKeva = !!keva?.end_date;
+  if (subscription?.canceled_at) {
+    const { renewalOffFromLimitedKeva } = await import("@/lib/payments/subscription");
+    limitedKeva = await renewalOffFromLimitedKeva(subscription);
   }
 
   return (
