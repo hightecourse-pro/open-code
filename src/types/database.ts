@@ -334,6 +334,29 @@ export interface Database {
         Relationships: [];
       };
       /** Central placements registry — community + external, with billing trail. */
+      /** רכזת ↔ צוות chat + job recommendations (16/9). Service-role only. */
+      coordinator_messages: {
+        Row: {
+          id: string;
+          contact_id: string;
+          sender: string;
+          body: string;
+          team_author_name: string | null;
+          read_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          sender: string;
+          body: string;
+          team_author_name?: string | null;
+          read_at?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["coordinator_messages"]["Insert"]>;
+        Relationships: [];
+      };
       hires: {
         Row: {
           id: string;

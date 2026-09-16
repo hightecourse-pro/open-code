@@ -112,3 +112,93 @@ export async function saveCoordinatorReview(
   revalidatePath(`/coordinator/member/${profileId}`);
   return { ok: true };
 }
+
+export type ChatState = { error?: string; ok?: boolean };
+
+/** She writes to the team — any time (the owner, 16/9). */
+export async function sendCoordinatorMessage(
+  _prev: ChatState,
+  formData: FormData
+): Promise<ChatState> {
+  const me = await getCoordinator();
+  if (!me) redirect("/coordinator/login");
+  const body = String(formData.get("body") ?? "").trim().slice(0, 4000);
+  if (!body) return { error: "כתבי הודעה קודם 🙂" };
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("coordinator_messages")
+    .insert({ contact_id: me.id, sender: "coordinator", body });
+  if (error) return { error: "ההודעה לא נשלחה — נסי שוב." };
+
+  const { raiseAlert } = await import("@/lib/alerts");
+  await raiseAlert({
+    kind: "coordinator_message",
+    severity: "info",
+    title: `הודעה חדשה מהרכזת ${me.full_name}`,
+    body: body.slice(0, 200),
+    context: { link: "/admin/coordinators?tab=chats" },
+  });
+  revalidatePath("/coordinator/chat");
+  return { ok: true };
+}
+
+/**
+ * A graduate recommendation for a job we have not submitted anyone to yet
+ * (the owner, 16/9) — lands in her chat thread + the alerts center.
+ */
+export async function sendJobRecommendation(
+  jobId: string,
+  _prev: ChatState,
+  formData: FormData
+): Promise<ChatState> {
+  const me = await getCoordinator();
+  if (!me) redirect("/coordinator/login");
+
+  const graduateId = String(formData.get("graduate_id") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim().slice(0, 2000);
+  if (!graduateId && !note) return { error: "בחרי בוגרת או כתבי כמה מילים 🙂" };
+
+  const admin = createAdminClient();
+  const { data: job } = await admin
+    .from("jobs")
+    .select("id, title")
+    .eq("id", jobId)
+    .maybeSingle();
+  if (!job) return { error: "המשרה לא נמצאה." };
+
+  // The recommended graduate must be HERS.
+  let gradName = "";
+  if (graduateId) {
+    const { loadGraduates } = await import("@/lib/coordinator-data");
+    const grads = await loadGraduates(me.institutions);
+    const grad = grads.find((g) => g.id === graduateId);
+    if (!grad) return { error: "הבוגרת לא נמצאה ברשימה שלך." };
+    gradName = grad.full_name;
+  }
+
+  const body = [
+    `💜 המלצה למשרת «${job.title}»`,
+    gradName ? `ממליצה על: ${gradName}` : null,
+    note || null,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const { error } = await admin
+    .from("coordinator_messages")
+    .insert({ contact_id: me.id, sender: "coordinator", body });
+  if (error) return { error: "ההמלצה לא נשלחה — נסי שוב." };
+
+  const { raiseAlert } = await import("@/lib/alerts");
+  await raiseAlert({
+    kind: "coordinator_recommendation",
+    severity: "info",
+    title: `המלצה מהרכזת ${me.full_name} למשרת ${job.title}`,
+    body: (gradName ? `ממליצה על ${gradName}. ` : "") + note.slice(0, 160),
+    context: { link: "/admin/coordinators?tab=chats" },
+  });
+  revalidatePath("/coordinator/jobs");
+  revalidatePath("/coordinator/chat");
+  return { ok: true };
+}
