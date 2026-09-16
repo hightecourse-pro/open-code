@@ -37,11 +37,20 @@ export default async function SubscriptionPage() {
   const [{ data: subscription }, pricing] = await Promise.all([
     supabase
       .from("subscriptions")
-      .select("status, current_period_end, canceled_at")
+      .select("status, current_period_end, canceled_at, provider_sub_id")
       .eq("profile_id", profile.id)
       .maybeSingle(),
     getPricing(),
   ]);
+
+  // Renewal-off that came from a LIMITED KEVA (charge-limited in Nedarim) is
+  // not something SHE did — the card must not say "ביטלת" (the owner, 16/9,
+  // after נחמה וולפא was alarmed by exactly that wording).
+  let limitedKeva = false;
+  if (subscription?.canceled_at) {
+    const { renewalOffFromLimitedKeva } = await import("@/lib/payments/subscription");
+    limitedKeva = await renewalOffFromLimitedKeva(subscription);
+  }
 
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
@@ -58,6 +67,7 @@ export default async function SubscriptionPage() {
           status={subscription.status}
           periodEnd={subscription.current_period_end}
           canceledAt={subscription.canceled_at}
+          limitedKeva={limitedKeva}
           priceShekels={Math.round(pricing.monthlyAgorot / 100)}
         />
       ) : (

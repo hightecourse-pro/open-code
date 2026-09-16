@@ -27,11 +27,19 @@ export function SubscriptionCard({
   status,
   periodEnd,
   canceledAt,
+  limitedKeva = false,
   priceShekels,
 }: {
   status: string;
   periodEnd: string | null;
   canceledAt: string | null;
+  /**
+   * The renewal-off state came from a charge-limited standing order in
+   * Nedarim, NOT from her own cancel click — the copy must never say
+   * "ביטלת" (נחמה וולפא, 15/9: clicked resume in alarm over a cancellation
+   * she never made).
+   */
+  limitedKeva?: boolean;
   priceShekels: number;
 }) {
   const router = useRouter();
@@ -133,7 +141,23 @@ export function SubscriptionCard({
         </Link>
       )}
 
-      {active && canceledAt && (
+      {active && canceledAt && limitedKeva && (
+        <>
+          <Alert variant="info">
+            המנוי שלך משולם עד <b>{endDate ?? "סוף התקופה ששולמה"}</b> לפי הוראת הקבע שלך 💜
+          </Alert>
+          <button
+            type="button"
+            onClick={doResume}
+            disabled={pending}
+            className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple hover:underline w-fit disabled:opacity-50"
+          >
+            <RotateCcw size={14} /> {pending ? "רגע…" : "להמשיך את המנוי גם אחרי ✓"}
+          </button>
+        </>
+      )}
+
+      {active && canceledAt && !limitedKeva && (
         <>
           <Alert variant="warn">
             ביטלת את חידוש המנוי — הוא יישאר פעיל עד <b>{endDate ?? "סוף התקופה ששולמה"}</b> ואז ייסגר.

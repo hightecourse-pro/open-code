@@ -454,7 +454,9 @@ export default async function JobsPage({
               <h2 className="font-display text-[16px] font-black text-ink-1000">
                 משרות בשבילך מקוד פתוח 💜
                 <span className="text-[12px] font-normal text-ink-500 ms-2">
-                  פורסמו לקבוצה מצומצמת שמתאימה — ואת בפנים
+                  {/* Every job goes to everyone now (the owner, 14/9) — the
+                      old "קבוצה מצומצמת" line overpromised a match (16/9). */}
+                  מוזמנת להגיש אם את מתאימה לדרישות המשרה ומעוניינת בה
                 </span>
               </h2>
             }

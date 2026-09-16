@@ -9,6 +9,7 @@ import {
   deleteHire,
   setHireAmount,
   setHireBanner,
+  setHireSeminary,
   setHireInstitution,
   setHirePayer,
   setHireStatus,
@@ -28,6 +29,7 @@ export interface HireRow {
   amount: number | null;
   payer: string | null;
   payer_institution: string | null;
+  seminary: string | null;
   hired_at: string;
   created_at: string;
   client_id: string | null;
@@ -73,10 +75,13 @@ export interface ClientOption {
 export function HiresTable({
   hires,
   clients,
+  seminaryOptions = [],
   defaultDate,
 }: {
   hires: HireRow[];
   clients: ClientOption[];
+  /** study_place labels — suggestions for the seminary editor (free text ok). */
+  seminaryOptions?: string[];
   defaultDate: string;
 }) {
   const [addState, add, adding] = useActionState<HireFormState, FormData>(addExternalHire, {});
@@ -111,6 +116,7 @@ export function HiresTable({
           h.full_name.includes(needle) ||
           (h.company ?? "").includes(needle) ||
           (h.email ?? "").includes(needle) ||
+          (h.seminary ?? "").includes(needle) ||
           (h.payer_institution ?? "").includes(needle))
     );
     const dir = sortAsc ? 1 : -1;
@@ -253,6 +259,11 @@ export function HiresTable({
 
       {/* Stacked rows — everything visible, nothing scrolls sideways
           (the owner, 3/9: "גורם גלילה משמאל לימין"). */}
+      <datalist id="hire-seminaries">
+        {seminaryOptions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
       <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm divide-y divide-ink-100">
         {filtered.map((h) => (
           <HireLine key={h.id} h={h} clients={clients} />
@@ -272,6 +283,9 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
   const [amount, setAmount] = useState(h.amount != null ? String(h.amount) : "");
   const [payer, setPayer] = useState(h.payer ?? "");
   const [institution, setInstitution] = useState(h.payer_institution ?? "");
+  // הסמינר — בולט על השורה, נערך בלחיצה (the owner, 15/9).
+  const [seminary, setSeminary] = useState(h.seminary ?? "");
+  const [seminaryEdit, setSeminaryEdit] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState({
     full_name: h.full_name,
@@ -299,6 +313,41 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
         <span className={cn("text-[10.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap", membership.cls)}>
           {membership.label}
         </span>
+        {seminaryEdit ? (
+          <input
+            autoFocus
+            list="hire-seminaries"
+            value={seminary}
+            onChange={(e) => setSeminary(e.target.value)}
+            onBlur={() => {
+              setSeminaryEdit(false);
+              start(() => void setHireSeminary(h.id, seminary));
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              if (e.key === "Escape") {
+                setSeminary(h.seminary ?? "");
+                setSeminaryEdit(false);
+              }
+            }}
+            placeholder="שם הסמינר…"
+            className="h-7 w-56 max-w-full border border-brand-purple rounded-full px-3 text-[12px] bg-white"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setSeminaryEdit(true)}
+            title="עדכון הסמינר"
+            className={cn(
+              "text-[11.5px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap border transition-colors cursor-pointer",
+              seminary
+                ? "bg-tint-purple text-brand-purple border-[#DDC9EC] hover:border-brand-purple"
+                : "bg-tint-warm text-[#8C5E0E] border-[#F0DCA8] hover:border-[#C99A2E]"
+            )}
+          >
+            🎓 {seminary || "חסר סמינר — עדכני"}
+          </button>
+        )}
         {h.company && <span className="text-[12.5px] text-ink-700">{h.company}</span>}
         {h.job_type && JOB_TYPE_HE[h.job_type] && (
           <span className="text-[11px] text-ink-500">{JOB_TYPE_HE[h.job_type]}</span>
