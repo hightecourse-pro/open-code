@@ -631,6 +631,26 @@ export function jobPublishedEmail(
   };
 }
 
+/**
+ * A chat message sent from a job's review center (the owner, 16/9) — the
+ * email is a NUDGE with her exact copy; the message itself waits in the chat.
+ */
+export function jobChatNudgeEmail(
+  name: string | undefined,
+  jobTitle: string,
+  chatUrl: string
+): BuiltEmail {
+  return {
+    subject: "יש לך הודעה מקוד פתוח",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}יש לך הודעה מקוד פתוח 💜`,
+      lines: [`בקשר למשרה - ${escapeHtml(jobTitle)}`, "המשך ההתכתבות בצ'אט"],
+      ctaText: "לצ'אט",
+      ctaUrl: chatUrl,
+    }),
+  };
+}
+
 /** The coordinator-portal OTP (the owner, 14/9: "כניסה ב-OTP בלבד"). */
 export function coordinatorOtpEmail(code: string): BuiltEmail {
   return {
