@@ -203,3 +203,24 @@ export async function sendJobRecommendation(
   revalidatePath("/coordinator/chat");
   return { ok: true };
 }
+
+/**
+ * Seminary tab switch (the owner, 16/9: "רכזת שיש לה כמה סמינרים - מופרדים
+ * לגמרי בכרטיסיות"). The choice lives in a path-scoped cookie so every
+ * portal page scopes itself to ONE seminary.
+ */
+export async function switchInstitution(institution: string, path: string): Promise<void> {
+  const me = await getCoordinator();
+  if (!me) redirect("/coordinator/login");
+  if (!me.institutions.includes(institution)) redirect("/coordinator");
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  jar.set("oc_coord_inst", institution, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/coordinator",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+  redirect(path.startsWith("/coordinator") ? path : "/coordinator");
+}

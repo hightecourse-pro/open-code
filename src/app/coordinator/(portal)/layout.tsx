@@ -6,6 +6,8 @@ import { getCoordinator } from "@/lib/coordinators";
 import { loadOptionLabels } from "@/lib/coordinator-data";
 import { coordinatorLogout, exitAdminView } from "../actions";
 import { CoordinatorNav } from "./nav";
+import { InstitutionTabs } from "./institution-tabs";
+import { activeInstitution } from "./active-institution";
 
 /**
  * The coordinator portal shell (the owner, 15/9: "תארגן את המסך בצורה נוחה
@@ -25,6 +27,9 @@ export default async function CoordinatorPortalLayout({
   const labels = await loadOptionLabels();
   const placeLabel = (v: string) => labels.places.get(v) ?? v;
   const adminView = (await cookies()).get("oc_coord_admin")?.value === "1";
+  // Multi-seminary coordinators work one seminary at a time (the owner,
+  // 16/9: "מופרדים לגמרי בכרטיסיות") — the tabs live above the section nav.
+  const active = await activeInstitution(me);
 
   return (
     <div className="min-h-screen bg-ink-50" dir="rtl">
@@ -51,7 +56,7 @@ export default async function CoordinatorPortalLayout({
               שלום {me.full_name.split(" ")[0]} 💜
             </div>
             <div className="text-[11.5px] text-ink-500 truncate">
-              {me.institutions.map(placeLabel).join(" · ")}
+              {me.institutions.length > 1 ? placeLabel(active) : me.institutions.map(placeLabel).join(" · ")}
             </div>
           </div>
           <form action={coordinatorLogout}>
@@ -60,6 +65,14 @@ export default async function CoordinatorPortalLayout({
             </Button>
           </form>
         </div>
+        {me.institutions.length > 1 && (
+          <div className="max-w-4xl mx-auto px-4 border-t border-ink-100">
+            <InstitutionTabs
+              institutions={me.institutions.map((v) => ({ value: v, label: placeLabel(v) }))}
+              active={active}
+            />
+          </div>
+        )}
         <div className="max-w-4xl mx-auto px-4">
           <CoordinatorNav />
         </div>

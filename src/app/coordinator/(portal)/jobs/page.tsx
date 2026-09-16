@@ -10,6 +10,7 @@ import {
   type CoordinatorJob,
 } from "@/lib/coordinator-data";
 import { RecommendForm } from "./recommend-form";
+import { activeInstitution } from "../active-institution";
 
 export const metadata: Metadata = { title: "משרות והגשות" };
 export const dynamic = "force-dynamic";
@@ -64,7 +65,8 @@ export default async function CoordinatorJobsPage() {
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");
 
-  const graduates = await loadGraduates(me.institutions);
+  const active = await activeInstitution(me);
+  const graduates = await loadGraduates(active ? [active] : []);
   const jobs = await loadJobsWithHerApplicants(graduates.map((g) => g.id));
   const gradOptions = graduates
     .map((g) => ({ id: g.id, name: g.full_name }))
