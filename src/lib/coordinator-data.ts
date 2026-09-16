@@ -266,20 +266,46 @@ export interface CoordinatorHire {
   hired_at: string | null;
 }
 
-/** Placements of HER graduates — names and dates; workplaces stay private. */
-export async function loadHires(graduateIds: string[]): Promise<CoordinatorHire[]> {
-  if (graduateIds.length === 0) return [];
+/**
+ * Placements of her institutions — names and dates; workplaces stay private.
+ * Two roads in (the owner, 16/9: "רואה רק גיוס אחד למרות שבמערכת יש יותר"):
+ * a hire linked to one of HER graduates, or any hire whose own seminary
+ * field carries her institution — covering external hires and members whose
+ * questionnaire never named the seminary.
+ */
+export async function loadHires(
+  graduateIds: string[],
+  institutions: string[] = []
+): Promise<CoordinatorHire[]> {
+  if (graduateIds.length === 0 && institutions.length === 0) return [];
   const admin = createAdminClient();
-  const { data } = await admin
-    .from("hires")
-    .select("full_name, hired_at, profile_id")
-    .in("profile_id", graduateIds)
-    .order("hired_at", { ascending: false, nullsFirst: false });
+  const [{ data: byGrad }, { data: bySeminary }] = await Promise.all([
+    graduateIds.length
+      ? admin
+          .from("hires")
+          .select("id, full_name, hired_at, profile_id")
+          .in("profile_id", graduateIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string; hired_at: string | null; profile_id: string | null }[] }),
+    institutions.length
+      ? admin
+          .from("hires")
+          .select("id, full_name, hired_at, profile_id")
+          .in("seminary", institutions)
+      : Promise.resolve({ data: [] as { id: string; full_name: string; hired_at: string | null; profile_id: string | null }[] }),
+  ]);
+  const seen = new Set<string>();
+  const rows = [...(byGrad ?? []), ...(bySeminary ?? [])].filter((h) => {
+    if (seen.has(h.id)) return false;
+    seen.add(h.id);
+    return true;
+  });
   const nameOf = await displayNamesOf(
-    [...new Set((data ?? []).map((h) => h.profile_id).filter((v): v is string => !!v))]
+    [...new Set(rows.map((h) => h.profile_id).filter((v): v is string => !!v))]
   );
-  return (data ?? []).map((h) => ({
-    full_name: (h.profile_id ? nameOf.get(h.profile_id) : null) ?? h.full_name,
-    hired_at: h.hired_at,
-  }));
+  return rows
+    .map((h) => ({
+      full_name: (h.profile_id ? nameOf.get(h.profile_id) : null) ?? h.full_name,
+      hired_at: h.hired_at,
+    }))
+    .sort((a, b) => (b.hired_at ?? "").localeCompare(a.hired_at ?? ""));
 }

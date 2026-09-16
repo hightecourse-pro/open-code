@@ -20,7 +20,7 @@ export default async function CoordinatorHiresPage() {
   if (!me) redirect("/coordinator/login");
 
   const graduates = await loadGraduates(me.institutions);
-  const hires = await loadHires(graduates.map((g) => g.id));
+  const hires = await loadHires(graduates.map((g) => g.id), me.institutions);
 
   return (
     <section className="bg-white border border-ink-200 rounded-[16px] p-5 shadow-sm">
