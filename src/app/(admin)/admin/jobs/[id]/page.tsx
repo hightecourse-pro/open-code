@@ -261,7 +261,9 @@ export default async function AdminJobPage({
     const { data: coordRows } = ids.length
       ? await coordAdmin
           .from("coordinator_reviews")
-          .select("profile_id, contact_id, communication, talent, note, found_job, found_job_place")
+          .select(
+            "profile_id, contact_id, communication, talent, talent_label, communication_label, note, found_job, found_job_place"
+          )
           .in("profile_id", ids)
       : { data: [] };
     const contactIds = [...new Set((coordRows ?? []).map((r) => r.contact_id))];
@@ -271,17 +273,28 @@ export default async function AdminJobPage({
     const coordNameOf = new Map((coordContacts ?? []).map((c) => [c.id, c.full_name]));
     for (const r of coordRows ?? []) {
       // Empty shells (a row saved with nothing in it) don't earn a chip.
-      if (r.communication === null && r.talent === null && !r.note && r.found_job === null) continue;
-      const l = coordReviewsOf.get(r.profile_id) ?? [];
+      if (
+        r.communication === null &&
+        r.talent === null &&
+        !r.note &&
+        r.found_job === null &&
+        !r.talent_label &&
+        !r.communication_label
+      )
+        continue;
+      const l = coordReviewsOf.get(r.profile_id!) ?? [];
       l.push({
         coordinator: coordNameOf.get(r.contact_id) ?? "רכזת",
+        contactId: r.contact_id,
         communication: r.communication,
         talent: r.talent,
+        talentLabel: r.talent_label,
+        communicationLabel: r.communication_label,
         note: r.note,
         foundJob: r.found_job,
         foundJobPlace: r.found_job_place,
       });
-      coordReviewsOf.set(r.profile_id, l);
+      coordReviewsOf.set(r.profile_id!, l);
     }
   }
 

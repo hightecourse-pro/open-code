@@ -5,10 +5,12 @@ import { useActionState } from "react";
 import { Eye, Mail, Pencil, Phone, Plus, Send, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Checkbox, Field, Input, Textarea } from "@/components/ui";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
+import { cn } from "@/lib/utils";
 import {
   deleteContact,
   saveContact,
   sendContactEmail,
+  setContactPortalEnabled,
   viewAsCoordinator,
   type ContactEmailState,
   type ContactFormState,
@@ -17,9 +19,12 @@ import {
 export interface AdminContact {
   id: string;
   full_name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
-  institutions: string[];
+  notes: string | null;
+  portal_enabled: boolean;
+  /** institution value → does she manage its reviews. */
+  institutions: { value: string; manages: boolean }[];
   reviewCount: number;
   emails: { id: string; subject: string | null; body: string; created_at: string }[];
 }
@@ -43,6 +48,14 @@ function ContactForm({
   onDone: () => void;
 }) {
   const [state, action, pending] = useActionState<ContactFormState, FormData>(saveContact, {});
+  // Controlled institution set so each checked one can show its own
+  // "מנהלת חוות דעת" sub-toggle (the owner, 16/9).
+  const [selected, setSelected] = useState<Set<string>>(
+    () => new Set((contact?.institutions ?? []).map((i) => i.value))
+  );
+  const [manages, setManages] = useState<Set<string>>(
+    () => new Set((contact?.institutions ?? []).filter((i) => i.manages).map((i) => i.value))
+  );
   useEffect(() => {
     if (state.ok) onDone();
   }, [state.ok, onDone]);
@@ -55,25 +68,64 @@ function ContactForm({
         <Field label="שם מלא" htmlFor="ct-name">
           <Input id="ct-name" name="full_name" required defaultValue={contact?.full_name ?? ""} />
         </Field>
-        <Field label="מייל (איתו היא נכנסת)" htmlFor="ct-email">
-          <Input id="ct-email" name="email" type="email" dir="ltr" required defaultValue={contact?.email ?? ""} />
+        <Field label="מייל (איתו היא נכנסת — אפשר להשלים אחר כך)" htmlFor="ct-email">
+          <Input id="ct-email" name="email" type="email" dir="ltr" defaultValue={contact?.email ?? ""} />
         </Field>
         <Field label="טלפון" htmlFor="ct-phone">
           <Input id="ct-phone" name="phone" dir="ltr" defaultValue={contact?.phone ?? ""} />
         </Field>
       </div>
+      <Field label="הערות (פנימי)" htmlFor="ct-notes">
+        <Textarea id="ct-notes" name="notes" rows={2} maxLength={2000} defaultValue={contact?.notes ?? ""} />
+      </Field>
       <div>
-        <div className="t-label text-ink-700 mb-1.5">המוסדות שלה</div>
+        <div className="t-label text-ink-700 mb-1.5">
+          המוסדות שלה — ולצד כל מוסד: האם היא מנהלת את חוות הדעת שלו
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-          {institutionOptions.map((o) => (
-            <Checkbox
-              key={o.value}
-              name="institutions"
-              value={o.value}
-              defaultChecked={contact?.institutions.includes(o.value) ?? false}
-              label={o.label}
-            />
-          ))}
+          {institutionOptions.map((o) => {
+            const on = selected.has(o.value);
+            return (
+              <div key={o.value} className="flex items-center gap-2 flex-wrap">
+                <Checkbox
+                  name="institutions"
+                  value={o.value}
+                  checked={on}
+                  onChange={(e) => {
+                    setSelected((prev) => {
+                      const next = new Set(prev);
+                      if (e.target.checked) next.add(o.value);
+                      else next.delete(o.value);
+                      return next;
+                    });
+                    if (e.target.checked)
+                      setManages((prev) => new Set(prev).add(o.value));
+                  }}
+                  label={o.label}
+                />
+                {on && (
+                  <label className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-[#8C5E0E] bg-tint-warm rounded-full px-2 py-0.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="manages"
+                      value={o.value}
+                      checked={manages.has(o.value)}
+                      onChange={(e) =>
+                        setManages((prev) => {
+                          const next = new Set(prev);
+                          if (e.target.checked) next.add(o.value);
+                          else next.delete(o.value);
+                          return next;
+                        })
+                      }
+                      className="accent-[#8C5E0E]"
+                    />
+                    מנהלת חוות דעת
+                  </label>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -147,11 +199,18 @@ export function ContactsManager({
               <>
                 <div className="flex items-start gap-3 flex-wrap">
                   <div className="flex-1 min-w-[220px]">
-                    <div className="font-display font-bold text-[16px] text-ink-1000">{c.full_name}</div>
+                    <div className="font-display font-bold text-[16px] text-ink-1000 flex items-center gap-2">
+                      {c.full_name}
+                      {!c.portal_enabled && <Badge variant="gray">כניסה כבויה</Badge>}
+                    </div>
                     <div className="flex items-center gap-3 flex-wrap text-[12.5px] text-ink-600 mt-0.5">
-                      <a href={`mailto:${c.email}`} dir="ltr" className="inline-flex items-center gap-1 hover:text-brand-purple">
-                        <Mail size={13} /> {c.email}
-                      </a>
+                      {c.email ? (
+                        <a href={`mailto:${c.email}`} dir="ltr" className="inline-flex items-center gap-1 hover:text-brand-purple">
+                          <Mail size={13} /> {c.email}
+                        </a>
+                      ) : (
+                        <span className="text-[#8C5E0E] font-semibold">בלי מייל — לא יכולה להיכנס עדיין</span>
+                      )}
                       {c.phone && (
                         <span dir="ltr" className="inline-flex items-center gap-1">
                           <Phone size={13} /> {c.phone}
@@ -159,16 +218,37 @@ export function ContactsManager({
                       )}
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                      {c.institutions.map((v) => (
-                        <Badge key={v} variant="purple">
-                          {labelOf.get(v) ?? v}
+                      {c.institutions.map((i) => (
+                        <Badge key={i.value} variant="purple">
+                          {labelOf.get(i.value) ?? i.value}
+                          {i.manages && <span title="מנהלת את חוות הדעת"> ⭐</span>}
                         </Badge>
                       ))}
                       {c.institutions.length === 0 && <Badge variant="gray">לא מקושרת למוסד</Badge>}
-                      {c.reviewCount > 0 && <Badge variant="mint">⭐ {c.reviewCount} חוות דעת</Badge>}
+                      {c.reviewCount > 0 && <Badge variant="mint">📝 {c.reviewCount} חוות דעת</Badge>}
                     </div>
+                    {c.notes && (
+                      <p className="text-[11.5px] text-ink-500 mt-1 whitespace-pre-wrap">{c.notes}</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <ConfirmActionButton
+                      action={() => setContactPortalEnabled(c.id, !c.portal_enabled)}
+                      message={
+                        c.portal_enabled
+                          ? `לכבות ל${c.full_name} את הכניסה לפורטל? היא לא תוכל להיכנס עד שתדליקי שוב.`
+                          : `להדליק ל${c.full_name} את הכניסה לפורטל?`
+                      }
+                      title="כניסה לפורטל"
+                      className={cn(
+                        "text-[12px] font-semibold rounded-full px-3 py-1.5 border",
+                        c.portal_enabled
+                          ? "bg-tint-mint text-success border-[#BFE4D1]"
+                          : "bg-ink-100 text-ink-500 border-ink-200"
+                      )}
+                    >
+                      {c.portal_enabled ? "פורטל: פעיל" : "פורטל: כבוי"}
+                    </ConfirmActionButton>
                     <form action={viewAsCoordinator.bind(null, c.id)}>
                       <Button
                         type="submit"
@@ -179,9 +259,11 @@ export function ContactsManager({
                         <Eye size={14} /> תצוגה כרכזת
                       </Button>
                     </form>
-                    <Button size="sm" variant="secondary" onClick={() => setComposing(composing === c.id ? null : c.id)}>
-                      <Mail size={14} /> שליחת מייל
-                    </Button>
+                    {c.email && (
+                      <Button size="sm" variant="secondary" onClick={() => setComposing(composing === c.id ? null : c.id)}>
+                        <Mail size={14} /> שליחת מייל
+                      </Button>
+                    )}
                     <Button size="sm" variant="ghost" onClick={() => setEditing(c.id)} title="עריכה">
                       <Pencil size={14} />
                     </Button>

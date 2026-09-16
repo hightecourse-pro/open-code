@@ -1245,29 +1245,34 @@ export interface Database {
       };
       /** Institution contact people (רכזות) — the coordinator portal's users. */
       institution_contacts: {
-        Row: { id: string; full_name: string; email: string; phone: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; full_name: string; email: string; phone?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; full_name: string; email: string | null; phone: string | null; notes: string | null; portal_enabled: boolean; created_at: string; updated_at: string };
+        Insert: { id?: string; full_name: string; email?: string | null; phone?: string | null; notes?: string | null; portal_enabled?: boolean; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["institution_contacts"]["Insert"]>;
         Relationships: [];
       };
       /** contact ↔ institution (study_place value) — many to many. */
       institution_contact_links: {
-        Row: { contact_id: string; institution: string };
-        Insert: { contact_id: string; institution: string };
+        Row: { contact_id: string; institution: string; manages_reviews: boolean };
+        Insert: { contact_id: string; institution: string; manages_reviews?: boolean };
         Update: Partial<Database["public"]["Tables"]["institution_contact_links"]["Insert"]>;
         Relationships: [];
       };
-      /** A coordinator's private assessment of one graduate. */
+      /** A coordinator's private assessment of one graduate. Unlinked women
+       *  (not yet in the community) are keyed by graduate_email (16/9). */
       coordinator_reviews: {
         Row: {
-          id: string; contact_id: string; profile_id: string;
+          id: string; contact_id: string; profile_id: string | null;
+          graduate_email: string | null;
           communication: number | null; talent: number | null; note: string | null;
+          talent_label: string | null; communication_label: string | null;
           found_job: boolean | null; found_job_place: string | null;
           created_at: string; updated_at: string;
         };
         Insert: {
-          id?: string; contact_id: string; profile_id: string;
+          id?: string; contact_id: string; profile_id?: string | null;
+          graduate_email?: string | null;
           communication?: number | null; talent?: number | null; note?: string | null;
+          talent_label?: string | null; communication_label?: string | null;
           found_job?: boolean | null; found_job_place?: string | null;
           created_at?: string; updated_at?: string;
         };
@@ -1993,6 +1998,8 @@ export interface Database {
         Returns: { id: string; email: string | null }[];
       };
       auth_user_id_by_email: { Args: { p_email: string }; Returns: string | null };
+      /** Links email-keyed coordinator reviews to fresh signups (16/9). */
+      link_coordinator_reviews: { Args: Record<string, never>; Returns: number };
       digest_unread_counts: {
         Args: Record<string, never>;
         Returns: { recipient: string; unread: number; senders: string[] }[];

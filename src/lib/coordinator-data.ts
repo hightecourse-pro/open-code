@@ -51,6 +51,9 @@ export interface CoordinatorReview {
   profile_id: string;
   communication: number | null;
   talent: number | null;
+  /** Imported phrasing kept verbatim ("מוכשרת מאוד"…) — shown when present. */
+  talent_label: string | null;
+  communication_label: string | null;
   note: string | null;
   found_job: boolean | null;
   found_job_place: string | null;
@@ -153,8 +156,9 @@ export async function loadReviews(contactId: string): Promise<Map<string, Coordi
   const admin = createAdminClient();
   const { data } = await admin
     .from("coordinator_reviews")
-    .select("profile_id, communication, talent, note, found_job, found_job_place, updated_at")
-    .eq("contact_id", contactId);
+    .select("profile_id, communication, talent, talent_label, communication_label, note, found_job, found_job_place, updated_at")
+    .eq("contact_id", contactId)
+    .not("profile_id", "is", null);
   return new Map((data ?? []).map((r) => [r.profile_id, r as CoordinatorReview]));
 }
 
@@ -426,4 +430,19 @@ export async function loadCoordinatorThreads(): Promise<CoordinatorThread[]> {
     if (m.sender === "coordinator" && !m.read_at) t.unread++;
   }
   return [...threads.values()].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+}
+
+/**
+ * Reviews imported for women not yet in the community are keyed by email —
+ * this lazy pass links them to a profile the moment one exists (the owner,
+ * 16/9: "ברגע שתתחבר אוטומטית תחבר לחוות דעת עליה"). Runs on admin +
+ * coordinator page visits; bounded per pass.
+ */
+export async function linkReviewsByEmail(): Promise<number> {
+  const admin = createAdminClient();
+  // The whole pass runs inside the database (auth.users join) — the old
+  // app-side loop could never chew through an imported backlog.
+  const { data, error } = await admin.rpc("link_coordinator_reviews");
+  if (error) return 0;
+  return (data as number | null) ?? 0;
 }

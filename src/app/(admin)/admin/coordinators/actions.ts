@@ -22,12 +22,16 @@ export async function saveContact(
 
   const id = String(formData.get("id") ?? "").trim() || null;
   const full_name = String(formData.get("full_name") ?? "").trim().slice(0, 120);
-  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200) || null;
   const phone = String(formData.get("phone") ?? "").trim().slice(0, 40) || null;
+  const notes = String(formData.get("notes") ?? "").trim().slice(0, 2000) || null;
   const institutions = formData.getAll("institutions").map(String).filter(Boolean);
+  // Which of her institutions' reviews she manages (checkbox per institution).
+  const manages = new Set(formData.getAll("manages").map(String));
 
   if (!full_name) return { error: "כתבי את שם הרכזת." };
-  if (!EMAIL_RE.test(email)) return { error: "כתובת המייל לא נראית תקינה." };
+  // Email optional (16/9) — without one she simply cannot log in yet.
+  if (email && !EMAIL_RE.test(email)) return { error: "כתובת המייל לא נראית תקינה." };
   if (institutions.length === 0) return { error: "בחרי לפחות מוסד אחד." };
 
   const admin = createAdminClient();
@@ -35,14 +39,14 @@ export async function saveContact(
   if (id) {
     const { error } = await admin
       .from("institution_contacts")
-      .update({ full_name, email, phone, updated_at: new Date().toISOString() })
+      .update({ full_name, email, phone, notes, updated_at: new Date().toISOString() })
       .eq("id", id);
     if (error)
       return { error: error.code === "23505" ? "כבר קיימת רכזת עם המייל הזה." : "השמירה נכשלה. נסי שוב." };
   } else {
     const { data, error } = await admin
       .from("institution_contacts")
-      .insert({ full_name, email, phone })
+      .insert({ full_name, email, phone, notes })
       .select("id")
       .single();
     if (error || !data)
@@ -54,11 +58,28 @@ export async function saveContact(
   await admin.from("institution_contact_links").delete().eq("contact_id", contactId!);
   const { error: linkError } = await admin
     .from("institution_contact_links")
-    .insert(institutions.map((institution) => ({ contact_id: contactId!, institution })));
+    .insert(
+      institutions.map((institution) => ({
+        contact_id: contactId!,
+        institution,
+        manages_reviews: manages.has(institution),
+      }))
+    );
   if (linkError) return { error: "הרכזת נשמרה אבל קישור המוסדות נכשל — פתחי אותה לעריכה ונסי שוב." };
 
   revalidatePath("/admin/coordinators");
   return { ok: true };
+}
+
+/** The owner's per-coordinator portal switch (16/9). */
+export async function setContactPortalEnabled(id: string, enabled: boolean): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  await admin
+    .from("institution_contacts")
+    .update({ portal_enabled: enabled, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  revalidatePath("/admin/coordinators");
 }
 
 /** Remove a contact — her links, reviews and email log go with her (cascade). */
@@ -118,6 +139,7 @@ export async function sendContactEmail(
     .eq("id", contactId)
     .maybeSingle();
   if (!contact) return { error: "לא נמצאה הרכזת." };
+  if (!contact.email) return { error: "לרכזת הזו אין כתובת מייל — השלימי אותה קודם." };
 
   const firstName = contact.full_name.split(" ")[0];
   const mail = contactPersonalEmail(firstName, body, subject || undefined);
@@ -179,4 +201,48 @@ export async function markThreadRead(contactId: string): Promise<void> {
   const { markCoordinatorMessagesRead } = await import("@/lib/coordinator-data");
   await markCoordinatorMessagesRead(contactId, "team");
   revalidatePath("/admin/coordinators");
+}
+
+/**
+ * A specific question to the coordinator about a candidate, from the review
+ * center (the owner, 16/9) — reaches her BOTH by email and in the chat,
+ * signed by the asking team member.
+ */
+export async function askCoordinatorQuestion(
+  contactId: string,
+  candidateName: string,
+  question: string
+): Promise<{ error?: string }> {
+  const me = await requireRole("admin");
+  const clean = question.trim().slice(0, 2000);
+  if (!clean) return { error: "כתבי שאלה קודם 🙂" };
+
+  const admin = createAdminClient();
+  const { data: contact } = await admin
+    .from("institution_contacts")
+    .select("id, full_name, email")
+    .eq("id", contactId)
+    .maybeSingle();
+  if (!contact) return { error: "הרכזת לא נמצאה." };
+
+  const body = `שאלה על ${candidateName}:\n${clean}`;
+  const { error } = await admin.from("coordinator_messages").insert({
+    contact_id: contactId,
+    sender: "team",
+    body,
+    team_author_name: me.full_name,
+  });
+  if (error) return { error: "השליחה נכשלה — נסי שוב." };
+
+  // Email too (best effort — the chat copy is already there).
+  if (contact.email) {
+    const mail = contactPersonalEmail(
+      contact.full_name.split(" ")[0],
+      `${body}\n\nאפשר לענות לנו כאן במייל או בצ'אט באזור האישי שלך.`,
+      `שאלה מקוד פתוח על ${candidateName}`
+    );
+    await sendResendEmail({ to: contact.email, subject: mail.subject, html: mail.html });
+  }
+  revalidatePath("/admin/coordinators");
+  return {};
 }
