@@ -76,9 +76,10 @@ export async function saveCoordinatorReview(
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");
 
-  // She may only review HER graduates — verify the profile's study place.
+  // She may only review graduates of institutions whose reviews SHE manages
+  // (the owner, 16/9: one reviews manager per multi-contact institution).
   const { loadGraduates } = await import("@/lib/coordinator-data");
-  const grads = await loadGraduates(me.institutions);
+  const grads = await loadGraduates(me.reviewInstitutions);
   if (!grads.some((g) => g.id === profileId)) return { error: "הבוגרת לא נמצאה ברשימה שלך." };
 
   const num = (k: string): number | null => {

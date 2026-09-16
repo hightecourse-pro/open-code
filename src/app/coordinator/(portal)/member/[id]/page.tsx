@@ -62,8 +62,16 @@ export default async function CoordinatorMemberPage({
               </div>
             </div>
           </div>
-          <h2 className="font-display font-bold text-[15.5px] text-ink-1000 mb-2">חוות הדעת שלך</h2>
-          <CoordinatorReviewForm profileId={id} existing={review} />
+          {me.reviewInstitutions.includes(grad.institution) ? (
+            <>
+              <h2 className="font-display font-bold text-[15.5px] text-ink-1000 mb-2">חוות הדעת שלך</h2>
+              <CoordinatorReviewForm profileId={id} existing={review} />
+            </>
+          ) : (
+            <p className="text-[12.5px] text-ink-500">
+              חוות הדעת על בוגרות המוסד הזה מנוהלות על ידי רכזת אחרת.
+            </p>
+          )}
         </section>
 
         {/* ──────────────────────────────────────── her profile, read-only */}

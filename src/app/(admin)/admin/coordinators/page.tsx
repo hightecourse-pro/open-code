@@ -37,14 +37,17 @@ export default async function AdminCoordinatorsPage({
   const me = await requireRole("admin");
   const { tab, chat } = await searchParams;
   const admin = createAdminClient();
+  // Imported email-keyed reviews link themselves to fresh signups here too.
+  const { linkReviewsByEmail: linkPass } = await import("@/lib/coordinator-data");
+  await linkPass();
 
   const [{ data: contacts }, { data: links }, { data: reviews }, { data: emails }, { data: placeQ }] =
     await Promise.all([
       admin
         .from("institution_contacts")
-        .select("id, full_name, email, phone, created_at")
+        .select("id, full_name, email, phone, notes, portal_enabled, created_at")
         .order("full_name"),
-      admin.from("institution_contact_links").select("contact_id, institution"),
+      admin.from("institution_contact_links").select("contact_id, institution, manages_reviews"),
       admin.from("coordinator_reviews").select("contact_id"),
       admin
         .from("contact_emails")
@@ -62,7 +65,11 @@ export default async function AdminCoordinatorsPage({
     full_name: c.full_name,
     email: c.email,
     phone: c.phone,
-    institutions: (links ?? []).filter((l) => l.contact_id === c.id).map((l) => l.institution),
+    notes: c.notes,
+    portal_enabled: c.portal_enabled !== false,
+    institutions: (links ?? [])
+      .filter((l) => l.contact_id === c.id)
+      .map((l) => ({ value: l.institution, manages: l.manages_reviews !== false })),
     reviewCount: reviewCount.get(c.id) ?? 0,
     emails: (emails ?? [])
       .filter((e) => e.contact_id === c.id)

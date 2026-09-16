@@ -21,6 +21,9 @@ export interface Coordinator {
   phone: string | null;
   /** study_place option values she is linked to. */
   institutions: string[];
+  /** The subset of institutions whose REVIEWS she manages (sees/updates) —
+   *  the owner, 16/9: multi-contact institutions pick one reviews manager. */
+  reviewInstitutions: string[];
 }
 
 function sessionSecret(): string {
@@ -93,15 +96,24 @@ export const getCoordinator = cache(async (): Promise<Coordinator | null> => {
   const admin = createAdminClient();
   const [{ data: contact }, { data: links }] = await Promise.all([
     admin.from("institution_contacts").select("*").eq("id", contactId).maybeSingle(),
-    admin.from("institution_contact_links").select("institution").eq("contact_id", contactId),
+    admin
+      .from("institution_contact_links")
+      .select("institution, manages_reviews")
+      .eq("contact_id", contactId),
   ]);
   if (!contact) return null;
+  // The owner's per-contact switch (16/9) — off means the door is shut even
+  // with a live cookie.
+  if (contact.portal_enabled === false) return null;
   return {
     id: contact.id,
     full_name: contact.full_name,
-    email: contact.email,
+    email: contact.email ?? "",
     phone: contact.phone ?? null,
     institutions: (links ?? []).map((l) => l.institution),
+    reviewInstitutions: (links ?? [])
+      .filter((l) => l.manages_reviews !== false)
+      .map((l) => l.institution),
   };
 });
 
@@ -129,10 +141,11 @@ export async function createOtp(email: string): Promise<string | null> {
   const clean = email.trim().toLowerCase();
   const { data: contact } = await admin
     .from("institution_contacts")
-    .select("id")
+    .select("id, portal_enabled")
     .ilike("email", clean)
     .maybeSingle();
-  if (!contact) return null;
+  // A disabled contact gets the same silent answer as an unknown email.
+  if (!contact || contact.portal_enabled === false) return null;
   const code = generateOtpCode();
   await admin.from("coordinator_otp").upsert(
     {

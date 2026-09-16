@@ -51,6 +51,9 @@ export interface CoordinatorReview {
   profile_id: string;
   communication: number | null;
   talent: number | null;
+  /** Imported phrasing kept verbatim ("מוכשרת מאוד"…) — shown when present. */
+  talent_label: string | null;
+  communication_label: string | null;
   note: string | null;
   found_job: boolean | null;
   found_job_place: string | null;
@@ -153,8 +156,9 @@ export async function loadReviews(contactId: string): Promise<Map<string, Coordi
   const admin = createAdminClient();
   const { data } = await admin
     .from("coordinator_reviews")
-    .select("profile_id, communication, talent, note, found_job, found_job_place, updated_at")
-    .eq("contact_id", contactId);
+    .select("profile_id, communication, talent, talent_label, communication_label, note, found_job, found_job_place, updated_at")
+    .eq("contact_id", contactId)
+    .not("profile_id", "is", null);
   return new Map((data ?? []).map((r) => [r.profile_id, r as CoordinatorReview]));
 }
 
@@ -426,4 +430,44 @@ export async function loadCoordinatorThreads(): Promise<CoordinatorThread[]> {
     if (m.sender === "coordinator" && !m.read_at) t.unread++;
   }
   return [...threads.values()].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+}
+
+/**
+ * Reviews imported for women not yet in the community are keyed by email —
+ * this lazy pass links them to a profile the moment one exists (the owner,
+ * 16/9: "ברגע שתתחבר אוטומטית תחבר לחוות דעת עליה"). Runs on admin +
+ * coordinator page visits; bounded per pass.
+ */
+export async function linkReviewsByEmail(): Promise<number> {
+  const admin = createAdminClient();
+  const { data: unlinked } = await admin
+    .from("coordinator_reviews")
+    .select("id, contact_id, graduate_email")
+    .is("profile_id", null)
+    .not("graduate_email", "is", null)
+    .limit(60);
+  if (!unlinked?.length) return 0;
+
+  let linked = 0;
+  const idByEmail = new Map<string, string | null>();
+  for (const row of unlinked) {
+    const email = row.graduate_email!.trim().toLowerCase();
+    if (!idByEmail.has(email)) {
+      const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: email });
+      idByEmail.set(email, (uid as string | null) ?? null);
+    }
+    const profileId = idByEmail.get(email);
+    if (!profileId) continue;
+    const { error } = await admin
+      .from("coordinator_reviews")
+      .update({ profile_id: profileId })
+      .eq("id", row.id);
+    if (!error) linked++;
+    else {
+      // A linked review by the same contact already exists — the live row
+      // wins; the imported shell folds away.
+      await admin.from("coordinator_reviews").delete().eq("id", row.id).is("profile_id", null);
+    }
+  }
+  return linked;
 }

@@ -24,6 +24,7 @@ import {
 } from "@/app/(admin)/admin/actions";
 import type { AdminMark, PipelineStatus } from "@/app/(admin)/admin/actions";
 import { saveMemberInternalNote, saveSubmissionOutcome, toggleMemberInternalTag } from "./finder-actions";
+import { askCoordinatorQuestion } from "@/app/(admin)/admin/coordinators/actions";
 import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
 
@@ -102,8 +103,12 @@ export interface ReviewApplication {
    */
   coordinatorReviews: {
     coordinator: string;
+    contactId: string;
     communication: number | null;
     talent: number | null;
+    /** Imported phrasing ("מוכשרת מאוד") — preferred over the number. */
+    talentLabel: string | null;
+    communicationLabel: string | null;
     note: string | null;
     foundJob: boolean | null;
     foundJobPlace: string | null;
@@ -1612,7 +1617,10 @@ export function ReviewCenter({
             <MemberNoteBox key={selected.applicantId} app={selected} />
             {selected.assessment && <AssessmentBox a={selected.assessment} />}
             {(selected.coordinatorReviews ?? []).length > 0 && (
-              <CoordinatorReviewsBox reviews={selected.coordinatorReviews} />
+              <CoordinatorReviewsBox
+                reviews={selected.coordinatorReviews}
+                candidateName={selected.profile?.fullName ?? "המועמדת"}
+              />
             )}
             <ForwardsBox key={`fwd-${selected.id}`} app={selected} />
             {/* header + prev/next */}
@@ -2106,12 +2114,21 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
   );
 }
 
-/** What her institution's coordinator wrote (the owner, 14/9) — team-only. */
+/** What her institution's coordinator wrote (the owner, 14/9) — team-only.
+ *  Since 16/9: imported phrasing shown verbatim + "שאלה לרכזת" that reaches
+ *  her by email AND in the coordinator chat. */
 function CoordinatorReviewsBox({
   reviews,
+  candidateName,
 }: {
   reviews: ReviewApplication["coordinatorReviews"];
+  candidateName: string;
 }) {
+  const [asking, setAsking] = useState<string | null>(null);
+  const [question, setQuestion] = useState("");
+  const [askResult, setAskResult] = useState<string | null>(null);
+  const [sending, startSending] = useTransition();
+
   return (
     <div className="rounded-[10px] border border-crown-gold-soft bg-tint-warm/40 p-3">
       <div className="text-[12px] font-bold text-[#8C5E0E] mb-1.5">
@@ -2122,14 +2139,14 @@ function CoordinatorReviewsBox({
           <div key={i} className="text-[13px] text-ink-900">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-bold">{r.coordinator}</span>
-              {r.communication !== null && (
+              {(r.talentLabel || r.talent !== null) && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-ink-0 border border-ink-200 text-ink-700">
-                  תקשורת {r.communication}/5
+                  כישרון: {r.talentLabel ?? `${r.talent}/5`}
                 </span>
               )}
-              {r.talent !== null && (
+              {(r.communicationLabel || r.communication !== null) && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-ink-0 border border-ink-200 text-ink-700">
-                  כישרון {r.talent}/5
+                  תקשורת: {r.communicationLabel ?? `${r.communication}/5`}
                 </span>
               )}
               {r.foundJob === true && (
@@ -2137,8 +2154,52 @@ function CoordinatorReviewsBox({
                   לדבריה מצאה עבודה{r.foundJobPlace ? ` — ${r.foundJobPlace}` : ""}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => {
+                  setAsking(asking === r.contactId ? null : r.contactId);
+                  setAskResult(null);
+                }}
+                className="text-[11.5px] font-semibold text-brand-purple hover:underline cursor-pointer"
+              >
+                ✉️ שאלה לרכזת
+              </button>
             </div>
             {r.note && <p className="leading-relaxed mt-0.5 whitespace-pre-wrap">{r.note}</p>}
+            {asking === r.contactId && (
+              <div className="mt-1.5 flex flex-col gap-1.5 bg-ink-0 border border-ink-200 rounded-[8px] p-2.5">
+                <textarea
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  rows={2}
+                  maxLength={2000}
+                  placeholder={`השאלה שלך ל${r.coordinator} על ${candidateName}…`}
+                  className="w-full text-[12.5px] border border-ink-200 rounded-md px-2.5 py-1.5 outline-none focus:border-brand-purple"
+                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={sending || !question.trim()}
+                    onClick={() =>
+                      startSending(async () => {
+                        const res = await askCoordinatorQuestion(r.contactId, candidateName, question);
+                        setAskResult(res.error ?? "נשלח לרכזת — במייל ובצ'אט ✓");
+                        if (!res.error) {
+                          setQuestion("");
+                          setAsking(null);
+                        }
+                      })
+                    }
+                    className="text-[12px] font-bold text-white bg-brand-purple rounded-full px-3 py-1 disabled:opacity-50 cursor-pointer"
+                  >
+                    {sending ? "שולחת…" : "שליחה במייל + בצ'אט"}
+                  </button>
+                </div>
+              </div>
+            )}
+            {askResult && asking !== r.contactId && (
+              <p className="text-[11.5px] font-semibold text-success mt-1">{askResult}</p>
+            )}
           </div>
         ))}
       </div>

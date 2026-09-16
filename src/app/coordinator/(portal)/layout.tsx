@@ -19,6 +19,9 @@ export default async function CoordinatorPortalLayout({
 }) {
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");
+  // Imported email-keyed reviews link themselves to fresh signups here.
+  const { linkReviewsByEmail } = await import("@/lib/coordinator-data");
+  await linkReviewsByEmail();
   const labels = await loadOptionLabels();
   const placeLabel = (v: string) => labels.places.get(v) ?? v;
   const adminView = (await cookies()).get("oc_coord_admin")?.value === "1";
