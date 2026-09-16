@@ -173,6 +173,12 @@ export interface CoordinatorJob {
   descriptionText: string;
   /** HER graduates who applied. sentByUs = we forwarded her to the employer. */
   applicants: { id: string; full_name: string; status: string; sentByUs: boolean }[];
+  /**
+   * Did Open Code submit ANY candidate (anyone's) to this job yet? An open
+   * job without a submission invites the coordinator's recommendation
+   * (the owner, 16/9).
+   */
+  oursSubmittedAny: boolean;
 }
 
 /**
@@ -181,31 +187,60 @@ export interface CoordinatorJob {
  * through-the-site submission, so the list starts from her applications.
  */
 export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<CoordinatorJob[]> {
-  if (graduateIds.length === 0) return [];
   const admin = createAdminClient();
   // Two roads to a job row: she applied through the site, or WE submitted
   // her proactively (job_candidates with a sent stamp). "הוגשה ע"י קוד פתוח"
   // = any of: the client-send stamp, a post-send status, the team's אישור
   // סופי (submissions often go out by plain email, leaving only the mark —
   // the owner, 15/9: תמר פוקס/עדינה טיטלבוים), or a stamped curation row.
-  const [{ data: apps }, { data: sentCands }] = await Promise.all([
+  const [{ data: apps }, { data: sentCands }, { data: openJobs }] = await Promise.all([
+    graduateIds.length
+      ? admin
+          .from("applications")
+          .select("job_id, applicant_id, status, sent_to_client_at, admin_mark")
+          .in("applicant_id", graduateIds)
+          .neq("status", "draft")
+      : Promise.resolve({ data: [] as never[] }),
+    graduateIds.length
+      ? admin
+          .from("job_candidates")
+          .select("job_id, profile_id, sent_at")
+          .in("profile_id", graduateIds)
+          .not("sent_at", "is", null)
+      : Promise.resolve({ data: [] as never[] }),
+    // Every OPEN job of ours is listed even with no applications (the owner,
+    // 16/9) — those are exactly where a coordinator's recommendation helps.
     admin
-      .from("applications")
-      .select("job_id, applicant_id, status, sent_to_client_at, admin_mark")
-      .in("applicant_id", graduateIds)
-      .neq("status", "draft"),
-    admin
-      .from("job_candidates")
-      .select("job_id, profile_id, sent_at")
-      .in("profile_id", graduateIds)
-      .not("sent_at", "is", null),
+      .from("jobs")
+      .select("id")
+      .eq("source", "ours")
+      .eq("status", "open")
+      .eq("pipeline_status", "published"),
   ]);
-  if (!apps?.length && !sentCands?.length) return [];
+  if (!apps?.length && !sentCands?.length && !openJobs?.length) return [];
 
   const jcSent = new Set((sentCands ?? []).map((c) => `${c.job_id}:${c.profile_id}`));
   const jobIds = [
-    ...new Set([...(apps ?? []).map((a) => a.job_id), ...(sentCands ?? []).map((c) => c.job_id)]),
+    ...new Set([
+      ...(apps ?? []).map((a) => a.job_id),
+      ...(sentCands ?? []).map((c) => c.job_id),
+      ...(openJobs ?? []).map((j) => j.id),
+    ]),
   ];
+
+  // Whether WE already submitted anyone at all per job (any woman, any road).
+  const [{ data: sentApps }, { data: sentAnyCands }] = await Promise.all([
+    admin
+      .from("applications")
+      .select("job_id")
+      .in("job_id", jobIds)
+      .or("sent_to_client_at.not.is.null,status.in.(sent,interview,exam,hired)"),
+    admin.from("job_candidates").select("job_id").in("job_id", jobIds).not("sent_at", "is", null),
+  ]);
+  const submittedJobs = new Set([
+    ...(sentApps ?? []).map((r) => r.job_id),
+    ...(sentAnyCands ?? []).map((r) => r.job_id),
+  ]);
   const applicantIds = [
     ...new Set([...(apps ?? []).map((a) => a.applicant_id), ...(sentCands ?? []).map((c) => c.profile_id)]),
   ];
@@ -256,9 +291,16 @@ export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<
           ? htmlToPlainText(j.description_html)
           : (j.description ?? ""),
         applicants,
+        oursSubmittedAny: submittedJobs.has(j.id),
       };
     })
-    .filter((j) => j.applicants.length > 0);
+    // Open jobs of ours always show (recommendations welcome); anything else
+    // earns its row only through her graduates' involvement.
+    .filter(
+      (j) =>
+        j.applicants.length > 0 ||
+        (j.status === "open" && j.pipeline_status === "published" && j.company === null)
+    );
 }
 
 export interface CoordinatorHire {
@@ -308,4 +350,80 @@ export async function loadHires(
       hired_at: h.hired_at,
     }))
     .sort((a, b) => (b.hired_at ?? "").localeCompare(a.hired_at ?? ""));
+}
+
+// ------------------------------------------------------------- chat (16/9)
+
+export interface CoordinatorMessage {
+  id: string;
+  sender: "coordinator" | "team";
+  body: string;
+  team_author_name: string | null;
+  created_at: string;
+}
+
+/** The full thread with one contact, oldest first. */
+export async function loadCoordinatorMessages(contactId: string): Promise<CoordinatorMessage[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("coordinator_messages")
+    .select("id, sender, body, team_author_name, created_at")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: true })
+    .limit(500);
+  return (data ?? []) as CoordinatorMessage[];
+}
+
+/** Mark the OTHER side's messages as read for this viewer. */
+export async function markCoordinatorMessagesRead(
+  contactId: string,
+  viewer: "coordinator" | "team"
+): Promise<void> {
+  const admin = createAdminClient();
+  await admin
+    .from("coordinator_messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("contact_id", contactId)
+    .eq("sender", viewer === "team" ? "coordinator" : "team")
+    .is("read_at", null);
+}
+
+export interface CoordinatorThread {
+  contact_id: string;
+  contact_name: string;
+  lastBody: string;
+  lastAt: string;
+  lastSender: "coordinator" | "team";
+  unread: number;
+}
+
+/** Admin view: one row per contact that has any messages, newest first. */
+export async function loadCoordinatorThreads(): Promise<CoordinatorThread[]> {
+  const admin = createAdminClient();
+  const [{ data: msgs }, { data: contacts }] = await Promise.all([
+    admin
+      .from("coordinator_messages")
+      .select("contact_id, sender, body, read_at, created_at")
+      .order("created_at", { ascending: false })
+      .limit(2000),
+    admin.from("institution_contacts").select("id, full_name"),
+  ]);
+  const nameOf = new Map((contacts ?? []).map((c) => [c.id, c.full_name]));
+  const threads = new Map<string, CoordinatorThread>();
+  for (const m of msgs ?? []) {
+    let t = threads.get(m.contact_id);
+    if (!t) {
+      t = {
+        contact_id: m.contact_id,
+        contact_name: nameOf.get(m.contact_id) ?? "רכזת",
+        lastBody: m.body,
+        lastAt: m.created_at,
+        lastSender: m.sender as "coordinator" | "team",
+        unread: 0,
+      };
+      threads.set(m.contact_id, t);
+    }
+    if (m.sender === "coordinator" && !m.read_at) t.unread++;
+  }
+  return [...threads.values()].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
 }

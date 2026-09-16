@@ -138,3 +138,45 @@ export async function sendContactEmail(
   revalidatePath("/admin/coordinators");
   return { ok: true };
 }
+
+export type CoordChatState = { error?: string; ok?: boolean };
+
+/**
+ * A team reply into a coordinator's thread — signed with the replying team
+ * member's name (the owner, 16/9: "תהיה חתימה לתשובה של מי מהצוות ענתה").
+ */
+export async function replyToCoordinator(
+  contactId: string,
+  _prev: CoordChatState,
+  formData: FormData
+): Promise<CoordChatState> {
+  const me = await requireRole("admin");
+  const body = String(formData.get("body") ?? "").trim().slice(0, 4000);
+  if (!body) return { error: "כתבי תשובה קודם 🙂" };
+
+  const admin = createAdminClient();
+  const { data: contact } = await admin
+    .from("institution_contacts")
+    .select("id")
+    .eq("id", contactId)
+    .maybeSingle();
+  if (!contact) return { error: "הרכזת לא נמצאה." };
+
+  const { error } = await admin.from("coordinator_messages").insert({
+    contact_id: contactId,
+    sender: "team",
+    body,
+    team_author_name: me.full_name,
+  });
+  if (error) return { error: "התשובה לא נשלחה — נסי שוב." };
+  revalidatePath("/admin/coordinators");
+  return { ok: true };
+}
+
+/** Opening a thread marks the coordinator's messages as read. */
+export async function markThreadRead(contactId: string): Promise<void> {
+  await requireRole("admin");
+  const { markCoordinatorMessagesRead } = await import("@/lib/coordinator-data");
+  await markCoordinatorMessagesRead(contactId, "team");
+  revalidatePath("/admin/coordinators");
+}

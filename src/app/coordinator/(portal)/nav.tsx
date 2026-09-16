@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Briefcase, GraduationCap, PartyPopper } from "lucide-react";
+import { Briefcase, GraduationCap, MessageCircle, PartyPopper } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const TABS = [
   { href: "/coordinator", label: "הבוגרות שלי", icon: GraduationCap },
   { href: "/coordinator/jobs", label: "משרות והגשות", icon: Briefcase },
   { href: "/coordinator/hires", label: "גיוסים", icon: PartyPopper },
+  { href: "/coordinator/chat", label: "צ'אט עם הצוות", icon: MessageCircle },
 ];
 
 /** The portal's tab menu; a graduate page highlights הבוגרות שלי. */
