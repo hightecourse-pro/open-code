@@ -1998,6 +1998,8 @@ export interface Database {
         Returns: { id: string; email: string | null }[];
       };
       auth_user_id_by_email: { Args: { p_email: string }; Returns: string | null };
+      /** Links email-keyed coordinator reviews to fresh signups (16/9). */
+      link_coordinator_reviews: { Args: Record<string, never>; Returns: number };
       digest_unread_counts: {
         Args: Record<string, never>;
         Returns: { recipient: string; unread: number; senders: string[] }[];

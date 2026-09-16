@@ -440,34 +440,9 @@ export async function loadCoordinatorThreads(): Promise<CoordinatorThread[]> {
  */
 export async function linkReviewsByEmail(): Promise<number> {
   const admin = createAdminClient();
-  const { data: unlinked } = await admin
-    .from("coordinator_reviews")
-    .select("id, contact_id, graduate_email")
-    .is("profile_id", null)
-    .not("graduate_email", "is", null)
-    .limit(60);
-  if (!unlinked?.length) return 0;
-
-  let linked = 0;
-  const idByEmail = new Map<string, string | null>();
-  for (const row of unlinked) {
-    const email = row.graduate_email!.trim().toLowerCase();
-    if (!idByEmail.has(email)) {
-      const { data: uid } = await admin.rpc("auth_user_id_by_email", { p_email: email });
-      idByEmail.set(email, (uid as string | null) ?? null);
-    }
-    const profileId = idByEmail.get(email);
-    if (!profileId) continue;
-    const { error } = await admin
-      .from("coordinator_reviews")
-      .update({ profile_id: profileId })
-      .eq("id", row.id);
-    if (!error) linked++;
-    else {
-      // A linked review by the same contact already exists — the live row
-      // wins; the imported shell folds away.
-      await admin.from("coordinator_reviews").delete().eq("id", row.id).is("profile_id", null);
-    }
-  }
-  return linked;
+  // The whole pass runs inside the database (auth.users join) — the old
+  // app-side loop could never chew through an imported backlog.
+  const { data, error } = await admin.rpc("link_coordinator_reviews");
+  if (error) return 0;
+  return (data as number | null) ?? 0;
 }
