@@ -16,6 +16,7 @@ import { Alert, Badge, Button, Checkbox, Input, Select, Textarea } from "@/compo
 import { cn } from "@/lib/utils";
 import {
   addJobCandidate,
+  sendJobChatMessage,
   sendJobOutcomeEmails,
   setApplicationMark,
   setApplicationMarkBulk,
@@ -1649,6 +1650,12 @@ export function ReviewCenter({
                     <Badge variant="pink">הוגשה ללקוח</Badge>
                   )}
                 </div>
+                {/* One click to her chat, job-context attached (the owner, 16/9). */}
+                <ChatToCandidate
+                  key={`chat-${selected.applicantId}`}
+                  applicantId={selected.applicantId}
+                  jobId={jobId}
+                />
                 {/* Study facts, front and center (the owner, 2/9). */}
                 {(selected.profile?.studyPlace || selected.profile?.track || selected.profile?.gradYear) && (
                   <div className="mt-2 inline-flex flex-wrap items-center gap-x-4 gap-y-1 bg-tint-purple/40 border border-brand-purple/15 rounded-[10px] px-3 py-1.5 text-[12.5px]">
@@ -2110,6 +2117,63 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
         )}
       </div>
       {a.verdict && <p className="text-[13px] text-ink-900 leading-relaxed">{a.verdict}</p>}
+    </div>
+  );
+}
+
+/**
+ * A chat message to the candidate from inside the job (the owner, 16/9) —
+ * lands in her chat + a nudge email "יש לך הודעה מקוד פתוח / בקשר למשרה".
+ */
+function ChatToCandidate({ applicantId, jobId }: { applicantId: string; jobId: string }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [result, setResult] = useState<string | null>(null);
+  const [sending, startSending] = useTransition();
+
+  return (
+    <div className="mt-1.5">
+      <button
+        type="button"
+        onClick={() => {
+          setOpen((v) => !v);
+          setResult(null);
+        }}
+        className="text-[12px] font-bold text-brand-purple hover:underline cursor-pointer"
+      >
+        💬 שליחת הודעה בצ&apos;אט (+מייל שמפנה לצ&apos;אט)
+      </button>
+      {open && (
+        <div className="mt-1.5 flex flex-col gap-1.5 bg-tint-purple/30 border border-[#DDC9EC] rounded-[10px] p-2.5">
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={2}
+            maxLength={4000}
+            placeholder="ההודעה תופיע בצ'אט שלה עם ההקשר של המשרה…"
+            className="w-full text-[12.5px] border border-ink-200 rounded-md px-2.5 py-1.5 outline-none focus:border-brand-purple bg-white"
+          />
+          <button
+            type="button"
+            disabled={sending || !text.trim()}
+            onClick={() =>
+              startSending(async () => {
+                const res = await sendJobChatMessage(applicantId, jobId, text);
+                if (res.error) setResult(res.error);
+                else {
+                  setResult("נשלח — בצ'אט שלה + מייל שמפנה לשם ✓");
+                  setText("");
+                  setOpen(false);
+                }
+              })
+            }
+            className="w-fit text-[12px] font-bold text-white bg-brand-purple rounded-full px-3 py-1 disabled:opacity-50 cursor-pointer"
+          >
+            {sending ? "שולחת…" : "שליחה"}
+          </button>
+        </div>
+      )}
+      {result && <p className="text-[11.5px] font-semibold text-success mt-1">{result}</p>}
     </div>
   );
 }

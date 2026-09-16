@@ -19,6 +19,7 @@ import {
   mentorApprovedEmail,
   mentorDeclinedEmail,
   teamPersonalEmail,
+  jobChatNudgeEmail,
   teamRepliedEmail,
   mentorAssignmentInviteEmail,
 } from "@/lib/email/templates";
@@ -2503,6 +2504,73 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
   // file page shows it and warns before a double send.
   await admin.from("personal_emails").insert({ profile_id: profileId, sender_id: me.id, body: note });
   revalidatePath(`/admin/members/${profileId}`);
+}
+
+/**
+ * A chat message to a candidate straight from a job's review center (the
+ * owner, 16/9) — lands in her chat with the acting admin, plus a nudge email
+ * in the owner's exact copy: "יש לך הודעה מקוד פתוח / בקשר למשרה - {משרה} /
+ * המשך ההתכתבות בצ'אט". The message text itself stays in the chat only.
+ */
+export async function sendJobChatMessage(
+  applicantId: string,
+  jobId: string,
+  message: string
+): Promise<{ error?: string }> {
+  const me = await requireRole("admin");
+  const body = message.trim().slice(0, 4000);
+  if (!body) return { error: "כתבי הודעה קודם 🙂" };
+  const admin = createAdminClient();
+
+  const { data: job } = await admin.from("jobs").select("title").eq("id", jobId).maybeSingle();
+  const chatBody = job?.title ? `בקשר למשרת «${job.title}»:\n${body}` : body;
+
+  const [a_id, b_id] = [me.id, applicantId].sort();
+  const { data: existing } = await admin
+    .from("conversations")
+    .select("id")
+    .eq("a_id", a_id)
+    .eq("b_id", b_id)
+    .maybeSingle();
+  let convId = existing?.id;
+  if (!convId) {
+    const { data: created } = await admin
+      .from("conversations")
+      .insert({ a_id, b_id })
+      .select("id")
+      .single();
+    convId = created?.id;
+  }
+  if (!convId) return { error: "פתיחת הצ'אט נכשלה — נסי שוב." };
+  const { error: msgErr } = await admin.from("messages").insert({
+    conversation_id: convId,
+    sender_id: me.id,
+    body: chatBody,
+    // This flow sends its OWN email — the grace cron skips it.
+    email_notified_at: new Date().toISOString(),
+  });
+  if (msgErr) return { error: "ההודעה לא נשלחה — נסי שוב." };
+  await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", convId);
+
+  // The nudge email (best effort — the chat copy is already there).
+  const { data: p } = await admin
+    .from("profiles")
+    .select("first_name, full_name")
+    .eq("id", applicantId)
+    .maybeSingle();
+  const { data: authUser } = await admin.auth.admin.getUserById(applicantId);
+  const email = authUser?.user?.email;
+  if (email && job?.title) {
+    const chatUrl = `${getSiteUrl()}/chat?c=${convId}`;
+    const mail = jobChatNudgeEmail(
+      p?.first_name ?? p?.full_name?.split(" ")[0] ?? undefined,
+      job.title,
+      chatUrl
+    );
+    const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+    if (!sent.ok) console.error("[jobs] chat nudge email failed:", applicantId, sent.error);
+  }
+  return {};
 }
 
 /**
