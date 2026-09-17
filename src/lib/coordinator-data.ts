@@ -4,6 +4,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nameWithPrevSurname } from "@/lib/names";
+import { inChunks } from "@/lib/chunk";
 
 /**
  * Display names for the coordinator portal: "שם (שם משפחה קודם)" whenever a
@@ -19,11 +20,13 @@ async function displayNamesOf(profileIds: string[]): Promise<Map<string, string>
     .select("id")
     .eq("key", "prev_surname")
     .maybeSingle();
-  const [{ data: profs }, { data: prevRows }] = await Promise.all([
-    admin.from("profiles").select("id, full_name").in("id", profileIds),
+  const [profs, prevRows] = await Promise.all([
+    inChunks(profileIds, (part) => admin.from("profiles").select("id, full_name").in("id", part)),
     q
-      ? admin.from("profile_answers").select("profile_id, value").eq("question_id", q.id).in("profile_id", profileIds)
-      : Promise.resolve({ data: [] as { profile_id: string; value: unknown }[] }),
+      ? inChunks(profileIds, (part) =>
+          admin.from("profile_answers").select("profile_id, value").eq("question_id", q.id).in("profile_id", part)
+        )
+      : Promise.resolve([] as { profile_id: string; value: unknown }[]),
   ]);
   const prevOf = new Map(
     (prevRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null])
@@ -118,17 +121,23 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
   const ids = [...instOf.keys()];
   if (ids.length === 0) return [];
 
-  const [{ data: profs }, { data: yearRows }, { data: certRows }] = await Promise.all([
-    admin
-      .from("profiles")
-      .select("id, full_name, avatar_initials, specialization, status, role, found_job, is_hidden")
-      .in("id", ids),
+  const [profs, yearRows, certRows] = await Promise.all([
+    inChunks(ids, (part) =>
+      admin
+        .from("profiles")
+        .select("id, full_name, avatar_initials, specialization, status, role, found_job, is_hidden")
+        .in("id", part)
+    ),
     qid("graduation_year")
-      ? admin.from("profile_answers").select("profile_id, value").eq("question_id", qid("graduation_year")!).in("profile_id", ids)
-      : Promise.resolve({ data: [] }),
+      ? inChunks(ids, (part) =>
+          admin.from("profile_answers").select("profile_id, value").eq("question_id", qid("graduation_year")!).in("profile_id", part)
+        )
+      : Promise.resolve([] as { profile_id: string; value: unknown }[]),
     qid("certificate")
-      ? admin.from("profile_answers").select("profile_id, value").eq("question_id", qid("certificate")!).in("profile_id", ids)
-      : Promise.resolve({ data: [] }),
+      ? inChunks(ids, (part) =>
+          admin.from("profile_answers").select("profile_id, value").eq("question_id", qid("certificate")!).in("profile_id", part)
+        )
+      : Promise.resolve([] as { profile_id: string; value: unknown }[]),
   ]);
   const yearOf = new Map((yearRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null]));
   const certOf = new Map((certRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null]));
@@ -197,21 +206,21 @@ export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<
   // = any of: the client-send stamp, a post-send status, the team's אישור
   // סופי (submissions often go out by plain email, leaving only the mark —
   // the owner, 15/9: תמר פוקס/עדינה טיטלבוים), or a stamped curation row.
-  const [{ data: apps }, { data: sentCands }, { data: openJobs }] = await Promise.all([
-    graduateIds.length
-      ? admin
-          .from("applications")
-          .select("job_id, applicant_id, status, sent_to_client_at, admin_mark")
-          .in("applicant_id", graduateIds)
-          .neq("status", "draft")
-      : Promise.resolve({ data: [] as never[] }),
-    graduateIds.length
-      ? admin
-          .from("job_candidates")
-          .select("job_id, profile_id, sent_at")
-          .in("profile_id", graduateIds)
-          .not("sent_at", "is", null)
-      : Promise.resolve({ data: [] as never[] }),
+  const [apps, sentCands, { data: openJobs }] = await Promise.all([
+    inChunks(graduateIds, (part) =>
+      admin
+        .from("applications")
+        .select("job_id, applicant_id, status, sent_to_client_at, admin_mark")
+        .in("applicant_id", part)
+        .neq("status", "draft")
+    ),
+    inChunks(graduateIds, (part) =>
+      admin
+        .from("job_candidates")
+        .select("job_id, profile_id, sent_at")
+        .in("profile_id", part)
+        .not("sent_at", "is", null)
+    ),
     // Every OPEN job of ours is listed even with no applications (the owner,
     // 16/9) — those are exactly where a coordinator's recommendation helps.
     admin
