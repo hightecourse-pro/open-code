@@ -9,6 +9,7 @@
 //   * member_crm (VIP flag, VIP reason, internal notes) is never read here.
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { chunk } from "@/lib/chunk";
 import { getTaxonomyOptionsForPortal, type TaxonomyOption } from "@/lib/taxonomies";
 import { parseLinkItems } from "@/lib/link-items";
 import { htmlToPlainText } from "@/lib/rich-text";
@@ -357,16 +358,25 @@ export async function loadCandidates(opts?: {
 
   // Answers are fetched for the listed members only, then filtered down to the
   // employer-visible questions before anything is returned.
+  // Member ids go in CHUNKS: one `.in()` with every listed id blew past the
+  // URL limit once the community grew (17/9), the request failed, and every
+  // card rendered empty. A failed page is now loud, never silently empty.
   const answers: { profile_id: string; question_id: string; value: unknown }[] = [];
   const PAGE = 1000;
-  for (let from = 0; ; from += PAGE) {
-    const { data } = await admin
-      .from("profile_answers")
-      .select("profile_id, question_id, value")
-      .in("profile_id", listed.map((p) => p.id))
-      .range(from, from + PAGE - 1);
-    answers.push(...((data ?? []) as typeof answers));
-    if (!data || data.length < PAGE) break;
+  for (const ids of chunk(listed.map((p) => p.id), 100)) {
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await admin
+        .from("profile_answers")
+        .select("profile_id, question_id, value")
+        .in("profile_id", ids)
+        .range(from, from + PAGE - 1);
+      if (error) {
+        console.error("[candidates] answers page failed:", error.message);
+        throw new Error("candidate_answers_failed");
+      }
+      answers.push(...((data ?? []) as typeof answers));
+      if (!data || data.length < PAGE) break;
+    }
   }
 
   const byMember = new Map<string, Map<string, unknown>>();

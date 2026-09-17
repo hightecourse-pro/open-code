@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCoordinator } from "@/lib/coordinators";
 import { loadGraduates, loadOptionLabels, loadReviews } from "@/lib/coordinator-data";
 import { GraduatesBrowser, type GraduateRow } from "./graduates-browser";
+import { activeInstitution } from "./active-institution";
 
 export const metadata: Metadata = { title: "אזור הרכזות" };
 export const dynamic = "force-dynamic";
@@ -12,9 +13,10 @@ export default async function CoordinatorGraduatesPage() {
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");
 
+  const active = await activeInstitution(me);
   const [labels, graduates, reviews] = await Promise.all([
     loadOptionLabels(),
-    loadGraduates(me.institutions),
+    loadGraduates(active ? [active] : []),
     loadReviews(me.id),
   ]);
 
@@ -40,5 +42,5 @@ export default async function CoordinatorGraduatesPage() {
     })
     .sort((a, b) => a.name.localeCompare(b.name, "he"));
 
-  return <GraduatesBrowser rows={rows} multiInstitution={me.institutions.length > 1} />;
+  return <GraduatesBrowser rows={rows} multiInstitution={false} />;
 }

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PartyPopper } from "lucide-react";
 import { getCoordinator } from "@/lib/coordinators";
 import { loadGraduates, loadHires } from "@/lib/coordinator-data";
+import { activeInstitution } from "../active-institution";
 
 export const metadata: Metadata = { title: "גיוסים" };
 export const dynamic = "force-dynamic";
@@ -19,8 +20,9 @@ export default async function CoordinatorHiresPage() {
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");
 
-  const graduates = await loadGraduates(me.institutions);
-  const hires = await loadHires(graduates.map((g) => g.id), me.institutions);
+  const active = await activeInstitution(me);
+  const graduates = await loadGraduates(active ? [active] : []);
+  const hires = await loadHires(graduates.map((g) => g.id), active ? [active] : []);
 
   return (
     <section className="bg-white border border-ink-200 rounded-[16px] p-5 shadow-sm">
