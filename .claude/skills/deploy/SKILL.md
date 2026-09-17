@@ -102,3 +102,35 @@ Nedarim dashboard URL and in Vercel, never in page code.
 A change that affects behaviour the QA document describes also updates the PDF
 in `qa-spec/` and the owner is told there is a new version. That is a standing
 rule, not a nicety.
+
+## Sanity, every push (the owner, 17/9)
+
+Not optional, not "when it seems relevant". After EVERY staging deploy:
+
+```bash
+node scripts/sanity/staging.mjs
+```
+
+It logs in as the staging test accounts and asserts on what actually
+rendered: the member's profile preview, the ADMIN FULL PROFILE PAGE
+(`/admin/members/<id>/profile` — the page that went header-only for everyone
+on 17/9 when the member list outgrew a PostgREST URL), the review center,
+coordinators, hires, mentors, jobs board, subscription page. Plus the
+feature-specific E2E of whatever the push changed.
+
+After EVERY production deploy:
+
+```bash
+node scripts/sanity/prod.mjs
+```
+
+Public pages render, gated routes redirect, nothing 500s. Report the two
+tallies in the deploy message. A red line blocks the push until fixed.
+
+Two lessons this rule exists for:
+- A page that renders 200 with an empty card is a broken page. Assert on
+  section headings, not on status codes.
+- Production data is bigger than staging. Anything that puts a member list
+  in a PostgREST `.in()` must go through `inChunks` (src/lib/chunk.ts);
+  supabase-js returns `data: null` on a URL that is too long, and every
+  caller reads that as "no rows".
