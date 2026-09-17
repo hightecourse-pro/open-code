@@ -3,7 +3,7 @@
 const BASE = process.env.SANITY_BASE ?? "https://app.opencode.org.il";
 const out = [];
 const ok = (name, cond, extra = "") => out.push(`${cond ? "PASS" : "FAIL"} ${name}${extra ? " — " + extra : ""}`);
-for (const [path, needle] of [["/", "קוד פתוח"], ["/login", "כניסה"], ["/signup", "הרשמה"], ["/coordinator/login", "שליחת קוד כניסה"], ["/hackathon-2026", "האקתון"], ["/hackathon-2026/partners", "האקתון"], ["/portal/login", "פורטל"]]) {
+for (const [path, needle] of [["/", "קוד פתוח"], ["/login", "כניסה"], ["/signup", "הצטרפות"], ["/coordinator/login", "שליחת קוד כניסה"], ["/hackathon-2026", "האקתון"], ["/hackathon-2026/partners", "האקתון"], ["/portal/login", "פורטל"]]) {
   const r = await fetch(`${BASE}${path}`);
   ok(`public ${path}`, r.status === 200 && (await r.text()).includes(needle), `status=${r.status}`);
 }
