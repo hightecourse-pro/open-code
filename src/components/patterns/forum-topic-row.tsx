@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui";
 import { cn, timeAgo } from "@/lib/utils";
 import { INTENT_LABEL } from "@/components/patterns/post-card";
 import type { PostIntent, UserRole } from "@/types/database";
+import { ForumRank } from "@/components/patterns/member-tags";
 
 /**
  * One row in the forum topic list — the Discourse convention: the list shows
@@ -46,7 +47,6 @@ export function topicTitle(body: string, max = 90): string {
 export function ForumTopicRow({ topic }: { topic: ForumTopic }) {
   const author = topic.author;
   const isMentor = author?.role === "mentor";
-  const isStaff = author?.role === "admin";
 
   return (
     <Link
@@ -79,20 +79,14 @@ export function ForumTopicRow({ topic }: { topic: ForumTopic }) {
               חדש
             </span>
           )}
-          {isStaff && (
-            <span className="bg-ink-1000 text-white px-2 py-px rounded-full text-[10px] font-bold shrink-0">
-              צוות
-            </span>
-          )}
         </div>
-        <div className="text-[12.5px] text-ink-500 mt-0.5 truncate">
-          {[
-            author?.full_name || "חברת קהילה",
-            INTENT_LABEL[topic.intent],
-            ...topic.tech_tags.slice(0, 3),
-          ]
-            .filter(Boolean)
-            .join(" · ")}
+        <div className="text-[12.5px] text-ink-500 mt-0.5 truncate flex items-center gap-1.5">
+          <span>{author?.full_name || "חברת קהילה"}</span>
+          {/* Rank next to every name (the owner, 18/9) */}
+          <ForumRank role={author?.role} size="xs" />
+          <span className="truncate">
+            {["", INTENT_LABEL[topic.intent], ...topic.tech_tags.slice(0, 3)].filter(Boolean).join(" · ")}
+          </span>
         </div>
       </div>
 

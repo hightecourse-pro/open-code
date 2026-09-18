@@ -133,6 +133,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       body: c.body,
       author_name: a?.full_name ?? "חברת קהילה",
       author_initials: a?.avatar_initials ?? null,
+      author_role: a?.role ?? null,
       created_at: c.created_at,
       edited_at: c.edited_at,
       mine: !!user && c.author_id === user.id,

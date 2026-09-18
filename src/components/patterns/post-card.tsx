@@ -1,4 +1,5 @@
 import { Avatar, Badge } from "@/components/ui";
+import { ForumRank } from "@/components/patterns/member-tags";
 import { timeAgo } from "@/lib/utils";
 import { PostBody } from "@/components/patterns/post-body";
 import { AttachmentList } from "@/components/patterns/attachment-list";
@@ -50,7 +51,6 @@ export function PostCard({
 }) {
   const author = post.author;
   const isMentor = author?.role === "mentor";
-  const isStaff = author?.role === "admin";
   const tone = isMentor ? "gold" : "pink";
 
   return (
@@ -64,12 +64,8 @@ export function PostCard({
         <div className="flex-1 min-w-0">
           <div className="font-display font-bold text-[15px] text-ink-1000 flex items-center gap-1.5 flex-wrap">
             {author?.full_name || "חברת קהילה"}
-            {isMentor && <Badge variant="mentor">👑 מנטורית</Badge>}
-            {isStaff && (
-              <span className="bg-ink-1000 text-white px-2 py-px rounded-full text-[10.5px] font-bold">
-                צוות קוד פתוח
-              </span>
-            )}
+            {/* Rank next to every name (the owner, 18/9) */}
+            <ForumRank role={author?.role} />
           </div>
           <div className="text-[12.5px] text-ink-500">
             {[
