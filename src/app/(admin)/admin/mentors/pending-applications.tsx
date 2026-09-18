@@ -36,6 +36,8 @@ export async function PendingMentorApplications({
     .select("id, full_name, avatar_initials, specialization, profile_completed, created_at")
     .eq("role", "mentor")
     .eq("status", "pending")
+    // The owner (18/9): finished questionnaires first, then oldest first.
+    .order("profile_completed", { ascending: false })
     .order("created_at", { ascending: true });
   const pending = pendingApps ?? [];
   if (pending.length === 0 && !showEmpty) return null;
