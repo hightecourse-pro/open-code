@@ -9,7 +9,7 @@ import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { CollapsibleSection } from "@/components/patterns/collapsible-section";
 import { JumpToCatalogue } from "@/components/patterns/jump-to-catalogue";
-import { COURSE_DATE_HE, swapEligibleAt } from "@/lib/course-library";
+import { COURSE_DATE_HE, releasedByTeam, swapEligibleAt } from "@/lib/course-library";
 import type { ContentLink } from "@/types/database";
 
 export const metadata: Metadata = { title: "ספריית הקורסים" };
@@ -52,7 +52,7 @@ export default async function CoursesPage() {
     user && subscriber
       ? supabase
           .from("enrollments")
-          .select("course_id, started_at, created_at")
+          .select("course_id, status, last_switch_month, started_at, created_at")
           .eq("profile_id", user.id)
           .order("started_at", { ascending: false, nullsFirst: false })
           .limit(1)
@@ -65,7 +65,8 @@ export default async function CoursesPage() {
   // The library rule, printed instead of implied: the rolling month runs from
   // her latest take (active OR returned), and every locked card carries the
   // exact date the next swap unlocks.
-  const takenRef = active ?? latestTake;
+  // A take the team released from the admin screen does not lock the month.
+  const takenRef = active ?? (latestTake && !releasedByTeam(latestTake) ? latestTake : null);
   const eligibleAt = takenRef ? swapEligibleAt(takenRef.started_at ?? takenRef.created_at) : null;
   const swapReady = !eligibleAt || eligibleAt <= new Date();
   const swapEligibleIso = eligibleAt && !swapReady ? eligibleAt.toISOString() : null;

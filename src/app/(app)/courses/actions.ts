@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSubscriber } from "@/lib/auth";
 import { queueRevokes } from "@/lib/drive-shares";
 import { ensureAccess } from "@/lib/content-access";
-import { COURSE_DATE_HE as DATE_HE, swapEligibleAt } from "@/lib/course-library";
+import { COURSE_DATE_HE as DATE_HE, releasedByTeam, swapEligibleAt } from "@/lib/course-library";
 
 function monthStart(): string {
   return new Date().toISOString().slice(0, 7) + "-01"; // YYYY-MM-01
@@ -69,12 +69,13 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
     // status now; only THAT course may be resumed early.
     const { data: latest } = await supabase
       .from("enrollments")
-      .select("course_id, started_at, created_at")
+      .select("course_id, status, last_switch_month, started_at, created_at")
       .eq("profile_id", user.id)
       .order("started_at", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle();
-    if (latest && latest.course_id !== courseId) {
+    // A take the team released from the admin screen never locks the month.
+    if (latest && latest.course_id !== courseId && !releasedByTeam(latest)) {
       const eligibleAt = swapEligibleAt(latest.started_at ?? latest.created_at);
       if (eligibleAt > now) {
         return {

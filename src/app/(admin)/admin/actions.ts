@@ -2939,3 +2939,38 @@ export async function sendJobOutcomeEmails(
   revalidatePath(`/admin/jobs/${jobId}`);
   return { ok: true, submitted, regrets, skipped, failed };
 }
+
+/**
+ * Cancel a member's course choice from her admin file (the owner, 18/9:
+ * "לבטל בחירה של קורס למשתתפת כדי שתוכל לבחור אחד אחר"). The take goes back
+ * to the library like a return, her Drive access to it is queued for revoke,
+ * and the rolling month is NOT started — releasedByTeam() lets her pick a new
+ * course right away.
+ */
+export async function releaseCourseChoice(profileId: string): Promise<void> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: active } = await admin
+    .from("enrollments")
+    .select("id, course_id")
+    .eq("profile_id", profileId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!active) return;
+  const { error } = await admin
+    .from("enrollments")
+    .update({ status: "returned", switched_at: new Date().toISOString(), last_switch_month: null })
+    .eq("id", active.id);
+  if (error) {
+    console.error("[admin] release course failed:", error.message);
+    return;
+  }
+  try {
+    const { queueRevokes } = await import("@/lib/drive-shares");
+    await queueRevokes(profileId, "course", [active.course_id]);
+  } catch (e) {
+    console.error("[drive] course revoke queue failed:", e);
+  }
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/courses");
+}
