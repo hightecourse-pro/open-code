@@ -13,7 +13,13 @@ import { nameWithPrevSurname } from "@/lib/names";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
-import { demoteMentorToMember, sendPersonalEmail, setMemberHidden, setMemberJunk } from "@/app/(admin)/admin/actions";
+import {
+  demoteMentorToMember,
+  releaseCourseChoice,
+  sendPersonalEmail,
+  setMemberHidden,
+  setMemberJunk,
+} from "@/app/(admin)/admin/actions";
 import { SaveButton } from "@/components/patterns/save-button";
 import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
 import { MemberSubscriptionPanel } from "@/components/patterns/member-subscription-panel";
@@ -33,7 +39,7 @@ import {
   practicumPeriodLabel,
 } from "@/lib/experience-entries";
 import { groupBySection } from "@/lib/profile-sections";
-import { swapEligibleAt } from "@/lib/course-library";
+import { releasedByTeam, swapEligibleAt } from "@/lib/course-library";
 import type { ConfigQuestion, QuestionScope } from "@/types/database";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
@@ -277,7 +283,7 @@ export default async function AdminMemberProfilePage({
   // the one thing the admin looks for first, so it renders apart and loud.
   const { data: enrollRows } = await adminClient
     .from("enrollments")
-    .select("course_id, status, progress_pct, started_at, created_at, switched_at, rating")
+    .select("course_id, status, last_switch_month, progress_pct, started_at, created_at, switched_at, rating")
     .eq("profile_id", id)
     .order("started_at", { ascending: false, nullsFirst: false });
   const enrollments = enrollRows ?? [];
@@ -721,7 +727,8 @@ export default async function AdminMemberProfilePage({
           <BookOpen size={16} className="text-brand-purple" /> הקורסים שלה
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          קורס פעיל אחד בכל פעם, כמו ספרייה — ההחלפה נפתחת חודש אחרי הבחירה.
+          קורס פעיל אחד בכל פעם, כמו ספרייה — ההחלפה נפתחת חודש אחרי הבחירה. ביטול הבחירה מכאן
+          מחזיר את הקורס לספרייה ופותח לה בחירה חדשה מיד.
         </p>
 
         {activeEnrollment ? (
@@ -752,7 +759,7 @@ export default async function AdminMemberProfilePage({
                   סימנה {activeEnrollment.progress_pct ?? 0}% מהקורס
                 </div>
               </div>
-              <div className="shrink-0">
+              <div className="shrink-0 flex flex-col items-end gap-2">
                 {(() => {
                   const st = shareStatusOf.get(`course:${activeEnrollment.course_id}`);
                   return st === "shared" ? (
@@ -763,6 +770,14 @@ export default async function AdminMemberProfilePage({
                     <Badge variant="gray">עוד לא נכנסה לקורס</Badge>
                   );
                 })()}
+                {/* The owner, 18/9: cancel her choice so she can pick another course */}
+                <ConfirmActionButton
+                  action={releaseCourseChoice.bind(null, id)}
+                  message={`לבטל את הבחירה בקורס «${contentTitleOf.get(`course:${activeEnrollment.course_id}`) ?? ""}»? הקורס יחזור לספרייה, הגישה שלה לחומרים שלו תיסגר, והיא תוכל לבחור קורס אחר מיד (בלי להמתין חודש).`}
+                  className="inline-flex items-center rounded-full border border-ink-300 text-ink-700 text-[12.5px] font-semibold px-3.5 py-1.5 hover:border-brand-purple hover:text-brand-purple transition-colors"
+                >
+                  ביטול הבחירה בקורס
+                </ConfirmActionButton>
               </div>
             </div>
           </div>
@@ -789,7 +804,9 @@ export default async function AdminMemberProfilePage({
                   {e.rating != null && (
                     <span className="text-[12px] text-ink-500">דירגה {e.rating}/5</span>
                   )}
-                  <Badge variant="gray">הוחזר לספרייה</Badge>
+                  <Badge variant="gray">
+                    {releasedByTeam(e) ? "הבחירה בוטלה ע״י הצוות" : "הוחזר לספרייה"}
+                  </Badge>
                 </div>
               ))}
             </div>
