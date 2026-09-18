@@ -10,7 +10,7 @@ export interface CvAnalysis {
   score: number;
   summary: string;
   insights: CvInsight[];
-  job_fit: { score: number; matched: string[]; missing: string[] } | null;
+  job_fit: { score: number; matched: string[]; missing: string[]; advice?: string } | null;
 }
 
 // Gemini responseSchema (OpenAPI subset).
@@ -38,6 +38,7 @@ const SCHEMA = {
         score: { type: "INTEGER" },
         matched: { type: "ARRAY", items: { type: "STRING" } },
         missing: { type: "ARRAY", items: { type: "STRING" } },
+        advice: { type: "STRING" },
       },
     },
   },
@@ -49,7 +50,7 @@ const SYSTEM = `את יועצת קריירה חמה ותומכת של "קוד פ
 כל הפלט בעברית, בלשון נקבה. בלי להתנשא ובלי לרכך יותר מדי — משוב שימושי שיעזור לה להשתפר.
 חשוב: משוב תמציתי וממוקד — בלי אריכות.
 score: ציון כללי 0–100. summary: 2–3 משפטים חמים ומעודדים. insights: 4–5 תובנות (type: good/warn/bad/tip + title קצר + detail של עד 2 משפטים).
-job_fit: אם סופק תיאור משרה — score התאמה 0–100, matched (מתאים), missing (חסר), עד 6 פריטים בכל רשימה; אחרת null.`;
+job_fit: אם סופק תיאור משרה — score התאמה 0–100; matched: דרישות מהמשרה שיש להן כיסוי בקורות החיים; missing: הדרישות הקונקרטיות מתיאור המשרה שאין להן עדות בקורות החיים (טכנולוגיה, ניסיון, השכלה, שפה) — כל פריט משפט קצר וספציפי, לא כללי; עד 6 פריטים בכל רשימה, ו-missing לא ריק אלא אם ההתאמה מלאה; advice: 2–3 משפטים מעשיים — מה לשנות או להוסיף בקורות החיים כדי להתאים למשרה הזו. כשיש תיאור משרה, גם התובנות (insights) מתייחסות אליו. אחרת job_fit = null.`;
 
 export async function analyzeCv(
   apiKey: string,

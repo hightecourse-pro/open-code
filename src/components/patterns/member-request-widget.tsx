@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { MessageSquarePlus, X } from "lucide-react";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
 import { AttachmentPicker } from "@/components/patterns/attachment-picker";
+import { FormDraft } from "@/components/patterns/form-draft";
 import { createMemberRequest } from "@/app/(app)/requests/actions";
 
 export interface MyRequestRow {
@@ -134,6 +135,8 @@ export function MemberRequestWidget({
               className="flex flex-col gap-2.5"
             >
               {error && <Alert variant="danger">{error}</Alert>}
+              {/* Closing the popup used to lose what she typed (a member, 18/9). */}
+              <FormDraft storageKey="draft:member-request" clear={sent} />
               <Field label="נושא" htmlFor="req-subject">
                 <Input key={subjectPrefill} id="req-subject" name="subject" required maxLength={120} placeholder="על מה מדובר?" defaultValue={subjectPrefill} />
               </Field>

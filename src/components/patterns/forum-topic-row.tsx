@@ -109,8 +109,13 @@ export function ForumTopicRow({ topic }: { topic: ForumTopic }) {
           <MessageCircle size={14} />
           {topic.replyCount}
         </span>
-        <span className="hidden md:block w-16 text-end text-[12px] text-ink-400">
-          {timeAgo(topic.last_activity_at)}
+        {/* The post's own time, exactly what the post page prints (the owner,
+            18/9: the two disagreed) — the newest reply as a second line. */}
+        <span className="hidden md:flex flex-col items-end w-24 text-end text-[12px] text-ink-400 leading-tight">
+          <span>{timeAgo(topic.created_at)}</span>
+          {topic.replyCount > 0 && topic.last_activity_at !== topic.created_at && (
+            <span className="text-[11px] text-brand-purple">תגובה {timeAgo(topic.last_activity_at)}</span>
+          )}
         </span>
       </div>
     </Link>
