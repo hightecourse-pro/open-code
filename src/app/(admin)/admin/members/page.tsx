@@ -59,7 +59,7 @@ export default async function AdminMembersPage({
   const supabase = await createClient();
   const admin = createAdminClient();
 
-  const [members, { data: questions }, { data: crm }, taxonomyOptions] = await Promise.all([
+  const [members, { data: questions }, { data: crm }, taxonomyOptions, { data: reminderRows }] = await Promise.all([
     fetchAllProfiles(),
     supabase
       .from("config_questions")
@@ -69,9 +69,14 @@ export default async function AdminMembersPage({
     // VIP + notes live in the admin-only member_crm table (empty pre-migration).
     supabase.from("member_crm").select("profile_id, is_vip, vip_reason, internal_notes"),
     getTaxonomyOptions(),
+    // Questionnaire reminders sent by the cron (the owner, 18/9): the table
+    // shows the last one, a click lists them all.
+    admin.from("profile_reminders").select("profile_id, sent_at").eq("kind", "questionnaire").order("sent_at", { ascending: false }),
   ]);
 
   const crmOf = new Map((crm ?? []).map((c) => [c.profile_id, c]));
+  const remindersOf = new Map<string, string[]>();
+  for (const r of reminderRows ?? []) remindersOf.set(r.profile_id, [...(remindersOf.get(r.profile_id) ?? []), r.sent_at]);
 
   // Contact details per row (the owner, 1/9): emails from auth (paged — the
   // default listUsers page is 50), phones from the phone answer.
@@ -247,6 +252,7 @@ export default async function AdminMembersPage({
       profile_completed: m.profile_completed === true,
       study_place: studyOf.get(m.id) ?? null,
       payment: paymentOf(m.id),
+      reminders: remindersOf.get(m.id) ?? [],
     };
   });
 

@@ -28,6 +28,7 @@ import { saveMemberInternalNote, saveSubmissionOutcome, toggleMemberInternalTag 
 import { askCoordinatorQuestion } from "@/app/(admin)/admin/coordinators/actions";
 import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 // ----------------------------------------------------------------- data types
 
@@ -1873,15 +1874,18 @@ export function ReviewCenter({
             {/* CV + curation */}
             <div className="flex flex-wrap items-center gap-3">
               {selected.cvUrl ? (
-                <a
-                  href={selected.cvUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline"
-                >
-                  <FileText size={15} /> צפייה בקורות החיים
-                  <ExternalLink size={12} aria-hidden />
-                </a>
+                <>
+                  <CvPreviewButton url={selected.cvUrl} label="תצוגה מקדימה של קורות החיים" />
+                  <a
+                    href={selected.cvUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline"
+                  >
+                    <FileText size={15} /> בכרטיסייה חדשה
+                    <ExternalLink size={12} aria-hidden />
+                  </a>
+                </>
               ) : (
                 <span className="text-sm text-ink-500">אין קובץ קורות חיים.</span>
               )}

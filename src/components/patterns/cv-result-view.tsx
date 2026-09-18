@@ -39,7 +39,8 @@ export function CvResultView({
   /** The history row already prints score + summary — skip the card there. */
   showScore?: boolean;
 }) {
-  const fit = analysis.job_fit;
+  const rawFit = analysis.job_fit;
+  const fit = rawFit ? { ...rawFit, matched: rawFit.matched ?? [], missing: rawFit.missing ?? [] } : null;
   return (
     <div className={cn("flex flex-col", compact ? "gap-2.5" : "gap-4")}>
       {heading}
@@ -124,7 +125,7 @@ export function CvResultView({
       )}
 
       <div className="flex flex-col gap-2.5">
-        {analysis.insights.map((ins, i) => {
+        {(analysis.insights ?? []).map((ins, i) => {
           const s = INSIGHT_STYLE[ins.type] ?? INSIGHT_STYLE.tip;
           const Icon = s.icon;
           return (

@@ -49,11 +49,11 @@ const recentlyHired = unstable_cache(
     // /admin/hires. No cap (the owner, 3/9) — the banner rotates.
     const { data: hires } = await admin
       .from("hires")
-      .select("full_name, profile_id")
+      .select("id, full_name, profile_id")
       .eq("show_in_banner", true)
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false });
-    return (hires ?? []).map((h) => ({ full_name: h.full_name, profileId: h.profile_id ?? null }));
+    return (hires ?? []).map((h) => ({ id: h.id, full_name: h.full_name, profileId: h.profile_id ?? null }));
   },
   ["recently-hired"],
   // The tag lets the hires screen bust this shared cache the moment a name
@@ -141,10 +141,17 @@ export default async function AuthenticatedLayout({
   // launch nudge is on — only fetched when someone will actually see them.
   // The external-applications claim rides in the same wave: an application
   // the team recorded by her email becomes hers on the first navigation.
-  const [feedbackAspects, hired, launchNudgeOn] = await Promise.all([
+  const [feedbackAspects, hired, launchNudgeOn, hiresSeen] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
     launchNudgeFlag(),
+    // Which celebrations SHE already saw (the owner, 18/9) — per member.
+    createAdminClient()
+      .from("hire_banner_seen")
+      .select("seen_hire_ids")
+      .eq("profile_id", profile.id)
+      .maybeSingle()
+      .then((r) => r.data?.seen_hire_ids ?? []),
     // Position matters: the claim's undefined must stay OUT of the
     // destructured slots above.
     (async () => {
@@ -276,7 +283,7 @@ export default async function AuthenticatedLayout({
           back in her chat. */}
       <MemberRequestWidget requests={myRequests} launchNudge={launchNudgeOn} />
       {/* The hired celebration — floating, minimizable, on every screen. */}
-      <HiredBanner members={hired} />
+      <HiredBanner members={hired} seenIds={hiresSeen} />
     </AppShell>
   );
 }

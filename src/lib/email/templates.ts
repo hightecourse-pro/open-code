@@ -744,6 +744,50 @@ export function genericActionEmail(actionUrl: string): BuiltEmail {
 // ---------------------------------------------------------------- mentors
 
 /** Sent when an admin approves a mentor application. */
+/**
+ * The questionnaire reminder (the owner, 18/9), two weeks after joining with
+ * the profile still unfinished. Mentor wording explains why HER answers
+ * matter; junior wording defuses the long-form fatigue. Both say that not
+ * every question is mandatory and where to finish later.
+ */
+export function questionnaireReminderEmail(name: string | undefined, track: "mentor" | "junior"): BuiltEmail {
+  const first = name?.trim().split(/\s+/)[0];
+  const hello = first ? `${escapeHtml(first)}, ` : "";
+  const common = [
+    "ובכל מקרה - לא כל השאלות חובה. אפשר לדלג על חלק, להשלים אחר כך, ולערוך הכול בכל רגע דרך \"הפרופיל שלי\" בתפריט הראשי בתוך הקהילה.",
+  ];
+  if (track === "mentor") {
+    return {
+      subject: "השאלון למנטורית מחכה לך 👑",
+      html: renderEmail({
+        heading: `${hello}רגע לפני שממשיכות 👑`,
+        lines: [
+          "שמנו לב שהשאלון למנטורית עוד לא הושלם - ורצינו להזכיר בעדינות.",
+          "השאלון עוזר לנו לדייק את העזרה שאת יכולה לתת, ולחבר אותך לג'וניוריות שצריכות דווקא אותך.",
+          ...common,
+        ],
+        ctaText: "להשלמת השאלון",
+        ctaUrl: `${SITE}/profile`,
+        footnote: "תודה שאת כאן. זה שווה המון 💜",
+      }),
+    };
+  }
+  return {
+    subject: "השאלון שלך מחכה - וזה פחות ארוך ממה שזה נראה 💜",
+    html: renderEmail({
+      heading: `${hello}רגע לפני שממשיכות 💜`,
+      lines: [
+        "שמנו לב שהשאלון עוד לא הושלם. אנחנו מבינות - שאלון ארוך יכול לייאש.",
+        "אין מה להיבהל: השאלות נועדו לבנות לך פרופיל מדויק, כזה שיאפשר לנו להגיש אותך למעסיקים הנכונים.",
+        ...common,
+      ],
+      ctaText: "להשלמת השאלון",
+      ctaUrl: `${SITE}/profile`,
+      footnote: "כל שאלה - אנחנו כאן. כפתור \"יש לך בקשה?\" מחכה בכל מסך 💜",
+    }),
+  };
+}
+
 export function mentorApprovedEmail(name?: string): BuiltEmail {
   return {
     subject: "אושרת כמנטורית בקוד פתוח 👑",

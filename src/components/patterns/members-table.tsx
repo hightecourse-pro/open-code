@@ -32,6 +32,8 @@ export interface MemberRow {
   study_place?: string | null;
   /** Payment state for the export — "מנוי פעיל עד…" / payers-list / "". */
   payment?: string;
+  /** Questionnaire reminder emails sent to her (ISO, newest first). */
+  reminders?: string[];
 }
 
 /** The member's TYPE in words — the export's status column. */
@@ -105,6 +107,7 @@ const COLUMNS: { key: string; label: string; sortVal?: (m: MemberRow) => string;
   { key: "study", label: "מקום לימודים", sortVal: (m) => m.study_place ?? "", filterVal: (m) => m.study_place ?? "" },
   { key: "region", label: "אזור", sortVal: (m) => m.region ?? "", filterVal: (m) => m.region ?? "" },
   { key: "joined", label: "הצטרפה", sortVal: (m) => m.created_at },
+  { key: "reminder", label: "תזכורת", sortVal: (m) => m.reminders?.[0] ?? "" },
   { key: "role", label: "תפקיד", sortVal: (m) => `${m.role}${m.is_experienced ? "-exp" : ""}` },
   { key: "status", label: "סטטוס", sortVal: (m) => `${STATUS_ORDER[m.status]}${m.profile_completed ? "b" : "a"}` },
   { key: "crm", label: "CRM" },
@@ -540,6 +543,31 @@ export function MembersTable({
                 <td className="p-2 border-b border-ink-100 text-ink-700">{m.region || "—"}</td>
                 <td className="p-2 border-b border-ink-100 text-ink-500 whitespace-nowrap">
                   {new Date(m.created_at).toLocaleDateString("he-IL")}
+                </td>
+                <td className="p-2 border-b border-ink-100 text-ink-500 whitespace-nowrap">
+                  {/* The questionnaire reminder trail (the owner, 18/9): last
+                      date on the row, every date on click. */}
+                  {m.reminders && m.reminders.length > 0 ? (
+                    <details className="relative">
+                      <summary
+                        className="list-none cursor-pointer inline-flex items-center gap-1 text-[12px] font-semibold text-brand-purple hover:underline [&::-webkit-details-marker]:hidden"
+                        title="תזכורת להשלמת השאלון — לחיצה לכל התאריכים"
+                      >
+                        ✉️ {new Date(m.reminders[0]).toLocaleDateString("he-IL")}
+                        {m.reminders.length > 1 && <span className="text-ink-400 font-normal">×{m.reminders.length}</span>}
+                      </summary>
+                      <div className="absolute z-20 mt-1 start-0 bg-white border border-ink-200 rounded-md shadow-md p-2 text-[12px] text-ink-700 min-w-[150px]">
+                        <div className="font-semibold text-ink-900 mb-1">תזכורות שנשלחו</div>
+                        {m.reminders.map((iso) => (
+                          <div key={iso} className="whitespace-nowrap">
+                            {new Date(iso).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" })}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  ) : (
+                    <span className="text-ink-300">—</span>
+                  )}
                 </td>
                 <td className="p-2 border-b border-ink-100"><RoleTag role={m.role} experienced={m.is_experienced === true} /></td>
                 <td className="p-2 border-b border-ink-100">

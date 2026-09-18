@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { cancelMentorRole, sendPersonalEmail, setMentorAvailability } from "@/app/(admin)/admin/actions";
 import { addMentorBonus } from "./actions";
 import { HACKATHON_POINTS } from "@/lib/mentor-score";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 export interface MentorHistoryRow {
   id: string;
@@ -125,14 +126,18 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
           </Badge>
         )}
         {m.cvUrl && (
-          <a
-            href={m.cvUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"
-          >
-            <FileText size={13} /> קו&quot;ח
-          </a>
+          <>
+            <CvPreviewButton url={m.cvUrl} title={m.full_name} label="קו״ח" />
+            <a
+              href={m.cvUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"
+              title="בכרטיסייה חדשה"
+            >
+              <FileText size={13} />
+            </a>
+          </>
         )}
         <button
           type="button"

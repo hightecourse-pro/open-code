@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, isSubscriber } from "@/lib/auth";
 import { withUserKey, type AiReason } from "@/lib/ai/keys";
-import { analyzeCvPdf, type CvAnalysis } from "@/lib/ai/cv";
+import { analyzeCvPdf, normalizeJobFit, type CvAnalysis } from "@/lib/ai/cv";
 import type { Json } from "@/types/database";
 
 export type CvState = { error?: string; reason?: AiReason; analysis?: CvAnalysis };
@@ -72,7 +72,7 @@ export async function latestCvReviewSince(afterIso: string | null): Promise<CvSt
     score: row.score,
     summary: row.summary ?? "",
     insights: Array.isArray(row.insights) ? (row.insights as unknown as CvAnalysis["insights"]) : [],
-    job_fit: (row.job_fit ?? null) as CvAnalysis["job_fit"],
+    job_fit: normalizeJobFit(row.job_fit),
   };
   return { analysis };
 }
@@ -141,7 +141,13 @@ async function runCvCheckInner(formData: FormData): Promise<CvState> {
     return { reason: result.reason, error: REASON_MSG[result.reason] };
   }
 
-  const analysis = result.data;
+  const analysis: CvAnalysis = {
+    ...result.data,
+    score: Math.max(0, Math.min(100, Math.round(Number(result.data.score) || 0))),
+    insights: Array.isArray(result.data.insights) ? result.data.insights : [],
+    // A job block without a job description is noise the model invented.
+    job_fit: normalizeJobFit(result.data.job_fit, Boolean(jobDescription)),
+  };
 
   // A one-off upload is kept as a snapshot so the history can open the exact
   // file the feedback talks about (the owner, 30/8). Under her own folder in

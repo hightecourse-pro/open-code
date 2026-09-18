@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { hasUsableKey } from "@/lib/ai/keys";
+import { normalizeJobFit } from "@/lib/ai/cv";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { AiKeyBanner } from "@/components/patterns/ai-key-banner";
 import { CvCheckerForm } from "@/components/patterns/cv-checker-form";
@@ -104,7 +105,9 @@ export default async function CvCheckerPage() {
           insights: Array.isArray(r.insights)
             ? (r.insights as { type: "good" | "warn" | "bad" | "tip"; title: string; detail: string }[])
             : [],
-          jobFit: (r.job_fit ?? null) as { score: number; matched: string[]; missing: string[]; advice?: string } | null,
+          // Old rows hold job_fit = {"score": N} with no arrays — normalized
+          // (a member, 18/9: every history entry but the first crashed).
+          jobFit: normalizeJobFit(r.job_fit),
   }));
   // The newest review renders in full under the form; the rest is history.
   const latest = entries[0] ?? null;

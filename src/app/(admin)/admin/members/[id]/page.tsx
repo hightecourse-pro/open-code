@@ -41,6 +41,7 @@ import {
 import { groupBySection } from "@/lib/profile-sections";
 import { releasedByTeam, swapEligibleAt } from "@/lib/course-library";
 import type { ConfigQuestion, QuestionScope } from "@/types/database";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
 
@@ -701,14 +702,17 @@ export default async function AdminMemberProfilePage({
                     </div>
                   </div>
                   {url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brand-gradient rounded-md px-3 py-1.5"
-                    >
-                      <Download size={13} /> הורדה
-                    </a>
+                    <>
+                      <CvPreviewButton url={url} fileName={d.file_name} title={`${profile.full_name} · ${d.label}`} />
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brand-gradient rounded-md px-3 py-1.5"
+                      >
+                        <Download size={13} /> הורדה
+                      </a>
+                    </>
                   ) : (
                     <span className="text-[12px] text-ink-400">הקישור לא זמין</span>
                   )}

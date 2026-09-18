@@ -9,6 +9,7 @@ import { CvUploadForm } from "@/components/patterns/cv-upload-form";
 import { CvName } from "@/components/patterns/cv-name";
 import { deleteCv, setDefaultCv } from "./actions";
 import type { CvLanguage } from "@/types/database";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 export const metadata: Metadata = { title: "קורות החיים שלך" };
 
@@ -94,15 +95,18 @@ export default async function CvPage() {
                       </form>
                     ))}
                   {signed.get(d.id) && (
-                    <a
-                      href={signed.get(d.id)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-ink-500 hover:text-brand-purple"
-                      title="הורדה"
-                    >
-                      <Download size={17} />
-                    </a>
+                    <>
+                      <CvPreviewButton compact url={signed.get(d.id)!} fileName={d.file_name} title={d.label} />
+                      <a
+                        href={signed.get(d.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-ink-500 hover:text-brand-purple"
+                        title="הורדה"
+                      >
+                        <Download size={17} />
+                      </a>
+                    </>
                   )}
                   <ConfirmActionButton
                     action={deleteCv.bind(null, d.id)}

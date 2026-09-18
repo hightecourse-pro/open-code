@@ -19,6 +19,7 @@ import { CandidateFeedback } from "@/components/portal/candidate-feedback";
 import { FavoriteButton } from "@/components/portal/favorite-button";
 import { portalClient, requirePortalClient } from "@/app/portal/session";
 import { siteThumbs } from "@/lib/site-thumbs";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 /**
  * loadCandidates() is a whole-list read; cache() collapses the metadata pass
@@ -140,6 +141,9 @@ export default async function CandidateProfilePage({
                   הורדת קורות חיים
                 </a>
               </Button>
+              <div className="mt-2 flex justify-center">
+                <CvPreviewButton url={`${cvHref}?inline=1`} title={candidate.name} label="תצוגה מקדימה" />
+              </div>
             </div>
 
             <InviteRail jobs={sent} candidate={candidate} />

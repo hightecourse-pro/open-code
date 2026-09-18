@@ -7,6 +7,7 @@ import { Avatar, Badge, Button } from "@/components/ui";
 import { langLevelLabel, parseLangSkills } from "@/lib/language-skills";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { approveMentorApplication, rejectMentorApplication, sendPersonalEmail } from "../actions";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 /**
  * The mentor-approval queue with the WHOLE application in front of her — the
@@ -175,14 +176,18 @@ export async function PendingMentorApplications({
               </div>
               {p.specialization && <Badge variant="purple">{p.specialization}</Badge>}
               {cvUrlOf.has(p.id) ? (
-                <a
-                  href={cvUrlOf.get(p.id)!}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"
-                >
-                  <FileText size={13} /> קו&quot;ח
-                </a>
+                <>
+                  <CvPreviewButton url={cvUrlOf.get(p.id)!} title={p.full_name} label="קו״ח" />
+                  <a
+                    href={cvUrlOf.get(p.id)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"
+                    title="בכרטיסייה חדשה"
+                  >
+                    <FileText size={13} />
+                  </a>
+                </>
               ) : (
                 <span className="text-[11.5px] text-ink-400">עוד לא העלתה קו&quot;ח</span>
               )}

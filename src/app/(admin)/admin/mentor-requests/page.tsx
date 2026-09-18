@@ -8,6 +8,7 @@ import { Badge, Button, Select } from "@/components/ui";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
 import { assignMentorToRequest, setMentorRequestStatus } from "../actions";
 import { HandledRequestsList, type HandledRequestRow } from "./handled-list";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 export const metadata: Metadata = { title: "בקשות לליווי" };
 export const dynamic = "force-dynamic";
@@ -281,14 +282,18 @@ export default async function AdminMentorRequestsPage({
                         לפרופיל המלא ←
                       </Link>
                       {cvUrl && (
-                        <a
-                          href={cvUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 font-semibold text-brand-purple hover:underline"
-                        >
-                          <FileText size={13} /> קורות החיים שלה
-                        </a>
+                        <>
+                          <CvPreviewButton url={cvUrl} title={m?.full_name ?? "קורות חיים"} label="קורות החיים שלה" />
+                          <a
+                            href={cvUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 font-semibold text-brand-purple hover:underline"
+                            title="בכרטיסייה חדשה"
+                          >
+                            <FileText size={13} />
+                          </a>
+                        </>
                       )}
                       <Link
                         href={`/chat?with=${r.profile_id}`}
