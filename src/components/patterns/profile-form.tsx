@@ -389,7 +389,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     return Object.keys(errs).length === 0;
   }
 
+  /**
+   * Belt and braces (19/9): mirror every rich editor into its hidden input
+   * right before the form is read, so what she SEES is what gets sent.
+   */
+  function syncRichInputs() {
+    const form = formRef.current;
+    if (!form) return;
+    for (const ed of form.querySelectorAll<HTMLElement>('[contenteditable="true"]')) {
+      const input = ed.parentElement?.querySelector<HTMLInputElement>(':scope > input[type="hidden"][name]');
+      if (input) input.value = ed.innerHTML;
+    }
+  }
   function next() {
+    syncRichInputs();
     if (cur === 0) {
       const fd = new FormData(formRef.current!);
       const first = String(fd.get("first_name") ?? "").trim();
@@ -813,6 +826,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       // startTransition keeps useActionState's pending/state behavior without
       // the reset. Enter on an earlier step advances instead of submitting.
       onSubmit={(e) => {
+        syncRichInputs();
         e.preventDefault();
         // The mid-step "שמירת השינויים" button (15/9) declares itself via the
         // submitter — everything else (Enter included) keeps advancing.

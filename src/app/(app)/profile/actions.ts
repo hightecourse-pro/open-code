@@ -351,6 +351,9 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       const v = htmlToPlainText(clean).trim() ? clean : "";
       value = v;
       empty = v === "";
+      // A quiet step draft never blanks a rich answer (19/9): an empty
+      // editor mirror in a draft is far more often a glitch than intent.
+      if (draft && v === "") continue;
     } else {
       const v = String(formData.get(key) ?? "").trim();
       value = v;
