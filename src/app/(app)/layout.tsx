@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { GradesNudge } from "@/components/patterns/grades-nudge";
 import { AppShell } from "@/components/layout";
 import { HiredBanner, type HiredMember } from "@/components/patterns/hired-banner";
 import { MemberRequestWidget } from "@/components/patterns/member-request-widget";
@@ -141,7 +142,7 @@ export default async function AuthenticatedLayout({
   // launch nudge is on — only fetched when someone will actually see them.
   // The external-applications claim rides in the same wave: an application
   // the team recorded by her email becomes hers on the first navigation.
-  const [feedbackAspects, hired, launchNudgeOn, hiresSeen] = await Promise.all([
+  const [feedbackAspects, hired, launchNudgeOn, hiresSeen, gradesCount] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
     launchNudgeFlag(),
@@ -152,6 +153,14 @@ export default async function AuthenticatedLayout({
       .eq("profile_id", profile.id)
       .maybeSingle()
       .then((r) => r.data?.seen_hire_ids ?? []),
+    // Does she have a grade sheet yet (the owner, 19/9)? Juniors only.
+    profile.role === "junior" && profile.profile_completed && profile.is_experienced !== true
+      ? createAdminClient()
+          .from("grade_sheets")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", profile.id)
+          .then((r) => r.count ?? 0)
+      : Promise.resolve(-1),
     // Position matters: the claim's undefined must stay OUT of the
     // destructured slots above.
     (async () => {
@@ -262,6 +271,7 @@ export default async function AuthenticatedLayout({
           <span className="font-display font-semibold whitespace-nowrap">לפרופיל ←</span>
         </Link>
       )}
+      {gradesCount === 0 && <GradesNudge />}
       {!subscriber && (
         <Link
           href="/join"

@@ -1965,6 +1965,12 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hire_banner_seen"]["Insert"]>;
         Relationships: [];
       };
+      grade_sheets: {
+        Row: { id: string; profile_id: string; label: string; file_path: string; file_name: string; created_at: string };
+        Insert: { id?: string; profile_id: string; label: string; file_path: string; file_name: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["grade_sheets"]["Insert"]>;
+        Relationships: [];
+      };
       profile_reminders: {
         Row: { id: string; profile_id: string; kind: string; sent_at: string };
         Insert: { id?: string; profile_id: string; kind?: string; sent_at?: string };

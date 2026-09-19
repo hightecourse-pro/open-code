@@ -122,6 +122,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   const [cvFileName, setCvFileName] = useState<string | null>(null);
+  const [gradesFileName, setGradesFileName] = useState<string | null>(null);
   const [cvError, setCvError] = useState(false);
 
   // A server-side save error must be seen — scroll it into view.
@@ -425,6 +426,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       const draftFd = new FormData(formRef.current!);
       draftFd.set("__draft", "1");
       draftFd.delete("cv_file"); // the heavy upload stays for the real submit
+      draftFd.delete("grades_file");
       startTransition(() => {
         void saveProfile({}, draftFd).catch(() => {});
       });
@@ -1017,6 +1019,38 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           />
           {cvError && (
             <span className="text-danger text-xs">בלי קורות חיים אי אפשר לסיים — העלי קובץ אחד 🙂</span>
+          )}
+          {/* Grade sheet — juniors only, never required (the owner, 19/9). */}
+          {expChoice === false && !mentorTrack && (
+            <div className="flex flex-col gap-1.5 mt-3">
+              <span className="text-xs font-semibold text-ink-700">גליון ציונים (לא חובה)</span>
+              <label
+                htmlFor="profile_grades_file"
+                className={cn(
+                  "flex items-center gap-3 border-2 border-dashed rounded-md px-4 py-3 cursor-pointer transition-colors",
+                  gradesFileName ? "border-[#A7E3C6] bg-tint-mint" : "border-ink-300 hover:border-brand-purple"
+                )}
+              >
+                <span className="text-sm text-ink-700">
+                  {gradesFileName ? (
+                    <>
+                      <b dir="ltr">{gradesFileName}</b> · נבחר ✓
+                    </>
+                  ) : (
+                    "אפשר לצרף גליון ציונים (PDF / Word / תמונה) — עוזר להציג אותך למעסיקים בצורה מלאה"
+                  )}
+                </span>
+              </label>
+              <input
+                id="profile_grades_file"
+                name="grades_file"
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                className="sr-only"
+                onChange={(e) => setGradesFileName(e.target.files?.[0]?.name ?? null)}
+              />
+              <span className="text-[11.5px] text-ink-400">אפשר גם להוסיף או להחליף אחר כך ב״קורות החיים שלי״ בתפריט.</span>
+            </div>
           )}
         </div>
       )}

@@ -470,6 +470,24 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     }
   }
 
+  // Grade sheet (the owner, 19/9): optional, juniors only; a failure here
+  // never costs her the questionnaire — it is reported, not fatal.
+  const gradesFile = formData.get("grades_file");
+  if (!draft && gradesFile instanceof File && gradesFile.size > 0 && before?.role === "junior" && !hasExperience) {
+    if (gradesFile.size <= 10 * 1024 * 1024 && /\.(pdf|docx?|jpe?g|png)$/i.test(gradesFile.name)) {
+      const safe = gradesFile.name.replace(/[^\w.\-]+/g, "_");
+      const gpath = `${user.id}/grades/${Date.now()}-${safe}`;
+      const { error: gErr } = await supabase.storage
+        .from("cvs")
+        .upload(gpath, gradesFile, { contentType: gradesFile.type || "application/octet-stream", upsert: false });
+      if (!gErr) {
+        await supabase.from("grade_sheets").insert({ profile_id: user.id, label: "גליון ציונים", file_path: gpath, file_name: gradesFile.name });
+      } else {
+        console.error("[profile] grade sheet upload failed:", gErr.message);
+      }
+    }
+  }
+
   // Change-tracked save: one read of what's already stored, then upserts only
   // for answers whose value actually changed (or is brand new) — so a row's
   // updated_at honestly means "when this answer last changed", not "when she

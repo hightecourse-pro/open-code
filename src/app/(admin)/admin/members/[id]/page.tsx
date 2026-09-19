@@ -186,6 +186,16 @@ export default async function AdminMemberProfilePage({
     .select("id, label, language, file_path, file_name, created_at")
     .eq("profile_id", id)
     .order("created_at", { ascending: false });
+  // Grade sheets (the owner, 19/9) — listed under her CVs.
+  const { data: gradeRows } = await adminClient
+    .from("grade_sheets")
+    .select("id, label, file_path, file_name, created_at")
+    .eq("profile_id", id)
+    .order("created_at", { ascending: false });
+  const { data: gradeSigned } = (gradeRows ?? []).length
+    ? await adminClient.storage.from("cvs").createSignedUrls((gradeRows ?? []).map((g) => g.file_path), 3600)
+    : { data: [] };
+  const gradeUrl = new Map((gradeSigned ?? []).map((s) => [s.path, s.signedUrl]));
   const { data: cvSigned } = (cvDocs ?? []).length
     ? await adminClient.storage
         .from("cvs")
@@ -722,6 +732,30 @@ export default async function AdminMemberProfilePage({
           </div>
         ) : (
           <p className="text-ink-500 text-sm">היא עדיין לא העלתה קורות חיים.</p>
+        )}
+        {(gradeRows ?? []).length > 0 && (
+          <div className="mt-4 pt-3 border-t border-ink-100">
+            <div className="text-[12px] font-semibold text-ink-500 mb-1.5">🎓 גליונות ציונים ({(gradeRows ?? []).length})</div>
+            {(gradeRows ?? []).map((g) => {
+              const url = g.file_path ? gradeUrl.get(g.file_path) : null;
+              return (
+                <div key={g.id} className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0 flex-wrap">
+                  <div className="flex-1 min-w-[160px]">
+                    <div className="font-medium text-ink-900">{g.label}</div>
+                    <div className="text-xs text-ink-500">הועלה {new Date(g.created_at).toLocaleDateString("he-IL")}</div>
+                  </div>
+                  {url && (
+                    <>
+                      <CvPreviewButton url={url} fileName={g.file_name} title={g.label} />
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-white bg-brand-gradient rounded-md px-3 py-1.5">
+                        <Download size={13} /> הורדה
+                      </a>
+                    </>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
