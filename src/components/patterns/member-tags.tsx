@@ -23,6 +23,32 @@ const ROLE: Record<UserRole, { label: string; cls: string }> = {
   admin: { label: "צוות", cls: "bg-ink-1000 text-white" },
 };
 
+/**
+ * The rank next to a name in the forum (the owner, 18/9: "שיהיה ניתן לראות
+ * מי צוות ומי מנטורית ומי משתתפת") — community wording, not the admin's.
+ */
+const FORUM_RANK: Record<UserRole, { label: string; cls: string }> = {
+  admin: { label: "צוות קוד פתוח", cls: "bg-ink-1000 text-white" },
+  mentor: { label: "👑 מנטורית", cls: "bg-[linear-gradient(95deg,#FFD166,#E5A93C)] text-[#5A3D00]" },
+  junior: { label: "משתתפת", cls: "bg-tint-purple text-brand-purple" },
+};
+
+export function ForumRank({ role, size = "sm" }: { role: UserRole | null | undefined; size?: "sm" | "xs" }) {
+  if (!role) return null;
+  const r = FORUM_RANK[role];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full font-bold whitespace-nowrap shrink-0",
+        size === "xs" ? "px-1.5 py-px text-[10px]" : "px-2 py-px text-[10.5px]",
+        r.cls
+      )}
+    >
+      {r.label}
+    </span>
+  );
+}
+
 export function RoleTag({ role, experienced = false }: { role: UserRole; experienced?: boolean }) {
   const r = ROLE[role];
   // An experienced member is still role=junior in the data — but showing her

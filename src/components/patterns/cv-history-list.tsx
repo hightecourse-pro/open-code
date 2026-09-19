@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, FileText, Info, Lightbulb, TriangleAlert, X } from "lucide-react";
+import { ChevronDown, FileText, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CvResultView } from "@/components/patterns/cv-result-view";
 
 export interface CvHistoryEntry {
   id: string;
@@ -13,15 +14,8 @@ export interface CvHistoryEntry {
   /** Signed URL to the exact file this check ran on (snapshot or saved doc). */
   fileUrl: string | null;
   insights: { type: "good" | "warn" | "bad" | "tip"; title: string; detail: string }[];
-  jobFit: { score: number; matched: string[]; missing: string[] } | null;
+  jobFit: { score: number; matched: string[]; missing: string[]; advice?: string } | null;
 }
-
-const STYLE = {
-  good: { icon: Check, cls: "bg-tint-mint text-[#1B7A4B]" },
-  warn: { icon: TriangleAlert, cls: "bg-tint-warm text-[#8C5E0E]" },
-  bad: { icon: X, cls: "bg-danger-bg text-[#A8254B]" },
-  tip: { icon: Lightbulb, cls: "bg-tint-purple text-brand-purple" },
-} as const;
 
 const HIST_DATE = new Intl.DateTimeFormat("he-IL", {
   day: "numeric",
@@ -39,7 +33,8 @@ export function CvHistoryList({ entries }: { entries: CvHistoryEntry[] }) {
   if (entries.length === 0) return null;
   return (
     <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-      <h2 className="font-display text-base font-bold text-ink-1000 mb-3">הבדיקות הקודמות שלך</h2>
+      <h2 className="font-display text-base font-bold text-ink-1000 mb-1">בדיקות קודמות</h2>
+      <p className="text-[12.5px] text-ink-500 mb-3">לחיצה על בדיקה פותחת את המשוב המלא שלה.</p>
       <div className="flex flex-col">
         {entries.map((r) => {
           const open = openId === r.id;
@@ -63,9 +58,7 @@ export function CvHistoryList({ entries }: { entries: CvHistoryEntry[] }) {
                     </span>
                   </span>
                   {r.summary && (
-                    <span className={cn("block text-[13px] text-ink-900 mt-0.5", !open && "line-clamp-2")}>
-                      {r.summary}
-                    </span>
+                    <span className="block text-[13px] text-ink-900 mt-0.5">{r.summary}</span>
                   )}
                 </span>
                 <ChevronDown
@@ -86,27 +79,12 @@ export function CvHistoryList({ entries }: { entries: CvHistoryEntry[] }) {
                       <FileText size={13} /> צפייה בקובץ שנבדק
                     </a>
                   )}
-                  {r.insights.map((ins, i) => {
-                    const s = STYLE[ins.type] ?? STYLE.tip;
-                    const Icon = s.icon;
-                    return (
-                      <div key={i} className="bg-ink-50/60 border border-ink-100 rounded-md p-3 flex gap-2.5 items-start">
-                        <span className={cn("w-6 h-6 rounded-full flex items-center justify-center shrink-0", s.cls)}>
-                          <Icon size={13} />
-                        </span>
-                        <span>
-                          <span className="block text-[13px] font-bold text-ink-1000">{ins.title}</span>
-                          <span className="block text-[12.5px] text-ink-700">{ins.detail}</span>
-                        </span>
-                      </div>
-                    );
-                  })}
-                  {r.jobFit && (
-                    <div className="bg-tint-purple/50 border border-[#DDC9EC] rounded-md p-3 text-[12.5px] text-ink-900">
-                      <b className="text-brand-purple">התאמה למשרה: {r.jobFit.score}/100.</b>{" "}
-                      {r.jobFit.matched.length > 0 && <>מתאים: {r.jobFit.matched.join(", ")}. </>}
-                      {r.jobFit.missing.length > 0 && <>חסר: {r.jobFit.missing.join(", ")}.</>}
-                    </div>
+                  {(r.insights.length > 0 || r.jobFit) && (
+                    <CvResultView
+                      compact
+                      showScore={false}
+                      analysis={{ score: r.score ?? 0, summary: r.summary ?? "", insights: r.insights, job_fit: r.jobFit }}
+                    />
                   )}
                   {r.insights.length === 0 && !r.jobFit && (
                     <p className="text-[12.5px] text-ink-500 flex items-center gap-1.5">

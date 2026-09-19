@@ -331,7 +331,13 @@ export function RichTextEditor({
           before this input mounts (DOM order), so without it an untouched
           field submitted "" and silently WIPED the stored answer on every
           re-save (רבקי, 2/9 — bio/notes gone). */}
-      <input type="hidden" name={name} ref={inputRef} defaultValue={defaultValue ?? ""} />
+      {/* NO defaultValue here (the "לא נשמר" root cause, 19/9): for a hidden
+          input, value and defaultValue are the same attribute, so on every
+          re-render (e.g. the wizard's step change) React put the ORIGINAL
+          stored value back over what she typed — the next save then wrote
+          the old value (or "") over her text. The value is mirrored
+          imperatively from the editor and React never touches it. */}
+      <input type="hidden" name={name} ref={inputRef} />
     </div>
   );
 }

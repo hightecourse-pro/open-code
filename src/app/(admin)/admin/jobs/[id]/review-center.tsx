@@ -28,6 +28,7 @@ import { saveMemberInternalNote, saveSubmissionOutcome, toggleMemberInternalTag 
 import { askCoordinatorQuestion } from "@/app/(admin)/admin/coordinators/actions";
 import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 // ----------------------------------------------------------------- data types
 
@@ -76,6 +77,8 @@ export interface ReviewApplication {
   memberLabel?: "team" | "mentor" | null;
   /** מנויה (profiles.status === "active") — internal indication only. */
   isSubscriber: boolean;
+  /** Chat messages the team sent her from THIS job (the owner, 19/9). */
+  sentMessages?: { body: string; at: string }[];
   /** VIP from the admin-only member_crm — internal indication only. */
   isVip: boolean;
   /** Internal profile tags (member_crm.internal_tags) — admin-only. */
@@ -366,10 +369,20 @@ export function ReviewCenter({
     spec: "",
     region: "",
     exp: "",
+    sub: "",
+    qId: "",
+    qText: "",
     status: "",
     mark: "",
     note: "",
   });
+  // The answer to ONE chosen job question, as text (the owner, 19/9:
+  // "לראות תשובה של שאלה מסוימת ששאלתי למשרה" in the table).
+  const answerOfQ = (a: ReviewApplication, qId: string): string => {
+    const v = a.answers?.[qId];
+    if (v == null || v === "") return "";
+    return Array.isArray(v) ? v.join(", ") : String(v);
+  };
   const setCol = (key: keyof typeof colFilters) => (value: string) =>
     setColFilters((prev) => ({ ...prev, [key]: value }));
 
@@ -535,6 +548,9 @@ export function ReviewCenter({
       if (colFilters.region && (a.profile?.region ?? "") !== colFilters.region) return false;
       if (colFilters.exp === "yes" && !a.profile?.isExperienced) return false;
       if (colFilters.exp === "no" && a.profile?.isExperienced) return false;
+      if (colFilters.sub === "yes" && !a.isSubscriber) return false;
+      if (colFilters.sub === "no" && a.isSubscriber) return false;
+      if (colFilters.qId && colFilters.qText.trim() && !answerOfQ(a, colFilters.qId).toLowerCase().includes(colFilters.qText.trim().toLowerCase())) return false;
       if (colFilters.status && statusOf(a) !== colFilters.status) return false;
       if (colFilters.mark && (markOf(a) ?? "none") !== colFilters.mark) return false;
       if (noteQ && !(noteValOf(a) ?? "").toLowerCase().includes(noteQ)) return false;
@@ -542,7 +558,7 @@ export function ReviewCenter({
     });
   }, [filtered, colFilters, statusOf, markOf, noteValOf]);
 
-  const anyColFilter = Object.values(colFilters).some((v) => v !== "");
+  const anyColFilter = Object.entries(colFilters).some(([k, v]) => k !== "qId" && v !== "");
 
   // --------------------------------------------------- criteria bar helpers
 
@@ -1313,6 +1329,52 @@ export function ReviewCenter({
                         ),
                       },
                       {
+                        key: "sub",
+                        head: "מנויה",
+                        filter: (
+                          <select
+                            value={colFilters.sub}
+                            onChange={(e) => setCol("sub")(e.target.value)}
+                            aria-label="סינון: מנויות בלבד"
+                            className="mt-1 w-full rounded-md border border-ink-200 bg-ink-0 px-1 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                          >
+                            <option value="">הכול</option>
+                            <option value="yes">מנויות בלבד</option>
+                            <option value="no">לא מנויות</option>
+                          </select>
+                        ),
+                      },
+                      {
+                        key: "answer",
+                        head: "תשובה לשאלה",
+                        filter: (
+                          <span className="flex flex-col gap-1">
+                            <select
+                              value={colFilters.qId}
+                              onChange={(e) => setCol("qId")(e.target.value)}
+                              aria-label="בחירת שאלה מהמשרה"
+                              className="mt-1 w-full min-w-[160px] max-w-[240px] rounded-md border border-ink-200 bg-ink-0 px-1 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                            >
+                              <option value="">בחרי שאלה…</option>
+                              {questions.map((q) => (
+                                <option key={q.id} value={q.id}>
+                                  {q.question}
+                                </option>
+                              ))}
+                            </select>
+                            {colFilters.qId && (
+                              <input
+                                value={colFilters.qText}
+                                onChange={(e) => setCol("qText")(e.target.value)}
+                                placeholder="סינון לפי התשובה…"
+                                aria-label="סינון לפי התשובה"
+                                className="w-full rounded-md border border-ink-200 bg-ink-0 px-1.5 py-0.5 text-[11.5px] font-normal outline-none focus:border-brand-purple"
+                              />
+                            )}
+                          </span>
+                        ),
+                      },
+                      {
                         key: "status",
                         head: "סטטוס",
                         filter: (
@@ -1380,12 +1442,12 @@ export function ReviewCenter({
               <tbody>
                 {anyColFilter && tableRows.length === 0 && (
                   <tr>
-                    <td colSpan={10} className="px-3 py-4 text-sm text-ink-500">
+                    <td colSpan={12} className="px-3 py-4 text-sm text-ink-500">
                       אין מועמדות שתואמות את סינון העמודות.{" "}
                       <button
                         type="button"
                         onClick={() =>
-                          setColFilters({ name: "", spec: "", region: "", exp: "", status: "", mark: "", note: "" })
+                          setColFilters({ name: "", spec: "", region: "", exp: "", sub: "", qId: "", qText: "", status: "", mark: "", note: "" })
                         }
                         className="font-semibold text-brand-purple underline cursor-pointer"
                       >
@@ -1428,6 +1490,22 @@ export function ReviewCenter({
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
                         {a.profile?.isExperienced ? "בעלת ניסיון" : "—"}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
+                        {a.isSubscriber ? (
+                          <span className="rounded-full bg-tint-pink text-brand-pink-deep px-2 py-0.5 text-[10.5px] font-bold">מנויה</span>
+                        ) : (
+                          <span className="text-ink-400">—</span>
+                        )}
+                      </td>
+                      <td className="border-b border-ink-100 px-3 py-2 align-top text-[12.5px] text-ink-800 max-w-[260px]">
+                        {colFilters.qId ? (
+                          <span className="block max-w-[260px] truncate" title={answerOfQ(a, colFilters.qId)}>
+                            {answerOfQ(a, colFilters.qId) || <span className="text-ink-400">— לא ענתה</span>}
+                          </span>
+                        ) : (
+                          <span className="text-ink-300">בחרי שאלה בכותרת</span>
+                        )}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
                         <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-bold text-ink-700">
@@ -1655,6 +1733,7 @@ export function ReviewCenter({
                   key={`chat-${selected.applicantId}`}
                   applicantId={selected.applicantId}
                   jobId={jobId}
+                  sent={selected.sentMessages ?? []}
                 />
                 {/* Study facts, front and center (the owner, 2/9). */}
                 {(selected.profile?.studyPlace || selected.profile?.track || selected.profile?.gradYear) && (
@@ -1873,15 +1952,18 @@ export function ReviewCenter({
             {/* CV + curation */}
             <div className="flex flex-wrap items-center gap-3">
               {selected.cvUrl ? (
-                <a
-                  href={selected.cvUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline"
-                >
-                  <FileText size={15} /> צפייה בקורות החיים
-                  <ExternalLink size={12} aria-hidden />
-                </a>
+                <>
+                  <CvPreviewButton url={selected.cvUrl} label="תצוגה מקדימה של קורות החיים" />
+                  <a
+                    href={selected.cvUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-purple hover:underline"
+                  >
+                    <FileText size={15} /> בכרטיסייה חדשה
+                    <ExternalLink size={12} aria-hidden />
+                  </a>
+                </>
               ) : (
                 <span className="text-sm text-ink-500">אין קובץ קורות חיים.</span>
               )}
@@ -2125,14 +2207,48 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
  * A chat message to the candidate from inside the job (the owner, 16/9) —
  * lands in her chat + a nudge email "יש לך הודעה מקוד פתוח / בקשר למשרה".
  */
-function ChatToCandidate({ applicantId, jobId }: { applicantId: string; jobId: string }) {
+function ChatToCandidate({
+  applicantId,
+  jobId,
+  sent = [],
+}: {
+  applicantId: string;
+  jobId: string;
+  /** What the team already sent her from this job (the owner, 19/9). */
+  sent?: { body: string; at: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [result, setResult] = useState<string | null>(null);
   const [sending, startSending] = useTransition();
+  const [showSent, setShowSent] = useState(false);
+  // Messages sent in THIS session, before the page re-reads them.
+  const [justSent, setJustSent] = useState<{ body: string; at: string }[]>([]);
+  const all = [...sent, ...justSent];
 
   return (
     <div className="mt-1.5">
+      {all.length > 0 && (
+        <div className="mb-1">
+          <button
+            type="button"
+            onClick={() => setShowSent((v) => !v)}
+            className="text-[12px] font-bold text-ink-700 hover:text-brand-purple cursor-pointer"
+          >
+            ✉️ {all.length === 1 ? "הודעה אחת ששלחת לה מהמשרה" : `${all.length} הודעות ששלחת לה מהמשרה`} {showSent ? "▴" : "▾"}
+          </button>
+          {showSent && (
+            <div className="mt-1 flex flex-col gap-1.5">
+              {all.map((m, i) => (
+                <div key={i} className="bg-ink-50 border border-ink-100 rounded-[10px] px-3 py-2 text-[12.5px]">
+                  <div className="text-[11px] text-ink-400 mb-0.5">{fmtDate(m.at)}</div>
+                  <div className="whitespace-pre-line text-ink-900">{m.body}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <button
         type="button"
         onClick={() => {
@@ -2162,6 +2278,8 @@ function ChatToCandidate({ applicantId, jobId }: { applicantId: string; jobId: s
                 if (res.error) setResult(res.error);
                 else {
                   setResult("נשלח — בצ'אט שלה + מייל שמפנה לשם ✓");
+                  setJustSent((l) => [...l, { body: text.trim(), at: new Date().toISOString() }]);
+                  setShowSent(true);
                   setText("");
                   setOpen(false);
                 }

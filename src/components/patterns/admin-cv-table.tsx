@@ -5,7 +5,6 @@ import {
   ArrowDownAZ,
   ArrowUpAZ,
   Download,
-  Eye,
   FileText,
   ChevronDown,
   ChevronUp,
@@ -15,6 +14,7 @@ import {
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { CvLanguage } from "@/types/database";
+import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 export interface AdminCvRow {
   id: string;
@@ -410,15 +410,7 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
                     </td>
                     <td className="p-2 border-b border-ink-100">
                       <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
-                        <a
-                          href={`/admin/cv-files/sign?id=${r.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title="תצוגה מקדימה בכרטיסייה חדשה"
-                          className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple border border-brand-purple/40 rounded-md px-2.5 py-1.5 hover:bg-tint-purple"
-                        >
-                          <Eye size={13} /> תצוגה
-                        </a>
+                        <CvPreviewButton url={`/admin/cv-files/sign?id=${r.id}`} fileName={r.file_name} title={r.member_name} label="תצוגה" />
                         <a
                           href={`/admin/cv-files/sign?id=${r.id}&download=1`}
                           className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-white bg-brand-gradient rounded-md px-2.5 py-1.5"

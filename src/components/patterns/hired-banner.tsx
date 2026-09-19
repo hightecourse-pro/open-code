@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { Minus } from "lucide-react";
+import { markHiresSeen } from "@/app/(app)/hired-banner-actions";
 
 export interface HiredMember {
+  /** The hires-registry row — what "seen" is tracked by. */
+  id: string;
   full_name: string;
   /** Her member card, when she's in the community — the name links to it. */
   profileId?: string | null;
@@ -17,23 +20,25 @@ export interface HiredMember {
  * shown to other members.
  *
  * Floats app-wide (the PM: not buried in the forum), bottom-start so it never
- * fights the request widget in the other corner. Minimizable to a 🎉 chip —
- * the choice sticks per browser until the set of names changes, so a NEW
- * celebration re-opens it.
+ * fights the request widget in the other corner.
+ *
+ * Per member, not per browser (the owner, 18/9): it opens by itself ONLY when
+ * there is news she has not seen yet; unseen names carry a "חדש" mark; once
+ * she has looked (the open banner, a few seconds), the names are recorded as
+ * seen — the mark drops and the banner stays a 🎉 chip until the next hire.
  */
-export function HiredBanner({ members }: { members: HiredMember[] }) {
-  // FULL names, by the owner's explicit call (31/8: "השמות מלאים כמובן") —
-  // and because the storage key below is derived from this exact string,
-  // every newly hired member changes it and the banner re-opens for everyone.
-  const names = members
-    .map((m) => m.full_name.trim())
-    .filter(Boolean)
-    .join(", ");
+export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seenIds: string[] }) {
+  const seen = new Set(seenIds);
+  const unseen = members.filter((m) => !seen.has(m.id));
+  const hasNews = unseen.length > 0;
+  const newsKey = unseen
+    .map((m) => m.id)
+    .sort()
+    .join(",");
 
-  const storageKey = `hired-banner-min:${names}`;
-  // localStorage through useSyncExternalStore: the server snapshot says
-  // "minimized", the client snapshot reads the real choice, and React
-  // reconciles after hydration — no setState-in-effect cascade.
+  // Her minimize choice for THIS batch of news sticks per browser — a new
+  // hire changes the key and the banner opens again.
+  const storageKey = `hired-banner-min:${newsKey || "none"}`;
   const subscribe = useCallback((cb: () => void) => {
     window.addEventListener("storage", cb);
     return () => window.removeEventListener("storage", cb);
@@ -49,22 +54,35 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
     },
     () => true
   );
-  // Her click this session wins over what storage said at load.
   const [override, setOverride] = useState<boolean | null>(null);
-  const minimized = override ?? storedMin;
+  // No news → stays a chip until she opens it herself.
+  const minimized = override ?? (hasNews ? storedMin : true);
 
-  // One name at a time, gently rotating (the owner, 2/9: "אנימציה שהשמות
-  // מתחלפים") — only when there is actually more than one to rotate.
+  // Unseen names first, then the rest, gently rotating (the owner, 2/9).
+  const ordered = [...unseen, ...members.filter((m) => seen.has(m.id))];
   const [nameIdx, setNameIdx] = useState(0);
-  const many = members.length > 1;
+  const many = ordered.length > 1;
   useEffect(() => {
     if (!many || minimized) return;
-    const id = setInterval(() => setNameIdx((i) => (i + 1) % members.length), 3500);
+    const id = setInterval(() => setNameIdx((i) => (i + 1) % ordered.length), 3500);
     return () => clearInterval(id);
-  }, [many, minimized, members.length]);
+  }, [many, minimized, ordered.length]);
+
+  // Looking at the open banner for a few seconds = seen. Recorded once per
+  // batch; the marks drop on her next page load, not mid-look.
+  useEffect(() => {
+    if (!hasNews || minimized) return;
+    const ids = unseen.map((m) => m.id);
+    const t = setTimeout(() => {
+      void markHiresSeen(ids);
+    }, 4000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasNews, minimized, newsKey]);
 
   if (members.length === 0) return null;
-  const current = members[nameIdx % members.length];
+  const current = ordered[nameIdx % ordered.length];
+  const currentIsNew = !seen.has(current.id);
 
   function toggle(next: boolean) {
     setOverride(next);
@@ -82,10 +100,15 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
           type="button"
           onClick={() => toggle(false)}
           aria-label="חברות שהתקבלו לעבודה — להרחבה"
-          title="יש חדשות משמחות 🎉"
-          className="w-11 h-11 rounded-full bg-brand-gradient text-white text-[20px] shadow-glow-pink flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
+          title={hasNews ? "יש חדשות משמחות 🎉" : "החברות שהתקבלו לעבודה 🎉"}
+          className="relative w-11 h-11 rounded-full bg-brand-gradient text-white text-[20px] shadow-glow-pink flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
         >
           🎉
+          {hasNews && (
+            <span className="absolute -top-1 -end-1 bg-white text-brand-pink-deep text-[10px] font-black px-1.5 py-px rounded-full shadow">
+              חדש
+            </span>
+          )}
         </button>
       ) : (
         <div className="bg-brand-gradient text-white rounded-[18px] p-4 pe-3 shadow-glow-pink max-w-[340px]">
@@ -100,8 +123,8 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
               {/* Name enlarged, and no i/N counter — how many were hired is
                   the team's business, not the banner's (the owner, 3/9). */}
               <div
-                key={current.full_name}
-                className="text-[17px] font-display font-black animate-[hired-swap_.5s_ease]"
+                key={current.id}
+                className="text-[17px] font-display font-black animate-[hired-swap_.5s_ease] flex items-center gap-1.5 flex-wrap"
               >
                 🎊{" "}
                 {current.profileId ? (
@@ -112,6 +135,11 @@ export function HiredBanner({ members }: { members: HiredMember[] }) {
                   current.full_name
                 )}{" "}
                 🎊
+                {currentIsNew && (
+                  <span className="bg-white text-brand-pink-deep text-[10.5px] font-black px-2 py-px rounded-full shadow-sm">
+                    חדש
+                  </span>
+                )}
               </div>
               <style>{`@keyframes hired-swap { from { opacity: 0; translate: 0 6px } to { opacity: 1; translate: 0 0 } }`}</style>
               <div className="text-[12px] opacity-85">

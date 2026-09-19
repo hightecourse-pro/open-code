@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, FileText, Info, Lightbulb, TriangleAlert, X, Upload } from "lucide-react";
+import { Check, FileText, Upload } from "lucide-react";
 import Link from "next/link";
-import { Alert, Button, Field, ProgressRing, Select, Textarea } from "@/components/ui";
+import { Alert, Button, Field, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { latestCvReviewSince, runCvCheck, type CvState } from "@/app/(app)/ai/cv-checker/actions";
+import { CvResultView } from "@/components/patterns/cv-result-view";
+import type { CvAnalysis } from "@/lib/ai/cv";
 
 export interface SavedCv {
   id: string;
@@ -14,20 +16,28 @@ export interface SavedCv {
   isDefault: boolean;
 }
 
-const INSIGHT_STYLE = {
-  good: { icon: Check, cls: "bg-tint-mint text-success", label: "חוזק" },
-  warn: { icon: TriangleAlert, cls: "bg-tint-warm text-[#8C5E0E]", label: "לשיפור" },
-  bad: { icon: X, cls: "bg-danger-bg text-danger", label: "חשוב" },
-  tip: { icon: Lightbulb, cls: "bg-tint-purple text-brand-purple", label: "טיפ" },
-} as const;
+const LATEST_DATE = new Intl.DateTimeFormat("he-IL", {
+  day: "numeric",
+  month: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Jerusalem",
+});
 
 export function CvCheckerForm({
   savedCvs = [],
   latestReviewAt = null,
+  latestReview = null,
 }: {
   savedCvs?: SavedCv[];
   /** created_at of the newest review already on screen — the recovery poll's floor. */
   latestReviewAt?: string | null;
+  /**
+   * Her newest saved review, shown in full right under the form (a member,
+   * 18/9: the result "appeared only after a refresh, under previous checks,
+   * with no place for the current one"). A fresh run replaces it on screen.
+   */
+  latestReview?: { createdAt: string; docName: string | null; analysis: CvAnalysis } | null;
 }) {
   const router = useRouter();
   const [state, setState] = useState<CvState>({});
@@ -50,6 +60,9 @@ export function CvCheckerForm({
     setPhase("running");
     try {
       const res = await runCvCheck({}, fd);
+      // A filtering proxy can hand back an empty body instead of failing —
+      // that is the dropped-connection case too, so recover the same way.
+      if (!res || (!res.analysis && !res.error)) throw new Error("empty_result");
       setState(res);
       setPhase("idle");
       if (res.analysis) router.refresh();
@@ -78,6 +91,12 @@ export function CvCheckerForm({
   }
 
   const analysis = state.analysis;
+  // The result lands below the form — bring it into view so it is never
+  // missed on a phone (a member, 18/9).
+  const resultRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (analysis) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [analysis]);
   const hasSaved = savedCvs.length > 0;
   // Her saved CV is the default path — the whole point is not re-uploading a
   // file we already keep for her.
@@ -245,66 +264,32 @@ export function CvCheckerForm({
         )}
       </form>
 
-      {analysis && (
-        <div className="flex flex-col gap-4">
-          <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm flex gap-5 items-center">
-            <ProgressRing value={analysis.score} size={96} />
-            <div>
-              <div className="font-display font-bold text-lg text-ink-1000">הציון שלך: {analysis.score}/100</div>
-              <p className="t-body-sm text-ink-700 mt-1">{analysis.summary}</p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2.5">
-            {analysis.insights.map((ins, i) => {
-              const s = INSIGHT_STYLE[ins.type];
-              const Icon = s.icon;
-              return (
-                <div key={i} className="bg-white border border-ink-200 rounded-md p-4 flex gap-3 items-start">
-                  <div className={cn("w-7 h-7 rounded-full flex items-center justify-center shrink-0", s.cls)}>
-                    <Icon size={15} />
-                  </div>
-                  <div>
-                    <div className="font-display font-bold text-ink-1000 text-[15px]">{ins.title}</div>
-                    <p className="t-body-sm text-ink-700 mt-0.5">{ins.detail}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {analysis.job_fit && (
-            <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm">
-              <div className="flex items-center gap-2 mb-3">
-                <Info size={18} className="text-brand-purple" />
-                <h3 className="font-display font-bold text-ink-1000">התאמה למשרה: {analysis.job_fit.score}/100</h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <div className="text-xs font-semibold text-success mb-1.5">מה שמתאים ✓</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {analysis.job_fit.matched.map((m) => (
-                      <span key={m} className="bg-tint-mint text-success text-xs px-2.5 py-1 rounded-full">
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-brand-pink-deep mb-1.5">מה שכדאי לחזק</div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {analysis.job_fit.missing.map((m) => (
-                      <span key={m} className="bg-tint-pink text-brand-pink-deep text-xs px-2.5 py-1 rounded-full">
-                        {m}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+      {analysis ? (
+        <div ref={resultRef} className="scroll-mt-4">
+          <CvResultView
+            analysis={analysis}
+            heading={
+              <h2 className="font-display text-lg font-bold text-ink-1000">
+                התוצאה של הבדיקה הנוכחית 💜
+              </h2>
+            }
+          />
         </div>
-      )}
+      ) : latestReview ? (
+        <CvResultView
+          analysis={latestReview.analysis}
+          heading={
+            <div>
+              <h2 className="font-display text-lg font-bold text-ink-1000">הבדיקה האחרונה שלך</h2>
+              <p className="text-[12.5px] text-ink-500">
+                <span suppressHydrationWarning>{LATEST_DATE.format(new Date(latestReview.createdAt))}</span>
+                {" · "}
+                {latestReview.docName ?? "קובץ שהועלה ישירות"}
+              </p>
+            </div>
+          }
+        />
+      ) : null}
     </>
   );
 }

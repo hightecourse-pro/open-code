@@ -12,12 +12,16 @@ import { AttachmentList } from "@/components/patterns/attachment-list";
 import type { AttachmentView } from "@/lib/attachments";
 import { toggleReaction, addComment, reportContent } from "@/app/(app)/feed/actions";
 
+import { ForumRank } from "@/components/patterns/member-tags";
+import type { UserRole } from "@/types/database";
+
 export interface PostComment {
   attachments?: AttachmentView[];
   id: string;
   body: string;
   author_name: string;
   author_initials: string | null;
+  author_role?: UserRole | null;
   created_at: string;
   edited_at?: string | null;
   /** True when the signed-in member wrote it — she may fix it for 10 minutes. */
@@ -145,7 +149,7 @@ export function PostInteractions({
               <Avatar size="xs" tone="pink" initials={c.author_initials || c.author_name.slice(0, 1) || "ק"} />
               <div className="flex-1 min-w-0 bg-ink-50 rounded-lg px-3 py-2">
                 <div className="text-[12.5px] font-semibold text-ink-900">
-                  {c.author_name}{" "}
+                  {c.author_name} <ForumRank role={c.author_role} size="xs" />{" "}
                   <span className="text-ink-400 font-normal">
                     · {timeAgo(c.created_at)}
                     {c.edited_at ? " · נערך" : ""}

@@ -1,8 +1,32 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronLeft, ChevronRight, Crown, Sparkles, Rocket, Plus, X } from "lucide-react";
-import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
+import {
+  startTransition,
+  useActionState,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Crown,
+  Sparkles,
+  Rocket,
+  Plus,
+  X,
+} from "lucide-react";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Field,
+  Input,
+  Select,
+  Textarea,
+} from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { saveProfile, type ProfileState } from "@/app/(app)/profile/actions";
 import { applyAsMentor } from "@/app/join/actions";
@@ -51,6 +75,8 @@ export interface ProfileFormProps {
   mentorTrack?: boolean;
   /** profiles.updated_at — a local draft older than it is dropped, not restored. */
   draftStaleAfter?: string | null;
+  /** She already has a grade sheet — the optional wizard field is skipped. */
+  hasGradeSheet?: boolean;
   /**
    * Fallback for the experience gate when no per-question answer row exists
    * (profiles completed by older/other paths store only profiles.is_experienced).
@@ -68,7 +94,13 @@ export interface ProfileFormProps {
 
 // Long free text becomes RICH text (the owner, 31/8: "בטקסט חופשי ארוך צריך
 // להיות טקסט עשיר, הדגשות, בולטים, מספור") — stored as sanitized HTML.
-const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps", "practicum_description"]);
+const RICH_KEYS = new Set([
+  "bio",
+  "notes_for_us",
+  "work_description",
+  "ai_gaps",
+  "practicum_description",
+]);
 // Structured links: URL + title + short note per link (the owner, 31/8).
 const FORM_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
 // Selects where "אחר" is a complete answer — no פירוט field (the owner, 31/8).
@@ -100,7 +132,21 @@ const ROW_GROUPS: string[][] = [
 // can group by exactly the same rule — otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
-export function ProfileForm({ firstName, lastName, questions, answers, taxonomyOptions = {}, requireCv = false, cvOptional = false, allowMentorTrack = false, mentorTrack = false, initialExperienced = null, draftStaleAfter = null, saveEveryStep = false }: ProfileFormProps) {
+export function ProfileForm({
+  firstName,
+  lastName,
+  questions,
+  answers,
+  taxonomyOptions = {},
+  requireCv = false,
+  cvOptional = false,
+  allowMentorTrack = false,
+  mentorTrack = false,
+  initialExperienced = null,
+  draftStaleAfter = null,
+  saveEveryStep = false,
+  hasGradeSheet = false,
+}: ProfileFormProps) {
   // The wizard's save carries her CV FILE — on filtered networks the proxy
   // can kill the large upload mid-flight, and an uncaught dispatch rejection
   // crashed straight to the משהו-השתבש boundary with nothing saved (רות,
@@ -110,18 +156,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       try {
         return (await saveProfile(prev, formData)) ?? prev;
       } catch (e) {
-        if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw e;
+        if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT"))
+          throw e;
         return {
           error:
             "החיבור התנתק בזמן השליחה — זה קורה לפעמים ברשתות מסוננות כשמעלים קובץ. כל מה שמילאת נשמר כאן בטופס: פשוט לחצי שוב על סיום ושמירה. אם זה חוזר על עצמו, נסי קובץ קורות חיים קטן יותר.",
         };
       }
     },
-    {}
+    {},
   );
   const formRef = useRef<HTMLFormElement>(null);
   const alertRef = useRef<HTMLDivElement>(null);
   const [cvFileName, setCvFileName] = useState<string | null>(null);
+  const [gradesFileName, setGradesFileName] = useState<string | null>(null);
   const [cvError, setCvError] = useState(false);
 
   // A server-side save error must be seen — scroll it into view.
@@ -166,9 +214,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       const vals = opts(q).map((o) => o.value);
       if (typeof cur === "string" && cur && !vals.includes(cur)) return cur;
     }
-    if ((q.field_type === "multiselect" || q.field_type === "tags") && Array.isArray(cur)) {
+    if (
+      (q.field_type === "multiselect" || q.field_type === "tags") &&
+      Array.isArray(cur)
+    ) {
       const vals = fullList(q).map((o) => o.value);
-      return (cur as string[]).filter((v) => !vals.includes(v) && !isOtherVal(v)).join(", ");
+      return (cur as string[])
+        .filter((v) => !vals.includes(v) && !isOtherVal(v))
+        .join(", ");
     }
     return "";
   }
@@ -184,15 +237,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (q.field_type === "select") {
       const vals = opts(q).map((o) => o.value);
       const cur = answers[q.id];
-      if (typeof cur === "string" && cur && !vals.includes(cur)) initSelOther[q.id] = true;
+      if (typeof cur === "string" && cur && !vals.includes(cur))
+        initSelOther[q.id] = true;
     } else if (q.field_type === "multiselect" || q.field_type === "tags") {
       // Against the FULL offered list — otherwise saved GenAI values (merged
       // into practicum_tech at render time) read as free-typed "אחר" text.
       const vals = fullList(q).map((o) => o.value);
-      const arr = Array.isArray(answers[q.id]) ? (answers[q.id] as string[]) : [];
+      const arr = Array.isArray(answers[q.id])
+        ? (answers[q.id] as string[])
+        : [];
       const known = arr.filter((v) => vals.includes(v) && !isOtherVal(v));
       // Custom (free-text) values keep the "אחר" chip on with its text intact.
-      initMultiVals[q.id] = arr.some((v) => !vals.includes(v)) ? [...known, "other"] : known;
+      initMultiVals[q.id] = arr.some((v) => !vals.includes(v))
+        ? [...known, "other"]
+        : known;
     }
   }
   const [bools, setBools] = useState(initBools);
@@ -206,7 +264,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     rest
       .map((q) => q.depends_on)
       .filter((d): d is string => !!d && d.includes("="))
-      .map((d) => d.split("=")[0])
+      .map((d) => d.split("=")[0]),
   );
   const initSelVals: Record<string, string> = {};
   for (const q of rest) {
@@ -225,9 +283,11 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     const savedNames = new Set(saved.map((s) => s.lang));
     return [
       ...DEFAULT_LANGUAGES.map(
-        (lang) => saved.find((s) => s.lang === lang) ?? { lang, level: "" }
+        (lang) => saved.find((s) => s.lang === lang) ?? { lang, level: "" },
       ),
-      ...saved.filter((s) => !DEFAULT_LANGUAGES.includes(s.lang) && savedNames.has(s.lang)),
+      ...saved.filter(
+        (s) => !DEFAULT_LANGUAGES.includes(s.lang) && savedNames.has(s.lang),
+      ),
     ];
   })();
   const [langRows, setLangRows] = useState<LangSkill[]>(initLangRows);
@@ -246,7 +306,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
         : answers[gate.id] === false
           ? false
           : initialExperienced
-      : false
+      : false,
   );
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -293,12 +353,15 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (q.field_type === "multiselect" || q.field_type === "tags") {
       const vals = fd.getAll(key).map(String);
       const other = String(fd.get(`${key}__other`) ?? "").trim();
-      const count = vals.filter((v) => v !== "other").length + (vals.includes("other") && other ? 1 : 0);
+      const count =
+        vals.filter((v) => v !== "other").length +
+        (vals.includes("other") && other ? 1 : 0);
       return count === 0;
     }
     if (q.field_type === "select") {
       let v = String(fd.get(key) ?? "");
-      if (v === "other" && !PLAIN_OTHER_KEYS.has(q.key)) v = String(fd.get(`${key}__other`) ?? "").trim();
+      if (v === "other" && !PLAIN_OTHER_KEYS.has(q.key))
+        v = String(fd.get(`${key}__other`) ?? "").trim();
       return !v;
     }
     if (q.field_type === "bool") {
@@ -311,10 +374,15 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     return !rawVal.trim();
   }
   /** Entry-level rules for the two JSON-array experience questions. */
-  function experienceError(q: ConfigQuestion, fd: FormData): string | undefined {
+  function experienceError(
+    q: ConfigQuestion,
+    fd: FormData,
+  ): string | undefined {
     let entries: ExperienceEntry[] = [];
     try {
-      entries = parseExperienceEntries(JSON.parse(String(fd.get(`q_${q.id}`) || "[]")));
+      entries = parseExperienceEntries(
+        JSON.parse(String(fd.get(`q_${q.id}`) || "[]")),
+      );
     } catch {
       entries = [];
     }
@@ -339,10 +407,13 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     }
     const p = parsePracticumPeriod(raw);
     if (!q.required && !p.start && !p.end) return undefined;
-    if (!isValidYm(p.start)) return "סמני מתי התחלת — ואם עוד לא סיימת, סמני את זה 🙂";
+    if (!isValidYm(p.start))
+      return "סמני מתי התחלת — ואם עוד לא סיימת, סמני את זה 🙂";
     if (p.end !== "current") {
-      if (!isValidYm(p.end)) return "סמני גם מתי סיימת — או סמני \"עוד לא סיימתי\" 🙂";
-      if (p.end < p.start) return "רגע, תאריך הסיום יוצא לפני ההתחלה — בדקי שוב את התאריכים 🙂";
+      if (!isValidYm(p.end))
+        return 'סמני גם מתי סיימת — או סמני "עוד לא סיימתי" 🙂';
+      if (p.end < p.start)
+        return "רגע, תאריך הסיום יוצא לפני ההתחלה — בדקי שוב את התאריכים 🙂";
     }
     return undefined;
   }
@@ -383,13 +454,33 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     if (firstBad) {
       requestAnimationFrame(() => {
         const el = document.getElementById(`q_${firstBad.id}`);
-        (el ?? alertRef.current)?.scrollIntoView({ behavior: "instant", block: "center" });
+        (el ?? alertRef.current)?.scrollIntoView({
+          behavior: "instant",
+          block: "center",
+        });
       });
     }
     return Object.keys(errs).length === 0;
   }
 
+  /**
+   * Belt and braces (19/9): mirror every rich editor into its hidden input
+   * right before the form is read, so what she SEES is what gets sent.
+   */
+  function syncRichInputs() {
+    const form = formRef.current;
+    if (!form) return;
+    for (const ed of form.querySelectorAll<HTMLElement>(
+      '[contenteditable="true"]',
+    )) {
+      const input = ed.parentElement?.querySelector<HTMLInputElement>(
+        ':scope > input[type="hidden"][name]',
+      );
+      if (input) input.value = ed.innerHTML;
+    }
+  }
   function next() {
+    syncRichInputs();
     if (cur === 0) {
       const fd = new FormData(formRef.current!);
       const first = String(fd.get("first_name") ?? "").trim();
@@ -412,6 +503,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       const draftFd = new FormData(formRef.current!);
       draftFd.set("__draft", "1");
       draftFd.delete("cv_file"); // the heavy upload stays for the real submit
+      draftFd.delete("grades_file");
       startTransition(() => {
         void saveProfile({}, draftFd).catch(() => {});
       });
@@ -442,10 +534,12 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   // A save error must land in front of her eyes — she saves from the LAST
   // step, the alert renders at the TOP (the member's "לא שומר", 14/9).
   useEffect(() => {
-    if (state.error) alertRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
+    if (state.error)
+      alertRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
   }, [state.error]);
 
-  const stepTitle = cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;
+  const stepTitle =
+    cur === 0 ? "כמה פרטים ונצא לדרך 💜" : sectionSteps[cur - 1].title;
   const stepHint =
     cur === 0
       ? mentorTrack
@@ -467,7 +561,8 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
         <Field key={q.id} label={q.label_he} error={err}>
           {isPractical && (
             <p className="t-body-sm text-ink-500 -mt-0.5 mb-1">
-              כאן צריך להופיע כל מה שמופיע בקורות החיים שלך — זה מה שלקוחות פוטנציאליים רואים.
+              כאן צריך להופיע כל מה שמופיע בקורות החיים שלך — זה מה שלקוחות
+              פוטנציאליים רואים.
             </p>
           )}
           <ExperienceListEditor
@@ -478,11 +573,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             // owner, 31/8) — practiced AI work is experience like any other.
             techOptions={[
               ...(taxonomyOptions.tech ?? []),
-              ...opts(rest.find((x) => x.key === "genai_practiced") ?? q).filter(
-                (o) => !(taxonomyOptions.tech ?? []).some((t) => t.value === o.value)
+              ...opts(
+                rest.find((x) => x.key === "genai_practiced") ?? q,
+              ).filter(
+                (o) =>
+                  !(taxonomyOptions.tech ?? []).some(
+                    (t) => t.value === o.value,
+                  ),
               ),
             ]}
-            roleOptions={isPractical ? [] : opts(rest.find((x) => x.key === "exp_role") ?? q)}
+            roleOptions={
+              isPractical
+                ? []
+                : opts(rest.find((x) => x.key === "exp_role") ?? q)
+            }
             error={!!err}
           />
         </Field>
@@ -501,7 +605,11 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
     // Structured link lists: URL + title + note per link.
     if (FORM_LINK_KEYS.has(q.key)) {
       return (
-        <Field key={q.id} label={q.label_he.replace(/\s*\(שורה לכל קישור\)/, "")} error={err}>
+        <Field
+          key={q.id}
+          label={q.label_he.replace(/\s*\(שורה לכל קישור\)/, "")}
+          error={err}
+        >
           <LinksListEditor name={key} initial={current} />
         </Field>
       );
@@ -529,7 +637,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             {langRows.map((row, i) => (
               <div key={row.lang} className="flex items-center gap-2">
                 <input type="hidden" name={`${key}__lang`} value={row.lang} />
-                <span className="w-24 shrink-0 text-sm font-medium text-ink-900">{row.lang}</span>
+                <span className="w-24 shrink-0 text-sm font-medium text-ink-900">
+                  {row.lang}
+                </span>
                 {/* The Select renders inside a wrapper div — stretch that. */}
                 <div className="flex-1">
                   <Select
@@ -537,7 +647,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                     value={row.level}
                     onChange={(e) =>
                       setLangRows((rows) =>
-                        rows.map((r, j) => (j === i ? { ...r, level: e.target.value } : r))
+                        rows.map((r, j) =>
+                          j === i ? { ...r, level: e.target.value } : r,
+                        ),
                       )
                     }
                   >
@@ -553,7 +665,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                   <button
                     type="button"
                     aria-label={`הסרת ${row.lang}`}
-                    onClick={() => setLangRows((rows) => rows.filter((_, j) => j !== i))}
+                    onClick={() =>
+                      setLangRows((rows) => rows.filter((_, j) => j !== i))
+                    }
                     className="text-ink-400 hover:text-danger p-1"
                   >
                     <X size={14} />
@@ -574,7 +688,12 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                 placeholder="שפה נוספת (למשל: צרפתית, יידיש…)"
                 className="flex-1"
               />
-              <Button type="button" size="sm" variant="secondary" onClick={addLanguage}>
+              <Button
+                type="button"
+                size="sm"
+                variant="secondary"
+                onClick={addLanguage}
+              >
                 <Plus size={14} /> הוספה
               </Button>
             </div>
@@ -607,9 +726,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           <Select
             id={key}
             name={key}
-            defaultValue={isOther ? "other" : typeof current === "string" ? current : ""}
+            defaultValue={
+              isOther ? "other" : typeof current === "string" ? current : ""
+            }
             onChange={(e) => {
-              setSelOther((s) => ({ ...s, [q.id]: e.target.value === "other" }));
+              setSelOther((s) => ({
+                ...s,
+                [q.id]: e.target.value === "other",
+              }));
               if (selectParentKeys.has(q.key)) {
                 setSelVals((s) => ({ ...s, [q.key]: e.target.value }));
               }
@@ -623,7 +747,12 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             ))}
           </Select>
           {isOther && (
-            <Input name={`${key}__other`} placeholder="פירוט…" defaultValue={customText(q)} className="mt-2" />
+            <Input
+              name={`${key}__other`}
+              placeholder="פירוט…"
+              defaultValue={customText(q)}
+              className="mt-2"
+            />
           )}
         </Field>
       );
@@ -657,7 +786,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             onClick={() =>
               setMultiVals((s) => ({
                 ...s,
-                [q.id]: on ? selected.filter((v) => v !== o.value) : [...selected, o.value],
+                [q.id]: on
+                  ? selected.filter((v) => v !== o.value)
+                  : [...selected, o.value],
               }))
             }
             className={cn(
@@ -665,7 +796,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
               "transition-colors duration-150 border cursor-pointer",
               on
                 ? "bg-brand-pink-deep text-white border-brand-pink-deep"
-                : "bg-ink-0 text-ink-700 border-ink-200 hover:border-brand-purple"
+                : "bg-ink-0 text-ink-700 border-ink-200 hover:border-brand-purple",
             )}
           >
             {o.label}
@@ -674,11 +805,17 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       };
       return (
         <Field key={q.id} label={q.label_he} error={err}>
-          <div className="flex flex-col gap-2.5 pt-1" role="group" aria-label={q.label_he}>
+          <div
+            className="flex flex-col gap-2.5 pt-1"
+            role="group"
+            aria-label={q.label_he}
+          >
             {groups.map((g) => (
               <div key={g.name ?? "_"}>
                 {g.name && (
-                  <div className="text-[11.5px] font-bold text-ink-500 mb-1.5">{g.name}</div>
+                  <div className="text-[11.5px] font-bold text-ink-500 mb-1.5">
+                    {g.name}
+                  </div>
                 )}
                 <div className="flex flex-wrap gap-2">{g.items.map(chip)}</div>
               </div>
@@ -688,7 +825,12 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             <input key={v} type="hidden" name={key} value={v} />
           ))}
           {isOther && (
-            <Input name={`${key}__other`} placeholder="פירוט…" defaultValue={customText(q)} className="mt-2" />
+            <Input
+              name={`${key}__other`}
+              placeholder="פירוט…"
+              defaultValue={customText(q)}
+              className="mt-2"
+            />
           )}
         </Field>
       );
@@ -699,17 +841,29 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       // checkbox carrying the whole sentence, and it must be checked.
       if (q.key === PAY_ACK_KEY) {
         return (
-          <div key={q.id} id={key} className={cn("rounded-[14px] border p-4", err ? "border-danger bg-danger-bg/30" : "border-[#EAD9A8] bg-tint-warm/60")}>
+          <div
+            key={q.id}
+            id={key}
+            className={cn(
+              "rounded-[14px] border p-4",
+              err
+                ? "border-danger bg-danger-bg/30"
+                : "border-[#EAD9A8] bg-tint-warm/60",
+            )}
+          >
             <Checkbox
               name={key}
               defaultChecked={bools[q.key]}
               label={q.label_he}
-              onChange={(e) => setBools((b) => ({ ...b, [q.key]: e.target.checked }))}
+              onChange={(e) =>
+                setBools((b) => ({ ...b, [q.key]: e.target.checked }))
+              }
             />
             {/* Seminary-agreement note — juniors only (the owner, 9/9). */}
             {!hasExperience && (
               <p className="text-[12px] text-ink-500 mt-1.5 ps-6">
-                במידה ויש הסכם עם הסמינר שלך - התשלום הוא דרך הסמינר לפי ההסכם מולם
+                במידה ויש הסכם עם הסמינר שלך - התשלום הוא דרך הסמינר לפי ההסכם
+                מולם
               </p>
             )}
             {err && <p className="text-danger text-xs mt-1.5">{err}</p>}
@@ -722,7 +876,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             name={key}
             defaultChecked={bools[q.key]}
             label="כן"
-            onChange={(e) => setBools((b) => ({ ...b, [q.key]: e.target.checked }))}
+            onChange={(e) =>
+              setBools((b) => ({ ...b, [q.key]: e.target.checked }))
+            }
           />
         </Field>
       );
@@ -734,7 +890,14 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           {/* step="any": a browser's default step=1 declares 3.5 שנות ניסיון
               invalid and silently blocks the whole submit (the customer who
               couldn't press סיום ושמירה, 1/9). */}
-          <Input id={key} name={key} type="number" step="any" dir="ltr" defaultValue={typeof current === "number" ? current : ""} />
+          <Input
+            id={key}
+            name={key}
+            type="number"
+            step="any"
+            dir="ltr"
+            defaultValue={typeof current === "number" ? current : ""}
+          />
         </Field>
       );
     }
@@ -744,12 +907,21 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       q.key === "id_number"
         ? { inputMode: "numeric" as const, dir: "ltr" as const, maxLength: 9 }
         : q.key === "phone"
-          ? { type: "tel", inputMode: "tel" as const, dir: "ltr" as const, placeholder: "05X-XXXXXXX" }
+          ? {
+              type: "tel",
+              inputMode: "tel" as const,
+              dir: "ltr" as const,
+              placeholder: "05X-XXXXXXX",
+            }
           : {};
     return (
       <Field key={q.id} label={q.label_he} htmlFor={key} error={err}>
         {isLong ? (
-          <Textarea id={key} name={key} defaultValue={typeof current === "string" ? current : ""} />
+          <Textarea
+            id={key}
+            name={key}
+            defaultValue={typeof current === "string" ? current : ""}
+          />
         ) : (
           <Input
             id={key}
@@ -767,7 +939,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
   // shared grid row (address trio, ID+phone pair).
   function renderRows(qs: ConfigQuestion[]) {
     const out: ReactNode[] = [];
-    for (let i = 0; i < qs.length; ) {
+    for (let i = 0; i < qs.length;) {
       const grp = ROW_GROUPS.find((g) => g.includes(qs[i].key));
       if (!grp) {
         out.push(renderField(qs[i]));
@@ -788,11 +960,13 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
           key={`row-${run[0].id}`}
           className={cn(
             "grid grid-cols-1 gap-3",
-            run.length === 3 ? "sm:grid-cols-[1.2fr_1.2fr_0.7fr]" : "sm:grid-cols-2"
+            run.length === 3
+              ? "sm:grid-cols-[1.2fr_1.2fr_0.7fr]"
+              : "sm:grid-cols-2",
           )}
         >
           {run.map(renderField)}
-        </div>
+        </div>,
       );
     }
     return out;
@@ -813,21 +987,32 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       // startTransition keeps useActionState's pending/state behavior without
       // the reset. Enter on an earlier step advances instead of submitting.
       onSubmit={(e) => {
+        syncRichInputs();
         e.preventDefault();
         // The mid-step "שמירת השינויים" button (15/9) declares itself via the
         // submitter — everything else (Enter included) keeps advancing.
         const saveNow =
-          (e.nativeEvent as SubmitEvent).submitter?.getAttribute("data-save-now") === "1";
+          (e.nativeEvent as SubmitEvent).submitter?.getAttribute(
+            "data-save-now",
+          ) === "1";
         if (!saveNow && (cur < totalSteps - 1 || expChoice === null)) {
           next();
           return;
         }
-        if (cur > 0 && !validateStep(sectionSteps[cur - 1]?.questions ?? [])) return;
+        if (cur > 0 && !validateStep(sectionSteps[cur - 1]?.questions ?? []))
+          return;
         const fd = new FormData(e.currentTarget);
         // The CV gate, client-side too: the server refuses without one, but the
         // red frame here beats a round trip. (Mid-step saves of a completed
         // profile never require a CV — she already has one.)
-        if (!saveNow && requireCv && !(fd.get("cv_file") instanceof File && (fd.get("cv_file") as File).size > 0)) {
+        if (
+          !saveNow &&
+          requireCv &&
+          !(
+            fd.get("cv_file") instanceof File &&
+            (fd.get("cv_file") as File).size > 0
+          )
+        ) {
           setCvError(true);
           return;
         }
@@ -842,13 +1027,19 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       </datalist>
       {/* Auto-save (members, 2/9): what she typed survives leaving the page.
           Cleared the moment a save succeeds — the server is the truth then. */}
-      <FormDraft storageKey="draft:profile" clear={state.ok === true} staleAfter={draftStaleAfter} />
+      <FormDraft
+        storageKey="draft:profile"
+        clear={state.ok === true}
+        staleAfter={draftStaleAfter}
+      />
       <div ref={alertRef}>
         {state.error && <Alert variant="danger">{state.error}</Alert>}
         {state.ok && <Alert variant="success">הפרופיל נשמר ✓</Alert>}
       </div>
 
-      <p className="text-[11px] text-ink-400 -mb-3">✓ התשובות נשמרות אוטומטית אחרי כל שלב</p>
+      <p className="text-[11px] text-ink-400 -mb-3">
+        ✓ התשובות נשמרות אוטומטית אחרי כל שלב
+      </p>
       {/* progress */}
       <div className="flex items-center gap-1.5">
         {Array.from({ length: totalSteps }).map((_, i) => (
@@ -856,7 +1047,11 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             key={i}
             className={cn(
               "h-1.5 rounded-full transition-all duration-300",
-              i === cur ? "w-7 bg-brand-pink-deep" : i < cur ? "w-4 bg-brand-pink" : "w-4 bg-ink-200"
+              i === cur
+                ? "w-7 bg-brand-pink-deep"
+                : i < cur
+                  ? "w-4 bg-brand-pink"
+                  : "w-4 bg-ink-200",
             )}
           />
         ))}
@@ -866,14 +1061,20 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       </div>
 
       <div>
-        <h3 className="font-display text-lg font-bold text-ink-1000">{stepTitle}</h3>
+        <h3 className="font-display text-lg font-bold text-ink-1000">
+          {stepTitle}
+        </h3>
         <p className="t-body-sm text-ink-500 mt-0.5">{stepHint}</p>
       </div>
 
       {/* Step 0: name + experience gate */}
       <div className={cn("flex flex-col gap-4", cur === 0 ? "" : "hidden")}>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="שם פרטי" htmlFor="first_name" error={nameError ? "נשמח לדעת איך קוראים לך 🙂" : undefined}>
+          <Field
+            label="שם פרטי"
+            htmlFor="first_name"
+            error={nameError ? "נשמח לדעת איך קוראים לך 🙂" : undefined}
+          >
             <Input
               id="first_name"
               name="first_name"
@@ -893,11 +1094,18 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
 
         {gate && (
           <div className="flex flex-col gap-2">
-            <span className="text-xs font-semibold text-ink-700">{gate.label_he}</span>
+            <span className="text-xs font-semibold text-ink-700">
+              {gate.label_he}
+            </span>
             {/* The mentor door sits IN the grid as an equal third card (the
                 owner, 10/9: "לא מספיק ברור בהתחלה שמנטורית זה עוד בחירה") —
                 a tucked-away note below the fold read as fine print. */}
-            <div className={cn("grid grid-cols-1 gap-3", allowMentorTrack ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+            <div
+              className={cn(
+                "grid grid-cols-1 gap-3",
+                allowMentorTrack ? "sm:grid-cols-3" : "sm:grid-cols-2",
+              )}
+            >
               <button
                 type="button"
                 onClick={() => {
@@ -908,12 +1116,16 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                   "text-start rounded-[14px] border p-4 transition-all",
                   expChoice === false
                     ? "border-brand-pink-deep bg-tint-pink shadow-sm"
-                    : "border-ink-200 hover:border-brand-pink"
+                    : "border-ink-200 hover:border-brand-pink",
                 )}
               >
                 <Rocket size={18} className="text-brand-pink-deep mb-1.5" />
-                <div className="font-display font-bold text-ink-1000">אני בתחילת הדרך</div>
-                <div className="text-[12.5px] text-ink-500 mt-0.5">בוגרת לימודים/בוטקאמפ, עדיין בלי שנה של ניסיון בתעשייה</div>
+                <div className="font-display font-bold text-ink-1000">
+                  אני בתחילת הדרך
+                </div>
+                <div className="text-[12.5px] text-ink-500 mt-0.5">
+                  בוגרת לימודים/בוטקאמפ, עדיין בלי שנה של ניסיון בתעשייה
+                </div>
               </button>
               <button
                 type="button"
@@ -925,12 +1137,16 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                   "text-start rounded-[14px] border p-4 transition-all",
                   expChoice === true
                     ? "border-brand-purple bg-tint-purple shadow-sm"
-                    : "border-ink-200 hover:border-brand-purple"
+                    : "border-ink-200 hover:border-brand-purple",
                 )}
               >
                 <Sparkles size={18} className="text-brand-purple mb-1.5" />
-                <div className="font-display font-bold text-ink-1000">יש לי ניסיון</div>
-                <div className="text-[12.5px] text-ink-500 mt-0.5">ניסיון אמיתי בתעשייה מעל שנה (גם אם כרגע בין עבודות)</div>
+                <div className="font-display font-bold text-ink-1000">
+                  יש לי ניסיון
+                </div>
+                <div className="text-[12.5px] text-ink-500 mt-0.5">
+                  ניסיון אמיתי בתעשייה מעל שנה (גם אם כרגע בין עבודות)
+                </div>
               </button>
               {/* The third door: the mentor track. Switches her to the free
                   approval track and reloads this wizard as the mentor
@@ -943,21 +1159,35 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                   className="text-start rounded-[14px] border border-[#EAD9A8] bg-tint-warm/60 p-4 transition-all hover:border-[#E5A93C]"
                 >
                   <Crown size={18} className="text-[#B07C1F] mb-1.5" />
-                  <div className="font-display font-bold text-ink-1000">מגיעה בתור מנטורית</div>
-                  <div className="text-[12.5px] text-ink-500 mt-0.5">מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. נעבור לשאלון מנטוריות קצר</div>
+                  <div className="font-display font-bold text-ink-1000">
+                    מגיעה בתור מנטורית
+                  </div>
+                  <div className="text-[12.5px] text-ink-500 mt-0.5">
+                    מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. נעבור
+                    לשאלון מנטוריות קצר
+                  </div>
                 </button>
               )}
             </div>
             {/* submit the gate answer with the rest of the form */}
-            {expChoice === true && <input type="hidden" name={`q_${gate.id}`} value="on" />}
-            {gateError && <span className="text-danger text-xs">בחרי אחת מהאפשרויות כדי להמשיך 🙂</span>}
+            {expChoice === true && (
+              <input type="hidden" name={`q_${gate.id}`} value="on" />
+            )}
+            {gateError && (
+              <span className="text-danger text-xs">
+                בחרי אחת מהאפשרויות כדי להמשיך 🙂
+              </span>
+            )}
           </div>
         )}
       </div>
 
       {/* section steps (all mounted so values submit; only current is shown) */}
       {sectionSteps.map((s, i) => (
-        <div key={i} className={cn("flex flex-col gap-4", cur === i + 1 ? "" : "hidden")}>
+        <div
+          key={i}
+          className={cn("flex flex-col gap-4", cur === i + 1 ? "" : "hidden")}
+        >
           {renderRows(s.questions)}
         </div>
       ))}
@@ -965,9 +1195,16 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
       {/* At least one CV is part of a complete profile (PM rule). Mounted with
           the form so the file submits; visible only on the final step. */}
       {(requireCv || cvOptional) && (
-        <div className={cn("flex flex-col gap-1.5", cur === totalSteps - 1 && expChoice !== null ? "" : "hidden")}>
+        <div
+          className={cn(
+            "flex flex-col gap-1.5",
+            cur === totalSteps - 1 && expChoice !== null ? "" : "hidden",
+          )}
+        >
           <span className="text-xs font-semibold text-ink-700">
-            {requireCv ? "קורות חיים (חובה — לפחות קובץ אחד)" : "קורות חיים (לא חובה — אבל מומלץ מאוד 💜)"}
+            {requireCv
+              ? "קורות חיים (חובה — לפחות קובץ אחד)"
+              : "קורות חיים (לא חובה — אבל מומלץ מאוד 💜)"}
           </span>
           <label
             htmlFor="profile_cv_file"
@@ -977,7 +1214,7 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                 ? "border-[#A7E3C6] bg-tint-mint"
                 : cvError
                   ? "border-danger bg-danger-bg"
-                  : "border-ink-300 hover:border-brand-purple"
+                  : "border-ink-300 hover:border-brand-purple",
             )}
           >
             <span className="text-sm text-ink-700">
@@ -1002,8 +1239,56 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
             }}
           />
           {cvError && (
-            <span className="text-danger text-xs">בלי קורות חיים אי אפשר לסיים — העלי קובץ אחד 🙂</span>
+            <span className="text-danger text-xs">
+              בלי קורות חיים אי אפשר לסיים — העלי קובץ אחד 🙂
+            </span>
           )}
+        </div>
+      )}
+      {/* Grade sheet — juniors only, never required, its own block so it shows
+          in the edit wizard too (the owner, 19/9); hidden once she has one. */}
+      {expChoice === false && !mentorTrack && !hasGradeSheet && (
+        <div
+          className={cn(
+            "flex flex-col gap-1.5",
+            cur === totalSteps - 1 ? "" : "hidden",
+          )}
+        >
+          <span className="text-xs font-semibold text-ink-700">
+            גליון ציונים (לא חובה)
+          </span>
+          <label
+            htmlFor="profile_grades_file"
+            className={cn(
+              "flex items-center gap-3 border-2 border-dashed rounded-md px-4 py-3 cursor-pointer transition-colors",
+              gradesFileName
+                ? "border-[#A7E3C6] bg-tint-mint"
+                : "border-ink-300 hover:border-brand-purple",
+            )}
+          >
+            <span className="text-sm text-ink-700">
+              {gradesFileName ? (
+                <>
+                  <b dir="ltr">{gradesFileName}</b> · נבחר ✓
+                </>
+              ) : (
+                "אפשר לצרף גליון ציונים (PDF / Word / תמונה) — עוזר להציג אותך למעסיקים בצורה מלאה"
+              )}
+            </span>
+          </label>
+          <input
+            id="profile_grades_file"
+            name="grades_file"
+            type="file"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+            className="sr-only"
+            onChange={(e) =>
+              setGradesFileName(e.target.files?.[0]?.name ?? null)
+            }
+          />
+          <span className="text-[11.5px] text-ink-400">
+            אפשר גם להוסיף או להחליף אחר כך ב״קורות החיים שלי״ בתפריט.
+          </span>
         </div>
       )}
 
@@ -1040,7 +1325,9 @@ export function ProfileForm({ firstName, lastName, questions, answers, taxonomyO
                 type="submit"
                 variant="secondary"
                 disabled={pending}
-                {...({ "data-save-now": "1" } as React.ButtonHTMLAttributes<HTMLButtonElement>)}
+                {...({
+                  "data-save-now": "1",
+                } as React.ButtonHTMLAttributes<HTMLButtonElement>)}
               >
                 {pending ? "שומר…" : "שמירת השינויים ✓"}
               </Button>

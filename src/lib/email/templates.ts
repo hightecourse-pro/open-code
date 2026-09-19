@@ -744,6 +744,50 @@ export function genericActionEmail(actionUrl: string): BuiltEmail {
 // ---------------------------------------------------------------- mentors
 
 /** Sent when an admin approves a mentor application. */
+/**
+ * The questionnaire reminder (the owner, 18/9), two weeks after joining with
+ * the profile still unfinished. Mentor wording explains why HER answers
+ * matter; junior wording defuses the long-form fatigue. Both say that not
+ * every question is mandatory and where to finish later.
+ */
+export function questionnaireReminderEmail(name: string | undefined, track: "mentor" | "junior"): BuiltEmail {
+  const first = name?.trim().split(/\s+/)[0];
+  const hello = first ? `${escapeHtml(first)}, ` : "";
+  const notAllRequired =
+    "ולא, לא הכול חובה. אפשר לענות על מה שנוח עכשיו, לדלג על השאר, ולהשלים מתי שתרצי דרך \"הפרופיל שלי\" בתפריט הראשי.";
+  const footnote = "יש שאלה? אנחנו כאן. כפתור \"יש לך בקשה?\" מחכה לך בכל מסך 💜";
+  if (track === "mentor") {
+    return {
+      subject: "השאלון למנטורית עוד פתוח אצלך 👑",
+      html: renderEmail({
+        heading: `${hello}אנחנו עדיין מחכות לך`,
+        lines: [
+          "ראינו שנרשמת אלינו כמנטורית - תודה, זה משמח אותנו מאוד. שמנו לב שהשאלון שלך נשאר באמצע, ורצינו רק להזכיר לך להמשיך.",
+          "התשובות שלך עוזרות לנו להבין במה בדיוק את יכולה לעזור, ולחבר אותך לג'וניוריות שצריכות דווקא אותך.",
+          notAllRequired,
+        ],
+        ctaText: "להמשך השאלון",
+        ctaUrl: `${SITE}/profile`,
+        footnote,
+      }),
+    };
+  }
+  return {
+    subject: "השאלון שלך מחכה לך (וזה באמת פחות ארוך ממה שזה נראה)",
+    html: renderEmail({
+      heading: `${hello}אנחנו עדיין מחכות לך`,
+      lines: [
+        "ראינו שהתחלת למלא את השאלון ועצרת באמצע. אנחנו לגמרי מבינות - הוא ארוך, ואולי נראה מאיים קצת...",
+        "רק כדי שתדעי למה הוא שם: כל שאלה בונה לך פרופיל מדויק, וזה מה שמאפשר לנו להגיש אותך למעסיקים הנכונים - ולא סתם לכולם.",
+        notAllRequired,
+      ],
+      ctaText: "להמשך השאלון",
+      ctaUrl: `${SITE}/profile`,
+      footnote,
+    }),
+  };
+}
+
 export function mentorApprovedEmail(name?: string): BuiltEmail {
   return {
     subject: "אושרת כמנטורית בקוד פתוח 👑",

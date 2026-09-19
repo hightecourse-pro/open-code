@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { hasUsableKey } from "@/lib/ai/keys";
+import { normalizeJobFit } from "@/lib/ai/cv";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { AiKeyBanner } from "@/components/patterns/ai-key-banner";
 import { CvCheckerForm } from "@/components/patterns/cv-checker-form";
@@ -84,18 +85,14 @@ export default async function CvCheckerPage() {
       ),
     ];
     if (paths.length) {
-      const { data: signed } = await supabase.storage.from("cvs").createSignedUrls(paths, 3600);
+      // 12h: a member who keeps the tab open past an hour used to land on a
+      // foreign storage error page from "צפייה בקובץ שנבדק" (18/9).
+      const { data: signed } = await supabase.storage.from("cvs").createSignedUrls(paths, 12 * 3600);
       for (const s of signed ?? []) if (s.signedUrl && s.path) historyFileUrls.set(s.path, s.signedUrl);
     }
   }
 
-  return (
-    <div className="flex flex-col gap-5">
-      <AiKeyBanner hasKey={hasKey} next="/ai/cv-checker" />
-      <CvCheckerForm savedCvs={savedCvs} latestReviewAt={pastReviews?.[0]?.created_at ?? null} />
-
-      <CvHistoryList
-        entries={(pastReviews ?? []).map((r) => ({
+  const entries = (pastReviews ?? []).map((r) => ({
           id: r.id,
           createdAt: r.created_at,
           score: r.score,
@@ -108,9 +105,31 @@ export default async function CvCheckerPage() {
           insights: Array.isArray(r.insights)
             ? (r.insights as { type: "good" | "warn" | "bad" | "tip"; title: string; detail: string }[])
             : [],
-          jobFit: (r.job_fit ?? null) as { score: number; matched: string[]; missing: string[] } | null,
-        }))}
+          // Old rows hold job_fit = {"score": N} with no arrays — normalized
+          // (a member, 18/9: every history entry but the first crashed).
+          jobFit: normalizeJobFit(r.job_fit),
+  }));
+  // The newest review renders in full under the form; the rest is history.
+  const latest = entries[0] ?? null;
+
+  return (
+    <div className="flex flex-col gap-5">
+      <AiKeyBanner hasKey={hasKey} next="/ai/cv-checker" />
+      <CvCheckerForm
+        savedCvs={savedCvs}
+        latestReviewAt={latest?.createdAt ?? null}
+        latestReview={
+          latest && latest.score != null
+            ? {
+                createdAt: latest.createdAt,
+                docName: latest.docName,
+                analysis: { score: latest.score, summary: latest.summary ?? "", insights: latest.insights, job_fit: latest.jobFit },
+              }
+            : null
+        }
       />
+
+      <CvHistoryList entries={entries.slice(1)} />
     </div>
   );
 }

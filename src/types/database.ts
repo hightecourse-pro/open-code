@@ -1959,6 +1959,24 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["personal_emails"]["Insert"]>;
         Relationships: [];
       };
+      hire_banner_seen: {
+        Row: { profile_id: string; seen_hire_ids: string[]; updated_at: string };
+        Insert: { profile_id: string; seen_hire_ids?: string[]; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hire_banner_seen"]["Insert"]>;
+        Relationships: [];
+      };
+      grade_sheets: {
+        Row: { id: string; profile_id: string; label: string; file_path: string; file_name: string; created_at: string };
+        Insert: { id?: string; profile_id: string; label: string; file_path: string; file_name: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["grade_sheets"]["Insert"]>;
+        Relationships: [];
+      };
+      profile_reminders: {
+        Row: { id: string; profile_id: string; kind: string; sent_at: string };
+        Insert: { id?: string; profile_id: string; kind?: string; sent_at?: string };
+        Update: Partial<Database["public"]["Tables"]["profile_reminders"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       /**

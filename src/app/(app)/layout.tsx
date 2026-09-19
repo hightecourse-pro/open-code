@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { GradesNudge } from "@/components/patterns/grades-nudge";
 import { AppShell } from "@/components/layout";
 import { HiredBanner, type HiredMember } from "@/components/patterns/hired-banner";
 import { MemberRequestWidget } from "@/components/patterns/member-request-widget";
@@ -49,11 +50,11 @@ const recentlyHired = unstable_cache(
     // /admin/hires. No cap (the owner, 3/9) — the banner rotates.
     const { data: hires } = await admin
       .from("hires")
-      .select("full_name, profile_id")
+      .select("id, full_name, profile_id")
       .eq("show_in_banner", true)
       .gte("hired_at", hiredSince)
       .order("hired_at", { ascending: false });
-    return (hires ?? []).map((h) => ({ full_name: h.full_name, profileId: h.profile_id ?? null }));
+    return (hires ?? []).map((h) => ({ id: h.id, full_name: h.full_name, profileId: h.profile_id ?? null }));
   },
   ["recently-hired"],
   // The tag lets the hires screen bust this shared cache the moment a name
@@ -141,10 +142,25 @@ export default async function AuthenticatedLayout({
   // launch nudge is on — only fetched when someone will actually see them.
   // The external-applications claim rides in the same wave: an application
   // the team recorded by her email becomes hers on the first navigation.
-  const [feedbackAspects, hired, launchNudgeOn] = await Promise.all([
+  const [feedbackAspects, hired, launchNudgeOn, hiresSeen, gradesCount] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
     launchNudgeFlag(),
+    // Which celebrations SHE already saw (the owner, 18/9) — per member.
+    createAdminClient()
+      .from("hire_banner_seen")
+      .select("seen_hire_ids")
+      .eq("profile_id", profile.id)
+      .maybeSingle()
+      .then((r) => r.data?.seen_hire_ids ?? []),
+    // Does she have a grade sheet yet (the owner, 19/9)? Juniors only.
+    profile.role === "junior" && profile.profile_completed && profile.is_experienced !== true
+      ? createAdminClient()
+          .from("grade_sheets")
+          .select("id", { count: "exact", head: true })
+          .eq("profile_id", profile.id)
+          .then((r) => r.count ?? 0)
+      : Promise.resolve(-1),
     // Position matters: the claim's undefined must stay OUT of the
     // destructured slots above.
     (async () => {
@@ -255,6 +271,7 @@ export default async function AuthenticatedLayout({
           <span className="font-display font-semibold whitespace-nowrap">לפרופיל ←</span>
         </Link>
       )}
+      {gradesCount === 0 && <GradesNudge />}
       {!subscriber && (
         <Link
           href="/join"
@@ -276,7 +293,7 @@ export default async function AuthenticatedLayout({
           back in her chat. */}
       <MemberRequestWidget requests={myRequests} launchNudge={launchNudgeOn} />
       {/* The hired celebration — floating, minimizable, on every screen. */}
-      <HiredBanner members={hired} />
+      <HiredBanner members={hired} seenIds={hiresSeen} />
     </AppShell>
   );
 }

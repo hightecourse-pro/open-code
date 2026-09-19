@@ -104,6 +104,10 @@ export default async function ProfilePage({
   // A junior must leave a CV; a mentor is warmly encouraged, never blocked
   // (the owner, 10/9).
   const requireCv = profile.role === "junior" && (cvCount ?? 0) === 0;
+  const { count: gradeCount } = await supabase
+    .from("grade_sheets")
+    .select("id", { count: "exact", head: true })
+    .eq("profile_id", profile.id);
   const cvOptional = profile.role === "mentor" && (cvCount ?? 0) === 0;
 
   // Resolve the assigned mentor's name for the employment card.
@@ -175,6 +179,7 @@ export default async function ProfilePage({
           mentorTrack={profile.role === "mentor"}
           draftStaleAfter={profile.updated_at ?? null}
           saveEveryStep={profile.profile_completed === true}
+          hasGradeSheet={(gradeCount ?? 0) > 0}
           // A completed profile is never asked the experience gate afresh —
           // profiles.is_experienced stands in when no answer row exists.
           initialExperienced={profile.profile_completed ? profile.is_experienced === true : null}

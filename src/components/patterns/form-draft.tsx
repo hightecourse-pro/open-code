@@ -91,7 +91,10 @@ export function FormDraft({
           }
           for (const { editable, input } of richPairs()) {
             const html = draft.rich[input.name];
-            if (html) {
+            // Chrome leaves "<div><br></div>" behind in an emptied editor —
+            // restoring that over saved text blanked answers (19/9).
+            const hasText = !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").trim() !== "";
+            if (hasText) {
               editable.innerHTML = html;
               input.value = html;
             }
