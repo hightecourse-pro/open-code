@@ -339,6 +339,39 @@ export default async function AdminJobPage({
     : { data: [] };
   const outcomeOf = new Map((outcomes ?? []).map((o) => [`${o.job_id}:${o.profile_id}`, o.note]));
 
+  // Chat messages the team sent from THIS job (the owner, 19/9: "לראות בפנים
+  // את המייל ששלחתי לה") — recognised by the job prefix sendJobChatMessage
+  // writes, per applicant, oldest first.
+  const sentMsgsOf = new Map<string, { body: string; at: string }[]>();
+  if (applicantIdsAll.length) {
+    const prefix = `בקשר למשרת «${job.title}»:`;
+    const { data: convs } = await admin
+      .from("conversations")
+      .select("id, a_id, b_id")
+      .or(`a_id.in.(${applicantIdsAll.join(",")}),b_id.in.(${applicantIdsAll.join(",")})`);
+    const applicantOfConv = new Map<string, string>();
+    for (const c of convs ?? []) {
+      const who = applicantIdsAll.includes(c.a_id) ? c.a_id : applicantIdsAll.includes(c.b_id) ? c.b_id : null;
+      if (who) applicantOfConv.set(c.id, who);
+    }
+    const convIds = [...applicantOfConv.keys()];
+    if (convIds.length) {
+      const { data: msgs } = await admin
+        .from("messages")
+        .select("conversation_id, sender_id, body, created_at")
+        .in("conversation_id", convIds)
+        .like("body", `${prefix}%`)
+        .order("created_at", { ascending: true });
+      for (const m of msgs ?? []) {
+        const who = applicantOfConv.get(m.conversation_id);
+        if (!who || m.sender_id === who) continue; // only what the TEAM sent
+        const l = sentMsgsOf.get(who) ?? [];
+        l.push({ body: m.body.slice(prefix.length).trim(), at: m.created_at });
+        sentMsgsOf.set(who, l);
+      }
+    }
+  }
+
   const crmTagsOf = new Map(
     (crmRows ?? []).map((c) => [c.profile_id, (c as { internal_tags?: string[] | null }).internal_tags ?? []])
   );
@@ -509,6 +542,7 @@ export default async function AdminJobPage({
           : null;
       })(),
       coordinatorReviews: coordReviewsOf.get(a.applicant_id) ?? [],
+      sentMessages: sentMsgsOf.get(a.applicant_id) ?? [],
       editedAt: a.edited_at ?? null,
       previousVersions: (Array.isArray(a.previous_versions) ? a.previous_versions : []).map(
         (v) => {
