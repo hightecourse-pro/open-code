@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { sendWhatsAppMedia, sendWhatsAppReply, startTemplateConversation } from "./actions";
+import { sendWhatsAppMedia, sendWhatsAppReply, startTemplateConversation, renameWaContact } from "./actions";
 
 export interface WaContactRow {
   id: string;
@@ -524,6 +524,23 @@ export function WaInbox({
           <>
             <div className="px-4 py-2.5 border-b border-ink-100 flex items-center gap-2 flex-wrap">
               <span className="font-display font-bold text-ink-1000">{active.name}</span>
+              {/* Name an unknown number (the owner, 22/9) - no client/member link needed. */}
+              <button
+                type="button"
+                title="שם לאיש הקשר"
+                aria-label="שם לאיש הקשר"
+                onClick={() => {
+                  const name = window.prompt("איך לקרוא לאיש/אשת הקשר הזו?", active.isMember ? "" : active.name.startsWith("+") ? "" : active.name);
+                  if (name === null) return;
+                  void renameWaContact(active.id, name).then((r) => {
+                    if (r.error) window.alert(r.error);
+                    else window.location.reload();
+                  });
+                }}
+                className="text-ink-400 hover:text-brand-purple text-[13px] cursor-pointer"
+              >
+                ✎
+              </button>
               <span className="font-mono text-[11.5px] text-ink-400" dir="ltr">
                 +{active.waId}
               </span>

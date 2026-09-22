@@ -15,6 +15,23 @@ import {
 } from "@/lib/whatsapp";
 
 /**
+ * Name a contact (the owner, 22/9): someone who wrote first, or whom the team
+ * wrote to, without linking her to a member or a client.
+ */
+export async function renameWaContact(contactId: string, name: string): Promise<{ error?: string; ok?: boolean }> {
+  await requireRole("admin");
+  const clean = name.trim().slice(0, 80);
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("wa_contacts")
+    .update({ display_name: clean || null })
+    .eq("id", contactId);
+  if (error) return { error: "השמירה נכשלה - נסי שוב." };
+  revalidatePath("/admin/whatsapp");
+  return { ok: true };
+}
+
+/**
  * Send a free-form WhatsApp reply from the admin inbox. Returns an explicit
  * verdict (the chat lesson, 31/8): the UI trusts it instead of guessing.
  * Refuses outside Meta's 24-hour service window - Meta would reject it

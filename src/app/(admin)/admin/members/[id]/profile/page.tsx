@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { loadCandidates } from "@/lib/portal/candidates";
 import { CandidateProfileCard } from "@/components/patterns/candidate-profile-card";
 import { siteThumbs } from "@/lib/site-thumbs";
+import { MemberCrm } from "@/components/patterns/member-crm";
 
 export const metadata: Metadata = { title: "הפרופיל המלא" };
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export default async function AdminMemberProfilePage({
   await requireRole("admin");
   const { id } = await params;
   const admin = createAdminClient();
-  const [{ candidates }, { data: authUser }, { data: phoneRow }] = await Promise.all([
+  const [{ candidates }, { data: authUser }, { data: phoneRow }, { data: crm }] = await Promise.all([
     // ONE profile, any status/role (the owner, 22/9: paused members and team
     // accounts must open here too) - and no 700-profile load for one card.
     loadCandidates({ includeMentors: true, everyoneForTeam: true, onlyId: id }),
@@ -37,6 +38,9 @@ export default async function AdminMemberProfilePage({
       .eq("profile_id", id)
       .eq("config_questions.key", "phone")
       .maybeSingle(),
+    // The internal note every job's review pane shows (the owner, 22/9:
+    // "נוח לעדכן את ההערה שרואים בכל המשרות מתוך הפרופיל").
+    admin.from("member_crm").select("is_vip, vip_reason, internal_notes").eq("profile_id", id).maybeSingle(),
   ]);
   const member = candidates.find((c) => c.id === id) ?? null;
   // A member who hasn't completed the questionnaire (or was blocked) has no
@@ -86,6 +90,7 @@ export default async function AdminMemberProfilePage({
           <b>הפרופיל המלא</b> - כמו שמגייסת רואה, בתוספת טלפון ומייל שמוצגים לצוות בלבד.
         </span>
       </div>
+      <MemberCrm id={id} isVip={crm?.is_vip ?? false} vipReason={crm?.vip_reason ?? null} notes={crm?.internal_notes ?? null} />
       <CandidateProfileCard candidate={member} teamContact={{ phone, email }} thumbs={await siteThumbs(member.links.map((l) => l.url))} />
     </div>
   );
