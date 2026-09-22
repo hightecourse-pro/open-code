@@ -44,7 +44,6 @@ async function loadDirectoryItems(
     let pageQuery = supabase
       .from("members_directory")
       .select("id, full_name, first_name, avatar_initials, specialization, region, role, created_at, is_subscriber")
-      .neq("id", viewer.id)
       .order("full_name", { ascending: true })
       .range(from, from + pageSize - 1);
     if (serverNeedle) {
@@ -57,7 +56,19 @@ async function loadDirectoryItems(
     if (!page || page.length < pageSize || (limit && data.length >= limit)) break;
   }
   // Hebrew alphabetical - the database collation isn't necessarily Hebrew-aware.
-  const members: DirectoryMember[] = data.sort((a, b) => a.full_name.localeCompare(b.full_name, "he"));
+  // She sees herself too, always first (the owner, 22/9: "כל אחת רוצה לראות
+  // גם את עצמה") - even when the first chunk or a search would not include her.
+  let members: DirectoryMember[] = data.sort((a, b) => a.full_name.localeCompare(b.full_name, "he"));
+  const selfIdx = members.findIndex((m) => m.id === viewer.id);
+  if (selfIdx > 0) members = [members[selfIdx], ...members.slice(0, selfIdx), ...members.slice(selfIdx + 1)];
+  if (selfIdx === -1 && !serverNeedle) {
+    const { data: selfRow } = await supabase
+      .from("members_directory")
+      .select("id, full_name, first_name, avatar_initials, specialization, region, role, created_at, is_subscriber")
+      .eq("id", viewer.id)
+      .maybeSingle();
+    if (selfRow) members = [selfRow as DirectoryMember, ...members];
+  }
 
   // Mentor scores are public - the directory card carries them.
   const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
@@ -110,10 +121,11 @@ async function loadDirectoryItems(
           : subscriberIds.has(member.id)
             ? "subscriber"
             : "member",
-    haystack: [member.full_name, member.specialization ?? "", member.region ?? "", cityOf.get(member.id) ?? "", studyOf.get(member.id) ?? ""].join(" "),
+    haystack: [member.full_name, member.specialization ?? "", member.region ?? "", cityOf.get(member.id) ?? "", studyOf.get(member.id) ?? "", member.id === viewer.id ? "אני זו את" : ""].join(" "),
     node: (
       <MemberCard
         member={member}
+        isSelf={member.id === viewer.id}
         canChat={viewer.canChat}
         mentorWaiting={viewer.mentorWaiting}
         score={scores.get(member.id)?.score}
@@ -176,7 +188,7 @@ export default async function MembersPage({
   // תשלוף מראש") - cheap head-counts on the view, so the chips are right from
   // the first paint even while most of the list is still streaming in.
   const countBase = () =>
-    supabase.from("members_directory").select("id", { count: "exact", head: true }).neq("id", me.id);
+    supabase.from("members_directory").select("id", { count: "exact", head: true });
   const [{ count: allC }, { count: mentorC }, { count: teamC }, { count: subC }] = await Promise.all([
     countBase(),
     countBase().eq("role", "mentor"),
