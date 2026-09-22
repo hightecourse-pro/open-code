@@ -118,7 +118,7 @@ export default async function AdminWhatsAppPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <AutoRefresh seconds={20} />
+      <AutoRefresh seconds={45} />
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;וואטסאפ/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">וואטסאפ</h1>

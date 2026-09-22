@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 // scale, every tick is a full server render, and idle tabs multiplied by
 // concurrent members were the single biggest source of invocations. Any
 // interaction (or returning to the tab) starts the clock again.
-const IDLE_STOP_MS = 10 * 60 * 1000;
+const IDLE_STOP_MS = 4 * 60 * 1000; // was 10 (the Vercel bill, 22/9: every tick is a full render)
 
 /**
  * Near-real-time without websockets: quietly re-fetch the server data every

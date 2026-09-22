@@ -376,7 +376,7 @@ export default async function JobsPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <AutoRefresh />
+      <AutoRefresh seconds={180} />
       {/* Compact top (the PM's ask): one row of identity, one quiet info line. */}
       <div className="flex items-baseline gap-2.5 flex-wrap">
         <h1 className="font-display text-[24px] font-black text-ink-1000">משרות</h1>

@@ -232,7 +232,7 @@ export default async function ChatPage({
       {/* A conversation, not a page: her side is optimistic already; the other
           side arrives on its own now. Also clears the unread badge shortly
           after a thread is opened (the refresh re-renders the layout count). */}
-      <AutoRefresh seconds={15} />
+      <AutoRefresh seconds={40} />
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="font-display text-[28px] font-black text-ink-1000">צ&apos;אטים</h1>
         {subscriber && <NewChatButton />}

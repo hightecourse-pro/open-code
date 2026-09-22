@@ -158,7 +158,7 @@ export default async function ForumPage({
 
   return (
     <div className="flex flex-col gap-5">
-      <AutoRefresh seconds={30} />
+      <AutoRefresh seconds={90} />
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;פורום/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הפורום</h1>

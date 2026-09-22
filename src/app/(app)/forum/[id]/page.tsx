@@ -220,7 +220,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       {/* A conversation, not a page: replies from other members show up on
           their own. Faster than the topic list - here she is actively waiting
           for an answer. Typed-but-unsent text survives the refresh. */}
-      <AutoRefresh seconds={20} />
+      <AutoRefresh seconds={60} />
     </div>
   );
 }
