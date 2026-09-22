@@ -130,9 +130,12 @@ export function MemberCard({
   viewerIsTeam = false,
   studyPlace = null,
   city = null,
+  isSelf = false,
 }: {
   member: DirectoryMember;
   canChat: boolean;
+  /** The viewer's own card (the owner, 22/9) - marked, and it opens her profile. */
+  isSelf?: boolean;
   /** Mentor score - public by design; only mentors carry one. */
   score?: number;
   /** Paying member - shown as a badge (the owner's call, 2026-08-26). */
@@ -150,7 +153,12 @@ export function MemberCard({
   const writable = viewerIsTeam || member.role !== "junior" || subscriber === true;
 
   return (
-    <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
+    <div
+      className={cn(
+        "bg-white border rounded-[18px] p-5 shadow-sm flex flex-col gap-3",
+        isSelf ? "border-brand-purple ring-2 ring-brand-purple/25 bg-tint-purple/20" : "border-ink-200"
+      )}
+    >
       <div className="flex items-center gap-3">
         <Avatar
           size="lg"
@@ -160,12 +168,17 @@ export function MemberCard({
         />
         <div className="min-w-0 flex flex-col gap-1.5">
           <Link
-            href={`/members/${member.id}`}
+            href={isSelf ? "/profile" : `/members/${member.id}`}
             className="font-display font-bold text-ink-1000 hover:text-brand-purple transition-colors truncate"
           >
             {member.full_name}
           </Link>
           <span className="flex items-center gap-1.5 flex-wrap">
+            {isSelf && (
+              <span className="bg-brand-gradient text-white px-2 py-px rounded-full text-[10.5px] font-bold">
+                זו את 💜
+              </span>
+            )}
             {member.role === "admin" && (
               <span className="bg-ink-1000 text-white px-2 py-px rounded-full text-[10.5px] font-bold">
                 צוות קוד פתוח
@@ -196,7 +209,16 @@ export function MemberCard({
         </div>
       </div>
 
-      <MemberChatAction member={member} canChat={canChat} mentorWaiting={mentorWaiting} writable={writable} className="mt-auto" />
+      {isSelf ? (
+        <Link
+          href="/profile"
+          className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-full border border-brand-purple/40 text-brand-purple text-[13px] font-semibold px-3.5 py-2 hover:bg-tint-purple transition-colors"
+        >
+          ככה רואות אותך · לעריכת הפרופיל שלי
+        </Link>
+      ) : (
+        <MemberChatAction member={member} canChat={canChat} mentorWaiting={mentorWaiting} writable={writable} className="mt-auto" />
+      )}
     </div>
   );
 }

@@ -143,6 +143,16 @@ export async function nedarimKevaAction(
   }
   const cfg = getNedarimConfig();
   if (!cfg) return { ok: false, detail: "Nedarim אינו מוגדר בסביבה הזו." };
+  // Nedarim (support, 22/9): the keva API takes the ApiPassword from the
+  // admin panel (עוד > תיעוד API) - NOT the iframe password we use for
+  // checkout. Until that key is set, every call fails with "מיועד לאייפרם".
+  const apiPassword = process.env.NEDARIM_API_PASSWORD?.trim();
+  if (!apiPassword) {
+    return {
+      ok: false,
+      detail: "חסר מפתח ה-API של נדרים (NEDARIM_API_PASSWORD) - נמצא בממשק נדרים תחת עוד > תיעוד API. עד אז הפעולה נעשית ידנית בנדרים.",
+    };
+  }
 
   try {
     const res = await fetch(NEDARIM_MANAGE_URL, {
@@ -151,7 +161,7 @@ export async function nedarimKevaAction(
       body: new URLSearchParams({
         Action: action,
         MosadId: cfg.mosadId,
-        ApiPassword: cfg.apiValid,
+        ApiPassword: apiPassword,
         KevaId: kevaId,
       }).toString(),
       signal: AbortSignal.timeout(30_000),
