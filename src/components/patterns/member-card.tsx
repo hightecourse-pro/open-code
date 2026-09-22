@@ -6,7 +6,7 @@ import { startConversation } from "@/app/(app)/chat/actions";
 import type { UserRole } from "@/types/database";
 
 /**
- * One member as the rest of the community sees her — exactly the columns of
+ * One member as the rest of the community sees her - exactly the columns of
  * the `members_directory` view. Status/tier stay out of the view; the ONE
  * exception is the boolean "מנויה" badge, resolved server-side (the owner's
  * call, 2026-08-26).
@@ -21,7 +21,7 @@ export interface DirectoryMember {
   role: UserRole;
   created_at: string;
   /** Really paying (activated paid / live subscription / on the Nedarim
-      payers list) — computed in the view; optional for narrower selects. */
+      payers list) - computed in the view; optional for narrower selects. */
   is_subscriber?: boolean;
 }
 
@@ -56,7 +56,7 @@ export function MemberChatAction({
   className?: string;
   /** A not-yet-active mentor is told about approval, never about paying. */
   mentorWaiting?: boolean;
-  /** May SHE be written to — מנויות, mentors and team only (the owner, 1/9). */
+  /** May SHE be written to - מנויות, mentors and team only (the owner, 1/9). */
   writable?: boolean;
 }) {
   if (canChat && !writable) {
@@ -102,7 +102,7 @@ export function MemberChatAction({
   );
 }
 
-/** Her specialization and city (the owner, 31/8: עיר במקום אזור מגורים —
+/** Her specialization and city (the owner, 31/8: עיר במקום אזור מגורים -
  *  region stays only as a fallback for profiles without a city answer). */
 export function MemberMeta({ member, city = null }: { member: DirectoryMember; city?: string | null }) {
   const place = city ?? member.region;
@@ -133,17 +133,17 @@ export function MemberCard({
 }: {
   member: DirectoryMember;
   canChat: boolean;
-  /** Mentor score — public by design; only mentors carry one. */
+  /** Mentor score - public by design; only mentors carry one. */
   score?: number;
-  /** Paying member — shown as a badge (the owner's call, 2026-08-26). */
+  /** Paying member - shown as a badge (the owner's call, 2026-08-26). */
   subscriber?: boolean;
-  /** The viewer is a not-yet-active mentor — approval copy, no pay pitch. */
+  /** The viewer is a not-yet-active mentor - approval copy, no pay pitch. */
   mentorWaiting?: boolean;
   /** The team writes to anyone; members only to מנויות/mentors/team. */
   viewerIsTeam?: boolean;
-  /** Where she studied — shown on the card (the owner, 1/9). */
+  /** Where she studied - shown on the card (the owner, 1/9). */
   studyPlace?: string | null;
-  /** Her city — replaces the region on the card (the owner, 31/8). */
+  /** Her city - replaces the region on the card (the owner, 31/8). */
   city?: string | null;
 }) {
   const isMentor = member.role === "mentor";
@@ -180,7 +180,7 @@ export function MemberCard({
             )}
           </span>
           {/* Team cards carry the badge alone (the owner, 31/8): no city, no
-              study place — a team member's personal details are not for the
+              study place - a team member's personal details are not for the
               directory. */}
           {member.role !== "admin" && (
             <>

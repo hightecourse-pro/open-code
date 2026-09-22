@@ -33,7 +33,7 @@ export interface TransactionParty {
   email: string;
   /** Nedarim requires a phone on every transaction ("נא לציין מספר טלפון"). */
   phone: string;
-  /** תעודת זהות — reported to Nedarim (מספר זהות on the receipt). */
+  /** תעודת זהות - reported to Nedarim (מספר זהות on the receipt). */
   idNumber: string;
   /** Street + house number, when she already answered the questionnaire. */
   street: string;
@@ -59,7 +59,7 @@ export function buildTransactionFields(
     PaymentType: "HK", // recurring standing order
     Currency: "1", // ILS
     Amount: (plan.amountAgorot / 100).toFixed(2),
-    // For a standing order, Tashlumim is the NUMBER OF CHARGES — "1" made
+    // For a standing order, Tashlumim is the NUMBER OF CHARGES - "1" made
     // every order a single-payment one (the owner saw exactly that in the
     // Nedarim console: "תשלום אחד ולא ללא הגבלה"). Empty = unlimited, which
     // is what a monthly membership is.
@@ -69,11 +69,11 @@ export function buildTransactionFields(
     Mail: party.email,
     Phone: party.phone,
     Zeout: party.idNumber,
-    // Nedarim's docs vary between Street/Adresse — send both, extras are ignored.
+    // Nedarim's docs vary between Street/Adresse - send both, extras are ignored.
     Street: party.street,
     Adresse: party.street,
     City: party.city,
-    // The report's קטגוריה — the owner's fixed wording; the plan itself rides
+    // The report's קטגוריה - the owner's fixed wording; the plan itself rides
     // in Param2 (and the amount). Comment stays empty, like her reference.
     Groupe: "דמי מנוי - קהילת קוד פתוח",
     Category: "דמי מנוי - קהילת קוד פתוח",
@@ -102,13 +102,13 @@ export function parseNedarimCallback(params: Record<string, string>): ParsedCall
   const amount = params.Amount ? Math.round(parseFloat(params.Amount) * 100) : null;
 
   const txId = params.TransactionId ?? params.transactionId ?? params.ID ?? null;
-  // הקמת הוראת קבע events carry KevaId instead of a transaction id — observed
+  // הקמת הוראת קבע events carry KevaId instead of a transaction id - observed
   // live 2026-08-24. Prefixed so a keva row can never collide with a charge.
   const kevaId = params.KevaId?.trim() || null;
 
   return {
     // The account-level webhooks (עדכוני עסקאות / הקמת הוראת קבע) fire on
-    // SUCCESS only and carry NO Status field at all — its absence on a call
+    // SUCCESS only and carry NO Status field at all - its absence on a call
     // that names a transaction or keva IS the success signal (observed live).
     // Refusals arrive on the separate declines webhook WITH status fields,
     // and anything carrying a non-ok status stays not-ok.
@@ -136,7 +136,7 @@ export async function nedarimKevaAction(
   action: KevaAction,
   kevaId: string
 ): Promise<{ ok: boolean; detail: string }> {
-  // Staging shares the REAL Nedarim account — a test click must never touch a
+  // Staging shares the REAL Nedarim account - a test click must never touch a
   // real standing order. Same guard philosophy as the email allowlist.
   if (process.env.VERCEL_ENV !== "production") {
     return { ok: false, detail: "מגן סטייג'ינג: פעולות על הוראות קבע רצות רק בפרודקשן." };

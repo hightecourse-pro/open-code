@@ -8,7 +8,7 @@ import { activeInstitution } from "./active-institution";
 export const metadata: Metadata = { title: "אזור הרכזות" };
 export const dynamic = "force-dynamic";
 
-/** הבוגרות שלי — year picker + search instead of one endless scroll. */
+/** הבוגרות שלי - year picker + search instead of one endless scroll. */
 export default async function CoordinatorGraduatesPage() {
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");

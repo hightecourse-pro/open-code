@@ -4,7 +4,7 @@
 // month+year pickers (התחלה / סיום) plus an "עוד לא סיימתי" checkbox that
 // disables the end picker and stores end as "current". Mirrors the date-row
 // pattern of ExperienceListEditor and, like it, serializes into one hidden
-// input so the FormData-based save flow stays untouched — the value submits
+// input so the FormData-based save flow stays untouched - the value submits
 // as {"start":"YYYY-MM","end":"YYYY-MM"} (or "current").
 
 import { useState } from "react";
@@ -35,7 +35,7 @@ function splitYm(ym: string): { month: string; year: string } {
 }
 
 // She picks the month and the year one at a time, and each pick is written back
-// through the serialized string — so collapsing a half-filled pair to "" would
+// through the serialized string - so collapsing a half-filled pair to "" would
 // erase the choice she just made and the Select would snap back to "חודש…".
 // A half value ("2024-" / "-03") round-trips through splitYm and is still
 // rejected by isValidYm, so validation stays exactly as strict.
@@ -44,7 +44,7 @@ function joinYm(month: string, year: string): string {
 }
 
 export interface PeriodPickerProps {
-  /** Form field name — the hidden input submits the JSON object. */
+  /** Form field name - the hidden input submits the JSON object. */
   name: string;
   initial: PracticumPeriod;
 }
@@ -57,7 +57,7 @@ export function PeriodPicker({ name, initial }: PeriodPickerProps) {
 
   return (
     <div className="flex flex-col gap-1.5">
-      {/* One value for the whole range — the server action parses the object. */}
+      {/* One value for the whole range - the server action parses the object. */}
       <input type="hidden" name={name} value={JSON.stringify(period)} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -10,7 +10,7 @@ const ok = (n, p) => results.push(`${p ? "✅" : "❌"} ${n}`);
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 1200 } });
 
-// checkout.probe: pending junior with profile_completed=true — flip to
+// checkout.probe: pending junior with profile_completed=true - flip to
 // incomplete via the profile page? Simpler: verify the gate card on /profile
 // wizard is NOT shown (edit mode), and on the /join page the benefits list is.
 await page.goto(`${BASE}/login`);
@@ -27,7 +27,7 @@ ok("benefits: hackathons", (await page.locator("text=השתתפות בהאקתו
 await page.screenshot({ path: `${SHOTS}/flow-1-join-benefits.png` });
 
 // The mentor door is ONBOARDING-only: assert it never shows in the edit
-// wizard of a completed, ACTIVE member (sub.test — checkout.probe's canonical
+// wizard of a completed, ACTIVE member (sub.test - checkout.probe's canonical
 // state is now the un-finished gate, where the door rightly DOES show).
 const edit = await browser.newPage({ viewport: { width: 1280, height: 1200 } });
 await edit.goto(`${BASE}/login`);

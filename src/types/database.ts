@@ -59,7 +59,7 @@ export type ShareStatus = "pending" | "shared" | "revoked";
 // Jobs CRM
 export type JobKind = "immediate" | "practicum_placement" | "practicum_percent" | "practicum_free" | "other";
 export type JobPipelineStatus = "draft" | "published" | "candidates_sent" | "interviews" | "hired" | "hired_direct" | "closed_no_hire";
-/** How a required job question is answered — like Google Forms field types. */
+/** How a required job question is answered - like Google Forms field types. */
 export type QuestionAnswerType = "paragraph" | "number" | "select" | "multiselect";
 export type ClientCrmStatus = "initial_call" | "materials_sent" | "job_active" | "hired";
 
@@ -83,7 +83,7 @@ export interface Database {
           member_tier: MemberTier;
           status: ProfileStatus;
           is_experienced: boolean;
-          /** Deprecated — CRM data moved to member_crm (admin-only). */
+          /** Deprecated - CRM data moved to member_crm (admin-only). */
           is_vip: boolean;
           internal_notes: string | null;
           profile_completed: boolean;
@@ -93,7 +93,7 @@ export interface Database {
           /** Team test/preview account: fully active for its owner, invisible
               to other members and to the employer portal. */
           is_hidden: boolean;
-          /** Stamped when a mentor application was declined — the registry
+          /** Stamped when a mentor application was declined - the registry
               in ניהול מנטוריות lists these. */
           mentor_declined_at: string | null;
           found_job: boolean;
@@ -101,7 +101,7 @@ export interface Database {
           hired_at: string | null;
           /** Mentors only: temporarily unavailable for new accompaniments. */
           mentor_available: boolean;
-          /** Digest fairness stamp — the morning window serves oldest first. */
+          /** Digest fairness stamp - the morning window serves oldest first. */
           digest_last_sent_at: string | null;
         } & Timestamps;
         Insert: {
@@ -143,7 +143,7 @@ export interface Database {
           status: string; // 'open' | 'handled'
           kind: "general" | "employment";
           assigned_mentor_id: string | null;
-          /** Stamped when the MENTOR accepts — only then the member sees her. */
+          /** Stamped when the MENTOR accepts - only then the member sees her. */
           mentor_accepted_at: string | null;
           created_at: string;
           handled_at: string | null;
@@ -188,7 +188,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["mentor_admin_log"]["Insert"]>;
         Relationships: [];
       };
-      /** Employer-portal clients — companies, not community members. */
+      /** Employer-portal clients - companies, not community members. */
       portal_clients: {
         Row: {
           id: string;
@@ -197,7 +197,7 @@ export interface Database {
           address?: string | null;
           /** Null until the client reaches "job_active" and portal access is assigned. */
           username: string | null;
-          /** Encrypted (reversible) password — admin can re-read it. */
+          /** Encrypted (reversible) password - admin can re-read it. */
           password_enc: string | null;
           password_hash: string | null;
           password_salt: string | null;
@@ -306,7 +306,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["job_questions"]["Insert"]>;
         Relationships: [];
       };
-      /** Women placed via Open Code before ever joining — banner-only names. */
+      /** Women placed via Open Code before ever joining - banner-only names. */
       manual_hires: {
         Row: {
           id: string;
@@ -333,7 +333,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["manual_hires"]["Insert"]>;
         Relationships: [];
       };
-      /** Central placements registry — community + external, with billing trail. */
+      /** Central placements registry - community + external, with billing trail. */
       /** רכזת ↔ צוות chat + job recommendations (16/9). Service-role only. */
       coordinator_messages: {
         Row: {
@@ -405,7 +405,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hires"]["Insert"]>;
         Relationships: [];
       };
-      /** A client's people — the owner's sheet carries up to four per company. */
+      /** A client's people - the owner's sheet carries up to four per company. */
       client_contacts: {
         Row: {
           id: string;
@@ -472,7 +472,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["submission_outcomes"]["Insert"]>;
         Relationships: [];
       };
-      /** The team's task list — manual entries and system-trigger routed ones. */
+      /** The team's task list - manual entries and system-trigger routed ones. */
       admin_tasks: {
         Row: {
           id: string;
@@ -568,7 +568,7 @@ export interface Database {
           profile_id: string;
           drive_email: string | null;
           drive_email_requested_at: string | null;
-          /** Where she works — team-only; never readable by other members. */
+          /** Where she works - team-only; never readable by other members. */
           workplace: string | null;
           updated_at: string;
         };
@@ -739,7 +739,7 @@ export interface Database {
           kind: TaxonomyKind;
           value: string;
           label_he: string;
-          /** Group heading (e.g. "פרונטאנד") — techs render grouped by it. */
+          /** Group heading (e.g. "פרונטאנד") - techs render grouped by it. */
           group_he: string | null;
           sort_order: number;
           active: boolean;
@@ -789,7 +789,7 @@ export interface Database {
           status: PostStatus;
           /** Set when the author fixed her words inside the edit window. */
           edited_at: string | null;
-          /** Trigger-maintained counters — the list never recounts raw rows. */
+          /** Trigger-maintained counters - the list never recounts raw rows. */
           reply_count: number;
           like_count: number;
           last_reply_at: string | null;
@@ -913,7 +913,7 @@ export interface Database {
           raw: Json | null;
           claimed_by: string | null;
           claimed_at: string | null;
-          /** Arrived from an unrecognized caller — admin must confirm first. */
+          /** Arrived from an unrecognized caller - admin must confirm first. */
           needs_review: boolean;
           created_at: string;
         };
@@ -1025,7 +1025,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["session_reminders"]["Insert"]>;
         Relationships: [];
       };
-      /** Admin-only note on one application (member × job) — see the migration. */
+      /** Admin-only note on one application (member × job) - see the migration. */
       application_notes: {
         Row: {
           application_id: string;
@@ -1059,7 +1059,7 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["course_feedback"]["Insert"]>;
         Relationships: [];
       };
-      /** Per-recipient reminder queue — drained in bounded batches by the tick. */
+      /** Per-recipient reminder queue - drained in bounded batches by the tick. */
       session_reminder_queue: {
         Row: {
           session_id: string;
@@ -1114,7 +1114,7 @@ export interface Database {
           title: string;
           excerpt: string | null;
           url: string | null;
-          /** Rich in-app content (sanitizeArticleHtml) — the alternative to url. */
+          /** Rich in-app content (sanitizeArticleHtml) - the alternative to url. */
           body_html: string | null;
           category: string | null;
           author_name: string | null;
@@ -1206,7 +1206,7 @@ export interface Database {
           status: ApplicationStatus;
           note: string | null;
           submitted_at: string;
-          /** The CV she attached for this job — what the client downloads. */
+          /** The CV she attached for this job - what the client downloads. */
           cv_document_id: string | null;
           /** {question_id: answer, fit: "..."} */
           answers: Json | null;
@@ -1243,14 +1243,14 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["saved_jobs"]["Insert"]>;
         Relationships: [];
       };
-      /** Institution contact people (רכזות) — the coordinator portal's users. */
+      /** Institution contact people (רכזות) - the coordinator portal's users. */
       institution_contacts: {
         Row: { id: string; full_name: string; email: string | null; phone: string | null; notes: string | null; portal_enabled: boolean; created_at: string; updated_at: string };
         Insert: { id?: string; full_name: string; email?: string | null; phone?: string | null; notes?: string | null; portal_enabled?: boolean; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["institution_contacts"]["Insert"]>;
         Relationships: [];
       };
-      /** contact ↔ institution (study_place value) — many to many. */
+      /** contact ↔ institution (study_place value) - many to many. */
       institution_contact_links: {
         Row: { contact_id: string; institution: string; manages_reviews: boolean };
         Insert: { contact_id: string; institution: string; manages_reviews?: boolean };
@@ -1341,7 +1341,7 @@ export interface Database {
           drive_url: string | null;
           cover_variant: number;
           is_published: boolean;
-          /** The Excel import key — one course per קוד קורס. */
+          /** The Excel import key - one course per קוד קורס. */
           code: number | null;
         } & Timestamps;
         Insert: {
@@ -1438,11 +1438,11 @@ export interface Database {
           canceled_at: string | null;
           /** Recording open to the whole community, free tier included. */
           open_to_all: boolean;
-          /** Downloadable handouts — plain URLs the admin pastes. */
+          /** Downloadable handouts - plain URLs the admin pastes. */
           syllabus_url: string | null;
           pre_topics: string | null;
           materials_url: string | null;
-          /** Planned length, minutes — shown in admin and on the events screen. */
+          /** Planned length, minutes - shown in admin and on the events screen. */
           duration_minutes: number | null;
         } & Timestamps;
         Insert: {
@@ -1650,7 +1650,7 @@ export interface Database {
           file_path: string;
           file_name: string | null;
           created_at: string;
-          /** The CV she marked as hers by default — one per member (partial unique index). */
+          /** The CV she marked as hers by default - one per member (partial unique index). */
           is_default: boolean;
         };
         Insert: {
@@ -1725,7 +1725,7 @@ export interface Database {
           created_at: string;
           shared_at: string | null;
           revoked_at: string | null;
-          /** An admin handed her this course on purpose — it outlives her enrolment. */
+          /** An admin handed her this course on purpose - it outlives her enrolment. */
           granted_manually: boolean;
         };
         Insert: {
@@ -1768,7 +1768,7 @@ export interface Database {
        * `owner_id` are what an admin actually reads ("she watched this
        * session"); `link_id` is the specific video when there is one, and is
        * nullable so deleting a link never erases the history.
-       * The owner columns land with supabase/_content_access_log.sql — the app
+       * The owner columns land with supabase/_content_access_log.sql - the app
        * falls back to the legacy {link_id, profile_id} insert until it runs.
        */
       content_views: {
@@ -1982,7 +1982,7 @@ export interface Database {
       /**
        * What one member may see about another (supabase/_community_v2.sql).
        * Deliberately narrow: no `status` and no `member_tier`, so nobody can
-       * tell who pays. Read-only — the directory reads this, never `profiles`.
+       * tell who pays. Read-only - the directory reads this, never `profiles`.
        */
       members_directory: {
         Row: {
@@ -1994,7 +1994,7 @@ export interface Database {
           region: string | null;
           role: UserRole;
           created_at: string;
-          /** Really paying — activated paid / live sub / Nedarim payers list. */
+          /** Really paying - activated paid / live sub / Nedarim payers list. */
           is_subscriber: boolean;
         };
         Relationships: [];
@@ -2010,7 +2010,7 @@ export interface Database {
       bump_ai_key_usage: { Args: { p_key: string; p_error?: boolean }; Returns: undefined };
       in_conversation: { Args: { conv: string }; Returns: boolean };
       owns_interview: { Args: { sess: string }; Returns: boolean };
-      /** Scale foundations (2026-08-29) — service-role only. */
+      /** Scale foundations (2026-08-29) - service-role only. */
       member_emails: {
         Args: { p_ids: string[] };
         Returns: { id: string; email: string | null }[];

@@ -1,4 +1,4 @@
-// Pure candidate filtering — no server imports, so the same implementation
+// Pure candidate filtering - no server imports, so the same implementation
 // runs on the server (smart search) and in the browser (instant filtering).
 
 import type { CandidateDetail } from "./types";

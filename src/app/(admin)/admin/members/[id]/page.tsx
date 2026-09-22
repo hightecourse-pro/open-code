@@ -58,7 +58,7 @@ const CV_LANG: Record<string, string> = {
 };
 
 // An answer counts as "edited later" only when updated_at is well past
-// created_at — the initial insert itself may touch updated_at within seconds.
+// created_at - the initial insert itself may touch updated_at within seconds.
 const ANSWER_EDIT_GRACE_MS = 60_000;
 
 // DD.MM.YYYY, admin-facing (updated-at markers).
@@ -74,7 +74,7 @@ export default async function AdminMemberProfilePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  // Defense-in-depth beyond the (admin) layout — this page uses the service
+  // Defense-in-depth beyond the (admin) layout - this page uses the service
   // role for the member's email and CV files.
   await requireRole("admin");
   const { id } = await params;
@@ -96,7 +96,7 @@ export default async function AdminMemberProfilePage({
       .order("sort_order", { ascending: true }),
     supabase
       .from("profile_answers")
-      // Timestamps power the internal "עודכן" markers — admin eyes only.
+      // Timestamps power the internal "עודכן" markers - admin eyes only.
       .select("question_id, value, created_at, updated_at")
       .eq("profile_id", id),
     // VIP + notes live in the admin-only member_crm table (null pre-migration).
@@ -140,7 +140,7 @@ export default async function AdminMemberProfilePage({
   const hiredAtDate = (profile.hired_at ? new Date(profile.hired_at) : new Date())
     .toISOString()
     .slice(0, 10);
-  // Where she works is team-only, so it lives in member_private — never on the
+  // Where she works is team-only, so it lives in member_private - never on the
   // profile row every member can read.
   const { data: privateRow } = await supabase
     .from("member_private")
@@ -186,7 +186,7 @@ export default async function AdminMemberProfilePage({
     .select("id, label, language, file_path, file_name, created_at")
     .eq("profile_id", id)
     .order("created_at", { ascending: false });
-  // Grade sheets (the owner, 19/9) — listed under her CVs.
+  // Grade sheets (the owner, 19/9) - listed under her CVs.
   const { data: gradeRows } = await adminClient
     .from("grade_sheets")
     .select("id, label, file_path, file_name, created_at")
@@ -304,7 +304,7 @@ export default async function AdminMemberProfilePage({
     ? swapEligibleAt(activeEnrollment.started_at ?? activeEnrollment.created_at)
     : null;
 
-  // Courses the team opened for her personally — on top of the library swap.
+  // Courses the team opened for her personally - on top of the library swap.
   const giftedCourseShares = (herShares ?? []).filter(
     (s) => s.owner_type === "course" && s.granted_manually && s.status !== "revoked"
   );
@@ -321,13 +321,13 @@ export default async function AdminMemberProfilePage({
   for (const c of extraCourses ?? []) contentTitleOf.set(`course:${c.id}`, c.title);
 
   const answerMap = new Map((answers ?? []).map((a) => [a.question_id, a.value]));
-  // Her maiden name, when she gave one — the header carries it in parentheses
+  // Her maiden name, when she gave one - the header carries it in parentheses
   // (the owner, 9/9: the team knows her seminary records by it).
   const prevSurnameQ = (questions ?? []).find((q) => q.key === "prev_surname");
   const prevSurnameRaw = prevSurnameQ ? answerMap.get(prevSurnameQ.id) : null;
   const prevSurname = typeof prevSurnameRaw === "string" ? prevSurnameRaw : null;
 
-  // Answers she changed after first filling them in (internal admin info —
+  // Answers she changed after first filling them in (internal admin info -
   // must never surface in the employer portal or member views).
   const answerEditedAt = new Map<string, Date>();
   for (const a of answers ?? []) {
@@ -346,7 +346,7 @@ export default async function AdminMemberProfilePage({
     if (!lastEditedAt || d > lastEditedAt) lastEditedAt = d;
   }
 
-  // Experience entries store tech taxonomy VALUES — resolve to labels here.
+  // Experience entries store tech taxonomy VALUES - resolve to labels here.
   const techLabels = new Map((taxonomyOptions.tech ?? []).map((o) => [o.value, o.label]));
 
   // Turn stored machine values back into the human labels the member picked.
@@ -360,26 +360,26 @@ export default async function AdminMemberProfilePage({
   }
   function display(q: ConfigQuestion): React.ReactNode {
     const v = answerMap.get(q.id);
-    if (v === undefined || v === null || v === "") return "—";
+    if (v === undefined || v === null || v === "") return "-";
     if (q.key === LANGUAGE_SKILLS_KEY) {
       const skills = parseLangSkills(v);
       return skills.length ? (
         <div className="flex flex-col gap-0.5">
           {skills.map((s) => (
             <div key={s.lang}>
-              {s.lang} — {langLevelLabel(s.level)}
+              {s.lang} - {langLevelLabel(s.level)}
             </div>
           ))}
         </div>
       ) : (
-        "—"
+        "-"
       );
     }
     // Experience lists (practical_experience / work_history) → readable
     // entries instead of raw JSON.
     if (EXPERIENCE_KEYS.has(q.key)) {
       const entries = parseExperienceEntries(v);
-      if (!entries.length) return "—";
+      if (!entries.length) return "-";
       return (
         <ul className="flex flex-col gap-2.5">
           {entries.map((e, i) => {
@@ -392,7 +392,7 @@ export default async function AdminMemberProfilePage({
             return (
               <li key={i} className="border-r-2 border-ink-200 pr-2.5">
                 <div>
-                  {e.place || "—"}
+                  {e.place || "-"}
                   {meta && <span className="text-ink-500 font-normal"> · {meta}</span>}
                 </div>
                 {e.tech.length > 0 && (
@@ -414,26 +414,26 @@ export default async function AdminMemberProfilePage({
     }
     // {"start":"YYYY-MM","end":"YYYY-MM"|"current"} → "MM.YYYY–MM.YYYY" / "MM.YYYY–היום".
     if (q.key === PRACTICUM_PERIOD_KEY) {
-      return practicumPeriodLabel(v) || "—";
+      return practicumPeriodLabel(v) || "-";
     }
     const labels = labelsFor(q);
     if (Array.isArray(v)) {
       const items = (v as unknown[])
         .filter((x): x is string => typeof x === "string")
         .map((x) => labels.get(x) ?? x);
-      return items.length ? items.join(" · ") : "—";
+      return items.length ? items.join(" · ") : "-";
     }
     if (typeof v === "boolean") return v ? "כן" : "לא";
     if (typeof v === "number") return String(v);
     if (typeof v === "string") {
-      // Rich-editor answers store HTML — render it, never show the tags
+      // Rich-editor answers store HTML - render it, never show the tags
       // (the owner, 9/9: the span-soup screenshot).
       if (isRichHtml(v)) {
         return <MessageBody body={v} className="whitespace-pre-line font-normal" />;
       }
       return labels.get(v) ?? v;
     }
-    return "—";
+    return "-";
   }
 
   function hasAnswer(q: ConfigQuestion): boolean {
@@ -444,7 +444,7 @@ export default async function AdminMemberProfilePage({
   // Which questions does HER wizard actually show? Same rules as the member
   // form: scope by role, the experience track, and bool parents (depends_on
   // holds the parent question's key). Rendering only answered questions hid
-  // every newly activated question — staff had no way to see it on any member.
+  // every newly activated question - staff had no way to see it on any member.
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
   const boolAnswerByKey = new Map<string, boolean>();
@@ -456,7 +456,7 @@ export default async function AdminMemberProfilePage({
   }
   const gateAnswer = boolAnswerByKey.get("has_experience");
   function inHerWizard(q: ConfigQuestion): boolean {
-    // The experience gate is structural — the wizard keeps it even when off.
+    // The experience gate is structural - the wizard keeps it even when off.
     if (!q.active && q.key !== "has_experience") return false;
     if (!scope.includes(q.scope)) return false;
     // Until she answers the gate, neither track is ruled out.
@@ -468,7 +468,7 @@ export default async function AdminMemberProfilePage({
 
   // The full questionnaire in the wizard's steps and order: every active
   // question in her scope (answered or not), plus inactive ones that still
-  // hold a stored answer — historical data stays visible.
+  // hold a stored answer - historical data stays visible.
   const profileSections = groupBySection(questions ?? [], (q) => inHerWizard(q) || hasAnswer(q));
   const totalShown = profileSections.reduce((n, s) => n + s.questions.length, 0);
   const answeredCount = (questions ?? []).filter(hasAnswer).length;
@@ -518,7 +518,7 @@ export default async function AdminMemberProfilePage({
             )}
             {profile.is_hidden && (
               <span
-                title="חשבון בדיקה של הצוות — פעיל לעצמו, לא מופיע לחברות ולא בפורטל"
+                title="חשבון בדיקה של הצוות - פעיל לעצמו, לא מופיע לחברות ולא בפורטל"
                 className="inline-flex items-center gap-1 text-[12px] font-bold text-ink-700 bg-ink-100 border border-ink-300 px-2 py-0.5 rounded-full"
               >
                 🙈 מוסתרת מחברות
@@ -550,7 +550,7 @@ export default async function AdminMemberProfilePage({
           {profile.role === "mentor" && (
             <ConfirmActionButton
               action={demoteMentorToMember.bind(null, profile.id)}
-              message="להפוך אותה למשתתפת רגילה ללא מנוי? הכתר יוסר, היא תחזור למסלול מנוי (ממתינה) ושאלון החברות ייפתח לה. אם יש לה ליוויים פעילים — כדאי להעביר אותם קודם."
+              message="להפוך אותה למשתתפת רגילה ללא מנוי? הכתר יוסר, היא תחזור למסלול מנוי (ממתינה) ושאלון החברות ייפתח לה. אם יש לה ליוויים פעילים - כדאי להעביר אותם קודם."
               className="text-[12px] font-semibold text-ink-500 hover:text-brand-purple"
             >
               הפיכה למשתתפת רגילה (הסרת מנטורית)
@@ -582,7 +582,7 @@ export default async function AdminMemberProfilePage({
         </div>
       </div>
 
-      {/* Personal email — a branded note carrying exactly the admin's words
+      {/* Personal email - a branded note carrying exactly the admin's words
           (the owner, 1/9: for explaining past mentor declines and anything
           else that deserves a personal touch). */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
@@ -592,7 +592,7 @@ export default async function AdminMemberProfilePage({
         {sentEmails.length > 0 && (
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-1.5 text-[12.5px] font-semibold text-[#8C5E0E] bg-tint-warm border border-[#F8D98C] rounded-md px-3 py-2">
-              ⚠️ כבר נשלח לה מייל אישי{sentEmails.length > 1 ? ` (${sentEmails.length} פעמים)` : ""} —
+              ⚠️ כבר נשלח לה מייל אישי{sentEmails.length > 1 ? ` (${sentEmails.length} פעמים)` : ""} -
               האחרון ב־{new Date(sentEmails[0].created_at).toLocaleDateString("he-IL")}. בדקי לפני
               שליחה נוספת.
             </div>
@@ -615,10 +615,10 @@ export default async function AdminMemberProfilePage({
             rows={3}
             maxLength={4000}
             className="w-full rounded-md border border-ink-200 bg-white p-2.5 text-[13.5px] focus:outline-none focus:border-brand-purple"
-            placeholder="ההודעה נשלחת אליה במייל מעוצב, מילה במילה — למשל הסבר אישי על החלטה, עידוד, או עדכון."
+            placeholder="ההודעה נשלחת אליה במייל מעוצב, מילה במילה - למשל הסבר אישי על החלטה, עידוד, או עדכון."
           />
           <div className="flex items-center gap-2">
-            {/* SaveButton disables while sending — the double-send that hit
+            {/* SaveButton disables while sending - the double-send that hit
                 הדסה (two identical chat messages, 6s apart) came from a
                 feedback-less button. */}
             <SaveButton label="שליחת המייל" />
@@ -629,7 +629,7 @@ export default async function AdminMemberProfilePage({
         </form>
       </div>
 
-      {/* Manual payment — the webhook-failed fallback. Kept next to the status
+      {/* Manual payment - the webhook-failed fallback. Kept next to the status
           actions so "flip her to active by hand" has a correct alternative in
           sight: this one creates the subscription and payment rows too. */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
@@ -661,7 +661,7 @@ export default async function AdminMemberProfilePage({
         />
       </div>
 
-      {/* Employment — admin-editable, incl. retroactive hired-via-us marking */}
+      {/* Employment - admin-editable, incl. retroactive hired-via-us marking */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
         <h3 className="font-display text-base font-bold flex items-center gap-1.5">
           <Briefcase size={16} className="text-brand-purple" /> תעסוקה
@@ -759,13 +759,13 @@ export default async function AdminMemberProfilePage({
         )}
       </div>
 
-      {/* Her courses — the active one stands apart from everything else */}
+      {/* Her courses - the active one stands apart from everything else */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
           <BookOpen size={16} className="text-brand-purple" /> הקורסים שלה
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          קורס פעיל אחד בכל פעם, כמו ספרייה — ההחלפה נפתחת חודש אחרי הבחירה. ביטול הבחירה מכאן
+          קורס פעיל אחד בכל פעם, כמו ספרייה - ההחלפה נפתחת חודש אחרי הבחירה. ביטול הבחירה מכאן
           מחזיר את הקורס לספרייה ופותח לה בחירה חדשה מיד.
         </p>
 
@@ -776,7 +776,7 @@ export default async function AdminMemberProfilePage({
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="mint">הקורס הפעיל שלה</Badge>
                   <span className="font-display text-[17px] font-black text-ink-1000">
-                    {contentTitleOf.get(`course:${activeEnrollment.course_id}`) ?? "—"}
+                    {contentTitleOf.get(`course:${activeEnrollment.course_id}`) ?? "-"}
                   </span>
                 </div>
                 <div className="text-[12.5px] text-ink-500 mt-1.5">
@@ -833,7 +833,7 @@ export default async function AdminMemberProfilePage({
                   className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0 flex-wrap"
                 >
                   <span className="font-medium text-ink-900">
-                    {contentTitleOf.get(`course:${e.course_id}`) ?? "—"}
+                    {contentTitleOf.get(`course:${e.course_id}`) ?? "-"}
                   </span>
                   <span className="text-[12px] text-ink-500">
                     {DMY.format(new Date(e.started_at ?? e.created_at))}
@@ -859,7 +859,7 @@ export default async function AdminMemberProfilePage({
             <div className="flex flex-wrap gap-1.5">
               {giftedCourseShares.map((s) => (
                 <Badge key={s.owner_id} variant="pink">
-                  {contentTitleOf.get(`course:${s.owner_id}`) ?? "—"}
+                  {contentTitleOf.get(`course:${s.owner_id}`) ?? "-"}
                 </Badge>
               ))}
             </div>
@@ -871,13 +871,13 @@ export default async function AdminMemberProfilePage({
         )}
       </div>
 
-      {/* What she watched — courses and session recordings alike */}
+      {/* What she watched - courses and session recordings alike */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm overflow-x-auto">
         <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
           <PlayCircle size={16} className="text-brand-pink-deep" /> מה היא צפתה
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          כל כניסה לתוכן — קורסים והקלטות סשנים. הגישה בדרייב נפתחת בכניסה הראשונה, אז זו גם
+          כל כניסה לתוכן - קורסים והקלטות סשנים. הגישה בדרייב נפתחת בכניסה הראשונה, אז זו גם
           התשובה ל&quot;למה יש לה את זה&quot;.
         </p>
         {!openLogReady && (
@@ -886,7 +886,7 @@ export default async function AdminMemberProfilePage({
             <span className="font-mono text-[11.5px]" dir="ltr">
               supabase/_content_access_log.sql
             </span>{" "}
-            — בינתיים רואים כאן רק צפיות בסרטוני קורסים.
+            - בינתיים רואים כאן רק צפיות בסרטוני קורסים.
           </p>
         )}
         {watched.length > 0 ? (
@@ -913,7 +913,7 @@ export default async function AdminMemberProfilePage({
                       </Badge>
                     </td>
                     <td className="py-2.5 font-medium text-ink-900">
-                      {contentTitleOf.get(key) ?? "—"}
+                      {contentTitleOf.get(key) ?? "-"}
                     </td>
                     <td className="py-2.5 text-ink-500">{DMY.format(new Date(w.firstOpen))}</td>
                     <td className="py-2.5 text-ink-500">{DMY.format(new Date(w.lastOpen))}</td>
@@ -948,7 +948,7 @@ export default async function AdminMemberProfilePage({
           )}
         </div>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          כל השאלון שלה, לפי סדר הטופס — ענתה על {answeredCount} מתוך {totalShown} שדות.
+          כל השאלון שלה, לפי סדר הטופס - ענתה על {answeredCount} מתוך {totalShown} שדות.
         </p>
         {profileSections.length > 0 ? (
           <div className="flex flex-col gap-5">

@@ -12,7 +12,7 @@ function merge(value: unknown): Pricing {
       ? Number(v.annualDiscountPct)
       : DEFAULT_PRICING.annualDiscountPct,
     // `|| default` would quietly turn a deliberate 0 (no minimum term) back
-    // into the default — so test for a finite number, not for truthiness.
+    // into the default - so test for a finite number, not for truthiness.
     minTermMonths: Number.isFinite(Number(v.minTermMonths))
       ? Math.max(0, Number(v.minTermMonths))
       : DEFAULT_PRICING.minTermMonths,

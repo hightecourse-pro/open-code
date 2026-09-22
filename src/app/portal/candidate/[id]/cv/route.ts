@@ -16,7 +16,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 /** Matches the signed-URL lifetime used elsewhere in the app. */
 const SIGNED_URL_TTL = 3600;
 
-/** Signed URLs are per-request secrets — never let a cache hold on to one. */
+/** Signed URLs are per-request secrets - never let a cache hold on to one. */
 function noStore(response: NextResponse): NextResponse {
   response.headers.set("Cache-Control", "no-store, max-age=0");
   return response;
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
   // Submission gate FIRST. Checking "is she listed?" before "may this client
   // reach her?" made the two answers distinguishable: an unknown id redirected
   // while a real-but-unsent candidate 404'd, so the 404 confirmed she exists.
-  // Both failures must look identical — 404, like the profile page.
+  // Both failures must look identical - 404, like the profile page.
   const reachable =
     client.can_search || (await candidateSentToClient(client.id, id));
   if (!reachable) {
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
 
 /**
  * Which CV this client gets, in order of how well it fits them:
- *   1. The CV she attached when applying to one of *this* client's jobs —
+ *   1. The CV she attached when applying to one of *this* client's jobs -
  *      she tailored it for them, so it beats anything generic.
  *   2. Her main CV, Hebrew first, newest first.
  */

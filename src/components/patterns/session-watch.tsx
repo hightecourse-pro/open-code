@@ -16,7 +16,7 @@ export interface WatchLink {
  * "צפייה" button (the link's TITLE never leaks onto it) that opens an
  * embedded player right in the row, with an external Drive link beside it.
  * The FIRST gate press is what grants her Drive permission, and Google can
- * take a few seconds to propagate it to the player — so the note tells that
+ * take a few seconds to propagate it to the player - so the note tells that
  * truth and a רענון button remounts the iframe (the owner, 30/8: "הפתיחה
  * בעצם יוצרת שיתוף… זה יקרה לכולם").
  */
@@ -87,7 +87,7 @@ export function SessionWatch({ sessionId, links }: { sessionId: string; links: W
                 />
               ) : (
                 <p className="text-[12.5px] text-ink-500">
-                  את הסרטון הזה אפשר לפתוח רק בדרייב —{" "}
+                  את הסרטון הזה אפשר לפתוח רק בדרייב -{" "}
                   <a href={link?.url} target="_blank" rel="noopener noreferrer" className="text-brand-purple underline">
                     לצפייה שם
                   </a>
@@ -96,8 +96,8 @@ export function SessionWatch({ sessionId, links }: { sessionId: string; links: W
               )}
               <p className="text-[11.5px] text-ink-400 mt-1 flex items-center gap-2 flex-wrap">
                 <span>
-                  בפתיחה הראשונה נפתחת לך גישה בדרייב — אם הנגן מבקש הרשאה, חכי כמה שניות
-                  ולחצי רענון. עדיין לא נטען, או שמופיעה חסימה (למשל של נטפרי)? פתחי בדרייב עם האייקון שלמעלה — זה אותו סרטון בדיוק 💜
+                  בפתיחה הראשונה נפתחת לך גישה בדרייב - אם הנגן מבקש הרשאה, חכי כמה שניות
+                  ולחצי רענון. עדיין לא נטען, או שמופיעה חסימה (למשל של נטפרי)? פתחי בדרייב עם האייקון שלמעלה - זה אותו סרטון בדיוק 💜
                 </span>
                 <button
                   type="button"

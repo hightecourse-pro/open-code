@@ -7,7 +7,7 @@ const fmtSize = (b: number) =>
 /**
  * What hangs on a post, comment or message: images inline (click opens the
  * full file), everything else as a download chip. URLs arrive signed and
- * short-lived from the server — nothing here is a permanent address.
+ * short-lived from the server - nothing here is a permanent address.
  */
 export function AttachmentList({
   items,

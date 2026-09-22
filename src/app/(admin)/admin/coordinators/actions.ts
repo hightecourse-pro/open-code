@@ -30,7 +30,7 @@ export async function saveContact(
   const manages = new Set(formData.getAll("manages").map(String));
 
   if (!full_name) return { error: "כתבי את שם הרכזת." };
-  // Email optional (16/9) — without one she simply cannot log in yet.
+  // Email optional (16/9) - without one she simply cannot log in yet.
   if (email && !EMAIL_RE.test(email)) return { error: "כתובת המייל לא נראית תקינה." };
   if (institutions.length === 0) return { error: "בחרי לפחות מוסד אחד." };
 
@@ -54,7 +54,7 @@ export async function saveContact(
     contactId = data.id;
   }
 
-  // The institution set is small — replacing it whole keeps add/remove one code path.
+  // The institution set is small - replacing it whole keeps add/remove one code path.
   await admin.from("institution_contact_links").delete().eq("contact_id", contactId!);
   const { error: linkError } = await admin
     .from("institution_contact_links")
@@ -65,7 +65,7 @@ export async function saveContact(
         manages_reviews: manages.has(institution),
       }))
     );
-  if (linkError) return { error: "הרכזת נשמרה אבל קישור המוסדות נכשל — פתחי אותה לעריכה ונסי שוב." };
+  if (linkError) return { error: "הרכזת נשמרה אבל קישור המוסדות נכשל - פתחי אותה לעריכה ונסי שוב." };
 
   revalidatePath("/admin/coordinators");
   return { ok: true };
@@ -82,7 +82,7 @@ export async function setContactPortalEnabled(id: string, enabled: boolean): Pro
   revalidatePath("/admin/coordinators");
 }
 
-/** Remove a contact — her links, reviews and email log go with her (cascade). */
+/** Remove a contact - her links, reviews and email log go with her (cascade). */
 export async function deleteContact(id: string): Promise<void> {
   await requireRole("admin");
   const admin = createAdminClient();
@@ -92,7 +92,7 @@ export async function deleteContact(id: string): Promise<void> {
 
 /**
  * See the portal exactly as one coordinator sees it (the owner, 15/9):
- * admin-only — opens a real coordinator session for that contact plus a
+ * admin-only - opens a real coordinator session for that contact plus a
  * display marker so the portal shows the "תצוגת ניהול" strip. Anything done
  * there (a saved review) is done in her name.
  */
@@ -139,7 +139,7 @@ export async function sendContactEmail(
     .eq("id", contactId)
     .maybeSingle();
   if (!contact) return { error: "לא נמצאה הרכזת." };
-  if (!contact.email) return { error: "לרכזת הזו אין כתובת מייל — השלימי אותה קודם." };
+  if (!contact.email) return { error: "לרכזת הזו אין כתובת מייל - השלימי אותה קודם." };
 
   const firstName = contact.full_name.split(" ")[0];
   const mail = contactPersonalEmail(firstName, body, subject || undefined);
@@ -148,7 +148,7 @@ export async function sendContactEmail(
     return {
       error:
         sent.error === "blocked_by_allowlist"
-          ? "בסביבת הבדיקות מיילים נשלחים רק לכתובות מאושרות — ההודעה לא נשלחה."
+          ? "בסביבת הבדיקות מיילים נשלחים רק לכתובות מאושרות - ההודעה לא נשלחה."
           : "השליחה נכשלה. נסי שוב בעוד רגע.",
     };
   }
@@ -164,7 +164,7 @@ export async function sendContactEmail(
 export type CoordChatState = { error?: string; ok?: boolean };
 
 /**
- * A team reply into a coordinator's thread — signed with the replying team
+ * A team reply into a coordinator's thread - signed with the replying team
  * member's name (the owner, 16/9: "תהיה חתימה לתשובה של מי מהצוות ענתה").
  */
 export async function replyToCoordinator(
@@ -190,7 +190,7 @@ export async function replyToCoordinator(
     body,
     team_author_name: me.full_name,
   });
-  if (error) return { error: "התשובה לא נשלחה — נסי שוב." };
+  if (error) return { error: "התשובה לא נשלחה - נסי שוב." };
   revalidatePath("/admin/coordinators");
   return { ok: true };
 }
@@ -205,7 +205,7 @@ export async function markThreadRead(contactId: string): Promise<void> {
 
 /**
  * A specific question to the coordinator about a candidate, from the review
- * center (the owner, 16/9) — reaches her BOTH by email and in the chat,
+ * center (the owner, 16/9) - reaches her BOTH by email and in the chat,
  * signed by the asking team member.
  */
 export async function askCoordinatorQuestion(
@@ -232,9 +232,9 @@ export async function askCoordinatorQuestion(
     body,
     team_author_name: me.full_name,
   });
-  if (error) return { error: "השליחה נכשלה — נסי שוב." };
+  if (error) return { error: "השליחה נכשלה - נסי שוב." };
 
-  // Email too (best effort — the chat copy is already there).
+  // Email too (best effort - the chat copy is already there).
   if (contact.email) {
     const mail = contactPersonalEmail(
       contact.full_name.split(" ")[0],

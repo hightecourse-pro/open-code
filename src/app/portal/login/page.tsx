@@ -9,7 +9,7 @@ export default function PortalLoginPage() {
 
   return (
     <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-ink-1000 px-6 py-12">
-      {/* A single, very restrained brand wash — enough to feel branded, not warm. */}
+      {/* A single, very restrained brand wash - enough to feel branded, not warm. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[420px] opacity-[0.18] bg-[radial-gradient(60%_60%_at_50%_0%,#464CA0_0%,transparent_70%)]"
@@ -25,7 +25,7 @@ export default function PortalLoginPage() {
           <div className="mt-7">
             <h1 className="t-h3">התחברו לפורטל</h1>
             <p className="t-body-sm mt-1">
-              הזינו את הפרטים שקיבלתם מאיתנו — המועמדות שלכם מחכות בפנים.
+              הזינו את הפרטים שקיבלתם מאיתנו - המועמדות שלכם מחכות בפנים.
             </p>
           </div>
 

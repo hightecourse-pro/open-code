@@ -48,12 +48,12 @@ export default function ComponentGallery() {
 
       <Section title="Typography">
         <div className="flex flex-col gap-3">
-          <div className="t-display">Display — כותרת ראשית</div>
-          <div className="t-h1">H1 — הצעד הראשון הוא הכי קשה</div>
-          <div className="t-h2">H2 — נעשה אותו ביחד</div>
-          <div className="t-h3">H3 — קהילה לג&apos;וניוריות</div>
-          <div className="t-body">Body — טקסט גוף רגיל לקריאה נוחה לאורך זמן.</div>
-          <div className="t-caption">Caption — מטא-מידע משני</div>
+          <div className="t-display">Display - כותרת ראשית</div>
+          <div className="t-h1">H1 - הצעד הראשון הוא הכי קשה</div>
+          <div className="t-h2">H2 - נעשה אותו ביחד</div>
+          <div className="t-h3">H3 - קהילה לג&apos;וניוריות</div>
+          <div className="t-body">Body - טקסט גוף רגיל לקריאה נוחה לאורך זמן.</div>
+          <div className="t-caption">Caption - מטא-מידע משני</div>
           <div className="t-mono text-brand-pink-deep">{"<מונוספייס/>"}</div>
         </div>
       </Section>
@@ -148,13 +148,13 @@ export default function ComponentGallery() {
             נחזיק לך אצבעות. תקבלי עדכון לאימייל ברגע שיש תשובה.
           </Alert>
           <Alert variant="info" title="סשן AI חדש פורסם">
-            &quot;בניית RAG עם LangChain&quot; — מחר ב־20:00, עם הקלטה אחר כך.
+            &quot;בניית RAG עם LangChain&quot; - מחר ב־20:00, עם הקלטה אחר כך.
           </Alert>
           <Alert variant="warn" title="הקורס הקודם לא הושלם">
             פתיחת קורס חדש תסגור את הקודם. רוצה להמשיך?
           </Alert>
           <Alert variant="danger" title="לא הצלחנו לשמור את קורות החיים">
-            בואי ננסה שוב — אם זה ממשיך, כתבי לנו.
+            בואי ננסה שוב - אם זה ממשיך, כתבי לנו.
           </Alert>
         </div>
       </Section>

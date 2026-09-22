@@ -34,7 +34,7 @@ const FULL_DATE = new Intl.DateTimeFormat("he-IL", {
   timeZone: "Asia/Jerusalem",
 });
 
-/** "לפני 10 דקות" / "לפני 3 שעות" / "לפני 4 ימים" — beside the full date. */
+/** "לפני 10 דקות" / "לפני 3 שעות" / "לפני 4 ימים" - beside the full date. */
 function relativeHe(iso: string): string {
   const mins = Math.max(0, Math.round((Date.now() - Date.parse(iso)) / 60_000));
   if (mins < 2) return "ממש עכשיו";
@@ -60,7 +60,7 @@ function dayBucket(iso: string): "היום" | "אתמול" | "השבוע" | "מ�
 
 /**
  * Where does this alert send the admin to ACT? Every actionable kind gets a
- * button — reading an alert should never end with "ומה עכשיו?".
+ * button - reading an alert should never end with "ומה עכשיו?".
  */
 function actionFor(a: AlertItem): { href: string; label: string } | null {
   const ctx = (a.context ?? {}) as { profileId?: string };
@@ -115,7 +115,7 @@ export function AlertsList({ alerts }: { alerts: AlertItem[] }) {
     if (needle) {
       list = list.filter((a) => `${a.title} ${a.body ?? ""}`.includes(needle));
     }
-    // Newest day first; INSIDE each day what needs handling floats up —
+    // Newest day first; INSIDE each day what needs handling floats up -
     // critical, then warnings, then info. Day headers stay contiguous this way.
     const rank = (a: AlertItem) => (a.severity === "critical" ? 0 : a.severity === "warning" ? 1 : 2);
     const dayKey = (a: AlertItem) => a.last_seen_at.slice(0, 10);
@@ -132,7 +132,7 @@ export function AlertsList({ alerts }: { alerts: AlertItem[] }) {
   const safePage = Math.min(page, pages - 1);
   const pageItems = filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
 
-  // Day headers inside the page — a header renders on the first row of each
+  // Day headers inside the page - a header renders on the first row of each
   // bucket (precomputed; render must not mutate).
   const headerFlags = pageItems.map(
     (a, i) => i === 0 || dayBucket(a.last_seen_at) !== dayBucket(pageItems[i - 1].last_seen_at)
@@ -182,7 +182,7 @@ export function AlertsList({ alerts }: { alerts: AlertItem[] }) {
       {pageItems.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-[14px] p-8 text-center text-sm text-ink-500">
           {filter === "unread"
-            ? "אין התראות שלא נקראו — הכול מטופל 💜"
+            ? "אין התראות שלא נקראו - הכול מטופל 💜"
             : "אין התראות שמתאימות לסינון."}
         </div>
       ) : (

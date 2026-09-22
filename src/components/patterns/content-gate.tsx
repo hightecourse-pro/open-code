@@ -1,6 +1,6 @@
 "use client";
 
-// The one place a member asks for access — and the one place every way it can
+// The one place a member asks for access - and the one place every way it can
 // go gets a sentence. She must never face a dead player: while we work she
 // sees that we're working, and if Google refuses us she hears it plainly plus
 // what happens next.
@@ -20,7 +20,7 @@ import type { ContentOwner } from "@/types/database";
 export interface ContentGateProps {
   ownerType: ContentOwner;
   ownerId: string;
-  /** She already holds a live share — render the content, no gate at all. */
+  /** She already holds a live share - render the content, no gate at all. */
   unlocked: boolean;
   /** Button text. Defaults to "צפייה". */
   label?: string;
@@ -41,7 +41,7 @@ export function ContentGate({
     async () => unlockContent(ownerType, ownerId),
     null
   );
-  // Success reveals the player in place — no navigation, no reload. Derived
+  // Success reveals the player in place - no navigation, no reload. Derived
   // from the action's own result, so there is no second source of truth.
   const revealed = state?.ok === true;
 
@@ -61,7 +61,7 @@ export function ContentGate({
             an occasional first render can still show the sign-in screen. */}
         {revealed && !unlocked && (
           <p className="flex items-center gap-1.5 text-[12.5px] text-[#1B7A4B] bg-tint-mint border border-[#A7E3C6] rounded-md px-3 py-2 mb-2">
-            הגישה נפתחה — צפייה נעימה 💜
+            הגישה נפתחה - צפייה נעימה 💜
             <span className="text-ink-500 inline-flex items-center gap-1">
               <RefreshCw size={11} /> לא נטען? רענני את הדף
             </span>
@@ -106,7 +106,7 @@ export function ContentGate({
       )}
 
       {pending && slow && (
-        <p className="text-[12.5px] text-ink-500">עוד רגע — מסדרות את ההרשאות בדרייב 💜</p>
+        <p className="text-[12.5px] text-ink-500">עוד רגע - מסדרות את ההרשאות בדרייב 💜</p>
       )}
 
       {!pending && state && !state.ok && (
@@ -124,14 +124,14 @@ export function ContentGate({
             )
           ) : state.reason === "needs_google_email" ? (
             <>
-              כדי לצפות צריך כתובת Google — אפשר להוסיף אותה{" "}
+              כדי לצפות צריך כתובת Google - אפשר להוסיף אותה{" "}
               <Link href="/profile" className="text-brand-purple font-semibold hover:underline">
                 בפרופיל
               </Link>{" "}
               ואז לחזור לכאן 💜
             </>
           ) : (
-            "ביקשנו לפתוח לך את הגישה. זה לוקח לנו רגע — נעדכן אותך ברגע שהיא מוכנה 💜"
+            "ביקשנו לפתוח לך את הגישה. זה לוקח לנו רגע - נעדכן אותך ברגע שהיא מוכנה 💜"
           )}
         </p>
       )}

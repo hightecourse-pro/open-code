@@ -20,11 +20,11 @@ export interface GroupCounts {
 
 /**
  * The directory with instant search: cards arrive server-rendered, and typing
- * filters them in place — by name, specialization or region — with no
+ * filters them in place - by name, specialization or region - with no
  * navigation and no URL writes.
  *
  * While the full list still streams in (loadingAll), the chips carry the
- * authoritative `counts` from the server — never the size of the partial
+ * authoritative `counts` from the server - never the size of the partial
  * chunk. The needle and chip survive the stream-in swap through the URL
  * (replaceState + mount adoption below).
  */
@@ -37,11 +37,11 @@ export function MembersInstantList({
   initialGroup = "",
 }: {
   items: InstantItem[];
-  /** The browse list hit MAX_RESULTS — noted next to the count. */
+  /** The browse list hit MAX_RESULTS - noted next to the count. */
   capped: boolean;
   /** Server-counted group sizes; falls back to counting the loaded items. */
   counts?: GroupCounts;
-  /** Only the first chunk is here — the rest is streaming in behind. */
+  /** Only the first chunk is here - the rest is streaming in behind. */
   loadingAll?: boolean;
   initialQuery?: string;
   initialGroup?: string;
@@ -50,10 +50,10 @@ export function MembersInstantList({
   // One-click group chips (the owner, 1/9): צוות / מנויות / מנטוריות.
   const [group, setGroup] = useState<string>(initialGroup);
 
-  // Keep the filters in the URL (replaceState — no navigation, no refetch), so
+  // Keep the filters in the URL (replaceState - no navigation, no refetch), so
   // opening a member's card and pressing BACK lands on the same filtered list
   // (member feedback, 1/9: "מתאפס לי הגדרות הסינון"). Two halves:
-  // 1. On mount, ADOPT whatever the browser brought back in the URL — the
+  // 1. On mount, ADOPT whatever the browser brought back in the URL - the
   //    router cache serves the page with its original (stale) props, so the
   //    address bar is the only survivor of the round trip.
   useEffect(() => {
@@ -63,7 +63,7 @@ export function MembersInstantList({
     if (q !== null) setNeedle(q);
     if (g !== null && ["", "subscriber", "mentor", "team"].includes(g)) setGroup(g);
   }, []);
-  // 2. Every later change writes itself back — skipping the mount run so the
+  // 2. Every later change writes itself back - skipping the mount run so the
   //    empty initial state never wipes the URL before the adoption lands.
   const urlSyncReady = useRef(false);
   useEffect(() => {
@@ -117,8 +117,8 @@ export function MembersInstantList({
         <div className="flex items-center gap-3 flex-wrap text-[12.5px] text-ink-500">
           <span>
             {countLabel(loadingAll && !searching && counts ? counts.all : filtered.length, searching)}
-            {capped && !searching && " ראשונות — החיפוש יביא אותך ישר למי שאת מחפשת"}
-            {loadingAll && " · כולן בדרך — הרשימה המלאה נטענת ברקע…"}
+            {capped && !searching && " ראשונות - החיפוש יביא אותך ישר למי שאת מחפשת"}
+            {loadingAll && " · כולן בדרך - הרשימה המלאה נטענת ברקע…"}
           </span>
           {searching && (
             <button
@@ -136,7 +136,7 @@ export function MembersInstantList({
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700 flex flex-col gap-2">
           {searching
             ? "לא מצאנו משתתפת שמתאימה לחיפוש בין המשתתפות שנטענו 💜"
-            : "רשימת המשתתפות עוד מתמלאת — בקרוב תמצאי כאן את כל מי שאיתנו 💜"}
+            : "רשימת המשתתפות עוד מתמלאת - בקרוב תמצאי כאן את כל מי שאיתנו 💜"}
           {searching && (capped || loadingAll) && (
             // The instant filter only sees the loaded page; the whole
             // community is one server search away.

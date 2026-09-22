@@ -7,7 +7,7 @@ import { fmtIsraelDateTime, israelLocalToIso, isoToIsraelInput } from "@/lib/uti
 import { updateSessionSchedule } from "./actions";
 
 /**
- * Shows a session's time in Israel time and lets an admin move it — the field is
+ * Shows a session's time in Israel time and lets an admin move it - the field is
  * filled from the very same Israel wall clock that's displayed, so editing round
  * trips instead of drifting by the offset on every save.
  */

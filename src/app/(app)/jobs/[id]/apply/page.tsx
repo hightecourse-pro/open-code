@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Her CV documents, the one she marked as default first. is_default arrives
- * with supabase/_cv_default.sql — before it runs the select fails with 42703
+ * with supabase/_cv_default.sql - before it runs the select fails with 42703
  * and we fall back to newest-first, exactly the old behaviour.
  */
 async function loadCvDocs(
@@ -48,14 +48,14 @@ async function loadCvDocs(
 /**
  * The application wizard for OUR jobs: per-job required questions, the
  * built-in "fit" question, and a CV choice (main / job-tailored upload).
- * Same gating as the board itself — any community member may apply; RLS keeps
+ * Same gating as the board itself - any community member may apply; RLS keeps
  * targeted jobs visible only to their audience.
  */
 export default async function ApplyPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const profile = await requireCommunityAccess();
-  // Mentors don't apply — the board page explains why.
-  // Mentors may apply too (2026-08-26) — senior jobs are published to them.
+  // Mentors don't apply - the board page explains why.
+  // Mentors may apply too (2026-08-26) - senior jobs are published to them.
   const supabase = await createClient();
 
   // RLS decides visibility (targeted jobs only for their audience).
@@ -66,7 +66,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
     .maybeSingle();
   if (!job || job.source !== "ours" || job.status !== "open") notFound();
 
-  // "שאלה על המשרה?" opens the request-to-the-team widget (30/8) — no
+  // "שאלה על המשרה?" opens the request-to-the-team widget (30/8) - no
   // admin-contact lookup needed anymore.
   const [{ data: questions }, cvDocs, { data: existing }] = await Promise.all([
     supabase
@@ -102,18 +102,18 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
 
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;הגשה/&gt;</span>
-        {/* The client's identity stays internal — she applies to the role, and
+        {/* The client's identity stays internal - she applies to the role, and
             the board already said the job is ours; once is enough (PM note). */}
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">
           הגשת מועמדות: {job.title}
         </h1>
         {/* Opens the request-to-the-team widget prefilled with the job (the
-            owner, 30/8) — the question lands in פניות לצוות, not in a chat. */}
+            owner, 30/8) - the question lands in פניות לצוות, not in a chat. */}
         <AskTeamAboutJob jobTitle={job.title} />
       </div>
 
       {/* The requirements exactly as the admin styled them (sanitized at save
-          time by the allowlist in lib/rich-text — brand styles apply here). */}
+          time by the allowlist in lib/rich-text - brand styles apply here). */}
       {(job.description_html || job.description) && (
         <section className="rounded-[18px] border border-ink-200 bg-white p-6 shadow-sm">
           <h2 className="font-display text-lg font-bold text-ink-1000 mb-3">דרישות המשרה</h2>
@@ -137,7 +137,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
 
       {existing && !unlocked ? (
         <Alert variant="info" title="ההגשה שלך כבר בטיפול 💜">
-          המועמדות שלך הועברה הלאה — משלב זה אי אפשר לערוך אותה. נעדכן אותך בכל התקדמות.{" "}
+          המועמדות שלך הועברה הלאה - משלב זה אי אפשר לערוך אותה. נעדכן אותך בכל התקדמות.{" "}
           <Link href="/jobs" className="font-semibold underline">
             חזרה למשרות
           </Link>
@@ -145,7 +145,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
       ) : existing && unlocked ? (
         <>
           <Alert variant="info" title="עריכת ההגשה שלך ✏️">
-            כבר הגשת למשרה הזו — עד שהצוות מקדם את ההגשה אפשר לעדכן תשובות, להחליף קורות
+            כבר הגשת למשרה הזו - עד שהצוות מקדם את ההגשה אפשר לעדכן תשובות, להחליף קורות
             חיים או להסיר את ההגשה לגמרי.
             {existing.edited_at && " (כבר ערכת אותה בעבר)"}
           </Alert>
@@ -173,7 +173,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
               "use server";
               await withdrawApplication(job.id);
             }}
-            message="להסיר את ההגשה למשרה הזו? היא תימחק לגמרי — ותמיד אפשר להגיש מחדש כל עוד המשרה פתוחה."
+            message="להסיר את ההגשה למשרה הזו? היא תימחק לגמרי - ותמיד אפשר להגיש מחדש כל עוד המשרה פתוחה."
             className="self-start text-[13px] font-semibold text-ink-500 hover:text-danger underline"
           >
             הסרת ההגשה שלי מהמשרה
@@ -182,7 +182,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
       ) : (
         <ApplyForm
           jobId={job.id}
-          // options is jsonb — coerce to a clean string[] for the form.
+          // options is jsonb - coerce to a clean string[] for the form.
           questions={(questions ?? []).map((q) => ({
             id: q.id,
             question: q.question,

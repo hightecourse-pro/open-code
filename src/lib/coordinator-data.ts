@@ -1,4 +1,4 @@
-// The coordinator portal's data layer — everything is scoped by HER
+// The coordinator portal's data layer - everything is scoped by HER
 // institutions, fetched with the service role (the tables are service-role
 // only) after the signed session already proved who she is.
 
@@ -9,7 +9,7 @@ import { inChunks } from "@/lib/chunk";
 /**
  * Display names for the coordinator portal: "שם (שם משפחה קודם)" whenever a
  * previous surname exists (the owner, 15/9: seminary records live under the
- * maiden name — "הוא צריך תמיד להופיע בסוגריים").
+ * maiden name - "הוא צריך תמיד להופיע בסוגריים").
  */
 async function displayNamesOf(profileIds: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
@@ -42,9 +42,9 @@ export interface Graduate {
   specialization: string | null;
   status: string;
   institution: string;
-  /** graduation_year option VALUE ("5785"…) — label resolved by the caller. */
+  /** graduation_year option VALUE ("5785"…) - label resolved by the caller. */
   yearValue: string | null;
-  /** certificate option VALUE — label resolved by the caller. */
+  /** certificate option VALUE - label resolved by the caller. */
   certificateValue: string | null;
   /** The system's own placement fact (profiles.found_job). */
   systemFoundJob: boolean;
@@ -54,7 +54,7 @@ export interface CoordinatorReview {
   profile_id: string;
   communication: number | null;
   talent: number | null;
-  /** Imported phrasing kept verbatim ("מוכשרת מאוד"…) — shown when present. */
+  /** Imported phrasing kept verbatim ("מוכשרת מאוד"…) - shown when present. */
   talent_label: string | null;
   communication_label: string | null;
   note: string | null;
@@ -103,7 +103,7 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
   const placeQ = qid("study_place");
   if (!placeQ) return [];
 
-  // Whose study_place is one of hers. The answer value is jsonb — comparing
+  // Whose study_place is one of hers. The answer value is jsonb - comparing
   // it in PostgREST is brittle, so the (bounded) answer set is filtered here.
   const wanted = new Set(institutions);
   const instOf = new Map<string, string>();
@@ -145,7 +145,7 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
   const nameOf = await displayNamesOf(ids);
   return (profs ?? [])
     // Graduates only (the owner, 15/9: "אין צורך שהמנטוריות יופיעו בבוגרות")
-    // — mentors and staff who once studied there are not her placement story.
+    // - mentors and staff who once studied there are not her placement story.
     .filter((p) => p.role === "junior" && p.status !== "rejected" && p.is_hidden !== true)
     .map((p) => ({
       id: p.id,
@@ -160,7 +160,7 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
     }));
 }
 
-/** HER reviews only — a colleague's notes never leave the service role. */
+/** HER reviews only - a colleague's notes never leave the service role. */
 export async function loadReviews(contactId: string): Promise<Map<string, CoordinatorReview>> {
   const admin = createAdminClient();
   const { data } = await admin
@@ -177,7 +177,7 @@ export interface CoordinatorJob {
   status: string;
   pipeline_status: string;
   published_at: string | null;
-  /** Company only for market jobs — client names of OUR jobs stay private,
+  /** Company only for market jobs - client names of OUR jobs stay private,
    *  exactly like the member board. */
   company: string | null;
   location: string | null;
@@ -196,7 +196,7 @@ export interface CoordinatorJob {
 
 /**
  * Only jobs HER graduates actually applied to through the site (the owner,
- * 15/9: "משרות רק את אלה שההגשות בוצעו דרך האתר") — an application row IS a
+ * 15/9: "משרות רק את אלה שההגשות בוצעו דרך האתר") - an application row IS a
  * through-the-site submission, so the list starts from her applications.
  */
 export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<CoordinatorJob[]> {
@@ -204,7 +204,7 @@ export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<
   // Two roads to a job row: she applied through the site, or WE submitted
   // her proactively (job_candidates with a sent stamp). "הוגשה ע"י קוד פתוח"
   // = any of: the client-send stamp, a post-send status, the team's אישור
-  // סופי (submissions often go out by plain email, leaving only the mark —
+  // סופי (submissions often go out by plain email, leaving only the mark -
   // the owner, 15/9: תמר פוקס/עדינה טיטלבוים), or a stamped curation row.
   const [apps, sentCands, { data: openJobs }] = await Promise.all([
     inChunks(graduateIds, (part) =>
@@ -222,7 +222,7 @@ export async function loadJobsWithHerApplicants(graduateIds: string[]): Promise<
         .not("sent_at", "is", null)
     ),
     // Every OPEN job of ours is listed even with no applications (the owner,
-    // 16/9) — those are exactly where a coordinator's recommendation helps.
+    // 16/9) - those are exactly where a coordinator's recommendation helps.
     admin
       .from("jobs")
       .select("id")
@@ -322,10 +322,10 @@ export interface CoordinatorHire {
 }
 
 /**
- * Placements of her institutions — names and dates; workplaces stay private.
+ * Placements of her institutions - names and dates; workplaces stay private.
  * Two roads in (the owner, 16/9: "רואה רק גיוס אחד למרות שבמערכת יש יותר"):
  * a hire linked to one of HER graduates, or any hire whose own seminary
- * field carries her institution — covering external hires and members whose
+ * field carries her institution - covering external hires and members whose
  * questionnaire never named the seminary.
  */
 export async function loadHires(
@@ -442,14 +442,14 @@ export async function loadCoordinatorThreads(): Promise<CoordinatorThread[]> {
 }
 
 /**
- * Reviews imported for women not yet in the community are keyed by email —
+ * Reviews imported for women not yet in the community are keyed by email -
  * this lazy pass links them to a profile the moment one exists (the owner,
  * 16/9: "ברגע שתתחבר אוטומטית תחבר לחוות דעת עליה"). Runs on admin +
  * coordinator page visits; bounded per pass.
  */
 export async function linkReviewsByEmail(): Promise<number> {
   const admin = createAdminClient();
-  // The whole pass runs inside the database (auth.users join) — the old
+  // The whole pass runs inside the database (auth.users join) - the old
   // app-side loop could never chew through an imported backlog.
   const { data, error } = await admin.rpc("link_coordinator_reviews");
   if (error) return 0;

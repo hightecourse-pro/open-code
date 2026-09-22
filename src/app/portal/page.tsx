@@ -5,7 +5,7 @@ import { loadCandidates } from "@/lib/portal/candidates";
 import { favoriteIds } from "@/lib/portal/favorites";
 import { CandidateSearch } from "@/components/portal/candidate-search";
 
-// Gemini rides a model-chain with retries — a stormy run outlives the platform
+// Gemini rides a model-chain with retries - a stormy run outlives the platform
 // default window. Server actions inherit the page segment they POST from.
 export const maxDuration = 300;
 
@@ -24,7 +24,7 @@ export default async function PortalSearchPage({
   if (!client.can_search) redirect("/portal/jobs");
 
   // Mentors are invisible here unless the recruiter explicitly flips the
-  // toggle — by default their data never even reaches this page.
+  // toggle - by default their data never even reaches this page.
   const includeMentors = (await searchParams).mentors === "1";
 
   // loadCandidates() is the only door to candidate data: it filters to listed
@@ -41,7 +41,7 @@ export default async function PortalSearchPage({
         <p className="t-body-sm text-ink-500">
           {/* RLM after the dash keeps the count attached to the Hebrew text even
               when the company name ends in Latin characters. */}
-          {client.company_name} —{"‏"}{" "}
+          {client.company_name} -{"‏"}{" "}
           {candidates.length === 1
             ? "מועמדת אחת מחכה כאן."
             : `${candidates.length} מועמדות מחכות כאן.`}{" "}
@@ -52,7 +52,7 @@ export default async function PortalSearchPage({
       <div className="-mt-2">
         {includeMentors ? (
           <a href="/portal" className="text-[12.5px] font-semibold text-brand-purple hover:underline">
-            👑 מוצגות גם מנטוריות — להסתרה
+            👑 מוצגות גם מנטוריות - להסתרה
           </a>
         ) : (
           <a href="/portal?mentors=1" className="text-[12.5px] text-ink-500 hover:text-brand-purple hover:underline">

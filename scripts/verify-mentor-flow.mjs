@@ -40,7 +40,7 @@ await login(admin, "admin.qa@opencode.test", ADMIN_PASS);
 await admin.goto(`${BASE}/admin/mentor-requests`);
 await admin.waitForLoadState("networkidle");
 const reqRow = admin.locator('div:has-text("מנויה בדיקה")').locator("select").first();
-// Option labels carry field+load now ("מנטורית בדיקה · פולסטאק · פנויה") —
+// Option labels carry field+load now ("מנטורית בדיקה · פולסטאק · פנויה") -
 // resolve the option by contained text and select by value.
 const mentorOpt = reqRow.locator("option", { hasText: "מנטורית בדיקה" }).first();
 await reqRow.selectOption((await mentorOpt.getAttribute("value")) ?? "");
@@ -79,7 +79,7 @@ await member.screenshot({ path: `${SHOTS}/mentor-visible.png` });
 // ── 6: admin history + bonus ─────────────────────────────────────────────────
 await admin.goto(`${BASE}/admin/mentors`);
 await admin.waitForLoadState("networkidle");
-// The list holds real mentors too — anchor everything to OUR fixture's card,
+// The list holds real mentors too - anchor everything to OUR fixture's card,
 // not to whichever mentor happens to render first.
 const mentorCard = admin.locator("div.bg-white").filter({ hasText: "מנטורית בדיקה" }).first();
 await mentorCard.locator('button:has-text("היסטוריית ליוויים")').first().click();

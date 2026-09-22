@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 /**
  * She has now looked at these celebrations (the owner, 18/9): the "חדש"
  * marks drop from her next page load and the banner stops opening by itself
- * until a NEW name appears. Idempotent — the set only grows.
+ * until a NEW name appears. Idempotent - the set only grows.
  */
 export async function markHiresSeen(hireIds: string[]): Promise<void> {
   const ids = hireIds.filter((v) => /^[0-9a-f-]{36}$/i.test(v));

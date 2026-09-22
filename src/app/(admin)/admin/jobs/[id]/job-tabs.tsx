@@ -6,16 +6,16 @@ import { cn } from "@/lib/utils";
 export interface JobTabDef {
   key: string;
   label: string;
-  /** Shown as "label (N)" — natural counters like מועמדות (3). */
+  /** Shown as "label (N)" - natural counters like מועמדות (3). */
   count?: number;
 }
 
 /**
  * The job page's tab bar. The server page composes every section once and
- * passes it as a named panel — switching tabs is pure client-side state (no
+ * passes it as a named panel - switching tabs is pure client-side state (no
  * navigation), initialized from the ?tab= search param the server passes.
- * Inactive panels stay mounted (hidden) so in-progress client state — a
- * half-built publish audience, an open edit form — survives tab hops.
+ * Inactive panels stay mounted (hidden) so in-progress client state - a
+ * half-built publish audience, an open edit form - survives tab hops.
  */
 export function JobTabs({
   tabs,

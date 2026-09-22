@@ -25,7 +25,7 @@ const CHAT_TIME_HE = new Intl.DateTimeFormat("he-IL", {
 
 /**
  * רכזות מוסדות (the owner, 14/9): the contact people of every study
- * institution — reachable by email from here — and the keys to their private
+ * institution - reachable by email from here - and the keys to their private
  * portal (/coordinator, OTP login). A contact may serve several institutions.
  * Since 16/9 also the team's chat desk with the coordinators.
  */
@@ -121,7 +121,7 @@ export default async function AdminCoordinatorsPage({
         ))}
         {threads.length === 0 && (
           <p className="text-ink-500 text-[12.5px] px-1 py-3">
-            עוד אין שיחות — הרכזות יכולות לכתוב לנו מהאזור האישי שלהן.
+            עוד אין שיחות - הרכזות יכולות לכתוב לנו מהאזור האישי שלהן.
           </p>
         )}
       </div>
@@ -170,7 +170,7 @@ export default async function AdminCoordinatorsPage({
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">רכזות מוסדות 🎓</h1>
         <p className="t-body-sm text-ink-700">
           אנשי הקשר של מוסדות הלימוד. לכל רכזת אזור אישי ב-
-          <span dir="ltr" className="font-mono text-[13px]">/coordinator</span> — כניסה עם קוד חד-פעמי
+          <span dir="ltr" className="font-mono text-[13px]">/coordinator</span> - כניסה עם קוד חד-פעמי
           למייל. רכזת יכולה להיות מקושרת לכמה מוסדות, ומה שהיא כותבת שם גלוי רק לה ולנו.
         </p>
       </div>

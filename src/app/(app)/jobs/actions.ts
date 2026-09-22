@@ -21,7 +21,7 @@ export async function toggleSaveJob(jobId: string, save: boolean) {
 
 /**
  * Hide a job from HER board only (member feedback, 14/9: "להסיר אותן מהלוח
- * האישי שלי") — reversible from the "הוסתרו" view. Nothing else changes: the
+ * האישי שלי") - reversible from the "הוסתרו" view. Nothing else changes: the
  * job stays live for everyone else and in her "ההגשות שלי" if she applied.
  */
 export async function toggleHideJob(jobId: string, hide: boolean) {
@@ -42,12 +42,12 @@ export async function toggleHideJob(jobId: string, hide: boolean) {
 }
 
 /**
- * One-click apply — for MARKET jobs only. An internal job ('ours') always goes
+ * One-click apply - for MARKET jobs only. An internal job ('ours') always goes
  * through the wizard at /jobs/[id]/apply, which validates her answers to the
  * job's questions against the DB; letting this action create those applications
  * would hand the review centre an empty submission nobody can explain.
  *
- * Optionally attaches a specific CV — that attachment is what the employer
+ * Optionally attaches a specific CV - that attachment is what the employer
  * downloads from the portal. With no explicit choice we attach the CV she
  * marked as her default on /cv, falling back to her most recent Hebrew CV.
  */
@@ -69,9 +69,9 @@ export async function applyToJob(
     .eq("id", jobId)
     .maybeSingle();
   if (!job) return { error: "המשרה הזו כבר לא זמינה." };
-  if (job.status !== "open") return { error: "המשרה הזו נסגרה — אבל יש עוד 💜" };
+  if (job.status !== "open") return { error: "המשרה הזו נסגרה - אבל יש עוד 💜" };
   if (job.source === "ours") {
-    return { error: "למשרה הזו מגישים דרך טופס ההגשה — כדי שנוכל להציג אותך במלואך." };
+    return { error: "למשרה הזו מגישים דרך טופס ההגשה - כדי שנוכל להציג אותך במלואך." };
   }
 
   let cvId = cvDocumentId ?? null;
@@ -87,8 +87,8 @@ export async function applyToJob(
   }
   if (!cvId) {
     // Her marked default wins outright. The old heuristic preferred any
-    // language === "job" document — i.e. a CV she tailored for a DIFFERENT
-    // job — so it stays only as the pre-migration fallback.
+    // language === "job" document - i.e. a CV she tailored for a DIFFERENT
+    // job - so it stays only as the pre-migration fallback.
     const marked = await supabase
       .from("cv_documents")
       .select("id")
@@ -124,7 +124,7 @@ export async function applyToJob(
     // our problem, and saying otherwise would leave her thinking she applied.
     if (error.code === "23505") return { error: "כבר הגשת למשרה הזו 💜" };
     console.error("[jobs] apply failed:", error.message);
-    return { error: "משהו השתבש אצלנו ברגע הזה — נסי שוב בעוד רגע, ואם זה חוזר כתבי לנו." };
+    return { error: "משהו השתבש אצלנו ברגע הזה - נסי שוב בעוד רגע, ואם זה חוזר כתבי לנו." };
   }
   return { ok: true };
 }

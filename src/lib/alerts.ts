@@ -2,10 +2,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * The alerts center's single write door. Called from webhooks and crons with
- * the service role — never from a browser (the table has no insert policy).
+ * the service role - never from a browser (the table has no insert policy).
  *
  * A dedupeKey collapses repeats: the same event again bumps `count`, refreshes
- * `last_seen_at`, and re-surfaces the row as unread — so a probe storm is one
+ * `last_seen_at`, and re-surfaces the row as unread - so a probe storm is one
  * loud row, not a thousand quiet ones.
  *
  * Never throws: an alert about a failure must not break the flow that failed.
@@ -43,7 +43,7 @@ export async function raiseAlert(input: RaiseAlertInput): Promise<void> {
             ...row,
             count: existing.count + 1,
             last_seen_at: new Date().toISOString(),
-            read_at: null, // it happened again — it is news again
+            read_at: null, // it happened again - it is news again
           })
           .eq("id", existing.id);
         return;
@@ -58,7 +58,7 @@ export async function raiseAlert(input: RaiseAlertInput): Promise<void> {
   }
 }
 
-/** The sidebar badge — one head-only count. */
+/** The sidebar badge - one head-only count. */
 export async function unreadAlertCount(): Promise<number> {
   try {
     const { count } = await createAdminClient()
@@ -71,7 +71,7 @@ export async function unreadAlertCount(): Promise<number> {
   }
 }
 
-/** Open member requests — the פניות לצוות sidebar badge. */
+/** Open member requests - the פניות לצוות sidebar badge. */
 export async function openRequestCount(): Promise<number> {
   try {
     const { count } = await createAdminClient()

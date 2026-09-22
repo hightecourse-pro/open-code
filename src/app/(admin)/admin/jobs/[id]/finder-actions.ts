@@ -53,7 +53,7 @@ export async function toggleMemberInternalTag(
   const { error } = await admin
     .from("member_crm")
     .upsert({ profile_id: profileId, internal_tags: [...current] }, { onConflict: "profile_id" });
-  if (error) return { ok: false, error: "השמירה נכשלה — ייתכן שחסרה המיגרציה" };
+  if (error) return { ok: false, error: "השמירה נכשלה - ייתכן שחסרה המיגרציה" };
   return { ok: true };
 }
 
@@ -67,7 +67,7 @@ export async function saveMemberInternalNote(
   const { error } = await admin
     .from("member_crm")
     .upsert({ profile_id: profileId, internal_notes: note.trim().slice(0, 2000) || null }, { onConflict: "profile_id" });
-  if (error) return { ok: false, error: "השמירה נכשלה — נסי שוב." };
+  if (error) return { ok: false, error: "השמירה נכשלה - נסי שוב." };
   return { ok: true };
 }
 
@@ -89,7 +89,7 @@ export async function saveSubmissionOutcome(
     },
     { onConflict: "job_id,profile_id" }
   );
-  if (error) return { ok: false, error: "השמירה נכשלה — נסי שוב." };
+  if (error) return { ok: false, error: "השמירה נכשלה - נסי שוב." };
   return { ok: true };
 }
 
@@ -115,7 +115,7 @@ const AI_SCHEMA = {
 } as const;
 
 /**
- * AI ranking over the finder's candidates (the owner, 2/9) — runs on the
+ * AI ranking over the finder's candidates (the owner, 2/9) - runs on the
  * system key pool (/admin/ai-keys, her free keys). Scores 0–100 with a one-
  * sentence Hebrew reason, stored on job_candidate_reviews. Practical
  * experience is weighted; learned-only tech is explicitly discounted.
@@ -154,13 +154,13 @@ export async function aiRankCandidates(
 תיאור: ${jobText}
 
 לפנייך רשימת מועמדות. דרגי כל אחת 0-100 לפי התאמה מעשית למשרה, עם נימוק של משפט אחד בעברית (בלשון נקבה, ישיר וקצר).
-כלל חשוב: רק ניסיון מעשי נחשב — עבודה, פרקטיקום, פרויקטים אמיתיים. טכנולוגיה שנלמדה בקורס בלבד אינה יתרון.
+כלל חשוב: רק ניסיון מעשי נחשב - עבודה, פרקטיקום, פרויקטים אמיתיים. טכנולוגיה שנלמדה בקורס בלבד אינה יתרון.
 
 המועמדות:
 ${batch
   .map(
     (c) =>
-      `id:${c.profileId} | ${c.name} | שנות ניסיון: ${c.years ?? "לא צוין"} | טכנולוגיות מניסיון מעשי: ${c.practical.join(", ") || "—"} | תקציר עבודה: ${c.workSummary.slice(0, 400) || "—"}`
+      `id:${c.profileId} | ${c.name} | שנות ניסיון: ${c.years ?? "לא צוין"} | טכנולוגיות מניסיון מעשי: ${c.practical.join(", ") || "-"} | תקציר עבודה: ${c.workSummary.slice(0, 400) || "-"}`
   )
   .join("\n")}`;
 
@@ -177,10 +177,10 @@ ${batch
       ok: false,
       error:
         res.reason === "no_key"
-          ? "אין מפתח AI במאגר — הוסיפי מפתח במסך מפתחות AI."
+          ? "אין מפתח AI במאגר - הוסיפי מפתח במסך מפתחות AI."
           : res.reason === "exhausted"
-            ? "כל מפתחות ה-AI מוצו להיום — נסי מאוחר יותר או הוסיפי מפתח."
-            : "דירוג ה-AI נכשל — נסי שוב.",
+            ? "כל מפתחות ה-AI מוצו להיום - נסי מאוחר יותר או הוסיפי מפתח."
+            : "דירוג ה-AI נכשל - נסי שוב.",
     };
   }
 

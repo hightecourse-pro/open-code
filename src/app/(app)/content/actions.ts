@@ -1,8 +1,8 @@
 "use server";
 
 // The two things a member's click can ask for: open my access to this, and
-// write down that I came in. Both re-derive who she is from the session —
-// never from an argument — because a server action is a POST endpoint.
+// write down that I came in. Both re-derive who she is from the session -
+// never from an argument - because a server action is a POST endpoint.
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
@@ -39,7 +39,7 @@ export async function unlockContent(
 }
 
 /**
- * Write down an entry. Fire-and-forget from the client — it never throws and
+ * Write down an entry. Fire-and-forget from the client - it never throws and
  * never blocks what she was opening.
  */
 export async function logContentOpen(input: {
@@ -63,7 +63,7 @@ export async function logContentOpen(input: {
 
 /**
  * A member opened a course video. Kept as its own action because the course
- * screen calls it per link — it resolves the link's owner so the entry is
+ * screen calls it per link - it resolves the link's owner so the entry is
  * attributed to the course even if the link is deleted later.
  */
 export async function recordView(linkId: string): Promise<void> {

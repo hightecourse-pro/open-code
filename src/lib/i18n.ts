@@ -2,12 +2,12 @@ import he from "@/messages/he.json";
 
 /**
  * Single-locale (Hebrew, feminine) copy lookup. All UI strings live in
- * `src/messages/he.json` — never hardcode user-facing text in JSX.
+ * `src/messages/he.json` - never hardcode user-facing text in JSX.
  *
  * Usage: t("feed.title") → "מה חדש בקהילה"
  *
  * If a second locale is ever needed (e.g. EN for EU members), swap this for
- * next-intl — the message-file structure is already compatible.
+ * next-intl - the message-file structure is already compatible.
  */
 const messages = he;
 

@@ -94,7 +94,7 @@ export interface CheckboxProps
   label?: React.ReactNode;
 }
 
-/** Custom checkbox — gradient box with white check when on. */
+/** Custom checkbox - gradient box with white check when on. */
 export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(function Checkbox(
   { className, label, checked, ...props },
   ref

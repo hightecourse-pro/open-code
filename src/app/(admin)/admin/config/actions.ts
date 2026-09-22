@@ -12,7 +12,7 @@ export type MoveQuestionState = { error?: string };
  *
  * The questionnaire is a sequence of titled steps and a question belongs to one
  * by its key, so moving a question past the end of its step would not move it
- * anywhere a member could see — the steps themselves are fixed. The swap is
+ * anywhere a member could see - the steps themselves are fixed. The swap is
  * therefore confined to the step, which is also what the configuration screen
  * now shows.
  *
@@ -39,7 +39,7 @@ export async function moveQuestion(
 
   const at = section.questions.findIndex((q) => q.id === id);
   const to = direction === "up" ? at - 1 : at + 1;
-  // Already at the edge of its step — there is nowhere inside it to go.
+  // Already at the edge of its step - there is nowhere inside it to go.
   if (to < 0 || to >= section.questions.length) return {};
 
   const [moved] = section.questions.splice(at, 1);

@@ -15,7 +15,7 @@ export interface PickerMember {
 const MAX_ROWS = 40;
 
 /**
- * Searchable picker over every active member — add/remove a candidate onto the
+ * Searchable picker over every active member - add/remove a candidate onto the
  * job with one click. Optimistic locally; the server (revalidate) is the source
  * of truth on the next load.
  */
@@ -62,7 +62,7 @@ export function CandidatePicker({
         if (on) await addJobCandidate(jobId, m.id);
         else await removeJobCandidate(jobId, m.id);
       } catch {
-        apply(m.id, !on); // the action failed — put the label back
+        apply(m.id, !on); // the action failed - put the label back
       } finally {
         setBusyId((b) => (b === m.id ? null : b));
       }
@@ -96,7 +96,7 @@ export function CandidatePicker({
             >
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-ink-900 truncate">{m.full_name}</div>
-                <div className="text-xs text-ink-500 truncate">{m.specialization ?? "—"}</div>
+                <div className="text-xs text-ink-500 truncate">{m.specialization ?? "-"}</div>
               </div>
               <button
                 type="button"
@@ -123,7 +123,7 @@ export function CandidatePicker({
 
       {query.trim() === "" && members.length > MAX_ROWS && (
         <p className="text-[12px] text-ink-400">
-          מוצגות {MAX_ROWS} הראשונות מתוך {members.length} — חפשי כדי לצמצם.
+          מוצגות {MAX_ROWS} הראשונות מתוך {members.length} - חפשי כדי לצמצם.
         </p>
       )}
     </div>

@@ -39,6 +39,6 @@ async function login(page, email, pass) {
 }
 
 // The full feedback-submission flow is owned by verify-pm-round4 (banner
-// naming, dates, admin-worded + default questions) — pm3 stops at presence.
+// naming, dates, admin-worded + default questions) - pm3 stops at presence.
 await browser.close();
 console.log(results.join("\n"));

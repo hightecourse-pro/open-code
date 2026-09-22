@@ -1,5 +1,5 @@
 // Every ops script takes its target from whatever env file was passed and
-// runs with the service role — RLS does not apply. One of them sets a fixed
+// runs with the service role - RLS does not apply. One of them sets a fixed
 // admin password, another deletes rows. Pointed at the wrong project, a single
 // run is a backdoor or a data loss. So: every script that writes says WHERE it
 // is about to write, and refuses a non-staging target unless the intent is

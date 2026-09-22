@@ -15,7 +15,7 @@ export interface ExperienceEntryDisplay {
   kindLabel?: string;
   /** Resolved tech LABELS. */
   tech: string[];
-  /** May be sanitized rich HTML — render through the safe-rich helper. */
+  /** May be sanitized rich HTML - render through the safe-rich helper. */
   description: string;
 }
 
@@ -27,7 +27,7 @@ export interface CandidateField {
   kind: "chips" | "text" | "links" | "experience";
   /** Only for kind === "experience". */
   entries?: ExperienceEntryDisplay[];
-  /** chips backed by the tech taxonomy — same values, grouped by תת-נושא. */
+  /** chips backed by the tech taxonomy - same values, grouped by תת-נושא. */
   chipGroups?: { name: string; values: string[] }[];
   /** kind === "links": the structured items (title + note per URL). */
   linkItems?: { url: string; title: string; note: string }[];
@@ -39,7 +39,7 @@ export interface CandidateSummary {
   initials: string;
   specialization: string | null;
   region: string | null;
-  /** City label from the questionnaire — shown beside/instead of the region. */
+  /** City label from the questionnaire - shown beside/instead of the region. */
   city: string | null;
   headline: string[];
   isExperienced: boolean;

@@ -58,9 +58,9 @@ export async function setMemberRoleAction(id: string, role: UserRole): Promise<v
 
 /**
  * Crown a member as mentor from the picker (the owner, 15/9: Esti Affen was
- * invisible — a paid member whose account is still pending). The appointment
+ * invisible - a paid member whose account is still pending). The appointment
  * IS the approval, so a pending account goes active with it; her tier is left
- * untouched — a paying member keeps her subscription.
+ * untouched - a paying member keeps her subscription.
  */
 export async function appointMentorAction(id: string): Promise<void> {
   await requireRole("admin");
@@ -81,7 +81,7 @@ export async function appointMentorAction(id: string): Promise<void> {
 
 /**
  * Resolve or dismiss a report. Resolving ("טופל") also removes the reported
- * content from the community — that's what handling a report means.
+ * content from the community - that's what handling a report means.
  */
 export async function updateReportStatus(id: string, status: ReportStatus) {
   await requireRole("admin");
@@ -126,7 +126,7 @@ export async function setMentorRequestStatus(id: string, status: "open" | "handl
 
 /**
  * Reopen a handled request WITH a documented reason (Shira: no reopen without
- * why). Clears the existing assignment — the assigned mentor's invite dies
+ * why). Clears the existing assignment - the assigned mentor's invite dies
  * with it, which the confirm dialog says out loud.
  */
 export async function reopenMentorRequest(id: string, formData: FormData): Promise<void> {
@@ -169,7 +169,7 @@ export async function setMentorAvailability(
 }
 
 /**
- * Cancel a mentor's appointment — reason required, logged, and every member
+ * Cancel a mentor's appointment - reason required, logged, and every member
  * she actively accompanies is emailed and her request reopened for a new
  * match. (Shira: no cancel without a reason and without telling the members.)
  */
@@ -219,7 +219,7 @@ export async function cancelMentorRole(mentorId: string, formData: FormData): Pr
         await sendResendEmail({
           to,
           subject: "עדכון על הליווי שלך בקוד פתוח 💜",
-          html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7"><p>היי ${first},</p><p>${mentor.full_name} מסיימת את תפקידה כמנטורית בקהילה, ולכן הליווי איתה נעצר. הבקשה שלך חזרה אלינו — אנחנו כבר מחפשות לך מנטורית חדשה ונעדכן אותך ברגע שנשבץ 💜</p><p>צוות קוד פתוח</p></div>`,
+          html: `<div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7"><p>היי ${first},</p><p>${mentor.full_name} מסיימת את תפקידה כמנטורית בקהילה, ולכן הליווי איתה נעצר. הבקשה שלך חזרה אלינו - אנחנו כבר מחפשות לך מנטורית חדשה ונעדכן אותך ברגע שנשבץ 💜</p><p>צוות קוד פתוח</p></div>`,
         });
       }
     } catch (e) {
@@ -275,7 +275,7 @@ export async function assignMentorToRequest(requestId: string, formData: FormDat
 }
 
 /**
- * Email the assigned MENTOR: who was matched to her and for what purpose —
+ * Email the assigned MENTOR: who was matched to her and for what purpose -
  * with the acceptance ask. Best-effort; never rolls back the assignment.
  */
 async function inviteMentorToAssignment(requestId: string): Promise<void> {
@@ -310,7 +310,7 @@ async function inviteMentorToAssignment(requestId: string): Promise<void> {
 }
 
 /**
- * Employment accompaniment is the admin's call — assign a mentor to accompany
+ * Employment accompaniment is the admin's call - assign a mentor to accompany
  * a member in her first months on the job. Upsert-style: an existing
  * employment mentor_request row (latest) is updated, otherwise one is
  * inserted already handled. The member is told by email (best-effort).
@@ -323,7 +323,7 @@ export async function assignEmploymentMentor(
   await requireRole("admin");
   const mentorId = String(formData.get("mentor_id") ?? "");
   if (!mentorId) return { error: "בחרי מנטורית מהרשימה." };
-  // Service role: RLS only lets a member insert her OWN request — here the
+  // Service role: RLS only lets a member insert her OWN request - here the
   // ADMIN creates the assignment on the member's behalf (role verified above).
   const supabase = createAdminClient();
   const now = new Date().toISOString();
@@ -363,7 +363,7 @@ export async function assignEmploymentMentor(
         .maybeSingle();
   if (inserted.error || !inserted.data) return { error: "השיוך נכשל. רענני את הדף ונסי שוב." };
 
-  // The mentor gets the invite — the member hears about it when she accepts.
+  // The mentor gets the invite - the member hears about it when she accepts.
   await inviteMentorToAssignment(inserted.data.id);
 
   revalidatePath(`/admin/members/${profileId}`);
@@ -421,7 +421,7 @@ export async function setMemberEmployment(
     await removeCommunityHireIfUnbilled(profileId);
   }
 
-  // The workplace name lives in member_private — other members must never be
+  // The workplace name lives in member_private - other members must never be
   // able to read where she works (and for an internal job it IS the client).
   const { error: wpError } = await createAdminClient()
     .from("member_private")
@@ -443,7 +443,7 @@ export type CrmState = { error?: string };
 
 /**
  * Toggle a member's VIP star, with an optional admin-only reason. Lives in
- * member_crm (admin-only RLS) — never on profiles, which members can read.
+ * member_crm (admin-only RLS) - never on profiles, which members can read.
  */
 export async function toggleVip(id: string, isVip: boolean, reason?: string): Promise<CrmState> {
   await requireRole("admin");
@@ -473,11 +473,11 @@ export async function saveInternalNotes(id: string, notes: string): Promise<CrmS
 }
 
 /**
- * רישום תשלום ידני — the fallback for a real charge whose CallBack never
+ * רישום תשלום ידני - the fallback for a real charge whose CallBack never
  * arrived (or arrived broken). Flipping the profile to active by hand creates
  * a ghost: no subscription row, so she never expires and appears in no
- * payment report. This goes through activateSubscription — the same single
- * door the webhook uses — so a subscription AND a payment row are written,
+ * payment report. This goes through activateSubscription - the same single
+ * door the webhook uses - so a subscription AND a payment row are written,
  * and if the CallBack shows up later the webhook's idempotency check finds
  * the asmachta already recorded and skips it.
  */
@@ -490,7 +490,7 @@ export async function recordManualPayment(
   const transactionId = String(formData.get("asmachta") ?? "").trim();
   const amountShekels = Number(formData.get("amount"));
   if (!transactionId) {
-    return { error: "צריך את מספר האסמכתא מנדרים — בלעדיו אי אפשר לזהות את החיוב." };
+    return { error: "צריך את מספר האסמכתא מנדרים - בלעדיו אי אפשר לזהות את החיוב." };
   }
   if (!Number.isFinite(amountShekels) || amountShekels <= 0) {
     return { error: "סכום לא תקין." };
@@ -503,7 +503,7 @@ export async function recordManualPayment(
     .eq("provider_payment_id", transactionId)
     .maybeSingle();
   if (existing) {
-    return { error: "האסמכתא הזו כבר רשומה — התשלום נקלט, אין צורך לרשום שוב." };
+    return { error: "האסמכתא הזו כבר רשומה - התשלום נקלט, אין צורך לרשום שוב." };
   }
 
   await activateSubscription({
@@ -521,7 +521,7 @@ export async function recordManualPayment(
 
 /** Approve / reject / pause a member. Admin-gated (action + RLS + role check). */
 /**
- * Hide (or unhide) a profile from the other members — for the team's
+ * Hide (or unhide) a profile from the other members - for the team's
  * test/preview accounts. The account itself stays fully functional: it
  * leaves the members directory, the chat search and the employer portal,
  * but its own login sees the app exactly like any member.
@@ -539,7 +539,7 @@ export async function setMemberStatus(profileId: string, status: ProfileStatus) 
   await requireRole("admin");
   const supabase = await createClient();
 
-  // "פעילה" means PAYING for a junior — activation comes from the payment
+  // "פעילה" means PAYING for a junior - activation comes from the payment
   // webhook, not from a button. Without this guard a well-meaning אישור used
   // to open chat, courses and Drive to someone who never paid (2026-08-30:
   // "הוא ללא מנוי ועדיין יכול להתכתב"). Mentors' activation is the mentor
@@ -557,7 +557,7 @@ export async function setMemberStatus(profileId: string, status: ProfileStatus) 
     if (target?.role === "junior" && (liveSubs ?? 0) === 0) {
       return {
         error:
-          "אין לה מנוי פעיל — חברה ללא תשלום נכנסת חופשי בלי אישור, והפעלה מלאה קורית אוטומטית עם התשלום. אם שולם מחוץ למערכת, שייכי את התשלום במסך התשלומים.",
+          "אין לה מנוי פעיל - חברה ללא תשלום נכנסת חופשי בלי אישור, והפעלה מלאה קורית אוטומטית עם התשלום. אם שולם מחוץ למערכת, שייכי את התשלום במסך התשלומים.",
       };
     }
   }
@@ -565,7 +565,7 @@ export async function setMemberStatus(profileId: string, status: ProfileStatus) 
   const { error } = await supabase.from("profiles").update({ status }).eq("id", profileId);
   if (error) return { error: error.message };
 
-  // Drive access follows membership — but only one way now. Approving her
+  // Drive access follows membership - but only one way now. Approving her
   // grants nothing: it decides what she MAY open, and the material reaches her
   // when she opens it. Pausing or rejecting still takes back everything she
   // really did open.
@@ -709,7 +709,7 @@ export async function updatePricing(
   if (!Number.isFinite(annualDiscountPct) || annualDiscountPct < 0 || annualDiscountPct > 100) {
     return { error: "אחוז הנחה צריך להיות בין 0 ל-100." };
   }
-  // 0 is a real choice — it means no commitment, and the join screen says so.
+  // 0 is a real choice - it means no commitment, and the join screen says so.
   if (!Number.isFinite(minTermMonths) || minTermMonths < 0) {
     return { error: "מינימום חודשים לא תקין." };
   }
@@ -734,7 +734,7 @@ export async function updatePricing(
 /**
  * Word the four session-feedback rating questions (the PM: the admin decides
  * what each session's feedback asks). Empty input falls back to the default
- * wording — the slots themselves are fixed DB columns.
+ * wording - the slots themselves are fixed DB columns.
  */
 export async function updateFeedbackLabels(
   _prev: PricingState,
@@ -760,7 +760,7 @@ export async function updateFeedbackLabels(
 }
 
 /**
- * The "מאגר המנטוריות עוד בבנייה" notice on the member's mentor screen —
+ * The "מאגר המנטוריות עוד בבנייה" notice on the member's mentor screen -
  * on while the pool is small, off with one click when it's ready.
  */
 export async function setMentorPoolNotice(on: boolean): Promise<void> {
@@ -774,7 +774,7 @@ export async function setMentorPoolNotice(on: boolean): Promise<void> {
 }
 
 /**
- * The launch-period nudge above the request widget ("הקהילה בהרצה 🚀") —
+ * The launch-period nudge above the request widget ("הקהילה בהרצה 🚀") -
  * the owner turns it off here when the launch settles (30/8).
  */
 export async function setLaunchNudge(on: boolean): Promise<void> {
@@ -812,7 +812,7 @@ function jobFields(formData: FormData) {
     ? (empRaw as EmploymentType)
     : "full";
   const external_url = String(formData.get("external_url") ?? "").trim() || null;
-  // The member board's role filter (30/8) — a fixed vocabulary, אחר as the
+  // The member board's role filter (30/8) - a fixed vocabulary, אחר as the
   // honest fallback.
   const ROLES = ["פיתוח", "בדיקות", "יישום", "ניתוח מערכות", "דאטה", "ניהול מוצר", "עיצוב", "אחר"];
   const roleRaw = String(formData.get("role_category") ?? "").trim();
@@ -823,7 +823,7 @@ function jobFields(formData: FormData) {
     ? (kindRaw as JobKind)
     : "immediate";
   // The employer's hire-percentage only means something on a percent-practicum
-  // job — anything else (or an empty/invalid value) is stored as null.
+  // job - anything else (or an empty/invalid value) is stored as null.
   const pctRaw = String(formData.get("practicum_percent") ?? "").trim();
   const pct = pctRaw ? Math.round(Number(pctRaw)) : NaN;
   const practicum_percent =
@@ -851,7 +851,7 @@ function jobFields(formData: FormData) {
 
 /**
  * The plain description mirrors the rich one (line breaks kept, styling
- * dropped) — the admin writes once. A manually typed plain text only wins
+ * dropped) - the admin writes once. A manually typed plain text only wins
  * when no rich text exists.
  */
 function withDerivedDescription(f: ReturnType<typeof jobFields>) {
@@ -861,23 +861,23 @@ function withDerivedDescription(f: ReturnType<typeof jobFields>) {
 
 function validateJob(f: ReturnType<typeof jobFields>): string | null {
   if (!f.company || !f.title) return "חברה ותפקיד הם שדות חובה.";
-  // Our jobs always belong to a client — the whole pipeline (portal, send-to-
+  // Our jobs always belong to a client - the whole pipeline (portal, send-to-
   // client, CRM) hangs off that link, so it's chosen first, never afterthought.
   if (f.source === "ours" && !f.client_id)
-    return "למשרה שלנו חובה לבחור לקוח — בחרי מהרשימה או צרי לקוח חדש.";
-  // Market ("open") jobs are applied to off-site — a link is required.
+    return "למשרה שלנו חובה לבחור לקוח - בחרי מהרשימה או צרי לקוח חדש.";
+  // Market ("open") jobs are applied to off-site - a link is required.
   if (f.source === "open" && !f.external_url) return "למשרה מהשוק חובה קישור להגשה.";
   return null;
 }
 
-/** Everything except the portal link — used to retry before that migration. */
+/** Everything except the portal link - used to retry before that migration. */
 function withoutClient<T extends { client_id: string | null }>(f: T) {
   const { client_id: _drop, ...rest } = f;
   void _drop;
   return rest;
 }
 
-/** Everything except the CRM-migration columns (_jobs_crm.sql) — retry before it ran. */
+/** Everything except the CRM-migration columns (_jobs_crm.sql) - retry before it ran. */
 function withoutCrmColumns<T extends { job_kind: JobKind; practicum_percent: number | null; description_html: string | null }>(
   f: T
 ) {
@@ -888,7 +888,7 @@ function withoutCrmColumns<T extends { job_kind: JobKind; practicum_percent: num
   return rest;
 }
 
-/** Postgres/PostgREST "column does not exist" — the pre-migration case only. */
+/** Postgres/PostgREST "column does not exist" - the pre-migration case only. */
 function isMissingColumn(error: { code?: string; message?: string } | null): boolean {
   if (!error) return false;
   return (
@@ -910,8 +910,8 @@ interface CleanJobQuestion {
 
 /**
  * Sanitize an admin-typed application question: trimmed non-empty text, a
- * valid answer type (anything else → paragraph) and — for the two choice
- * types — deduped non-empty options (max 20). A choice question with fewer
+ * valid answer type (anything else → paragraph) and - for the two choice
+ * types - deduped non-empty options (max 20). A choice question with fewer
  * than two options degrades to a free-text paragraph.
  */
 function sanitizeJobQuestion(
@@ -938,7 +938,7 @@ function sanitizeJobQuestion(
 }
 
 /**
- * Free-typed tech tags settle to the taxonomy's label when recognized —
+ * Free-typed tech tags settle to the taxonomy's label when recognized -
  * "pyton" and "SQL..." were live on the board, and free text that matches
  * nothing in the taxonomy is exactly what broke profile matching (BUG-007).
  * Unrecognized tags stay as typed; matching canonicalizes anyway.
@@ -970,7 +970,7 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
   const err = validateJob(fields);
   if (err) return { error: err };
 
-  // An "ours" job is born CLOSED (invisible on the board) — it goes live only
+  // An "ours" job is born CLOSED (invisible on the board) - it goes live only
   // when the admin publishes it to its audience. Market jobs open immediately.
   const f = {
     ...withDerivedDescription(fields),
@@ -983,7 +983,7 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
   jobId = created?.id ?? null;
   if (error) {
     // Backward-safe: retry without newer-migration columns ONLY when a column
-    // is what's missing — a real error must still surface. First without the
+    // is what's missing - a real error must still surface. First without the
     // CRM columns (_jobs_crm.sql), then also without the portal link.
     if (!isMissingColumn(error)) return { error: error.message };
     const { data: r1, error: retry } = await supabase
@@ -1005,8 +1005,8 @@ export async function createJob(_prev: FormState, formData: FormData): Promise<F
   }
 
   // Required application questions typed during creation (JSON array of
-  // {question, answer_type, options} objects — legacy plain strings still
-  // parse). Best-effort — the job itself is already saved.
+  // {question, answer_type, options} objects - legacy plain strings still
+  // parse). Best-effort - the job itself is already saved.
   if (jobId) {
     try {
       const raw = JSON.parse(String(formData.get("questions") ?? "[]")) as unknown;
@@ -1082,7 +1082,7 @@ export async function editJob(jobId: string, _prev: FormState, formData: FormDat
   return { ok: true };
 }
 
-/** Close (or reopen) a job — closed jobs disappear from the members' board. */
+/** Close (or reopen) a job - closed jobs disappear from the members' board. */
 export async function setJobStatus(jobId: string, open: boolean): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();
@@ -1102,7 +1102,7 @@ export async function setJobVisibility(jobId: string, visible: boolean): Promise
   revalidatePath("/jobs");
 }
 
-/** Bulk close/reopen/delete — the PM's checkbox actions on several jobs. */
+/** Bulk close/reopen/delete - the PM's checkbox actions on several jobs. */
 export async function bulkJobs(jobIds: string[], op: "close" | "open" | "delete"): Promise<void> {
   await requireRole("admin");
   const ids = [...new Set(jobIds.filter(Boolean))].slice(0, 200);
@@ -1127,7 +1127,7 @@ export async function deleteJob(jobId: string): Promise<void> {
 }
 
 // ------------------------------------------------------------ job questions
-// The built-in question ("למה את חושבת שאת מתאימה למשרה?") lives in code —
+// The built-in question ("למה את חושבת שאת מתאימה למשרה?") lives in code -
 // these are only the extra, per-job questions the admin defines.
 
 /** Add a required application question to a job (appended last). */
@@ -1250,7 +1250,7 @@ export async function moveJobQuestion(id: string, jobId: string, dir: "up" | "do
       supabase.from("job_questions").update({ sort_order: a.sort_order }).eq("id", b.id),
     ]);
   } else {
-    // Legacy rows can share a sort_order — reindex the whole list (with the
+    // Legacy rows can share a sort_order - reindex the whole list (with the
     // two swapped) so every question gets a distinct integer again.
     const order = rows.map((r) => r.id);
     [order[idx], order[swapIdx]] = [order[swapIdx], order[idx]];
@@ -1273,10 +1273,10 @@ export interface AudienceFilters {
   criteria?: Record<string, string[]>;
   /** true = experienced only, false = juniors only, undefined = everyone. */
   experienced?: boolean;
-  /** Also offer the job to mentors (senior roles) — per-job admin decision. */
+  /** Also offer the job to mentors (senior roles) - per-job admin decision. */
   includeMentors?: boolean;
   /** Also reach members still MID-questionnaire (the owner, 1/9: "צריך
-      לשלוח לכל מי שנכנסה") — they can't be criteria-matched (no answers
+      לשלוח לכל מי שנכנסה") - they can't be criteria-matched (no answers
       yet), so they join wholesale, criteria or not. */
   includeIncomplete?: boolean;
 }
@@ -1288,7 +1288,7 @@ export interface AudienceMember {
   region: string | null;
   /** Paying member (active) vs free (pending). Admin-only indication. */
   is_subscriber: boolean;
-  /** Internal VIP flag from member_crm — never leaves admin screens. */
+  /** Internal VIP flag from member_crm - never leaves admin screens. */
   is_vip: boolean;
 }
 
@@ -1297,7 +1297,7 @@ export interface AudienceMember {
  * completed profile, matched against ANY profile criterion. A member passes
  * when, for every criterion with selected values, at least one of them appears
  * in her pool (case-insensitive; pools are label-resolved). Pools come from
- * src/lib/admin/audience.ts — the same pass that builds the panel's catalogue —
+ * src/lib/admin/audience.ts - the same pass that builds the panel's catalogue -
  * so what the admin picks and what a member "has" can never drift apart.
  */
 export async function previewAudience(
@@ -1319,7 +1319,7 @@ export async function previewAudience(
     members = members.filter((p) => p.is_experienced === filters.experienced);
   }
 
-  // OR within one criterion, AND across criteria — like the portal search.
+  // OR within one criterion, AND across criteria - like the portal search.
   const criteria = Object.entries(filters.criteria ?? {})
     .map(([key, values]) => ({
       key,
@@ -1337,7 +1337,7 @@ export async function previewAudience(
   }
 
   // Mid-questionnaire members join AFTER criteria (they have no answers to
-  // match) — the email nudges them to finish the wizard and apply.
+  // match) - the email nudges them to finish the wizard and apply.
   if (filters.includeIncomplete) {
     const { data: incomplete } = await admin
       .from("profiles")
@@ -1362,7 +1362,7 @@ export async function previewAudience(
     }
   }
 
-  // VIP flags (member_crm is admin-only — this stays in admin surfaces, never
+  // VIP flags (member_crm is admin-only - this stays in admin surfaces, never
   // the portal). VIPs float to the top of the audience list.
   const { data: crm } = members.length
     ? await admin.from("member_crm").select("profile_id, is_vip").in("profile_id", members.map((m) => m.id))
@@ -1381,7 +1381,7 @@ export async function previewAudience(
 
   return {
     members: shaped,
-    // The pre-criteria pool — lets the UI distinguish "the community has no
+    // The pre-criteria pool - lets the UI distinguish "the community has no
     // eligible members yet" from "the criteria filtered everyone out".
     pool: eligible.length,
   };
@@ -1399,19 +1399,19 @@ function jobExcerpt(html: string | null, fallback: string, max = 200): string {
 
 /**
  * Publish a job to its chosen audience: write job_targets, flip the job to
- * published/open, and email every target that wasn't emailed yet — so
+ * published/open, and email every target that wasn't emailed yet - so
  * re-publishing with a wider audience only mails the newly added members.
  */
 export async function publishJob(
   jobId: string,
   profileIds: string[],
-  /** Hand-picked additions ("מעבר לקריטריונים") — recorded as source 'manual'
+  /** Hand-picked additions ("מעבר לקריטריונים") - recorded as source 'manual'
       so criteria-matched and hand-picked targets stay distinguishable. */
   manualIds: string[] = [],
-  /** Board-visible to the WHOLE community — future joiners included (the
+  /** Board-visible to the WHOLE community - future joiners included (the
       owner, 1/9). Emails still go only to the selected audience. */
   openToAll = false,
-  /** Board-visible to every EXPERIENCED member — future joiners included
+  /** Board-visible to every EXPERIENCED member - future joiners included
       (the owner, 6/9). */
   openToExperienced = false
 ): Promise<{ ok?: boolean; error?: string; sent?: number; failed?: number; queued?: number }> {
@@ -1449,7 +1449,7 @@ export async function publishJob(
     .update({
       pipeline_status: "published",
       status: "open",
-      // Publishing IS the request to be seen — a quick-created job is born
+      // Publishing IS the request to be seen - a quick-created job is born
       // hidden and stayed hidden through publish (וורדפרס, 3/9: members
       // "couldn't see" a published job).
       is_visible: true,
@@ -1462,7 +1462,7 @@ export async function publishJob(
 
   // Email only targets that never got the announcement. A small audience is
   // mailed right here (publishing feels instant); anything bigger is left on
-  // the queue for the 10-minute notifications cron — a serverless action must
+  // the queue for the 10-minute notifications cron - a serverless action must
   // never loop thousands of sends (it gets killed mid-loop and nobody knows).
   const INLINE_LIMIT = 25;
   const { data: pending } = await admin
@@ -1553,7 +1553,7 @@ export interface MemberFilterInput {
 /**
  * The candidate finder's matching, moved server-side (2026-08-29): each
  * criterion resolves to member ids in SQL; AND across criteria happens here.
- * The old model preloaded every profile_answers row into the browser — at
+ * The old model preloaded every profile_answers row into the browser - at
  * 3,000 members that was ~90k rows per page view.
  */
 export async function evaluateMemberFilters(filters: MemberFilterInput[]): Promise<string[]> {
@@ -1574,7 +1574,7 @@ export async function evaluateMemberFilters(filters: MemberFilterInput[]): Promi
     } else if (f.type === "language") {
       const wanted = f.values.filter(Boolean);
       if (wanted.length === 0) continue;
-      // One question's rows only (bounded by member count) — the lang/level
+      // One question's rows only (bounded by member count) - the lang/level
       // pairs live inside a jsonb array of objects, parsed here.
       const { data } = await admin
         .from("profile_answers")
@@ -1642,14 +1642,14 @@ export async function removeJobCandidate(jobId: string, profileId: string): Prom
 
 /**
  * Email the client the candidates curated for their job, with a link straight
- * into that job in the portal. The names are resolved through loadClientJob —
- * the same privacy gate the portal renders behind — so a member who opted out
+ * into that job in the portal. The names are resolved through loadClientJob -
+ * the same privacy gate the portal renders behind - so a member who opted out
  * (or is paused / no longer a listed junior) is never named to the client,
  * even if she is still a row in job_candidates.
  *
  * The email also carries the client's portal credentials and an optional
  * personal note; each candidate actually sent gets her own "הגשנו אותך" email
- * and — if she applied — her application flips to status "sent".
+ * and - if she applied - her application flips to status "sent".
  */
 export async function sendJobCandidatesToClient(
   jobId: string,
@@ -1666,7 +1666,7 @@ export async function sendJobCandidatesToClient(
   if (!job) return { error: "המשרה לא נמצאה." };
   if (!job.client_id) return { error: "המשרה לא מקושרת ללקוח פורטל. חברי אותה ללקוח בעריכת המשרה." };
 
-  // Service-role read: the password is stored encrypted (reversible — see
+  // Service-role read: the password is stored encrypted (reversible - see
   // portal/auth.ts) exactly so it can be handed to the client here.
   const { data: client } = await admin
     .from("portal_clients")
@@ -1678,10 +1678,10 @@ export async function sendJobCandidatesToClient(
   }
   const password = decryptPassword(client.password_enc);
   if (!client.username || !password) {
-    return { error: "ללקוח אין עדיין פרטי גישה — הקצי במסך לקוחות פורטל." };
+    return { error: "ללקוח אין עדיין פרטי גישה - הקצי במסך לקוחות פורטל." };
   }
 
-  // Forgiving auto-curation: "אישור סופי" alone is enough to send — every
+  // Forgiving auto-curation: "אישור סופי" alone is enough to send - every
   // approved application joins job_candidates first (existing rows untouched).
   // Best-effort: a pre-migration DB without admin_mark simply adds nothing.
   const { data: approvedApps } = await admin
@@ -1702,14 +1702,14 @@ export async function sendJobCandidatesToClient(
   }
 
   // Resolve names through the portal's single door, never from profiles
-  // directly — this drops any curated candidate the client can't actually see,
+  // directly - this drops any curated candidate the client can't actually see,
   // so the email and the portal job page always name exactly the same people.
-  // includeUnsent: this IS the send — we preview what's about to go out.
+  // includeUnsent: this IS the send - we preview what's about to go out.
   const clientJob = await loadClientJob(job.client_id, jobId, { includeUnsent: true });
   const sentCandidates = clientJob?.candidates ?? [];
   const names = sentCandidates.map((c) => c.name).filter(Boolean);
   if (names.length === 0) {
-    // Curated rows exist but the privacy gate hides every one of them — tell
+    // Curated rows exist but the privacy gate hides every one of them - tell
     // the admin exactly who is hidden and why (service-role read; this list is
     // admin-facing only and never reaches the client).
     const { data: curatedRows } = await admin
@@ -1735,7 +1735,7 @@ export async function sendJobCandidatesToClient(
                   : p.portal_listed === false
                     ? "ביקשה לא להופיע בפורטל"
                     : "לא עומדת בתנאי התצוגה בפורטל";
-        return `${p.full_name} — ${reason}`;
+        return `${p.full_name} - ${reason}`;
       });
       if (parts.length) {
         return {
@@ -1765,14 +1765,14 @@ export async function sendJobCandidatesToClient(
     return { error: "המייל לא נשלח. נסי שוב." };
   }
 
-  // The client has the list — the job pipeline moves to "candidates sent".
+  // The client has the list - the job pipeline moves to "candidates sent".
   const { error: pipelineError } = await admin
     .from("jobs")
     .update({ pipeline_status: "candidates_sent" })
     .eq("id", jobId);
   if (pipelineError) console.error("[job candidates] pipeline update failed:", pipelineError);
 
-  // Everything below is best-effort per candidate — the client email is out.
+  // Everything below is best-effort per candidate - the client email is out.
   const now = new Date().toISOString();
   const candidateIds = sentCandidates.map((c) => c.id);
 
@@ -1828,7 +1828,7 @@ export async function sendJobCandidatesToClient(
     }
   }
 
-  // The client has the shortlist — every fresh application that is NOT part of
+  // The client has the shortlist - every fresh application that is NOT part of
   // it moves to the waitlist. No email: the member just sees the gentle
   // "התקדמנו בינתיים עם מועמדות אחרות 💜" label in her jobs area.
   {
@@ -1856,10 +1856,10 @@ export type AdminMark = "optional" | "not_fit" | "approved";
 
 /**
  * Internal review mark on an application (אופציונלית / לא מתאימה / אישור
- * סופי). Admin-only — never surfaces to the member or the client.
+ * סופי). Admin-only - never surfaces to the member or the client.
  */
 /**
- * The per-application internal note — "הערה ספציפית שמקושרת לבת במשרה זו"
+ * The per-application internal note - "הערה ספציפית שמקושרת לבת במשרה זו"
  * (the owner, 2026-08-30). Lives in admin-only application_notes, so it can
  * never surface through the member's own application rows.
  */
@@ -1935,7 +1935,7 @@ export async function setApplicationMark(
     .maybeSingle();
   if (!app) return { error: "ההגשה לא נמצאה." };
 
-  // The reason rides only with "לא מתאימה" — clearing/other marks clear it.
+  // The reason rides only with "לא מתאימה" - clearing/other marks clear it.
   const admin_mark_reason =
     mark === "not_fit" ? (reason ?? "").trim().slice(0, 500) || null : null;
   const { error } = await admin
@@ -1955,7 +1955,7 @@ export async function setApplicationMark(
 
 /**
  * The same internal mark, applied to a whole selection at once (the review
- * center's bulk bar). One reason is shared by every row — and rides only with
+ * center's bulk bar). One reason is shared by every row - and rides only with
  * "לא מתאימה", any other mark clears it. Admin-only, capped at 200 rows.
  */
 export async function setApplicationMarkBulk(
@@ -1971,7 +1971,7 @@ export async function setApplicationMarkBulk(
   if (ids.length === 0) return { error: "לא נבחרו הגשות." };
   const admin = createAdminClient();
 
-  // All rows in one bulk come from a single job's review center — resolve the
+  // All rows in one bulk come from a single job's review center - resolve the
   // job from the first row for the revalidation.
   const { data: rows } = await admin
     .from("applications")
@@ -2000,21 +2000,21 @@ export async function setApplicationMarkBulk(
 
 export type PipelineStatus = "sent" | "interview" | "exam" | "hired" | "declined";
 
-// "sent" = we submitted her to the employer — with or without a portal
+// "sent" = we submitted her to the employer - with or without a portal
 // client (the PM's quick "הוגשה ✓"). The rest move her along the pipeline.
 const PIPELINE_STATUSES: PipelineStatus[] = ["sent", "interview", "exam", "hired", "declined"];
 
 /**
  * Move an application along the client pipeline (ראיון/מבחן/גויסה/בפעם הבאה)
- * and email the member a warm update. Hiring also celebrates on her profile —
+ * and email the member a warm update. Hiring also celebrates on her profile -
  * found_job / hired_via_us / hired_at / workplace.
  */
 /**
- * Close a job's journey — "גויס" (filled, possibly by several members) or
- * "נסגר ללא גיוס" — or reopen it. Closing also takes it off the board.
+ * Close a job's journey - "גויס" (filled, possibly by several members) or
+ * "נסגר ללא גיוס" - or reopen it. Closing also takes it off the board.
  */
 /**
- * Manually close (or reopen) an open job to NEW submissions — for the times
+ * Manually close (or reopen) an open job to NEW submissions - for the times
  * the admin hands candidates to the client outside the system, so the
  * automatic "candidates sent" stamp (the client-email flow) never fired.
  * Members then see "המשרה התקדמה לשלב הבא" and the apply door closes.
@@ -2097,7 +2097,7 @@ export async function updateApplicationPipeline(
   if (error) return { error: "עדכון הסטטוס נכשל. נסי שוב." };
 
   // The first candidate reaching an interview/exam moves the JOB to
-  // "ראיונות" automatically. Hiring never auto-closes the job — a role can
+  // "ראיונות" automatically. Hiring never auto-closes the job - a role can
   // hire several members, so that call stays with the admin.
   if (
     (status === "interview" || status === "exam") &&
@@ -2106,7 +2106,7 @@ export async function updateApplicationPipeline(
     await admin.from("jobs").update({ pipeline_status: "interviews" }).eq("id", app.job_id);
   }
 
-  // גויסה 🎉 — mark the placement on her profile so the community stats know
+  // גויסה 🎉 - mark the placement on her profile so the community stats know
   // she found her job through us.
   if (status === "hired") {
     const { error: hiredError } = await admin
@@ -2124,7 +2124,7 @@ export async function updateApplicationPipeline(
       link: "/admin/hires",
     });
 
-    // Where she works is team-only (member_private) — on an internal job the
+    // Where she works is team-only (member_private) - on an internal job the
     // company IS the client, and rule 1 says that name never leaves the team.
     if (job?.company) {
       const { error: wpError } = await admin
@@ -2213,7 +2213,7 @@ function crmContactFields(formData: FormData) {
 
 /**
  * Add a lead to the client CRM. The lead and the portal client are the same
- * portal_clients row — credentials (username/password) are assigned later, on
+ * portal_clients row - credentials (username/password) are assigned later, on
  * the clients screen, once the lead reaches "משרה בטיפול".
  */
 export async function createCrmLead(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -2239,7 +2239,7 @@ export async function createCrmLead(_prev: FormState, formData: FormData): Promi
 
 /**
  * Create a client inline from the new-job flow and hand its id back so the
- * form can select it. Born as job_active — a client created while adding a
+ * form can select it. Born as job_active - a client created while adding a
  * job is by definition one with a job in progress.
  */
 export async function quickCreateClientForJob(
@@ -2301,7 +2301,7 @@ export async function updateCrmClient(
     return { error: "השמירה נכשלה. נסי שוב." };
   }
 
-  // The clients screen shows only "משרה בטיפול" — a status change moves rows
+  // The clients screen shows only "משרה בטיפול" - a status change moves rows
   // between the two screens, so both must refresh.
   revalidatePath("/admin/crm");
   revalidatePath("/admin/clients");
@@ -2367,7 +2367,7 @@ export async function createSession(_prev: FormState, formData: FormData): Promi
 /**
  * Approve a self-served mentor application: pending+mentor → active, and the
  * promised email goes out. The free tier means no subscription row is ever
- * created — nothing here will expire.
+ * created - nothing here will expire.
  */
 export async function approveMentorApplication(profileId: string): Promise<void> {
   await requireRole("admin");
@@ -2398,7 +2398,7 @@ export async function approveMentorApplication(profileId: string): Promise<void>
 
 /**
  * Demote an APPROVED mentor back to a regular, not-subscribed member (the
- * owner, 1/9): role junior on the paid track, pending (not active — active
+ * owner, 1/9): role junior on the paid track, pending (not active - active
  * juniors are payers), and the member questionnaire reopens. Her mentor
  * answers stay stored; assignments should be reassigned first if any.
  */
@@ -2415,7 +2415,7 @@ export async function demoteMentorToMember(profileId: string): Promise<void> {
     .from("profiles")
     .update({ role: "junior", member_tier: "paid", status: "pending", profile_completed: false })
     .eq("id", profileId);
-  // A payer never lands as "pending" — her live/claimable payment activates
+  // A payer never lands as "pending" - her live/claimable payment activates
   // her right back (הדסה, 1/9).
   try {
     const { data: au } = await admin.auth.admin.getUserById(profileId);
@@ -2432,7 +2432,7 @@ export async function demoteMentorToMember(profileId: string): Promise<void> {
 
 /**
  * Junk-account block (the owner, 1/9): a spam/garbage signup is locked all
- * the way — login banned, community access revoked (rejected) and hidden
+ * the way - login banned, community access revoked (rejected) and hidden
  * from every member-facing list. Reversible from the same button.
  */
 export async function setMemberJunk(profileId: string, junk: boolean): Promise<void> {
@@ -2455,7 +2455,7 @@ export async function setMemberJunk(profileId: string, junk: boolean): Promise<v
 
 /**
  * A personal email from the team to one member, from her file page (the
- * owner, 1/9: "תן לי אפשרות לכתוב הודעה גם לאלה שדחיתי כבר") — a branded
+ * owner, 1/9: "תן לי אפשרות לכתוב הודעה גם לאלה שדחיתי כבר") - a branded
  * email carrying exactly the admin's words.
  */
 export async function sendPersonalEmail(profileId: string, formData: FormData): Promise<void> {
@@ -2483,7 +2483,7 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
     convId = created?.id;
   }
   if (convId) {
-    // email_notified_at: this flow sends its OWN email — the grace cron skips it.
+    // email_notified_at: this flow sends its OWN email - the grace cron skips it.
     await admin.from("messages").insert({ conversation_id: convId, sender_id: me.id, body: note, email_notified_at: new Date().toISOString() });
     await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", convId);
   }
@@ -2500,7 +2500,7 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
   const mail = teamPersonalEmail(p?.first_name ?? p?.full_name?.split(" ")[0] ?? undefined, note, chatUrl);
   const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
   if (!sent.ok) console.error("[members] personal email failed:", profileId, sent.error);
-  // The record the owner asked for (1/9): what was sent, by whom, when — the
+  // The record the owner asked for (1/9): what was sent, by whom, when - the
   // file page shows it and warns before a double send.
   await admin.from("personal_emails").insert({ profile_id: profileId, sender_id: me.id, body: note });
   revalidatePath(`/admin/members/${profileId}`);
@@ -2508,7 +2508,7 @@ export async function sendPersonalEmail(profileId: string, formData: FormData): 
 
 /**
  * A chat message to a candidate straight from a job's review center (the
- * owner, 16/9) — lands in her chat with the acting admin, plus a nudge email
+ * owner, 16/9) - lands in her chat with the acting admin, plus a nudge email
  * in the owner's exact copy: "יש לך הודעה מקוד פתוח / בקשר למשרה - {משרה} /
  * המשך ההתכתבות בצ'אט". The message text itself stays in the chat only.
  */
@@ -2541,18 +2541,18 @@ export async function sendJobChatMessage(
       .single();
     convId = created?.id;
   }
-  if (!convId) return { error: "פתיחת הצ'אט נכשלה — נסי שוב." };
+  if (!convId) return { error: "פתיחת הצ'אט נכשלה - נסי שוב." };
   const { error: msgErr } = await admin.from("messages").insert({
     conversation_id: convId,
     sender_id: me.id,
     body: chatBody,
-    // This flow sends its OWN email — the grace cron skips it.
+    // This flow sends its OWN email - the grace cron skips it.
     email_notified_at: new Date().toISOString(),
   });
-  if (msgErr) return { error: "ההודעה לא נשלחה — נסי שוב." };
+  if (msgErr) return { error: "ההודעה לא נשלחה - נסי שוב." };
   await admin.from("conversations").update({ last_message_at: new Date().toISOString() }).eq("id", convId);
 
-  // The nudge email (best effort — the chat copy is already there).
+  // The nudge email (best effort - the chat copy is already there).
   const { data: p } = await admin
     .from("profiles")
     .select("first_name, full_name")
@@ -2576,13 +2576,13 @@ export async function sendJobChatMessage(
 /**
  * Decline a mentor application (the owner, 1/9): the admin writes a PERSONAL
  * note that goes to her by email, and she stays in the community as a regular
- * (not-subscribed) member — role junior on the paid track, wizard reopened so
+ * (not-subscribed) member - role junior on the paid track, wizard reopened so
  * she fills the member questionnaire.
  */
 export async function rejectMentorApplication(profileId: string, formData: FormData): Promise<void> {
   const me = await requireRole("admin");
   const note = String(formData.get("note") ?? "").trim().slice(0, 2000);
-  if (!note) return; // the personal explanation is the point — never silent
+  if (!note) return; // the personal explanation is the point - never silent
   const admin = createAdminClient();
   const { data: p } = await admin
     .from("profiles")
@@ -2611,7 +2611,7 @@ export async function rejectMentorApplication(profileId: string, formData: FormD
   } catch (e) {
     console.error("[mentors] decline email failed:", profileId, e);
   }
-  // The decline note is a personal email too — same record, same visibility.
+  // The decline note is a personal email too - same record, same visibility.
   await admin
     .from("personal_emails")
     .insert({ profile_id: profileId, sender_id: me.id, kind: "mentor_decline", body: note });
@@ -2640,7 +2640,7 @@ export async function replyToMemberRequest(
 ): Promise<void> {
   const me = await requireRole("admin");
   const reply = String(formData.get("reply") ?? "").trim().slice(0, 4000);
-  // An explicit "handle without answering" — never an accidental empty send.
+  // An explicit "handle without answering" - never an accidental empty send.
   const skipReply = formData.get("skip_reply") === "1";
   if (!reply && !skipReply) return;
   const handledByName = String(formData.get("handled_by_name") ?? "").trim().slice(0, 60) || null;
@@ -2672,7 +2672,7 @@ export async function replyToMemberRequest(
     }
     if (convId) {
       // The FULL question rides with the answer (the owner, 3/9: "אני כבר
-      // לא זוכרת מה היתה השאלה") — days may pass between asking and answering.
+      // לא זוכרת מה היתה השאלה") - days may pass between asking and answering.
       const questionQuote = [`📝 פנית אלינו: "${req.subject}"`, req.body ? String(req.body) : null]
         .filter(Boolean)
         .join("\n");
@@ -2680,7 +2680,7 @@ export async function replyToMemberRequest(
         conversation_id: convId,
         sender_id: me.id,
         body: `${questionQuote}\n\n💬 התשובה שלנו:\n${reply}`,
-        // This flow mails teamRepliedEmail itself — the grace cron skips it.
+        // This flow mails teamRepliedEmail itself - the grace cron skips it.
         email_notified_at: new Date().toISOString(),
       });
       await admin
@@ -2722,7 +2722,7 @@ export async function replyToMemberRequest(
 }
 
 /**
- * The inbox's two preset lists — who is on the team, and the canned replies
+ * The inbox's two preset lists - who is on the team, and the canned replies
  * for recurring questions. Both live in app_settings so every admin sees the
  * same lists.
  */
@@ -2745,7 +2745,7 @@ export async function saveInboxSettings(formData: FormData): Promise<void> {
       }
     }
   } catch {
-    // Malformed canned list — keep the names update, drop the bad list.
+    // Malformed canned list - keep the names update, drop the bad list.
   }
   await admin
     .from("app_settings")
@@ -2761,7 +2761,7 @@ export async function saveInboxSettings(formData: FormData): Promise<void> {
 /**
  * Cancel a member's subscription from OUR side (the owner, 3/9: "לבטל מנוי
  * מהמערכת, כשתשלום נכשל למשל"): subscription rows → canceled, tier → free,
- * Drive access queued for revoke. Nedarim is NOT touched here — the standing
+ * Drive access queued for revoke. Nedarim is NOT touched here - the standing
  * order has its own buttons.
  */
 export async function adminCancelSubscription(profileId: string): Promise<{ error?: string }> {
@@ -2773,7 +2773,7 @@ export async function adminCancelSubscription(profileId: string): Promise<{ erro
     .update({ status: "canceled", canceled_at: new Date().toISOString() })
     .eq("profile_id", profileId)
     .in("status", ["active", "trialing", "past_due"]);
-  if (subErr) return { error: "ביטול המנוי נכשל — נסי שוב." };
+  if (subErr) return { error: "ביטול המנוי נכשל - נסי שוב." };
 
   await admin.from("profiles").update({ member_tier: "free" }).eq("id", profileId);
   try {
@@ -2788,7 +2788,7 @@ export async function adminCancelSubscription(profileId: string): Promise<{ erro
     kind: "subscription_admin_canceled",
     severity: "warning",
     title: `המנוי של ${who?.full_name ?? profileId} בוטל ידנית`,
-    body: `בוטל על ידי חברת צוות מתוך המערכת. אם יש הוראת קבע פעילה בנדרים — יש לטפל בה בנפרד (כפתורי ההו"ק בעמוד החברה).`,
+    body: `בוטל על ידי חברת צוות מתוך המערכת. אם יש הוראת קבע פעילה בנדרים - יש לטפל בה בנפרד (כפתורי ההו"ק בעמוד החברה).`,
     dedupeKey: `admin-cancel-${profileId}`,
   });
 
@@ -2814,7 +2814,7 @@ export async function adminKevaAction(
   await raiseAlert({
     kind: "keva_action",
     severity: "warning",
-    title: `פעולת הו"ק בנדרים: ${action} על ${kevaId} — ${result.ok ? "הצליחה" : "נכשלה"}`,
+    title: `פעולת הו"ק בנדרים: ${action} על ${kevaId} - ${result.ok ? "הצליחה" : "נכשלה"}`,
     body: result.detail.slice(0, 300),
     dedupeKey: `keva-${action}-${kevaId}-${result.ok}`,
   });
@@ -2827,7 +2827,7 @@ export async function adminKevaAction(
  * One button closes the loop with every applicant of a job (the owner, 8/9):
  * whoever was forwarded to the employer gets the "הגשנו אותך" email (with the
  * placement-fee note), and everyone else who was not finally approved gets the
- * regret email — subscribers with the extra family line. Each application is
+ * regret email - subscribers with the extra family line. Each application is
  * stamped after a successful send, so re-clicking only reaches whoever is
  * still missing (a failed batch can simply be retried).
  */
@@ -2859,7 +2859,7 @@ export async function sendJobOutcomeEmails(
     if (FORWARDED.has(a.status) || a.sent_to_client_at) {
       targets.push({ appId: a.id, applicantId: a.applicant_id, kind: "submitted" });
     } else if (a.admin_mark !== "approved" && a.status !== "draft" && a.status !== "declined") {
-      // Finally-approved women are still in play and drafts never applied —
+      // Finally-approved women are still in play and drafts never applied -
       // neither belongs in a regret email.
       targets.push({ appId: a.id, applicantId: a.applicant_id, kind: "regret" });
     }
@@ -2944,7 +2944,7 @@ export async function sendJobOutcomeEmails(
  * Cancel a member's course choice from her admin file (the owner, 18/9:
  * "לבטל בחירה של קורס למשתתפת כדי שתוכל לבחור אחד אחר"). The take goes back
  * to the library like a return, her Drive access to it is queued for revoke,
- * and the rolling month is NOT started — releasedByTeam() lets her pick a new
+ * and the rolling month is NOT started - releasedByTeam() lets her pick a new
  * course right away.
  */
 export async function releaseCourseChoice(profileId: string): Promise<void> {

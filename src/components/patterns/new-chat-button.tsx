@@ -11,7 +11,7 @@ import {
 
 /**
  * Start a conversation without leaving the chat screen: button, type a name,
- * pick her — the existing find-or-create action opens the thread. Members are
+ * pick her - the existing find-or-create action opens the thread. Members are
  * looked up on the SERVER per keystroke (debounced) instead of shipping the
  * whole community directory to the browser on every chat render.
  */
@@ -32,7 +32,7 @@ export function NewChatButton() {
         if (alive) setHits(rows);
       } catch {
         // A rejected server action (typically a tab from before a deploy whose
-        // action ids no longer exist) must NOT reach the error boundary — a
+        // action ids no longer exist) must NOT reach the error boundary - a
         // refresh fixes it, so say that instead of crashing the page.
         if (alive) setStale(true);
       } finally {
@@ -69,7 +69,7 @@ export function NewChatButton() {
             placeholder="עם מי לדבר? חפשי לפי שם או תחום…"
             // Password/passkey extensions inject their widgets into freshly
             // focused inputs and corrupt React's DOM (the owner's crash,
-            // 10/9 — passkeys-inject.js all over her console). These are the
+            // 10/9 - passkeys-inject.js all over her console). These are the
             // standard leave-me-alone hints the major ones respect.
             type="search"
             autoComplete="off"
@@ -107,12 +107,12 @@ export function NewChatButton() {
                 onClick={() => window.location.reload()}
                 className="text-[12.5px] font-semibold text-brand-purple px-2 py-3 text-center cursor-pointer hover:underline"
               >
-                העמוד התעדכן מאז שנפתח — לחצי לרענון ונמשיך משם 💜
+                העמוד התעדכן מאז שנפתח - לחצי לרענון ונמשיך משם 💜
               </button>
             )}
             {!stale && !loading && hits.length === 0 && (
               <p className="text-[12.5px] text-ink-500 px-2 py-3 text-center">
-                לא מצאנו — נסי שם אחר 🙂
+                לא מצאנו - נסי שם אחר 🙂
               </p>
             )}
             {loading && hits.length === 0 && (

@@ -8,10 +8,10 @@ import { UpgradeNote } from "@/components/patterns/upgrade-prompt";
 import { fmtIsraelDate, fmtIsraelTime } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "אירועים וסשנים" };
-// A session goes live by the clock — the page must notice without a deploy.
+// A session goes live by the clock - the page must notice without a deploy.
 export const dynamic = "force-dynamic";
 
-/** The join link only exists on the subscriber read — free rows simply lack it. */
+/** The join link only exists on the subscriber read - free rows simply lack it. */
 function joinUrl(session: object): string | null {
   return (session as { zoom_url?: string | null }).zoom_url ?? null;
 }
@@ -70,11 +70,11 @@ export default async function EventsPage() {
   const subscriber = isSubscriber(profile);
   const now = new Date();
   const cutoff = now.getTime() - 24 * 3600 * 1000; // canceled sessions hide after 24h
-  // A session that started less than two hours ago is happening NOW — it
+  // A session that started less than two hours ago is happening NOW - it
   // belongs at the top with a live badge, not in the "עברו" list.
   const liveEdgeIso = new Date(now.getTime() - LIVE_WINDOW_MS).toISOString();
 
-  // Free members read the sanitized view — it simply has no join link in it,
+  // Free members read the sanitized view - it simply has no join link in it,
   // so there's nothing to leak even straight from the API.
   const table = subscriber ? "sessions" : "sessions_public";
 
@@ -95,7 +95,7 @@ export default async function EventsPage() {
   ]);
 
   // A live session ENDS (the owner, 30/8: "צריך להפסיק להיות לייב"): with a
-  // duration — when it runs out; without one — two hours after the start.
+  // duration - when it runs out; without one - two hours after the start.
   // A long hackathon evening stays live by getting a real duration.
   const liveUntil = (s: { scheduled_at: string; duration_minutes?: number | null }) =>
     new Date(s.scheduled_at).getTime() + (s.duration_minutes ?? 120) * 60 * 1000;
@@ -125,7 +125,7 @@ export default async function EventsPage() {
 
   const pastShown = (past ?? []).filter((s) => !s.canceled_at && !isLive(s));
   // "הועבר + כניסה מההקלטות": the link shows only when a recording actually
-  // exists for that session — a dead "להקלטה" teaches her not to click it.
+  // exists for that session - a dead "להקלטה" teaches her not to click it.
   const recTable = subscriber ? "recordings" : "recordings_public";
   const [{ data: recRows }, { data: recLinks }] = pastShown.length
     ? await Promise.all([
@@ -134,8 +134,8 @@ export default async function EventsPage() {
           .select("id, session_id")
           .in("session_id", pastShown.map((s) => s.id)),
         // Recordings added on the session itself (ניהול סשנים) live in
-        // content_links — without this, a session with a recording said
-        // nothing (the owner, 30/8: "סשן 2 יש גם הקלטה — למה לא רואים").
+        // content_links - without this, a session with a recording said
+        // nothing (the owner, 30/8: "סשן 2 יש גם הקלטה - למה לא רואים").
         supabase
           .from("content_links")
           .select("owner_id")
@@ -159,7 +159,7 @@ export default async function EventsPage() {
 
       {!subscriber && (
         <UpgradeNote mentorWaiting={profile.role === "mentor"}>
-          את רואה מה מתוכנן — קישורי ההצטרפות והתזכורות נפתחים עם מנוי.
+          את רואה מה מתוכנן - קישורי ההצטרפות והתזכורות נפתחים עם מנוי.
         </UpgradeNote>
       )}
 
@@ -222,7 +222,7 @@ export default async function EventsPage() {
                       subscriber={subscriber}
                     />
                   </div>
-                  {/* "נושאים שחשוב להכיר" — prep only, so it shows ONLY until
+                  {/* "נושאים שחשוב להכיר" - prep only, so it shows ONLY until
                       the session actually starts (the owner, 30/8). */}
                   {preTopics(s) && new Date(s.scheduled_at).getTime() > now.getTime() && (
                     <div className="mt-2 text-[12.5px] text-ink-700 bg-tint-warm/50 border border-[#F0DCA8] rounded-md px-3 py-2 max-w-xl">
@@ -255,7 +255,7 @@ export default async function EventsPage() {
           })
         ) : (
           <div className="bg-white border border-ink-200 rounded-lg p-6 text-ink-700">
-            אין סשנים מתוכננים כרגע — נעדכן אותך ברגע שנקבע משהו חדש.
+            אין סשנים מתוכננים כרגע - נעדכן אותך ברגע שנקבע משהו חדש.
           </div>
         )}
       </section>
@@ -272,7 +272,7 @@ export default async function EventsPage() {
                 <div className="text-ink-400 text-xs font-mono w-20 shrink-0">{fmtIsraelDate(s.scheduled_at, { day: "numeric", month: "short" })}</div>
                 <div className="font-medium text-ink-900 flex-1 min-w-0 flex items-center gap-2 flex-wrap">
                   <span>{s.title}</span>
-                  {/* The topic carries the lecturer's name — it belongs here too. */}
+                  {/* The topic carries the lecturer's name - it belongs here too. */}
                   {s.topic && (
                     <span className="inline-block text-[10.5px] font-bold px-2 py-0.5 rounded-full bg-tint-purple text-brand-purple">
                       {s.topic}

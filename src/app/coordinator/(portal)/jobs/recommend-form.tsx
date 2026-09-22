@@ -5,7 +5,7 @@ import { Alert, Button, Field, Select, Textarea } from "@/components/ui";
 import { sendJobRecommendation, type ChatState } from "../../actions";
 
 /**
- * "עוד לא הגשנו מועמדות למשרה הזו" — the coordinator recommends one of her
+ * "עוד לא הגשנו מועמדות למשרה הזו" - the coordinator recommends one of her
  * graduates (the owner, 16/9). Lands in her team chat + the alerts center.
  */
 export function RecommendForm({
@@ -34,7 +34,7 @@ export function RecommendForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
         <Field label="על מי את ממליצה?" htmlFor={`rec-g-${jobId}`}>
           <Select id={`rec-g-${jobId}`} name="graduate_id" defaultValue="">
-            <option value="">— בחרי בוגרת (לא חובה) —</option>
+            <option value="">- בחרי בוגרת (לא חובה) -</option>
             {graduates.map((g) => (
               <option key={g.id} value={g.id}>
                 {g.name}

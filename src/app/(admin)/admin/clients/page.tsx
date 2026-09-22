@@ -15,7 +15,7 @@ export default async function AdminClientsPage() {
     // select("*") so the decryptable password_enc comes along whether or not
     // the migration has run.
     admin.from("portal_clients").select("*").order("created_at", { ascending: false }),
-    // Only the FK column — enough to count each client's jobs without
+    // Only the FK column - enough to count each client's jobs without
     // pulling job content into an unrelated screen.
     admin.from("jobs").select("client_id"),
   ]);
@@ -27,7 +27,7 @@ export default async function AdminClientsPage() {
 
   // The CRM (/admin/crm) is the master list of ALL clients and leads. This
   // screen handles portal access only, so it shows just the clients whose
-  // status is "משרה בטיפול". Pre-migration rows have no crm_status — any row
+  // status is "משרה בטיפול". Pre-migration rows have no crm_status - any row
   // with credentials counts as job_active.
   const activeClients = (clients ?? []).filter(
     (c) => (c.crm_status ?? (c.username ? "job_active" : "initial_call")) === "job_active"
@@ -36,7 +36,7 @@ export default async function AdminClientsPage() {
   const rows: PortalClientRow[] = activeClients.map((c) => ({
     id: c.id,
     company_name: c.company_name,
-    // CRM leads have no portal credentials yet — the list shows them without one.
+    // CRM leads have no portal credentials yet - the list shows them without one.
     username: c.username ?? "",
     contact_name: c.contact_name,
     contact_email: c.contact_email,
@@ -63,8 +63,8 @@ export default async function AdminClientsPage() {
           עם שם המשתמש והסיסמה שתפיקי כאן.
         </p>
         <p className="text-[13px] text-ink-500 mt-1">
-          מוצגות כאן רק לקוחות בסטטוס &quot;משרה בטיפול&quot;. את הרשימה המלאה — כולל לידים
-          — תמצאי ב
+          מוצגות כאן רק לקוחות בסטטוס &quot;משרה בטיפול&quot;. את הרשימה המלאה - כולל לידים
+          - תמצאי ב
           <Link href="/admin/crm" className="font-semibold text-brand-purple hover:text-brand-pink-deep underline">
             ־CRM הלקוחות
           </Link>

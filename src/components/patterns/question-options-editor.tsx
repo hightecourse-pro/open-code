@@ -19,7 +19,7 @@ export function QuestionOptionsEditor({
 }: {
   questionId: string;
   options: Option[];
-  /** Free-typed "אחר" answers members wrote — candidates for the list. */
+  /** Free-typed "אחר" answers members wrote - candidates for the list. */
   otherValues?: string[];
 }) {
   const [list, setList] = useState(options);
@@ -87,7 +87,7 @@ export function QuestionOptionsEditor({
         </button>
       </span>
 
-      {/* What members typed under "אחר" — one click turns a write-in into a
+      {/* What members typed under "אחר" - one click turns a write-in into a
           real list option (the owner, 30/8). */}
       {otherValues.filter((v) => !list.some((o) => o.label === v || o.value === v)).length > 0 && (
         <div className="w-full mt-1.5 rounded-md border border-[#F0DCA8] bg-tint-warm/50 px-3 py-2">

@@ -12,7 +12,7 @@ export function AdminCreateSession() {
   // decide what "19:00" means.
   const [when, setWhen] = useState("");
   // React clears the uncontrolled fields after a successful action; this one is
-  // controlled, so it's cleared here — during render, on the state object the
+  // controlled, so it's cleared here - during render, on the state object the
   // action returned, which is the pattern React recommends over an effect.
   const [seen, setSeen] = useState(state);
   if (seen !== state) {

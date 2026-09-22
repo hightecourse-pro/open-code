@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 /**
- * Service-role Supabase client — bypasses RLS. SERVER ONLY.
+ * Service-role Supabase client - bypasses RLS. SERVER ONLY.
  * Use exclusively in trusted server contexts (payment webhooks, admin RPCs).
  * Never import this into a Client Component.
  */

@@ -52,7 +52,7 @@ export interface ProgressRingProps {
 
 let ringIdSeq = 0;
 
-/** Circular gradient ring — used for CV score and the AI-thinking indicator. */
+/** Circular gradient ring - used for CV score and the AI-thinking indicator. */
 export function ProgressRing({ value, size = 88, centerLabel, className }: ProgressRingProps) {
   const pct = Math.max(0, Math.min(100, value));
   // Stable gradient id per instance to avoid collisions when multiple rings render.

@@ -19,7 +19,7 @@ await page.waitForLoadState("networkidle");
 console.log("gate step shows mentor door:", (await page.locator("text=מגיעה בתור מנטורית? 👑").count()) === 1 ? "✅" : "❌");
 await page.screenshot({ path: `${SHOTS}/flow-2-gate-mentor.png` });
 await page.locator('button:has-text("מגיעה בתור מנטורית?")').click();
-// The switch is a full server round trip + RSC refresh — wait for the junior
+// The switch is a full server round trip + RSC refresh - wait for the junior
 // gate to actually leave the tree.
 await page.waitForSelector('text=אני בתחילת הדרך', { state: "detached", timeout: 20000 }).catch(() => {});
 const mentorScope = (await page.locator("text=אני בתחילת הדרך").count()) === 0;

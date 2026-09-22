@@ -30,7 +30,7 @@ function speak(text: string) {
  * Transcript + answer box in one component, so her answer can appear in the
  * transcript the instant she sends it. The Gemini round-trip takes seconds;
  * without the optimistic bubble and the "typing" row it reads as an Enter
- * that didn't register — the tester's exact words.
+ * that didn't register - the tester's exact words.
  */
 export function InterviewThread({
   sessionId,
@@ -69,7 +69,7 @@ export function InterviewThread({
   // Uncontrolled on purpose: a setState inside the form action is deferred to
   // the end of the async transition (React 19), so a controlled box kept her
   // words visible for the whole Gemini round-trip. The ref empties it the
-  // instant she sends — same trick as the community chat composer.
+  // instant she sends - same trick as the community chat composer.
   const inputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -93,7 +93,7 @@ export function InterviewThread({
     }
   }, [voice, lastAgentText]);
 
-  // Keep the newest turn in view — hers on send, the interviewer's on arrival.
+  // Keep the newest turn in view - hers on send, the interviewer's on arrival.
   const count = bubbles.length + (answerPending ? 1 : 0);
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -114,7 +114,7 @@ export function InterviewThread({
   }
 
   // Record → transcribe with Gemini. The browsers' built-in SpeechRecognition
-  // turned Hebrew into English words for the tester in Chrome AND Edge — so
+  // turned Hebrew into English words for the tester in Chrome AND Edge - so
   // the mic records real audio and the same Gemini key that runs the
   // interview does the transcription (it handles Hebrew properly).
   async function toggleListen() {
@@ -164,7 +164,7 @@ export function InterviewThread({
             }
           } else if (res.error) setVoiceError(res.error);
         })
-        .catch(() => setVoiceError("התמלול נכשל — נסי שוב."))
+        .catch(() => setVoiceError("התמלול נכשל - נסי שוב."))
         .finally(() => setTranscribing(false));
     };
     recorderRef.current = recorder;
@@ -178,7 +178,7 @@ export function InterviewThread({
 
   const error = answer.error || finish.error;
   const reason = answer.reason || finish.reason;
-  // A transient "משהו השתבש" is not a key problem — pointing at the keys
+  // A transient "משהו השתבש" is not a key problem - pointing at the keys
   // screen for it convinced testers their key was broken when it wasn't.
   const keyIssue = reason && reason !== "error";
 
@@ -256,7 +256,7 @@ export function InterviewThread({
                 השמעת השאלה שוב
               </button>
             )}
-            {!supported && <span className="text-[12px] text-ink-500">הדפדפן לא תומך בהקלטה — נסי Chrome</span>}
+            {!supported && <span className="text-[12px] text-ink-500">הדפדפן לא תומך בהקלטה - נסי Chrome</span>}
             {transcribing && <span className="text-[12px] text-brand-purple font-semibold">מתמללת… ✨</span>}
             {voiceError && <span className="text-[12px] text-danger">{voiceError}</span>}
           </div>

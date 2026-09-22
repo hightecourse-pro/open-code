@@ -1,7 +1,7 @@
 // Candidate↔job matching for the finder tab (the owner, 2/9). The one rule
-// that matters: technology matches count ONLY from PRACTICAL sources — the
+// that matters: technology matches count ONLY from PRACTICAL sources - the
 // work-history entries, the practicum, the legacy from-work answer. Never
-// from "טכנולוגיות שלמדת" — לימודים יש לכולן וזה לא משנה (the owner).
+// from "טכנולוגיות שלמדת" - לימודים יש לכולן וזה לא משנה (the owner).
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
@@ -19,7 +19,7 @@ export interface CandidateMatch {
   matched: string[];
   /** Job tags she lacks (display labels). */
   missing: string[];
-  /** Practical tech beyond the job's asks (labels, capped) — context. */
+  /** Practical tech beyond the job's asks (labels, capped) - context. */
   extra: string[];
   years: number | null;
 }
@@ -36,7 +36,7 @@ export interface StudyInfo {
   years: number | null;
 }
 
-/** Study facts for the finder card (the owner, 2/9): מוסד, מגמה, שנת סיום —
+/** Study facts for the finder card (the owner, 2/9): מוסד, מגמה, שנת סיום -
  *  select VALUES resolved to their display labels. */
 export async function studyInfoOf(profileIds: string[]): Promise<Map<string, StudyInfo>> {
   const admin = createAdminClient();
@@ -104,7 +104,7 @@ export async function matchCandidates(
   const out = new Map<string, CandidateMatch>();
   if (!profileIds.length) return out;
 
-  // value↔label resolution, both directions — job tags and answers may hold
+  // value↔label resolution, both directions - job tags and answers may hold
   // either shape.
   const tax = await getTaxonomyOptions();
   const labelOf = new Map<string, string>();
@@ -152,7 +152,7 @@ export async function matchCandidates(
     if (techQIds.has(a.question_id) && Array.isArray(a.value)) {
       for (const v of a.value) if (typeof v === "string") add(a.profile_id, v);
     } else if (a.question_id === workQ) {
-      // The work-history sequence: [{place, tech: [...], ...}, ...] — the
+      // The work-history sequence: [{place, tech: [...], ...}, ...] - the
       // answer may arrive as a JSON array or as its stringified form.
       const rows = Array.isArray(a.value)
         ? a.value

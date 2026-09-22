@@ -59,7 +59,7 @@ export function CommentBody({
       }
       className="flex flex-col gap-1.5 mt-1"
     >
-      {/* A legacy comment with markers seeds the editor as REAL formatting —
+      {/* A legacy comment with markers seeds the editor as REAL formatting -
           she edits bold text, not asterisk soup. */}
       <RichTextEditor
         name="body"

@@ -26,7 +26,7 @@ export interface WaMessageRow {
   media_path: string | null;
   media_mime: string | null;
   filename: string | null;
-  /** Signed, short-lived — generated server-side per render. */
+  /** Signed, short-lived - generated server-side per render. */
   mediaUrl: string | null;
 }
 
@@ -54,7 +54,7 @@ async function toWhatsAppAudio(file: File, opts?: { passthrough?: boolean }): Pr
   if (opts?.passthrough && ["audio/ogg", "audio/mp4", "audio/mpeg", "audio/aac", "audio/amr"].includes(base))
     return file;
   type Encoder = { encodeBuffer: (s: Int16Array) => Int8Array; flush: () => Int8Array };
-  // The @breezystack fork — original lamejs crashes under bundlers with a
+  // The @breezystack fork - original lamejs crashes under bundlers with a
   // missing-global error ("עיבוד ההקלטה נכשל", the owner, 1/9 23:37).
   const L = (await import("@breezystack/lamejs")) as unknown as {
     Mp3Encoder: new (ch: number, rate: number, kbps: number) => Encoder;
@@ -101,14 +101,14 @@ const STATUS_HE: Record<string, string> = {
   failed: "נכשל",
 };
 
-/** WhatsApp-ish everyday emojis — inserted into the composer at the caret. */
+/** WhatsApp-ish everyday emojis - inserted into the composer at the caret. */
 const EMOJIS = [
   "😊", "😂", "🤣", "❤️", "💜", "🙏", "👍", "👏", "🎉", "✨",
   "😍", "🥰", "😉", "🤗", "😅", "🙈", "💪", "🔥", "🌸", "☀️",
   "😢", "😮", "🤔", "👌", "🫶", "💐", "🎊", "🥳", "📌", "✅",
 ];
 
-/** URLs become clickable — a chat without live links isn't a chat. */
+/** URLs become clickable - a chat without live links isn't a chat. */
 function Linkify({ text }: { text: string }) {
   const parts = text.split(/(https?:\/\/[^\s]+)/g);
   return (
@@ -153,7 +153,7 @@ function MediaBubble({ m }: { m: WaMessageRow }) {
   );
 }
 
-/** Our four templates share one param convention — friendly labels + smart
+/** Our four templates share one param convention - friendly labels + smart
  *  defaults come from it (the owner, 1/9). */
 const OUR_PARAM_LABELS = ["שם הנמענת", "השם שלך", "תוכן ההודעה"];
 const OUR_TEMPLATE_HE: Record<string, string> = {
@@ -190,7 +190,7 @@ function NewChatDialog({
 
   useEffect(() => {
     // Sender defaults to the logged-in team member's first name (param 2 of
-    // our convention) — she overrides freely.
+    // our convention) - she overrides freely.
     setParams((p) =>
       Array.from({ length: tpl?.paramCount ?? 0 }, (_, i) =>
         p[i] ?? (isOurs && i === 1 ? viewerFirstName : "")
@@ -214,14 +214,14 @@ function NewChatDialog({
           <button type="button" onClick={onClose} aria-label="סגירה" className="text-ink-400 hover:text-ink-900 font-bold cursor-pointer">✕</button>
         </div>
         <p className="text-[12.5px] text-ink-500 -mt-1.5">
-          פתיחת שיחה יזומה נשלחת מתוך תבנית שאושרה במטא — ברגע שהיא עונה, הצ׳אט חופשי.
+          פתיחת שיחה יזומה נשלחת מתוך תבנית שאושרה במטא - ברגע שהיא עונה, הצ׳אט חופשי.
         </p>
 
         {approved.length === 0 ? (
           <div className="bg-tint-warm border border-[#F8D98C] rounded-[12px] p-3.5 text-[13px] text-ink-900">
             {templates.length > 0
-              ? `${templates.length} תבניות הוגשו וממתינות לאישור מטא (בדרך כלל שעות בודדות) — ברגע שיאושרו, השליחה תיפתח כאן אוטומטית. עד אז אפשר לענות רק לפניות נכנסות.`
-              : "אין עדיין תבניות — נוסחי הפתיחה יוגשו למטא ואז יופיעו כאן."}
+              ? `${templates.length} תבניות הוגשו וממתינות לאישור מטא (בדרך כלל שעות בודדות) - ברגע שיאושרו, השליחה תיפתח כאן אוטומטית. עד אז אפשר לענות רק לפניות נכנסות.`
+              : "אין עדיין תבניות - נוסחי הפתיחה יוגשו למטא ואז יופיעו כאן."}
           </div>
         ) : (
           <>
@@ -421,7 +421,7 @@ export function WaInbox({
     setError(null);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // WhatsApp accepts ogg/opus, mp4/aac, mpeg — try in that order; a
+      // WhatsApp accepts ogg/opus, mp4/aac, mpeg - try in that order; a
       // browser that only does webm gets an honest error from Meta.
       const mime = ["audio/ogg;codecs=opus", "audio/mp4", "audio/webm;codecs=opus"].find((m) =>
         MediaRecorder.isTypeSupported(m)
@@ -438,13 +438,13 @@ export function WaInbox({
         // webm → mp3 happens here, before it ever reaches Meta.
         toWhatsAppAudio(raw)
           .then(setAttachment)
-          .catch((e) => setError(`עיבוד ההקלטה נכשל — נסי שוב (${String(e).slice(0, 120)})`));
+          .catch((e) => setError(`עיבוד ההקלטה נכשל - נסי שוב (${String(e).slice(0, 120)})`));
       };
       recorderRef.current = rec;
       rec.start();
       setRecording(true);
     } catch {
-      setError("אין גישה למיקרופון — בדקי את הרשאות הדפדפן");
+      setError("אין גישה למיקרופון - בדקי את הרשאות הדפדפן");
     }
   };
 
@@ -481,7 +481,7 @@ export function WaInbox({
         <div className="flex-1 overflow-y-auto">
           {shown.length === 0 && (
             <p className="text-[13px] text-ink-500 p-4 text-center">
-              {contacts.length === 0 ? "אין עדיין שיחות — ברגע שמישהי תכתוב למספר, היא תופיע כאן 💜" : "אין תוצאה לחיפוש"}
+              {contacts.length === 0 ? "אין עדיין שיחות - ברגע שמישהי תכתוב למספר, היא תופיע כאן 💜" : "אין תוצאה לחיפוש"}
             </p>
           )}
           {shown.map((c) => (
@@ -563,7 +563,7 @@ export function WaInbox({
                     {m.kind === "template" && "תבנית · "}
                     {TIME_IL.format(new Date(m.created_at))}
                     {m.direction === "out" && ` · ${STATUS_HE[m.status] ?? m.status}`}
-                    {m.status === "failed" && m.error && ` — ${m.error}`}
+                    {m.status === "failed" && m.error && ` - ${m.error}`}
                   </span>
                 </div>
               ))}
@@ -647,8 +647,8 @@ export function WaInbox({
             ) : (
               <div className="border-t border-ink-100 p-3.5 text-[13px] text-ink-500 text-center bg-ink-50 flex flex-col items-center gap-2">
                 {!canSend
-                  ? "שליחה תיפתח כשהחיבור למטא יושלם — ההודעות הנכנסות כבר נשמרות."
-                  : "חלון ה-24 שעות של מטא נסגר — מענה חופשי אפשרי רק תוך יממה מההודעה האחרונה שלה."}
+                  ? "שליחה תיפתח כשהחיבור למטא יושלם - ההודעות הנכנסות כבר נשמרות."
+                  : "חלון ה-24 שעות של מטא נסגר - מענה חופשי אפשרי רק תוך יממה מההודעה האחרונה שלה."}
                 {canSend && (
                   <button
                     type="button"

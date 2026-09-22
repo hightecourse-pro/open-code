@@ -1,4 +1,4 @@
-// The light formatting members write in the forum and in chat — the same
+// The light formatting members write in the forum and in chat - the same
 // markers people already use in WhatsApp and Slack, so nobody has to learn
 // anything:
 //
@@ -19,7 +19,7 @@ const URL_RE = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/g;
 
 /**
  * A marker only counts when it wraps real content and sits on a word
- * boundary — otherwise `2*3*4` and file_name_here would come out formatted.
+ * boundary - otherwise `2*3*4` and file_name_here would come out formatted.
  */
 const MARKERS: { char: string; kind: TextToken["kind"] }[] = [
   { char: "*", kind: "bold" },
@@ -32,9 +32,9 @@ function escapeRe(ch: string): string {
   return ch.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-/** Split one line into styled tokens. Never nests — one level is plenty. */
+/** Split one line into styled tokens. Never nests - one level is plenty. */
 function tokenizeLine(line: string): TextToken[] {
-  // The Markdown habit dies hard — **מודגש** appears in real member posts.
+  // The Markdown habit dies hard - **מודגש** appears in real member posts.
   // Fold it into our single-asterisk marker before tokenizing.
   line = line.replace(/\*\*(\S(?:[^*]*\S)?)\*\*/g, "*$1*");
   for (const { char, kind } of MARKERS) {
@@ -42,7 +42,7 @@ function tokenizeLine(line: string): TextToken[] {
     // A marker run counts when it does not sit mid-word: anything that is not
     // a letter or digit may border it. The old whitelist ([\s([{ before,
     // [\s)]},.!?:; after) silently rejected quotes, gershayim, dashes, maqaf
-    // and emoji — all common in real Hebrew posts — leaving raw markers
+    // and emoji - all common in real Hebrew posts - leaving raw markers
     // published. Content still cannot start or end with whitespace, which
     // protects 2*3*4 and snake_case_names.
     const re = new RegExp(`(^|[^\\p{L}\\p{N}])${c}(\\S(?:[^${c}]*\\S)?)${c}(?=$|[^\\p{L}\\p{N}])`, "u");
@@ -58,7 +58,7 @@ function tokenizeLine(line: string): TextToken[] {
     }
   }
 
-  // No markers left — pull out bare URLs so they become real links.
+  // No markers left - pull out bare URLs so they become real links.
   const out: TextToken[] = [];
   let last = 0;
   for (const m of line.matchAll(URL_RE)) {
@@ -77,8 +77,8 @@ function tokenizeLine(line: string): TextToken[] {
 }
 
 /**
- * The rich editor can emit a TAGLESS body that still carries HTML entities —
- * a trailing space becomes "&nbsp;" — and such a body takes the plain-text
+ * The rich editor can emit a TAGLESS body that still carries HTML entities -
+ * a trailing space becomes "&nbsp;" - and such a body takes the plain-text
  * path, where the entity used to show up literally in the bubble. Decoded
  * text is rendered as React text (auto-escaped), so "&lt;" becoming "<" is
  * display, not markup.
@@ -103,12 +103,12 @@ export function parseRichText(body: string): TextToken[][] {
 /**
  * Does this body hold editor HTML rather than legacy marker text? The rich
  * editor always produces element markup, and no legacy plain-text body starts
- * with a tag — members had no way to type one that survived rendering.
+ * with a tag - members had no way to type one that survived rendering.
  */
 export function isRichHtml(body: string | null | undefined): boolean {
   // Anywhere, not only at the start: the editor can emit a bare text node
   // first ("שלום <b>עולם</b>"), and the start-anchored test branded exactly
-  // those messages "legacy" — so their tags rendered as literal text (the
+  // those messages "legacy" - so their tags rendered as literal text (the
   // tester's raw-HTML bug). Legacy marker text never contains real tags.
   return /<(p|div|ul|ol|li|h3|b|strong|i|em|br|a|s|strike|del|code)(\s|\/?>)/i.test(body ?? "");
 }
@@ -155,7 +155,7 @@ export function withinEditWindow(createdAt: string, now = Date.now()): boolean {
   return Number.isFinite(t) && now - t <= EDIT_WINDOW_MS;
 }
 
-/** Minutes left to edit — for "אפשר לערוך עוד 7 דק'". */
+/** Minutes left to edit - for "אפשר לערוך עוד 7 דק'". */
 export function editMinutesLeft(createdAt: string, now = Date.now()): number {
   const t = Date.parse(createdAt);
   if (!Number.isFinite(t)) return 0;

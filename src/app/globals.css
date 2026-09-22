@@ -1,14 +1,14 @@
 @import "tailwindcss";
 
 /* ==========================================================================
-   Open Code — Design Tokens (קוד פתוח)
+   Open Code - Design Tokens (קוד פתוח)
    Lifted verbatim from the design system's colors_and_type.css so that any
    markup pasted from ui_kits/ which uses var(--brand-pink), var(--ink-900),
    var(--r-lg), var(--space-6)... resolves with zero changes.
    Brand gradient: Hot Pink (#E0418D) → Magenta (#913F80) → Indigo (#464CA0)
    ========================================================================== */
 :root {
-  /* ====== BRAND CORE — sampled from logo ====== */
+  /* ====== BRAND CORE - sampled from logo ====== */
   --brand-pink:        #E0418D;
   --brand-pink-deep:   #CE2462;
   --brand-magenta:     #913F80;
@@ -16,14 +16,14 @@
   --brand-indigo:      #464CA0;
   --brand-indigo-deep: #2E2E6E;
 
-  /* ====== THE GRADIENT — the brand's "signature" (use SPARINGLY) ====== */
+  /* ====== THE GRADIENT - the brand's "signature" (use SPARINGLY) ====== */
   --gradient-brand:      linear-gradient(95deg, #E0418D 0%, #913F80 50%, #464CA0 100%);
   --gradient-brand-soft: linear-gradient(95deg, #FCE4EE 0%, #EBE2F2 50%, #E2E4F2 100%);
   --gradient-brand-vert: linear-gradient(180deg, #E0418D 0%, #913F80 50%, #464CA0 100%);
   --gradient-brand-glow: radial-gradient(60% 60% at 50% 50%, rgba(224,65,141,0.35) 0%, rgba(70,76,160,0) 70%);
   --gradient-celebrate:  linear-gradient(120deg, #FFD166 0%, #E0418D 33%, #913F80 66%, #464CA0 100%);
 
-  /* ====== NEUTRALS — warm-cool grey scale, slight purple tint ====== */
+  /* ====== NEUTRALS - warm-cool grey scale, slight purple tint ====== */
   --ink-1000: #11102A;
   --ink-900:  #1F1E3F;
   --ink-700:  #3A3A5C;
@@ -35,7 +35,7 @@
   --ink-50:   #F8F8FB;
   --ink-0:    #FFFFFF;
 
-  /* ====== SURFACE TINTS — pastel washes for cards/sections ====== */
+  /* ====== SURFACE TINTS - pastel washes for cards/sections ====== */
   --tint-pink:   #FDECF3;
   --tint-purple: #F2EBF7;
   --tint-indigo: #ECEEF8;
@@ -62,12 +62,12 @@
   --confetti-5: #1F9D6A;
   --confetti-6: #FF8A5C;
 
-  /* ====== TYPOGRAPHY — families wired to next/font variables ====== */
+  /* ====== TYPOGRAPHY - families wired to next/font variables ====== */
   --font-display: var(--font-noto-hebrew), 'Heebo', system-ui, sans-serif;
   --font-body:    var(--font-noto-hebrew), 'Heebo', system-ui, sans-serif;
   --font-mono:    var(--font-jetbrains), 'Menlo', 'Consolas', monospace;
 
-  /* Sizes — fluid-friendly fixed scale */
+  /* Sizes - fluid-friendly fixed scale */
   --fs-display: clamp(40px, 6vw, 72px);
   --fs-h1: 44px;
   --fs-h2: 32px;
@@ -95,7 +95,7 @@
   --track-base:  0;
   --track-wide:  0.04em;
 
-  /* ====== SPACING (4px base — matches Tailwind's default scale) ====== */
+  /* ====== SPACING (4px base - matches Tailwind's default scale) ====== */
   --space-0:  0;
   --space-1:  4px;
   --space-2:  8px;
@@ -118,7 +118,7 @@
   --r-2xl: 36px;
   --r-full: 9999px;
 
-  /* ====== ELEVATION — soft, brand-tinted ====== */
+  /* ====== ELEVATION - soft, brand-tinted ====== */
   --shadow-xs:  0 1px 2px rgba(46, 46, 110, 0.06);
   --shadow-sm:  0 2px 6px rgba(46, 46, 110, 0.08);
   --shadow-md:  0 8px 20px rgba(46, 46, 110, 0.10), 0 2px 4px rgba(46, 46, 110, 0.05);
@@ -221,7 +221,7 @@
 }
 
 /* ==========================================================================
-   BASE — element defaults (ported from the design system)
+   BASE - element defaults (ported from the design system)
    ========================================================================== */
 @layer base {
   html {
@@ -262,7 +262,7 @@
 }
 
 /* ==========================================================================
-   COMPONENTS — semantic type classes + brand helpers (ported verbatim)
+   COMPONENTS - semantic type classes + brand helpers (ported verbatim)
    Used directly by markup carried over from the design system.
    ========================================================================== */
 @layer components {
@@ -307,7 +307,7 @@
   .t-micro   { font-size: var(--fs-micro);   line-height: var(--lh-snug); color: var(--ink-500); letter-spacing: var(--track-wide); }
   .t-mono    { font-family: var(--font-mono); }
 
-  /* Gradient text — SPARINGLY for headlines / brand words */
+  /* Gradient text - SPARINGLY for headlines / brand words */
   .t-gradient {
     background: var(--gradient-brand);
     -webkit-background-clip: text;
@@ -316,7 +316,7 @@
     -webkit-text-fill-color: transparent;
   }
 
-  /* The </> code-bracket motif — wraps an emphasized word */
+  /* The </> code-bracket motif - wraps an emphasized word */
   .t-bracketed { position: relative; display: inline-block; }
   .t-bracketed::before,
   .t-bracketed::after {

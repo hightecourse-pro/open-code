@@ -24,7 +24,7 @@ export default async function AdminCrmPage() {
       .select("id, client_id, name, display_name, email, phone, sort_order")
       .order("sort_order", { ascending: true }),
     // The hierarchy's bottom layer (the owner, 3/9): under each job, the
-    // women recruited for it — straight from the hires registry.
+    // women recruited for it - straight from the hires registry.
     admin
       .from("hires")
       .select("id, client_id, job_id, full_name, profile_id, status, hired_at")
@@ -83,8 +83,8 @@ export default async function AdminCrmPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;CRM/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">לקוחות</h1>
         <p className="text-[13px] text-ink-500 mt-1.5">
-          כל הלקוחות והלידים במקום אחד — משיחה ראשונית ועד גיוס. לחצי על שורה לעריכת
-          פרטים, אנשי הקשר, המשרות של הלקוחה — ומי גויסה לכל משרה.
+          כל הלקוחות והלידים במקום אחד - משיחה ראשונית ועד גיוס. לחצי על שורה לעריכת
+          פרטים, אנשי הקשר, המשרות של הלקוחה - ומי גויסה לכל משרה.
         </p>
       </div>
 

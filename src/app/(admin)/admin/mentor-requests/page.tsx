@@ -20,7 +20,7 @@ const FULL_DATE = new Intl.DateTimeFormat("he-IL", {
   timeZone: "Asia/Jerusalem",
 });
 
-/** "ממתינה 3 ימים" — the age of an open request, in words. */
+/** "ממתינה 3 ימים" - the age of an open request, in words. */
 function waitingHe(iso: string): string {
   const hours = Math.round((Date.now() - Date.parse(iso)) / 3_600_000);
   if (hours < 24) return hours <= 1 ? "ממתינה פחות משעה" : `ממתינה ${hours} שעות`;
@@ -38,7 +38,7 @@ function KindBadge({ kind }: { kind: string }) {
 
 /**
  * The matching aid: search every active junior by name, technology and years
- * of experience — the answers a good mentor match hangs on. Reads answers with
+ * of experience - the answers a good mentor match hangs on. Reads answers with
  * the user (admin) client; RLS lets admins read everything anyway.
  */
 async function searchJuniors(q: string, tech: string, minYears: number) {
@@ -106,7 +106,7 @@ export default async function AdminMentorRequestsPage({
   const open = (requests ?? []).filter((r) => r.status === "open");
   const handled = (requests ?? []).filter((r) => r.status !== "open");
 
-  // Each mentor's CURRENT load — accepted, still-handled accompaniments. The
+  // Each mentor's CURRENT load - accepted, still-handled accompaniments. The
   // dropdown says who is free and who already carries how many.
   const loadOf = new Map<string, number>();
   for (const r of handled) {
@@ -115,7 +115,7 @@ export default async function AdminMentorRequestsPage({
     }
   }
 
-  // Open requesters: years of experience + a CV link — what a match hangs on.
+  // Open requesters: years of experience + a CV link - what a match hangs on.
   const openIds = open.map((r) => r.profile_id);
   const admin = createAdminClient();
   const { data: yearsQ } = await supabase
@@ -207,7 +207,7 @@ export default async function AdminMentorRequestsPage({
         <span className="font-mono text-xs text-brand-pink-deep">&lt;בקשות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">בקשות לליווי</h1>
         <p className="t-body-sm text-ink-500">
-          חברות שביקשו שנחבר אותן למנטורית. שיוך שולח למנטורית הזמנה — החברה רואה אותה רק
+          חברות שביקשו שנחבר אותן למנטורית. שיוך שולח למנטורית הזמנה - החברה רואה אותה רק
           אחרי שהמנטורית מאשרת.
         </p>
       </div>
@@ -339,11 +339,11 @@ export default async function AdminMentorRequestsPage({
       </div>
 
       {/* The matching aid: find a junior ACROSS THE WHOLE COMMUNITY (not only
-          those who asked) — for starting an accompaniment proactively. */}
+          those who asked) - for starting an accompaniment proactively. */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">איתור ג&#39;וניורית לליווי יזום</h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          חיפוש בין כל חברות הקהילה (לא רק מי שביקשה) — כשעולה רעיון לחבר מישהי למנטורית
+          חיפוש בין כל חברות הקהילה (לא רק מי שביקשה) - כשעולה רעיון לחבר מישהי למנטורית
           ביוזמתנו. החיפוש לא מסנן את הבקשות שלמעלה.
         </p>
         <form method="get" className="flex flex-wrap items-end gap-2 mb-3">

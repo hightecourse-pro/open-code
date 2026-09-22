@@ -19,11 +19,11 @@ export function isDriveFolder(url: string): boolean {
 }
 
 /**
- * The Drive object id inside any Drive/Docs URL — files, folders, Docs,
+ * The Drive object id inside any Drive/Docs URL - files, folders, Docs,
  * Sheets and Slides. Needed to grant/revoke per-member permissions.
  */
 export function driveFileId(url: string): string | null {
-  // Only Google-hosted links carry a Drive object id — never guess from an
+  // Only Google-hosted links carry a Drive object id - never guess from an
   // arbitrary URL that happens to have an ?id= parameter.
   let host: string;
   try {

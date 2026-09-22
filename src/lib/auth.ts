@@ -7,7 +7,7 @@ import type { Profile, UserRole } from "@/types/database";
  * The authenticated Supabase user, or null. Validates the token server-side.
  *
  * Wrapped in React's cache() so one request validates the token ONCE, no
- * matter how many of layout / page / generateMetadata / helpers ask — each
+ * matter how many of layout / page / generateMetadata / helpers ask - each
  * auth.getUser() here is a real network round trip to Supabase Auth.
  */
 export const getUser = cache(async () => {
@@ -40,7 +40,7 @@ export async function requireProfile(): Promise<Profile> {
 }
 
 /**
- * True for a paying member — the tier that can take part rather than just
+ * True for a paying member - the tier that can take part rather than just
  * look around (join links, recordings, posting, courses, AI, mentor chat).
  */
 export function isSubscriber(profile: Pick<Profile, "status" | "role">): boolean {
@@ -49,9 +49,9 @@ export function isSubscriber(profile: Pick<Profile, "status" | "role">): boolean
 
 /**
  * Gate the community: anyone signed in may come in and look around. Paying
- * is what unlocks taking part — enforced per feature, not at the door.
+ * is what unlocks taking part - enforced per feature, not at the door.
  * Only a rejected member is turned away.
- * (RLS is the real enforcement — this is the UX layer.)
+ * (RLS is the real enforcement - this is the UX layer.)
  */
 export async function requireCommunityAccess(): Promise<Profile> {
   const profile = await requireProfile();

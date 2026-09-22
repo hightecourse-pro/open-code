@@ -9,7 +9,7 @@ const OK_NAME = /\.(pdf|docx?|jpe?g|png)$/i;
 export type GradeSheetState = { error?: string; ok?: boolean };
 
 /**
- * Grade sheets (the owner, 19/9): a transcript she may attach — optional in
+ * Grade sheets (the owner, 19/9): a transcript she may attach - optional in
  * the questionnaire, manageable here. Same private bucket as the CVs, own
  * folder, own table so no CV reader ever mistakes it for a CV.
  */
@@ -22,7 +22,7 @@ export async function uploadGradeSheet(_prev: GradeSheetState, formData: FormDat
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "בחרי קובץ להעלאה." };
-  if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי — עד 10MB." };
+  if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי - עד 10MB." };
   if (!OK_NAME.test(file.name)) return { error: "אפשר להעלות PDF, Word או תמונה (JPG/PNG)." };
   const label = String(formData.get("label") ?? "").trim() || "גליון ציונים";
 

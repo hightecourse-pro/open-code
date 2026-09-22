@@ -1,4 +1,4 @@
-// The candidate profile — the portal's showcase page.
+// The candidate profile - the portal's showcase page.
 //
 // PRIVACY: every value on this page comes from loadCandidates(), which returns
 // only listed/active/completed members and only answers to employer_visible
@@ -51,7 +51,7 @@ export async function generateMetadata({
   if (!candidate) return { title: "מועמדת" };
 
   // Even a browser-tab title must not leak a name the client isn't allowed to
-  // see — apply the same sent-to-client gate the page body applies.
+  // see - apply the same sent-to-client gate the page body applies.
   const client = await portalClient();
   if (client && !client.can_search && (await sentJobs(client.id, candidate.id)).length === 0) {
     return { title: "מועמדת" };
@@ -69,14 +69,14 @@ export default async function CandidateProfilePage({
   const client = await requirePortalClient();
   const [{ id }, { cv }] = await Promise.all([params, searchParams]);
 
-  // Not being in loadCandidates() is indistinguishable from not existing — that
+  // Not being in loadCandidates() is indistinguishable from not existing - that
   // is the whole listing gate, and it must not leak which of the two it was.
   const candidate = await findCandidate(id);
   if (!candidate) notFound();
 
   // Without free search, a client may only open candidates we sent to one of
   // her jobs; anyone else must be indistinguishable from not existing. The same
-  // list also powers the invite-to-interview control in the side rail — for ANY
+  // list also powers the invite-to-interview control in the side rail - for ANY
   // client (free search included) the candidate was sent to.
   const sent = await sentJobs(client.id, candidate.id);
   if (!client.can_search && sent.length === 0) notFound();
@@ -98,20 +98,20 @@ export default async function CandidateProfilePage({
 
       {cv === "none" && (
         <Alert variant="info" title="עדיין אין כאן קורות חיים">
-          המועמדת עוד לא העלתה קובץ. כל מה שהיא שיתפה נמצא בפרופיל שלפניכם — ואם חשוב לכם הקובץ,
+          המועמדת עוד לא העלתה קובץ. כל מה שהיא שיתפה נמצא בפרופיל שלפניכם - ואם חשוב לכם הקובץ,
           כתבו לנו ונשלים אותו מולה.
         </Alert>
       )}
       {cv === "error" && (
         <Alert variant="warn" title="לא הצלחנו לפתוח את הקובץ">
-          משהו השתבש בדרך. נסו שוב בעוד רגע, ואם זה חוזר — כתבו לנו ונטפל בזה.
+          משהו השתבש בדרך. נסו שוב בעוד רגע, ואם זה חוזר - כתבו לנו ונטפל בזה.
         </Alert>
       )}
 
       {/* ------------------------------------------------ body + side rail */}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_290px] lg:items-start">
         <div className="flex flex-col gap-6">
-          {/* ONE renderer with the member preview and the team view — the
+          {/* ONE renderer with the member preview and the team view - the
               favorite star rides in as page-specific chrome. */}
           <CandidateProfileCard
             candidate={candidate}
@@ -119,7 +119,7 @@ export default async function CandidateProfilePage({
             headerExtra={<FavoriteButton profileId={candidate.id} initial={favs.has(candidate.id)} />}
           />
 
-          {/* The rail collapses on narrow screens — same as the CV button, the
+          {/* The rail collapses on narrow screens - same as the CV button, the
               invite control gets a mobile home at the end of the profile. */}
           {sent.length > 0 && (
             <div className="lg:hidden print:hidden">
@@ -166,7 +166,7 @@ export default async function CandidateProfilePage({
 }
 
 /**
- * The invite-to-interview control, right on the profile the client is reading —
+ * The invite-to-interview control, right on the profile the client is reading -
  * the exact CandidateFeedback the job pages use, one per job the candidate was
  * sent on, so its state is shared with the job page and the team is notified.
  * No contact details appear anywhere: the invite goes through us, by design.

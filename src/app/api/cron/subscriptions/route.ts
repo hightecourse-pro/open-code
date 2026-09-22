@@ -12,12 +12,12 @@ import { processShareQueue } from "@/lib/drive-shares";
  * Daily maintenance (multiple jobs in one endpoint because the Hobby plan
  * allows only once-a-day crons). The subscription lifecycle (the owner, 10/9):
  *
- *   1. Two days BEFORE a non-renewing subscription ends — a reminder email.
+ *   1. Two days BEFORE a non-renewing subscription ends - a reminder email.
  *      A send-day that lands on Shabbat/chag moves EARLIER; the copy carries
  *      the explicit end date, so moved wording stays true.
- *   2. The day AFTER the period ends — access is blocked ("הסתיים ב-14,
+ *   2. The day AFTER the period ends - access is blocked ("הסתיים ב-14,
  *      ב-15 הכל חסום"). Blocking runs every day; it is automatic, not mail.
- *   3. The "המנוי הסתיים" email — on the first email-eligible day after the
+ *   3. The "המנוי הסתיים" email - on the first email-eligible day after the
  *      block (never on Shabbat/chag).
  *
  * Plus the Drive share queue and attachment hygiene.
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
   // The schedule ships in vercel.json, so a staging deployment gets it too.
   // Staging runs ONLY when an EMAIL_ALLOWLIST is set: every recipient is
   // gated by emailGate (real members' addresses stay unreachable), and this
-  // run also drains the Drive share queue — skipping it left staging course
+  // run also drains the Drive share queue - skipping it left staging course
   // shares stuck on pending for days.
   if (!isProductionEnv() && !process.env.EMAIL_ALLOWLIST) {
     return NextResponse.json({ skipped: "not_production", env: appEnv() });
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
   const { data: endedRows, error } = await admin
     .from("subscriptions")
     .select("profile_id, current_period_end")
-    // Every live state, not just 'active' — a stale 'trialing' or 'past_due'
+    // Every live state, not just 'active' - a stale 'trialing' or 'past_due'
     // row would otherwise keep access forever.
     .in("status", ["active", "trialing", "past_due"])
     .not("current_period_end", "is", null)
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
 
   // -------------------------------------------- reminders (2 days ahead)
   // Only subscriptions that are actually ENDING get one: renewal turned off
-  // (canceled_at set while still active — cancelRenewal's marker), or already
+  // (canceled_at set while still active - cancelRenewal's marker), or already
   // failing payment. An auto-renewing member's period just rolls.
   const { data: endingSoon } = await admin
     .from("subscriptions")
@@ -136,7 +136,7 @@ export async function GET(request: Request) {
     ((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email])
   );
 
-  // 1. reminders — email-eligible days only
+  // 1. reminders - email-eligible days only
   let remindersSent = 0;
   if (emailDay) {
     for (const s of reminderDue) {
@@ -162,7 +162,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 2. expire — every day, Shabbat included (an automatic gate, not mail)
+  // 2. expire - every day, Shabbat included (an automatic gate, not mail)
   let expiredCount = 0;
   for (const profileId of ids) {
     try {
@@ -176,8 +176,8 @@ export async function GET(request: Request) {
       await raiseAlert({
         kind: "subscription_expired",
         severity: "warning",
-        title: `המנוי של ${who?.full_name ?? profileId} פג בלי חידוש — הועברה להשהיה`,
-        body: "לא נרשם תשלום מחדש. אם היא כן חויבה בכרטיס — זה חידוש שלא דווח, וצריך לרשום אותו ידנית בדף שלה.",
+        title: `המנוי של ${who?.full_name ?? profileId} פג בלי חידוש - הועברה להשהיה`,
+        body: "לא נרשם תשלום מחדש. אם היא כן חויבה בכרטיס - זה חידוש שלא דווח, וצריך לרשום אותו ידנית בדף שלה.",
         context: { profileId },
         dedupeKey: `sub-expired:${profileId}`,
       });
@@ -186,7 +186,7 @@ export async function GET(request: Request) {
     }
   }
 
-  // 3. ended emails — the first eligible day on/after the block
+  // 3. ended emails - the first eligible day on/after the block
   let endedEmailsSent = 0;
   if (emailDay) {
     for (const s of endedUnmailed ?? []) {
@@ -207,7 +207,7 @@ export async function GET(request: Request) {
       }
     }
     // Freshly expired this run: their notice goes out right now too (today is
-    // eligible — otherwise the next eligible run picks them up above).
+    // eligible - otherwise the next eligible run picks them up above).
     for (const profileId of ids) {
       try {
         const email = emailOf.get(profileId);
@@ -237,11 +237,11 @@ export async function GET(request: Request) {
     }
   }
 
-  // 4. reconcile — the safety net for torn states (אסתי רוזנשטיין, 14/9): a
+  // 4. reconcile - the safety net for torn states (אסתי רוזנשטיין, 14/9): a
   // live subscription is proof of payment, so a junior carrying one must be
   // member_tier=paid. Any path that downgraded her (failed keva, cancel)
   // followed by a successful charge left her paying-but-locked. Heals in the
-  // member's favor only — the reverse (paid tier, no sub) is legitimate for
+  // member's favor only - the reverse (paid tier, no sub) is legitimate for
   // external-payments members and is never touched. The alert keeps the
   // underlying tearing path visible instead of silently patched.
   let reconciled = 0;
@@ -265,8 +265,8 @@ export async function GET(request: Request) {
         await raiseAlert({
           kind: "subscription_reconciled",
           severity: "warning",
-          title: `${p.full_name} שילמה אבל הייתה מסומנת ${p.member_tier} — תוקן אוטומטית ל-paid`,
-          body: "יש לה מנוי חי אבל הפרופיל לא היה מסומן כמנויה — כנראה שרשרת של כשל חיוב ואז חיוב מוצלח. הגישה הוחזרה לה אוטומטית; אם זה חוזר על עצמו אצל חברות נוספות, יש מסלול שקורע את המצב ושווה לחקור.",
+          title: `${p.full_name} שילמה אבל הייתה מסומנת ${p.member_tier} - תוקן אוטומטית ל-paid`,
+          body: "יש לה מנוי חי אבל הפרופיל לא היה מסומן כמנויה - כנראה שרשרת של כשל חיוב ואז חיוב מוצלח. הגישה הוחזרה לה אוטומטית; אם זה חוזר על עצמו אצל חברות נוספות, יש מסלול שקורע את המצב ושווה לחקור.",
           context: { profileId: p.id, previousTier: p.member_tier },
           dedupeKey: `sub-reconciled:${p.id}:${todayIL}`,
         });

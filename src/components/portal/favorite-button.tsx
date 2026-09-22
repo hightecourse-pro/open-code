@@ -26,7 +26,7 @@ export function FavoriteButton({
       title={on ? "במועדפות" : "הוספה למועדפות"}
       disabled={pending}
       onClick={(e) => {
-        // Cards are wrapped in a link — don't navigate when favoriting.
+        // Cards are wrapped in a link - don't navigate when favoriting.
         e.preventDefault();
         e.stopPropagation();
         const next = !on;

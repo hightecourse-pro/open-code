@@ -55,8 +55,8 @@ function Chips({ items, tone, cap = 8 }: { items: string[]; tone: "match" | "mis
 }
 
 /**
- * The finder (the owner, 2/9): every candidate — applicants or the whole
- * community — scored by PRACTICAL tech only, reviewable as a sortable table
+ * The finder (the owner, 2/9): every candidate - applicants or the whole
+ * community - scored by PRACTICAL tech only, reviewable as a sortable table
  * or one-by-one cards with saved verdicts, plus an optional AI ranking pass.
  */
 export function CandidateFinder({
@@ -138,7 +138,7 @@ export function CandidateFinder({
       const res = await aiRankCandidates(jobId, payload);
       if (!res.ok) setAiMsg(res.error ?? "הדירוג נכשל");
       else {
-        setAiMsg(`✓ ${res.ranked} מועמדות דורגו — הרשימה התעדכנה`);
+        setAiMsg(`✓ ${res.ranked} מועמדות דורגו - הרשימה התעדכנה`);
         setSortBy("ai");
         router.refresh();
       }
@@ -267,7 +267,7 @@ export function CandidateFinder({
                     {c.name}
                   </a>
                   <div className="text-[11.5px] text-ink-500">
-                    {[c.specialization, c.region].filter(Boolean).join(" · ") || "—"}
+                    {[c.specialization, c.region].filter(Boolean).join(" · ") || "-"}
                     {c.applied && (
                       <span className="ms-1.5 inline-flex rounded-full bg-tint-pink text-brand-pink-deep px-1.5 text-[10.5px] font-bold">
                         הגישה
@@ -285,14 +285,14 @@ export function CandidateFinder({
                     </div>
                   )}
                 </td>
-                <td className="py-2.5 pe-2 tabular-nums">{c.years ?? "—"}</td>
+                <td className="py-2.5 pe-2 tabular-nums">{c.years ?? "-"}</td>
                 <td className="py-2.5 pe-2">
                   {c.aiScore !== null ? (
                     <span className="font-bold tabular-nums" title={c.aiReason ?? ""}>
                       {c.aiScore}
                     </span>
                   ) : (
-                    "—"
+                    "-"
                   )}
                 </td>
                 <td className="py-2.5 pe-2">
@@ -341,9 +341,9 @@ export function CandidateFinder({
                 </div>
                 <h3 className="font-display font-black text-[22px]">{card.name}</h3>
                 <div className="text-[13px] text-ink-500">
-                  {[card.specialization, card.region].filter(Boolean).join(" · ") || "—"}
+                  {[card.specialization, card.region].filter(Boolean).join(" · ") || "-"}
                 </div>
-                {/* Experience — loud when it's real (the owner, 2/9). */}
+                {/* Experience - loud when it's real (the owner, 2/9). */}
                 {card.experienced ? (
                   <div className="inline-flex items-center gap-1.5 mt-1.5 bg-tint-warm border border-[#F8D98C] text-[#8C5E0E] rounded-full px-3 py-1 text-[13px] font-bold">
                     ⭐ בעלת ניסיון{card.years !== null ? ` · ${card.years} שנות ניסיון` : ""}
@@ -380,15 +380,15 @@ export function CandidateFinder({
             <div className="grid grid-cols-3 gap-2 bg-tint-purple/40 border border-brand-purple/15 rounded-[12px] px-3.5 py-2.5 text-center">
               <div>
                 <div className="text-[11px] text-ink-500">🎓 מוסד לימודים</div>
-                <div className="text-[13.5px] font-bold text-ink-900">{card.studyPlace ?? "—"}</div>
+                <div className="text-[13.5px] font-bold text-ink-900">{card.studyPlace ?? "-"}</div>
               </div>
               <div>
                 <div className="text-[11px] text-ink-500">מגמה</div>
-                <div className="text-[13.5px] font-bold text-ink-900">{card.track ?? "—"}</div>
+                <div className="text-[13.5px] font-bold text-ink-900">{card.track ?? "-"}</div>
               </div>
               <div>
                 <div className="text-[11px] text-ink-500">שנת סיום</div>
-                <div className="text-[13.5px] font-bold text-ink-900 tabular-nums">{card.gradYear ?? "—"}</div>
+                <div className="text-[13.5px] font-bold text-ink-900 tabular-nums">{card.gradYear ?? "-"}</div>
               </div>
             </div>
 
@@ -423,7 +423,7 @@ export function CandidateFinder({
                 {card.appliedAnswers.map((qa, j) => (
                   <div key={j} className="text-[13px]">
                     <div className="text-ink-500">{qa.q}</div>
-                    <div className="text-ink-900 whitespace-pre-wrap">{qa.a || "—"}</div>
+                    <div className="text-ink-900 whitespace-pre-wrap">{qa.a || "-"}</div>
                   </div>
                 ))}
               </div>

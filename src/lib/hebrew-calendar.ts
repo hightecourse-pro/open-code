@@ -1,6 +1,6 @@
 // When the community stays quiet: Shabbat and the festivals of Israel.
 //
-// No dependency and no table to maintain — the Hebrew date comes from the
+// No dependency and no table to maintain - the Hebrew date comes from the
 // platform's own calendar support, evaluated in Jerusalem time. The digest
 // runs in the morning, so the civil day and the Hebrew day line up.
 
@@ -15,7 +15,7 @@ const WEEKDAY = new Intl.DateTimeFormat("en-US", {
   weekday: "short",
 });
 
-/** Yom tov as kept in Israel — one day of each, no diaspora second day. */
+/** Yom tov as kept in Israel - one day of each, no diaspora second day. */
 const FESTIVALS: Record<string, Record<number, string>> = {
   Tishri: {
     1: "ראש השנה",
@@ -35,7 +35,7 @@ const FESTIVALS: Record<string, Record<number, string>> = {
 
 export interface RestDay {
   rest: boolean;
-  /** What it is, for the log — "שבת", "פסח"… */
+  /** What it is, for the log - "שבת", "פסח"… */
   reason?: string;
 }
 

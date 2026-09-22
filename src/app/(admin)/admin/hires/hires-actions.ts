@@ -8,7 +8,7 @@ import { studyInfoOf } from "@/lib/admin/candidate-match";
 
 
 /**
- * Every hire linked to a client hangs under a job (the owner, 3/9) — when no
+ * Every hire linked to a client hangs under a job (the owner, 3/9) - when no
  * job was chosen, she lands on the client's generic one, born hidden.
  */
 async function genericJobFor(clientId: string): Promise<string | null> {
@@ -30,14 +30,14 @@ async function genericJobFor(clientId: string): Promise<string | null> {
   const { data: job } = await supabase
     .from("jobs")
     .insert({
-      title: `משרה כללית — ${client.company_name}`,
+      title: `משרה כללית - ${client.company_name}`,
       company: client.company_name,
       client_id: clientId,
       source: "ours",
       status: "closed",
       pipeline_status: "hired_direct",
       is_visible: false,
-      description: "משרה שנוצרה אוטומטית לרישום גיוסים — אפשר לערוך את הפרטים.",
+      description: "משרה שנוצרה אוטומטית לרישום גיוסים - אפשר לערוך את הפרטים.",
     })
     .select("id")
     .single();
@@ -55,7 +55,7 @@ function revalidate() {
   revalidateTag("recently-hired", "max"); // the banner's shared 60s cache
 }
 
-/** Off-community placement — kept exactly like the old banner-only flow. */
+/** Off-community placement - kept exactly like the old banner-only flow. */
 export async function addExternalHire(_prev: HireFormState, formData: FormData): Promise<HireFormState> {
   const me = await requireRole("admin");
 
@@ -76,7 +76,7 @@ export async function addExternalHire(_prev: HireFormState, formData: FormData):
   }
 
   const supabase = await createClient();
-  // The company comes from the clients registry (the owner, 3/9) — the name
+  // The company comes from the clients registry (the owner, 3/9) - the name
   // is denormalized for display, the id is the link.
   const client_id = String(formData.get("client_id") ?? "").trim() || null;
   let company: string | null = null;
@@ -146,7 +146,7 @@ export async function setHirePayer(id: string, payer: string): Promise<{ institu
   return { institution: payer_institution };
 }
 
-/** The hired woman's seminary — prominent + editable on every row (15/9). */
+/** The hired woman's seminary - prominent + editable on every row (15/9). */
 export async function setHireSeminary(id: string, name: string): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();
@@ -157,7 +157,7 @@ export async function setHireSeminary(id: string, name: string): Promise<void> {
   revalidate();
 }
 
-/** Manual institution name — for external hires with no profile to read from. */
+/** Manual institution name - for external hires with no profile to read from. */
 export async function setHireInstitution(id: string, name: string): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();
@@ -185,7 +185,7 @@ export async function updateHireDetails(
   const supabase = await createClient();
   const { data: current } = await supabase.from("hires").select("email, profile_id").eq("id", id).maybeSingle();
 
-  // A new email may belong to a member — re-link on the spot.
+  // A new email may belong to a member - re-link on the spot.
   let profile_id = current?.profile_id ?? null;
   if (email && email !== current?.email) {
     const { data: uid } = await createAdminClient().rpc("auth_user_id_by_email", { p_email: email });

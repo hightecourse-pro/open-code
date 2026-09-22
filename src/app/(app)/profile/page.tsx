@@ -49,13 +49,13 @@ export default async function ProfilePage({
       .or("active.eq.true,key.eq.has_experience")
       .order("sort_order", { ascending: true }),
     supabase.from("profile_answers").select("question_id, value").eq("profile_id", profile.id),
-    // Owner-only row — her Drive address isn't on the shared profiles table.
+    // Owner-only row - her Drive address isn't on the shared profiles table.
     supabase
       .from("member_private")
       .select("drive_email, drive_email_requested_at, workplace")
       .eq("profile_id", profile.id)
       .maybeSingle(),
-    // Her latest employment accompaniment assignment (admin-assigned) — the
+    // Her latest employment accompaniment assignment (admin-assigned) - the
     // card shows the mentor's name with a link to chat.
     supabase
       .from("mentor_requests")
@@ -71,7 +71,7 @@ export default async function ProfilePage({
     getTaxonomyOptions(),
   ]);
 
-  // A mentor's own score — with what the points are worth (400 = course gift).
+  // A mentor's own score - with what the points are worth (400 = course gift).
   const myScore =
     profile.role === "mentor"
       ? (await mentorScores([profile.id])).get(profile.id) ?? null
@@ -93,13 +93,13 @@ export default async function ProfilePage({
   const answerMap: Record<string, unknown> = {};
   for (const a of answers ?? []) answerMap[a.question_id] = a.value;
 
-  // At least one CV is part of a complete junior profile (PM rule) — the
+  // At least one CV is part of a complete junior profile (PM rule) - the
   // wizard collects one when she has none.
   const { count: cvCount } = await supabase
     .from("cv_documents")
     .select("id", { count: "exact", head: true })
     .eq("profile_id", profile.id);
-  // At least one CV for every member INCLUDING mentors (the owner, 30/8) —
+  // At least one CV for every member INCLUDING mentors (the owner, 30/8) -
   // only staff accounts are exempt (the server enforces the same rule).
   // A junior must leave a CV; a mentor is warmly encouraged, never blocked
   // (the owner, 10/9).
@@ -125,7 +125,7 @@ export default async function ProfilePage({
     <div className="flex flex-col gap-5">
       {saved === "1" && (
         <div className="flex items-center gap-2.5 bg-tint-mint border border-[#BFE4D1] rounded-[14px] p-3.5 px-4 text-[14px] font-semibold text-[#0F6E4A]">
-          ✓ השינויים נשמרו — הפרופיל שלך מעודכן.
+          ✓ השינויים נשמרו - הפרופיל שלך מעודכן.
         </div>
       )}
       <div className="flex items-center gap-4">
@@ -147,7 +147,7 @@ export default async function ProfilePage({
             {profile.specialization && <Badge variant="purple">{profile.specialization}</Badge>}
           </div>
         </div>
-        {/* The mirror sits at the TOP (the owner, 31/8) — it's the reason to
+        {/* The mirror sits at the TOP (the owner, 31/8) - it's the reason to
             polish everything below. */}
         <Link
           href="/profile/preview"
@@ -165,7 +165,7 @@ export default async function ProfilePage({
         </h2>
         <p className="t-body-sm text-ink-500 mb-4">
           עוברים שלב-שלב עם &quot;הבא&quot;, משנים מה שרוצים, ולוחצות{" "}
-          <b>&quot;שמירת השינויים&quot;</b> — הכפתור נמצא בכל שלב, ואפשר לשמור מכל מקום.
+          <b>&quot;שמירת השינויים&quot;</b> - הכפתור נמצא בכל שלב, ואפשר לשמור מכל מקום.
           המידע עוזר לנו להתאים לך משרות, קורסים ומנטוריות.
         </p>
         <ProfileForm
@@ -180,13 +180,13 @@ export default async function ProfilePage({
           draftStaleAfter={profile.updated_at ?? null}
           saveEveryStep={profile.profile_completed === true}
           hasGradeSheet={(gradeCount ?? 0) > 0}
-          // A completed profile is never asked the experience gate afresh —
+          // A completed profile is never asked the experience gate afresh -
           // profiles.is_experienced stands in when no answer row exists.
           initialExperienced={profile.profile_completed ? profile.is_experienced === true : null}
         />
       </div>
 
-      {/* Mentors contribute — they don't report job-hunting status (30/8). */}
+      {/* Mentors contribute - they don't report job-hunting status (30/8). */}
       {profile.role !== "mentor" && (
         <EmploymentCard
           foundJob={profile.found_job}
@@ -196,11 +196,11 @@ export default async function ProfilePage({
         />
       )}
 
-      {/* "המנוי שלי" moved to its own page (PM) — /subscription in the menu. */}
+      {/* "המנוי שלי" moved to its own page (PM) - /subscription in the menu. */}
 
       <PortalVisibility listed={profile.portal_listed !== false} />
 
-      {/* A mentor's points — and what they're worth (the owner, 2026-08-26:
+      {/* A mentor's points - and what they're worth (the owner, 2026-08-26:
           400 points = a course from the library, as a gift). */}
       {profile.role === "mentor" && (
         <div className="border border-[#EAD9A8] bg-tint-warm/60 rounded-[16px] p-4 flex items-center gap-4 flex-wrap">
@@ -208,7 +208,7 @@ export default async function ProfilePage({
             ⭐ {myScore?.score ?? 0} נק&#39;
           </div>
           <div className="flex-1 min-w-[220px] text-[13px] text-ink-700 leading-relaxed">
-            <b className="text-ink-1000">הנקודות שלך שוות קורס 🎁</b> — ב-400 נקודות מגיע לך קורס
+            <b className="text-ink-1000">הנקודות שלך שוות קורס 🎁</b> - ב-400 נקודות מגיע לך קורס
             מתנה מספריית הקורסים של הייטקורס. צוברים על כל תשובה בפורום ועל כל ליווי אישי
             {myScore
               ? ` (עד עכשיו: ${myScore.answers} תשובות ו-${myScore.assignments} ליוויים).`
@@ -219,7 +219,7 @@ export default async function ProfilePage({
       )}
 
       {/* Experienced members may ask to become mentors right here (the
-          owner's ask 2026-08-26) — a request to the team, not a self-serve
+          owner's ask 2026-08-26) - a request to the team, not a self-serve
           switch: she keeps her paid membership until someone approves. */}
       {profile.role === "junior" && profile.is_experienced && (
         <div className="border border-[#EAD9A8] bg-tint-warm/60 rounded-[16px] p-4 flex items-center gap-3 flex-wrap">
@@ -228,13 +228,13 @@ export default async function ProfilePage({
               רוצה להצטרף כמנטורית? 👑
             </div>
             <p className="text-[13px] text-ink-700 mt-0.5">
-              בתור בעלת ניסיון את מוזמנת לתרום לקהילה — מענה לשאלות, ליווי אישי והאקתונים. נעבור
+              בתור בעלת ניסיון את מוזמנת לתרום לקהילה - מענה לשאלות, ליווי אישי והאקתונים. נעבור
               על הבקשה ונחזור אלייך.
             </p>
           </div>
           {mentorRequestOpen ? (
             <span className="text-[13px] font-semibold text-[#8C5E0E]">
-              הבקשה שלך אצלנו — נעדכן אותך ממש בקרוב 💜
+              הבקשה שלך אצלנו - נעדכן אותך ממש בקרוב 💜
             </span>
           ) : (
             <form action={requestMentorRole}>
@@ -251,10 +251,10 @@ export default async function ProfilePage({
 
       {profile.role === "mentor" && (
         /* The way back (the owner, 1/9): a mentor may choose the regular
-           member track — the questionnaire reopens, a payer re-activates. */
+           member track - the questionnaire reopens, a payer re-activates. */
         <div className="border border-ink-200 bg-white rounded-[16px] p-4 flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[220px] text-[13px] text-ink-700">
-            <b className="text-ink-1000">מעדיפה להיות משתתפת רגילה?</b> אפשר לעבור למסלול הרגיל —
+            <b className="text-ink-1000">מעדיפה להיות משתתפת רגילה?</b> אפשר לעבור למסלול הרגיל -
             שאלון החברות ייפתח לך (מה שכבר מילאת יישמר), ואם כבר שילמת המנוי יחובר אוטומטית.
           </div>
           <ConfirmActionButton

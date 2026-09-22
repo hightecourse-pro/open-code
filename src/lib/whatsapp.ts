@@ -1,4 +1,4 @@
-// WhatsApp Cloud API — the community's number lives at Meta, no phone
+// WhatsApp Cloud API - the community's number lives at Meta, no phone
 // involved (the owner has a kosher device; the Bezeq landline 02-5800296 is
 // the registered number once she completes the Meta signup). Everything here
 // runs server-side with the token from the environment.
@@ -18,7 +18,7 @@ export function getWaConfig(): WaConfig | null {
   return { token, phoneNumberId };
 }
 
-/** The webhook's GET-verification secret — settable before the token exists. */
+/** The webhook's GET-verification secret - settable before the token exists. */
 export function getWaVerifyToken(): string {
   return process.env.WHATSAPP_VERIFY_TOKEN ?? "";
 }
@@ -37,7 +37,7 @@ export function toWaId(phone: string): string | null {
 
 /**
  * Send a free-form text message. The CALLER enforces Meta's 24-hour service
- * window — outside it this returns Meta's error, it does not pre-check.
+ * window - outside it this returns Meta's error, it does not pre-check.
  */
 export async function sendWaText(
   to: string,
@@ -80,7 +80,7 @@ export function waWindowLeftMs(lastInboundAt: string | null): number {
   return Math.max(0, closesAt - Date.now());
 }
 
-/** The WhatsApp Business Account id — template listing lives on it. */
+/** The WhatsApp Business Account id - template listing lives on it. */
 export function getWaWabaId(): string {
   return process.env.WHATSAPP_WABA_ID ?? "";
 }
@@ -162,12 +162,12 @@ export interface WaTemplate {
   language: string;
   status: string;
   category: string;
-  /** The body text with {{n}} placeholders — for the compose form + preview. */
+  /** The body text with {{n}} placeholders - for the compose form + preview. */
   bodyText: string;
   paramCount: number;
 }
 
-/** The WABA's message templates — only APPROVED ones may be sent. */
+/** The WABA's message templates - only APPROVED ones may be sent. */
 export async function listWaTemplates(): Promise<WaTemplate[]> {
   const cfg = getWaConfig();
   const waba = getWaWabaId();
@@ -197,7 +197,7 @@ export async function listWaTemplates(): Promise<WaTemplate[]> {
   }
 }
 
-/** Open a conversation with an approved template — the only door Meta allows
+/** Open a conversation with an approved template - the only door Meta allows
  *  outside the 24h window. */
 export async function sendWaTemplate(
   to: string,
@@ -238,7 +238,7 @@ export async function sendWaTemplate(
   }
 }
 
-/** Download an inbound media file from Meta (their links expire — we keep a
+/** Download an inbound media file from Meta (their links expire - we keep a
  *  copy in our private bucket). */
 export async function fetchWaMedia(
   mediaId: string

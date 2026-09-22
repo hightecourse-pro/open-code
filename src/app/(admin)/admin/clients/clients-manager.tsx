@@ -63,7 +63,7 @@ function CopyButton({ value, label }: { value: string; label: string }) {
 
 /**
  * The credentials to hand to the client. The password is stored encrypted, so
- * it can always be re-read here — no "last chance" pressure.
+ * it can always be re-read here - no "last chance" pressure.
  */
 function CredentialsPanel({
   company,
@@ -117,7 +117,7 @@ function CredentialsPanel({
 }
 
 /**
- * A CRM lead that reached "משרה בטיפול" but has no portal access yet — this
+ * A CRM lead that reached "משרה בטיפול" but has no portal access yet - this
  * assigns username + password to the SAME row (update, not a new client).
  */
 function AssignCredentials({ client }: { client: PortalClientRow }) {
@@ -216,11 +216,11 @@ function ClientRow({ client }: { client: PortalClientRow }) {
                   {showPw && <CopyButton value={client.password} label="העתקה" />}
                 </>
               ) : (
-                <span className="text-ink-400">לא זמינה — הפיקי סיסמה חדשה</span>
+                <span className="text-ink-400">לא זמינה - הפיקי סיסמה חדשה</span>
               )}
             </div>
           )}
-          {/* Free candidate search — off by default; the client only sees what we sent. */}
+          {/* Free candidate search - off by default; the client only sees what we sent. */}
           <div className="mt-1.5">
             <Switch
               label={<span className="text-xs text-ink-700">חיפוש חופשי בפורטל</span>}

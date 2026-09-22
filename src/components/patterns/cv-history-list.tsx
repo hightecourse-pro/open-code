@@ -25,7 +25,7 @@ const HIST_DATE = new Intl.DateTimeFormat("he-IL", {
 
 /**
  * Past AI reviews, each OPENABLE to its full feedback (the owner, 30/8:
- * "לא ניתן לפתוח את המשוב") — the stored insights render exactly like a
+ * "לא ניתן לפתוח את המשוב") - the stored insights render exactly like a
  * fresh result.
  */
 export function CvHistoryList({ entries }: { entries: CvHistoryEntry[] }) {
@@ -47,7 +47,7 @@ export function CvHistoryList({ entries }: { entries: CvHistoryEntry[] }) {
                 className="w-full py-2.5 flex items-start gap-3 flex-wrap text-start cursor-pointer group"
               >
                 <span className="w-10 h-10 rounded-full bg-brand-gradient-soft flex items-center justify-center font-display font-black text-[14px] text-brand-purple shrink-0">
-                  {r.score ?? "—"}
+                  {r.score ?? "-"}
                 </span>
                 <span className="flex-1 min-w-[200px]">
                   <span className="text-[12.5px] text-ink-500 flex items-center gap-2 flex-wrap">

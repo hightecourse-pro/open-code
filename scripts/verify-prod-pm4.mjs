@@ -1,5 +1,5 @@
 // Post-deploy check: the PM-round-4 UI, live on production, through שירה's
-// demo account. Read-only — nothing is submitted.
+// demo account. Read-only - nothing is submitted.
 import { chromium } from "@playwright/test";
 const BASE = "https://app.opencode.org.il";
 const SHOTS = process.env.SHOTS_DIR || ".";

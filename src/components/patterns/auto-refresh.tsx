@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-// A tab left open with no interaction stops polling after this long — at
+// A tab left open with no interaction stops polling after this long - at
 // scale, every tick is a full server render, and idle tabs multiplied by
 // concurrent members were the single biggest source of invocations. Any
 // interaction (or returning to the tab) starts the clock again.
@@ -38,7 +38,7 @@ export function AutoRefresh({ seconds = 45 }: { seconds?: number }) {
       if (document.visibilityState === "visible") {
         markActive(); // coming back wakes the polling up
         // Refresh only when the data is actually stale. Firing on EVERY tab
-        // return meant a heavy server render raced her first click — exactly
+        // return meant a heavy server render raced her first click - exactly
         // the "the site takes a while to wake up" feeling (the owner, 31/8).
         if (Date.now() - lastRefresh.current > seconds * 1000) refresh();
       }

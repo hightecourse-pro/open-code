@@ -25,7 +25,7 @@ export default async function AdminSessionsPage() {
     linksOf.set(l.owner_id, arr);
   }
 
-  // Distinct members who opened each session's content — the "participants"
+  // Distinct members who opened each session's content - the "participants"
   // number the PM asked to see on past sessions.
   const ids = (sessions ?? []).map((s) => s.id);
   const viewsBySession = new Map<string, Set<string>>();
@@ -63,7 +63,7 @@ export default async function AdminSessionsPage() {
   }
   const fbBySession = new Map<string, AdminSessionRow["feedback"]>();
   for (const f of fbRows ?? []) {
-    if (!f.attended) continue; // "לא הפעם" closes the ask — not a rating
+    if (!f.attended) continue; // "לא הפעם" closes the ask - not a rating
     const cur = fbBySession.get(f.session_id) ?? { avg: null, count: 0, entries: [] };
     const nums = [f.content_rating, f.practical_rating, f.clarity_rating, f.speaker_rating].filter(
       (n): n is number => typeof n === "number"
@@ -108,10 +108,10 @@ export default async function AdminSessionsPage() {
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;סשנים/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול סשנים</h1>
-        <p className="t-body-sm text-ink-700">כל השעות כאן — ובכל מה שהחברות רואות — הן שעון ישראל.</p>
+        <p className="t-body-sm text-ink-700">כל השעות כאן - ובכל מה שהחברות רואות - הן שעון ישראל.</p>
       </div>
 
-      {/* Closed by default (Shira) — a button opens the creation form. */}
+      {/* Closed by default (Shira) - a button opens the creation form. */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <Collapsible title="➕ סשן חדש" defaultOpen={false}>
           <AdminCreateSession />

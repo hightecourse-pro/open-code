@@ -32,7 +32,7 @@ import { CandidateFinder, type FinderCandidate } from "./candidate-finder";
 import { matchCandidates, studyInfoOf } from "@/lib/admin/candidate-match";
 import { SendCandidatesButton } from "./send-candidates-button";
 
-// Gemini rides a model-chain with retries — a stormy run outlives the platform
+// Gemini rides a model-chain with retries - a stormy run outlives the platform
 // default window. Server actions inherit the page segment they POST from.
 export const maxDuration = 300;
 
@@ -40,7 +40,7 @@ export const metadata: Metadata = { title: "ניהול משרה" };
 
 const cardClass = "bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm";
 
-// The recruitment-pipeline pill in the header — display-only (the status is
+// The recruitment-pipeline pill in the header - display-only (the status is
 // changed from the details tab / review center).
 const PIPELINE: Record<
   string,
@@ -56,7 +56,7 @@ const PIPELINE: Record<
 };
 
 /**
- * applications.answers is jsonb {question_id: answer, fit: "..."} — answers
+ * applications.answers is jsonb {question_id: answer, fit: "..."} - answers
  * can be strings (paragraph/select), numbers (number) or string[] (multiselect).
  */
 function parseAnswers(value: unknown): Record<string, string | number | string[]> {
@@ -138,7 +138,7 @@ export default async function AdminJobPage({
         .select("id, company_name")
         
         .order("company_name", { ascending: true }),
-      // The publish panel's criteria palette — only "ours" jobs render it.
+      // The publish panel's criteria palette - only "ours" jobs render it.
       job.source === "ours" ? buildAudienceCatalogue() : Promise.resolve([]),
       // …and why the pool is the size it is, so the panel can say it out loud.
       job.source === "ours"
@@ -151,7 +151,7 @@ export default async function AdminJobPage({
     company_name: c.company_name,
   }));
 
-  // job_questions.options is jsonb — coerce to a clean string[] for the UI.
+  // job_questions.options is jsonb - coerce to a clean string[] for the UI.
   const questionItems = (questions ?? []).map((q) => ({
     id: q.id,
     question: q.question,
@@ -173,9 +173,9 @@ export default async function AdminJobPage({
       ).data
     : null;
 
-  // Who PASSES the privacy gate (includeUnsent — this is the admin preview).
-  // A curated candidate outside it — opted out, paused, no longer a listed
-  // junior — will be hidden from the client, so flag it here. Separately,
+  // Who PASSES the privacy gate (includeUnsent - this is the admin preview).
+  // A curated candidate outside it - opted out, paused, no longer a listed
+  // junior - will be hidden from the client, so flag it here. Separately,
   // sent_at tells whether she was actually submitted yet: the client sees only
   // gate-passing AND sent candidates.
   const visibleToClient = job.client_id
@@ -187,7 +187,7 @@ export default async function AdminJobPage({
     : null;
   const sentAtOf = new Map((curated ?? []).map((c) => [c.profile_id, c.sent_at ?? null]));
 
-  // Names for applicants + curated candidates — they may not all be in the
+  // Names for applicants + curated candidates - they may not all be in the
   // active-junior list above (e.g. paused members).
   const appList = applications ?? [];
   const hiredCount = appList.filter((a) => a.status === "hired").length;
@@ -214,7 +214,7 @@ export default async function AdminJobPage({
   const profileOf = new Map((named ?? []).map((p) => [p.id, p]));
   const curatedSet = new Set(curatedIds);
 
-  // Off-community applications recorded by email — claimed automatically the
+  // Off-community applications recorded by email - claimed automatically the
   // moment the woman signs in with that address (the owner, 31/8).
   const { data: externalApps } = await admin
     .from("external_applications")
@@ -222,14 +222,14 @@ export default async function AdminJobPage({
     .eq("job_id", id)
     .order("created_at", { ascending: false });
 
-  // The per-application internal notes (admin-only table) — the "הערה" column.
+  // The per-application internal notes (admin-only table) - the "הערה" column.
   const appIds = appList.map((a) => a.id);
   const { data: noteRows } = appIds.length
     ? await admin.from("application_notes").select("application_id, note").in("application_id", appIds)
     : { data: [] as { application_id: string; note: string | null }[] };
   const noteOf = new Map((noteRows ?? []).map((n) => [n.application_id, n.note]));
 
-  // VIP flags from the admin-only member_crm table — an internal triage aid
+  // VIP flags from the admin-only member_crm table - an internal triage aid
   // that stays on this admin surface, never in the portal or member views.
   const { data: crmRows } = applicantIds.length
     ? await admin
@@ -244,15 +244,15 @@ export default async function AdminJobPage({
           internal_tags: string[] | null;
         }[],
       };
-  // Internal profile tags (the owner, 2/9) — admin-only, never member/client.
-  // חוות דעת המערכת על ניסיון ה-AI (the owner, 5/9) — נכתבות בניתוח לילי.
+  // Internal profile tags (the owner, 2/9) - admin-only, never member/client.
+  // חוות דעת המערכת על ניסיון ה-AI (the owner, 5/9) - נכתבות בניתוח לילי.
   const { data: assessRows } = await createAdminClient()
     .from("application_assessments")
     .select("application_id, ai_domain, experience_context, company, depth, verdict")
     .in("application_id", (applications ?? []).map((a) => a.id));
   const assessOf = new Map((assessRows ?? []).map((r) => [r.application_id, r]));
 
-  // חוות דעת הרכזות מהמוסדות (the owner, 14/9) — team-only, rides on the
+  // חוות דעת הרכזות מהמוסדות (the owner, 14/9) - team-only, rides on the
   // applicant across every job she applies to.
   const coordReviewsOf = new Map<string, ReviewApplication["coordinatorReviews"]>();
   {
@@ -298,7 +298,7 @@ export default async function AdminJobPage({
     }
   }
 
-  // Everywhere WE submitted each applicant (the owner, 7/9) — application
+  // Everywhere WE submitted each applicant (the owner, 7/9) - application
   // forwards + proactive job_candidates rows, across ALL jobs, with the
   // per-place outcome note.
   const applicantIdsAll = [...new Set((applications ?? []).map((a) => a.applicant_id))];
@@ -340,7 +340,7 @@ export default async function AdminJobPage({
   const outcomeOf = new Map((outcomes ?? []).map((o) => [`${o.job_id}:${o.profile_id}`, o.note]));
 
   // Chat messages the team sent from THIS job (the owner, 19/9: "לראות בפנים
-  // את המייל ששלחתי לה") — recognised by the job prefix sendJobChatMessage
+  // את המייל ששלחתי לה") - recognised by the job prefix sendJobChatMessage
   // writes, per applicant, oldest first.
   const sentMsgsOf = new Map<string, { body: string; at: string }[]>();
   if (applicantIdsAll.length) {
@@ -379,7 +379,7 @@ export default async function AdminJobPage({
     (crmRows ?? []).filter((c) => c.is_vip === true).map((c) => c.profile_id)
   );
   // The team's general note about a member (from her page) follows her into
-  // every application she submits — Shira's "ישתקף עליה במסך הגשות".
+  // every application she submits - Shira's "ישתקף עליה במסך הגשות".
   const crmNoteOf = new Map(
     (crmRows ?? []).flatMap((c) =>
       c.internal_notes?.trim() ? [[c.profile_id, c.internal_notes] as const] : []
@@ -387,7 +387,7 @@ export default async function AdminJobPage({
   );
 
   // The review center's criteria engine, scoped to THE APPLICANTS (no
-  // eligibility gates — a paused member who applied still counts): the
+  // eligibility gates - a paused member who applied still counts): the
   // catalogue offers only values actually seen among them (no dead chips) and
   // the pools feed the client-side matching, label-resolved + lowercased.
   const [applicantCatalogue, applicantPoolData] = applicantIds.length
@@ -407,7 +407,7 @@ export default async function AdminJobPage({
   );
 
   // CV per application: the CV she attached to THIS application, else her
-  // latest upload — resolved to short-lived signed URLs like the portal route.
+  // latest upload - resolved to short-lived signed URLs like the portal route.
   const cvDocIds = [...new Set(appList.map((a) => a.cv_document_id).filter((v): v is string => !!v))];
   const { data: attachedDocs } = cvDocIds.length
     ? await admin.from("cv_documents").select("id, profile_id, file_path").in("id", cvDocIds)
@@ -455,7 +455,7 @@ export default async function AdminJobPage({
   const reviewStudy = await studyInfoOf(applicantIds);
 
   // עיר מגורים לצד האזור (the owner, 15/9: "שיופיע בצורה בולטת גם עיר
-  // מגורים") — the city select's stored VALUE resolved to its label.
+  // מגורים") - the city select's stored VALUE resolved to its label.
   const cityOf = new Map<string, string>();
   if (applicantIds.length) {
     const cityAdmin = createAdminClient();
@@ -579,7 +579,7 @@ export default async function AdminJobPage({
 
   // ------------------------------------------------------------------- tabs
   // Two different lists on purpose: "מועמדות" counts APPLICATIONS, "לקוח"
-  // counts what the client actually sees (curated) — the labels say so.
+  // counts what the client actually sees (curated) - the labels say so.
   const tabs: JobTabDef[] = [
     { key: "details", label: "פרטי המשרה" },
     ...(job.source === "ours" ? [{ key: "publish", label: "פרסום" }] : []),
@@ -589,7 +589,7 @@ export default async function AdminJobPage({
     { key: "client", label: "לקוח", count: curatedIds.length },
   ];
 
-  // Candidates the client flagged for an interview — front-page news.
+  // Candidates the client flagged for an interview - front-page news.
   const interviewMarkedNames = (curated ?? [])
     .filter((c) => c.interview_marked === true)
     .map((c) => profileOf.get(c.profile_id)?.full_name)
@@ -610,12 +610,12 @@ export default async function AdminJobPage({
             <span className="font-semibold text-ink-900">{client.company_name}</span>
           </p>
         ) : (
-          <Alert variant="warn">לא מקושרת ללקוח — בחרי לקוח בטופס שלמטה.</Alert>
+          <Alert variant="warn">לא מקושרת ללקוח - בחרי לקוח בטופס שלמטה.</Alert>
         )}
       </div>
       {/* The form seeds source/kind/client into useState once. A re-render that
           keeps the instance mounted (a ?tab= navigation, a revalidate after a
-          save) would leave those showing stale local state — and "משרה שלנו"
+          save) would leave those showing stale local state - and "משרה שלנו"
           is the select's first option, i.e. what it falls back to. Keying on
           the persisted values re-seeds them from the server. */}
       <JobDetailsForm
@@ -624,7 +624,7 @@ export default async function AdminJobPage({
         clients={clientOptions}
       />
 
-      {/* Job outcome — hired can be several members, so closing is always
+      {/* Job outcome - hired can be several members, so closing is always
           the admin's call; only "interviews" moves automatically. */}
       {job.source === "ours" && (
         <div className="mt-4 pt-3 border-t border-ink-100 flex items-center gap-2 flex-wrap">
@@ -649,7 +649,7 @@ export default async function AdminJobPage({
                   message='לסגור את המשרה להגשות חדשות? היא תישאר פתוחה אצלך, החברות יראו שהיא התקדמה לשלב הבא ולא יוכלו להגיש עוד. בנוסף יישלחו המיילים: "הגשנו אותך" למי שהוגשה למעסיק, ומייל עדכון למי שלא אושרה סופית.'
                   className="inline-flex items-center rounded-full border border-ink-300 text-ink-700 text-[12.5px] font-semibold px-3.5 py-1.5 hover:border-brand-purple hover:text-brand-purple transition-colors"
                 >
-                  סגירה להגשות — המועמדות אצל המעסיק
+                  סגירה להגשות - המועמדות אצל המעסיק
                 </ConfirmActionButton>
               )}
               {(job.pipeline_status === "candidates_sent" || job.pipeline_status === "interviews") && (
@@ -663,7 +663,7 @@ export default async function AdminJobPage({
               )}
               {hiredCount > 0 && (
                 <span className="text-[12.5px] text-ink-700">
-                  🎉 {hiredCount === 1 ? "מועמדת אחת גויסה" : `${hiredCount} מועמדות גויסו`} —
+                  🎉 {hiredCount === 1 ? "מועמדת אחת גויסה" : `${hiredCount} מועמדות גויסו`} -
                   כשסיימת לגייס, סגרי את המשרה:
                 </span>
               )}
@@ -688,7 +688,7 @@ export default async function AdminJobPage({
     </div>
   );
 
-  // Targeted publishing — our jobs only (market jobs are applied to off-site)
+  // Targeted publishing - our jobs only (market jobs are applied to off-site)
   const publishPanel =
     job.source === "ours" ? (
       <div
@@ -703,7 +703,7 @@ export default async function AdminJobPage({
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
           {job.pipeline_status === "draft"
-            ? "המשרה עדיין טיוטה — בחרי את קהל היעד ופרסמי אותה. רק החברות שנבחרו יראו אותה ויקבלו מייל."
+            ? "המשרה עדיין טיוטה - בחרי את קהל היעד ופרסמי אותה. רק החברות שנבחרו יראו אותה ויקבלו מייל."
             : "המשרה פורסמה לקהל היעד שנבחר."}
         </p>
         <PublishPanel
@@ -720,8 +720,8 @@ export default async function AdminJobPage({
       </div>
     ) : null;
 
-  // The candidate finder (the owner, 2/9): everyone — applicants AND the
-  // whole community — scored by PRACTICAL tech only (never "שלמדת"),
+  // The candidate finder (the owner, 2/9): everyone - applicants AND the
+  // whole community - scored by PRACTICAL tech only (never "שלמדת"),
   // triaged in a table or one-by-one cards, with an optional AI pass.
   let finderPanel: React.ReactNode = null;
   if (job.source === "ours") {
@@ -776,7 +776,7 @@ export default async function AdminJobPage({
           <Sparkles size={16} className="text-brand-pink-deep" /> איתור המתאימות ביותר
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          ציון ההתאמה נבנה מטכנולוגיות מניסיון <b>מעשי</b> בלבד — עבודות, פרקטיקום — לא ממה
+          ציון ההתאמה נבנה מטכנולוגיות מניסיון <b>מעשי</b> בלבד - עבודות, פרקטיקום - לא ממה
           שנלמד בקורסים. הסימונים (מתאימה/אולי/לא) נשמרים פר משרה, פנימיים בלבד.
         </p>
         <CandidateFinder jobId={job.id} candidates={finderCandidates} appliedCount={applicantIds.length} />
@@ -791,15 +791,15 @@ export default async function AdminJobPage({
         <ListChecks size={16} className="text-brand-purple" /> שאלות למועמדות
       </h3>
       <p className="text-[12.5px] text-ink-500 mb-3">
-        שאלות שכל מועמדת רואה בהגשה למשרה הזו — כל שאלה אפשר לסמן כחובה או רשות. שימי לב: השאלה
+        שאלות שכל מועמדת רואה בהגשה למשרה הזו - כל שאלה אפשר לסמן כחובה או רשות. שימי לב: השאלה
         {" “למה את חושבת שאת מתאימה למשרה?” "}
-        נשאלת תמיד אוטומטית — אין צורך להוסיף אותה.
+        נשאלת תמיד אוטומטית - אין צורך להוסיף אותה.
       </p>
       <JobQuestionsManager jobId={job.id} questions={questionItems} />
     </div>
   );
 
-  // Review center — the applicants who submitted to this job
+  // Review center - the applicants who submitted to this job
   const reviewPanel = (
     <div className={cardClass}>
       <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
@@ -807,7 +807,7 @@ export default async function AdminJobPage({
       </h3>
       <p className="text-[12.5px] text-ink-500 mb-3">
         מרכז הבדיקה: תשובות, קורות חיים, סימון פנימי וניהול הצינור מול הלקוח.
-        הסימונים פנימיים בלבד — לא נחשפים ללקוח ולא למועמדת.
+        הסימונים פנימיים בלבד - לא נחשפים ללקוח ולא למועמדת.
       </p>
       <ReviewCenter
         jobId={job.id}
@@ -819,7 +819,7 @@ export default async function AdminJobPage({
         criteriaPools={applicantPools}
       />
 
-      {/* Applications that happened OUTSIDE the community — recorded by email.
+      {/* Applications that happened OUTSIDE the community - recorded by email.
           When the woman signs in with that address, she gets a real
           application (original date) and this row turns "נקלטה". */}
       <div className="mt-5 border-t border-ink-100 pt-4">
@@ -827,7 +827,7 @@ export default async function AdminJobPage({
           <Mail size={14} className="text-brand-purple" /> הגישו מחוץ לקהילה ({(externalApps ?? []).length})
         </h4>
         <p className="text-[12.5px] text-ink-500 mb-2.5">
-          מועמדת שהגישה במייל לפני שנרשמה — רשמי את הכתובת, וברגע שתיכנס עם המייל הזה
+          מועמדת שהגישה במייל לפני שנרשמה - רשמי את הכתובת, וברגע שתיכנס עם המייל הזה
           ההגשה תופיע לה ב&quot;ההגשות שלי&quot; עם תאריך ההגשה המקורי.
         </p>
         {(externalApps ?? []).length > 0 && (
@@ -870,7 +870,7 @@ export default async function AdminJobPage({
           <input
             name="note"
             maxLength={200}
-            placeholder="הערה (אופציונלי — למשל: הגישה במייל 28/8)"
+            placeholder="הערה (אופציונלי - למשל: הגישה במייל 28/8)"
             className="flex-1 min-w-[180px] text-[12px] border border-ink-300 rounded-md px-2 py-1.5"
           />
           <SaveButton label="הוספה" />
@@ -887,7 +887,7 @@ export default async function AdminJobPage({
           <UserCheck size={16} className="text-brand-purple" /> המועמדות שנבחרו למשרה ({curated?.length ?? 0})
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          אלו המועמדות שהלקוח רואה בפורטל — הרשימה הזו נבחרת על ידך (מהמגישות או
+          אלו המועמדות שהלקוח רואה בפורטל - הרשימה הזו נבחרת על ידך (מהמגישות או
           ידנית), והיא נפרדת מרשימת ההגשות בטאב &quot;מועמדות&quot;.
         </p>
         {curated && curated.length > 0 ? (
@@ -902,21 +902,21 @@ export default async function AdminJobPage({
                 >
                   <div className="flex-1 min-w-[160px]">
                     <div className="font-medium text-ink-900">{p?.full_name ?? "מועמדת"}</div>
-                    <div className="text-xs text-ink-500">{p?.specialization ?? "—"}</div>
+                    <div className="text-xs text-ink-500">{p?.specialization ?? "-"}</div>
                   </div>
                   {c.interview_marked === true && (
                     <Badge variant="warm">הלקוח מסמן לראיון ⭐</Badge>
                   )}
                   {hidden ? (
-                    <Badge variant="warm" title="לא עומדת בתנאי התצוגה בפורטל (למשל ביקשה לא להופיע, או אינה פעילה) — הלקוח לא יראה אותה ולא תישלח במייל.">
+                    <Badge variant="warm" title="לא עומדת בתנאי התצוגה בפורטל (למשל ביקשה לא להופיע, או אינה פעילה) - הלקוח לא יראה אותה ולא תישלח במייל.">
                       לא מוצגת ללקוח
                     </Badge>
                   ) : sentAtOf.get(c.profile_id) ? (
-                    <Badge variant="mint" title="נשלחה ללקוח — מופיעה אצלו בפורטל.">
+                    <Badge variant="mint" title="נשלחה ללקוח - מופיעה אצלו בפורטל.">
                       נשלחה ללקוח ✓
                     </Badge>
                   ) : (
-                    <Badge variant="tech" title="נבחרה למשרה אך טרם הוגשה — הלקוח יראה אותה רק אחרי 'שליחה ללקוח'.">
+                    <Badge variant="tech" title="נבחרה למשרה אך טרם הוגשה - הלקוח יראה אותה רק אחרי 'שליחה ללקוח'.">
                       טרם נשלחה
                     </Badge>
                   )}
@@ -994,7 +994,7 @@ export default async function AdminJobPage({
 
       {interviewMarkedNames.length > 0 && (
         <Alert variant="success" title="🎯 הלקוח מסמן לראיון">
-          {interviewMarkedNames.join(", ")} — עדכני את המועמדת וקבעי סטטוס ראיון בטאב
+          {interviewMarkedNames.join(", ")} - עדכני את המועמדת וקבעי סטטוס ראיון בטאב
           המועמדות.
         </Alert>
       )}

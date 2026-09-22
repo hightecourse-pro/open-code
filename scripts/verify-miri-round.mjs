@@ -28,7 +28,7 @@ async function login(page, email, pass) {
   await page.screenshot({ path: `${SHOTS}/miri-members.png` });
 
   // Applied job must be OFF the board and ONLY in ההגשות שלי. Two distinct
-  // jobs share this title — she applied to ONE, so exactly one card remains.
+  // jobs share this title - she applied to ONE, so exactly one card remains.
   await page.goto(`${BASE}/jobs`);
   await page.waitForLoadState("networkidle");
   const jfdCards = await page.locator('article:has-text("Junior Frontend Developer")').count();

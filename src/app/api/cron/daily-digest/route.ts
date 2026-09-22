@@ -10,9 +10,9 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 // Bounded batch per run. pg_cron ticks this route every 15 minutes through
-// the morning window (Vercel Hobby crons are daily-only — vercel.json keeps a
+// the morning window (Vercel Hobby crons are daily-only - vercel.json keeps a
 // single daily tick as a safety), so thousands of members drain across the
-// runs — ordered by digest_last_sent_at, oldest first, stamped as processed.
+// runs - ordered by digest_last_sent_at, oldest first, stamped as processed.
 // Nobody is ever starved by a fixed daily cap again.
 const BATCH = 150;
 
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
   // The schedule ships in vercel.json, so a staging deployment gets it too.
   // Staging runs ONLY when an EMAIL_ALLOWLIST is set: every recipient is
   // gated by emailGate (real members' addresses stay unreachable), and the
-  // testers DO need the digests to behave — skipping everything outside
+  // testers DO need the digests to behave - skipping everything outside
   // production made "המיילים הפסיקו" a permanent state on staging.
   if (!isProductionEnv() && !process.env.EMAIL_ALLOWLIST) {
     return NextResponse.json({ skipped: "not_production", env: appEnv() });
@@ -54,7 +54,7 @@ export async function GET(req: Request) {
   const all = url.searchParams.get("all") === "1";
   const testEmail = url.searchParams.get("test");
 
-  // The community rests on Shabbat and on the festivals — and so does its
+  // The community rests on Shabbat and on the festivals - and so does its
   // mail. A test address is still allowed through, so the digest can be
   // checked on any day. ?force=1 is the deliberate override.
   const rest = isRestDay();
@@ -81,17 +81,17 @@ export async function GET(req: Request) {
   const now = new Date().toISOString();
   const in7 = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
   // Anyone stamped after this morning-boundary already got (or was considered
-  // for) today's digest — the every-15-minutes window skips her.
+  // for) today's digest - the every-15-minutes window skips her.
   const todayStart = `${israelToday()}T00:00:00+03:00`;
 
   const [posts, jobs, sessions, unreadRes, batchRes] = await Promise.all([
     admin.from("posts").select("id", { count: "exact", head: true }).eq("kind", "forum").gte("created_at", since),
-    // Only jobs still taking submissions count as "new" — an OUR job already
+    // Only jobs still taking submissions count as "new" - an OUR job already
     // sent to the client would nudge members toward a closed door. External
     // jobs have no pipeline and count as before.
     admin.from("jobs").select("id", { count: "exact", head: true }).eq("status", "open").or("source.neq.ours,pipeline_status.eq.published").gte("created_at", since),
     admin.from("sessions").select("title, scheduled_at").neq("status", "done").is("canceled_at", null).gte("scheduled_at", now).lte("scheduled_at", in7).order("scheduled_at", { ascending: true }),
-    // Unread counts per recipient — one SQL aggregate, not every message row.
+    // Unread counts per recipient - one SQL aggregate, not every message row.
     admin.rpc("digest_unread_counts"),
     // This run's batch: active members not yet processed today, oldest-served
     // first. Only the columns the email needs.
@@ -127,7 +127,7 @@ export async function GET(req: Request) {
   const batch = batchRes.data ?? [];
   // Preference filter: 'daily' (default) → send; 'unread' → only with unread
   // messages waiting; 'off' → never. Everyone in the batch gets STAMPED as
-  // processed either way — that is what moves the window forward.
+  // processed either way - that is what moves the window forward.
   const recipients = batch.filter((p) => {
     const freq = p.digest_frequency || "daily";
     if (freq === "off") return false;
@@ -142,7 +142,7 @@ export async function GET(req: Request) {
   const emailOf = new Map(
     ((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email ?? ""])
   );
-  // Sender names for the "unread from" line — only the ones actually needed.
+  // Sender names for the "unread from" line - only the ones actually needed.
   const senderIds = [
     ...new Set(recipientIds.flatMap((id) => unreadByRecipient.get(id)?.from ?? [])),
   ];
@@ -168,7 +168,7 @@ export async function GET(req: Request) {
       newJobs,
       upcomingSessions,
     };
-    // An empty digest is worse than no digest — it teaches her to ignore us.
+    // An empty digest is worse than no digest - it teaches her to ignore us.
     const hasNews =
       data.unreadCount > 0 ||
       data.newForumPosts > 0 ||
@@ -189,7 +189,7 @@ export async function GET(req: Request) {
     if (r.ok) sent += 1;
   }
 
-  // Everyone in the batch was considered — stamp them so the next run in the
+  // Everyone in the batch was considered - stamp them so the next run in the
   // window moves on to the rest of the community.
   if (!dry && batch.length > 0) {
     await admin
@@ -201,14 +201,14 @@ export async function GET(req: Request) {
   const failures = results.filter((r) => !r.ok);
   if (failures.length > 0) {
     // Blocked-by-allowlist is staging behaving correctly, not a delivery
-    // failure — only real send errors reach the alerts center.
+    // failure - only real send errors reach the alerts center.
     const real = failures.filter((f) => f.error !== "blocked_by_allowlist");
     if (real.length > 0) {
       await raiseAlert({
         kind: "digest_send_failed",
         severity: "warning",
         title: `${real.length} מיילים יומיים לא נשלחו`,
-        body: `דוגמה לשגיאה: ${real[0].error ?? "?"} — בדרך כלל מכסת Resend או מפתח שפג.`,
+        body: `דוגמה לשגיאה: ${real[0].error ?? "?"} - בדרך כלל מכסת Resend או מפתח שפג.`,
         context: { failures: real.slice(0, 10) },
         dedupeKey: "digest-send-failed",
       });

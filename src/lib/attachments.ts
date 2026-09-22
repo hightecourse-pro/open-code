@@ -21,13 +21,13 @@ export const FILE_MIMES = [
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-/** Signed-URL lifetime — long enough to read a thread, short enough to expire. */
+/** Signed-URL lifetime - long enough to read a thread, short enough to expire. */
 const SIGN_TTL_SECONDS = 60 * 60;
 
 /**
  * Everything attached to a batch of posts/comments/messages, keyed by
  * context id, each with a fresh signed URL. Service-role: the CALLER is
- * responsible for only asking about content the viewer is allowed to see —
+ * responsible for only asking about content the viewer is allowed to see -
  * every screen that calls this already fetched those parents under RLS.
  */
 export async function attachmentsFor(
@@ -70,7 +70,7 @@ export async function attachmentsFor(
 
 /**
  * Stamp freshly-sent content onto the uploader's unlinked attachment rows.
- * Only HER unlinked rows can be claimed — an id belonging to someone else, or
+ * Only HER unlinked rows can be claimed - an id belonging to someone else, or
  * already linked elsewhere, is silently skipped.
  */
 export async function linkAttachments(

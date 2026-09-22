@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * "היית איתנו בסשן?" — both answers are stored (a "לא" simply closes the ask
+ * "היית איתנו בסשן?" - both answers are stored (a "לא" simply closes the ask
  * for that session); ratings ride along only with a yes. One row per
  * (session, member), first answer wins.
  */
@@ -27,7 +27,7 @@ export async function submitSessionFeedback(
   const comment = String(formData.get("comment") ?? "").trim().slice(0, 1000) || null;
 
   if (attended && !(rating("content") && rating("practical") && rating("clarity") && rating("speaker"))) {
-    return { error: "עוד רגע — סמני דירוג בכל אחת מארבע השורות 🙂" };
+    return { error: "עוד רגע - סמני דירוג בכל אחת מארבע השורות 🙂" };
   }
 
   const { error } = await supabase.from("session_feedback").insert({
@@ -42,7 +42,7 @@ export async function submitSessionFeedback(
   });
   // A duplicate answer (double click, two tabs) is already a success.
   if (error && !error.message.includes("duplicate")) {
-    return { error: "משהו השתבש — נסי שוב עוד רגע." };
+    return { error: "משהו השתבש - נסי שוב עוד רגע." };
   }
 
   revalidatePath("/", "layout");

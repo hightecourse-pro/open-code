@@ -8,7 +8,7 @@ import {
 import type { ContentLink, CourseUnit } from "@/types/database";
 
 /**
- * Admin editor for a course's units (קוביות) — one year-cycle each, with its
+ * Admin editor for a course's units (קוביות) - one year-cycle each, with its
  * own recordings and materials. A course with no units keeps its links flat,
  * so nothing forces the older courses into the new shape.
  */
@@ -82,7 +82,7 @@ export function CourseUnitsEditor({
         <div className="border border-dashed border-ink-300 rounded-[14px] p-3.5">
           <div className="text-[12px] text-ink-500 mb-2">
             {units.length > 0
-              ? "קישורים שלא שויכו לאף קוביה — הם עדיין מוצגים למשתתפות."
+              ? "קישורים שלא שויכו לאף קוביה - הם עדיין מוצגים למשתתפות."
               : "קישורי הקורס"}
           </div>
           <ContentLinksEditor ownerType="course" ownerId={courseId} links={unassigned} />

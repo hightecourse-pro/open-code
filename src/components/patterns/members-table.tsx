@@ -28,15 +28,15 @@ export interface MemberRow {
   phone?: string | null;
   /** Splits "ממתינה" into its two honest kinds (the owner, 1/9). */
   profile_completed?: boolean;
-  /** Where she studied — replaces the specialization column (the owner, 1/9). */
+  /** Where she studied - replaces the specialization column (the owner, 1/9). */
   study_place?: string | null;
-  /** Payment state for the export — "מנוי פעיל עד…" / payers-list / "". */
+  /** Payment state for the export - "מנוי פעיל עד…" / payers-list / "". */
   payment?: string;
   /** Questionnaire reminder emails sent to her (ISO, newest first). */
   reminders?: string[];
 }
 
-/** The member's TYPE in words — the export's status column. */
+/** The member's TYPE in words - the export's status column. */
 function typeLabel(m: MemberRow): string {
   if (m.role === "admin") return "צוות";
   if (m.role === "mentor") return m.status === "active" ? "מנטורית" : m.status === "pending" ? "מנטורית לאישור" : "מנטורית (לא פעילה)";
@@ -59,7 +59,7 @@ function CopyButton({ text, title }: { text: string; title: string }) {
           setDone(true);
           setTimeout(() => setDone(false), 1500);
         } catch {
-          /* clipboard unavailable — nothing to break */
+          /* clipboard unavailable - nothing to break */
         }
       }}
       className="text-ink-400 hover:text-brand-purple cursor-pointer"
@@ -81,7 +81,7 @@ type ActiveFilter = { defId: string; values: string[]; text: string };
 
 const STATUS_ORDER: Record<ProfileStatus, number> = { pending: 0, active: 1, paused: 2, rejected: 3 };
 
-/** One-click member TYPES (the owner, 1/9) — each chip carries its count. */
+/** One-click member TYPES (the owner, 1/9) - each chip carries its count. */
 const TYPE_DEFS: { id: string; label: string; test: (m: MemberRow) => boolean; onlyWhenAny?: boolean }[] = [
   { id: "subscribers", label: "מנויות 💜", test: (m) => m.role === "junior" && m.status === "active" },
   { id: "free", label: "ללא מנוי", test: (m) => m.role === "junior" && m.status === "pending" && m.profile_completed === true },
@@ -100,7 +100,7 @@ const RAW_STATUS: Record<string, (m: MemberRow) => boolean> = {
   rejected: (m) => m.status === "rejected",
 };
 
-/** Sortable/filterable columns — filter is a contains-match on the shown text. */
+/** Sortable/filterable columns - filter is a contains-match on the shown text. */
 const COLUMNS: { key: string; label: string; sortVal?: (m: MemberRow) => string; filterVal?: (m: MemberRow) => string }[] = [
   { key: "name", label: "חברה", sortVal: (m) => m.full_name ?? "", filterVal: (m) => m.full_name ?? "" },
   { key: "contact", label: "קשר", sortVal: (m) => m.email ?? "", filterVal: (m) => `${m.email ?? ""} ${m.phone ?? ""}` },
@@ -121,7 +121,7 @@ export function MembersTable({
 }: {
   members: MemberRow[];
   filterDefs?: FilterDef[];
-  /** Pre-applied status filter — the dashboard cubes deep-link with it. */
+  /** Pre-applied status filter - the dashboard cubes deep-link with it. */
   initialStatus?: string;
 }) {
   const [q, setQ] = useState("");
@@ -165,7 +165,7 @@ export function MembersTable({
   const effective = active.filter((f) => f.values.length > 0 || f.text.trim().length > 0);
   const finding = effective.length > 0;
 
-  // The criteria are matched on the SERVER (SQL over profile_answers) — the
+  // The criteria are matched on the SERVER (SQL over profile_answers) - the
   // browser no longer holds every member's every answer. Debounced per change.
   const [matchIds, setMatchIds] = useState<Set<string> | null>(null);
   const [matching, setMatching] = useState(false);
@@ -283,7 +283,7 @@ export function MembersTable({
             {finding && <span className="font-mono text-[11px]">({effective.length})</span>}
           </button>
         )}
-        {/* Excel export (the owner, 1/9) — exactly the rows currently shown,
+        {/* Excel export (the owner, 1/9) - exactly the rows currently shown,
             so the chips/filters shape the file. UTF-8 BOM keeps Hebrew intact
             when Excel opens the CSV. */}
         <button
@@ -379,7 +379,7 @@ export function MembersTable({
 
           {active.length === 0 && (
             <p className="text-[12.5px] text-ink-500">
-              בחרי פרמטר אחד או יותר — בכל פרמטר אפשר לסמן כמה ערכים. יוצגו רק חברות שעונות על כל
+              בחרי פרמטר אחד או יותר - בכל פרמטר אפשר לסמן כמה ערכים. יוצגו רק חברות שעונות על כל
               הפרמטרים, כשה-VIP ⭐ בראש הרשימה.
             </p>
           )}
@@ -496,12 +496,12 @@ export function MembersTable({
                       title="לפרופיל המלא"
                       className="font-medium text-ink-900 hover:text-brand-purple hover:underline inline-flex items-center gap-1"
                     >
-                      {m.full_name || "—"}
+                      {m.full_name || "-"}
                       <UserRound size={12} className="text-ink-400" />
                     </a>
                     <a
                       href={`/admin/members/${m.id}/profile`}
-                      title="הפרופיל המלא — כמו שמגייסת רואה"
+                      title="הפרופיל המלא - כמו שמגייסת רואה"
                       className="text-ink-400 hover:text-brand-purple"
                     >
                       <Eye size={13} />
@@ -531,7 +531,7 @@ export function MembersTable({
                       <CopyButton text={m.email} title="העתקת המייל" />
                     </span>
                   ) : (
-                    "—"
+                    "-"
                   )}
                   {m.phone && (
                     <div className="text-ink-500" dir="ltr">
@@ -539,8 +539,8 @@ export function MembersTable({
                     </div>
                   )}
                 </td>
-                <td className="p-2 border-b border-ink-100 text-ink-700">{m.study_place || "—"}</td>
-                <td className="p-2 border-b border-ink-100 text-ink-700">{m.region || "—"}</td>
+                <td className="p-2 border-b border-ink-100 text-ink-700">{m.study_place || "-"}</td>
+                <td className="p-2 border-b border-ink-100 text-ink-700">{m.region || "-"}</td>
                 <td className="p-2 border-b border-ink-100 text-ink-500 whitespace-nowrap">
                   {new Date(m.created_at).toLocaleDateString("he-IL")}
                 </td>
@@ -551,7 +551,7 @@ export function MembersTable({
                     <details className="relative">
                       <summary
                         className="list-none cursor-pointer inline-flex items-center gap-1 text-[12px] font-semibold text-brand-purple hover:underline [&::-webkit-details-marker]:hidden"
-                        title="תזכורת להשלמת השאלון — לחיצה לכל התאריכים"
+                        title="תזכורת להשלמת השאלון - לחיצה לכל התאריכים"
                       >
                         ✉️ {new Date(m.reminders[0]).toLocaleDateString("he-IL")}
                         {m.reminders.length > 1 && <span className="text-ink-400 font-normal">×{m.reminders.length}</span>}
@@ -566,7 +566,7 @@ export function MembersTable({
                       </div>
                     </details>
                   ) : (
-                    <span className="text-ink-300">—</span>
+                    <span className="text-ink-300">-</span>
                   )}
                 </td>
                 <td className="p-2 border-b border-ink-100"><RoleTag role={m.role} experienced={m.is_experienced === true} /></td>

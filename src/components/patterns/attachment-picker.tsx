@@ -5,7 +5,7 @@ import { FileText, ImageIcon, Loader2, Paperclip, X } from "lucide-react";
 import { uploadAttachment, removeUnlinkedAttachment, type UploadedAttachment } from "@/app/(app)/attachments/actions";
 
 /**
- * Attach files to whatever is being composed: a paperclip button, and paste —
+ * Attach files to whatever is being composed: a paperclip button, and paste -
  * an image pasted anywhere inside `children` (the editor) uploads too. Each
  * uploaded file becomes a chip with a remove ×, and a hidden attach_ids input
  * the send action reads to link the files to the new post/comment/message.
@@ -31,7 +31,7 @@ export function AttachmentPicker({ children }: { children: ReactNode }) {
 
   function remove(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
-    // Fire and forget — the nightly sweep is the safety net anyway.
+    // Fire and forget - the nightly sweep is the safety net anyway.
     void removeUnlinkedAttachment(id);
   }
 

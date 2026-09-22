@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // ---------------------------------------------------------------------------
-// שעון ישראל — מקור אמת יחיד לזמני סשנים.
+// שעון ישראל - מקור אמת יחיד לזמני סשנים.
 // The server renders in UTC and a member's browser can sit in any zone, so a
 // session time is never formatted or parsed without naming the zone explicitly.
 // The offset is derived per date (Israel moves between +02:00 and +03:00), never
@@ -37,7 +37,7 @@ function israelWallClock(date: Date) {
     year: Number(p.year),
     month: Number(p.month),
     day: Number(p.day),
-    // h23 keeps midnight at 00, but guard anyway — some engines emit 24.
+    // h23 keeps midnight at 00, but guard anyway - some engines emit 24.
     hour: Number(p.hour) % 24,
     minute: Number(p.minute),
     second: Number(p.second),
@@ -67,7 +67,7 @@ export function israelLocalToIso(local: string): string {
   return new Date(ts).toISOString();
 }
 
-/** Inverse of `israelLocalToIso` — fills a `datetime-local` field for editing. */
+/** Inverse of `israelLocalToIso` - fills a `datetime-local` field for editing. */
 export function isoToIsraelInput(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
@@ -84,7 +84,7 @@ export function fmtIsraelDate(
   return new Date(iso).toLocaleDateString("he-IL", { ...opts, timeZone: ISRAEL_TZ });
 }
 
-/** "19:00" — Israel time, 24h. */
+/** "19:00" - Israel time, 24h. */
 export function fmtIsraelTime(iso: string): string {
   return new Date(iso).toLocaleTimeString("he-IL", {
     hour: "2-digit",
@@ -94,7 +94,7 @@ export function fmtIsraelTime(iso: string): string {
   });
 }
 
-/** "20 באוג׳, 19:00" — the compact date+time used in lists. */
+/** "20 באוג׳, 19:00" - the compact date+time used in lists. */
 export function fmtIsraelDateTime(iso: string): string {
   return `${fmtIsraelDate(iso, { day: "numeric", month: "short" })}, ${fmtIsraelTime(iso)}`;
 }

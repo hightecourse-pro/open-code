@@ -10,7 +10,7 @@ interface Option {
 }
 
 /**
- * The grant used to fail in silence — the admin clicked, nothing moved, and
+ * The grant used to fail in silence - the admin clicked, nothing moved, and
  * she had no way to tell whether it worked. useActionState gives her an answer.
  */
 export function ManualShareForm({

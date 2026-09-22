@@ -18,7 +18,7 @@ export async function portalLogin(
 
   const client = await authenticate(username, password);
 
-  // A single message for both an unknown username and a wrong password — the
+  // A single message for both an unknown username and a wrong password - the
   // form must not double as a way to discover which companies have access.
   if (!client) {
     return { error: "שם המשתמש או הסיסמה שגויים." };

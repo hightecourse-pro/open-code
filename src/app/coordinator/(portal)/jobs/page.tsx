@@ -35,7 +35,7 @@ function JobStatusBadge({ j }: { j: CoordinatorJob }) {
 
 /**
  * The status through the coordinator's eyes (the owner, 15/9): SHE applied
- * ("הגישה מועמדות" — we didn't submit anything yet); once WE forwarded her,
+ * ("הגישה מועמדות" - we didn't submit anything yet); once WE forwarded her,
  * "הוגשה ע"י קוד פתוח" in green; a hire gets its own גויסה marker.
  */
 function ApplicantStatus({ a }: { a: CoordinatorJob["applicants"][number] }) {
@@ -79,8 +79,8 @@ export default async function CoordinatorJobsPage() {
       </h2>
       <p className="text-[12px] text-ink-500 mb-2">
         כל המשרות הפתוחות שלנו + משרות שבוגרות מהמוסדות שלך הגישו אליהן דרך האתר.{" "}
-        <span className="text-success font-semibold">בירוק</span> — מועמדות שקוד פתוח הגישה
-        למעסיק. במשרה שעוד לא הגשנו אליה — נשמח להמלצה שלך 💜
+        <span className="text-success font-semibold">בירוק</span> - מועמדות שקוד פתוח הגישה
+        למעסיק. במשרה שעוד לא הגשנו אליה - נשמח להמלצה שלך 💜
       </p>
       <div className="flex flex-col">
         {jobs.map((j) => (
@@ -134,7 +134,7 @@ export default async function CoordinatorJobsPage() {
             {j.status === "open" && !j.oursSubmittedAny && (
               <details className="mt-1.5 group">
                 <summary className="text-[12.5px] font-semibold text-brand-purple cursor-pointer w-fit list-none [&::-webkit-details-marker]:hidden">
-                  💜 עוד לא הגשנו מועמדות למשרה הזו — יש לך בוגרת מתאימה? המלצה ▾
+                  💜 עוד לא הגשנו מועמדות למשרה הזו - יש לך בוגרת מתאימה? המלצה ▾
                 </summary>
                 <RecommendForm jobId={j.id} graduates={gradOptions} />
               </details>

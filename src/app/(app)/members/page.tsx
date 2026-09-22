@@ -9,7 +9,7 @@ import type { InstantItem } from "@/components/patterns/instant-filter";
 
 export const metadata: Metadata = { title: "המשתתפות שלנו" };
 
-/** PostgREST page size — the loop below walks pages until it drains. */
+/** PostgREST page size - the loop below walks pages until it drains. */
 const PAGE = 500;
 /** What the first paint carries while the full list streams in behind it. */
 const FIRST_CHUNK = 60;
@@ -24,7 +24,7 @@ interface Viewer {
 /**
  * Load directory members (optionally only the first chunk) with everything the
  * card shows: score, study place, city, the מנויה badge. Shared by the instant
- * first paint and the full streamed list — same enrichment, different size.
+ * first paint and the full streamed list - same enrichment, different size.
  */
 async function loadDirectoryItems(
   viewer: Viewer,
@@ -33,9 +33,9 @@ async function loadDirectoryItems(
 ): Promise<InstantItem[]> {
   const supabase = await createClient();
 
-  // members_directory — never `profiles`: the view carries no `status` or
+  // members_directory - never `profiles`: the view carries no `status` or
   // `member_tier`; the ONE payment fact it exposes is the deliberate
-  // is_subscriber badge. Since 31/8 it lists pending members too — the owner:
+  // is_subscriber badge. Since 31/8 it lists pending members too - the owner:
   // "אמורים לראות את כולן".
   const data: DirectoryMember[] = [];
   for (let from = 0; ; from += PAGE) {
@@ -56,13 +56,13 @@ async function loadDirectoryItems(
     data.push(...((page ?? []) as DirectoryMember[]));
     if (!page || page.length < pageSize || (limit && data.length >= limit)) break;
   }
-  // Hebrew alphabetical — the database collation isn't necessarily Hebrew-aware.
+  // Hebrew alphabetical - the database collation isn't necessarily Hebrew-aware.
   const members: DirectoryMember[] = data.sort((a, b) => a.full_name.localeCompare(b.full_name, "he"));
 
-  // Mentor scores are public — the directory card carries them.
+  // Mentor scores are public - the directory card carries them.
   const scores = await mentorScores(members.filter((m) => m.role === "mentor").map((m) => m.id));
 
-  // Study place + city on the card (the owner, 1/9 + 31/8: עיר במקום אזור) —
+  // Study place + city on the card (the owner, 1/9 + 31/8: עיר במקום אזור) -
   // stored as the selects' VALUEs in profile_answers; resolved to labels here
   // with the service role (answers aren't member-readable) and passed per card.
   const { createAdminClient } = await import("@/lib/supabase/admin");
@@ -93,7 +93,7 @@ async function loadDirectoryItems(
     }
   }
 
-  // Who is a paying subscriber — since 31/8 the view computes it (activated
+  // Who is a paying subscriber - since 31/8 the view computes it (activated
   // paid junior / live subscription / on the Nedarim payers list), so a
   // PENDING member who already paid is labeled מנויה too (the owner's ask).
   const subscriberIds = new Set(members.filter((m) => m.is_subscriber === true).map((m) => m.id));
@@ -159,7 +159,7 @@ export default async function MembersPage({
 }) {
   const { q, g } = await searchParams;
   // The chip filter survives the round-trip to a member's page (?g= written
-  // client-side with replaceState) — validate to the known groups.
+  // client-side with replaceState) - validate to the known groups.
   const initialGroup = ["subscriber", "mentor", "team"].includes(g ?? "") ? g! : "";
 
   const me = await requireCommunityAccess();
@@ -173,7 +173,7 @@ export default async function MembersPage({
   const supabase = await createClient();
 
   // The TRUE numbers, fetched up front (the owner, 10/9: "רק שהמספרים הנכונים
-  // תשלוף מראש") — cheap head-counts on the view, so the chips are right from
+  // תשלוף מראש") - cheap head-counts on the view, so the chips are right from
   // the first paint even while most of the list is still streaming in.
   const countBase = () =>
     supabase.from("members_directory").select("id", { count: "exact", head: true }).neq("id", me.id);
@@ -191,7 +191,7 @@ export default async function MembersPage({
   };
 
   // The first chunk renders IMMEDIATELY (the owner, 10/9: "לא יכול להיות
-  // שנכנסים ורואים ריק") — the rest of the directory streams in behind it
+  // שנכנסים ורואים ריק") - the rest of the directory streams in behind it
   // via Suspense and replaces the list when ready.
   const firstItems = await loadDirectoryItems(viewer, serverNeedle, FIRST_CHUNK);
   const partial = counts.all > firstItems.length;
@@ -202,11 +202,11 @@ export default async function MembersPage({
         <span className="font-mono text-xs text-brand-pink-deep">&lt;קהילה/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המשתתפות שלנו 💜</h1>
         <p className="t-body-sm text-ink-700">
-          כל מי שנמצאת כאן איתנו. חפשי לפי שם, תחום או עיר — ואם בא לך להכיר, אפשר לכתוב לה ישירות.
+          כל מי שנמצאת כאן איתנו. חפשי לפי שם, תחום או עיר - ואם בא לך להכיר, אפשר לכתוב לה ישירות.
         </p>
       </div>
 
-      {/* Instant search — she types, the cards narrow, nothing navigates.
+      {/* Instant search - she types, the cards narrow, nothing navigates.
           An incoming ?q= from an old link still pre-fills the box. */}
       {partial ? (
         <Suspense

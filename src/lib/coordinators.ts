@@ -1,6 +1,6 @@
 // Coordinator-portal core (the owner, 14/9): institutions' contact people
 // (רכזות) get an OTP-only personal area. Deliberately separate from member
-// auth AND from the employer portal — a third door, mirroring the portal's
+// auth AND from the employer portal - a third door, mirroring the portal's
 // signed-cookie session so no Supabase user (and no member profile) is ever
 // created for a coordinator.
 
@@ -10,7 +10,7 @@ import { cookies } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const COOKIE = "oc_coord";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // a week — רכזות check in occasionally
+const SESSION_MAX_AGE = 60 * 60 * 24 * 7; // a week - רכזות check in occasionally
 const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 
@@ -21,7 +21,7 @@ export interface Coordinator {
   phone: string | null;
   /** study_place option values she is linked to. */
   institutions: string[];
-  /** The subset of institutions whose REVIEWS she manages (sees/updates) —
+  /** The subset of institutions whose REVIEWS she manages (sees/updates) -
    *  the owner, 16/9: multi-contact institutions pick one reviews manager. */
   reviewInstitutions: string[];
 }
@@ -30,7 +30,7 @@ function sessionSecret(): string {
   const secret = process.env.PORTAL_SESSION_SECRET || process.env.AI_KEY_SECRET || "";
   if (!secret) {
     throw new Error(
-      "coordinator_session_secret_missing: set PORTAL_SESSION_SECRET — the coordinator portal cannot sign sessions without it"
+      "coordinator_session_secret_missing: set PORTAL_SESSION_SECRET - the coordinator portal cannot sign sessions without it"
     );
   }
   // Derived, so coordinator cookies can never be replayed against the
@@ -73,7 +73,7 @@ export async function startCoordinatorSession(contactId: string): Promise<void> 
 
 export async function endCoordinatorSession(): Promise<void> {
   const jar = await cookies();
-  // Expire on the cookie's own path — a bare delete targets path=/ and
+  // Expire on the cookie's own path - a bare delete targets path=/ and
   // silently leaves the real session alive (the portal's hard-won lesson).
   jar.set(COOKIE, "", {
     httpOnly: true,
@@ -85,7 +85,7 @@ export async function endCoordinatorSession(): Promise<void> {
 }
 
 /** The signed-in coordinator with her institutions, or null. Memoized per
- *  request — the portal layout and its pages both ask. */
+ *  request - the portal layout and its pages both ask. */
 export const getCoordinator = cache(async (): Promise<Coordinator | null> => {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
@@ -102,7 +102,7 @@ export const getCoordinator = cache(async (): Promise<Coordinator | null> => {
       .eq("contact_id", contactId),
   ]);
   if (!contact) return null;
-  // The owner's per-contact switch (16/9) — off means the door is shut even
+  // The owner's per-contact switch (16/9) - off means the door is shut even
   // with a live cookie.
   if (contact.portal_enabled === false) return null;
   return {
@@ -133,7 +133,7 @@ export function generateOtpCode(): string {
 
 /**
  * Store a fresh OTP for a KNOWN contact email. Returns the code to send, or
- * null when the email belongs to no contact — the caller answers identically
+ * null when the email belongs to no contact - the caller answers identically
  * either way, so the login form never confirms which emails exist.
  */
 export async function createOtp(email: string): Promise<string | null> {

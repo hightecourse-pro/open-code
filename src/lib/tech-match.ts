@@ -3,8 +3,8 @@
  *
  * Job tags are typed free-hand by admins ("node", "JS", "SQL...", "pyton"),
  * while a member's skills are canonical taxonomy values ("nodejs",
- * "javascript", "sql", "python"). Exact string comparison between the two —
- * which is what the jobs board used to do — silently missed most real matches:
+ * "javascript", "sql", "python"). Exact string comparison between the two -
+ * which is what the jobs board used to do - silently missed most real matches:
  * a member with SQL in her profile was not offered a job tagged "SQL...".
  *
  * Both sides now reduce to the same canonical key before comparing.

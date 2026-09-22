@@ -10,10 +10,10 @@ import { approveMentorApplication, rejectMentorApplication, sendPersonalEmail } 
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
 
 /**
- * The mentor-approval queue with the WHOLE application in front of her — the
+ * The mentor-approval queue with the WHOLE application in front of her - the
  * owner (10/9): "אני לא רואה מול העיניים את כל הנתונים כדי לאשר". One shared
  * card for the dashboard AND /admin/mentors, so approving anywhere goes
- * through approveMentorApplication (the מייל אושרת flow) — the dashboard's
+ * through approveMentorApplication (the מייל אושרת flow) - the dashboard's
  * old ✓ went through the generic status action and sent her nothing.
  */
 export async function PendingMentorApplications({
@@ -30,7 +30,7 @@ export async function PendingMentorApplications({
   showEmpty?: boolean;
 }) {
   const supabase = await createClient();
-  // Self-served applications from the join screen — approving is what mails
+  // Self-served applications from the join screen - approving is what mails
   // her the promised "אושרת" email.
   const { data: pendingApps } = await supabase
     .from("profiles")
@@ -70,7 +70,7 @@ export async function PendingMentorApplications({
     }
   }
 
-  // Everything she needs IN FRONT OF HER to approve — the applicant's
+  // Everything she needs IN FRONT OF HER to approve - the applicant's
   // questionnaire answers laid out on the card itself, not a click away.
   type Fact = { label: string; value: string };
   const factsOf = new Map<string, Fact[]>();
@@ -103,7 +103,7 @@ export async function PendingMentorApplications({
       if (!valueOf.has(a.profile_id)) valueOf.set(a.profile_id, new Map());
       valueOf.get(a.profile_id)!.set(q.key, a.value);
     }
-    // Reading order: the mentor questions carry the decision — they lead.
+    // Reading order: the mentor questions carry the decision - they lead.
     const FACT_KEYS = [
       "mentor_workplace", "mentor_years", "mentor_tech", "mentor_ai_experience",
       "mentor_contribution", "city", "phone", "language_skills", "github",
@@ -195,7 +195,7 @@ export async function PendingMentorApplications({
                 <Button type="submit" size="sm">אישור 👑</Button>
               </form>
 
-              {/* The whole application at a glance — approving straight off
+              {/* The whole application at a glance - approving straight off
                   the card, without opening the file (the owner, 10/9). */}
               {(factsOf.get(p.id) ?? []).length > 0 && (
                 <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-4 gap-y-2 bg-tint-warm/40 border border-[#EAD9A8] rounded-md p-3">
@@ -220,7 +220,7 @@ export async function PendingMentorApplications({
                 </div>
               )}
 
-              {/* A personal word before (or instead of) the decision — the
+              {/* A personal word before (or instead of) the decision - the
                   branded email that ALSO lands in her chat with the team. */}
               <details className="w-full">
                 <summary className="cursor-pointer text-[12.5px] font-semibold text-brand-purple hover:underline list-none">
@@ -236,7 +236,7 @@ export async function PendingMentorApplications({
                     rows={3}
                     maxLength={4000}
                     className="w-full rounded-md border border-ink-200 bg-white p-2 text-[13px] focus:outline-none focus:border-brand-purple"
-                    placeholder="ההודעה נשלחת אליה במייל ממותג ומופיעה גם בצ'אט שלה עם הצוות — התשובה שלה תגיע אלייך לצ'אט."
+                    placeholder="ההודעה נשלחת אליה במייל ממותג ומופיעה גם בצ'אט שלה עם הצוות - התשובה שלה תגיע אלייך לצ'אט."
                   />
                   <div>
                     <Button type="submit" size="sm">שליחה</Button>
@@ -244,7 +244,7 @@ export async function PendingMentorApplications({
                 </form>
               </details>
 
-              {/* Declining requires a personal explanation — it goes to her
+              {/* Declining requires a personal explanation - it goes to her
                   by email, and she stays a regular (not-subscribed) member. */}
               <details className="w-full">
                 <summary className="cursor-pointer text-[12.5px] font-semibold text-ink-500 hover:text-danger list-none">
@@ -264,7 +264,7 @@ export async function PendingMentorApplications({
                     rows={3}
                     maxLength={2000}
                     className="w-full rounded-md border border-ink-200 bg-white p-2 text-[13px] focus:outline-none focus:border-brand-purple"
-                    placeholder="למשל: ראינו שהניסיון שלך עדיין בתחילת הדרך — נשמח שתגישי שוב בעוד שנה…"
+                    placeholder="למשל: ראינו שהניסיון שלך עדיין בתחילת הדרך - נשמח שתגישי שוב בעוד שנה…"
                   />
                   <div className="flex items-center gap-2">
                     <Button type="submit" size="sm" variant="ghost">שליחת הדחייה</Button>

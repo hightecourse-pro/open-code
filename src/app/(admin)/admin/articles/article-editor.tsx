@@ -17,7 +17,7 @@ export interface EditableArticle {
 
 /**
  * Create/edit form: an article is EITHER a link out (url) OR in-app rich
- * content (WordPress-style — headings, images, YouTube). The category comes
+ * content (WordPress-style - headings, images, YouTube). The category comes
  * from a dropdown of the categories already in use, and stays free to extend.
  */
 export function ArticleEditor({
@@ -100,10 +100,10 @@ export function ArticleEditor({
             name="body_html"
             defaultValue={article?.body_html ?? ""}
             tools={["bold", "italic", "h3", "ul", "ol", "link", "image", "video"]}
-            placeholder="כתבי את המאמר כאן — כותרות, רשימות, תמונות וסרטונים…"
+            placeholder="כתבי את המאמר כאן - כותרות, רשימות, תמונות וסרטונים…"
           />
           <p className="text-[12px] text-ink-500 mt-1.5">
-            תמונה — מדביקים קישור לתמונה; סרטון — מדביקים קישור YouTube והוא מוטמע בתוך המאמר.
+            תמונה - מדביקים קישור לתמונה; סרטון - מדביקים קישור YouTube והוא מוטמע בתוך המאמר.
           </p>
         </div>
       )}

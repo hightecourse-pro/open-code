@@ -4,7 +4,7 @@
  * Allowlist only: p, br, b, strong, i, em, ul, ol, li, h3, div, span and
  * a[href] where href is http/https. Every attribute except a.href is dropped
  * (style/class/on* included), so the rendered output always inherits brand
- * styles. Safe to run on the server — no browser APIs.
+ * styles. Safe to run on the server - no browser APIs.
  */
 
 const ALLOWED_TAGS = new Set([
@@ -36,7 +36,7 @@ function safeHref(attrs: string): string | null {
   const m = /href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(attrs);
   const raw = (m?.[1] ?? m?.[2] ?? m?.[3] ?? "").trim();
   if (!/^https?:\/\//i.test(raw)) return null;
-  // We emit the value inside double quotes — make breaking out impossible.
+  // We emit the value inside double quotes - make breaking out impossible.
   return raw.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
@@ -96,7 +96,7 @@ const EMBED_HOSTS = /^https:\/\/(www\.)?(youtube\.com|youtube-nocookie\.com)\/em
 /**
  * The ARTICLE sanitizer: everything sanitizeRichHtml allows, plus images
  * (img[src] over https) and video embeds (iframe from YouTube/Vimeo only),
- * and h2 for article structure. Admin-authored content only — members never
+ * and h2 for article structure. Admin-authored content only - members never
  * reach this path.
  */
 export function sanitizeArticleHtml(html: string): string {
@@ -128,7 +128,7 @@ export function sanitizeArticleHtml(html: string): string {
 
 /**
  * The plain-text mirror of rich HTML: line breaks preserved, formatting
- * dropped. Used for emails and anywhere the styled version can't render —
+ * dropped. Used for emails and anywhere the styled version can't render -
  * the admin writes once, this copy derives itself.
  */
 export function htmlToPlainText(html: string | null | undefined): string {

@@ -155,7 +155,7 @@ const HIRE_STATUS: Record<string, { label: string; cls: string }> = {
   paid: { label: "שולם", cls: "bg-tint-mint text-success" },
 };
 
-/** One hired woman under a job — name, billing status, and a move control. */
+/** One hired woman under a job - name, billing status, and a move control. */
 function HireChipRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) {
   const [, start] = useTransition();
   const st = HIRE_STATUS[hire.status] ?? HIRE_STATUS.started;
@@ -192,7 +192,7 @@ function HireChipRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) {
   );
 }
 
-/** One client — collapsed summary row that expands to edit + jobs. */
+/** One client - collapsed summary row that expands to edit + jobs. */
 function ClientRow({ client }: { client: CrmClientRow }) {
   const [open, setOpen] = useState(false);
   const st = CRM_STATUS[client.crm_status] ?? CRM_STATUS.initial_call;
@@ -260,7 +260,7 @@ function ClientRow({ client }: { client: CrmClientRow }) {
         <div className="pb-4 pt-1 px-1 flex flex-col gap-4">
           {needsCredentials && (
             <Alert variant="warn">
-              טרם הוקצו פרטי גישה —{" "}
+              טרם הוקצו פרטי גישה -{" "}
               <Link href="/admin/clients" className="font-semibold underline hover:text-brand-pink-deep">
                 הקצי במסך לקוחות פורטל
               </Link>
@@ -345,7 +345,7 @@ function ClientRow({ client }: { client: CrmClientRow }) {
             )}
             {client.hires.some((h) => !h.job_id || !client.jobs.find((j) => j.id === h.job_id)) && (
               <div className="mt-2">
-                <div className="text-xs font-semibold text-ink-700 mb-0.5">גויסו — עדיין בלי שיוך למשרה</div>
+                <div className="text-xs font-semibold text-ink-700 mb-0.5">גויסו - עדיין בלי שיוך למשרה</div>
                 {client.hires
                   .filter((h) => !h.job_id || !client.jobs.find((j) => j.id === h.job_id))
                   .map((h) => (
@@ -360,7 +360,7 @@ function ClientRow({ client }: { client: CrmClientRow }) {
   );
 }
 
-/** A hire not attached to any job yet — pick one of the client's jobs. */
+/** A hire not attached to any job yet - pick one of the client's jobs. */
 function HireAssignRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) {
   const [, start] = useTransition();
   const st = HIRE_STATUS[hire.status] ?? HIRE_STATUS.started;
@@ -386,7 +386,7 @@ function HireAssignRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) 
   );
 }
 
-/** Show/hide on the members' board — one click on the row (the owner, 3/9). */
+/** Show/hide on the members' board - one click on the row (the owner, 3/9). */
 function JobEyeButton({ jobId, visible }: { jobId: string; visible: boolean }) {
   const [, start] = useTransition();
   return (
@@ -401,7 +401,7 @@ function JobEyeButton({ jobId, visible }: { jobId: string; visible: boolean }) {
   );
 }
 
-/** One click, one draft job — hidden from the board until she publishes. */
+/** One click, one draft job - hidden from the board until she publishes. */
 function QuickJobButton({ clientId }: { clientId: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -463,7 +463,7 @@ export function CrmManager({ clients }: { clients: CrmClientRow[] }) {
 
   return (
     <>
-      {/* add lead — behind the top button so the pipeline shows first */}
+      {/* add lead - behind the top button so the pipeline shows first */}
       {showAdd && (
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <h3 className="font-display text-base font-bold mb-1">הוספת ליד</h3>

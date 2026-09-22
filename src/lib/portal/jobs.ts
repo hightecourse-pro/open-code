@@ -2,7 +2,7 @@
 //
 // Candidates always go through loadCandidates(), so the same privacy contract
 // applies here: only listed, active, completed members with employer-visible
-// fields — a member who opted out of the portal never appears, even if an
+// fields - a member who opted out of the portal never appears, even if an
 // admin added her to a job.
 //
 // SENT gate: curation is internal staging. A candidate reaches the client ONLY
@@ -28,7 +28,7 @@ export interface ClientJob {
   candidates: CandidateDetail[];
   /**
    * The client's own feedback per candidate id (interview mark + note). Both
-   * loaders fill it, and only for candidates the client can actually see — a
+   * loaders fill it, and only for candidates the client can actually see - a
    * hidden candidate's row must not leak even as a bare id.
    */
   feedback?: Record<string, ClientJobFeedback>;
@@ -87,8 +87,8 @@ export interface SentCandidateJob {
 }
 
 /**
- * The client's jobs on which we SENT this candidate — job_candidates rows on
- * the client's jobs with sent_at stamped — each with the client's own feedback
+ * The client's jobs on which we SENT this candidate - job_candidates rows on
+ * the client's jobs with sent_at stamped - each with the client's own feedback
  * (interview mark + note), so the candidate page can offer the invite control
  * right where the client is reading. An empty array is the same privacy gate
  * candidateSentToClient enforces: never sent ⇒ nothing to show.
@@ -119,7 +119,7 @@ export async function candidateSentJobs(
 }
 
 /**
- * Whether we ever SENT this candidate to this client — a job_candidates row on
+ * Whether we ever SENT this candidate to this client - a job_candidates row on
  * one of the client's jobs with sent_at stamped. This is the privacy gate for
  * clients without free search: any other candidate must look nonexistent.
  */
@@ -130,7 +130,7 @@ export async function candidateSentToClient(clientId: string, profileId: string)
 
 /**
  * One job, only if it belongs to this client. null otherwise (404 upstream).
- * includeUnsent is for the ADMIN send flow only — it previews the not-yet-sent
+ * includeUnsent is for the ADMIN send flow only - it previews the not-yet-sent
  * curated list through the same privacy gate. Portal pages never pass it.
  */
 export async function loadClientJob(
@@ -160,7 +160,7 @@ export async function loadClientJob(
     .map((r) => byId.get(r.profile_id))
     .filter((c): c is CandidateDetail => !!c);
 
-  // Feedback only for candidates the client can see — a hidden candidate's row
+  // Feedback only for candidates the client can see - a hidden candidate's row
   // must not leak even as a bare id.
   const shown = new Set(list.map((c) => c.id));
   const feedback: Record<string, ClientJobFeedback> = {};

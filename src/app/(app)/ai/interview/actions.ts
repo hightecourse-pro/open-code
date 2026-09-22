@@ -18,7 +18,7 @@ const DIFFS: InterviewDifficulty[] = ["basic", "standard", "hard"];
 
 // Not exported: a "use server" module may only export async functions.
 const REASON_MSG: Record<AiReason, string> = {
-  no_key: "כדי לתרגל ראיון תצטרכי מפתח Google — תוכלי להוסיף אותו בעמוד מפתחות ה-AI.",
+  no_key: "כדי לתרגל ראיון תצטרכי מפתח Google - תוכלי להוסיף אותו בעמוד מפתחות ה-AI.",
   exhausted: "המפתח הגיע למכסת השימוש. הוסיפי מפתח נוסף ונמשיך 💜",
   invalid: "המפתח לא תקין יותר. בדקי אותו או הוסיפי חדש.",
   error: "משהו השתבש. בואי ננסה שוב.",
@@ -50,7 +50,7 @@ export async function startInterview(_prev: StartState, formData: FormData): Pro
   const tech = formData.getAll("tech").map(String);
   const cfg: InterviewConfig = { agent, difficulty, tech };
 
-  // Generate the opening question first — this both validates the key and
+  // Generate the opening question first - this both validates the key and
   // avoids creating an empty session if there's no usable key.
   const first = await withUserKey((apiKey) => interviewReply(apiKey, cfg, []));
   if (!first.ok) return { reason: first.reason, error: REASON_MSG[first.reason] };
@@ -92,7 +92,7 @@ export async function sendAnswer(
   const answer = String(formData.get("answer") ?? "").trim();
   if (!answer) return {};
 
-  // Gate every turn, not just the first — otherwise a session started while
+  // Gate every turn, not just the first - otherwise a session started while
   // subscribed keeps running the paid tool after the membership lapses.
   const me = await getProfile();
   if (!me || !isSubscriber(me)) {
@@ -119,7 +119,7 @@ export async function sendAnswer(
     { session_id: sessionId, role: "candidate", text: answer },
     { session_id: sessionId, role: "agent", text: reply.data },
   ]);
-  // A silent failure here would swallow the member's answer — tell her instead.
+  // A silent failure here would swallow the member's answer - tell her instead.
   if (turnErr) return { error: "התשובה לא נשמרה. נסי לשלוח אותה שוב." };
 
   revalidatePath(`/ai/interview/${sessionId}`);
@@ -172,7 +172,7 @@ export type TranscribeState = { text?: string; error?: string; reason?: AiReason
 /**
  * Transcribe a recorded voice answer with Gemini (the member's own key).
  * The browsers' built-in speech engines proved unreliable for Hebrew (the
- * tester got English words in Chrome AND Edge) — so the mic now records
+ * tester got English words in Chrome AND Edge) - so the mic now records
  * audio and Gemini, which handles Hebrew well, does the transcription.
  */
 export async function transcribeAnswer(formData: FormData): Promise<TranscribeState> {
@@ -188,10 +188,10 @@ export async function transcribeAnswer(formData: FormData): Promise<TranscribeSt
 
   const audio = formData.get("audio");
   const mime = String(formData.get("mime") ?? "audio/webm");
-  if (!(audio instanceof File) || audio.size === 0) return { error: "לא הוקלט קול — נסי שוב." };
+  if (!(audio instanceof File) || audio.size === 0) return { error: "לא הוקלט קול - נסי שוב." };
   // ~90 seconds of opus comfortably; a runaway recording must not blow the
   // request or the token budget.
-  if (audio.size > 4 * 1024 * 1024) return { error: "ההקלטה ארוכה מדי — עד כדקה וחצי 🙂" };
+  if (audio.size > 4 * 1024 * 1024) return { error: "ההקלטה ארוכה מדי - עד כדקה וחצי 🙂" };
   const base64 = Buffer.from(await audio.arrayBuffer()).toString("base64");
 
   const { geminiText } = await import("@/lib/ai/gemini");
@@ -199,7 +199,7 @@ export async function transcribeAnswer(formData: FormData): Promise<TranscribeSt
     geminiText({
       apiKey,
       system:
-        "את מתמללת תשובה מוקלטת של מועמדת בראיון עבודה. תמללי במדויק את מה שנאמר, בעברית (מונחים טכניים באנגלית נשארים באנגלית). החזירי אך ורק את התמלול — בלי הערות, בלי מרכאות.",
+        "את מתמללת תשובה מוקלטת של מועמדת בראיון עבודה. תמללי במדויק את מה שנאמר, בעברית (מונחים טכניים באנגלית נשארים באנגלית). החזירי אך ורק את התמלול - בלי הערות, בלי מרכאות.",
       contents: [
         {
           role: "user",
@@ -212,6 +212,6 @@ export async function transcribeAnswer(formData: FormData): Promise<TranscribeSt
   );
   if (!res.ok) return { reason: res.reason, error: REASON_MSG[res.reason] };
   const text = res.data.trim();
-  if (!text) return { error: "לא הצלחנו לשמוע — נסי להקליט שוב קרוב יותר למיקרופון." };
+  if (!text) return { error: "לא הצלחנו לשמוע - נסי להקליט שוב קרוב יותר למיקרופון." };
   return { text };
 }

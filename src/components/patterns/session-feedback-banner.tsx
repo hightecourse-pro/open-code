@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { submitSessionFeedback } from "@/app/(app)/session-feedback/actions";
 
 // The four rating slots are fixed columns in session_feedback; their LABELS
-// are the admin's to word (הגדרות → שאלות המשוב) — these are the defaults.
+// are the admin's to word (הגדרות → שאלות המשוב) - these are the defaults.
 export const DEFAULT_ASPECTS = [
   { name: "content", label: "התוכן עצמו" },
   { name: "practical", label: "כמה זה מעשי" },
@@ -26,7 +26,7 @@ function StarRow({
   onChange: (v: number) => void;
   label: string;
 }) {
-  // Empty stars used to be ink-200 outlines on the lilac gradient — invisible
+  // Empty stars used to be ink-200 outlines on the lilac gradient - invisible
   // enough that "אין אפשרות לדרג" was reported. The empty state must READ as a
   // clickable rating: darker outline, bigger target, hover previews the fill.
   const [hover, setHover] = useState(0);
@@ -70,7 +70,7 @@ function StarRow({
 /**
  * For a week after a session ends: "היית איתנו? דעתך חשובה לנו". A "לא" just
  * closes the ask; a "כן" opens the four ratings the PM specified. Answered
- * once per session — the server keeps it that way.
+ * once per session - the server keeps it that way.
  */
 export function SessionFeedbackBanner({
   sessionId,
@@ -80,7 +80,7 @@ export function SessionFeedbackBanner({
 }: {
   sessionId: string;
   sessionTitle: string;
-  /** Pre-formatted (Israel time) — so it's clear WHICH session this asks about. */
+  /** Pre-formatted (Israel time) - so it's clear WHICH session this asks about. */
   sessionDate?: string;
   /** Admin-worded rating labels; falls back to the defaults. */
   aspects?: FeedbackAspect[];
@@ -155,7 +155,7 @@ export function SessionFeedbackBanner({
           className="flex flex-col gap-2"
         >
           {error && <Alert variant="danger">{error}</Alert>}
-          <p className="text-[12.5px] text-ink-500">לחצי על הכוכבים לדירוג — 1 עד 5 בכל שורה:</p>
+          <p className="text-[12.5px] text-ink-500">לחצי על הכוכבים לדירוג - 1 עד 5 בכל שורה:</p>
           {aspects.map((a) => (
             <StarRow
               key={a.name}

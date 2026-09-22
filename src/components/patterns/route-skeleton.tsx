@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Skeleton building blocks for the route loading states (loading.tsx files).
- * The shell (sidebar, nav) stays interactive while a page's data loads — these
+ * The shell (sidebar, nav) stays interactive while a page's data loads - these
  * fill the content column so navigation feels instant instead of frozen.
  * Ink/tint palette only, one gentle shared pulse; screen readers get a single
  * status line instead of a pile of gray boxes.
@@ -13,7 +13,7 @@ export function Bone({ className }: { className?: string }) {
   return <div aria-hidden className={cn("animate-pulse rounded-md bg-ink-100", className)} />;
 }
 
-/** A circle — where an avatar will land. */
+/** A circle - where an avatar will land. */
 export function BoneCircle({ className }: { className?: string }) {
   return <div aria-hidden className={cn("animate-pulse rounded-full bg-ink-100 shrink-0", className)} />;
 }

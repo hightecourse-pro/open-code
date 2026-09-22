@@ -24,7 +24,7 @@ export interface PostComment {
   author_role?: UserRole | null;
   created_at: string;
   edited_at?: string | null;
-  /** True when the signed-in member wrote it — she may fix it for 10 minutes. */
+  /** True when the signed-in member wrote it - she may fix it for 10 minutes. */
   mine?: boolean;
 }
 
@@ -140,7 +140,7 @@ export function PostInteractions({
           </button>
         </form>
       )}
-      {reported && <div className="mt-2 text-[12.5px] text-ink-500">הדיווח נשלח לצוות — תודה שאכפת לך 💜</div>}
+      {reported && <div className="mt-2 text-[12.5px] text-ink-500">הדיווח נשלח לצוות - תודה שאכפת לך 💜</div>}
 
       {openComments && (
         <div className="mt-3 flex flex-col gap-3">
@@ -202,7 +202,7 @@ export function PostInteractions({
               className="flex items-center gap-2 text-[13px] text-ink-700 bg-tint-purple border border-[#DDC9EC] rounded-md px-3 py-2 hover:border-brand-purple transition-colors"
             >
               <Lock size={14} className="text-brand-purple shrink-0" />
-              <span className="flex-1">כתיבת תגובות נפתחת עם מנוי — נשמח שתצטרפי לשיחה 💜</span>
+              <span className="flex-1">כתיבת תגובות נפתחת עם מנוי - נשמח שתצטרפי לשיחה 💜</span>
               <span className="font-semibold text-brand-purple">לשדרוג ←</span>
             </Link>
           )}
@@ -243,7 +243,7 @@ function LikersLine({ names }: { names: string[] }) {
       >
         💜 אהבו: {names.slice(0, 4).join(", ")}
         {names.length > 4 && (
-          <span className="font-semibold text-brand-purple"> ועוד {names.length - 4} — לכולן</span>
+          <span className="font-semibold text-brand-purple"> ועוד {names.length - 4} - לכולן</span>
         )}
       </button>
       {open && (

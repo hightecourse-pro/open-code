@@ -1,6 +1,6 @@
 /**
  * PostgREST `.in()` lists ride in the URL: past ~300 uuids the request fails
- * outright and supabase-js hands back `data: null` — which every caller
+ * outright and supabase-js hands back `data: null` - which every caller
  * reads as "no rows" (the 17/9 production incident: profile cards emptied
  * for everyone once the member list crossed the limit). Query in chunks.
  */
@@ -12,7 +12,7 @@ export function chunk<T>(items: T[], size = 100): T[][] {
 
 /**
  * Run a PostgREST query once per id-chunk and concatenate the rows. A failed
- * chunk throws — a silent "no rows" is exactly the bug this exists to stop.
+ * chunk throws - a silent "no rows" is exactly the bug this exists to stop.
  */
 export async function inChunks<T>(
   ids: string[],

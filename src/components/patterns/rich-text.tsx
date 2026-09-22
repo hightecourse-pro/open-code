@@ -33,7 +33,7 @@ export function MessageBody({
       // was start-anchored bypassed the save gate, so the renderer must never
       // trust the stored string alone.
       //
-      // Raw newlines inside HTML are insignificant whitespace — but callers
+      // Raw newlines inside HTML are insignificant whitespace - but callers
       // that also render plain text pass whitespace-pre-line, which turned a
       // Word-paste's wrap points into mid-sentence breaks (Lea Fefer's
       // profile, 9/9). Collapsed here; real breaks are <br>/<p> anyway.
@@ -44,7 +44,7 @@ export function MessageBody({
 
 /**
  * Renders what a member wrote, with her light formatting applied. The body is
- * plain text all the way from the database — this turns markers into elements
+ * plain text all the way from the database - this turns markers into elements
  * at display time, so nothing she types can inject markup.
  */
 export function RichText({ body, className }: { body: string; className?: string }) {

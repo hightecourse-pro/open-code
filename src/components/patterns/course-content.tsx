@@ -9,7 +9,7 @@ import { logContentOpen } from "@/app/(app)/content/actions";
 import { ContentGate } from "@/components/patterns/content-gate";
 import type { ContentLink } from "@/types/database";
 
-/** A course unit (קוביה) — one year-cycle with its recordings and materials. */
+/** A course unit (קוביה) - one year-cycle with its recordings and materials. */
 export interface CourseUnitContent {
   id: string;
   name: string;
@@ -49,7 +49,7 @@ export function CourseContent({
   const [text, setText] = useState(feedback ?? "");
   const [saved, setSaved] = useState(false);
   // Lessons arrive COLLAPSED (the owner, 30/8: "ההקלטות יהיו מכווצות לפי
-  // שיעורים עם אופציה לפתוח") — the iframe loads only when a lesson opens,
+  // שיעורים עם אופציה לפתוח") - the iframe loads only when a lesson opens,
   // which also stops a 7-lesson course loading 7 Drive players at once.
   const [openVideos, setOpenVideos] = useState<Set<string>>(() => new Set());
   const toggleVideo = (id: string) =>
@@ -119,7 +119,7 @@ export function CourseContent({
             title={v.title}
             allow="autoplay"
             className="w-full aspect-video"
-            // Fires on every mount and re-render — the 30-minute throttle in
+            // Fires on every mount and re-render - the 30-minute throttle in
             // the log is what keeps "כמה פעמים" meaningful.
             onLoad={() =>
               start(() =>
@@ -134,7 +134,7 @@ export function CourseContent({
           />
         ) : (
           <div className="p-4 text-sm text-ink-500">
-            אי אפשר להציג את הסרטון כאן —{" "}
+            אי אפשר להציג את הסרטון כאן -{" "}
             <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-brand-purple underline">
               צפייה בדרייב
             </a>
@@ -176,7 +176,7 @@ export function CourseContent({
     );
   }
 
-  // One gate for the whole course — not one per video. The grant unit in
+  // One gate for the whole course - not one per video. The grant unit in
   // content_shares is the course, so a single press covers every unit,
   // recording and materials folder in it. The משוב card below stays outside
   // it: marking a course as studied has nothing to do with Drive.
@@ -244,7 +244,7 @@ export function CourseContent({
 
         {fbOpen ? (
           <div className="flex flex-col gap-2 pt-2 border-t border-ink-100">
-            <div className="text-[13px] font-semibold text-ink-700">משוב קצר — עד כמה הקורס תרם לך?</div>
+            <div className="text-[13px] font-semibold text-ink-700">משוב קצר - עד כמה הקורס תרם לך?</div>
             <div className="flex items-center gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} type="button" onClick={() => setStars(n)} title={`${n}`}>
@@ -268,7 +268,7 @@ export function CourseContent({
             />
             {!stars && (
               <p className="text-[12px] text-ink-500 -mt-1">
-                בחרי דירוג כוכבים (1–5) — ואז אפשר לשלוח את המשוב.
+                בחרי דירוג כוכבים (1–5) - ואז אפשר לשלוח את המשוב.
               </p>
             )}
             <button

@@ -25,7 +25,7 @@ const { data: created, error } = await sb.auth.admin.createUser({
 if (error) {
   const { data: list } = await sb.auth.admin.listUsers();
   userId = list.users.find((u) => u.email === EMAIL)?.id;
-  console.log(`ℹ️  user already exists: ${userId} — resetting password + promoting`);
+  console.log(`ℹ️  user already exists: ${userId} - resetting password + promoting`);
   if (userId) await sb.auth.admin.updateUserById(userId, { password: PASSWORD, email_confirm: true });
 } else {
   userId = created.user.id;
@@ -58,7 +58,7 @@ const { data: after } = await sb
   .single();
 
 if (after?.status === "active" && after?.role === "admin") {
-  console.log(`\n🎉 ready — log in at /login with:\n   ${EMAIL}\n   ${PASSWORD}`);
+  console.log(`\n🎉 ready - log in at /login with:\n   ${EMAIL}\n   ${PASSWORD}`);
 } else {
-  console.log(`\n⚠️  status=${after?.status} role=${after?.role} — if blocked, run supabase/migrations/20260615090300_guard_fix.sql and re-run.`);
+  console.log(`\n⚠️  status=${after?.status} role=${after?.role} - if blocked, run supabase/migrations/20260615090300_guard_fix.sql and re-run.`);
 }

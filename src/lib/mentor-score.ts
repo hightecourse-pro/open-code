@@ -1,4 +1,4 @@
-// The mentor score, computed straight from its sources every time — a ledger
+// The mentor score, computed straight from its sources every time - a ledger
 // would be a second copy of the same facts that could drift. Public rule:
 // answering in the forum earns points, being matched to a junior earns more.
 
@@ -6,21 +6,21 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const ANSWER_POINTS = 5;
 export const ASSIGNMENT_POINTS = 25;
-/** One accompanied hackathon project — awarded via the bonus ledger's
+/** One accompanied hackathon project - awarded via the bonus ledger's
  *  one-click button in ניהול מנטוריות (the owner, 10/9). */
 export const HACKATHON_POINTS = 25;
 
 export interface MentorScore {
   answers: number;
   assignments: number;
-  /** Hand-awarded points (mentor_bonus_points ledger) — admin-granted. */
+  /** Hand-awarded points (mentor_bonus_points ledger) - admin-granted. */
   bonus: number;
   score: number;
 }
 
 /**
  * Scores for a set of mentors. "Answers" are comments she wrote on posts that
- * are NOT her own — replying to yourself is not mentoring.
+ * are NOT her own - replying to yourself is not mentoring.
  */
 export async function mentorScores(ids: string[]): Promise<Map<string, MentorScore>> {
   const out = new Map<string, MentorScore>();
@@ -29,7 +29,7 @@ export async function mentorScores(ids: string[]): Promise<Map<string, MentorSco
 
   const admin = createAdminClient();
   const [{ data: answerCounts }, { data: assignments }, { data: bonuses }] = await Promise.all([
-    // One SQL aggregate — this used to fetch every comment a mentor ever
+    // One SQL aggregate - this used to fetch every comment a mentor ever
     // wrote (with a join) just to count it, on every directory render.
     admin.rpc("mentor_answer_counts", { p_ids: ids }),
     admin

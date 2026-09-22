@@ -4,7 +4,7 @@ const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); 
 const BASE = "https://open-code-psi.vercel.app";
 const SHOTS = process.env.SHOTS_DIR || ".";
 const results = [];
-const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " — " + x : ""}`);
+const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " - " + x : ""}`);
 const browser = await chromium.launch();
 process.on("uncaughtException", (e) => { console.log(results.join("\n")); console.error("FAILED:", e.message); process.exit(1); });
 

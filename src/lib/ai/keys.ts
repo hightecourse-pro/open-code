@@ -21,10 +21,10 @@ export async function listUserKeys(): Promise<KeyView[]> {
   return data ?? [];
 }
 
-/** Decrypt and return the first usable key (server only — never sent to client). */
+/** Decrypt and return the first usable key (server only - never sent to client). */
 export async function getUsableKey(): Promise<{ id: string; apiKey: string; lastUsedAt: string | null } | null> {
   const supabase = await createClient();
-  // Google quotas reset daily, so an "exhausted" key is worth retrying —
+  // Google quotas reset daily, so an "exhausted" key is worth retrying -
   // prefer active keys, but fall back to exhausted ones instead of failing.
   // ("active" sorts before "exhausted" alphabetically.)
   const { data } = await supabase
@@ -52,13 +52,13 @@ export type AddKeyResult = { ok: true } | { ok: false; error: string };
 export async function addUserKey(rawKey: string, label?: string): Promise<AddKeyResult> {
   const key = rawKey.trim();
   // Google keys are typically ~39 chars (often "AIza…"), but the format can
-  // vary — so we just sanity-check the length and let Google's API be the
+  // vary - so we just sanity-check the length and let Google's API be the
   // real validator via verifyGeminiKey below.
   if (key.length < 20 || /\s/.test(key)) {
     return { ok: false, error: "המפתח נראה קצר מדי או מכיל רווחים. העתיקי אותו שוב מ-Google AI Studio." };
   }
 
-  // Auth first — never spend an outbound Google call on an unauthenticated request.
+  // Auth first - never spend an outbound Google call on an unauthenticated request.
   const supabase = await createClient();
   const {
     data: { user },
@@ -123,7 +123,7 @@ export async function withUserKey<T>(run: (apiKey: string) => Promise<T>): Promi
       return { ok: false, reason: "invalid" };
     }
     // Gemini 400 INVALID_ARGUMENT on a key that NEVER worked = the key
-    // itself (referrer-restricted, or not a Gemini/AI-Studio key at all) —
+    // itself (referrer-restricted, or not a Gemini/AI-Studio key at all) -
     // אילה מילר, 2/9. Flag it so the UI tells her to mint a proper one
     // instead of looping on "משהו השתבש".
     const msg0 = e instanceof Error ? e.message : String(e);
@@ -131,13 +131,13 @@ export async function withUserKey<T>(run: (apiKey: string) => Promise<T>): Promi
       await markKeyStatus(
         key.id,
         "invalid",
-        "המפתח לא מתאים ל-Gemini או מוגבל לאתר מסוים — צרי מפתח חדש ב-Google AI Studio בלי הגבלות"
+        "המפתח לא מתאים ל-Gemini או מוגבל לאתר מסוים - צרי מפתח חדש ב-Google AI Studio בלי הגבלות"
       );
       return { ok: false, reason: "invalid" };
     }
-    // The generic branch used to swallow the cause entirely — when every model
+    // The generic branch used to swallow the cause entirely - when every model
     // in the chain 404s (Google retiring a generation) nothing anywhere said
-    // why. Now the logs do — and the key row keeps the last cause (status
+    // why. Now the logs do - and the key row keeps the last cause (status
     // stays active: a transient 503 storm is not the member's key's fault),
     // so "משהו השתבש" is diagnosable from the DB after the fact.
     const msg = e instanceof Error ? e.message : String(e);

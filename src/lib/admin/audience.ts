@@ -1,13 +1,13 @@
 // Audience criteria for the targeted-publish flow (admin-only, service role).
 //
 // Mirrors the employer portal's search catalogue (src/lib/portal/candidates.ts)
-// but for the admin: EVERY active profile question becomes a criterion — not
-// just the employer-visible ones — because the admin already sees full
+// but for the admin: EVERY active profile question becomes a criterion - not
+// just the employer-visible ones - because the admin already sees full
 // profiles. The catalogue (what the panel offers) and the pools (what each
 // member "has") are built from the same label-resolving pass, so a value picked
 // in the UI always compares against the same string on the member side.
 //
-// SERVER ONLY — never import this into a Client Component (types are fine via
+// SERVER ONLY - never import this into a Client Component (types are fine via
 // `import type`).
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -49,7 +49,7 @@ async function loadQuestions(): Promise<ConfigQuestion[]> {
     .from("config_questions")
     .select("*")
     .eq("active", true)
-    // The publish audience is junior members — mentor-only questions can't
+    // The publish audience is junior members - mentor-only questions can't
     // match anyone in it.
     .in("scope", ["junior", "all"])
     .order("sort_order", { ascending: true });
@@ -103,7 +103,7 @@ function profilesQuery(profileIds?: string[], includeMentors = false) {
   const base = createAdminClient()
     .from("profiles")
     .select("id, full_name, specialization, region, is_experienced, status");
-  // Id scope (e.g. a job's applicants): they're already in — she applied, so
+  // Id scope (e.g. a job's applicants): they're already in - she applied, so
   // she counts even if paused or with an incomplete profile. No gates.
   if (profileIds) return base.in("id", profileIds).order("full_name", { ascending: true });
   return (
@@ -120,7 +120,7 @@ function profilesQuery(profileIds?: string[], includeMentors = false) {
   );
 }
 
-/** PostgREST caps a plain select at 1000 rows — page until the pool is whole. */
+/** PostgREST caps a plain select at 1000 rows - page until the pool is whole. */
 const PAGE = 1000;
 
 async function fetchAllProfiles(profileIds?: string[], includeMentors = false) {
@@ -138,17 +138,17 @@ async function fetchAllProfiles(profileIds?: string[], includeMentors = false) {
 }
 
 /**
- * Why the eligible pool is what it is — the numbers the publish panel states
+ * Why the eligible pool is what it is - the numbers the publish panel states
  * out loud, so "no criteria" never reads as "the whole community".
  */
 export interface AudienceEligibility {
-  /** Junior + active/pending + profile_completed — the placement pool. */
+  /** Junior + active/pending + profile_completed - the placement pool. */
   eligible: number;
   /** Juniors who haven't finished the intake wizard yet. */
   notCompleted: number;
   /** Paused or rejected juniors. */
   paused: number;
-  /** Mentors and admins — never a placement audience. */
+  /** Mentors and admins - never a placement audience. */
   staff: number;
 }
 
@@ -183,7 +183,7 @@ export async function loadAudienceEligibility(): Promise<AudienceEligibility> {
 
 /**
  * The eligible members with everything they "have" per question key: the
- * denormalized profile columns (specialization/region — which may hold taxonomy
+ * denormalized profile columns (specialization/region - which may hold taxonomy
  * VALUES or Hebrew labels, so both resolve) plus their profile_answers, all as
  * display labels. One loader feeds both the catalogue and the matching pools.
  *
@@ -191,7 +191,7 @@ export async function loadAudienceEligibility(): Promise<AudienceEligibility> {
  * eligibility gates above.
  */
 // The publish panel fires a full-community load on every debounced criteria
-// change — a burst of identical heavy scans. Memoized per warm instance for a
+// change - a burst of identical heavy scans. Memoized per warm instance for a
 // short window: within one composing session the pool barely changes.
 const communityScanCache = new Map<string, { at: number; promise: Promise<AudienceData> }>();
 const COMMUNITY_SCAN_TTL_MS = 120_000;
@@ -228,7 +228,7 @@ async function loadAudienceDataUncached(
 
   const answers: { profile_id: string; question_id: string; value: unknown }[] = [];
   if (members.length > 0) {
-    // A community-wide scope drops the .in() entirely — inlining thousands of
+    // A community-wide scope drops the .in() entirely - inlining thousands of
     // UUIDs into the querystring breaks URL limits long before the data does;
     // the member-set intersection happens on the loop below via memberSet.
     const scopeIds = profileIds && profileIds.length > 0 ? members.map((m) => m.id) : null;
@@ -281,7 +281,7 @@ async function loadAudienceDataUncached(
 
 /**
  * The criteria palette for the publish panel: every active profile question
- * with something discrete to pick — its defined options / taxonomy labels
+ * with something discrete to pick - its defined options / taxonomy labels
  * unioned with values actually seen on eligible members. Free-text questions
  * are skipped (nothing discrete to offer); experience stays a separate select
  * in the panel.
@@ -291,7 +291,7 @@ export async function buildAudienceCatalogue(
 ): Promise<AudienceCatalogueField[]> {
   const { questions, taxonomies, members, valuePools } = await loadAudienceData(profileIds);
   // Id-scoped catalogues (a job's applicants) offer only values actually seen
-  // in the scope — every chip matches at least one row, no dead chips.
+  // in the scope - every chip matches at least one row, no dead chips.
   const scoped = profileIds !== undefined;
 
   const seenFor = (key: string): Set<string> => {
@@ -352,7 +352,7 @@ export async function buildAudienceCatalogue(
         });
       }
     }
-    // Free-text questions aren't offered — there's nothing discrete to pick.
+    // Free-text questions aren't offered - there's nothing discrete to pick.
   }
 
   return out;
@@ -382,7 +382,7 @@ export async function loadAudiencePools(
       is_experienced: !!m.is_experienced,
       status: m.status,
       // The profile column was added to the pool first, so [0] prefers it and
-      // falls back to her first intake answer — already label-resolved.
+      // falls back to her first intake answer - already label-resolved.
       specialization: mine.get("specialization")?.[0] ?? null,
       region: mine.get("region")?.[0] ?? null,
     };

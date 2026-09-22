@@ -30,7 +30,7 @@ const { count } = await sb.from("posts").select("*", { count: "exact", head: tru
 if ((count ?? 0) === 0) {
   const { error: postErr } = await sb.from("posts").insert({
     author_id: auth.user.id,
-    body: "ברוכות הבאות לקהילה של קוד פתוח! 🎉 אני פה לכל שאלה — בהצלחה במסע 💜",
+    body: "ברוכות הבאות לקהילה של קוד פתוח! 🎉 אני פה לכל שאלה - בהצלחה במסע 💜",
     intent: "knowledge",
     kind: "feed",
   });

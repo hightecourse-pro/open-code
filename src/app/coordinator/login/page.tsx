@@ -22,7 +22,7 @@ export default async function CoordinatorLoginPage() {
           </div>
         </div>
         <p className="t-body-sm text-ink-500 -mt-1">
-          כאן רואים את הבוגרות שלך, ההגשות והגיוסים — ומשתפים אותנו בחוות דעת. הכניסה עם קוד
+          כאן רואים את הבוגרות שלך, ההגשות והגיוסים - ומשתפים אותנו בחוות דעת. הכניסה עם קוד
           חד-פעמי למייל, בגלל רגישות המידע.
         </p>
         <CoordinatorLoginForm />

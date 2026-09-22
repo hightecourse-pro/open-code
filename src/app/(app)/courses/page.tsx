@@ -19,7 +19,7 @@ export default async function CoursesPage() {
   const user = await getUser();
   const profile = await requireCommunityAccess();
   // The library is a junior benefit; mentors get sessions and recordings. The
-  // sidebar hides this tab for them — this covers a typed-in URL.
+  // sidebar hides this tab for them - this covers a typed-in URL.
   if (profile.role === "mentor") {
     return (
       <div className="flex flex-col gap-4">
@@ -29,7 +29,7 @@ export default async function CoursesPage() {
         </div>
         <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14.5px] text-ink-700 leading-relaxed">
           ספריית הקורסים מיועדת לחברות הקהילה במסלול מנוי 💜 בתור מנטורית פתוחים לך הסשנים,
-          ההקלטות, הפורום והצ&apos;אט — ואם מתחשק לך קורס מסוים, כתבי לנו ונפתח אותו עבורך אישית.
+          ההקלטות, הפורום והצ&apos;אט - ואם מתחשק לך קורס מסוים, כתבי לנו ונפתח אותו עבורך אישית.
         </div>
       </div>
     );
@@ -47,7 +47,7 @@ export default async function CoursesPage() {
           .maybeSingle()
       : Promise.resolve({ data: null }),
     // The most recent take of ANY status: after a return the rolling month
-    // still runs — without this, every card looked open and only the click
+    // still runs - without this, every card looked open and only the click
     // revealed the refusal (the PM's "התנהגות לא תקינה").
     user && subscriber
       ? supabase
@@ -73,7 +73,7 @@ export default async function CoursesPage() {
   // The one course she may still re-open inside a locked month (her last take).
   const resumableId = !activeCourse && !swapReady ? (latestTake?.course_id ?? null) : null;
 
-  // Unit (קוביה) headers for every course — the cards show the year cycles.
+  // Unit (קוביה) headers for every course - the cards show the year cycles.
   // Tolerates the table not existing yet (pre-migration deploys).
   const { data: allUnits } = await supabase
     .from("course_units")
@@ -105,7 +105,7 @@ export default async function CoursesPage() {
   }));
   const legacyLinks = activeLinks.filter((l) => !l.unit_id);
 
-  // Courses an admin opened for her personally — extra, on top of the active
+  // Courses an admin opened for her personally - extra, on top of the active
   // one. They survive the monthly swap, and end when an admin removes them or
   // when she leaves the community / stops paying.
   // One read, two jobs: which courses an admin opened for her personally, and
@@ -151,7 +151,7 @@ export default async function CoursesPage() {
   const courseCards = (courses ?? []).map((course) => {
     const units = unitsByCourse.get(course.id) ?? [];
     const years = [...new Set(units.map((u) => u.year).filter(Boolean))] as number[];
-    // "שנות קורס", not "מחזורים" — the PM's wording call.
+    // "שנות קורס", not "מחזורים" - the PM's wording call.
     const courseYears = years.length
       ? `שנות הקורס: ${years.length > 1 ? `${Math.min(...years)}–${Math.max(...years)}` : years[0]}`
       : null;
@@ -180,9 +180,9 @@ export default async function CoursesPage() {
         <div className="flex-1 min-w-[220px]">
           <span className="font-mono text-xs text-brand-pink-deep">&lt;קורסים/&gt;</span>
           <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ספריית הקורסים</h1>
-          <p className="t-body-sm text-ink-700">קורס פעיל אחד בכל פעם — כמו ספרייה. אפשר להחליף פעם בחודש.</p>
+          <p className="t-body-sm text-ink-700">קורס פעיל אחד בכל פעם - כמו ספרייה. אפשר להחליף פעם בחודש.</p>
         </div>
-        {/* The full 2026 syllabus — what each course in the library covers. */}
+        {/* The full 2026 syllabus - what each course in the library covers. */}
         <a
           href="/syllabus-2026.pdf"
           target="_blank"
@@ -204,11 +204,11 @@ export default async function CoursesPage() {
         <Info size={18} className="text-brand-purple shrink-0 mt-0.5" />
         <span>
           <b className="font-display text-brand-purple">איך זה עובד:</b> את בוחרת קורס אחד ולומדת בקצב שלך.
-          חודש אחרי הבחירה נפתחת זכאות החלפה — הקורס הקודם ייסגר והחדש ייפתח, כמו בספרייה.
+          חודש אחרי הבחירה נפתחת זכאות החלפה - הקורס הקודם ייסגר והחדש ייפתח, כמו בספרייה.
         </span>
       </div>
 
-      {/* With a course underway, the full catalogue is next month's business —
+      {/* With a course underway, the full catalogue is next month's business -
           folded away instead of scrolling under her feet (PM feedback). */}
       {activeCourse ? (
         <div id="course-catalogue" className="scroll-mt-4">
@@ -216,8 +216,8 @@ export default async function CoursesPage() {
           title="כל הקורסים בספרייה"
           subtitle={
             swapReady
-              ? "זכאות ההחלפה שלך פתוחה — אפשר לבחור קורס אחר."
-              : `להחלפה הבאה — הזכאות נפתחת ב-${COURSE_DATE_HE.format(eligibleAt!)}.`
+              ? "זכאות ההחלפה שלך פתוחה - אפשר לבחור קורס אחר."
+              : `להחלפה הבאה - הזכאות נפתחת ב-${COURSE_DATE_HE.format(eligibleAt!)}.`
           }
           count={(courses ?? []).length}
           storageKey="courses:catalogue"
@@ -248,7 +248,7 @@ export default async function CoursesPage() {
             <div className="text-xs opacity-85 mt-1.5">השלמת {active?.progress_pct ?? 0}% מהקורס</div>
             <div className="text-xs opacity-85 mt-1">
               {swapReady
-                ? "זכאות ההחלפה שלך פתוחה — אפשר לבחור קורס אחר מהספרייה 📚"
+                ? "זכאות ההחלפה שלך פתוחה - אפשר לבחור קורס אחר מהספרייה 📚"
                 : `זכאות החלפת קורס: ${COURSE_DATE_HE.format(eligibleAt!)}`}
             </div>
             <JumpToCatalogue
@@ -260,7 +260,7 @@ export default async function CoursesPage() {
             </JumpToCatalogue>
           </div>
           <div className="flex flex-col gap-2 sm:ms-auto">
-            {/* Only once she really holds the Drive share — otherwise this
+            {/* Only once she really holds the Drive share - otherwise this
                 button would land her on Google's sign-in screen. Before that
                 the gate below is the way in. */}
             {activeLinks.length > 0 && unlockedCourses.has(activeCourse.id) && (
@@ -275,7 +275,7 @@ export default async function CoursesPage() {
               </LoggedLink>
             )}
             {/* "החזרת קורס" is gone from here on the PM's feedback: returning
-                mid-month closed her access without unlocking a new pick — pure
+                mid-month closed her access without unlocking a new pick - pure
                 confusion. Swapping at the eligibility date covers the flow. */}
           </div>
         </div>
@@ -293,7 +293,7 @@ export default async function CoursesPage() {
         />
       )}
 
-      {/* Personally opened for her by the team — not part of the monthly swap. */}
+      {/* Personally opened for her by the team - not part of the monthly swap. */}
       {giftedCourses.map((course) => {
         const links = giftedLinks.filter((l) => l.owner_id === course.id);
         const units = (unitsByCourse.get(course.id) ?? []).map((u) => ({

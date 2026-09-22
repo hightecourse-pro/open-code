@@ -46,7 +46,7 @@ export function CoordinatorLoginForm() {
         <Alert variant="danger">{verState.error}</Alert>
       ) : (
         <Alert variant="success">
-          אם הכתובת מוכרת לנו — קוד בן 6 ספרות בדרך למייל. תקף ל-10 דקות.
+          אם הכתובת מוכרת לנו - קוד בן 6 ספרות בדרך למייל. תקף ל-10 דקות.
         </Alert>
       )}
       <input type="hidden" name="email" value={email} />

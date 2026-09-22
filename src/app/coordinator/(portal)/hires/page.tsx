@@ -15,7 +15,7 @@ const DATE_HE = new Intl.DateTimeFormat("he-IL", {
   timeZone: "Asia/Jerusalem",
 });
 
-/** Placements of her graduates — names and dates; workplaces stay private. */
+/** Placements of her graduates - names and dates; workplaces stay private. */
 export default async function CoordinatorHiresPage() {
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");
@@ -42,7 +42,7 @@ export default async function CoordinatorHiresPage() {
           </div>
         ))}
         {hires.length === 0 && (
-          <p className="text-ink-500 text-sm py-2">עוד אין גיוסים רשומים — נעדכן כאן כשיהיו 💜</p>
+          <p className="text-ink-500 text-sm py-2">עוד אין גיוסים רשומים - נעדכן כאן כשיהיו 💜</p>
         )}
       </div>
     </section>

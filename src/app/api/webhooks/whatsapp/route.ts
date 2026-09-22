@@ -7,14 +7,14 @@ import { fetchWaMedia, getWaVerifyToken } from "@/lib/whatsapp";
 /**
  * Meta WhatsApp Cloud API webhook.
  *
- * GET — Meta's one-time subscription check: echo hub.challenge when
+ * GET - Meta's one-time subscription check: echo hub.challenge when
  * hub.verify_token matches ours.
  *
- * POST — inbound messages and delivery statuses. Authenticated by
+ * POST - inbound messages and delivery statuses. Authenticated by
  * X-Hub-Signature-256 (HMAC of the raw body with the app secret) when
  * WHATSAPP_APP_SECRET is set; before it is set the webhook only accepts
  * traffic when the verify token is configured at all, and stores nothing
- * sensitive beyond what a chat inbox needs. Always answers 200 fast — Meta
+ * sensitive beyond what a chat inbox needs. Always answers 200 fast - Meta
  * retries aggressively and disables webhooks that keep failing.
  */
 
@@ -73,7 +73,7 @@ const EXT_OF: Record<string, string> = {
 
 /**
  * Pull a media message's file down from Meta (their links expire fast) and
- * park it in the private wa-media bucket. Returns the stored path or null —
+ * park it in the private wa-media bucket. Returns the stored path or null -
  * a failed download degrades to a text placeholder, never a lost message.
  */
 async function storeInboundMedia(
@@ -105,7 +105,7 @@ async function storeInboundMedia(
 export async function POST(req: Request) {
   const rawBody = await req.text();
 
-  // Signature check — load-bearing once the app secret is configured.
+  // Signature check - load-bearing once the app secret is configured.
   const appSecret = process.env.WHATSAPP_APP_SECRET ?? "";
   if (appSecret) {
     const sig = req.headers.get("x-hub-signature-256") ?? "";
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "bad signature" }, { status: 401 });
     }
   } else if (!getWaVerifyToken()) {
-    // Nothing configured at all — this endpoint is not yet open for business.
+    // Nothing configured at all - this endpoint is not yet open for business.
     return NextResponse.json({ error: "not configured" }, { status: 503 });
   }
 
@@ -138,7 +138,7 @@ export async function POST(req: Request) {
         );
 
         for (const m of value.messages ?? []) {
-          // Contact row — upsert by wa_id, keep the freshest pushed name.
+          // Contact row - upsert by wa_id, keep the freshest pushed name.
           const { data: contact } = await admin
             .from("wa_contacts")
             .upsert(
@@ -182,7 +182,7 @@ export async function POST(req: Request) {
             );
             continue;
           }
-          // Media rides along (the owner, 1/9: "כמו ווצאפ רגיל") — stored in
+          // Media rides along (the owner, 1/9: "כמו ווצאפ רגיל") - stored in
           // our bucket; a failed download degrades to a labeled placeholder.
           const mediaKind = MEDIA_KINDS.find((k) => m[k]?.id);
           const stored = mediaKind ? await storeInboundMedia(admin, m, mediaKind) : null;
@@ -193,8 +193,8 @@ export async function POST(req: Request) {
           const body =
             bodyOf(m) ||
             caption ||
-            (mediaKind ? `[${KIND_HE[mediaKind]}${stored ? "" : " — לא הצלחנו למשוך את הקובץ"}]` : "[הודעה]");
-          // Idempotent on Meta's message id — redeliveries change nothing.
+            (mediaKind ? `[${KIND_HE[mediaKind]}${stored ? "" : " - לא הצלחנו למשוך את הקובץ"}]` : "[הודעה]");
+          // Idempotent on Meta's message id - redeliveries change nothing.
           await admin
             .from("wa_messages")
             .upsert(
@@ -216,15 +216,15 @@ export async function POST(req: Request) {
             kind: "whatsapp_inbound",
             severity: "info",
             title: `הודעת וואטסאפ חדשה מ${contact.display_name ?? m.from}`,
-            body: `${body.slice(0, 160)} — מענה במסך הוואטסאפ בניהול.`,
+            body: `${body.slice(0, 160)} - מענה במסך הוואטסאפ בניהול.`,
             context: { wa_id: m.from },
-            // One alert per contact per hour — a burst is one conversation.
+            // One alert per contact per hour - a burst is one conversation.
             dedupeKey: `wa:${m.from}:${new Date().toISOString().slice(0, 13)}`,
           });
         }
 
         for (const s of value.statuses ?? []) {
-          // Only statuses our check constraint knows — Meta has more exotic ones.
+          // Only statuses our check constraint knows - Meta has more exotic ones.
           if (!s.id || !s.status || !["sent", "delivered", "read", "failed"].includes(s.status)) continue;
           await admin
             .from("wa_messages")
@@ -240,7 +240,7 @@ export async function POST(req: Request) {
       }
     }
   } catch (e) {
-    // Store failures must not make Meta retry-storm us — log and answer 200.
+    // Store failures must not make Meta retry-storm us - log and answer 200.
     console.error("[webhook/whatsapp] store failed", String(e));
   }
   return NextResponse.json({ ok: true });

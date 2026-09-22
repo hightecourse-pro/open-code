@@ -6,13 +6,13 @@ import { createClient } from "@/lib/supabase/server";
 import { Alert, Button, ProgressRing } from "@/components/ui";
 import { InterviewThread } from "@/components/patterns/interview-thread";
 
-// Gemini rides a model-chain with retries — a stormy run outlives the platform
+// Gemini rides a model-chain with retries - a stormy run outlives the platform
 // default window. Server actions inherit the page segment they POST from.
 export const maxDuration = 300;
 
 export const metadata: Metadata = { title: "ראיון" };
 
-// The simulator is temporarily offline (2026-08-29) — old session links land
+// The simulator is temporarily offline (2026-08-29) - old session links land
 // on the "בקרוב" screen. The live page below is untouched; bringing the
 // simulator back = swapping the default export back to it.
 export default async function InterviewSessionPage() {
@@ -63,7 +63,7 @@ async function LiveInterviewSessionPage({
 
       {done && !feedback && (
         <Alert variant="warn">
-          לא הצלחנו להפיק משוב לראיון הזה — ייתכן שנגמרה מכסת המפתח.
+          לא הצלחנו להפיק משוב לראיון הזה - ייתכן שנגמרה מכסת המפתח.
           <a
             href={`/ai/keys?next=/ai/interview/${sessionId}`}
             className="block mt-1 font-semibold text-brand-purple underline"

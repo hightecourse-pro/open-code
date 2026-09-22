@@ -30,7 +30,7 @@ export interface AdminCvRow {
   job_title: string | null;
 }
 
-// Language is a real language; "job-tailored" is a TYPE, not a language —
+// Language is a real language; "job-tailored" is a TYPE, not a language -
 // it renders as a badge on the file column, next to the default marker.
 const LANG: Record<string, { label: string; variant: "pink" | "indigo" }> = {
   he: { label: "עברית", variant: "pink" },
@@ -51,13 +51,13 @@ const TYPE_FILTERS: { value: "" | "plain" | "job"; label: string }[] = [
 
 /** PDF / Word, from the file name. */
 function fileKind(name: string | null): string {
-  if (!name) return "—";
+  if (!name) return "-";
   if (/\.pdf$/i.test(name)) return "PDF";
   if (/\.docx?$/i.test(name)) return "Word";
-  return name.split(".").pop()?.toUpperCase() ?? "—";
+  return name.split(".").pop()?.toUpperCase() ?? "-";
 }
 
-/** One member and her documents — the default one first, then newest-first. */
+/** One member and her documents - the default one first, then newest-first. */
 interface MemberGroup {
   profile_id: string;
   member_name: string;
@@ -117,7 +117,7 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
 
   const filterActive = q.trim() !== "" || lang !== "" || type !== "";
 
-  // Filter per document, then keep any group with at least one match — a hit
+  // Filter per document, then keep any group with at least one match - a hit
   // inside a collapsed group must surface that group. Then sort the groups.
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -179,7 +179,7 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
     }
   };
 
-  // A render helper, not a component — components born in render remount.
+  // A render helper, not a component - components born in render remount.
   const sortIcon = (active: boolean) =>
     !active ? null : sortAsc ? <ArrowUpAZ size={12} /> : <ArrowDownAZ size={12} />;
 
@@ -314,7 +314,7 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
           <tbody>
             {pageGroups.map((g) => {
               const [primary, ...others] = g.docs;
-              // While a filter is on, every match must be visible — collapsing
+              // While a filter is on, every match must be visible - collapsing
               // would hide the very rows the filter found.
               const expanded = filterActive || !!open[g.profile_id];
               const visible = expanded ? g.docs : [primary];
@@ -367,7 +367,7 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
                       )}
                     </td>
                     <td className="p-2 border-b border-ink-100 text-ink-700 align-top">
-                      {head ? g.specialization || "—" : null}
+                      {head ? g.specialization || "-" : null}
                     </td>
                     <td className="p-2 border-b border-ink-100">
                       <span className="inline-flex items-center gap-1.5 text-ink-700 flex-wrap">
@@ -400,7 +400,7 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
                       {fileKind(r.file_name)}
                     </td>
                     <td className="p-2 border-b border-ink-100">
-                      {lng ? <Badge variant={lng.variant}>{lng.label}</Badge> : <span className="text-ink-400">—</span>}
+                      {lng ? <Badge variant={lng.variant}>{lng.label}</Badge> : <span className="text-ink-400">-</span>}
                     </td>
                     <td className="p-2 border-b border-ink-100 text-ink-500 whitespace-nowrap">
                       {DMY.format(new Date(r.created_at))}

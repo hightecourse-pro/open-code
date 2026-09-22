@@ -30,7 +30,7 @@ export function DriveEmailForm({
 
       {wasRequested && !current && (
         <Alert variant="warn">
-          כדי שנוכל לשתף איתך את הקלטות הסשנים וחומרי הקורסים, נשמח לכתובת Gmail —
+          כדי שנוכל לשתף איתך את הקלטות הסשנים וחומרי הקורסים, נשמח לכתובת Gmail -
           גוגל דרייב יודע לשתף רק עם חשבון Google.
         </Alert>
       )}

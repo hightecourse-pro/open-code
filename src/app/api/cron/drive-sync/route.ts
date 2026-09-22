@@ -5,7 +5,7 @@ import { processShareQueue } from "@/lib/drive-shares";
 
 /**
  * Actions the Drive share queue: grants access to members who should have it
- * and removes it from those who shouldn't. Idempotent — anything that fails
+ * and removes it from those who shouldn't. Idempotent - anything that fails
  * is retried on the next run and stays visible in /admin/shares.
  *
  * Kept as a standalone endpoint for manual/testing use (?secret=CRON_SECRET)
@@ -29,12 +29,12 @@ export async function GET(request: Request) {
   }
 
   // The schedule ships in vercel.json, so a staging deployment gets it too.
-  // Staging runs when an EMAIL_ALLOWLIST is set — the Drive calls themselves
+  // Staging runs when an EMAIL_ALLOWLIST is set - the Drive calls themselves
   // are separately gated by driveAutomationAllowed().
   if (!isProductionEnv() && !process.env.EMAIL_ALLOWLIST) {
     return NextResponse.json({ skipped: "not_production", env: appEnv() });
   }
-  // Surfaces *why* nothing happens (bad key, wrong service account, …) —
+  // Surfaces *why* nothing happens (bad key, wrong service account, …) -
   // useful when testing the setup by hand.
   const access = await checkDriveAccess();
   if (!access.ok) {

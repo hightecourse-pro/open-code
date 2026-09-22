@@ -1,7 +1,7 @@
 /**
  * Instant feedback for every in-app navigation. Without a loading boundary a
  * click on the menu paints NOTHING until the server finishes rendering the
- * whole page — on a cold start that reads as "the site is stuck" (the owner,
+ * whole page - on a cold start that reads as "the site is stuck" (the owner,
  * 31/8: "לחיצה על התפריט לא גוררת תגובה"). The sidebar stays; only the
  * content area shows the spinner.
  */

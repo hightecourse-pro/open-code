@@ -14,12 +14,12 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    // An unconfirmed address used to get "wrong password" — so she retried
+    // An unconfirmed address used to get "wrong password" - so she retried
     // passwords, hit reset flows, and filed bug reports. Name the real reason.
     if (error.code === "email_not_confirmed") {
       return {
         error:
-          "הכתובת עוד לא אושרה — שלחנו לך מייל אישור בהרשמה. בדקי את התיבה (גם בספאם) 💌",
+          "הכתובת עוד לא אושרה - שלחנו לך מייל אישור בהרשמה. בדקי את התיבה (גם בספאם) 💌",
       };
     }
     return { error: "האימייל או הסיסמה לא נכונים. בואי ננסה שוב." };
@@ -48,7 +48,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   });
 
   if (error) {
-    // Surface the real reason (server logs) — the message shown to the member
+    // Surface the real reason (server logs) - the message shown to the member
     // is friendly, but we keep the cause for diagnosis.
     console.error("[signup] failed", { code: error.code, status: error.status, message: error.message });
     const code = error.code ?? "";
@@ -58,7 +58,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
       return { error: "כבר קיים חשבון עם האימייל הזה. אפשר להיכנס או לאפס סיסמה." };
     }
     if (code === "weak_password") {
-      return { error: "הסיסמה חלשה מדי — נסי סיסמה ארוכה יותר עם אותיות ומספרים." };
+      return { error: "הסיסמה חלשה מדי - נסי סיסמה ארוכה יותר עם אותיות ומספרים." };
     }
     if (code === "email_address_invalid") {
       return { error: "כתובת האימייל לא נראית תקינה. בדקי אותה שוב 🙂" };
@@ -67,7 +67,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
       return { error: "יותר מדי ניסיונות בזמן קצר. נסי שוב בעוד כמה דקות." };
     }
     if (msg.includes("confirmation email") || msg.includes("sending") || error.status === 500) {
-      return { error: "יש תקלה זמנית בשליחת מייל האימות מהצד שלנו. אנחנו כבר מטפלות — נסי שוב עוד רגע 🙏" };
+      return { error: "יש תקלה זמנית בשליחת מייל האימות מהצד שלנו. אנחנו כבר מטפלות - נסי שוב עוד רגע 🙏" };
     }
     return { error: "לא הצלחנו להשלים את ההרשמה כרגע. נסי שוב עוד רגע." };
   }

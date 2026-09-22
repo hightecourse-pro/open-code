@@ -11,7 +11,7 @@ import { activeInstitution } from "./active-institution";
 
 /**
  * The coordinator portal shell (the owner, 15/9: "תארגן את המסך בצורה נוחה
- * עם תפריט") — one header + tab menu, each subject on its own page instead
+ * עם תפריט") - one header + tab menu, each subject on its own page instead
  * of a single endless scroll.
  */
 export default async function CoordinatorPortalLayout({
@@ -28,7 +28,7 @@ export default async function CoordinatorPortalLayout({
   const placeLabel = (v: string) => labels.places.get(v) ?? v;
   const adminView = (await cookies()).get("oc_coord_admin")?.value === "1";
   // Multi-seminary coordinators work one seminary at a time (the owner,
-  // 16/9: "מופרדים לגמרי בכרטיסיות") — the tabs live above the section nav.
+  // 16/9: "מופרדים לגמרי בכרטיסיות") - the tabs live above the section nav.
   const active = await activeInstitution(me);
 
   return (
@@ -37,7 +37,7 @@ export default async function CoordinatorPortalLayout({
         <div className="bg-[#8C5E0E] text-white text-[12.5px] font-semibold">
           <div className="max-w-4xl mx-auto px-4 py-1.5 flex items-center gap-3 flex-wrap">
             <span>
-              👁 תצוגת ניהול — כך רואה את האזור {me.full_name}. פעולות כאן (כמו שמירת חוות דעת)
+              👁 תצוגת ניהול - כך רואה את האזור {me.full_name}. פעולות כאן (כמו שמירת חוות דעת)
               נעשות בשמה.
             </span>
             <form action={exitAdminView} className="ms-auto">

@@ -22,18 +22,18 @@ export interface ThreadMessage {
   edited_at?: string | null;
 }
 
-/** How long a sent message stays editable — mirrors the server's window. */
+/** How long a sent message stays editable - mirrors the server's window. */
 const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
-/** The reaction palette — must match the server action's allowlist. */
+/** The reaction palette - must match the server action's allowlist. */
 const REACTION_EMOJIS = ["💜", "👍", "😂", "🎉", "🙏", "😮"];
 
-/** A message on screen — either from the server, or hers still on its way. */
+/** A message on screen - either from the server, or hers still on its way. */
 type Bubble = ThreadMessage & { pending?: boolean };
 
 /**
  * The words of a body, markup and whitespace flattened. Delivery detection
- * compares WORDS, not raw strings — the server may sanitize or normalize the
+ * compares WORDS, not raw strings - the server may sanitize or normalize the
  * markup it stores, and a message that came back transformed is still the
  * same delivered message. Raw equality here once branded a stored message
  * "לא נשלחה" and handed it back to the member who had just sent it.
@@ -61,7 +61,7 @@ const DELIVERY_GRACE_MS = 6000;
 
 /**
  * The message list and the box under it. Her own message appears the moment
- * she hits send — the send itself is a long server round-trip, and staring at
+ * she hits send - the send itself is a long server round-trip, and staring at
  * an empty box is what makes it feel broken.
  *
  * It never fakes a delivery: the bubble stays marked "נשלחת…" until the
@@ -80,9 +80,9 @@ export function ChatThread({
 }: {
   messages: ThreadMessage[];
   meId: string;
-  /** Her display name — feeds the avatar chip beside her bubbles. */
+  /** Her display name - feeds the avatar chip beside her bubbles. */
   otherName?: string;
-  /** Missing when she can't write in this thread — `footer` says why.
+  /** Missing when she can't write in this thread - `footer` says why.
    *  A returned verdict ({ok}) is trusted outright; a void return falls back
    *  to watching the revalidated thread (the old delivery detection). */
   action?: (formData: FormData) => void | Promise<void | { ok: boolean }>;
@@ -90,9 +90,9 @@ export function ChatThread({
   hint?: ReactNode;
   /** Rendered instead of the box when there is no action. */
   footer?: ReactNode;
-  /** Toggles the caller's emoji on a message — absent on read-only threads. */
+  /** Toggles the caller's emoji on a message - absent on read-only threads. */
   reactAction?: (messageId: string, emoji: string) => Promise<void>;
-  /** Rewrites the caller's own message — absent on read-only threads. */
+  /** Rewrites the caller's own message - absent on read-only threads. */
   editAction?: (messageId: string, formData: FormData) => Promise<void>;
 }) {
   const [bubbles, addBubble] = useOptimistic<Bubble[], string>(messages, (state, body) => [
@@ -116,7 +116,7 @@ export function ChatThread({
   // Which message's emoji palette is open, and optimistic reaction overlays.
   const [pickerFor, setPickerFor] = useState<string | null>(null);
   // The reaction palette closes on any click elsewhere or Escape (member
-  // feedback, 14/9) — not only by picking or re-clicking the toggle.
+  // feedback, 14/9) - not only by picking or re-clicking the toggle.
   useEffect(() => {
     if (!pickerFor) return;
     const onDown = (e: PointerEvent) => {
@@ -134,7 +134,7 @@ export function ChatThread({
   }, [pickerFor]);
   const [localReactions, setLocalReactions] = useState<Record<string, Record<string, string>>>({});
   const byId = new Map(bubbles.map((b) => [b.id, b]));
-  /** The quoted snippet a bubble shows — flattened words, capped. */
+  /** The quoted snippet a bubble shows - flattened words, capped. */
   const quotePreview = (id: string): { preview: string; name: string } | null => {
     const q = byId.get(id);
     if (!q) return { preview: "הודעה קודמת", name: "" };
@@ -155,7 +155,7 @@ export function ChatThread({
   };
   const composerRef = useRef<RichEditorHandle | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  // The freshest thread the server handed us — the failure timer consults THIS
+  // The freshest thread the server handed us - the failure timer consults THIS
   // at fire time instead of trusting a closure from seconds ago.
   const messagesRef = useRef(messages);
   useEffect(() => {
@@ -166,7 +166,7 @@ export function ChatThread({
   const atBottomRef = useRef(true);
   const inFlight = bubbles.some((b) => b.pending);
   // Delivered = the revalidated thread came back holding it. Read from the
-  // messages we were just handed, never remembered — a remembered "sent" is
+  // messages we were just handed, never remembered - a remembered "sent" is
   // exactly the lie this component must not tell.
   const awaiting = !!sending && countMine(messages, meId, sending.key) <= sending.seen;
 
@@ -176,7 +176,7 @@ export function ChatThread({
     if (!sending || !awaiting || inFlight) return;
     const timer = setTimeout(() => {
       // Last look before crying wolf: if the freshest thread holds the
-      // message, it was delivered — a race between the revalidated props and
+      // message, it was delivered - a race between the revalidated props and
       // this timer must never turn a sent message into a failure banner.
       const delivered = countMine(messagesRef.current, meId, sending.key) > sending.seen;
       setSending(null);
@@ -188,7 +188,7 @@ export function ChatThread({
     return () => clearTimeout(timer);
   }, [sending, awaiting, inFlight, meId]);
 
-  // Follow the conversation down — on first open and whenever a message
+  // Follow the conversation down - on first open and whenever a message
   // arrives while she is at the bottom. If she scrolled up to reread
   // something, we stay exactly where she is; nothing yanks her back down.
   const bubbleCount = bubbles.length;
@@ -199,11 +199,11 @@ export function ChatThread({
 
   const last = bubbles[bubbles.length - 1];
   const iWrote = bubbles.some((b) => b.sender_id === meId);
-  // A locked thread (no send action) never INVITES writing — that reads as a
+  // A locked thread (no send action) never INVITES writing - that reads as a
   // contradiction next to the lock explanation below.
   const status = !last
     ? action
-      ? "עוד לא התחלתן — כתבי לה מה מעסיק אותך 💜"
+      ? "עוד לא התחלתן - כתבי לה מה מעסיק אותך 💜"
       : "אין עדיין הודעות בשיחה הזו"
     : inFlight || awaiting
       ? "שולח…"
@@ -289,10 +289,10 @@ export function ChatThread({
                   <MessageBody body={m.body} invert={mine} />
                   {m.attachments && <AttachmentList items={m.attachments} compact />}
                 </div>
-                {/* Reply + react — appear on hover (always reachable on touch
+                {/* Reply + react - appear on hover (always reachable on touch
                     via the reaction chips row below). ABSOLUTE on purpose: as
                     flex siblings they reserved ~80px beside every bubble and
-                    shrank the message width (the owner, 31/8) — floated past
+                    shrank the message width (the owner, 31/8) - floated past
                     the bubble's center-facing edge they cost no layout space. */}
                 {!m.pending && (action || reactAction) && (
                   <span
@@ -403,14 +403,14 @@ export function ChatThread({
         })}
         {bubbles.length === 0 && (
           <p className="text-sm text-ink-500 text-center my-auto">
-            {action ? "התחילי את השיחה — כתבי לה הודעה ראשונה 💜" : "אין עדיין הודעות בשיחה הזו 💜"}
+            {action ? "התחילי את השיחה - כתבי לה הודעה ראשונה 💜" : "אין עדיין הודעות בשיחה הזו 💜"}
           </p>
         )}
       </div>
 
       {failed && (
         <div role="alert" className="px-3.5 py-2 border-t border-ink-100 text-[12.5px] text-[#A8254B] bg-danger-bg">
-          ההודעה לא נשלחה — החזרנו לך אותה לתיבה, אפשר לנסות שוב 💜
+          ההודעה לא נשלחה - החזרנו לך אותה לתיבה, אפשר לנסות שוב 💜
         </div>
       )}
 
@@ -421,7 +421,7 @@ export function ChatThread({
           )}
           {editing && (
             <div className="mx-3.5 mt-2 flex items-start gap-2 border-s-2 border-brand-pink-deep bg-tint-pink/40 rounded-md px-3 py-1.5 text-[12.5px] text-ink-700">
-              <span className="flex-1 min-w-0 truncate">✏️ עריכת הודעה — שליחה תעדכן את ההודעה המקורית</span>
+              <span className="flex-1 min-w-0 truncate">✏️ עריכת הודעה - שליחה תעדכן את ההודעה המקורית</span>
               <button
                 type="button"
                 aria-label="ביטול העריכה"
@@ -459,7 +459,7 @@ export function ChatThread({
               setFailed(false);
               if (editing) {
                 // Rewriting, not sending: no optimistic bubble, no delivery
-                // watch — the revalidated thread brings the new text back.
+                // watch - the revalidated thread brings the new text back.
                 const target = editing.id;
                 setEditing(null);
                 await editAction?.(target, formData);
@@ -475,7 +475,7 @@ export function ChatThread({
               try {
                 const verdict = await action(formData);
                 if (verdict && typeof verdict === "object" && "ok" in verdict) {
-                  // The server answered outright — no more inferring delivery
+                  // The server answered outright - no more inferring delivery
                   // from a revalidation racing a timer (the owner, 31/8: a slow
                   // cold start branded DELIVERED messages "לא נשלחה").
                   setSending(null);
@@ -486,7 +486,7 @@ export function ChatThread({
                   }
                 }
               } catch {
-                // The action itself failed to reach the server — that IS a
+                // The action itself failed to reach the server - that IS a
                 // real failure: hand her words back.
                 setSending(null);
                 setFailed(true);

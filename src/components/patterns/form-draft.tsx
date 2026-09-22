@@ -6,12 +6,12 @@ import { useEffect, useRef, useState } from "react";
  * Google-Forms-style auto-save for a form (the members' ask, 2/9: "עדיף
  * שהתוכן שכבר מילאתי יישאר"). Drop it INSIDE the form; it watches the
  * closest("form"), snapshots what she typed into localStorage (debounced),
- * and restores it on the next visit — so a hop to another page never costs
+ * and restores it on the next visit - so a hop to another page never costs
  * her the half-filled answers.
  *
  * Coverage is deliberately the SAFE fields: text/textarea/select/checkbox/
  * radio and the rich editors. Hidden inputs of complex widgets (experience
- * lists, multiselect chips) are skipped — restoring their value without
+ * lists, multiselect chips) are skipped - restoring their value without
  * their UI state would lie to her.
  */
 const TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -32,7 +32,7 @@ export function FormDraft({
   clear?: boolean;
   /**
    * The record's last successful save time (ISO). A draft OLDER than it
-   * predates a save that already happened — restoring it would resurrect
+   * predates a save that already happened - restoring it would resurrect
    * old text over the truth (the member's "לא שומר שינויים", 14/9). Such a
    * draft is dropped instead of restored.
    */
@@ -74,7 +74,7 @@ export function FormDraft({
         const draft = JSON.parse(raw) as DraftShape;
         const staleMs = staleAfter ? Date.parse(staleAfter) : 0;
         if (staleMs && draft.t < staleMs) {
-          // The form was saved AFTER this draft was written — the server is
+          // The form was saved AFTER this draft was written - the server is
           // the newer truth; the leftover draft must not overwrite it.
           localStorage.removeItem(storageKey);
         } else if (Date.now() - draft.t < TTL_MS) {
@@ -84,14 +84,14 @@ export function FormDraft({
               const key = `${el.name}::${el.value}`;
               if (key in draft.checks) el.checked = draft.checks[key];
             } else if (el.name in draft.fields && !(el instanceof HTMLInputElement && el.type === "file")) {
-              // Only fill where she LEFT something — never blank a
+              // Only fill where she LEFT something - never blank a
               // server-rendered value with an empty draft entry.
               if (draft.fields[el.name] !== "") el.value = draft.fields[el.name];
             }
           }
           for (const { editable, input } of richPairs()) {
             const html = draft.rich[input.name];
-            // Chrome leaves "<div><br></div>" behind in an emptied editor —
+            // Chrome leaves "<div><br></div>" behind in an emptied editor -
             // restoring that over saved text blanked answers (19/9).
             const hasText = !!html && html.replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").trim() !== "";
             if (hasText) {
@@ -103,7 +103,7 @@ export function FormDraft({
         }
       }
     } catch {
-      /* corrupt/blocked storage — start clean */
+      /* corrupt/blocked storage - start clean */
     }
 
     // ------------------------------------------------------------- capture
@@ -122,7 +122,7 @@ export function FormDraft({
       try {
         localStorage.setItem(storageKey, JSON.stringify(draft));
       } catch {
-        /* storage full/blocked — autosave just doesn't stick */
+        /* storage full/blocked - autosave just doesn't stick */
       }
     };
     const onInput = () => {
@@ -142,7 +142,7 @@ export function FormDraft({
     <span ref={anchorRef} className="contents">
       {restoredAt !== null && (
         <span className="block text-[11.5px] text-ink-400 -mt-1">
-          ✓ שחזרנו את מה שמילאת קודם — הטופס נשמר אוטומטית תוך כדי כתיבה
+          ✓ שחזרנו את מה שמילאת קודם - הטופס נשמר אוטומטית תוך כדי כתיבה
         </span>
       )}
     </span>

@@ -7,7 +7,7 @@ const SHOTS = process.env.SHOTS_DIR || ".";
 const SESSION = "eacb500f-9b4e-419b-8bd7-f5d024914047";
 const results = [];
 const ok = (name, pass, extra = "") => {
-  results.push(`${pass ? "✅" : "❌"} ${name}${extra ? " — " + extra : ""}`);
+  results.push(`${pass ? "✅" : "❌"} ${name}${extra ? " - " + extra : ""}`);
 };
 
 // Tiny but valid-enough PDF for upload flows.
@@ -65,7 +65,7 @@ const keysHref = await page.locator('a[href*="/ai/keys"]').last().getAttribute("
 ok("no_key alert links back to checker", decodeURIComponent(keysHref ?? "").includes("next=/ai/cv-checker"), keysHref ?? "");
 await page.screenshot({ path: `${SHOTS}/sweep-3-checker-nokey.png` });
 
-// 3. interview: OFFLINE by the owner's call (2026-08-29) — the session page
+// 3. interview: OFFLINE by the owner's call (2026-08-29) - the session page
 // redirects to the "בקרוב" screen. The optimistic-thread checks return with
 // the simulator (git history has them).
 await page.goto(`${BASE}/ai/interview/${SESSION}`);

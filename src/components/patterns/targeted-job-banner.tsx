@@ -9,7 +9,7 @@ export interface TargetedJobLite {
 
 /**
  * A bold brand-gradient banner for jobs published specifically to the current
- * member (job_targets). Server component — the caller queries her targeted
+ * member (job_targets). Server component - the caller queries her targeted
  * open jobs and passes them in; renders nothing when there are none.
  */
 export function TargetedJobBanner({ jobs }: { jobs: TargetedJobLite[] }) {

@@ -27,7 +27,7 @@ export async function checkMembershipActive(): Promise<boolean> {
 /**
  * DEV ONLY: simulate a successful payment so the full signup → pay → active
  * flow is testable before Nedarim credentials exist. Disabled once Nedarim is
- * configured — in production the real server CallBack activates the member.
+ * configured - in production the real server CallBack activates the member.
  */
 export async function simulatePayment(plan: SubscriptionPlan): Promise<{ error?: string }> {
   // Hard-blocked in production regardless of env state: the real Nedarim
@@ -44,7 +44,7 @@ export async function simulatePayment(plan: SubscriptionPlan): Promise<{ error?:
 }
 
 /**
- * "אני מגיעה בתור מנטורית" — switches her onto the free, approval-based track:
+ * "אני מגיעה בתור מנטורית" - switches her onto the free, approval-based track:
  * role mentor + free tier, and the profile gate reopens so she fills the
  * MENTOR questionnaire (shared answers she already gave stay pre-filled).
  * Until an admin approves, she is a pending member like any other.
@@ -58,11 +58,11 @@ export async function applyAsMentor(): Promise<void> {
     .select("status, role")
     .eq("id", user.id)
     .maybeSingle();
-  // Only a not-yet-active member may switch tracks — an active member asking
+  // Only a not-yet-active member may switch tracks - an active member asking
   // to mentor goes through the admin (מינוי), not through self-serve.
   if (!me || me.status === "active") redirect("/join");
   // Service role, deliberately: the profiles guard trigger silently reverts
-  // role/tier changes from a member's own context — which left applicants as
+  // role/tier changes from a member's own context - which left applicants as
   // free JUNIORS facing the junior questionnaire (the tester's bug). The
   // action itself is the gate: her own row, pre-active only, fixed values.
   const { createAdminClient } = await import("@/lib/supabase/admin");
@@ -71,16 +71,16 @@ export async function applyAsMentor(): Promise<void> {
     .update({ role: "mentor", member_tier: "free", profile_completed: false })
     .eq("id", user.id);
   // The (app) layout shows the mentor questionnaire while profile_completed
-  // is false — land her straight on it.
-  // Same-route redirects are soft no-ops without this — the wizard must
+  // is false - land her straight on it.
+  // Same-route redirects are soft no-ops without this - the wizard must
   // re-render with the mentor scope.
   revalidatePath("/", "layout");
   redirect("/forum");
 }
 
-/** She clicked the mentor track by mistake — back to the paid junior track. */
+/** She clicked the mentor track by mistake - back to the paid junior track. */
 /**
- * A mentor — pending OR approved — chooses the regular member track from her
+ * A mentor - pending OR approved - chooses the regular member track from her
  * PROFILE page (the owner, 1/9: "בהגדרת הפרופיל צריך לאפשר למנטורית להתחרט").
  * She becomes a junior on the paid track; the member questionnaire reopens
  * (shared answers pre-filled); a payer is activated straight back as מנויה.
@@ -98,7 +98,7 @@ export async function switchMentorToMemberTrack(): Promise<void> {
   const { createAdminClient } = await import("@/lib/supabase/admin");
   await createAdminClient()
     .from("profiles")
-    // An active MENTOR is not a payer — as a junior, "active" means paying
+    // An active MENTOR is not a payer - as a junior, "active" means paying
     // (the honest gating), so she starts pending and the reconcile below
     // activates her only if she actually pays.
     .update({ role: "junior", member_tier: "paid", status: "pending", profile_completed: false })
@@ -123,10 +123,10 @@ async function revertMentor(): Promise<void> {
     .eq("id", user.id)
     .maybeSingle();
   if (!me || me.status === "active" || me.role !== "mentor") redirect("/join");
-  // Same trigger story as applyAsMentor — the revert must also bypass it.
+  // Same trigger story as applyAsMentor - the revert must also bypass it.
   // profile_completed resets too, symmetrically: she may have completed the
   // MENTOR questionnaire meanwhile, and carrying that "completed" back to the
-  // junior track produced a junior with no junior answers (מרים, 31/8) —
+  // junior track produced a junior with no junior answers (מרים, 31/8) -
   // the wizard reopens with her shared answers pre-filled.
   const { createAdminClient } = await import("@/lib/supabase/admin");
   await createAdminClient()
@@ -150,7 +150,7 @@ export async function revertMentorApplication(): Promise<void> {
 
 /**
  * The same way out, offered INSIDE the questionnaire (the owner, 31/8: "מי
- * שלחצה בטעות על מנטורית אין לה דרך יציאה — תאפשר בכל שלב"). Lands back on
+ * שלחצה בטעות על מנטורית אין לה דרך יציאה - תאפשר בכל שלב"). Lands back on
  * the wizard, now on the regular-member track with her shared answers kept.
  */
 export async function revertMentorFromWizard(): Promise<void> {

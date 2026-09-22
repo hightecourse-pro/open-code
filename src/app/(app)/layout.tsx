@@ -14,14 +14,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
 
 /**
- * Women who recently started a job — the whole community celebrates, on every
+ * Women who recently started a job - the whole community celebrates, on every
  * screen (the PM: floating, not buried in the forum). Two sources: members
  * (profiles) and off-community placements (manual_hires, admin-only RLS →
- * service role; banner names are public by design). Names only — a member's
+ * service role; banner names are public by design). Names only - a member's
  * workplace is never shown to other members.
  */
 
-// Config flag, identical for everyone — one query a minute instead of one per
+// Config flag, identical for everyone - one query a minute instead of one per
 // page render (the Vercel cost round, 3/9).
 const launchNudgeFlag = unstable_cache(
   async (): Promise<boolean> => {
@@ -38,7 +38,7 @@ const launchNudgeFlag = unstable_cache(
   { revalidate: 60 }
 );
 
-// The same list for every member — cached for a minute so the auto-refresh
+// The same list for every member - cached for a minute so the auto-refresh
 // polls of the whole community share ONE query instead of one each (the
 // Vercel cost round, 3/9). Email→profile linking happens on /admin/hires.
 const recentlyHired = unstable_cache(
@@ -47,7 +47,7 @@ const recentlyHired = unstable_cache(
     const admin = createAdminClient();
     // The hires registry (3/9) is the single source: community rows are
     // inserted the moment a member is marked placed-by-us, external ones from
-    // /admin/hires. No cap (the owner, 3/9) — the banner rotates.
+    // /admin/hires. No cap (the owner, 3/9) - the banner rotates.
     const { data: hires } = await admin
       .from("hires")
       .select("id, full_name, profile_id")
@@ -58,12 +58,12 @@ const recentlyHired = unstable_cache(
   },
   ["recently-hired"],
   // The tag lets the hires screen bust this shared cache the moment a name
-  // is pulled from the banner — no stale minute.
+  // is pulled from the banner - no stale minute.
   { revalidate: 60, tags: ["recently-hired"] }
 );
 
 /**
- * Messages waiting for her — the same rule the daily digest counts by: in one
+ * Messages waiting for her - the same rule the daily digest counts by: in one
  * of her conversations, written by the other side, never read.
  *
  * One head-only count, no explicit conversation filter: messages RLS
@@ -92,7 +92,7 @@ export default async function AuthenticatedLayout({
   const profile = await requireCommunityAccess();
 
   // First-login gate: members must complete their profile before entering.
-  // (Admins/staff skip — they manage, they don't onboard.)
+  // (Admins/staff skip - they manage, they don't onboard.)
   if (!profile.profile_completed && profile.role !== "admin") {
     return <ProfileOnboarding profile={profile} />;
   }
@@ -102,9 +102,9 @@ export default async function AuthenticatedLayout({
   // A free member reads the history she already has, so the count is hers too.
   const unreadCount = await unreadMessageCount(profile.id);
 
-  // "היית איתנו בסשן?" — for a week after a session ends, until she answers.
+  // "היית איתנו בסשן?" - for a week after a session ends, until she answers.
   // Only women who may actually ATTEND sessions are asked (the owner, 30/8:
-  // "מנויות רשומות ומנטוריות, השאר לא מקבלות משוב") — same crowd as the
+  // "מנויות רשומות ומנטוריות, השאר לא מקבלות משוב") - same crowd as the
   // session gate itself.
   let feedbackSession: { id: string; title: string; scheduled_at: string } | null = null;
   const mayAttendSessions =
@@ -123,7 +123,7 @@ export default async function AuthenticatedLayout({
         .select("id, title, scheduled_at")
         .eq("is_published", true)
         .is("canceled_at", null)
-        // An admin-marked live session is still running — never ask about it.
+        // An admin-marked live session is still running - never ask about it.
         .neq("status", "live")
         .gte("scheduled_at", weekAgo)
         .lt("scheduled_at", endedEdge)
@@ -133,20 +133,20 @@ export default async function AuthenticatedLayout({
     ]);
     const done = new Set((answered ?? []).map((a) => a.session_id));
     // ONLY the newest ended session may ask (the owner, 30/8: answering one
-    // then being asked about an OLDER one read as "מופיע שוב") — once it is
+    // then being asked about an OLDER one read as "מופיע שוב") - once it is
     // answered or dismissed, the banner goes quiet.
     const newest = (ended ?? [])[0] ?? null;
     feedbackSession = newest && !done.has(newest.id) ? newest : null;
   }
   // The admin-worded rating questions + the celebration names + whether the
-  // launch nudge is on — only fetched when someone will actually see them.
+  // launch nudge is on - only fetched when someone will actually see them.
   // The external-applications claim rides in the same wave: an application
   // the team recorded by her email becomes hers on the first navigation.
   const [feedbackAspects, hired, launchNudgeOn, hiresSeen, gradesCount] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
     launchNudgeFlag(),
-    // Which celebrations SHE already saw (the owner, 18/9) — per member.
+    // Which celebrations SHE already saw (the owner, 18/9) - per member.
     createAdminClient()
       .from("hire_banner_seen")
       .select("seen_hire_ids")
@@ -172,7 +172,7 @@ export default async function AuthenticatedLayout({
     })(),
   ]);
 
-  // Her recent team requests — the widget shows their status and WHO answered.
+  // Her recent team requests - the widget shows their status and WHO answered.
   const myRequests = await (async () => {
     const supabase = await createClient();
     const { data: reqs } = await supabase
@@ -199,10 +199,10 @@ export default async function AuthenticatedLayout({
     }));
   })();
 
-  // She turned auto-renewal off but is still inside the paid period — a quiet
+  // She turned auto-renewal off but is still inside the paid period - a quiet
   // standing reminder of the end date, with the way back one click away.
   // A charge-limited keva gets its own neutral wording ("ביטלת" alarmed
-  // נחמה וולפא, 15/9 — she never canceled anything).
+  // נחמה וולפא, 15/9 - she never canceled anything).
   let cancelNotice: string | null = null;
   let cancelNoticeLimitedKeva = false;
   if (subscriber && profile.role === "junior") {
@@ -253,7 +253,7 @@ export default async function AuthenticatedLayout({
           className="flex items-center gap-2.5 bg-tint-purple/50 border border-[#DDC9EC] rounded-md p-3 px-4 mb-5 text-[13.5px] text-brand-purple hover:border-brand-purple transition-colors"
         >
           <span className="flex-1">
-            המנוי שלך משולם עד <b>{cancelNotice}</b> לפי הוראת הקבע שלך — אפשר להמשיך אותו
+            המנוי שלך משולם עד <b>{cancelNotice}</b> לפי הוראת הקבע שלך - אפשר להמשיך אותו
             בלחיצה 💜
           </span>
           <span className="font-display font-semibold whitespace-nowrap">למנוי שלי ←</span>
@@ -265,7 +265,7 @@ export default async function AuthenticatedLayout({
           className="flex items-center gap-2.5 bg-tint-warm border border-[#F8D98C] rounded-md p-3 px-4 mb-5 text-[13.5px] text-[#8C5E0E] hover:border-[#E5A93C] transition-colors"
         >
           <span className="flex-1">
-            ביטלת את חידוש המנוי — הוא פעיל עד <b>{cancelNotice}</b>. התחרטת? אפשר להפעיל מחדש
+            ביטלת את חידוש המנוי - הוא פעיל עד <b>{cancelNotice}</b>. התחרטת? אפשר להפעיל מחדש
             בלחיצה.
           </span>
           <span className="font-display font-semibold whitespace-nowrap">לפרופיל ←</span>
@@ -280,7 +280,7 @@ export default async function AuthenticatedLayout({
           <Sparkles size={17} className="text-brand-pink-deep shrink-0" />
           <span className="flex-1">
             {profile.role === "mentor"
-              ? "הבקשה שלך כמנטורית אצל הצוות 👑 ברגע שתאושרי — הכול נפתח מעצמו, בלי תשלום."
+              ? "הבקשה שלך כמנטורית אצל הצוות 👑 ברגע שתאושרי - הכול נפתח מעצמו, בלי תשלום."
               : "את מסתכלת מסביב 👋 עם מנוי נפתחות גם הקלטות הסשנים, הקורסים, כלי ה-AI והשיחות בפורום."}
           </span>
           <span className="font-display font-semibold text-brand-purple whitespace-nowrap">
@@ -289,10 +289,10 @@ export default async function AuthenticatedLayout({
         </Link>
       )}
       {children}
-      {/* The floating message-to-the-team widget (PM ask) — the reply lands
+      {/* The floating message-to-the-team widget (PM ask) - the reply lands
           back in her chat. */}
       <MemberRequestWidget requests={myRequests} launchNudge={launchNudgeOn} />
-      {/* The hired celebration — floating, minimizable, on every screen. */}
+      {/* The hired celebration - floating, minimizable, on every screen. */}
       <HiredBanner members={hired} seenIds={hiresSeen} />
     </AppShell>
   );

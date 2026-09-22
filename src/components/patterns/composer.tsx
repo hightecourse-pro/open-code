@@ -32,7 +32,7 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
         setAttachEpoch((n) => n + 1);
         setPublished(true);
         // createPost already revalidates this route; this is the belt to its
-        // braces — a form cleared with nothing new on screen reads as "my post
+        // braces - a form cleared with nothing new on screen reads as "my post
         // disappeared", and one extra fetch is cheaper than that doubt.
         router.refresh();
       }
@@ -61,7 +61,7 @@ export function Composer({ kind = "feed" }: { kind?: "feed" | "forum" }) {
           <input
             name="title"
             maxLength={120}
-            placeholder="נושא הפוסט — כותרת קצרה (לא חובה)"
+            placeholder="נושא הפוסט - כותרת קצרה (לא חובה)"
             className="w-full rounded-md border border-ink-300 bg-ink-0 px-3 py-2 text-sm font-semibold text-ink-1000 placeholder:font-normal placeholder:text-ink-400 focus:outline-none focus:border-brand-purple mb-2"
           />
         )}

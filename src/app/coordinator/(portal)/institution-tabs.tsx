@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { switchInstitution } from "../actions";
 
 /**
- * Seminary tabs for a multi-seminary coordinator (the owner, 16/9) — each
+ * Seminary tabs for a multi-seminary coordinator (the owner, 16/9) - each
  * seminary is a fully separate view; switching keeps the current page.
  */
 export function InstitutionTabs({

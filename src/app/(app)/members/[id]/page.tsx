@@ -16,7 +16,7 @@ import {
 } from "@/components/patterns/member-card";
 
 /**
- * A mentor's public card is deliberately richer than a member's — workplace,
+ * A mentor's public card is deliberately richer than a member's - workplace,
  * years, technologies, what she offers. These come from her MENTOR-scope
  * questionnaire answers, read with the service role: the profile the owner
  * decided every member may see. Junior answers never pass through here.
@@ -61,7 +61,7 @@ async function mentorSpotlight(profileId: string) {
   };
 }
 
-/** "אוגוסט 2025" — how long she's been part of this. */
+/** "אוגוסט 2025" - how long she's been part of this. */
 const MONTH_YEAR = new Intl.DateTimeFormat("he-IL", {
   month: "long",
   year: "numeric",
@@ -69,7 +69,7 @@ const MONTH_YEAR = new Intl.DateTimeFormat("he-IL", {
 });
 
 /**
- * One member from the directory view. Never `profiles` — this page must not be
+ * One member from the directory view. Never `profiles` - this page must not be
  * able to reveal whether she's paying.
  */
 async function loadMember(id: string): Promise<DirectoryMember | null> {
@@ -108,7 +108,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
       ])
     : [null, null];
 
-  // Her city — shown instead of the region (the owner, 31/8). Stored as the
+  // Her city - shown instead of the region (the owner, 31/8). Stored as the
   // select's VALUE; resolved to the label with the service role.
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const adminC = createAdminClient();
@@ -177,7 +177,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
-        {/* קצת על עצמי stays off members' eyes — it belongs to the admin and
+        {/* קצת על עצמי stays off members' eyes - it belongs to the admin and
             the employer-facing candidate profile only (the owner, 10/9). */}
 
         {isMentor && spotlight && (
@@ -228,7 +228,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
               href="/profile"
               className="w-full inline-flex items-center justify-center gap-1.5 font-display font-semibold text-[13px] py-2.5 rounded-md bg-ink-50 text-ink-700 border border-ink-200 hover:border-brand-purple hover:text-brand-purple transition-colors"
             >
-              <Pencil size={14} /> זה את — לעריכת הפרופיל שלך
+              <Pencil size={14} /> זה את - לעריכת הפרופיל שלך
             </Link>
           ) : (
             <MemberChatAction member={member} canChat={isSubscriber(me)} mentorWaiting={me.role === "mentor"} />

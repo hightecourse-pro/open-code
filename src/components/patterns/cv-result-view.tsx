@@ -21,7 +21,7 @@ const INSIGHT_STYLE = {
 } as const;
 
 /**
- * ONE rendering for an AI CV review — the fresh result, the latest saved
+ * ONE rendering for an AI CV review - the fresh result, the latest saved
  * review and an opened history entry all look the same (a member, 18/9: the
  * feedback "showed only under previous checks" and the job fit "gave only a
  * score"). The job block leads with what is missing for THIS job and the
@@ -36,7 +36,7 @@ export function CvResultView({
   analysis: CvAnalysis;
   heading?: React.ReactNode;
   compact?: boolean;
-  /** The history row already prints score + summary — skip the card there. */
+  /** The history row already prints score + summary - skip the card there. */
   showScore?: boolean;
 }) {
   const rawFit = analysis.job_fit;
@@ -116,7 +116,7 @@ export function CvResultView({
                   </span>
                 ))}
                 {fit.matched.length === 0 && (
-                  <span className="text-[12.5px] text-ink-500">—</span>
+                  <span className="text-[12.5px] text-ink-500">-</span>
                 )}
               </div>
             </div>

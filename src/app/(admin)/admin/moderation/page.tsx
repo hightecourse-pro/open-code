@@ -70,7 +70,7 @@ export default async function AdminModerationPage() {
   const openCards = cards.filter((c) => c.isOpen);
   const handledCards = cards.filter((c) => !c.isOpen);
 
-  /** One reported item, open or already handled — the markup is the same. */
+  /** One reported item, open or already handled - the markup is the same. */
   function reportCard(card: (typeof cards)[number]) {
     const newest = card.rows[0];
     const st = STATUS[card.isOpen ? "open" : newest.status] ?? STATUS.open;
@@ -79,7 +79,7 @@ export default async function AdminModerationPage() {
     const target = post ?? comment;
     const where = post ? (post.kind === "forum" ? "פורום" : "פיד") : comment ? "תגובה" : null;
     const whereHref = post?.kind === "feed" ? "/feed" : "/forum";
-    // Any open row can carry the decision — it closes all of its siblings.
+    // Any open row can carry the decision - it closes all of its siblings.
     const leadId = (card.openRows[0] ?? newest).id;
 
     return (
@@ -115,7 +115,7 @@ export default async function AdminModerationPage() {
                     ? `לסמן כטופל? התוכן המדווח יוסר מהקהילה לצמיתות, וכל ${card.rows.length} הדיווחים עליו ייסגרו.`
                     : "לסמן כטופל? התוכן המדווח יוסר מהקהילה לצמיתות."
                 }
-                title="טופל — הסרת התוכן"
+                title="טופל - הסרת התוכן"
                 className="font-display font-semibold text-[13px] px-3.5 py-1.5 rounded-md bg-brand-gradient text-white"
               >
                 טופל · הסרת התוכן
@@ -135,7 +135,7 @@ export default async function AdminModerationPage() {
           )}
         </div>
 
-        {/* Every reason stays visible — the same post can be reported for
+        {/* Every reason stays visible - the same post can be reported for
             different things, and the decision covers all of them. */}
         <ul className="flex flex-col gap-0.5">
           {card.rows.map((r) => (
@@ -171,7 +171,7 @@ export default async function AdminModerationPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">מודרציה</h1>
         <p className="t-body-sm text-ink-700">
           דיווחים על תוכן בקהילה, כרטיס אחד לכל תוכן שדווח. ״טופל״ מסיר את התוכן; ״דחייה״ משאירה
-          אותו — ובשני המקרים כל הדיווחים על אותו תוכן נסגרים יחד.
+          אותו - ובשני המקרים כל הדיווחים על אותו תוכן נסגרים יחד.
         </p>
       </div>
 
@@ -184,8 +184,8 @@ export default async function AdminModerationPage() {
         ) : (
           <p className="text-ink-500 text-sm py-4">
             {cards.length > 0
-              ? "אין דיווחים שמחכים לך — הכול טופל 💜"
-              : "עדיין אין דיווחים — הקהילה נקייה 💜"}
+              ? "אין דיווחים שמחכים לך - הכול טופל 💜"
+              : "עדיין אין דיווחים - הקהילה נקייה 💜"}
           </p>
         )}
       </div>

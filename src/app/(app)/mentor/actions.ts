@@ -15,7 +15,7 @@ export type MentorRequestState = { ok?: boolean; error?: string };
 
 /**
  * A member asks to be matched with a mentor. Stores the request for the admin
- * queue and emails the team (best-effort — a failed email never loses the
+ * queue and emails the team (best-effort - a failed email never loses the
  * request).
  */
 export async function requestMentor(
@@ -40,7 +40,7 @@ export async function requestMentor(
   }
   const note = String(formData.get("note") ?? "").trim().slice(0, 1000);
 
-  // One open request at a time — a second ask would just duplicate the queue.
+  // One open request at a time - a second ask would just duplicate the queue.
   const { data: existing } = await supabase
     .from("mentor_requests")
     .select("id")
@@ -48,7 +48,7 @@ export async function requestMentor(
     .eq("status", "open")
     .maybeSingle();
   if (existing) {
-    return { error: "כבר יש לך בקשה פתוחה — אנחנו עליה 💜" };
+    return { error: "כבר יש לך בקשה פתוחה - אנחנו עליה 💜" };
   }
 
   const { error } = await supabase
@@ -94,7 +94,7 @@ export async function requestMentor(
 
 /**
  * The MENTOR accepts an assignment made to her. Only now the member sees her
- * (and gets the "צוותה לך מנטורית" email) — the owner's flow: assignment
+ * (and gets the "צוותה לך מנטורית" email) - the owner's flow: assignment
  * starts as an invitation, never as a fact.
  */
 export async function acceptMentorAssignment(requestId: string): Promise<void> {
@@ -118,7 +118,7 @@ export async function acceptMentorAssignment(requestId: string): Promise<void> {
     .update({ mentor_accepted_at: new Date().toISOString() })
     .eq("id", requestId);
 
-  // Now — and only now — the member hears who accompanies her.
+  // Now - and only now - the member hears who accompanies her.
   try {
     const [{ data: member }, { data: mentor }, { data: memberAuth }] = await Promise.all([
       admin.from("profiles").select("first_name, full_name").eq("id", req.profile_id).maybeSingle(),
@@ -142,7 +142,7 @@ export async function acceptMentorAssignment(requestId: string): Promise<void> {
     kind: "mentor_assignment_accepted",
     severity: "info",
     title: "מנטורית אישרה שיבוץ 👑",
-    body: "השיבוץ אושר — המנטית רואה אותה מעכשיו וקיבלה מייל.",
+    body: "השיבוץ אושר - המנטית רואה אותה מעכשיו וקיבלה מייל.",
     context: { requestId, mentorId: user.id },
     dedupeKey: `mentor-accept:${requestId}`,
   });
@@ -184,7 +184,7 @@ export async function declineMentorAssignment(requestId: string): Promise<void> 
       assigned_mentor_id: null,
       status: "open",
       handled_at: null,
-      // Visible on the admin requests screen — a decline is no longer silent.
+      // Visible on the admin requests screen - a decline is no longer silent.
       reopen_reason: `המנטורית ${mentor?.full_name ?? ""} סירבה לליווי`.trim(),
       reopened_at: new Date().toISOString(),
     })
@@ -193,7 +193,7 @@ export async function declineMentorAssignment(requestId: string): Promise<void> 
   await raiseAlert({
     kind: "mentor_assignment_declined",
     severity: "warning",
-    title: `${mentor?.full_name ?? "מנטורית"} ויתרה על שיבוץ — צריך לשבץ מישהי אחרת`,
+    title: `${mentor?.full_name ?? "מנטורית"} ויתרה על שיבוץ - צריך לשבץ מישהי אחרת`,
     body: "הבקשה חזרה לתור הפתוח במסך בקשות למנטורית.",
     context: { requestId, mentorId: user.id },
     dedupeKey: `mentor-decline:${requestId}:${Date.now()}`,

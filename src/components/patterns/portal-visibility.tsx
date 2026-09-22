@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { setPortalListed } from "@/app/(app)/profile/actions";
 
 /**
- * Whether her profile appears in the employer portal. On by default — it's how
- * companies find her — but always hers to switch off.
+ * Whether her profile appears in the employer portal. On by default - it's how
+ * companies find her - but always hers to switch off.
  */
 export function PortalVisibility({ listed }: { listed: boolean }) {
   const [on, setOn] = useState(listed);
@@ -25,7 +25,7 @@ export function PortalVisibility({ listed }: { listed: boolean }) {
       </div>
 
       <p className="t-body-sm text-ink-700">
-        חברות שעובדות איתנו מקבלות גישה לפורטל מועמדות ורואות שם את הפרופיל המקצועי שלך — במקום
+        חברות שעובדות איתנו מקבלות גישה לפורטל מועמדות ורואות שם את הפרופיל המקצועי שלך - במקום
         לקבל קורות חיים במייל. <b>פרטים אישיים (ת״ז, טלפון וכתובת) לעולם לא מוצגים שם.</b>
       </p>
 
@@ -55,7 +55,7 @@ export function PortalVisibility({ listed }: { listed: boolean }) {
         )}
       </button>
       <span className="text-[12.5px] text-ink-500">
-        {on ? "לחיצה תסתיר אותך מהפורטל." : "לחיצה תחזיר אותך לפורטל — ותגדיל את הסיכוי שיפנו אלייך."}
+        {on ? "לחיצה תסתיר אותך מהפורטל." : "לחיצה תחזיר אותך לפורטל - ותגדיל את הסיכוי שיפנו אלייך."}
       </span>
     </div>
   );

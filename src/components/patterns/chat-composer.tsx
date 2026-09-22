@@ -6,7 +6,7 @@ import { RichTextEditor, type RichEditorHandle } from "@/components/patterns/ric
 import { AttachmentPicker } from "@/components/patterns/attachment-picker";
 
 /**
- * The chat message box — the same rich editor the rest of the product uses,
+ * The chat message box - the same rich editor the rest of the product uses,
  * chat-sized: what she makes bold IS bold as she types, Enter sends,
  * Shift+Enter opens a new line.
  *
@@ -27,7 +27,7 @@ export function ChatComposer({
 
   // Straight back to typing after every send (tester feedback): the epoch
   // bump REMOUNTS the picker+editor to reset the attachment chips, and that
-  // remount lands at the END of the send transition — after any focus() made
+  // remount lands at the END of the send transition - after any focus() made
   // inside the action. Only an effect keyed on the epoch runs after the new
   // editor exists.
   useEffect(() => {

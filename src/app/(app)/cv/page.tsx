@@ -28,10 +28,10 @@ export default async function CvPage() {
 
   if (!user) redirect("/login");
 
-  // Filtered to her own rows explicitly, not just via RLS — an admin's RLS
+  // Filtered to her own rows explicitly, not just via RLS - an admin's RLS
   // grants read on everyone's documents, which put the whole community's CVs
   // (each with its owner's default badge) on this personal screen.
-  // is_default arrives with supabase/_cv_default.sql — until it runs, the page
+  // is_default arrives with supabase/_cv_default.sql - until it runs, the page
   // still lists her files (without the marker) instead of erroring.
   const withDefault = await supabase
     .from("cv_documents")
@@ -57,7 +57,7 @@ export default async function CvPage() {
     if (data?.signedUrl) signed.set(d.id, data.signedUrl);
   }
 
-  // Grade sheets (the owner, 19/9) — juniors only; optional, hers to manage.
+  // Grade sheets (the owner, 19/9) - juniors only; optional, hers to manage.
   const { data: me } = await supabase.from("profiles").select("role, is_experienced").eq("id", user.id).maybeSingle();
   const juniorTrack = me?.role === "junior" && me.is_experienced !== true;
   const { data: grades } = juniorTrack
@@ -75,7 +75,7 @@ export default async function CvPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;קורות חיים/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">קורות החיים שלך</h1>
         <p className="t-body-sm text-ink-700">
-          שמרי כאן את הגרסאות שלך — עברית, אנגלית, או מותאמות למשרה ספציפית. הקבצים פרטיים ונגישים רק לך ולצוות.
+          שמרי כאן את הגרסאות שלך - עברית, אנגלית, או מותאמות למשרה ספציפית. הקבצים פרטיים ונגישים רק לך ולצוות.
           {canMarkDefault && " הקובץ שסימנת כברירת מחדל הוא זה שיצורף אוטומטית להגשות שלך."}
         </p>
       </div>
@@ -146,7 +146,7 @@ export default async function CvPage() {
             <GraduationCap size={18} className="text-brand-indigo" /> גליונות ציונים
           </h2>
           <p className="text-[12.5px] text-ink-500 mb-4">
-            לא חובה — אבל גליון ציונים עוזר לנו להציג אותך למעסיקים בצורה מלאה יותר. הקבצים פרטיים ונגישים רק לך ולצוות.
+            לא חובה - אבל גליון ציונים עוזר לנו להציג אותך למעסיקים בצורה מלאה יותר. הקבצים פרטיים ונגישים רק לך ולצוות.
           </p>
           <GradeSheetUploadForm />
           {(grades ?? []).length > 0 && (

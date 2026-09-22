@@ -1,9 +1,9 @@
 // Minimal Google Drive API client over REST, authenticated as a service
 // account. Used to grant/revoke per-member access to course and session
-// material automatically — the same thing an admin used to do by hand in the
+// material automatically - the same thing an admin used to do by hand in the
 // share queue.
 //
-// Setup (once, by an admin — see the checklist in the share queue screen):
+// Setup (once, by an admin - see the checklist in the share queue screen):
 //   1. Google Cloud → new project → enable the "Google Drive API".
 //   2. Create a Service Account, then a JSON key for it.
 //   3. Put the content in a Shared Drive and add the service-account email as
@@ -98,12 +98,12 @@ async function driveFetch(path: string, init: RequestInit = {}): Promise<Respons
 }
 
 /**
- * Give an email read access to a Drive file/folder. Idempotent — an existing
+ * Give an email read access to a Drive file/folder. Idempotent - an existing
  * permission is left as-is.
  */
 export async function grantReadAccess(fileId: string, email: string): Promise<void> {
   // driveAutomationAllowed, not isProductionEnv: the owner's staging flag
-  // (ALLOW_DRIVE_OUTSIDE_PRODUCTION) must open WRITES too — with only the
+  // (ALLOW_DRIVE_OUTSIDE_PRODUCTION) must open WRITES too - with only the
   // read path open, staging shares sat pending forever ("הקורסים לא נפתחים").
   if (!driveAutomationAllowed()) {
     throw new Error("drive_write_blocked_outside_production");
@@ -119,7 +119,7 @@ export async function grantReadAccess(fileId: string, email: string): Promise<vo
   if (!res.ok) {
     const text = await res.text();
     // Google refuses silent sharing with addresses that aren't Google
-    // accounts — retry with a notification email, which is allowed.
+    // accounts - retry with a notification email, which is allowed.
     if (/sendNotificationEmail|not.*Google account|invalidSharingRequest/i.test(text)) {
       res = await driveFetch(
         `/files/${encodeURIComponent(fileId)}/permissions?supportsAllDrives=true&sendNotificationEmail=true`,
@@ -129,7 +129,7 @@ export async function grantReadAccess(fileId: string, email: string): Promise<vo
       const retryText = await res.text();
       // Only treat it as "she needs a Google address" when Google says so
       // about the ACCOUNT. A generic invalidSharingRequest can equally mean a
-      // domain sharing policy blocked us — that's our problem, not hers, and
+      // domain sharing policy blocked us - that's our problem, not hers, and
       // must not trigger an email asking her to fix something.
       if (/not.*a?.*Google account|no.*Google account|invalid.*email|badRequest.*emailAddress/i.test(retryText)) {
         throw new NotAGoogleAccountError(email);
@@ -142,7 +142,7 @@ export async function grantReadAccess(fileId: string, email: string): Promise<vo
 
 /**
  * Remove an email's access to a Drive file/folder. A no-op if not shared.
- * Walks every page of permissions — a popular file can have hundreds, and
+ * Walks every page of permissions - a popular file can have hundreds, and
  * missing the match would silently leave access in place.
  */
 export async function revokeAccess(fileId: string, email: string): Promise<void> {

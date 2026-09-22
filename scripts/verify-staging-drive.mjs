@@ -1,5 +1,5 @@
 // Prove staging now actually reaches Google: the fixture member's login email
-// is @opencode.test — NOT a Google account — so a real grant attempt must come
+// is @opencode.test - NOT a Google account - so a real grant attempt must come
 // back as "set a Drive address" instead of the old "the request was recorded".
 // Nobody receives access; the refusal itself is the proof the gate opened.
 import { chromium } from "@playwright/test";
@@ -19,7 +19,7 @@ await page.goto(`${BASE}/courses`);
 await page.waitForLoadState("networkidle");
 const gate = page.locator('button:has-text("פתחי את חומרי הקורס")');
 if (!(await gate.count())) {
-  console.log("no unlock gate visible — nothing to click");
+  console.log("no unlock gate visible - nothing to click");
 } else {
   await gate.click();
   await page.waitForTimeout(8000);

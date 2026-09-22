@@ -1,6 +1,6 @@
 /**
  * The canonical public URL of the app. Email links (auth redirects, digest
- * CTAs) must always be absolute and point at production — never localhost.
+ * CTAs) must always be absolute and point at production - never localhost.
  * Priority: explicit env → Vercel's production domain → local dev.
  */
 export function getSiteUrl(): string {

@@ -65,17 +65,17 @@ export interface ProfileFormProps {
   questions: ConfigQuestion[];
   answers: Record<string, unknown>; // question_id -> value
   taxonomyOptions?: Partial<Record<TaxonomyKind, Option[]>>;
-  /** She has no CV yet — the final step collects one, required (PM rule). */
+  /** She has no CV yet - the final step collects one, required (PM rule). */
   requireCv?: boolean;
   /** Show the CV upload as recommended-but-optional (mentors, 10/9). */
   cvOptional?: boolean;
   /** First-time signup may switch to the mentor track from the gate step. */
   allowMentorTrack?: boolean;
-  /** She is on the mentor questionnaire — the copy talks contribution, not placement. */
+  /** She is on the mentor questionnaire - the copy talks contribution, not placement. */
   mentorTrack?: boolean;
-  /** profiles.updated_at — a local draft older than it is dropped, not restored. */
+  /** profiles.updated_at - a local draft older than it is dropped, not restored. */
   draftStaleAfter?: string | null;
-  /** She already has a grade sheet — the optional wizard field is skipped. */
+  /** She already has a grade sheet - the optional wizard field is skipped. */
   hasGradeSheet?: boolean;
   /**
    * Fallback for the experience gate when no per-question answer row exists
@@ -85,7 +85,7 @@ export interface ProfileFormProps {
   initialExperienced?: boolean | null;
   /**
    * A completed profile being EDITED (15/9): every step carries a real
-   * "שמירת השינויים" submit — members edit one field mid-wizard, press the
+   * "שמירת השינויים" submit - members edit one field mid-wizard, press the
    * nearest "שמירה", and used to lose the edit (only the last step saved;
    * the local draft masked the loss on her own device).
    */
@@ -93,7 +93,7 @@ export interface ProfileFormProps {
 }
 
 // Long free text becomes RICH text (the owner, 31/8: "בטקסט חופשי ארוך צריך
-// להיות טקסט עשיר, הדגשות, בולטים, מספור") — stored as sanitized HTML.
+// להיות טקסט עשיר, הדגשות, בולטים, מספור") - stored as sanitized HTML.
 const RICH_KEYS = new Set([
   "bio",
   "notes_for_us",
@@ -103,7 +103,7 @@ const RICH_KEYS = new Set([
 ]);
 // Structured links: URL + title + short note per link (the owner, 31/8).
 const FORM_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
-// Selects where "אחר" is a complete answer — no פירוט field (the owner, 31/8).
+// Selects where "אחר" is a complete answer - no פירוט field (the owner, 31/8).
 const PLAIN_OTHER_KEYS = new Set(["marital_status"]);
 // The placement-fee acknowledgment: a fact with a must-check checkbox.
 const PAY_ACK_KEY = "paid_placement";
@@ -119,7 +119,7 @@ const LONG_TEXT = new Set([
 ]);
 const isOtherVal = (v: string) => v === "other";
 
-// Short related fields share a row instead of each taking a full one — the
+// Short related fields share a row instead of each taking a full one - the
 // tester's "אפשר לחבר לשורה אחת (רחוב, מס' בית, עיר)". Only consecutive
 // questions from one group are joined, so an admin reordering the form can
 // always split them again.
@@ -129,7 +129,7 @@ const ROW_GROUPS: string[][] = [
 ];
 
 // The wizard's steps live in @/lib/profile-sections so the configuration screen
-// can group by exactly the same rule — otherwise the admin reorders a flat list
+// can group by exactly the same rule - otherwise the admin reorders a flat list
 // that the member never sees in that order.
 
 export function ProfileForm({
@@ -147,7 +147,7 @@ export function ProfileForm({
   saveEveryStep = false,
   hasGradeSheet = false,
 }: ProfileFormProps) {
-  // The wizard's save carries her CV FILE — on filtered networks the proxy
+  // The wizard's save carries her CV FILE - on filtered networks the proxy
   // can kill the large upload mid-flight, and an uncaught dispatch rejection
   // crashed straight to the משהו-השתבש boundary with nothing saved (רות,
   // 5/9). Catch it: her answers stay in the form, she just retries.
@@ -160,7 +160,7 @@ export function ProfileForm({
           throw e;
         return {
           error:
-            "החיבור התנתק בזמן השליחה — זה קורה לפעמים ברשתות מסוננות כשמעלים קובץ. כל מה שמילאת נשמר כאן בטופס: פשוט לחצי שוב על סיום ושמירה. אם זה חוזר על עצמו, נסי קובץ קורות חיים קטן יותר.",
+            "החיבור התנתק בזמן השליחה - זה קורה לפעמים ברשתות מסוננות כשמעלים קובץ. כל מה שמילאת נשמר כאן בטופס: פשוט לחצי שוב על סיום ושמירה. אם זה חוזר על עצמו, נסי קובץ קורות חיים קטן יותר.",
         };
       }
     },
@@ -172,10 +172,10 @@ export function ProfileForm({
   const [gradesFileName, setGradesFileName] = useState<string | null>(null);
   const [cvError, setCvError] = useState(false);
 
-  // A server-side save error must be seen — scroll it into view.
+  // A server-side save error must be seen - scroll it into view.
   useEffect(() => {
     // Success scrolls too (15/9): a mid-step save renders the ✓ at the form
-    // top — off-screen from step 5, which read as "לא נשמר".
+    // top - off-screen from step 5, which read as "לא נשמר".
     if (state.error || state.ok)
       alertRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [state]);
@@ -189,7 +189,7 @@ export function ProfileForm({
   }
   // The list a multiselect ACTUALLY offers: opts() plus the GenAI merge for
   // practicum_tech and the "אחר" chip on tech taxonomies. Every "is this
-  // stored value a known option?" check must use THIS list — checking opts()
+  // stored value a known option?" check must use THIS list - checking opts()
   // alone shoved saved GenAI selections into the "אחר" free-text (the owner,
   // 31/8: "באחר מוצב מה שהיה במערכת").
   function fullList(q: ConfigQuestion): Option[] {
@@ -229,7 +229,7 @@ export function ProfileForm({
   // --- state ---
   const initBools: Record<string, boolean> = {};
   const initSelOther: Record<string, boolean> = {};
-  // Multiselects render as chip toggles — the selection is client state,
+  // Multiselects render as chip toggles - the selection is client state,
   // submitted through hidden inputs (storage stays an array of option values).
   const initMultiVals: Record<string, string[]> = {};
   for (const q of rest) {
@@ -240,7 +240,7 @@ export function ProfileForm({
       if (typeof cur === "string" && cur && !vals.includes(cur))
         initSelOther[q.id] = true;
     } else if (q.field_type === "multiselect" || q.field_type === "tags") {
-      // Against the FULL offered list — otherwise saved GenAI values (merged
+      // Against the FULL offered list - otherwise saved GenAI values (merged
       // into practicum_tech at render time) read as free-typed "אחר" text.
       const vals = fullList(q).map((o) => o.value);
       const arr = Array.isArray(answers[q.id])
@@ -259,7 +259,7 @@ export function ProfileForm({
 
   // Select-value dependencies: depends_on may be "key=value" (e.g. the
   // where-do-you-work follow-up shows only for "עובדת בהייטק"). Only parent
-  // selects are tracked in state — the rest stay uncontrolled.
+  // selects are tracked in state - the rest stay uncontrolled.
   const selectParentKeys = new Set(
     rest
       .map((q) => q.depends_on)
@@ -408,12 +408,12 @@ export function ProfileForm({
     const p = parsePracticumPeriod(raw);
     if (!q.required && !p.start && !p.end) return undefined;
     if (!isValidYm(p.start))
-      return "סמני מתי התחלת — ואם עוד לא סיימת, סמני את זה 🙂";
+      return "סמני מתי התחלת - ואם עוד לא סיימת, סמני את זה 🙂";
     if (p.end !== "current") {
       if (!isValidYm(p.end))
-        return 'סמני גם מתי סיימת — או סמני "עוד לא סיימתי" 🙂';
+        return 'סמני גם מתי סיימת - או סמני "עוד לא סיימתי" 🙂';
       if (p.end < p.start)
-        return "רגע, תאריך הסיום יוצא לפני ההתחלה — בדקי שוב את התאריכים 🙂";
+        return "רגע, תאריך הסיום יוצא לפני ההתחלה - בדקי שוב את התאריכים 🙂";
     }
     return undefined;
   }
@@ -498,7 +498,7 @@ export function ProfileForm({
     }
     setErrors({});
     // Server-side step draft (the owner, 6/9): whatever is filled so far is
-    // saved quietly — a lost final submit costs nothing (רות, 5/9).
+    // saved quietly - a lost final submit costs nothing (רות, 5/9).
     try {
       const draftFd = new FormData(formRef.current!);
       draftFd.set("__draft", "1");
@@ -518,11 +518,11 @@ export function ProfileForm({
   }
   /**
    * All the steps stay mounted and only toggle `hidden`, so the viewport keeps
-   * the previous step's offset — after a long step she'd land mid-form instead
+   * the previous step's offset - after a long step she'd land mid-form instead
    * of on the first field of the new one. Scrolling used to run synchronously
    * inside next()/back(), i.e. BEFORE React committed the step swap: a smooth
    * scroll started against the old tall layout, the document reflowed under it,
-   * and the animation visibly fought the clamp — the tester's "לא עובד חלק".
+   * and the animation visibly fought the clamp - the tester's "לא עובד חלק".
    * Post-commit + instant lands cleanly at the top of the new step.
    */
   const prevStep = useRef(0);
@@ -531,7 +531,7 @@ export function ProfileForm({
     prevStep.current = cur;
     alertRef.current?.scrollIntoView({ behavior: "instant", block: "start" });
   }, [cur]);
-  // A save error must land in front of her eyes — she saves from the LAST
+  // A save error must land in front of her eyes - she saves from the LAST
   // step, the alert renders at the TOP (the member's "לא שומר", 14/9).
   useEffect(() => {
     if (state.error)
@@ -543,8 +543,8 @@ export function ProfileForm({
   const stepHint =
     cur === 0
       ? mentorTrack
-        ? "נשמח להכיר אותך — ולשמוע איך תרצי ללוות ולתרום 💜"
-        : "ספרי לנו מאיפה את מגיעה — ואנחנו נתאים לך את השאלות."
+        ? "נשמח להכיר אותך - ולשמוע איך תרצי ללוות ולתרום 💜"
+        : "ספרי לנו מאיפה את מגיעה - ואנחנו נתאים לך את השאלות."
       : sectionSteps[cur - 1].hint;
 
   // ---- a single question field ----
@@ -561,7 +561,7 @@ export function ProfileForm({
         <Field key={q.id} label={q.label_he} error={err}>
           {isPractical && (
             <p className="t-body-sm text-ink-500 -mt-0.5 mb-1">
-              כאן צריך להופיע כל מה שמופיע בקורות החיים שלך — זה מה שלקוחות
+              כאן צריך להופיע כל מה שמופיע בקורות החיים שלך - זה מה שלקוחות
               פוטנציאליים רואים.
             </p>
           )}
@@ -570,7 +570,7 @@ export function ProfileForm({
             variant={isPractical ? "practical" : "work"}
             initial={parseExperienceEntries(current)}
             // The tech chips offer the taxonomy PLUS the GenAI list (the
-            // owner, 31/8) — practiced AI work is experience like any other.
+            // owner, 31/8) - practiced AI work is experience like any other.
             techOptions={[
               ...(taxonomyOptions.tech ?? []),
               ...opts(
@@ -640,7 +640,7 @@ export function ProfileForm({
                 <span className="w-24 shrink-0 text-sm font-medium text-ink-900">
                   {row.lang}
                 </span>
-                {/* The Select renders inside a wrapper div — stretch that. */}
+                {/* The Select renders inside a wrapper div - stretch that. */}
                 <div className="flex-1">
                   <Select
                     name={`${key}__level`}
@@ -759,13 +759,13 @@ export function ProfileForm({
     }
 
     if (q.field_type === "multiselect" || q.field_type === "tags") {
-      // Chip toggles (the portal-search pattern) — friendlier than a checkbox
+      // Chip toggles (the portal-search pattern) - friendlier than a checkbox
       // wall; the selection submits via hidden inputs in the same array format.
       // Options that carry a group (the tech list) render under group
-      // headings — 58 flat chips were a wall nobody could scan.
+      // headings - 58 flat chips were a wall nobody could scan.
       const selected = multiVals[q.id] ?? [];
       const isOther = selected.includes("other");
-      // GenAI merge for practicum_tech + the "אחר" chip on tech taxonomies —
+      // GenAI merge for practicum_tech + the "אחר" chip on tech taxonomies -
       // fullList is also what the saved-value checks compare against.
       list = fullList(q);
       const grouped = list.some((o) => o.group);
@@ -837,7 +837,7 @@ export function ProfileForm({
     }
 
     if (q.field_type === "bool") {
-      // The placement-fee line is a FACT she confirms, not a question — one
+      // The placement-fee line is a FACT she confirms, not a question - one
       // checkbox carrying the whole sentence, and it must be checked.
       if (q.key === PAY_ACK_KEY) {
         return (
@@ -859,7 +859,7 @@ export function ProfileForm({
                 setBools((b) => ({ ...b, [q.key]: e.target.checked }))
               }
             />
-            {/* Seminary-agreement note — juniors only (the owner, 9/9). */}
+            {/* Seminary-agreement note - juniors only (the owner, 9/9). */}
             {!hasExperience && (
               <p className="text-[12px] text-ink-500 mt-1.5 ps-6">
                 במידה ויש הסכם עם הסמינר שלך - התשלום הוא דרך הסמינר לפי ההסכם
@@ -983,14 +983,14 @@ export function ProfileForm({
       // Manual submit, not action={action}: React 19 resets an uncontrolled
       // form after a form-action completes, so a save that returned a
       // validation error also wiped everything she had typed back to the
-      // stored defaults — "מילאתי ולא נשמר". Dispatching the same action inside
+      // stored defaults - "מילאתי ולא נשמר". Dispatching the same action inside
       // startTransition keeps useActionState's pending/state behavior without
       // the reset. Enter on an earlier step advances instead of submitting.
       onSubmit={(e) => {
         syncRichInputs();
         e.preventDefault();
         // The mid-step "שמירת השינויים" button (15/9) declares itself via the
-        // submitter — everything else (Enter included) keeps advancing.
+        // submitter - everything else (Enter included) keeps advancing.
         const saveNow =
           (e.nativeEvent as SubmitEvent).submitter?.getAttribute(
             "data-save-now",
@@ -1004,7 +1004,7 @@ export function ProfileForm({
         const fd = new FormData(e.currentTarget);
         // The CV gate, client-side too: the server refuses without one, but the
         // red frame here beats a round trip. (Mid-step saves of a completed
-        // profile never require a CV — she already has one.)
+        // profile never require a CV - she already has one.)
         if (
           !saveNow &&
           requireCv &&
@@ -1026,7 +1026,7 @@ export function ProfileForm({
         ))}
       </datalist>
       {/* Auto-save (members, 2/9): what she typed survives leaving the page.
-          Cleared the moment a save succeeds — the server is the truth then. */}
+          Cleared the moment a save succeeds - the server is the truth then. */}
       <FormDraft
         storageKey="draft:profile"
         clear={state.ok === true}
@@ -1098,7 +1098,7 @@ export function ProfileForm({
               {gate.label_he}
             </span>
             {/* The mentor door sits IN the grid as an equal third card (the
-                owner, 10/9: "לא מספיק ברור בהתחלה שמנטורית זה עוד בחירה") —
+                owner, 10/9: "לא מספיק ברור בהתחלה שמנטורית זה עוד בחירה") -
                 a tucked-away note below the fold read as fine print. */}
             <div
               className={cn(
@@ -1150,7 +1150,7 @@ export function ProfileForm({
               </button>
               {/* The third door: the mentor track. Switches her to the free
                   approval track and reloads this wizard as the mentor
-                  questionnaire. NOT a nested <form> — HTML drops an inner form
+                  questionnaire. NOT a nested <form> - HTML drops an inner form
                   silently, which made this button dead once. */}
               {allowMentorTrack && (
                 <button
@@ -1163,7 +1163,7 @@ export function ProfileForm({
                     מגיעה בתור מנטורית
                   </div>
                   <div className="text-[12.5px] text-ink-500 mt-0.5">
-                    מפתחת מנוסה שרוצה לתרום לקהילה — בלי מנוי ובלי תשלום. נעבור
+                    מפתחת מנוסה שרוצה לתרום לקהילה - בלי מנוי ובלי תשלום. נעבור
                     לשאלון מנטוריות קצר
                   </div>
                 </button>
@@ -1203,8 +1203,8 @@ export function ProfileForm({
         >
           <span className="text-xs font-semibold text-ink-700">
             {requireCv
-              ? "קורות חיים (חובה — לפחות קובץ אחד)"
-              : "קורות חיים (לא חובה — אבל מומלץ מאוד 💜)"}
+              ? "קורות חיים (חובה - לפחות קובץ אחד)"
+              : "קורות חיים (לא חובה - אבל מומלץ מאוד 💜)"}
           </span>
           <label
             htmlFor="profile_cv_file"
@@ -1223,7 +1223,7 @@ export function ProfileForm({
                   <b dir="ltr">{cvFileName}</b> · נבחר ✓
                 </>
               ) : (
-                "בחרי קובץ PDF או Word — זה מה שנציג למעסיקים"
+                "בחרי קובץ PDF או Word - זה מה שנציג למעסיקים"
               )}
             </span>
           </label>
@@ -1240,12 +1240,12 @@ export function ProfileForm({
           />
           {cvError && (
             <span className="text-danger text-xs">
-              בלי קורות חיים אי אפשר לסיים — העלי קובץ אחד 🙂
+              בלי קורות חיים אי אפשר לסיים - העלי קובץ אחד 🙂
             </span>
           )}
         </div>
       )}
-      {/* Grade sheet — juniors only, never required, its own block so it shows
+      {/* Grade sheet - juniors only, never required, its own block so it shows
           in the edit wizard too (the owner, 19/9); hidden once she has one. */}
       {expChoice === false && !mentorTrack && !hasGradeSheet && (
         <div
@@ -1272,7 +1272,7 @@ export function ProfileForm({
                   <b dir="ltr">{gradesFileName}</b> · נבחר ✓
                 </>
               ) : (
-                "אפשר לצרף גליון ציונים (PDF / Word / תמונה) — עוזר להציג אותך למעסיקים בצורה מלאה"
+                "אפשר לצרף גליון ציונים (PDF / Word / תמונה) - עוזר להציג אותך למעסיקים בצורה מלאה"
               )}
             </span>
           </label>
@@ -1292,7 +1292,7 @@ export function ProfileForm({
         </div>
       )}
 
-      {/* Consent notice — plain text by the owner's decision (2026-08-28): no
+      {/* Consent notice - plain text by the owner's decision (2026-08-28): no
           checkbox; registering IS the consent (spam-law wise, stated up front). */}
       {cur === totalSteps - 1 && expChoice !== null && (
         <p className="text-[12px] text-ink-500 -mb-1">
@@ -1313,12 +1313,12 @@ export function ProfileForm({
         {/* Distinct keys, deliberately: without them React reuses one DOM node
             for both buttons, and when next() advanced to the last step DURING
             the click's dispatch, the node's type flipped to submit and the
-            browser fired the form action against a half-finished form —
+            browser fired the form action against a half-finished form -
             skipping the final step's validation entirely (BUG-020B). */}
         {cur < totalSteps - 1 || expChoice === null ? (
           <span className="flex items-center gap-2">
             {/* Editing an already-complete profile: a REAL save on every step
-                (15/9) — "מילאתי ולחצתי שמירה" must mean saved, from anywhere. */}
+                (15/9) - "מילאתי ולחצתי שמירה" must mean saved, from anywhere. */}
             {saveEveryStep && expChoice !== null && (
               <Button
                 key="save-now"

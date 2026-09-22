@@ -62,7 +62,7 @@ export function GradeSheetUploadForm() {
           onChange={(e) => {
             const f = e.target.files?.[0] ?? null;
             if (f && f.size > MAX_BYTES) {
-              setSizeError("הקובץ גדול מדי — עד 10MB.");
+              setSizeError("הקובץ גדול מדי - עד 10MB.");
               setFile(null);
               e.target.value = "";
               return;

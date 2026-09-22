@@ -1,5 +1,5 @@
 // The TEAM's view of a member's full profile (the owner, 2026-08-30:
-// "לצוות ניתן לראות את הפרופיל ולהשתמש בהכל") — the same CV-replacing card
+// "לצוות ניתן לראות את הפרופיל ולהשתמש בהכל") - the same CV-replacing card
 // the employer portal renders, but for EVERY member, portal-hidden included,
 // PLUS her contact details (phone + email), which only the team sees
 // (the owner, 31/8: "תוסיף בפרופיל גם טלפון ומייל").
@@ -26,10 +26,10 @@ export default async function AdminMemberProfilePage({
   const admin = createAdminClient();
   const [{ candidates }, { data: authUser }, { data: phoneRow }] = await Promise.all([
     // ONE profile, any status/role (the owner, 22/9: paused members and team
-    // accounts must open here too) — and no 700-profile load for one card.
+    // accounts must open here too) - and no 700-profile load for one card.
     loadCandidates({ includeMentors: true, everyoneForTeam: true, onlyId: id }),
     admin.auth.admin.getUserById(id),
-    // Phone is NOT employer_visible, so loadCandidates never returns it —
+    // Phone is NOT employer_visible, so loadCandidates never returns it -
     // the team fetches it directly.
     admin
       .from("profile_answers")
@@ -40,7 +40,7 @@ export default async function AdminMemberProfilePage({
   ]);
   const member = candidates.find((c) => c.id === id) ?? null;
   // A member who hasn't completed the questionnaire (or was blocked) has no
-  // candidate card — say so instead of a bare 404 (the owner, 1/9: the eye
+  // candidate card - say so instead of a bare 404 (the owner, 1/9: the eye
   // icon on a mid-questionnaire member landed on "page not found").
   if (!member) {
     const { data: bare } = await admin
@@ -61,8 +61,8 @@ export default async function AdminMemberProfilePage({
         <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-ink-700 text-sm leading-relaxed">
           <b className="text-ink-1000">{bare.full_name}</b>{" "}
           {bare.profile_completed
-            ? "— אין לחשבון הזה תשובות בשאלון להצגה."
-            : "עדיין באמצע מילוי השאלון — ברגע שתסיים, הפרופיל המלא יופיע כאן בדיוק כמו שמגייסת תראה אותו."}
+            ? "- אין לחשבון הזה תשובות בשאלון להצגה."
+            : "עדיין באמצע מילוי השאלון - ברגע שתסיים, הפרופיל המלא יופיע כאן בדיוק כמו שמגייסת תראה אותו."}
         </div>
       </div>
     );
@@ -83,7 +83,7 @@ export default async function AdminMemberProfilePage({
       <div className="flex items-center gap-2.5 bg-tint-purple/60 border border-[#DDC9EC] rounded-md p-3 px-4 text-[13.5px] text-ink-900">
         <Eye size={16} className="text-brand-purple shrink-0" />
         <span>
-          <b>הפרופיל המלא</b> — כמו שמגייסת רואה, בתוספת טלפון ומייל שמוצגים לצוות בלבד.
+          <b>הפרופיל המלא</b> - כמו שמגייסת רואה, בתוספת טלפון ומייל שמוצגים לצוות בלבד.
         </span>
       </div>
       <CandidateProfileCard candidate={member} teamContact={{ phone, email }} thumbs={await siteThumbs(member.links.map((l) => l.url))} />

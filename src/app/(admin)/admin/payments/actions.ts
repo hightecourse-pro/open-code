@@ -9,7 +9,7 @@ import { raiseAlert } from "@/lib/alerts";
 /**
  * Approve a payment that arrived from an unrecognized caller: the admin
  * checked it against the Nedarim console. Clearing the flag also retries the
- * email auto-match — if the payer is already a member, she activates now.
+ * email auto-match - if the payer is already a member, she activates now.
  */
 export async function approveExternalPayment(id: string): Promise<void> {
   await requireRole("admin");

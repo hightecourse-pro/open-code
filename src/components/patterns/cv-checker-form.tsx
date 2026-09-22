@@ -30,7 +30,7 @@ export function CvCheckerForm({
   latestReview = null,
 }: {
   savedCvs?: SavedCv[];
-  /** created_at of the newest review already on screen — the recovery poll's floor. */
+  /** created_at of the newest review already on screen - the recovery poll's floor. */
   latestReviewAt?: string | null;
   /**
    * Her newest saved review, shown in full right under the form (a member,
@@ -43,7 +43,7 @@ export function CvCheckerForm({
   const [state, setState] = useState<CvState>({});
   // "background" = the request died mid-flight (filtered networks cut long
   // connections around a minute) but the server keeps working and saves the
-  // result — so instead of an error we poll for the saved review (2/9, שפרה
+  // result - so instead of an error we poll for the saved review (2/9, שפרה
   // למברגר: two "failed" checks, both actually succeeded and persisted).
   const [phase, setPhase] = useState<"idle" | "running" | "background">("idle");
   const pending = phase !== "idle";
@@ -52,7 +52,7 @@ export function CvCheckerForm({
     e.preventDefault();
     if (pending) return;
     const fd = new FormData(e.currentTarget);
-    // The newest review already on screen is the recovery floor — a server
+    // The newest review already on screen is the recovery floor - a server
     // timestamp, so a skewed client clock can't make the poll miss the result.
     // router.refresh() below keeps it current after each successful run.
     const floor = latestReviewAt;
@@ -60,7 +60,7 @@ export function CvCheckerForm({
     setPhase("running");
     try {
       const res = await runCvCheck({}, fd);
-      // A filtering proxy can hand back an empty body instead of failing —
+      // A filtering proxy can hand back an empty body instead of failing -
       // that is the dropped-connection case too, so recover the same way.
       if (!res || (!res.analysis && !res.error)) throw new Error("empty_result");
       setState(res);
@@ -79,31 +79,31 @@ export function CvCheckerForm({
             return;
           }
         } catch {
-          /* the network is still flaky — keep polling */
+          /* the network is still flaky - keep polling */
         }
       }
       setPhase("idle");
       setState({
         error:
-          "החיבור התנתק ולא הצלחנו למשוך את התוצאה. רענני את הדף בעוד כמה דקות — אם הבדיקה הצליחה, היא תופיע בהיסטוריה למטה.",
+          "החיבור התנתק ולא הצלחנו למשוך את התוצאה. רענני את הדף בעוד כמה דקות - אם הבדיקה הצליחה, היא תופיע בהיסטוריה למטה.",
       });
     }
   }
 
   const analysis = state.analysis;
-  // The result lands below the form — bring it into view so it is never
+  // The result lands below the form - bring it into view so it is never
   // missed on a phone (a member, 18/9).
   const resultRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (analysis) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }, [analysis]);
   const hasSaved = savedCvs.length > 0;
-  // Her saved CV is the default path — the whole point is not re-uploading a
+  // Her saved CV is the default path - the whole point is not re-uploading a
   // file we already keep for her.
   const [source, setSource] = useState<"saved" | "upload">(hasSaved ? "saved" : "upload");
   const defaultDoc = savedCvs.find((d) => d.isDefault) ?? savedCvs[0];
   const [fileName, setFileName] = useState<string | null>(null);
-  // "משהו השתבש" is a passing hiccup, not a key problem — sending her to the
+  // "משהו השתבש" is a passing hiccup, not a key problem - sending her to the
   // keys screen for it taught testers their key was broken when it wasn't.
   const keyIssue = state.reason && state.reason !== "error";
 
@@ -113,7 +113,7 @@ export function CvCheckerForm({
         <span className="font-mono text-xs text-brand-pink-deep">&lt;בודקת קו&quot;ח/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">בודקת קורות חיים</h1>
         <p className="t-body-sm text-ink-700">
-          נעבור יחד על קורות החיים שלך — אלה ששמורות אצלנו או קובץ PDF שתעלי. אפשר גם להוסיף תיאור
+          נעבור יחד על קורות החיים שלך - אלה ששמורות אצלנו או קובץ PDF שתעלי. אפשר גם להוסיף תיאור
           משרה לבדיקת התאמה.
         </p>
       </div>
@@ -219,14 +219,14 @@ export function CvCheckerForm({
           </Link>
           .
         </p>
-        <Field label="תיאור המשרה (אופציונלי — לבדיקת התאמה)" htmlFor="job">
+        <Field label="תיאור המשרה (אופציונלי - לבדיקת התאמה)" htmlFor="job">
           <Textarea id="job" name="job" rows={4} placeholder="הדביקי תיאור משרה ונבדוק יחד עד כמה את מתאימה…" />
         </Field>
         <Button type="submit" disabled={pending} className="w-fit" bracketed>
           {pending ? "בודק את קורות החיים שלך…" : "בדיקת קורות חיים"}
         </Button>
 
-        {/* The analysis takes real time (10-60s through Google) — a working
+        {/* The analysis takes real time (10-60s through Google) - a working
             animation says "בעבודה", not a frozen form (the owner, 2026-08-30). */}
         {phase === "background" && (
           <div
@@ -239,7 +239,7 @@ export function CvCheckerForm({
               <span className="relative inline-flex h-7 w-7 animate-spin rounded-full border-[2.5px] border-white border-t-brand-purple" />
             </span>
             <span className="text-[13px] text-ink-700 leading-snug">
-              <b className="font-display text-brand-purple">החיבור התנתק — אבל הבדיקה ממשיכה אצלנו ברקע 💜</b>
+              <b className="font-display text-brand-purple">החיבור התנתק - אבל הבדיקה ממשיכה אצלנו ברקע 💜</b>
               <br />
               ברגע שהיא תסתיים, התוצאה תופיע כאן מעצמה. אל תסגרי את הדף.
             </span>
@@ -258,7 +258,7 @@ export function CvCheckerForm({
             <span className="text-[13px] text-ink-700 leading-snug">
               <b className="font-display text-brand-purple">ה-AI קוראת את קורות החיים שלך ממש עכשיו…</b>
               <br />
-              זה יכול לקחת דקה-שתיים — שווה לחכות 💜
+              זה יכול לקחת דקה-שתיים - שווה לחכות 💜
             </span>
           </div>
         )}

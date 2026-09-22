@@ -53,7 +53,7 @@ export async function setFavorite(
 ): Promise<boolean> {
   const admin = createAdminClient();
   if (on) {
-    // Saving is a read of candidate data by another name — same gate.
+    // Saving is a read of candidate data by another name - same gate.
     if (!(await mayReach(clientId, canSearch, profileId))) return false;
     await admin
       .from("portal_favorites")

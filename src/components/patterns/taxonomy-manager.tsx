@@ -8,7 +8,7 @@ import type { ConfigTaxonomy, TaxonomyKind } from "@/types/database";
 
 /**
  * One editable taxonomy list. Lists whose rows carry a group (the tech list)
- * render as group sections, each with its own add box — and a new group is
+ * render as group sections, each with its own add box - and a new group is
  * born by naming it and giving it its first value.
  */
 export function TaxonomyManager({
@@ -20,7 +20,7 @@ export function TaxonomyManager({
   kind: TaxonomyKind;
   label: string;
   items: ConfigTaxonomy[];
-  /** Free-typed values members wrote under "אחר" — adoption candidates. */
+  /** Free-typed values members wrote under "אחר" - adoption candidates. */
   otherValues?: string[];
 }) {
   const [list, setList] = useState(items);
@@ -71,7 +71,7 @@ export function TaxonomyManager({
     start(() => void addTaxonomy(kind, v, adoptGroup || undefined));
   }
 
-  // A render helper, not a component — a component born inside render would
+  // A render helper, not a component - a component born inside render would
   // remount (and drop the add-box focus) on every keystroke.
   const renderChips = (rows: ConfigTaxonomy[], group: string | null) => (
     <div className="flex flex-wrap items-center gap-1.5">

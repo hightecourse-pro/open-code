@@ -1,4 +1,4 @@
-// Email sender — posts to the Google Apps Script web app (see
+// Email sender - posts to the Google Apps Script web app (see
 // scripts/google-apps-script/). The script does the actual sending through the
 // Workspace account. Server-only.
 import { emailGate } from "@/lib/email/resend";

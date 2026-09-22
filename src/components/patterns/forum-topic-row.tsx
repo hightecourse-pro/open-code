@@ -9,7 +9,7 @@ import type { PostIntent, UserRole } from "@/types/database";
 import { ForumRank } from "@/components/patterns/member-tags";
 
 /**
- * One row in the forum topic list — the Discourse convention: the list shows
+ * One row in the forum topic list - the Discourse convention: the list shows
  * WHO opened WHAT and how alive the thread is; the replies themselves live one
  * click deeper, on the topic page.
  */
@@ -21,7 +21,7 @@ export interface ForumTopic {
   is_official: boolean;
   is_pinned: boolean;
   created_at: string;
-  /** Newest activity in the thread — the last reply, or the post itself. */
+  /** Newest activity in the thread - the last reply, or the post itself. */
   last_activity_at: string;
   author: {
     full_name: string;
@@ -31,14 +31,14 @@ export interface ForumTopic {
   } | null;
   replyCount: number;
   likeCount: number;
-  /** Activity she hasn't seen yet — new topic, or new replies since her visit. */
+  /** Activity she hasn't seen yet - new topic, or new replies since her visit. */
   unread?: boolean;
 }
 
-/** A topic's list title — the first line of the post's words, kept short. */
+/** A topic's list title - the first line of the post's words, kept short. */
 export function topicTitle(body: string, max = 90): string {
   // Rich-editor posts store HTML; the title wants only the words. A tagless
-  // body can still carry entities (&nbsp;) — decode those too.
+  // body can still carry entities (&nbsp;) - decode those too.
   const words = isRichHtml(body) ? htmlToPlainText(body) : decodeHtmlEntities(body);
   const first = words.split("\n").find((l) => l.trim().length > 0)?.trim() ?? "";
   return first.length > max ? `${first.slice(0, max - 1)}…` : first || "נושא בפורום";
@@ -90,7 +90,7 @@ export function ForumTopicRow({ topic }: { topic: ForumTopic }) {
         </div>
       </div>
 
-      {/* activity column — replies are the headline number, Discourse-style */}
+      {/* activity column - replies are the headline number, Discourse-style */}
       <div className="flex items-center gap-3 shrink-0">
         {topic.likeCount > 0 && (
           <span className="hidden sm:flex items-center gap-1 text-[12.5px] text-ink-400">
@@ -110,7 +110,7 @@ export function ForumTopicRow({ topic }: { topic: ForumTopic }) {
           {topic.replyCount}
         </span>
         {/* The post's own time, exactly what the post page prints (the owner,
-            18/9: the two disagreed) — the newest reply as a second line. */}
+            18/9: the two disagreed) - the newest reply as a second line. */}
         <span className="hidden md:flex flex-col items-end w-24 text-end text-[12px] text-ink-400 leading-tight">
           <span>{timeAgo(topic.created_at)}</span>
           {topic.replyCount > 0 && topic.last_activity_at !== topic.created_at && (

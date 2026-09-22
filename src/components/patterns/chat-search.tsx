@@ -11,7 +11,7 @@ export interface ChatSearchItem {
 
 /**
  * Name search over the conversation list, with autocomplete (the owner, 2/9)
- * — typing narrows, a click (or Enter) jumps straight into the conversation.
+ * - typing narrows, a click (or Enter) jumps straight into the conversation.
  */
 export function ChatSearch({ items }: { items: ChatSearchItem[] }) {
   const router = useRouter();
@@ -59,7 +59,7 @@ export function ChatSearch({ items }: { items: ChatSearchItem[] }) {
         }}
         placeholder="חיפוש שיחה לפי שם… 🔍"
         aria-label="חיפוש שיחה לפי שם"
-        // Keep password/passkey extensions out of this field — their injected
+        // Keep password/passkey extensions out of this field - their injected
         // widgets corrupt React's DOM (the 10/9 new-chat crash family).
         type="search"
         autoComplete="off"
@@ -89,7 +89,7 @@ export function ChatSearch({ items }: { items: ChatSearchItem[] }) {
       )}
       {open && q.trim() && matches.length === 0 && (
         <div className="absolute inset-x-1.5 top-full -mt-0.5 z-20 bg-white border border-ink-200 rounded-md shadow-md px-3 py-2 text-[12.5px] text-ink-500">
-          אין שיחה עם השם הזה — אפשר לפתוח חדשה מ&quot;שיחה חדשה&quot; למעלה
+          אין שיחה עם השם הזה - אפשר לפתוח חדשה מ&quot;שיחה חדשה&quot; למעלה
         </div>
       )}
     </div>

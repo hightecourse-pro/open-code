@@ -1,6 +1,6 @@
 // Seed the recorded-courses library from course-library.json (extracted from
 // the owner's Excel). One course per Excel code; each row becomes a unit
-// (קוביה) with its recordings and materials folder as content_links — which
+// (קוביה) with its recordings and materials folder as content_links - which
 // puts them under the automatic Drive-sharing machinery.
 //
 // Requires supabase/_course_library.sql to have run first. Idempotent:
@@ -51,7 +51,7 @@ for (const [code, list] of [...byCode.entries()].sort((a, b) => a[0] - b[0])) {
   const title = names.length === 1 ? names[0] : (TITLE_BY_CODE[code] ?? names[names.length - 1]);
   const totalVideos = list.reduce((n, u) => n + u.videos.length, 0);
 
-  // course row — keyed by code
+  // course row - keyed by code
   const { data: existing } = await db.from("courses").select("id").eq("code", code).maybeSingle();
   const courseFields = {
     title,
@@ -103,6 +103,6 @@ for (const [code, list] of [...byCode.entries()].sort((a, b) => a[0] - b[0])) {
       linkCount += links.length;
     }
   }
-  console.log(`ok: [${code}] ${title} — ${list.length} units, ${linkCount} links`);
+  console.log(`ok: [${code}] ${title} - ${list.length} units, ${linkCount} links`);
 }
 console.log("\nCOURSE LIBRARY SEEDED");

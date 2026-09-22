@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * The inbox behind the members' floating "יש לך בקשה?" widget. Replying sends
- * the answer into HER CHAT and marks the request handled — one motion.
+ * the answer into HER CHAT and marks the request handled - one motion.
  */
 export default async function AdminRequestsPage() {
   await requireRole("admin");
@@ -34,7 +34,7 @@ export default async function AdminRequestsPage() {
     ? await supabase.from("profiles").select("id, full_name, status, member_tier, role").in("id", ids)
     : { data: [] };
   const nameOf = new Map((members ?? []).map((m) => [m.id, m.full_name]));
-  // מנויה badge (the owner, 2/9) — paying junior; team/mentor labeled apart.
+  // מנויה badge (the owner, 2/9) - paying junior; team/mentor labeled apart.
   const subscriberOf = new Map(
     (members ?? []).map((m) => [
       m.id,
@@ -80,7 +80,7 @@ export default async function AdminRequestsPage() {
           <Inbox size={24} className="text-brand-purple" /> פניות לצוות
         </h1>
         <p className="t-body-sm text-ink-500">
-          הודעות מהכפתור הצף. תשובה נשלחת אליה ישירות בצ&apos;אט ומסמנת את הפנייה כטופלה —
+          הודעות מהכפתור הצף. תשובה נשלחת אליה ישירות בצ&apos;אט ומסמנת את הפנייה כטופלה -
           עם שם מי שטיפלה, כדי שכולן ידעו איפה זה עומד.
         </p>
       </div>

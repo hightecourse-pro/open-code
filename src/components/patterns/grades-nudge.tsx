@@ -10,7 +10,7 @@ const SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
 /**
  * The invitation to add a grade sheet (the owner, 19/9): a junior who
  * finished the questionnaire without one sees it on entry, until she adds a
- * sheet. The ✕ snoozes it for a week per browser — an invitation, not a nag.
+ * sheet. The ✕ snoozes it for a week per browser - an invitation, not a nag.
  */
 export function GradesNudge() {
   const subscribe = useCallback((cb: () => void) => {
@@ -36,7 +36,7 @@ export function GradesNudge() {
     <div className="flex items-center gap-2.5 bg-tint-indigo border border-[#C9CFF3] rounded-md p-3 px-4 mb-5 text-[13.5px] text-ink-900">
       <GraduationCap size={17} className="text-brand-indigo shrink-0" />
       <span className="flex-1">
-        יש לך גליון ציונים? הוסיפי אותו לפרופיל — הוא עוזר לנו להציג אותך למעסיקים בצורה מלאה יותר 💜
+        יש לך גליון ציונים? הוסיפי אותו לפרופיל - הוא עוזר לנו להציג אותך למעסיקים בצורה מלאה יותר 💜
       </span>
       <Link href="/cv#grades" className="font-display font-semibold whitespace-nowrap text-brand-indigo hover:underline">
         להוספת גליון ←
@@ -50,7 +50,7 @@ export function GradesNudge() {
           try {
             localStorage.setItem(KEY, String(Date.now() + SNOOZE_MS));
           } catch {
-            /* private mode — hides for this page only */
+            /* private mode - hides for this page only */
           }
         }}
         className="shrink-0 w-6 h-6 rounded-full hover:bg-white/60 flex items-center justify-center text-ink-500 cursor-pointer"

@@ -27,7 +27,7 @@ export function shekels(agorot: number): string {
 /** Derive the monthly + annual plans from the admin-set pricing. */
 /**
  * How the commitment reads to a member. With no minimum term there is nothing
- * to name, and "מינימום 0 חודשים" would be worse than saying nothing — so the
+ * to name, and "מינימום 0 חודשים" would be worse than saying nothing - so the
  * reassuring half of the sentence is what she sees instead.
  */
 export function termNote(minTermMonths: number): string {
@@ -57,8 +57,8 @@ export function buildPlans(pricing: Pricing): Record<SubscriptionPlan, Plan> {
 }
 
 /**
- * What we actually sell. The annual plan is no longer offered — asking a
- * junior for a year up front is the wrong ask — but buildPlans still knows it
+ * What we actually sell. The annual plan is no longer offered - asking a
+ * junior for a year up front is the wrong ask - but buildPlans still knows it
  * so an older annual subscription keeps renewing and its callbacks keep
  * resolving to a real price.
  */

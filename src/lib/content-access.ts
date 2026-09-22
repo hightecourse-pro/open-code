@@ -1,7 +1,7 @@
 // Access on attempt: a member gets Drive access the moment she opens
 // something, not the moment she joins.
 //
-// The old model pushed — joining fanned a member out across every session,
+// The old model pushed - joining fanned a member out across every session,
 // publishing a session fanned it out across every member. M×N rows for
 // material nobody had asked for, and every one of them to undo on leaving.
 // This pulls instead: `ensureAccess` writes exactly one row, for exactly the
@@ -10,7 +10,7 @@
 //
 // The queue is still the safety net, never the engine: the row is written
 // `pending` BEFORE any Google call, so a Drive outage (or a process that dies
-// mid-grant) degrades to yesterday's behaviour — the worker finishes the job —
+// mid-grant) degrades to yesterday's behaviour - the worker finishes the job -
 // instead of to a broken page.
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -33,7 +33,7 @@ export type AccessResult =
 
 /**
  * May she open session recordings at all? Paying members, mentors and the
- * team — the rule the Drive automation has always used. Sessions the team
+ * team - the rule the Drive automation has always used. Sessions the team
  * opened to the whole community bypass this (see `canAccess`).
  *
  * Exported so the screen and the grant agree: a button that refuses when you
@@ -50,7 +50,7 @@ export function mayOpenSessions(
 
 /**
  * Is she entitled to this content right now? Re-checked here, at the moment of
- * access, because a server action is a POST endpoint anyone can call — the UI
+ * access, because a server action is a POST endpoint anyone can call - the UI
  * gate is decoration, this is the rule.
  */
 export async function canAccess(
@@ -78,7 +78,7 @@ export async function canAccess(
 
   // A course: her active enrolment on THIS course, or a share an admin opened
   // for her personally (which outlives the monthly swap). Membership is the
-  // floor for both — nothing ever ends an enrolment when she leaves, so on a
+  // floor for both - nothing ever ends an enrolment when she leaves, so on a
   // stale `active` row alone a paused/pending profile would walk straight back
   // through the door `queueRevokeAll` just closed. Same rule `startCourse`
   // enforces, so the button and the grant agree.
@@ -107,7 +107,7 @@ export async function canAccess(
 
 /**
  * She is trying to open this content. Check she may, then actually give her
- * Drive access — and log the entry.
+ * Drive access - and log the entry.
  *
  * Never throws: every Drive failure is mapped to a result the screen has a
  * sentence for, and leaves the row `pending` for the worker to retry.
@@ -124,7 +124,7 @@ export async function ensureAccess(
 
   const admin = createAdminClient();
 
-  // 2. Already hers? Idempotent — this is also the double-click and the
+  // 2. Already hers? Idempotent - this is also the double-click and the
   //    two-open-tabs answer.
   const { data: existing } = await admin
     .from("content_shares")
@@ -140,7 +140,7 @@ export async function ensureAccess(
 
   /**
    * The address this row was last granted to. When she has changed her Drive
-   * address since, the OLD one still holds the permission — granting the new
+   * address since, the OLD one still holds the permission - granting the new
    * one here and overwriting granted_email would strand that access with no
    * row pointing at it, so nothing could ever take it back (not even leaving
    * the community). Re-pointing is the worker's job, which revokes the old
@@ -149,16 +149,16 @@ export async function ensureAccess(
   const grantedTo = existing?.granted_email ?? null;
 
   // 3. The queue row goes in BEFORE Google is touched. If anything below dies,
-  //    the daily worker still finishes the job — and a grant with no row
+  //    the daily worker still finishes the job - and a grant with no row
   //    behind it would be access nobody could ever take back.
   if (!(await queueShares(profileId, ownerType, [ownerId]))) {
     return { ok: false, reason: "queued" };
   }
 
-  // 4. No Google credentials — the admin shares by hand from /admin/shares.
+  // 4. No Google credentials - the admin shares by hand from /admin/shares.
   if (!isDriveAutomationConfigured()) return { ok: false, reason: "queued" };
 
-  // 4b. Only environments explicitly allowed touch Google — the same service
+  // 4b. Only environments explicitly allowed touch Google - the same service
   //     account holds the REAL course folders everywhere (owner decision).
   //     Staging is currently allowed via ALLOW_DRIVE_OUTSIDE_PRODUCTION (the
   //     owner accepts the risk: testers aren't community members); anywhere
@@ -176,11 +176,11 @@ export async function ensureAccess(
   }
 
   // 6. Every file of this owner at once. Sequentially, a course with five
-  //    links would be 5 × 15s inside her click — past any serverless budget.
+  //    links would be 5 × 15s inside her click - past any serverless budget.
   const ids = await fileIdsFor(ownerType, ownerId);
   if (ids.length === 0) {
     // Nothing here needs a Drive permission (no Drive links yet, or none of
-    // them are Drive URLs). Not a failure — don't spin forever on it.
+    // them are Drive URLs). Not a failure - don't spin forever on it.
     await recordContentOpen(profileId, { ownerType, ownerId, source: "unlock" });
     return { ok: true, alreadyHad: false };
   }
@@ -189,7 +189,7 @@ export async function ensureAccess(
   const failures = settled.filter((r) => r.status === "rejected");
 
   if (failures.length > 0) {
-    // Partial success still leaves the row pending — the worker completes it.
+    // Partial success still leaves the row pending - the worker completes it.
     const needsGoogle = failures.some(
       (f) => (f as PromiseRejectedResult).reason instanceof NotAGoogleAccountError
     );
@@ -199,7 +199,7 @@ export async function ensureAccess(
         (f as PromiseRejectedResult).reason
       );
     }
-    // Her address can't hold a Drive share. Don't email her from here — she is
+    // Her address can't hold a Drive share. Don't email her from here - she is
     // standing in front of the fix, and the screen sends her to /profile.
     return { ok: false, reason: needsGoogle ? "needs_google_email" : "queued" };
   }

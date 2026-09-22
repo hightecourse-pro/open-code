@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Noto_Sans_Hebrew, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-// Noto Sans Hebrew is a variable font — omit `weight` to get the full 300–900 range.
+// Noto Sans Hebrew is a variable font - omit `weight` to get the full 300–900 range.
 const notoSansHebrew = Noto_Sans_Hebrew({
   subsets: ["hebrew", "latin"],
   variable: "--font-noto-hebrew",
@@ -17,11 +17,11 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "קהילת קוד פתוח — פותחים לך דלת להייטק",
+    default: "קהילת קוד פתוח - פותחים לך דלת להייטק",
     template: "%s · קהילת קוד פתוח",
   },
   description:
-    "קהילה חמה ותומכת לג'וניוריות בתחום הפיתוח — כלי AI, סימולטור ראיונות, קורסים, לוח משרות ומנטוריות. אנחנו ביחד.",
+    "קהילה חמה ותומכת לג'וניוריות בתחום הפיתוח - כלי AI, סימולטור ראיונות, קורסים, לוח משרות ומנטוריות. אנחנו ביחד.",
 };
 
 export default function RootLayout({

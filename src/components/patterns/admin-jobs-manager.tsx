@@ -169,7 +169,7 @@ export function AdminJobsManager({
     <div className="flex flex-col gap-4">
       {created && <Alert variant="success">המשרה נוספה ✓ הנה היא ברשימה.</Alert>}
 
-      {/* Tabs — two different worlds, two different tables (the PM's call). */}
+      {/* Tabs - two different worlds, two different tables (the PM's call). */}
       <div className="flex items-center gap-2 flex-wrap">
         {(
           [
@@ -303,16 +303,16 @@ export function AdminJobsManager({
 }
 
 function sourceHost(url: string | null): string {
-  if (!url) return "—";
+  if (!url) return "-";
   try {
     return new URL(url).hostname.replace(/^www\./, "");
   } catch {
-    return "—";
+    return "-";
   }
 }
 
 /**
- * The market tab: a plain sortable table — name, company, location, source,
+ * The market tab: a plain sortable table - name, company, location, source,
  * publish date, link, one remove button. No pipeline, no lock, no
  * submissions: market jobs are a bulletin board, not a recruitment process.
  */
@@ -367,12 +367,12 @@ function MarketTable({
             <tr key={j.id} className="border-t border-ink-100 hover:bg-ink-50/50">
               <td className="px-3 py-2.5 font-semibold text-ink-900">{j.title}</td>
               <td className="px-3 py-2.5 text-ink-700">{j.company}</td>
-              <td className="px-3 py-2.5 text-ink-700">{j.location ?? "—"}</td>
+              <td className="px-3 py-2.5 text-ink-700">{j.location ?? "-"}</td>
               <td className="px-3 py-2.5 text-ink-500" dir="ltr">{sourceHost(j.external_url)}</td>
               <td className="px-3 py-2.5 text-ink-700 tabular-nums">
                 {(() => {
                   const d = j.published_at ?? j.created_at;
-                  return d ? DATE_HE.format(new Date(d)) : "—";
+                  return d ? DATE_HE.format(new Date(d)) : "-";
                 })()}
               </td>
               <td className="px-3 py-2.5">

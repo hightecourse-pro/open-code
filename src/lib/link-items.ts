@@ -1,4 +1,4 @@
-// Structured profile links — URL + title + short note (the owner, 31/8).
+// Structured profile links - URL + title + short note (the owner, 31/8).
 // Pure module: shared by the wizard editor (client), the save action (server)
 // and the portal candidate loader.
 
@@ -6,7 +6,7 @@ export type LinkItem = { url: string; title: string; note: string };
 
 /**
  * Parse a stored answer (or editor JSON) into clean link items. Legacy
- * answers were plain one-URL-per-line strings — those hydrate as URL-only
+ * answers were plain one-URL-per-line strings - those hydrate as URL-only
  * rows so nothing anyone already saved is lost.
  */
 export function parseLinkItems(value: unknown): LinkItem[] {

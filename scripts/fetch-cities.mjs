@@ -21,7 +21,7 @@ const names = [
 ].sort((a, b) => a.localeCompare(b, "he"));
 
 const content =
-  `// Official Israeli settlements — auto-generated from data.gov.il\n` +
+  `// Official Israeli settlements - auto-generated from data.gov.il\n` +
   `// (מילון יישובים בישראל, resource ${RES}). Regenerate: node scripts/fetch-cities.mjs\n` +
   `export const CITIES: readonly string[] = ${JSON.stringify(names)};\n`;
 

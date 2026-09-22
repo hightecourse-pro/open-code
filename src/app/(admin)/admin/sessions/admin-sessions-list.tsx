@@ -217,7 +217,7 @@ function Row({ s, past, panel }: { s: AdminSessionRow; past: boolean; panel?: Re
                   {e.name}
                 </a>
                 <span className="text-ink-500" dir="ltr">
-                  {[e.content, e.practical, e.clarity, e.speaker].map((n) => n ?? "—").join(" / ")}
+                  {[e.content, e.practical, e.clarity, e.speaker].map((n) => n ?? "-").join(" / ")}
                 </span>
                 {e.avg != null && <span className="text-[#8C5E0E] font-bold">⭐ {e.avg.toFixed(1)}</span>}
               </div>
@@ -238,7 +238,7 @@ function Row({ s, past, panel }: { s: AdminSessionRow; past: boolean; panel?: Re
 export function AdminSessionsList({ sessions, panels = {} }: { sessions: AdminSessionRow[]; panels?: Record<string, React.ReactNode> }) {
   const [q, setQ] = useState("");
   const [pastOpen, setPastOpen] = useState(true);
-  // Captured once per mount — render must stay pure (react-hooks/purity).
+  // Captured once per mount - render must stay pure (react-hooks/purity).
   const [now] = useState(() => Date.now());
 
   const filtered = useMemo(() => {

@@ -9,12 +9,12 @@ import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
-/** The reaction palette — WhatsApp-style, one emoji per person per message. */
+/** The reaction palette - WhatsApp-style, one emoji per person per message. */
 const REACTION_EMOJIS = new Set(["💜", "👍", "😂", "🎉", "🙏", "😮"]);
 
 /**
  * Toggle the caller's emoji reaction on a message (the owner, 1/9). Her own
- * client can only SELECT messages of conversations she is in — that read is
+ * client can only SELECT messages of conversations she is in - that read is
  * the participation check; the write itself runs with the service role
  * because members have no UPDATE policy on messages (by design).
  */
@@ -74,7 +74,7 @@ export async function startConversation(otherId: string) {
     convId = created?.id;
   }
 
-  // A failed insert (RLS, race) must not produce /chat?c=undefined — land on
+  // A failed insert (RLS, race) must not produce /chat?c=undefined - land on
   // the list instead of an error page.
   if (!convId) redirect("/chat");
 
@@ -84,7 +84,7 @@ export async function startConversation(otherId: string) {
 /**
  * Returns an explicit verdict: {ok:true} means the row is in the database.
  * The client once inferred delivery only from the revalidated thread coming
- * back in time — on a cold serverless start that raced a 6s timer and branded
+ * back in time - on a cold serverless start that raced a 6s timer and branded
  * DELIVERED messages "לא נשלחה" (the owner, 31/8). The verdict ends the guess.
  */
 export async function sendMessage(
@@ -95,7 +95,7 @@ export async function sendMessage(
   // plain text. HTML passes the same sanitizing allowlist job descriptions
   // use, and every limit is measured on the words, not the markup.
   const raw = String(formData.get("body") ?? "").trim();
-  // A TAGLESS editor body can still carry entities ("&nbsp;") — store it
+  // A TAGLESS editor body can still carry entities ("&nbsp;") - store it
   // decoded so the plain path never shows entity codes in a bubble.
   const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : decodeHtmlEntities(raw);
   const plain = isRichHtml(raw) ? htmlToPlainText(body) : body;
@@ -124,21 +124,21 @@ export async function sendMessage(
   ]);
   // digest_frequency arrived in a later migration. If it isn't in the database
   // yet the whole select fails, the recipient reads as "not active" and members
-  // stop being able to write to each other — a mail preference must never cost
+  // stop being able to write to each other - a mail preference must never cost
   // us the chat. Fall back to the columns that were always there.
   const otherFallback = otherRes.error
     ? (await supabase.from("profiles").select("role, status").eq("id", otherId).single()).data
     : null;
   const other = otherRes.data ?? (otherFallback && { ...otherFallback, digest_frequency: "daily" });
   if (other?.status !== "active" && other?.status !== "pending") return { ok: false };
-  // Free members read their history but don't send — EXCEPT to the team:
+  // Free members read their history but don't send - EXCEPT to the team:
   // answering the team's personal note must never be behind a paywall.
   if (!me) return { ok: false };
   const writingToTeam = other?.role === "admin";
   if (!(me.status === "active" || me.role === "admin" || (writingToTeam && me.status === "pending")))
     return { ok: false };
   // Who may be WRITTEN to (the owner, 1/9): the team writes to anyone still
-  // here; a member writes only to מנויות (real payers — pending included),
+  // here; a member writes only to מנויות (real payers - pending included),
   // approved mentors, and the team. The directory view is the single source
   // of that truth (masked role + is_subscriber).
   if (me.role !== "admin") {
@@ -151,7 +151,7 @@ export async function sendMessage(
       return { ok: false };
   }
 
-  // Quoting (the owner, 1/9): a reply carries the quoted message's id — only
+  // Quoting (the owner, 1/9): a reply carries the quoted message's id - only
   // if that message really lives in THIS conversation (her client can only
   // read it if she's a participant, so the select is the check).
   let replyToId: string | null = null;
@@ -186,18 +186,18 @@ export async function sendMessage(
 
   // NO immediate email (the owner, 1/9): the "מישהי כתבה לך" mail goes out
   // from the 10-minute cron ONLY for messages that are ≥5 minutes old, still
-  // unread, and unanswered — an answered-in-time chat never emails at all.
+  // unread, and unanswered - an answered-in-time chat never emails at all.
   // (See drainChatEmailGrace in the session-reminders cron route.)
 
   revalidatePath("/chat");
   return { ok: true };
 }
 
-/** How long a sent message stays editable — WhatsApp's convention. */
+/** How long a sent message stays editable - WhatsApp's convention. */
 const EDIT_WINDOW_MS = 15 * 60 * 1000;
 
 /**
- * Rewrite the caller's OWN message (the owner, 1/9: "אפשרות לערוך בצ'אט") —
+ * Rewrite the caller's OWN message (the owner, 1/9: "אפשרות לערוך בצ'אט") -
  * within 15 minutes of sending. Same sanitation as sendMessage; edited_at
  * marks the bubble. Members have no UPDATE policy on messages, so the write
  * runs with the service role after the sender+window checks.
@@ -213,7 +213,7 @@ export async function editMessage(messageId: string, formData: FormData): Promis
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
-  // Her client can only read messages of her own conversations — and only
+  // Her client can only read messages of her own conversations - and only
   // her OWN message may change.
   const { data: msg } = await supabase
     .from("messages")
@@ -238,7 +238,7 @@ export interface ChatMemberHit {
 }
 
 /**
- * The new-chat picker's search — a bounded server lookup instead of shipping
+ * The new-chat picker's search - a bounded server lookup instead of shipping
  * the whole community directory into the client (it grows with every member).
  */
 export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
@@ -249,7 +249,7 @@ export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
   if (!user) return [];
   const needle = q.trim().slice(0, 60);
   // The directory view is the searchable population (hidden/paused/rejected
-  // never appear). A regular member gets only who she may WRITE to — מנויות,
+  // never appear). A regular member gets only who she may WRITE to - מנויות,
   // approved mentors and the team; an admin reaches everyone listed.
   const { data: meRow } = await supabase
     .from("profiles")

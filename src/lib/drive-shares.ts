@@ -1,14 +1,14 @@
 // Keeps Google Drive access in sync with community membership.
 //
 // Design (since "access on attempt"): a share is created when a member really
-// opens something — `ensureAccess` in `src/lib/content-access.ts` does the
+// opens something - `ensureAccess` in `src/lib/content-access.ts` does the
 // Drive call inside her click. Joining, renewing or publishing a new session
 // no longer fan out rows across everyone; they only change WHO MAY unlock.
 // The upside is that leaving revokes exactly what she actually opened.
 //
 // What lives here is the rest of the lifecycle: revokes (leaving, returning a
 // course, closing a session back), re-pointing to a new Google address,
-// re-opening a share when new material is added — and the worker.
+// re-opening a share when new material is added - and the worker.
 //
 // `processShareQueue` (cron + a "sync now" button) is now the RETRY LANE, not
 // the engine: it drains rows `ensureAccess` left `pending` after a Drive
@@ -20,7 +20,7 @@
 //   revoked  → should lose access, not yet removed in Drive
 // A row is deleted only once it has been fully undone (or was never granted).
 // With no Google credentials configured, the queue simply stays as-is and the
-// admin actions it by hand — exactly the behaviour before automation existed.
+// admin actions it by hand - exactly the behaviour before automation existed.
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { driveAutomationAllowed } from "@/lib/env";
@@ -41,7 +41,7 @@ import type { ContentOwner } from "@/types/database";
 /**
  * Mark that a member should have access to these courses/sessions.
  *
- * Returns false when the row could not be written — `ensureAccess` must know,
+ * Returns false when the row could not be written - `ensureAccess` must know,
  * because a Drive grant with no row behind it is access nobody can revoke.
  */
 export async function queueShares(
@@ -71,7 +71,7 @@ export async function queueShares(
 }
 
 /**
- * Mark that a member should lose access to specific content — returning a
+ * Mark that a member should lose access to specific content - returning a
  * course, switching to another one. Rows that were never granted are dropped
  * outright; granted ones become `revoked` for the worker to undo.
  *
@@ -80,7 +80,7 @@ export async function queueShares(
  * own, independent of the enrolment, so revoking it here would strip Drive
  * access the app still says she has. A personal share ends when the admin
  * removes it,
- * or when she leaves the community — `queueRevokeAll` below, which does NOT
+ * or when she leaves the community - `queueRevokeAll` below, which does NOT
  * make this exception.
  */
 export async function queueRevokes(
@@ -93,7 +93,7 @@ export async function queueRevokes(
 
   // Before the granted_manually migration the column doesn't exist. The lookup
   // then fails and we simply revoke everything, exactly as we did before the
-  // exception existed — a revoke must never fail open.
+  // exception existed - a revoke must never fail open.
   const { data: manual, error: manualErr } = await admin
     .from("content_shares")
     .select("id")
@@ -105,7 +105,7 @@ export async function queueRevokes(
   const keep = manualErr ? [] : (manual ?? []).map((r) => r.id);
   const spare = `(${keep.join(",")})`;
 
-  // Only "pending" is safe to delete — a "revoked" row is outstanding work.
+  // Only "pending" is safe to delete - a "revoked" row is outstanding work.
   let cleanup = admin
     .from("content_shares")
     .delete()
@@ -156,7 +156,7 @@ async function sessionAudienceIds(openToAll: boolean): Promise<string[]> {
 /**
  * The session's audience changed.
  *
- * Opening it to everyone grants nothing by itself — it only WIDENS who may
+ * Opening it to everyone grants nothing by itself - it only WIDENS who may
  * unlock it, and the free members who care will open it themselves.
  * Closing it back is the half that still matters here: it takes a real, live
  * Drive permission away from a free member who already opened the session,
@@ -194,7 +194,7 @@ export async function syncSessionAudience(sessionId: string, openToAll: boolean)
 
 /**
  * A member is leaving (paused, rejected, subscription ended): queue removal of
- * everything she was given — personal shares an admin opened by hand included.
+ * everything she was given - personal shares an admin opened by hand included.
  * Deliberately unfiltered: leaving the community ends ALL access to the
  * material, and /admin/shares says so.
  */
@@ -259,7 +259,7 @@ export interface SyncResult {
   gmailRequested: number;
   /**
    * What Google actually said, for the first few failures. A bare count tells
-   * an admin nothing — "the service account cannot see this file" tells her
+   * an admin nothing - "the service account cannot see this file" tells her
    * exactly what to fix.
    */
   errors?: string[];
@@ -282,7 +282,7 @@ export async function emailOf(profileId: string): Promise<string | null> {
     const preferred = data?.drive_email?.trim();
     if (preferred) return preferred;
   } catch {
-    // ignore — fall back below
+    // ignore - fall back below
   }
   try {
     const { data } = await admin.auth.admin.getUserById(profileId);
@@ -293,7 +293,7 @@ export async function emailOf(profileId: string): Promise<string | null> {
 }
 
 /**
- * Her address can't receive Drive access — ask her (once) for a Google one.
+ * Her address can't receive Drive access - ask her (once) for a Google one.
  * Returns true when an email was actually sent.
  */
 async function requestGmail(profileId: string): Promise<boolean> {
@@ -320,7 +320,7 @@ async function requestGmail(profileId: string): Promise<boolean> {
   const sent = await sendResendEmail({ to, subject: built.subject, html: built.html });
 
   // Record the attempt either way. If the send failed we still must not retry
-  // the whole Drive+Resend round trip every 15 minutes forever — the admin
+  // the whole Drive+Resend round trip every 15 minutes forever - the admin
   // sees the row waiting in the share queue.
   await admin.from("member_private").upsert(
     { profile_id: profileId, drive_email_requested_at: new Date().toISOString() },
@@ -340,7 +340,7 @@ export async function fileIdsFor(ownerType: ContentOwner, ownerId: string): Prom
 }
 
 /**
- * The owner's links split into Drive ids and a total count — the queue needs
+ * The owner's links split into Drive ids and a total count - the queue needs
  * both, because "no Drive links yet" and "the links exist but live on YouTube"
  * call for opposite treatments.
  */
@@ -362,7 +362,7 @@ export async function linksFor(
 }
 
 /**
- * Action a bounded batch of the queue against Drive. Safe to run repeatedly —
+ * Action a bounded batch of the queue against Drive. Safe to run repeatedly -
  * every step is idempotent, and anything that fails is simply retried next
  * run (or handled by hand in the admin queue).
  */
@@ -381,14 +381,14 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
   // her course material is this gate. Outside production the queue is
   // read-only: rows stay visible in /admin/shares, nothing reaches Google.
   if (!driveAutomationAllowed()) {
-    console.log("[drive] share queue untouched — drive automation off here");
+    console.log("[drive] share queue untouched - drive automation off here");
     return result;
   }
 
   const admin = createAdminClient();
 
   // Members we've already asked for a Google address and who haven't answered
-  // yet can't be granted anything. They're excluded from the batch entirely —
+  // yet can't be granted anything. They're excluded from the batch entirely -
   // otherwise their rows sit at the head of the queue and starve everyone
   // else's, run after run. Saving an address clears the flag, which puts her
   // straight back in.
@@ -422,23 +422,23 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
   ]);
 
   const pendingRows = (pendingRowsRaw ?? []).filter((r) => !blockedSet.has(r.profile_id));
-  // Revokes first — losing access should never wait behind a backlog of grants.
+  // Revokes first - losing access should never wait behind a backlog of grants.
   const rows = [...(revokedRows ?? []), ...pendingRows].slice(0, limit);
   if (rows.length === 0) return result;
 
   // Resolve each member's email and each owner's file list once per batch.
   const emails = new Map<string, string | null>();
   const files = new Map<string, { driveIds: string[]; totalLinks: number }>();
-  // Members whose address Drive rejected — asked for a Gmail once per batch.
+  // Members whose address Drive rejected - asked for a Gmail once per batch.
   const askedForGmail = new Set<string>();
 
   // Budget by Google API calls, not rows: one course can hold 10 Drive links,
-  // so 60 rows could mean 600+ sequential Drive calls — past any time limit.
+  // so 60 rows could mean 600+ sequential Drive calls - past any time limit.
   const DRIVE_CALL_BUDGET = 120;
   let driveCalls = 0;
   for (const row of rows) {
     if (driveCalls >= DRIVE_CALL_BUDGET) break; // next run continues the queue
-    // Her address already failed earlier in this batch — skip her remaining
+    // Her address already failed earlier in this batch - skip her remaining
     // GRANTS (revokes need no valid Google account, so they still run).
     if (row.status === "pending" && askedForGmail.has(row.profile_id)) {
       result.skipped++;
@@ -456,10 +456,10 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
     const { driveIds: ids, totalLinks } = files.get(key) ?? { driveIds: [], totalLinks: 0 };
     if (ids.length === 0) {
       // Content whose links live entirely off Drive (a YouTube recording) has
-      // nothing to grant — the URL itself is the access. Mark such grants done
+      // nothing to grant - the URL itself is the access. Mark such grants done
       // instead of leaving them "pending" forever in the admin queue (two real
       // members sat there for a day over a YouTube-only session). Content with
-      // NO links yet keeps waiting — its Drive folder may still be coming.
+      // NO links yet keeps waiting - its Drive folder may still be coming.
       if (row.status === "pending" && totalLinks > 0) {
         await admin
           .from("content_shares")
@@ -478,7 +478,7 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
       continue;
     }
 
-    // Always act on the address the share was actually granted to — if she
+    // Always act on the address the share was actually granted to - if she
     // changed her Gmail, the OLD address is the one holding the permission.
     const grantedTo = row.granted_email ?? null;
 

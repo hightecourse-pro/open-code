@@ -9,7 +9,7 @@ import { getSiteUrl } from "@/lib/site";
  * job-published emails.
  *
  * Scale model (2026-08-29): a due (session, stage) no longer mails its whole
- * pool inside one invocation — at thousands of members that blows the
+ * pool inside one invocation - at thousands of members that blows the
  * serverless time limit mid-loop with the stage already claimed, silently
  * skipping most of the community. Instead the claim ENQUEUES one row per
  * recipient (a single insert..select), and every tick drains a bounded batch
@@ -17,14 +17,14 @@ import { getSiteUrl } from "@/lib/site";
  * unique, and each queue row is stamped before the next is sent.
  *
  * Recipients are the women entitled to join: paying members, mentors and the
- * team — or every active member when the session is open to all. Outside
+ * team - or every active member when the session is open to all. Outside
  * production the EMAIL_ALLOWLIST gate inside sendResendEmail keeps every real
  * address safe.
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// Bounded work per tick — ~35-45s of sequential sends at the worst.
+// Bounded work per tick - ~35-45s of sequential sends at the worst.
 const REMINDER_BATCH = 90;
 const JOB_EMAIL_BATCH = 60;
 
@@ -113,11 +113,11 @@ async function enqueueDueReminders(admin: AdminClient, now: Date) {
 
   let enqueued = 0;
   for (const { session, stage } of work) {
-    // Claim first — a second tick landing here finds the row and moves on.
+    // Claim first - a second tick landing here finds the row and moves on.
     const { error: claimErr } = await admin
       .from("session_reminders")
       .insert({ session_id: session.id, stage });
-    if (claimErr) continue; // already claimed (unique) — or table missing
+    if (claimErr) continue; // already claimed (unique) - or table missing
 
     // One set-based insert enqueues the whole pool: paid + mentors + team, or
     // every active member when the session is open to all.
@@ -227,7 +227,7 @@ async function drainJobEmails(admin: AdminClient) {
   let sent = 0;
   for (const t of targets) {
     const job = jobOf.get(t.job_id);
-    // Only live, published jobs still announce; a withdrawn one just drains —
+    // Only live, published jobs still announce; a withdrawn one just drains -
     // and so does a job already sent to the client / in interviews / hired
     // (the owner, 2026-08-30: no submission nudges once the job moved on).
     const live = job && job.status === "open" && job.pipeline_status === "published";
@@ -279,7 +279,7 @@ async function drainChatEmailGrace(admin: ReturnType<typeof createAdminClient>) 
     .in("id", convIds);
   const convOf = new Map((convs ?? []).map((c) => [c.id, c]));
 
-  // Group by (conversation, sender) — each group is one potential email.
+  // Group by (conversation, sender) - each group is one potential email.
   const groups = new Map<string, typeof pending>();
   for (const m of pending) {
     const key = `${m.conversation_id}:${m.sender_id}`;
@@ -301,7 +301,7 @@ async function drainChatEmailGrace(admin: ReturnType<typeof createAdminClient>) 
     const senderId = group[0].sender_id;
     const recipientId = conv.a_id === senderId ? conv.b_id : conv.a_id;
     // "ולא עניתי": did the recipient write anything after the oldest waiting
-    // message? Then the conversation is alive — no email.
+    // message? Then the conversation is alive - no email.
     const { count: replied } = await admin
       .from("messages")
       .select("id", { count: "exact", head: true })
@@ -341,8 +341,8 @@ async function drainChatEmailGrace(admin: ReturnType<typeof createAdminClient>) 
 
 /**
  * WhatsApp inbound messages nobody answered within 5 minutes (the owner,
- * 1/9): email שרה, and — when the conversation was OPENED by a team member
- * (a template send) — that team member too. Same grace idea as the chat:
+ * 1/9): email שרה, and - when the conversation was OPENED by a team member
+ * (a template send) - that team member too. Same grace idea as the chat:
  * an answered-in-time message never emails at all.
  */
 const WA_ALERT_EMAIL = "saraavi.ezra@gmail.com";

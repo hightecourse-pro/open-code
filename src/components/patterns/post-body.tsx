@@ -8,7 +8,7 @@ import { editPost } from "@/app/(app)/feed/actions";
 import { editMinutesLeft, isRichHtml, legacyToHtml, withinEditWindow } from "@/lib/rich-text-lite";
 
 /**
- * A post's words — and, for the ten minutes after she wrote them, a quiet way
+ * A post's words - and, for the ten minutes after she wrote them, a quiet way
  * to fix them. The window is checked again on the server; here it only decides
  * whether the pencil is worth showing.
  */
@@ -66,7 +66,7 @@ export function PostBody({
       }
       className="flex flex-col gap-1.5"
     >
-      {/* A legacy post with markers seeds the editor as REAL formatting —
+      {/* A legacy post with markers seeds the editor as REAL formatting -
           she edits bold text, not asterisk soup. */}
       <RichTextEditor
         name="body"

@@ -8,7 +8,7 @@ import { appointMentorAction } from "@/app/(admin)/admin/actions";
  * Appointing a member as a mentor, compactly: type her name, appoint in one
  * click. Replaces the 50-row button wall (the owner, 10/9: "לא נח ותופס
  * מידי הרבה מקום"). Pending members are offered too (the owner, 15/9: Esti
- * Affen — paid but pending — was unfindable); appointing one activates her.
+ * Affen - paid but pending - was unfindable); appointing one activates her.
  */
 export function AppointMentorPicker({
   candidates,
@@ -36,7 +36,7 @@ export function AppointMentorPicker({
         />
       </div>
       {!needle && (
-        <p className="text-[12px] text-ink-400">הקלידי שם — המינוי בלחיצה אחת ליד ההתאמה.</p>
+        <p className="text-[12px] text-ink-400">הקלידי שם - המינוי בלחיצה אחת ליד ההתאמה.</p>
       )}
       {needle && matches.length === 0 && (
         <p className="text-[12.5px] text-ink-500">לא נמצאה חברה בשם הזה.</p>
@@ -50,7 +50,7 @@ export function AppointMentorPicker({
             {c.name}
             {c.pending && (
               <span className="ms-2 text-[11px] font-semibold text-[#8C5E0E] bg-tint-warm rounded-full px-2 py-0.5">
-                חשבון ממתין — המינוי יפעיל אותו
+                חשבון ממתין - המינוי יפעיל אותו
               </span>
             )}
           </span>

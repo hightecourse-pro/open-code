@@ -11,7 +11,7 @@ import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 export const metadata: Metadata = { title: "בודקת קורות חיים" };
 
 // The analysis rides through Google's 503 storms (model chain + waits between
-// retry rounds) — the default function window cuts that journey short. Pinned
+// retry rounds) - the default function window cuts that journey short. Pinned
 // high: real runs measured at 69-115s (telemetry, 2/9) even on healthy keys.
 export const maxDuration = 300;
 
@@ -30,7 +30,7 @@ export default async function CvCheckerPage() {
         <UpgradeCard
           mentorWaiting={profile.role === "mentor"}
           title="כלי ה-AI נפתחים עם מנוי"
-          body="בודקת קורות החיים נותנת לך משוב מפורט על הקו״ח שלך ובודקת התאמה למשרה — הכול נפתח עם מנוי לקהילה."
+          body="בודקת קורות החיים נותנת לך משוב מפורט על הקו״ח שלך ובודקת התאמה למשרה - הכול נפתח עם מנוי לקהילה."
         />
       </div>
     );
@@ -50,7 +50,7 @@ export default async function CvCheckerPage() {
 
   const hasKey = await hasUsableKey();
 
-  // Past AI reviews — the score history, each linked to the document it ran
+  // Past AI reviews - the score history, each linked to the document it ran
   // on (the owner, 30/8: "לשמור היסטוריית חוות דעת... יחד עם לינק למסמך").
   const { data: pastReviews } = await supabase
     .from("cv_reviews")
@@ -105,7 +105,7 @@ export default async function CvCheckerPage() {
           insights: Array.isArray(r.insights)
             ? (r.insights as { type: "good" | "warn" | "bad" | "tip"; title: string; detail: string }[])
             : [],
-          // Old rows hold job_fit = {"score": N} with no arrays — normalized
+          // Old rows hold job_fit = {"score": N} with no arrays - normalized
           // (a member, 18/9: every history entry but the first crashed).
           jobFit: normalizeJobFit(r.job_fit),
   }));

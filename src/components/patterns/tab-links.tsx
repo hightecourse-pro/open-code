@@ -1,6 +1,6 @@
 "use client";
 
-// URL-driven tab bars used plain <a> links — a full page load with zero
+// URL-driven tab bars used plain <a> links - a full page load with zero
 // feedback, which reads as "stuck" (the owner, 10/9). This renders the same
 // links through the client router inside a transition: the clicked tab shows
 // a spinner immediately, and the current content stays until the new view is
@@ -47,7 +47,7 @@ export function TabLinks({
             title={item.title}
             aria-current={active ? "page" : undefined}
             onClick={(e) => {
-              // Plain click only — modified clicks (new tab) keep native behavior.
+              // Plain click only - modified clicks (new tab) keep native behavior.
               if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
               e.preventDefault();
               if (active) return;

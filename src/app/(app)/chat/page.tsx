@@ -24,10 +24,10 @@ function roleWord(role: UserRole): string {
   return "חברת קהילה";
 }
 
-/** One line of the last thing said in a thread — words only, shortened. */
+/** One line of the last thing said in a thread - words only, shortened. */
 function previewText(body: string, mine: boolean): string {
   // New messages are editor HTML; the preview wants only the words. Tagless
-  // bodies can still carry entities (&nbsp;) — decode those too.
+  // bodies can still carry entities (&nbsp;) - decode those too.
   const words = isRichHtml(body) ? htmlToPlainText(body) : decodeHtmlEntities(body);
   const flat = words.replace(/\s+/g, " ").trim();
   return `${mine ? "את: " : ""}${flat || "📎 קובץ מצורף"}`;
@@ -41,7 +41,7 @@ export default async function ChatPage({
   const me = await requireProfile();
   const { c: activeId, with: withId } = await searchParams;
   // ?with={profileId}: a deep link that opens (or starts) the 1:1 with that
-  // member — lets other screens link INTO a conversation with a plain <a>
+  // member - lets other screens link INTO a conversation with a plain <a>
   // (e.g. "שאלה על המשרה?" on the apply page, opened in a new tab so her
   // half-filled form survives). startConversation redirects to ?c=….
   if (withId && /^[0-9a-f-]{36}$/.test(withId) && withId !== me.id) {
@@ -59,16 +59,16 @@ export default async function ChatPage({
   const conversationIds = (conversations ?? []).map((c) => c.id);
 
   // Everything that only needs the conversation list runs as ONE parallel
-  // wave — this used to be 5 sequential round trips before first paint.
+  // wave - this used to be 5 sequential round trips before first paint.
   //
   // The mark-read UPDATE rides in the same wave instead of blocking it:
   // opening the thread reads it, via the service role because RLS doesn't let
-  // a recipient update a sender's rows — safe here since `active` came from
+  // a recipient update a sender's rows - safe here since `active` came from
   // the member's own conversation list. read_at drives both the mentor
   // "first new message" email and the digest's unread count, so without it
   // both fire forever. Because the unread query below runs concurrently with
   // it, the thread she just opened may keep its unread dot for this one
-  // render — the next refresh clears it, a fair trade for not serializing a
+  // render - the next refresh clears it, a fair trade for not serializing a
   // write before every paint.
   const [
     { data: others },
@@ -85,7 +85,7 @@ export default async function ChatPage({
           .select("id, full_name, avatar_initials, role, status, specialization, member_tier")
           .in("id", otherIds)
       : Promise.resolve({ data: [] }),
-    // Which of these women is the mentor an admin actually matched her with —
+    // Which of these women is the mentor an admin actually matched her with -
     // otherwise her mentor looks like any other thread in the list. kind='general'
     // only: an employment accompaniment is a placement companion, not the mentor
     // this crown and the interview hint below are talking about.
@@ -95,7 +95,7 @@ export default async function ChatPage({
       .eq("profile_id", me.id)
       .eq("kind", "general")
       .not("assigned_mentor_id", "is", null),
-    // The newest 200 only — a years-long thread must not decide how long the
+    // The newest 200 only - a years-long thread must not decide how long the
     // page blocks. Fetched newest-first so the LIMIT keeps the right end,
     // reversed back to chronological below.
     active
@@ -116,7 +116,7 @@ export default async function ChatPage({
       : Promise.resolve(null),
     // The list needs to say what happened, not just when: a preview per
     // thread and which ones are still waiting for her. One window over the
-    // newest messages instead of a query per row — an older thread simply
+    // newest messages instead of a query per row - an older thread simply
     // shows no preview.
     conversationIds.length
       ? supabase
@@ -137,7 +137,7 @@ export default async function ChatPage({
   ]);
 
   const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
-  // An unapproved mentor carries no mentor indication (the owner, 1/9) — she
+  // An unapproved mentor carries no mentor indication (the owner, 1/9) - she
   // reads as a regular member everywhere until the team approves her.
   for (const o of otherMap.values()) {
     if (o.role === "mentor" && o.status !== "active") o.role = "junior";
@@ -148,11 +148,11 @@ export default async function ChatPage({
   const activeOther = active ? otherMap.get(active.a_id === me.id ? active.b_id : active.a_id) : null;
 
   // Who may be WRITTEN to (the owner, 1/9): the team writes to anyone still
-  // here; a member writes only to מנויות (real payers — pending included),
+  // here; a member writes only to מנויות (real payers - pending included),
   // approved mentors and the team. The directory view carries that truth.
   const subscriber = isSubscriber(me);
   const activeOtherId = activeOther?.id ?? null;
-  // מנויה indication for the admin viewer only (the owner, 2/9) — a real paid
+  // מנויה indication for the admin viewer only (the owner, 2/9) - a real paid
   // member: junior + active + paid tier. Members never see each other's tier.
   const isPaidMember = (o?: { role: string; status: string; member_tier?: string | null }) =>
     me.role === "admin" && !!o && o.role === "junior" && o.status === "active" && o.member_tier === "paid";
@@ -169,14 +169,14 @@ export default async function ChatPage({
       otherWritable = !!dir && (dir.role === "admin" || dir.role === "mentor" || dir.is_subscriber);
     }
   }
-  // True when the thread is locked because SHE isn't a subscriber — the one
+  // True when the thread is locked because SHE isn't a subscriber - the one
   // case that gets a clear explanation (the owner: "הודעה ברורה").
   const otherNotSubscribed =
     !!activeOther &&
     !otherWritable &&
     me.role !== "admin" &&
     (activeOther.status === "active" || activeOther.status === "pending");
-  // Writing to the TEAM is never behind a paywall — a member must be able to
+  // Writing to the TEAM is never behind a paywall - a member must be able to
   // answer the team's personal note even before she subscribes.
   const canSend = (subscriber || activeOther?.role === "admin") && otherWritable;
 
@@ -185,7 +185,7 @@ export default async function ChatPage({
 
   const lastMessage = new Map<string, { body: string; mine: boolean }>();
   for (const m of recentMessages ?? []) {
-    // Newest first — the first row we meet for a conversation is its last word.
+    // Newest first - the first row we meet for a conversation is its last word.
     if (!lastMessage.has(m.conversation_id)) {
       lastMessage.set(m.conversation_id, { body: m.body, mine: m.sender_id === me.id });
     }
@@ -196,7 +196,7 @@ export default async function ChatPage({
   }
 
   // A conversation nobody wrote in yet is clutter, not a chat (the owner,
-  // 31/8: "למה יש צ'אטים שהם ריקים?") — the row is created the moment a
+  // 31/8: "למה יש צ'אטים שהם ריקים?") - the row is created the moment a
   // member picks someone, so an abandoned pick leaves an empty thread behind.
   // Hide those from the list. "Has traffic" without querying every message:
   // a preview in the recent window, an unread message, or last_message_at
@@ -216,7 +216,7 @@ export default async function ChatPage({
     ? [roleWord(activeOther.role), activeOther.specialization].filter(Boolean).join(" · ")
     : "";
 
-  // Files hanging on the visible messages — signed URLs minted here, so the
+  // Files hanging on the visible messages - signed URLs minted here, so the
   // client never holds a permanent address.
   const messageAtt = await attachmentsFor("message", (messages ?? []).map((m) => m.id));
   const messagesWithFiles = (messages ?? []).map((m) => ({
@@ -238,7 +238,7 @@ export default async function ChatPage({
         {subscriber && <NewChatButton />}
       </div>
 
-      {/* A free member with no conversations used to see a bare empty page —
+      {/* A free member with no conversations used to see a bare empty page -
           the upgrade offer must exist here like everywhere gated (the owner,
           2026-08-30: "הצעה לשדרוג בכל מקום בו אין הרשאה"). */}
       {!subscriber && (
@@ -248,8 +248,8 @@ export default async function ChatPage({
         >
           <span className="flex-1">
             {me.role === "mentor"
-              ? "ההתכתבות תיפתח ברגע שהצוות יאשר את הבקשה שלך כמנטורית — בלי תשלום 💜"
-              : "ההתכתבות עם חברות ומנטוריות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜"}
+              ? "ההתכתבות תיפתח ברגע שהצוות יאשר את הבקשה שלך כמנטורית - בלי תשלום 💜"
+              : "ההתכתבות עם חברות ומנטוריות נפתחת עם מנוי - ההיסטוריה שלך נשמרת ומחכה לך 💜"}
           </span>
           <span className="font-semibold text-brand-purple whitespace-nowrap">
             {me.role === "mentor" ? "למצב הבקשה ←" : "לשדרוג ←"}
@@ -258,7 +258,7 @@ export default async function ChatPage({
       )}
 
       {/* Bounded to the viewport so the thread scrolls inside its own pane and
-          the composer stays on screen — the page itself never scrolls to chat.
+          the composer stays on screen - the page itself never scrolls to chat.
           On mobile the panes stack: the list keeps its natural height (capped),
           the thread takes whatever is left. The constants are the measured
           space above the grid (page padding + title) plus the bottom padding;
@@ -327,7 +327,7 @@ export default async function ChatPage({
                         )}
                       >
                         {/* Outside the 150-message window we simply don't know
-                            what was said last — the timestamp above already
+                            what was said last - the timestamp above already
                             tells the truth, and claiming nothing was written
                             would be a lie about a full thread. */}
                         {preview ? previewText(preview.body, preview.mine) : " "}
@@ -345,7 +345,7 @@ export default async function ChatPage({
             })
           ) : (
             <p className="text-sm text-ink-500 p-4 text-center leading-relaxed">
-              אין עדיין שיחות — אפשר להתחיל אחת מ
+              אין עדיין שיחות - אפשר להתחיל אחת מ
               <Link href="/mentor" className="font-semibold text-brand-purple hover:underline">
                 עמוד המנטוריות
               </Link>{" "}
@@ -413,21 +413,21 @@ export default async function ChatPage({
                     >
                       {me.role === "mentor"
                         ? "ההתכתבות תיפתח עם אישור הבקשה שלך כמנטורית 💜"
-                        : "ההתכתבות נפתחת עם מנוי — ההיסטוריה שלך נשמרת ומחכה לך 💜"}
+                        : "ההתכתבות נפתחת עם מנוי - ההיסטוריה שלך נשמרת ומחכה לך 💜"}
                     </Link>
                   ) : otherNotSubscribed ? (
                     // A clear reason (the owner, 1/9): chat is a subscriber
                     // benefit, so a thread with a member who isn't a מנויה
                     // waits until she joins.
                     <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
-                      התכתבות אפשרית רק עם מנויות הקהילה — היא עדיין לא מנויה, וברגע שתצטרף השיחה
+                      התכתבות אפשרית רק עם מנויות הקהילה - היא עדיין לא מנויה, וברגע שתצטרף השיחה
                       תיפתח 💜
                     </div>
                   ) : (
                     // Deliberately vague for anyone who LEFT (paused/rejected):
                     // why she can't write here is nobody else's business.
                     <div className="p-3.5 border-t border-ink-100 text-[13px] text-ink-500 text-center bg-ink-50">
-                      אי אפשר לשלוח הודעות חדשות בשיחה הזו כרגע — היא נשמרת כאן במלואה 💜
+                      אי אפשר לשלוח הודעות חדשות בשיחה הזו כרגע - היא נשמרת כאן במלואה 💜
                     </div>
                   )
                 }

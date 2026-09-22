@@ -13,14 +13,14 @@ import { ConfirmActionButton } from "@/components/patterns/confirm-action-button
 
 export const metadata: Metadata = { title: "תור שיתופים" };
 
-/** DD.MM.YYYY — how dates read everywhere else in the admin. */
+/** DD.MM.YYYY - how dates read everywhere else in the admin. */
 const DMY = new Intl.DateTimeFormat("he-IL", {
   day: "2-digit",
   month: "2-digit",
   year: "numeric",
   timeZone: "Asia/Jerusalem",
 });
-const dmy = (iso: string | null) => (iso ? DMY.format(new Date(iso)) : "—");
+const dmy = (iso: string | null) => (iso ? DMY.format(new Date(iso)) : "-");
 
 export default async function AdminSharesPage({
   searchParams,
@@ -32,12 +32,12 @@ export default async function AdminSharesPage({
   const needle = (q ?? "").trim().toLowerCase();
 
   const supabase = await createClient();
-  // Cheap env check — no live Google call on every page render.
+  // Cheap env check - no live Google call on every page render.
   const driveOn = isDriveAutomationConfigured();
 
   // Scoped queries instead of one unbounded select("*"): the table grows as
   // members × sessions, and past PostgREST's default row cap a single query
-  // silently dropped the NEWEST rows — precisely where a just-created manual
+  // silently dropped the NEWEST rows - precisely where a just-created manual
   // grant lives, which is why it never showed up here. Everything is ordered
   // newest-first so a truncation can only ever lose ancient history.
   // select("*") stays, so a column added later still renders.
@@ -65,14 +65,14 @@ export default async function AdminSharesPage({
       .limit(500),
   ]);
   if ((queueRows ?? []).length === ROW_CAP || (sharedRows ?? []).length === ROW_CAP) {
-    console.warn("[shares] row cap reached — the oldest rows are not shown on /admin/shares");
+    console.warn("[shares] row cap reached - the oldest rows are not shown on /admin/shares");
   }
 
-  // The manual query overlaps the queue (both hold pending rows) — dedupe by id.
+  // The manual query overlaps the queue (both hold pending rows) - dedupe by id.
   const shares = [
     ...new Map([...(queueRows ?? []), ...(manualRows ?? [])].map((s) => [s.id, s])).values(),
   ].sort((a, b) => a.created_at.localeCompare(b.created_at));
-  // "Who has what" also shows manual grants that haven't synced yet — the
+  // "Who has what" also shows manual grants that haven't synced yet - the
   // admin decided them, so they must be visible (and removable) immediately.
   const live = [
     ...(sharedRows ?? []),
@@ -95,9 +95,9 @@ export default async function AdminSharesPage({
   ]);
 
   // When she first walked in. Under "access on attempt" that date IS the
-  // explanation of why the share exists. Null before the log migration runs —
+  // explanation of why the share exists. Null before the log migration runs -
   // the column then simply doesn't render.
-  // Scoped to the members actually rendered — the un-scoped view aggregated
+  // Scoped to the members actually rendered - the un-scoped view aggregated
   // (and shipped) member×content rows for the whole community.
   const shareProfileIds = [...new Set(shares.map((s) => s.profile_id))];
   const { data: openStats } = shareProfileIds.length
@@ -123,8 +123,8 @@ export default async function AdminSharesPage({
   type LiveRow = (typeof live)[number] & { memberName: string; contentTitle: string };
   const liveRows: LiveRow[] = live.map((s) => ({
     ...s,
-    memberName: nameOf.get(s.profile_id) ?? "—",
-    contentTitle: titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—",
+    memberName: nameOf.get(s.profile_id) ?? "-",
+    contentTitle: titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "-",
   }));
   const filtered = needle
     ? liveRows.filter(
@@ -133,7 +133,7 @@ export default async function AdminSharesPage({
       )
     : liveRows;
 
-  // Grouped both ways — the tabs just pick which grouping to render.
+  // Grouped both ways - the tabs just pick which grouping to render.
   const groups = new Map<string, { label: string; rows: LiveRow[] }>();
   for (const r of filtered) {
     const key = byContent ? `${r.owner_type}:${r.owner_id}` : r.profile_id;
@@ -166,19 +166,19 @@ export default async function AdminSharesPage({
         <span className="font-mono text-xs text-brand-pink-deep">&lt;שיתופים/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">תור שיתופים אישיים</h1>
         <p className="t-body-sm text-ink-500">
-          כאן רואים למי צריך לשתף (או לבטל) קישורי Google Drive באופן אישי. השיתוף עצמו מתבצע בדרייב — כאן מסמנים שבוצע.
+          כאן רואים למי צריך לשתף (או לבטל) קישורי Google Drive באופן אישי. השיתוף עצמו מתבצע בדרייב - כאן מסמנים שבוצע.
         </p>
       </div>
 
-      {/* Automation status — when it's on, this queue should stay near-empty. */}
+      {/* Automation status - when it's on, this queue should stay near-empty. */}
       {driveOn ? (
         <div className="flex items-start gap-2.5 bg-tint-mint border border-[#A7E3C6] rounded-md p-3.5 px-4 text-[13.5px] text-[#1B7A4B]">
           <Zap size={18} className="shrink-0 mt-0.5" />
           <div className="flex-1">
             <b className="font-display">שיתוף אוטומטי פעיל.</b> הגישה נפתחת ברגע שחברה נכנסת
-            לתוכן — לא בהצטרפות. לכן הרשימה כאן קצרה בכוונה: נשאר בה רק מה שלא הצליח וצריך טיפול
+            לתוכן - לא בהצטרפות. לכן הרשימה כאן קצרה בכוונה: נשאר בה רק מה שלא הצליח וצריך טיפול
             ידני, ומה שצריך להסיר. מי שעוזבת מאבדת בדיוק את מה שהיא באמת פתחה. הסנכרון רץ פעם
-            ביום — ולסנכרון מיידי אפשר ללחוץ &quot;סנכרון עכשיו&quot;.
+            ביום - ולסנכרון מיידי אפשר ללחוץ &quot;סנכרון עכשיו&quot;.
           </div>
           <form action={syncDriveNow}>
             <Button type="submit" size="sm" variant="ghost">סנכרון עכשיו</Button>
@@ -188,7 +188,7 @@ export default async function AdminSharesPage({
         <div className="flex items-start gap-2.5 bg-tint-warm border border-[#F0DCA8] rounded-md p-3.5 px-4 text-[13.5px] text-[#8C5E0E]">
           <ZapOff size={18} className="shrink-0 mt-0.5" />
           <span>
-            <b className="font-display">שיתוף אוטומטי כבוי</b> — כרגע משתפים ידנית בדרייב ומסמנים כאן.
+            <b className="font-display">שיתוף אוטומטי כבוי</b> - כרגע משתפים ידנית בדרייב ומסמנים כאן.
             כדי להפעיל אותו צריך להגדיר חשבון שירות של Google (ההוראות המלאות ב-
             <span className="font-mono text-[12px]" dir="ltr">docs/drive-automation.md</span>)
             ולהוסיף ב-Vercel את{" "}
@@ -205,22 +205,22 @@ export default async function AdminSharesPage({
         <PendingShares
           rows={pending.map((s) => ({
             id: s.id,
-            memberName: nameOf.get(s.profile_id) ?? "—",
+            memberName: nameOf.get(s.profile_id) ?? "-",
             ownerType: s.owner_type,
-            contentTitle: titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—",
-            since: dmy(s.created_at) ?? "—",
+            contentTitle: titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "-",
+            since: dmy(s.created_at) ?? "-",
           }))}
         />
       </section>
 
-      {/* ---------- Manual share — an extra course for one member ---------- */}
+      {/* ---------- Manual share - an extra course for one member ---------- */}
       <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
         <div>
           <h3 className="font-display text-base font-bold flex items-center gap-2">
-            <Gift size={16} className="text-brand-pink-deep" /> שיתוף אישי — קורס נוסף למשתתפת
+            <Gift size={16} className="text-brand-pink-deep" /> שיתוף אישי - קורס נוסף למשתתפת
           </h3>
           <p className="text-[12.5px] text-ink-500 mt-0.5">
-            כאן את פותחת למישהי קורס או סשן מעבר לקורס הפעיל שלה. החלפת קורס לא נוגעת בו — הוא
+            כאן את פותחת למישהי קורס או סשן מעבר לקורס הפעיל שלה. החלפת קורס לא נוגעת בו - הוא
             נשאר איתה. הוא נסגר כשאת מסירה אותו כאן, וגם מעצמו כשהיא עוזבת את הקהילה או כשהמנוי
             שלה מסתיים.
           </p>
@@ -232,7 +232,7 @@ export default async function AdminSharesPage({
         />
       </section>
 
-      {/* ---------- Who has what — the live picture ---------- */}
+      {/* ---------- Who has what - the live picture ---------- */}
       <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
         <div className="flex items-end justify-between flex-wrap gap-3">
           <div>
@@ -285,7 +285,7 @@ export default async function AdminSharesPage({
         {grouped.length === 0 ? (
           <p className="text-ink-500 text-sm">
             {needle
-              ? "לא מצאנו שיתוף שמתאים לחיפוש — אולי לנסות מילה אחרת?"
+              ? "לא מצאנו שיתוף שמתאים לחיפוש - אולי לנסות מילה אחרת?"
               : "עדיין אין שיתופים פעילים. ברגע שמשתתפת תיכנס לקורס או להקלטה, זה יופיע כאן 💜"}
           </p>
         ) : (
@@ -354,11 +354,11 @@ export default async function AdminSharesPage({
           <div className="flex flex-col">
             {revoked.map((s) => (
               <div key={s.id} className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0">
-                <span className="font-medium text-ink-900">{nameOf.get(s.profile_id) ?? "—"}</span>
+                <span className="font-medium text-ink-900">{nameOf.get(s.profile_id) ?? "-"}</span>
                 <Badge variant={s.owner_type === "course" ? "pink" : "purple"}>
                   {s.owner_type === "course" ? "קורס" : "סשן"}
                 </Badge>
-                <span className="text-ink-700 text-sm">{titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "—"}</span>
+                <span className="text-ink-700 text-sm">{titleOf.get(`${s.owner_type}:${s.owner_id}`) ?? "-"}</span>
                 <ConfirmActionButton
                   action={dismissShare.bind(null, s.id)}
                   message={`לסמן שהשיתוף של ${nameOf.get(s.profile_id) ?? "החברה"} בוטל בדרייב? השורה תוסר מהרשימה.`}

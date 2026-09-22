@@ -10,14 +10,14 @@ export const dynamic = "force-dynamic";
 
 /**
  * The subscription's own screen (PM: out of the profile, into the menu).
- * Mentors and staff never pay — the sidebar hides the item for mentors and
+ * Mentors and staff never pay - the sidebar hides the item for mentors and
  * this covers a typed-in URL.
  */
 export default async function SubscriptionPage() {
   const profile = await requireCommunityAccess();
   if (profile.role === "mentor") redirect("/profile");
 
-  // Staff don't pay (the owner, 30/8: "אם אני צוות למה המנוי פעיל בתשלום?") —
+  // Staff don't pay (the owner, 30/8: "אם אני צוות למה המנוי פעיל בתשלום?") -
   // an admin sees a staff notice, never billing details.
   if (profile.role === "admin") {
     return (
@@ -27,7 +27,7 @@ export default async function SubscriptionPage() {
           <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המנוי שלי</h1>
         </div>
         <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14.5px] text-ink-700">
-          חשבון צוות 💜 הכול פתוח לך בלי מנוי ובלי תשלום — אין כאן מה לנהל.
+          חשבון צוות 💜 הכול פתוח לך בלי מנוי ובלי תשלום - אין כאן מה לנהל.
         </div>
       </div>
     );
@@ -44,7 +44,7 @@ export default async function SubscriptionPage() {
   ]);
 
   // Renewal-off that came from a LIMITED KEVA (charge-limited in Nedarim) is
-  // not something SHE did — the card must not say "ביטלת" (the owner, 16/9,
+  // not something SHE did - the card must not say "ביטלת" (the owner, 16/9,
   // after נחמה וולפא was alarmed by exactly that wording).
   let limitedKeva = false;
   if (subscription?.canceled_at) {
@@ -58,7 +58,7 @@ export default async function SubscriptionPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מנוי/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המנוי שלי</h1>
         <p className="t-body-sm text-ink-700">
-          כל מה שקשור לתשלום והחידוש — במקום אחד, בשליטה שלך.
+          כל מה שקשור לתשלום והחידוש - במקום אחד, בשליטה שלך.
         </p>
       </div>
 
@@ -72,7 +72,7 @@ export default async function SubscriptionPage() {
         />
       ) : (
         <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14.5px] text-ink-700">
-          עדיין אין לך מנוי פעיל — עם מנוי נפתחים הקורסים, ההקלטות, הצ&apos;אט וכלי ה-AI 💜{" "}
+          עדיין אין לך מנוי פעיל - עם מנוי נפתחים הקורסים, ההקלטות, הצ&apos;אט וכלי ה-AI 💜{" "}
           <a href="/join" className="text-brand-purple font-semibold">
             להצטרפות ←
           </a>
