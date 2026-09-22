@@ -124,11 +124,18 @@ export default async function Home({
         </div>
       </section>
 
+      {/* The public map of the site (the owner, 22/9: sitelinks under the
+          app) - crawlable links with descriptive text to every public page. */}
       <footer className="px-6 py-8 text-center text-ink-500 text-sm border-t border-ink-200">
-        קוד פתוח · קהילה למפתחות ג&apos;וניוריות 💜 ·{" "}
-        <Link href="/privacy" className="font-semibold text-brand-purple hover:underline">
-          מדיניות פרטיות
-        </Link>
+        <nav aria-label="אזורי האתר" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mb-3">
+          <Link href="/join" className="font-semibold text-brand-purple hover:underline">הצטרפות לקהילה</Link>
+          <Link href="/hackathon-2026" className="font-semibold text-brand-purple hover:underline">האקתון AI 2026</Link>
+          <Link href="/hackathon-2026/partners" className="font-semibold text-brand-purple hover:underline">שותפים וספונסרים</Link>
+          <Link href="/signup" className="font-semibold text-brand-purple hover:underline">הרשמה</Link>
+          <Link href="/login" className="font-semibold text-brand-purple hover:underline">כניסה לקהילה</Link>
+          <Link href="/privacy" className="font-semibold text-brand-purple hover:underline">מדיניות פרטיות</Link>
+        </nav>
+        קוד פתוח · קהילה למפתחות ג&apos;וניוריות 💜
       </footer>
     </main>
   );
