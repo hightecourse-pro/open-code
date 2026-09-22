@@ -86,9 +86,9 @@ await page.waitForLoadState("networkidle");
 await page.click('button:has-text("מאמר חדש")');
 await page.fill("#ar-title", "מאמר בדיקה ADMIN4");
 await page.fill("#ar-cat", "בדיקות");
-await page.locator('[contenteditable="true"]').fill("זהו תוכן מאמר הבדיקה — פסקה ראשונה.");
+await page.locator('[contenteditable="true"]').fill("זהו תוכן מאמר הבדיקה - פסקה ראשונה.");
 await page.click('button:has-text("שמירה כטיוטה")');
-// onDone closes the form only after the server action finished — reload then.
+// onDone closes the form only after the server action finished - reload then.
 await page.waitForSelector("#ar-title", { state: "detached", timeout: 20000 });
 await page.reload();
 await page.waitForLoadState("networkidle");
@@ -121,7 +121,7 @@ await page.goto(`${BASE}/admin/shares`);
 await page.waitForLoadState("networkidle");
 {
   // An EMPTY pending queue is the healthy steady state since the YouTube-only
-  // fix — the bulk controls exist only when something waits.
+  // fix - the bulk controls exist only when something waits.
   const pendingEmpty = (await page.locator("text=אין ממתינים").count()) > 0
     || (await page.locator("text=מחכה מ-").count()) === 0;
   const bulkOk = (await page.locator("text=בחירת הכול").count()) > 0 && (await page.locator('button:has-text("סימון הכול כבוצע")').count()) > 0;

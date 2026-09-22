@@ -14,7 +14,7 @@ await page.goto(`${BASE}/forum`);
 await page.waitForLoadState("networkidle");
 console.log("onboarding gate:", (await page.locator("text=כמה פרטים ונצא לדרך").count()) > 0 ? "✅" : "❌");
 console.log("no junior experience gate:", (await page.locator("text=אני בתחילת הדרך").count()) === 0 ? "✅ (mentor scope)" : "❌ junior gate shown");
-// walk while filling nothing—the first step is names only for mentors
+// walk while filling nothing-the first step is names only for mentors
 const next = page.locator('button:has-text("הבא")');
 let mentorQ = false;
 for (let i = 0; i < 8 && !mentorQ; i++) {

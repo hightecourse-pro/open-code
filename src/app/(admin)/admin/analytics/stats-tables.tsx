@@ -9,14 +9,14 @@ export interface CourseStatRow {
   title: string;
   /** All-time sign-ups, swapped-back ones included (the owner, 31/8). */
   enrollments: number;
-  /** Who holds the course right now — expands under the row (the owner, 31/8). */
+  /** Who holds the course right now - expands under the row (the owner, 31/8). */
   current: { profileId: string; name: string; since: string; completed: boolean }[];
   studied: number;
   avgRating: number | null;
   members: number;
   views: number;
   last: string | null;
-  /** The course's member feedback — expands under the row (the owner, 30/8). */
+  /** The course's member feedback - expands under the row (the owner, 30/8). */
   feedback: { profileId: string; name: string; rating: number | null; text: string | null }[];
 }
 
@@ -36,7 +36,7 @@ const DMY = new Intl.DateTimeFormat("he-IL", {
   year: "numeric",
   timeZone: "Asia/Jerusalem",
 });
-const dmy = (iso: string | null | undefined) => (iso ? DMY.format(new Date(iso)) : "—");
+const dmy = (iso: string | null | undefined) => (iso ? DMY.format(new Date(iso)) : "-");
 
 type Col<T> = {
   key: string;
@@ -126,7 +126,7 @@ function FragmentRow<T extends { id: string }>({
       <tr className="border-b border-ink-100 last:border-b-0">
         {cols.map((c) => (
           <td key={c.key} className="py-2.5 first:font-medium first:text-ink-900 text-ink-700 tabular-nums">
-            {c.render ? c.render(r) : (c.value(r) ?? "—")}
+            {c.render ? c.render(r) : (c.value(r) ?? "-")}
           </td>
         ))}
       </tr>
@@ -143,7 +143,7 @@ function FragmentRow<T extends { id: string }>({
 
 export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
   // One detail panel per row, opened either from "רשומות כרגע" (the names) or
-  // from "דירוג ומשובים" (the feedback) — it shows whichever section was asked.
+  // from "דירוג ומשובים" (the feedback) - it shows whichever section was asked.
   const [openDetail, setOpenDetail] = useState<{ id: string; kind: "current" | "feedback" } | null>(null);
   const toggle = (id: string, kind: "current" | "feedback") =>
     setOpenDetail((v) => (v?.id === id && v.kind === kind ? null : { id, kind }));
@@ -210,7 +210,7 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
                 {r.current.length} ▾
               </button>
             ) : (
-              "—"
+              "-"
             ),
         },
         { key: "enrollments", label: "נרשמו עד היום", value: (r) => r.enrollments },
@@ -227,16 +227,16 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
                 className="font-semibold text-brand-purple hover:underline cursor-pointer"
                 title="פתיחת המשובים של הקורס"
               >
-                {r.avgRating != null ? `${r.avgRating.toFixed(1)} ⭐` : "—"} ·{" "}
+                {r.avgRating != null ? `${r.avgRating.toFixed(1)} ⭐` : "-"} ·{" "}
                 {r.feedback.length === 1 ? "משוב אחד" : `${r.feedback.length} משובים`} ▾
               </button>
             ) : r.avgRating != null ? (
               `${r.avgRating.toFixed(1)} ⭐`
             ) : (
-              "—"
+              "-"
             ),
         },
-        { key: "members", label: "כמה חברות", value: (r) => r.members, render: (r) => r.members || "—" },
+        { key: "members", label: "כמה חברות", value: (r) => r.members, render: (r) => r.members || "-" },
         { key: "views", label: "סה״כ כניסות", value: (r) => r.views },
         { key: "last", label: "כניסה אחרונה", value: (r) => r.last ?? "", render: (r) => dmy(r.last) },
       ]}
@@ -245,7 +245,7 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
 }
 
 export function SessionsStatsTable({ rows }: { rows: SessionStatRow[] }) {
-  // "מי נכנסה" per session (the owner, 31/8) — fetched lazily on first click
+  // "מי נכנסה" per session (the owner, 31/8) - fetched lazily on first click
   // and cached, so the page never ships member×content history up front.
   const [openId, setOpenId] = useState<string | null>(null);
   const [viewersOf, setViewersOf] = useState<Record<string, SessionViewer[]>>({});
@@ -309,12 +309,12 @@ export function SessionsStatsTable({ rows }: { rows: SessionStatRow[] }) {
                 {r.members} ▾
               </button>
             ) : (
-              "—"
+              "-"
             ),
         },
         { key: "views", label: "סה״כ כניסות", value: (r) => r.views },
         { key: "last", label: "כניסה אחרונה", value: (r) => r.last ?? "", render: (r) => dmy(r.last) },
-        { key: "openToAll", label: "פתוח לכולן", value: (r) => (r.openToAll ? 1 : 0), render: (r) => (r.openToAll ? "כן" : "—") },
+        { key: "openToAll", label: "פתוח לכולן", value: (r) => (r.openToAll ? 1 : 0), render: (r) => (r.openToAll ? "כן" : "-") },
       ]}
     />
   );

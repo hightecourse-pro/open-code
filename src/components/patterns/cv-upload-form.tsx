@@ -21,7 +21,7 @@ export function CvUploadForm() {
   // Clear the form after a successful upload.
   //
   // The dependency is the whole `state`, not `state.ok`: the action returns a
-  // fresh object every time, so its identity changes on each submission —
+  // fresh object every time, so its identity changes on each submission -
   // whereas `state.ok` stays `true` from the second upload onwards, and React
   // would skip this effect and leave the form filled. The guard below is what
   // keeps a failed upload from clearing her work.

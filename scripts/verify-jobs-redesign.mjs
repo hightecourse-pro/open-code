@@ -5,7 +5,7 @@ const PASS = requireEnv("VERIFY_FIXTURE_PASSWORD");
 const BASE = "https://open-code-psi.vercel.app";
 const SHOTS = process.env.SHOTS_DIR || ".";
 const results = [];
-const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " — " + x : ""}`);
+const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " - " + x : ""}`);
 
 const PDF = Buffer.from("%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF");
 
@@ -56,7 +56,7 @@ ok("question→chat link present", (await page.locator('a:has-text("יש לך ש
 ok("profile link opens new tab", (await page.locator('a[href="/profile"][target="_blank"]').count()) >= 1);
 await page.screenshot({ path: `${SHOTS}/jobs-2-apply.png` });
 
-// fill and submit (upload CV path — this account has no saved docs)
+// fill and submit (upload CV path - this account has no saved docs)
 const fitBox = page.locator("#fit");
 await fitBox.fill("יש לי רקע מתאים ואני מתרגשת להגיש 💜");
 // answer any required job questions minimally
@@ -72,7 +72,7 @@ await page.waitForURL((u) => u.searchParams.get("applied") === "1", { timeout: 3
 ok("application submitted", true);
 
 // 5. dedup + the mine view groups
-// The fixtures hold JFD TWINS (two open jobs with this title) — only the one
+// The fixtures hold JFD TWINS (two open jobs with this title) - only the one
 // she applied to leaves the board, so the assertion is per-card link, not
 // per-title.
 await page.waitForLoadState("networkidle");

@@ -9,13 +9,13 @@ export default async function AdminDashboardPage() {
   const supabase = await createClient();
 
   // Only a MENTOR candidate goes through approval (the owner, 2026-08-30):
-  // a woman who joined without paying is simply a free member — she browses
+  // a woman who joined without paying is simply a free member - she browses
   // immediately, nothing to approve. Payment (not an admin) activates a
   // subscriber; the approval queue below is mentors only.
   const [subscribers, regulars, unregisteredPayers, pendingMentors, mentors, posts] =
     await Promise.all([
       // The directory view computes "really paying" (active paid / live sub /
-      // on the Nedarim payers list) — pending payers count as מנויות too.
+      // on the Nedarim payers list) - pending payers count as מנויות too.
       supabase
         .from("members_directory")
         .select("*", { count: "exact", head: true })
@@ -27,7 +27,7 @@ export default async function AdminDashboardPage() {
         .select("*", { count: "exact", head: true })
         .eq("is_subscriber", false)
         .eq("role", "junior"),
-      // Paid outside and never signed up — the definer function matches the
+      // Paid outside and never signed up - the definer function matches the
       // payers list against auth accounts (null pre-migration → cube shows 0).
       supabase.rpc("admin_unregistered_payers_count"),
       supabase
@@ -43,7 +43,7 @@ export default async function AdminDashboardPage() {
       supabase.from("posts").select("*", { count: "exact", head: true }),
     ]);
 
-  // Each cube IS its filter (the tester's ask) — clicking lands on the list
+  // Each cube IS its filter (the tester's ask) - clicking lands on the list
   // it counts, already narrowed.
   const stats = [
     { label: "מנויות 💜", value: subscribers.count ?? 0, href: "/admin/members?status=active" },
@@ -77,11 +77,11 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* The SAME rich approval card as /admin/mentors (the owner, 10/9:
-          "תסדר לי בדשבורד את אישור המנטוריות") — one component, so approving
+          "תסדר לי בדשבורד את אישור המנטוריות") - one component, so approving
           here also sends her the אושרת email. */}
       <PendingMentorApplications
         heading="מנטוריות חדשות לאישור"
-        sub="רק הצטרפות כמנטורית עוברת אישור צוות — חברה שנרשמה בלי מנוי נכנסת מיד, בלי אישור."
+        sub="רק הצטרפות כמנטורית עוברת אישור צוות - חברה שנרשמה בלי מנוי נכנסת מיד, בלי אישור."
         showEmpty
         footer={
           <Link

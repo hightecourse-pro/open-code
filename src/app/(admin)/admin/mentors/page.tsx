@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminMentorsPage() {
   const supabase = await createClient();
-  // Past declines (mentor_declined_at) — the registry the owner asked for.
+  // Past declines (mentor_declined_at) - the registry the owner asked for.
   // Errors (pre-migration column) fold to an empty list.
   const declinedPromise = supabase
     .from("profiles")
@@ -31,7 +31,7 @@ export default async function AdminMentorsPage() {
       .eq("role", "mentor")
       .eq("status", "active")
       .order("full_name"),
-    // ALL juniors, active AND pending — a paid member whose account is still
+    // ALL juniors, active AND pending - a paid member whose account is still
     // pending (Esti Affen, 15/9) must be appointable; appointing activates.
     supabase
       .from("profiles")
@@ -193,7 +193,7 @@ export default async function AdminMentorsPage() {
           applications: (
             <PendingMentorApplications
               heading="בקשות הצטרפות כמנטורית"
-              sub="אישור שולח לה מייל ופותח לה את הקהילה — בלי מנוי ובלי תשלום."
+              sub="אישור שולח לה מייל ופותח לה את הקהילה - בלי מנוי ובלי תשלום."
             />
           ),
           active: (
@@ -214,7 +214,7 @@ export default async function AdminMentorsPage() {
             <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
               <h3 className="font-display text-base font-bold mb-1">מינוי חברה כמנטורית</h3>
               <p className="text-[12.5px] text-ink-500 mb-3">
-                חברה שאת רוצה להכתיר בעצמך — בלי שהיא הגישה בקשה. גם חברה שחשבונה עדיין ממתין
+                חברה שאת רוצה להכתיר בעצמך - בלי שהיא הגישה בקשה. גם חברה שחשבונה עדיין ממתין
                 מופיעה כאן; המינוי מאשר ומפעיל אותה.
               </p>
               <AppointMentorPicker
@@ -244,7 +244,7 @@ export default async function AdminMentorsPage() {
                       {d.full_name}
                     </Link>
                     <span className="text-[12px] text-ink-500 whitespace-nowrap">
-                      נדחתה ב־{d.mentor_declined_at ? new Date(d.mentor_declined_at).toLocaleDateString("he-IL") : "—"}
+                      נדחתה ב־{d.mentor_declined_at ? new Date(d.mentor_declined_at).toLocaleDateString("he-IL") : "-"}
                     </span>
                   </div>
                 ))}

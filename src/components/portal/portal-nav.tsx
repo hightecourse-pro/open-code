@@ -13,7 +13,7 @@ const ITEMS = [
 
 /**
  * The portal's top-bar sections. Dark-surface styling to sit on the ink bar.
- * Free search is a per-client grant — without it the search item is hidden
+ * Free search is a per-client grant - without it the search item is hidden
  * (the page itself also redirects, so this is presentation, not the gate).
  */
 export function PortalNav({ canSearch }: { canSearch: boolean }) {

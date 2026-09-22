@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "מפתחות AI" };
 const WINDOW_DAYS = 7;
 
 // bump_ai_key_usage stamps rows with the database's current_date (UTC), so the
-// window is built in UTC too — otherwise "today" could land on the wrong bar.
+// window is built in UTC too - otherwise "today" could land on the wrong bar.
 function utcDayKey(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
@@ -68,7 +68,7 @@ export default async function AdminAiKeysPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מפתחות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">מפתחות AI</h1>
         <p className="text-[13px] text-ink-500 mt-1.5">
-          המפתחות האלה מפעילים את החיפוש החכם בפורטל המעסיקים — המפתחות האישיים של החברות
+          המפתחות האלה מפעילים את החיפוש החכם בפורטל המעסיקים - המפתחות האישיים של החברות
           נפרדים לגמרי ואינם מושפעים מכאן.
         </p>
       </div>
@@ -94,7 +94,7 @@ export default async function AdminAiKeysPage() {
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <KeyRound size={28} className="text-ink-300" />
             <p className="text-ink-500 text-sm">
-              אין עדיין מפתחות בבריכה — החיפוש החכם בפורטל לא יעבוד בלעדיהם.
+              אין עדיין מפתחות בבריכה - החיפוש החכם בפורטל לא יעבוד בלעדיהם.
             </p>
           </div>
         )}

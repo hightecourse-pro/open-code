@@ -5,7 +5,7 @@ import { Button } from "@/components/ui";
 
 /**
  * The in-app error boundary. Without it, any server exception showed Next's
- * built-in screen: plain LTR English, no brand, no way forward — the worst
+ * built-in screen: plain LTR English, no brand, no way forward - the worst
  * possible moment to stop speaking Hebrew to her.
  */
 export default function AppError({
@@ -16,7 +16,7 @@ export default function AppError({
   reset: () => void;
 }) {
   // Browser extensions (password managers, translate) rewrite the DOM and
-  // React then crashes on reconciliation — a TRANSIENT crash that a plain
+  // React then crashes on reconciliation - a TRANSIENT crash that a plain
   // re-render fixes (the owner, 6/9: "לא קורה תמיד"). Auto-heal once: retry
   // silently, and only show the sad screen if it crashes again within 15s.
   const [healing, setHealing] = useState(true);
@@ -52,7 +52,7 @@ export default function AppError({
         <div className="h-1 w-16 mx-auto rounded-full bg-brand-gradient mb-5" />
         <h1 className="font-display text-[22px] font-black text-ink-1000">משהו השתבש רגע 🙈</h1>
         <p className="t-body-sm text-ink-500 mt-2 mb-6">
-          לא את — אנחנו. אפשר לנסות שוב, ואם זה חוזר על עצמו נשמח שתכתבי לנו.
+          לא את - אנחנו. אפשר לנסות שוב, ואם זה חוזר על עצמו נשמח שתכתבי לנו.
         </p>
         <Button onClick={reset} bracketed>
           לנסות שוב

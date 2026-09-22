@@ -1,4 +1,4 @@
-// The portal's "המשרות שלי" section — every job this company has with us, each
+// The portal's "המשרות שלי" section - every job this company has with us, each
 // with the candidate list an admin curated for it.
 //
 // PRIVACY: candidates come only from loadClientJobs(), which routes through
@@ -17,7 +17,7 @@ import { requirePortalClient } from "@/app/portal/session";
 
 export const metadata: Metadata = { title: "המשרות שלי" };
 
-/** "3 מועמדות" — with the singular form for one. */
+/** "3 מועמדות" - with the singular form for one. */
 function candidatesLabel(n: number): string {
   if (n === 0) return "אין מועמדות עדיין";
   if (n === 1) return "מועמדת אחת";
@@ -45,7 +45,7 @@ export default async function PortalJobsPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מועמדות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המשרות שלי</h1>
         <p className="t-body-sm text-ink-500">
-          {client.company_name} — אלו המועמדות שבחרנו למשרות שלכם. אפשר לסמן כוכב למי ששווה
+          {client.company_name} - אלו המועמדות שבחרנו למשרות שלכם. אפשר לסמן כוכב למי ששווה
           לזכור, ולהזמין לראיון ישר מכאן.
         </p>
       </header>
@@ -59,7 +59,7 @@ export default async function PortalJobsPage() {
             עדיין אין כאן משרות.
           </p>
           <p className="t-body-sm text-ink-500 mt-1.5 mx-auto max-w-[46ch]">
-            כשנפתח משרה ונמצא לה מועמדות, הכול יופיע כאן — ותקבלו מאיתנו עדכון.
+            כשנפתח משרה ונמצא לה מועמדות, הכול יופיע כאן - ותקבלו מאיתנו עדכון.
           </p>
         </div>
       ) : (
@@ -103,7 +103,7 @@ export default async function PortalJobsPage() {
               {/* ------------------------------------------- candidate grid */}
               {job.candidates.length === 0 ? (
                 <p className="t-body-sm rounded-xl border border-dashed border-ink-200 bg-white/70 px-4 py-8 text-center text-ink-500">
-                  אנחנו עוד מחפשות מועמדות למשרה הזו — נעדכן אתכם ברגע שיהיו.
+                  אנחנו עוד מחפשות מועמדות למשרה הזו - נעדכן אתכם ברגע שיהיו.
                 </p>
               ) : (
                 <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 list-none p-0 m-0">

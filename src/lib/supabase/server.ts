@@ -23,7 +23,7 @@ export async function createClient() {
               cookieStore.set(name, value, options)
             );
           } catch {
-            // Called from a Server Component — cookie writes are ignored here.
+            // Called from a Server Component - cookie writes are ignored here.
             // The Proxy (proxy.ts) refreshes the session cookie instead.
           }
         },

@@ -12,7 +12,7 @@ function revalidate() {
 
 /**
  * One-click job under a client (the owner, 3/9: "אפשרות קלה לייצר עוד משרה").
- * Born hidden (draft + not visible) — she edits the content on the job page
+ * Born hidden (draft + not visible) - she edits the content on the job page
  * and publishes when it's real.
  */
 export async function quickCreateJobForClient(clientId: string): Promise<{ jobId?: string; error?: string }> {
@@ -28,14 +28,14 @@ export async function quickCreateJobForClient(clientId: string): Promise<{ jobId
   const { data: job, error } = await supabase
     .from("jobs")
     .insert({
-      title: `משרה חדשה — ${client.company_name}`,
+      title: `משרה חדשה - ${client.company_name}`,
       company: client.company_name,
       client_id: client.id,
       source: "ours",
       status: "open",
       pipeline_status: "draft",
       is_visible: false,
-      description: "משרה שנוצרה מהפייפליין — ערכי כאן את הפרטים.",
+      description: "משרה שנוצרה מהפייפליין - ערכי כאן את הפרטים.",
       posted_by: me.id,
     })
     .select("id")
@@ -46,7 +46,7 @@ export async function quickCreateJobForClient(clientId: string): Promise<{ jobId
 }
 
 /**
- * Move a hire under a job — or detach her (the owner, 3/9: "לגרור אליה
+ * Move a hire under a job - or detach her (the owner, 3/9: "לגרור אליה
  * מועמדות"). The hire inherits the job's client and company name.
  */
 export async function assignHireToJob(hireId: string, jobId: string | null): Promise<void> {

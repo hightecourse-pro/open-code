@@ -5,7 +5,7 @@ import type { CandidateSummary } from "@/lib/portal/types";
 
 /**
  * The candidate card shared by search results, a job's candidate list and the
- * favorites page. Only summary fields are shown — the private detail lives
+ * favorites page. Only summary fields are shown - the private detail lives
  * behind the profile page, itself privacy-filtered.
  */
 export function CandidateCard({

@@ -49,7 +49,7 @@ export function TasksBoard({
   const teamName = useMemo(() => new Map(team.map((t) => [t.id, t.full_name])), [team]);
 
   // Fixed per-team-member filter (the owner, 3/9: "סינון קבוע למשימות של כל
-  // אחת מהצוות") — defaults to the viewer's own tasks.
+  // אחת מהצוות") - defaults to the viewer's own tasks.
   const [who, setWho] = useState<string>(meId);
   const [statusFilter, setStatusFilter] = useState<"open" | "done" | "all">("open");
 
@@ -216,7 +216,7 @@ export function TasksBoard({
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
         <h3 className="font-display text-base font-bold">⚡ חוקי ניתוב אוטומטיים</h3>
         <p className="text-[12.5px] text-ink-500">
-          כל שורה היא אירוע במערכת. כשהחוק דולק — האירוע פותח משימה אוטומטית לחברת הצוות שנבחרה.
+          כל שורה היא אירוע במערכת. כשהחוק דולק - האירוע פותח משימה אוטומטית לחברת הצוות שנבחרה.
         </p>
         <div className="flex flex-col divide-y divide-ink-100">
           {rules.map((r) => (
@@ -250,7 +250,7 @@ function RuleLine({ rule, team }: { rule: RuleRow; team: TeamMember[] }) {
         }}
         className="h-8 border border-ink-200 rounded-md px-2 text-[12.5px] bg-white"
       >
-        <option value="">— בחרי חברת צוות —</option>
+        <option value="">- בחרי חברת צוות -</option>
         {team.map((t) => (
           <option key={t.id} value={t.id}>
             {t.full_name}
@@ -279,7 +279,7 @@ function RuleLine({ rule, team }: { rule: RuleRow; team: TeamMember[] }) {
         />
       </button>
       <span className="text-[11.5px] text-ink-400">
-        {enabled && assignee ? "דולק — פותח משימות" : "כבוי"}
+        {enabled && assignee ? "דולק - פותח משימות" : "כבוי"}
       </span>
     </div>
   );

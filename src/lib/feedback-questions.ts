@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 
 /**
  * The session-feedback rating questions. The four rating slots are fixed
- * columns in session_feedback (content/practical/clarity/speaker) — what the
+ * columns in session_feedback (content/practical/clarity/speaker) - what the
  * admin edits (הגדרות → שאלות המשוב על סשן) is the wording each slot asks.
  */
 export type FeedbackAspect = { name: string; label: string };

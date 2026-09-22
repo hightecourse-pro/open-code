@@ -2,7 +2,7 @@
 //   * a paid test member (subscription active) for the cancel/resume flow
 //   * a pending mentor applicant (questionnaire "done") for the approval queue
 //   * a published session ~25 minutes out for the reminders endpoint
-// All addresses are @opencode.test — never allowlisted, so no real mail moves.
+// All addresses are @opencode.test - never allowlisted, so no real mail moves.
 //   node --env-file=.env.local scripts/seed-membership-verify.mjs
 import { guardTarget } from "./_guard.mjs";
 import { createClient } from "@supabase/supabase-js";

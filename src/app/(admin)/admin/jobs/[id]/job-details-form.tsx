@@ -31,8 +31,8 @@ const EMPLOYMENT_OPTIONS: { value: EmploymentType; label: string }[] = [
 ];
 
 /**
- * The full edit form for an existing job — the same fields as the create form
- * — living on the job page's "פרטי המשרה" tab and submitting editJob.
+ * The full edit form for an existing job - the same fields as the create form
+ * - living on the job page's "פרטי המשרה" tab and submitting editJob.
  */
 export function JobDetailsForm({
   job,
@@ -57,7 +57,7 @@ export function JobDetailsForm({
       {state.ok && <Alert variant="success">נשמר ✓</Alert>}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
         {source === "ours" ? (
-          // The client IS the company — it rides along hidden, no retyping.
+          // The client IS the company - it rides along hidden, no retyping.
           <input type="hidden" name="company" value={companyForClient} />
         ) : (
           <Field label="חברה">
@@ -132,7 +132,7 @@ export function JobDetailsForm({
             required={source === "ours"}
           >
             <option value="" disabled={source === "ours"}>
-              {source === "ours" ? "בחרי לקוח…" : "— ללא —"}
+              {source === "ours" ? "בחרי לקוח…" : "- ללא -"}
             </option>
             {clients.map((c) => (
               <option key={c.id} value={c.id}>
@@ -153,7 +153,7 @@ export function JobDetailsForm({
       <Field label="דרישות המשרה (תיאור מעוצב)">
         <RichTextEditor name="description_html" defaultValue={job.description_html} />
       </Field>
-      {/* Unlike the questions tab (instant), THIS form waits for the button —
+      {/* Unlike the questions tab (instant), THIS form waits for the button -
           say so where her eyes are (the owner, 14/9). */}
       <p className="text-[12px] text-ink-500">
         השינויים בטופס הזה נשמרים רק בלחיצה על ״שמירת פרטי המשרה״.

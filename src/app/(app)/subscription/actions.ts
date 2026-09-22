@@ -19,12 +19,12 @@ const DATE_HE = new Intl.DateTimeFormat("he-IL", {
 
 /**
  * She turns auto-renewal off. The membership stays fully active until
- * current_period_end — the nightly cron pauses it there, like any other
+ * current_period_end - the nightly cron pauses it there, like any other
  * expiry, and mails her the ending notice.
  *
- * Since 3/9 Nedarim exposes a keva API — the cancel FREEZES her standing
+ * Since 3/9 Nedarim exposes a keva API - the cancel FREEZES her standing
  * order automatically (DisableKeva) and resume reactivates it. If the call
- * fails, the old critical manual-handling alert fires instead — the gap
+ * fails, the old critical manual-handling alert fires instead - the gap
  * lives in the alerts center, never in silence.
  */
 export async function cancelRenewal(): Promise<{ error?: string }> {
@@ -47,15 +47,15 @@ export async function cancelRenewal(): Promise<{ error?: string }> {
     .from("subscriptions")
     .update({ canceled_at: new Date().toISOString() })
     .eq("id", sub.id);
-  if (error) return { error: "משהו השתבש — נסי שוב עוד רגע." };
+  if (error) return { error: "משהו השתבש - נסי שוב עוד רגע." };
 
   const until = sub.current_period_end ? DATE_HE.format(new Date(sub.current_period_end)) : "סוף התקופה ששולמה";
 
-  // Nedarim gave us a keva API (3/9) — freeze her standing order right here,
+  // Nedarim gave us a keva API (3/9) - freeze her standing order right here,
   // so a canceled membership stops charging without anyone remembering to.
   // Freeze (not delete): she may resume until the period ends. Any failure
   // falls back to the old manual-handling alert, never to silence.
-  let kevaLine = "לא מצאנו אצלנו מזהה הוראת קבע — יש לבדוק ולבטל ידנית בנדרים.";
+  let kevaLine = "לא מצאנו אצלנו מזהה הוראת קבע - יש לבדוק ולבטל ידנית בנדרים.";
   let kevaOk = false;
   const kevaIds = await kevaIdsFor(user.id);
   if (kevaIds[0]) {
@@ -63,14 +63,14 @@ export async function cancelRenewal(): Promise<{ error?: string }> {
     kevaOk = r.ok;
     kevaLine = r.ok
       ? `הוראת הקבע ${kevaIds[0]} הוקפאה אוטומטית בנדרים ✓ (תשובתם: ${r.detail.slice(0, 120)})`
-      : `ניסינו להקפיא את הוראת הקבע ${kevaIds[0]} אוטומטית — נכשל (${r.detail.slice(0, 160)}). יש לבטל ידנית בנדרים!`;
+      : `ניסינו להקפיא את הוראת הקבע ${kevaIds[0]} אוטומטית - נכשל (${r.detail.slice(0, 160)}). יש לבטל ידנית בנדרים!`;
   }
 
   const { data: who } = await admin.from("profiles").select("full_name, first_name").eq("id", user.id).maybeSingle();
   await raiseAlert({
     kind: "subscription_cancel_requested",
     severity: kevaOk ? "warning" : "critical",
-    title: `${who?.full_name ?? "חברה"} ביטלה את חידוש המנוי${kevaOk ? "" : " — צריך לבטל את הוראת הקבע בנדרים"}`,
+    title: `${who?.full_name ?? "חברה"} ביטלה את חידוש המנוי${kevaOk ? "" : " - צריך לבטל את הוראת הקבע בנדרים"}`,
     body: `המנוי שלה פעיל עד ${until} ואז יושהה אוטומטית. ${kevaLine}`,
     context: { profileId: user.id, currentPeriodEnd: sub.current_period_end, kevaIds },
     dedupeKey: `sub-cancel:${user.id}`,
@@ -81,7 +81,7 @@ export async function cancelRenewal(): Promise<{ error?: string }> {
     await sendResendEmail({ to: user.email, subject: mail.subject, html: mail.html });
   }
 
-  // The subscription lives on ITS page — refreshing /profile alone left the
+  // The subscription lives on ITS page - refreshing /profile alone left the
   // screen frozen ("חידוש מנוי בלחיצה לא עובד", a member, 1/9).
   revalidatePath("/subscription");
   revalidatePath("/subscription");
@@ -89,7 +89,7 @@ export async function cancelRenewal(): Promise<{ error?: string }> {
   return {};
 }
 
-/** She changed her mind while still active — auto-renewal back on. */
+/** She changed her mind while still active - auto-renewal back on. */
 export async function resumeRenewal(): Promise<{ error?: string }> {
   const supabase = await createClient();
   const {
@@ -108,7 +108,7 @@ export async function resumeRenewal(): Promise<{ error?: string }> {
   await admin.from("subscriptions").update({ canceled_at: null }).eq("id", sub.id);
 
   // Mirror of the cancel: the keva we froze comes back to life.
-  let kevaLine = "לא מצאנו מזהה הוראת קבע — יש לוודא ידנית שהיא פעילה בנדרים.";
+  let kevaLine = "לא מצאנו מזהה הוראת קבע - יש לוודא ידנית שהיא פעילה בנדרים.";
   let kevaOk = false;
   const kevaIds = await kevaIdsFor(user.id);
   if (kevaIds[0]) {
@@ -116,7 +116,7 @@ export async function resumeRenewal(): Promise<{ error?: string }> {
     kevaOk = r.ok;
     kevaLine = r.ok
       ? `הוראת הקבע ${kevaIds[0]} הופעלה מחדש אוטומטית בנדרים ✓`
-      : `הפעלת הוראת הקבע ${kevaIds[0]} מחדש נכשלה (${r.detail.slice(0, 160)}) — יש להפעיל ידנית בנדרים, אחרת החידוש הבא לא ייגבה!`;
+      : `הפעלת הוראת הקבע ${kevaIds[0]} מחדש נכשלה (${r.detail.slice(0, 160)}) - יש להפעיל ידנית בנדרים, אחרת החידוש הבא לא ייגבה!`;
   }
 
   const { data: who } = await admin.from("profiles").select("full_name").eq("id", user.id).maybeSingle();

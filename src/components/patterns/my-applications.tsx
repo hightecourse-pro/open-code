@@ -7,23 +7,23 @@ export interface MyApplicationItem {
   title: string;
   company: string;
   status: ApplicationStatus;
-  /** When she applied — the PM asked for the date. */
+  /** When she applied - the PM asked for the date. */
   appliedAt: string | null;
   /** The truth about the client handoff: her CV physically went out. */
   forwarded: boolean;
   /**
-   * The job closed since — "המשרה אוישה" when someone was hired, "המשרה
+   * The job closed since - "המשרה אוישה" when someone was hired, "המשרה
    * נסגרה" otherwise; null while it's open. A closed job's application always
    * files under הסתיימו, whatever its own status says.
    */
   closedLabel: string | null;
   /**
    * The job is still OPEN but moved past submissions (sent to client /
-   * interviews). Shown as a chip only — it does NOT end the story (the
+   * interviews). Shown as a chip only - it does NOT end the story (the
    * owner, 31/8: "רק הוגש ללקוח" is not "הסתיימו").
    */
   stageLabel: string | null;
-  /** Still editable — the team hasn't locked it (the owner, 2/9). */
+  /** Still editable - the team hasn't locked it (the owner, 2/9). */
   editable?: boolean;
 }
 
@@ -73,7 +73,7 @@ function Row({
   appliedAt?: string | null;
   closedLabel?: string | null;
   stageLabel?: string | null;
-  /** When set — the application is still open for edits/withdrawal. */
+  /** When set - the application is still open for edits/withdrawal. */
   editHref?: string | null;
 }) {
   return (
@@ -128,10 +128,10 @@ function Group({
 }
 
 /**
- * "ההגשות שלי" — its own view now (the PM's feedback: it must not push the
+ * "ההגשות שלי" - its own view now (the PM's feedback: it must not push the
  * board down). The core separation she asked for is structural: applying to
  * us and being handed to the client are different events, so they are
- * different groups — with an honest line about the gap between them.
+ * different groups - with an honest line about the gap between them.
  */
 export function MyApplications({
   applications,
@@ -144,13 +144,13 @@ export function MyApplications({
   if (visible.length === 0 && submitted.length === 0) {
     return (
       <div className="bg-white border border-ink-200 rounded-[16px] p-6 shadow-sm text-ink-700 text-sm">
-        עוד לא הגשת מועמדות — ברגע שתגישי, כל הסטטוסים שלך יתרכזו כאן 💜
+        עוד לא הגשת מועמדות - ברגע שתגישי, כל הסטטוסים שלך יתרכזו כאן 💜
       </div>
     );
   }
 
   // A closed job ends the story no matter what the application's own status
-  // froze at — leaving it under "בבדיקה" reads as a promise nobody will keep.
+  // froze at - leaving it under "בבדיקה" reads as a promise nobody will keep.
   const ended = (a: MyApplicationItem) => DONE.includes(a.status) || !!a.closedLabel;
   const forwarded = visible.filter((a) => a.forwarded && !ended(a));
   const inProgress = visible.filter((a) => !a.forwarded && !ended(a));
@@ -165,7 +165,7 @@ export function MyApplications({
         <Group
           icon={Hourglass}
           title={`אצלנו בבדיקה (${inProgress.length})`}
-          hint="הצוות עובר על כל הגשה אישית ובוחר את המתאימות ביותר לכל משרה — לא כל הגשה מועברת ללקוח, וברגע שהמועמדות שלך עוברת תראי את זה כאן."
+          hint="הצוות עובר על כל הגשה אישית ובוחר את המתאימות ביותר לכל משרה - לא כל הגשה מועברת ללקוח, וברגע שהמועמדות שלך עוברת תראי את זה כאן."
         >
           {inProgress.map((a) => (
             <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} />
@@ -177,7 +177,7 @@ export function MyApplications({
         <Group
           icon={Send}
           title={`הוגשו ללקוח (${forwarded.length + submittedOpen.length})`}
-          hint="קורות החיים שלך אצל המעסיק — נעדכן אותך בכל צעד."
+          hint="קורות החיים שלך אצל המעסיק - נעדכן אותך בכל צעד."
         >
           {forwarded.map((a) => (
             <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />

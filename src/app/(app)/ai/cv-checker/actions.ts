@@ -11,7 +11,7 @@ import type { Json } from "@/types/database";
 export type CvState = { error?: string; reason?: AiReason; analysis?: CvAnalysis };
 
 const REASON_MSG: Record<AiReason, string> = {
-  no_key: "כדי להשתמש בכלי ה-AI תצטרכי מפתח Google — תוכלי להוסיף אותו בעמוד מפתחות ה-AI.",
+  no_key: "כדי להשתמש בכלי ה-AI תצטרכי מפתח Google - תוכלי להוסיף אותו בעמוד מפתחות ה-AI.",
   exhausted: "המפתח הנוכחי הגיע למכסת השימוש. הוסיפי מפתח נוסף ונמשיך 💜",
   invalid: "המפתח לא תקין יותר. בדקי אותו או הוסיפי מפתח חדש.",
   error: "משהו השתבש בניתוח. בואי ננסה שוב עוד רגע.",
@@ -21,7 +21,7 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10MB
 
 export async function runCvCheck(_prev: CvState, formData: FormData): Promise<CvState> {
   // Telemetry wrapper (2/9): 17 members with valid keys got no result and no
-  // recorded reason — every run now logs its outcome so support has a row.
+  // recorded reason - every run now logs its outcome so support has a row.
   const startedAt = Date.now();
   const state = await runCvCheckInner(formData);
   try {
@@ -43,7 +43,7 @@ export async function runCvCheck(_prev: CvState, formData: FormData): Promise<Cv
 
 /**
  * Recovery poll: filtered networks (2/9, שפרה למברגר) cut the long analysis
- * request around a minute with a 504 — while the server finishes and saves the
+ * request around a minute with a 504 - while the server finishes and saves the
  * review. The client then polls here for a review newer than the newest one it
  * rendered, and shows the saved result instead of an error. Server timestamps
  * on both sides, so a skewed client clock can't miss it.
@@ -97,7 +97,7 @@ async function runCvCheckInner(formData: FormData): Promise<CvState> {
   let uploadBuffer: Buffer | null = null;
   if (docId) {
     // A CV she already keeps with us. profile_id is checked explicitly, not
-    // left to RLS — an admin's RLS reads every document, and the service role
+    // left to RLS - an admin's RLS reads every document, and the service role
     // is about to touch storage on the strength of this row being hers.
     const { data: doc } = await supabase
       .from("cv_documents")
@@ -106,10 +106,10 @@ async function runCvCheckInner(formData: FormData): Promise<CvState> {
       .eq("profile_id", user.id)
       .maybeSingle();
     if (!doc) {
-      return { error: "לא מצאנו את קורות החיים ששמורות אצלנו — נסי לבחור שוב או להעלות קובץ." };
+      return { error: "לא מצאנו את קורות החיים ששמורות אצלנו - נסי לבחור שוב או להעלות קובץ." };
     }
     if (!/\.pdf$/i.test(doc.file_name ?? "")) {
-      return { error: "הבדיקה עובדת על PDF — הקובץ השמור הזה הוא Word. העלי גרסת PDF." };
+      return { error: "הבדיקה עובדת על PDF - הקובץ השמור הזה הוא Word. העלי גרסת PDF." };
     }
     const admin = createAdminClient();
     const { data: blob, error: dlErr } = await admin.storage.from("cvs").download(doc.file_path);
@@ -117,7 +117,7 @@ async function runCvCheckInner(formData: FormData): Promise<CvState> {
       return { error: "לא הצלחנו לפתוח את הקובץ השמור. נסי להעלות אותו ישירות." };
     }
     if (blob.size > MAX_BYTES) {
-      return { error: "הקובץ גדול מדי — עד 10MB." };
+      return { error: "הקובץ גדול מדי - עד 10MB." };
     }
     base64 = Buffer.from(await blob.arrayBuffer()).toString("base64");
   } else {
@@ -128,7 +128,7 @@ async function runCvCheckInner(formData: FormData): Promise<CvState> {
       return { error: "הקובץ צריך להיות בפורמט PDF." };
     }
     if (file.size > MAX_BYTES) {
-      return { error: "הקובץ גדול מדי — עד 10MB." };
+      return { error: "הקובץ גדול מדי - עד 10MB." };
     }
     uploadBuffer = Buffer.from(await file.arrayBuffer());
     base64 = uploadBuffer.toString("base64");
@@ -151,7 +151,7 @@ async function runCvCheckInner(formData: FormData): Promise<CvState> {
 
   // A one-off upload is kept as a snapshot so the history can open the exact
   // file the feedback talks about (the owner, 30/8). Under her own folder in
-  // the cvs bucket — the member storage policy signs it without a new route.
+  // the cvs bucket - the member storage policy signs it without a new route.
   // Best effort: a storage hiccup must not cost her the analysis she paid
   // tokens for.
   let checkedFilePath: string | null = null;
@@ -171,7 +171,7 @@ async function runCvCheckInner(formData: FormData): Promise<CvState> {
     insights: analysis.insights as unknown as Json,
     job_fit: (analysis.job_fit ?? null) as unknown as Json,
     cv_text: null,
-    // Which saved document this ran on — the history list links back to it
+    // Which saved document this ran on - the history list links back to it
     // (the owner, 30/8). A one-off upload keeps its snapshot instead.
     cv_document_id: docId || null,
     checked_file_path: checkedFilePath,

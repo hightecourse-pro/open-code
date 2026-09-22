@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * משימות (the owner, 3/9): the team's shared task list with a fixed filter
- * per team member, plus the trigger-routing rules — which system events open
+ * per team member, plus the trigger-routing rules - which system events open
  * a task and who always receives it.
  */
 export default async function AdminTasksPage() {
@@ -35,7 +35,7 @@ export default async function AdminTasksPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;משימות/&gt;</span>
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">משימות</h1>
         <p className="t-body-sm text-ink-700">
-          המשימות של הצוות — ידניות ואוטומטיות. למטה: חוקי הניתוב שקובעים אילו אירועים במערכת
+          המשימות של הצוות - ידניות ואוטומטיות. למטה: חוקי הניתוב שקובעים אילו אירועים במערכת
           פותחים משימה ולמי היא מנותבת.
         </p>
       </div>

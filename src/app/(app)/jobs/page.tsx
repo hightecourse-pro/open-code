@@ -20,7 +20,7 @@ import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import type { Job, JobSource } from "@/types/database";
 
 export const metadata: Metadata = { title: "משרות" };
-// Always fresh — a newly published job shows immediately.
+// Always fresh - a newly published job shows immediately.
 export const dynamic = "force-dynamic";
 
 const TABS: { id: JobSource; label: string; desc: string }[] = [
@@ -38,7 +38,7 @@ export default async function JobsPage({
 }) {
   const { type, applied, q, fit, view: viewRaw } = await searchParams;
   const activeTab: JobSource = type === "open" ? "open" : "ours";
-  // The search is instant and client-side now (JobsInstantList) — nothing is
+  // The search is instant and client-side now (JobsInstantList) - nothing is
   // written back to the URL. An incoming ?q= from an old link still lands in
   // the box as its initial value, and the client filter takes it from there.
   const initialQuery = (q ?? "").trim().slice(0, 60);
@@ -66,15 +66,15 @@ export default async function JobsPage({
   const subscriber = isSubscriber(profile);
 
   // The whole open board of this tab loads here; searching filters it on the
-  // client as she types — no query round-trip, no URL writes.
-  // Explicit columns and a hard cap — select("*") dragged every full job text
+  // client as she types - no query round-trip, no URL writes.
+  // Explicit columns and a hard cap - select("*") dragged every full job text
   // (twice, with the haystack) into a page that refreshes on a timer.
   const JOB_CARD_COLUMNS =
     "id, company, title, source, location, region, employment_type, description, description_html, tech_tags, external_url, logo_variant, status, created_at, job_kind, practicum_percent, pipeline_status, published_at, role_category";
   const jobsQuery = supabase
     .from("jobs")
     .select(JOB_CARD_COLUMNS)
-    // RLS lets an admin see hidden jobs — but on the member board that only
+    // RLS lets an admin see hidden jobs - but on the member board that only
     // confuses (the owner, 3/9: "למה משרה מוסתרת כתובה אצלי בלוח").
     .eq("is_visible", true)
     .eq("source", activeTab)
@@ -101,7 +101,7 @@ export default async function JobsPage({
     user
       ? supabase.from("profile_answers").select("question_id, value").eq("profile_id", user.id)
       : Promise.resolve({ data: [] }),
-    // Tech labels for matching, plus specialization labels — her מגמה is the
+    // Tech labels for matching, plus specialization labels - her מגמה is the
     // one non-tech signal that really appears in job tags (devops, fullstack…).
     supabase
       .from("config_taxonomies")
@@ -109,7 +109,7 @@ export default async function JobsPage({
       .in("kind", ["tech", "specialization"]),
     supabase.from("config_questions").select("id, key, taxonomy_kind, options").eq("active", true),
     user ? supabase.from("job_targets").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
-    // Before the hidden_jobs migration runs this errors — data null, no hides.
+    // Before the hidden_jobs migration runs this errors - data null, no hides.
     user ? supabase.from("hidden_jobs").select("job_id").eq("profile_id", user.id) : Promise.resolve({ data: [] }),
   ]);
 
@@ -118,7 +118,7 @@ export default async function JobsPage({
   const appStatusByJob = new Map((myApplications ?? []).map((a) => [a.job_id, a.status]));
   const appliedAtByJob = new Map((myApplications ?? []).map((a) => [a.job_id, a.created_at]));
 
-  // Jobs published specifically to this member — shown in their own top section.
+  // Jobs published specifically to this member - shown in their own top section.
   const targetIds = (myTargets ?? []).map((t) => t.job_id);
   let targetedJobs: Job[] = [];
   if (targetIds.length > 0) {
@@ -139,7 +139,7 @@ export default async function JobsPage({
   // "המשרות שלי": where each of her applications stands, plus jobs the admin
   // submitted her to proactively. job_candidates is admin-only under RLS, so
   // it (and the job titles, which may be closed/hidden by now) are resolved
-  // with the service role — strictly filtered to her own profile_id.
+  // with the service role - strictly filtered to her own profile_id.
   let myAppItems: MyApplicationItem[] = [];
   let submittedForHer: MySubmittedItem[] = [];
   if (user) {
@@ -155,7 +155,7 @@ export default async function JobsPage({
     const lookupIds = [...new Set([...appRows.map((a) => a.job_id), ...candJobIds])];
     if (lookupIds.length > 0) {
       // status too: a job that closed since she applied is reflected, not
-      // silently frozen — the PM's "האם משוקף כשהמשרה אוישה".
+      // silently frozen - the PM's "האם משוקף כשהמשרה אוישה".
       const { data: jobRows } = await adminClient
         .from("jobs")
         .select("id, title, company, status, pipeline_status")
@@ -165,12 +165,12 @@ export default async function JobsPage({
       // endings, and "אוישה" on a job nobody got would be a small lie.
       const closedLabelOf = (j: { status: string; pipeline_status: string }) =>
         j.status === "open" ? null : j.pipeline_status === "hired" ? "המשרה אוישה" : "המשרה נסגרה";
-      // Still open but past submissions (sent to client / interviews) — a
+      // Still open but past submissions (sent to client / interviews) - a
       // chip, NOT an ending (the owner, 31/8: it filed under "הסתיימו").
       const stageLabelOf = (j: { status: string; pipeline_status: string }) =>
         j.status === "open" &&
         (j.pipeline_status === "candidates_sent" || j.pipeline_status === "interviews")
-          ? "המשרה בשלב הבא — המועמדויות אצל המעסיק"
+          ? "המשרה בשלב הבא - המועמדויות אצל המעסיק"
           : null;
       // "הוגשה ללקוח" is a FACT, not a status guess: a job_candidates row means
       // her CV physically went out; the pipeline statuses that imply it count
@@ -188,7 +188,7 @@ export default async function JobsPage({
           forwarded: candSet.has(a.job_id) || FORWARDED.includes(a.status),
           closedLabel: closedLabelOf(j),
           stageLabel: stageLabelOf(j),
-          // Editable until the team locks it (the owner, 2/9) — submitted,
+          // Editable until the team locks it (the owner, 2/9) - submitted,
           // not yet forwarded, and the job is still taking submissions.
           editable:
             a.status === "submitted" &&
@@ -209,12 +209,12 @@ export default async function JobsPage({
     myAppItems.filter((a) => a.status !== "draft").length + submittedForHer.length;
 
   // The member's tech stack, normalized for matching: answers store taxonomy
-  // values (e.g. "react") while admins type job tags in free text — so match on
+  // values (e.g. "react") while admins type job tags in free text - so match on
   // both the value and its Hebrew/English label.
   //
   // ONLY answers to tech-taxonomy questions count. Reading every array answer
   // (as this did) meant "בדיקות תוכנה" in her certificate question, or "פולסטאק"
-  // in her track, declared her a match for any job tagged qa — a promise of
+  // in her track, declared her a match for any job tagged qa - a promise of
   // personalization she never made.
   const techQuestionIds = new Set(
     (questions ?? []).filter((q) => q.taxonomy_kind === "tech").map((q) => q.id)
@@ -222,7 +222,7 @@ export default async function JobsPage({
   const labelByValue = new Map((techTax ?? []).map((t) => [t.value, t.label_he]));
   // Both sides reduce to canonical keys (see lib/tech-match): job tags are
   // free-typed by admins ("node", "JS", "SQL...", "pyton") while her skills are
-  // taxonomy values ("nodejs", "javascript", "sql", "python") — exact string
+  // taxonomy values ("nodejs", "javascript", "sql", "python") - exact string
   // comparison missed most real matches, which was BUG-007.
   const myTech = new Set<string>();
   const addSkill = (raw: string) => {
@@ -232,7 +232,7 @@ export default async function JobsPage({
     const label = labelByValue.get(value);
     if (label) myTech.add(techKey(label));
   };
-  // GenAI tools she actually practiced count as skills too (the owner, 31/8) —
+  // GenAI tools she actually practiced count as skills too (the owner, 31/8) -
   // their options are inline on the question, so map value→label locally.
   const genaiQ = (questions ?? []).find((q) => q.key === "genai_practiced");
   const genaiLabel = new Map(
@@ -240,7 +240,7 @@ export default async function JobsPage({
       (o) => [o.value, o.label]
     )
   );
-  // Experience-list questions carry per-entry tech arrays — for an
+  // Experience-list questions carry per-entry tech arrays - for an
   // experienced member that IS her skill list (the owner, 31/8: "שיחפש
   // בניסיון את כל מה שסימנו כניסיון").
   const experienceQuestionIds = new Set(
@@ -270,11 +270,11 @@ export default async function JobsPage({
       }
     }
   }
-  // Her specialization is a genuine second signal — it may hold a taxonomy
+  // Her specialization is a genuine second signal - it may hold a taxonomy
   // value or an already-Hebrew label, so both resolve.
   if (profile.specialization) addSkill(profile.specialization);
 
-  // The tags a job and she actually share — the card names them, so "מתאימה"
+  // The tags a job and she actually share - the card names them, so "מתאימה"
   // is something she can check rather than trust.
   const matchedCache = new Map<string, string[]>();
   const matchedTags = (job: Job) => {
@@ -287,22 +287,22 @@ export default async function JobsPage({
   };
 
   // Profile-based ordering: best-matching jobs first, then newest. A job she
-  // applied to LEAVES the board (tester round 2026-08-26 — it lives in
+  // applied to LEAVES the board (tester round 2026-08-26 - it lives in
   // "ההגשות שלי" with its status; on the board it was duplication). The
   // targeted section drops it for the same reason.
   const boardAll = (jobs ?? []).filter(
     (j) => !targetedSet.has(j.id) && !appStatusByJob.has(j.id)
   );
-  // Jobs she hid leave HER board (member feedback, 14/9) — they live in the
+  // Jobs she hid leave HER board (member feedback, 14/9) - they live in the
   // "הוסתרו" view, always one click from coming back. The personally-targeted
-  // section is hideable too — the eye is on those cards as well.
+  // section is hideable too - the eye is on those cards as well.
   const hiddenBoardJobs = [
     ...boardAll.filter((j) => hiddenIds.has(j.id)),
     ...targetedJobs.filter((j) => hiddenIds.has(j.id) && !appStatusByJob.has(j.id)),
   ];
   const boardJobs = boardAll.filter((j) => !hiddenIds.has(j.id));
   const targetedVisible = targetedJobs.filter((j) => !hiddenIds.has(j.id));
-  // "מתאימות לי" no longer hides the rest of the board — the PM's point was
+  // "מתאימות לי" no longer hides the rest of the board - the PM's point was
   // that the two views looked identical. The non-matching jobs stay, dimmed
   // and un-appliable, so the difference between the views is visible.
   const viewJobs =
@@ -321,12 +321,12 @@ export default async function JobsPage({
   const fitCount = boardJobs.filter((j) => matchedTags(j).length > 0).length;
   const savedCount = boardJobs.filter((j) => savedIds.has(j.id)).length;
 
-  // The filter selects' values, from EVERYTHING filterable on this tab — the
+  // The filter selects' values, from EVERYTHING filterable on this tab - the
   // targeted section included (30/8: with every job published to her
   // personally, boardJobs alone left the dropdowns empty).
   const facetSource = [...boardJobs, ...targetedJobs];
   // Technology suggestions: the FULL taxonomy plus whatever tags actually
-  // appear on this tab (deduped by canonical key) — so the box offers real
+  // appear on this tab (deduped by canonical key) - so the box offers real
   // choices even when the board itself is small (the owner, 30/8).
   const techSeen = new Map<string, string>();
   for (const t of techTax ?? []) {
@@ -358,7 +358,7 @@ export default async function JobsPage({
     subscriber,
     // Only the fit view closes the apply door on non-matching jobs; the full
     // board keeps every job open. A job she already applied to is never
-    // dimmed — she's in its process, disabled styling would read as a rejection.
+    // dimmed - she's in its process, disabled styling would read as a rejection.
     ineligible: view === "fit" && matchedTags(job).length === 0 && !appStatusByJob.has(job.id),
     hidden: hiddenIds.has(job.id),
   });
@@ -368,7 +368,7 @@ export default async function JobsPage({
     { id: "fit", label: `מתאימות לי (${fitCount})` },
     { id: "saved", label: `נשמרו (${savedCount})` },
     { id: "mine", label: `ההגשות שלי (${mineCount})` },
-    // Appears only once something is hidden — the promised way back.
+    // Appears only once something is hidden - the promised way back.
     ...(hiddenBoardJobs.length > 0 || view === "hidden"
       ? [{ id: "hidden" as const, label: `הוסתרו (${hiddenBoardJobs.length})` }]
       : []),
@@ -376,23 +376,23 @@ export default async function JobsPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <AutoRefresh />
+      <AutoRefresh seconds={180} />
       {/* Compact top (the PM's ask): one row of identity, one quiet info line. */}
       <div className="flex items-baseline gap-2.5 flex-wrap">
         <h1 className="font-display text-[24px] font-black text-ink-1000">משרות</h1>
-        <span className="text-[13px] text-ink-500">מסודרות לפי ההתאמה שלך — הכי מתאימות למעלה</span>
+        <span className="text-[13px] text-ink-500">מסודרות לפי ההתאמה שלך - הכי מתאימות למעלה</span>
       </div>
 
       {applied === "1" && (
         <Alert variant="success" title="המועמדות שלך נשלחה 🎉">
-          קיבלנו את ההגשה שלך — נעדכן אותך בכל התקדמות 💜
+          קיבלנו את ההגשה שלך - נעדכן אותך בכל התקדמות 💜
         </Alert>
       )}
 
       {/* One merged note instead of two banner boxes. */}
       <p className="text-[12.5px] text-ink-500 flex items-center gap-1.5 flex-wrap -mt-1">
         <Sparkles size={13} className="text-brand-indigo shrink-0" />
-        ההתאמה מחושבת מהטכנולוגיות וההתמחות שבפרופיל שלך —{" "}
+        ההתאמה מחושבת מהטכנולוגיות וההתמחות שבפרופיל שלך -{" "}
         <a href="/profile" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
           עדכון הפרופיל
         </a>
@@ -401,12 +401,12 @@ export default async function JobsPage({
         עדיפות למנויות הקהילה
         {!subscriber && profile.role !== "mentor" && (
           <Link href="/join" className="text-brand-purple font-semibold hover:underline">
-            — לשדרוג ←
+            - לשדרוג ←
           </Link>
         )}
       </p>
 
-      {/* The PM's four clear views — always visible, one row. */}
+      {/* The PM's four clear views - always visible, one row. */}
       <div className="flex gap-1.5 flex-wrap">
         <TabLinks
           items={VIEWS.map((v) => ({ id: v.id, href: boardHref({ view: v.id }), label: v.label }))}
@@ -419,13 +419,13 @@ export default async function JobsPage({
 
       {view === "fit" && (
         <p className="text-[12.5px] text-ink-500 -mt-1.5">
-          המשרות שמתאימות לפרופיל שלך מודגשות למעלה; השאר מוצגות מעומעמות — בלי אפשרות הגשה, כי הן
+          המשרות שמתאימות לפרופיל שלך מודגשות למעלה; השאר מוצגות מעומעמות - בלי אפשרות הגשה, כי הן
           מבקשות קריטריונים אחרים.
         </p>
       )}
       {view === "hidden" && (
         <p className="text-[12.5px] text-ink-500 -mt-1.5">
-          משרות שהסתרת מהלוח שלך — הן מוסתרות רק אצלך, ולחיצה על העין מחזירה משרה ללוח.
+          משרות שהסתרת מהלוח שלך - הן מוסתרות רק אצלך, ולחיצה על העין מחזירה משרה ללוח.
         </p>
       )}
 
@@ -434,7 +434,7 @@ export default async function JobsPage({
       ) : (
         <>
           {/* Instant search + the PM's structured filters over the loaded
-              board — rendered at the top and applied to the targeted section
+              board - rendered at the top and applied to the targeted section
               too (the owner). The haystack includes the company ONLY on the
               market tab: matching an internal job by its client's name would
               let a member infer the confidential company. */}
@@ -454,7 +454,7 @@ export default async function JobsPage({
               <h2 className="font-display text-[16px] font-black text-ink-1000">
                 משרות בשבילך מקוד פתוח 💜
                 <span className="text-[12px] font-normal text-ink-500 ms-2">
-                  {/* Every job goes to everyone now (the owner, 14/9) — the
+                  {/* Every job goes to everyone now (the owner, 14/9) - the
                       old "קבוצה מצומצמת" line overpromised a match (16/9). */}
                   מוזמנת להגיש אם את מתאימה לדרישות המשרה ומעוניינת בה
                 </span>
@@ -497,7 +497,7 @@ export default async function JobsPage({
                   </>
                 ) : view === "saved" ? (
                   <>
-                    עוד לא שמרת משרות — סימנייה 🔖 על כרטיס שומרת אותו כאן.
+                    עוד לא שמרת משרות - סימנייה 🔖 על כרטיס שומרת אותו כאן.
                   </>
                 ) : (
                   "מעכשיו כל משרה חדשה שתיפתח תופיע כאן 💜"

@@ -74,7 +74,7 @@ export default async function AdminContentPage() {
           </button>
         </form>
 
-        {/* Every course folds closed by default (Shira) — the header line
+        {/* Every course folds closed by default (Shira) - the header line
             still says what's inside, and deletion stays visible. */}
         {(courses ?? []).map((c) => (
           <div key={c.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
@@ -102,17 +102,17 @@ export default async function AdminContentPage() {
             </Collapsible>
           </div>
         ))}
-        {(courses ?? []).length === 0 && <p className="text-ink-500 text-sm">אין קורסים עדיין — הוסיפי את הראשון 💜</p>}
+        {(courses ?? []).length === 0 && <p className="text-ink-500 text-sm">אין קורסים עדיין - הוסיפי את הראשון 💜</p>}
       </section>
 
-      {/* Session content moved to ניהול סשנים (the owner, 30/8) — one home
+      {/* Session content moved to ניהול סשנים (the owner, 30/8) - one home
           per session: recording, syllabus upload, materials, pre-topics. */}
       <p className="text-[13px] text-ink-500 bg-ink-50 border border-ink-200 rounded-md px-4 py-3">
         תכני הסשנים (הקלטה, סילבוס, חומרים ונושאים) מנוהלים עכשיו במסך{" "}
         <a href="/admin/sessions" className="font-semibold text-brand-purple hover:underline">
           ניהול סשנים
         </a>{" "}
-        — על כל סשן, בכפתור התיקייה.
+        - על כל סשן, בכפתור התיקייה.
       </p>
     </div>
   );

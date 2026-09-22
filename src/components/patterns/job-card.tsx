@@ -19,19 +19,19 @@ const EMPLOYMENT: Record<EmploymentType, string> = {
 // What the member sees about her own application, per pipeline status.
 const APP_STATUS: Record<ApplicationStatus, { label: string; cls: string }> = {
   draft: { label: "טיוטה", cls: "text-ink-500" },
-  submitted: { label: "הגשת — נעדכן אותך 💜", cls: "text-success" },
+  submitted: { label: "הגשת - נעדכן אותך 💜", cls: "text-success" },
   in_review: { label: "המועמדות שלך בבדיקה 👀", cls: "text-brand-indigo" },
   accepted: { label: "התקבלת! 🎉", cls: "text-success" },
-  rejected: { label: "הפעם זה לא התקדם — ממשיכות הלאה 💪", cls: "text-ink-500" },
+  rejected: { label: "הפעם זה לא התקדם - ממשיכות הלאה 💪", cls: "text-ink-500" },
   sent: { label: "המועמדות שלך הוגשה למעסיק 🤞", cls: "text-brand-indigo" },
   interview: { label: "זומנת לראיון! 🎯", cls: "text-success" },
-  exam: { label: "עברת שלב — יש מבחן בדרך ✍️", cls: "text-brand-indigo" },
+  exam: { label: "עברת שלב - יש מבחן בדרך ✍️", cls: "text-brand-indigo" },
   hired: { label: "גויסת! 🎉", cls: "text-success" },
-  declined: { label: "הפעם זה לא התקדם — ממשיכות הלאה 💪", cls: "text-ink-500" },
+  declined: { label: "הפעם זה לא התקדם - ממשיכות הלאה 💪", cls: "text-ink-500" },
   waitlisted: { label: "התקדמנו בינתיים עם מועמדות אחרות 💜", cls: "text-ink-500" },
 };
 
-// The scannable version of the status — a small pill at the top of the card,
+// The scannable version of the status - a small pill at the top of the card,
 // so an applied job is unmistakable without reading the footer.
 const APP_STATUS_SHORT: Record<ApplicationStatus, string> = {
   draft: "טיוטה",
@@ -53,20 +53,20 @@ export interface JobCardProps {
   applied: boolean;
   /** The member's application status for this job (null if she hasn't applied). */
   applicationStatus?: ApplicationStatus | null;
-  /** When she applied — the PM asked for the date to be visible. */
+  /** When she applied - the PM asked for the date to be visible. */
   appliedAt?: string | null;
   /** Member's tech stack, lowercase, for match highlighting. */
   myTech?: string[];
-  /** The job's tags she actually shares — named on the badge, never just counted. */
+  /** The job's tags she actually shares - named on the badge, never just counted. */
   matchedTags?: string[];
   /** Free members may apply, but the board says subscribers come first. */
   subscriber?: boolean;
   /**
    * In "מתאימות לי" the non-matching jobs stay visible but can't be applied
-   * to — the PM wants the difference between the views to be felt.
+   * to - the PM wants the difference between the views to be felt.
    */
   ineligible?: boolean;
-  /** She hid this job from her board (member feedback, 14/9) — the card
+  /** She hid this job from her board (member feedback, 14/9) - the card
       offers the way back instead of the hide button. */
   hidden?: boolean;
 }
@@ -103,7 +103,7 @@ export function JobCard({
   const [, start] = useTransition();
   const techSet = new Set(myTech);
   const publishedAt = job.published_at ?? job.created_at;
-  // Candidates already went to the client (or further) — the job is still
+  // Candidates already went to the client (or further) - the job is still
   // listed, but the apply door is closed and the card says so (the owner,
   // 2026-08-30: "אינדיקציה שהמשרה התקדמה לשלב הבא ואין מה להגיש").
   const advanced =
@@ -119,7 +119,7 @@ export function JobCard({
   }
 
   function onToggleHide() {
-    // The server excludes (or re-includes) the job on refresh — the board
+    // The server excludes (or re-includes) the job on refresh - the board
     // updates itself; no optimistic vanishing that could mislead on failure.
     start(async () => {
       await toggleHideJob(job.id, !hidden);
@@ -150,7 +150,7 @@ export function JobCard({
     >
       <div className="flex gap-2.5 items-start">
         <div className="flex-1 min-w-0">
-          {/* Market jobs name their company; ours say nothing — the tab
+          {/* Market jobs name their company; ours say nothing - the tab
               already said it (PM: the repeated "בלעדית" was noise, and the
               letter square carried no information at all).
               The client behind an internal job stays confidential either way. */}
@@ -171,7 +171,7 @@ export function JobCard({
         <button
           type="button"
           onClick={onToggleHide}
-          title={hidden ? "החזרה ללוח שלי" : "לא רלוונטי לי — הסתרה מהלוח שלי (הפיך)"}
+          title={hidden ? "החזרה ללוח שלי" : "לא רלוונטי לי - הסתרה מהלוח שלי (הפיך)"}
           aria-label={hidden ? "החזרת המשרה ללוח" : "הסתרת המשרה מהלוח שלי"}
           className="w-[28px] h-[28px] rounded-full flex items-center justify-center shrink-0 border bg-ink-50 border-ink-200 text-ink-400 hover:text-brand-purple transition-colors"
         >
@@ -201,13 +201,13 @@ export function JobCard({
         <span className="inline-flex items-center gap-1">
           <Briefcase size={11} /> {EMPLOYMENT[job.employment_type]}
         </span>
-        {/* Automatic — from the moment it went live. */}
+        {/* Automatic - from the moment it went live. */}
         <span className="inline-flex items-center gap-1" suppressHydrationWarning>
           <CalendarDays size={11} /> פורסמה {timeAgo(publishedAt)}
         </span>
       </div>
 
-      {/* WHY it fits her, by name — personalization she can verify. */}
+      {/* WHY it fits her, by name - personalization she can verify. */}
       {matchedTags.length > 0 && (
         <div className="inline-flex items-center gap-1 text-[12px] font-semibold text-success mt-1.5">
           <Sparkles size={12} className="shrink-0" />
@@ -297,12 +297,12 @@ export function JobCard({
           </span>
         ) : advanced ? (
           <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1.5">
-            🎯 המשרה התקדמה לשלב הבא — ההגשות הועברו למעסיק, אין מה להגיש כרגע
+            🎯 המשרה התקדמה לשלב הבא - ההגשות הועברו למעסיק, אין מה להגיש כרגע
           </span>
         ) : ineligible ? (
-          // The apply door is closed here on purpose — say why, plainly.
+          // The apply door is closed here on purpose - say why, plainly.
           <span className="text-[12px] text-ink-500 leading-snug">
-            לא ניתן להגיש — הפרופיל שלך לא תואם את הקריטריונים שהמשרה מבקשת
+            לא ניתן להגיש - הפרופיל שלך לא תואם את הקריטריונים שהמשרה מבקשת
           </span>
         ) : job.source === "ours" ? (
           // Our jobs go through the application wizard (questions + CV choice).
@@ -314,7 +314,7 @@ export function JobCard({
           </Link>
         ) : job.source === "open" && job.external_url ? (
           <span className="ms-auto inline-flex items-center gap-2">
-            {/* She applies on the employer's site — this button records it
+            {/* She applies on the employer's site - this button records it
                 with us, so it shows in "ההגשות שלי" and in the admin lists. */}
             <button
               type="button"

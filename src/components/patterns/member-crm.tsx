@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 import { saveInternalNotes, toggleVip } from "@/app/(admin)/admin/actions";
 
 /**
- * Admin-only CRM chips per member: the VIP star (with a "why" note — VIPs
+ * Admin-only CRM chips per member: the VIP star (with a "why" note - VIPs
  * float to the top of candidate filtering) and internal screening notes.
- * Stored in the admin-only member_crm table — members can never read it.
+ * Stored in the admin-only member_crm table - members can never read it.
  */
 export function MemberCrm({
   id,
@@ -32,7 +32,7 @@ export function MemberCrm({
 
   function onStarClick() {
     if (vip) {
-      // Removing the star also deletes the saved reason — confirm first.
+      // Removing the star also deletes the saved reason - confirm first.
       if (!window.confirm("להסיר את סימון ה-VIP? הסיבה שנשמרה תימחק.")) return;
       setVip(false);
       setReason("");

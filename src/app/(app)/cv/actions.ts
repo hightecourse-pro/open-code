@@ -10,7 +10,7 @@ const LANGS: CvLanguage[] = ["he", "en", "job"];
 export type CvDocState = { error?: string; ok?: boolean };
 
 /**
- * Postgres "column does not exist" — cv_documents.is_default arrives with
+ * Postgres "column does not exist" - cv_documents.is_default arrives with
  * supabase/_cv_default.sql, and the CV screen must keep working before it runs.
  */
 function isMissingDefaultColumn(error: { code?: string; message?: string } | null): boolean {
@@ -28,8 +28,8 @@ export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<C
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { error: "בחרי קובץ להעלאה." };
-  if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי — עד 10MB." };
-  // Server-side type check — the client `accept` attribute is only a hint.
+  if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי - עד 10MB." };
+  // Server-side type check - the client `accept` attribute is only a hint.
   const okType =
     /\.(pdf|docx?)$/i.test(file.name) ||
     ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(file.type);
@@ -57,7 +57,7 @@ export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<C
     file_name: file.name,
   };
 
-  // Her very first document becomes the default — otherwise she'd have a CV
+  // Her very first document becomes the default - otherwise she'd have a CV
   // nothing is allowed to attach. A job-tailored upload never steals the flag.
   const { count } = await supabase
     .from("cv_documents")
@@ -77,7 +77,7 @@ export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<C
 }
 
 /**
- * Mark one of her documents as the default — the CV every application attaches
+ * Mark one of her documents as the default - the CV every application attaches
  * unless she picked another. Cleared then set (two statements, not one
  * transaction) so the partial unique index can never be violated; if the second
  * write is lost she simply has no default, which every reader tolerates by
@@ -164,7 +164,7 @@ export async function deleteCv(id: string): Promise<void> {
   await supabase.storage.from("cvs").remove([filePath]);
   await supabase.from("cv_documents").delete().eq("id", id).eq("profile_id", user.id);
 
-  // Deleting the default must not leave her without one — the newest survivor
+  // Deleting the default must not leave her without one - the newest survivor
   // takes over, which is exactly what the apply flow would have fallen back to.
   if (wasDefault) {
     const { data: next } = await supabase

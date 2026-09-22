@@ -2,7 +2,7 @@
 // junior track's CV-style list of practicums/side jobs) and work_history (the
 // experienced track's employment history). Both are special-cased by key in
 // the profile wizard (rendered by ExperienceListEditor) and stored in
-// profile_answers as a JSON array of entries. Pure module — shared by the
+// profile_answers as a JSON array of entries. Pure module - shared by the
 // client editor, the server action validation and the employer portal.
 
 export const PRACTICAL_EXPERIENCE_KEY = "practical_experience";
@@ -10,9 +10,9 @@ export const WORK_HISTORY_KEY = "work_history";
 export const EXPERIENCE_KEYS = new Set([PRACTICAL_EXPERIENCE_KEY, WORK_HISTORY_KEY]);
 
 export type ExperienceEntry = {
-  /** practical_experience only — one of EXPERIENCE_KINDS values. */
+  /** practical_experience only - one of EXPERIENCE_KINDS values. */
   kind?: string;
-  /** work_history only — the role label she picked ("מפתחת", "ראש צוות"…). */
+  /** work_history only - the role label she picked ("מפתחת", "ראש צוות"…). */
   role?: string;
   place: string;
   /** Tech taxonomy VALUES (labels are resolved at render time). */
@@ -22,7 +22,7 @@ export type ExperienceEntry = {
   start: string;
   /** "YYYY-MM" or "current" (= עד היום). */
   end: string;
-  /** work_history only — "מקום נוכחי/אחרון"; at most one entry carries it. */
+  /** work_history only - "מקום נוכחי/אחרון"; at most one entry carries it. */
   current?: boolean;
 };
 
@@ -96,7 +96,7 @@ export function experienceRangeLabel(e: ExperienceEntry): string {
 // ---- practicum period ("practicum_period") --------------------------------
 // A single {start, end} month range (not a list): WHEN the practicum
 // happened. Special-cased by key in the profile wizard (PeriodPicker) and
-// stored in profile_answers as {"start":"YYYY-MM","end":"YYYY-MM"} — or
+// stored in profile_answers as {"start":"YYYY-MM","end":"YYYY-MM"} - or
 // {"start":"YYYY-MM","end":"current"} while she's still in it.
 
 export const PRACTICUM_PERIOD_KEY = "practicum_period";

@@ -1,5 +1,5 @@
 // An in-app article: admin-authored rich content (sanitized on save AND at
-// render — same defense-in-depth as the community bodies).
+// render - same defense-in-depth as the community bodies).
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";

@@ -55,7 +55,7 @@ export function CoordinatorChatThread({ messages }: { messages: CoordinatorMessa
         ))}
         {messages.length === 0 && (
           <p className="text-ink-500 text-sm py-4 text-center">
-            עוד אין הודעות — ההודעה הראשונה שלך תפתח את השיחה 💜
+            עוד אין הודעות - ההודעה הראשונה שלך תפתח את השיחה 💜
           </p>
         )}
         <div ref={endRef} />
@@ -68,7 +68,7 @@ export function CoordinatorChatThread({ messages }: { messages: CoordinatorMessa
           rows={3}
           required
           maxLength={4000}
-          placeholder="כתבי לנו כל דבר — נשמח לשמוע 💜"
+          placeholder="כתבי לנו כל דבר - נשמח לשמוע 💜"
         />
         <Button type="submit" disabled={pending} className="w-fit">
           <Send size={14} /> {pending ? "שולחת…" : "שליחה"}

@@ -7,7 +7,7 @@ import { parseLinkItems, type LinkItem } from "@/lib/link-items";
 
 /**
  * Structured link lists in the profile wizard (the owner, 31/8: "בקישורים
- * צריך גם כותרת והסבר קצר על הקישור") — each link carries a URL, a title and
+ * צריך גם כותרת והסבר קצר על הקישור") - each link carries a URL, a title and
  * a short note the recruiter sees. Serialized into one hidden input as JSON;
  * legacy answers (plain one-URL-per-line strings) are hydrated as URL-only
  * rows so nothing anyone already saved is lost.
@@ -52,12 +52,12 @@ export function LinksListEditor({
             <Input
               value={r.title}
               onChange={(e) => patch(i, { title: e.target.value })}
-              placeholder="כותרת — מה זה? (למשל: בוט וואטסאפ לניהול תורים)"
+              placeholder="כותרת - מה זה? (למשל: בוט וואטסאפ לניהול תורים)"
             />
             <Input
               value={r.note}
               onChange={(e) => patch(i, { note: e.target.value })}
-              placeholder="הסבר קצר — מה שווה לראות שם"
+              placeholder="הסבר קצר - מה שווה לראות שם"
             />
           </div>
         </div>

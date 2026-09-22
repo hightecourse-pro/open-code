@@ -25,7 +25,7 @@ export default async function AdminAlertsPage() {
           <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">התראות</h1>
           <p className="t-body-sm text-ink-500">
             מה שדורש טיפול מסודר למעלה, עם כפתור שלוקח אותך ישר לשם. ברירת המחדל מציגה רק
-            מה שעוד לא נקרא — התראה שסומנה יורדת מהרשימה.
+            מה שעוד לא נקרא - התראה שסומנה יורדת מהרשימה.
           </p>
         </div>
         {unread.length > 0 && (
@@ -40,7 +40,7 @@ export default async function AdminAlertsPage() {
           <BellRing size={28} className="mx-auto text-ink-300 mb-3" />
           <p className="font-display font-bold text-ink-700">שקט טוב 🙂</p>
           <p className="t-body-sm text-ink-500 mt-1">
-            אין התראות. כשמשהו ידרוש את תשומת לבך — הוא יופיע כאן, עם ספירה בתפריט.
+            אין התראות. כשמשהו ידרוש את תשומת לבך - הוא יופיע כאן, עם ספירה בתפריט.
           </p>
         </div>
       ) : (

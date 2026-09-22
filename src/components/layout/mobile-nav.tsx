@@ -24,7 +24,7 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
 
-  // Navigating closes the drawer — she tapped a destination, not a menu state.
+  // Navigating closes the drawer - she tapped a destination, not a menu state.
   // (Deferred a tick for the set-state-in-effect rule.)
   useEffect(() => {
     const t = setTimeout(() => setOpen(false), 0);

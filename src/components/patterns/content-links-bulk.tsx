@@ -6,7 +6,7 @@ import { bulkDeleteContentLinks, deleteContentLink } from "@/app/(admin)/admin/c
 import type { ContentLink } from "@/types/database";
 
 /**
- * The links list with checkbox selection — pick several inside one course or
+ * The links list with checkbox selection - pick several inside one course or
  * session and act on them together (Shira: bulk actions inside each).
  */
 export function ContentLinksBulkList({ links }: { links: ContentLink[] }) {

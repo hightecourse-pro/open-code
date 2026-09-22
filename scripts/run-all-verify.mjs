@@ -1,5 +1,5 @@
 // Run every staging verify-* script in sequence and summarize ✅/❌ lines.
-// Prod scripts are excluded — this runner must never mutate production.
+// Prod scripts are excluded - this runner must never mutate production.
 import { spawnSync } from "child_process";
 import { readdirSync } from "fs";
 

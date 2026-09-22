@@ -1,7 +1,7 @@
 // Staging check: a session with status='live' that STARTED 5 HOURS AGO must
 // still show as live (badge, top list), never as "עברו", and must not raise
 // the feedback banner. SELF-SEEDING (2026-08-30): the fixture session is
-// created here and removed at the end — no external seed step.
+// created here and removed at the end - no external seed step.
 // Run with: node --env-file=.env.local scripts/verify-live-status.mjs
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";

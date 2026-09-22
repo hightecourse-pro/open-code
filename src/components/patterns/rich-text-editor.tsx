@@ -6,13 +6,13 @@ import { cn } from "@/lib/utils";
 
 type ToolAction = "bold" | "italic" | "strike" | "ul" | "ol" | "h3" | "link" | "image" | "video";
 
-/** The quick palette — the emojis the community actually writes with. */
+/** The quick palette - the emojis the community actually writes with. */
 const EMOJIS = [
   "💜", "🙂", "😄", "🎉", "🙏", "👍", "💪", "🔥",
   "✨", "🤗", "😅", "🤔", "👏", "❤️", "🚀", "☕",
 ];
 
-/** The thread/composer's imperative handle — restore-on-failure, clear-on-send. */
+/** The thread/composer's imperative handle - restore-on-failure, clear-on-send. */
 export interface RichEditorHandle {
   getHtml: () => string;
   setHtml: (html: string) => void;
@@ -23,7 +23,7 @@ export interface RichEditorHandle {
 
 /**
  * The one rich-text editor of the product. Born for job descriptions, now also
- * the community's composer (forum, comments, chat) — a contentEditable that
+ * the community's composer (forum, comments, chat) - a contentEditable that
  * shows bold AS bold while typing, mirrored into a hidden input so it submits
  * like any form field. What you see is exactly what gets published; the
  * asterisk markers are history.
@@ -49,11 +49,11 @@ export function RichTextEditor({
   /** Chat-sized: low minimum height, toolbar under the box. */
   compact?: boolean;
   placeholder?: string;
-  /** Enter submits the surrounding form (Shift+Enter = new line) — chat. */
+  /** Enter submits the surrounding form (Shift+Enter = new line) - chat. */
   submitOnEnter?: boolean;
   /** Imperative access for clear-after-send / restore-after-failure. */
   editorRef?: RefObject<RichEditorHandle | null>;
-  /** Fires with the current HTML on every edit — for parents that keep the
+  /** Fires with the current HTML on every edit - for parents that keep the
       value in their own state (e.g. the experience-entry editor). */
   onHtmlChange?: (html: string) => void;
 }) {
@@ -66,7 +66,7 @@ export function RichTextEditor({
   const [emojiOpen, setEmojiOpen] = useState(false);
   const toolbarRef = useRef<HTMLDivElement>(null);
   // The palette must close without picking (member feedback, 14/9: "אין לי
-  // איך לצאת מהחלון") — a click anywhere else, or Escape, dismisses it.
+  // איך לצאת מהחלון") - a click anywhere else, or Escape, dismisses it.
   useEffect(() => {
     if (!emojiOpen) return;
     const onDown = (e: PointerEvent) => {
@@ -134,7 +134,7 @@ export function RichTextEditor({
       // Keep formatting as tags (<b>…), not style spans.
       document.execCommand("styleWithCSS", false, "false");
     } catch {
-      /* not supported — tags are the default anyway */
+      /* not supported - tags are the default anyway */
     }
     document.execCommand(command, false, value);
     sync();
@@ -176,7 +176,7 @@ export function RichTextEditor({
       const file = input.files?.[0];
       if (!file) return;
       if (file.size > 5 * 1024 * 1024) {
-        window.alert("התמונה גדולה מדי — עד 5MB.");
+        window.alert("התמונה גדולה מדי - עד 5MB.");
         return;
       }
       const reader = new FileReader();
@@ -198,7 +198,7 @@ export function RichTextEditor({
       /[?&]v=([\w-]{6,})/.exec(url)?.[1] ??
       /youtube(?:-nocookie)?\.com\/embed\/([\w-]{6,})/.exec(url)?.[1];
     if (!id) {
-      window.alert("לא זיהיתי קישור YouTube — נסי להעתיק את הקישור המלא של הסרטון.");
+      window.alert("לא זיהיתי קישור YouTube - נסי להעתיק את הקישור המלא של הסרטון.");
       return;
     }
     exec(
@@ -242,7 +242,7 @@ export function RichTextEditor({
           {ALL_TOOLS[t].icon}
         </button>
       ))}
-      {/* Emoji palette (PM ask) — inserted at the caret like typed text. */}
+      {/* Emoji palette (PM ask) - inserted at the caret like typed text. */}
       <button
         type="button"
         title="אימוג'י"
@@ -308,7 +308,7 @@ export function RichTextEditor({
         compact ? "min-h-10 max-h-32 overflow-y-auto py-2.5" : "min-h-28 py-3",
         // The placeholder: shown only while truly empty.
         "empty:before:content-[attr(data-placeholder)] empty:before:text-ink-400 empty:before:pointer-events-none",
-        // Tailwind preflight strips list/heading styles — restore them so the
+        // Tailwind preflight strips list/heading styles - restore them so the
         // editor shows what members will see.
         "[&_ul]:list-disc [&_ul]:ps-5 [&_ul]:my-1 [&_ol]:list-decimal [&_ol]:ps-5 [&_ol]:my-1",
         "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-base [&_h3]:mt-2 [&_h3]:mb-1",
@@ -330,11 +330,11 @@ export function RichTextEditor({
       {/* defaultValue is LOAD-BEARING: the ref-callback seed above runs
           before this input mounts (DOM order), so without it an untouched
           field submitted "" and silently WIPED the stored answer on every
-          re-save (רבקי, 2/9 — bio/notes gone). */}
+          re-save (רבקי, 2/9 - bio/notes gone). */}
       {/* NO defaultValue here (the "לא נשמר" root cause, 19/9): for a hidden
           input, value and defaultValue are the same attribute, so on every
           re-render (e.g. the wizard's step change) React put the ORIGINAL
-          stored value back over what she typed — the next save then wrote
+          stored value back over what she typed - the next save then wrote
           the old value (or "") over her text. The value is mirrored
           imperatively from the editor and React never touches it. */}
       <input type="hidden" name={name} ref={inputRef} />

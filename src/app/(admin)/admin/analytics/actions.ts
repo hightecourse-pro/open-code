@@ -12,7 +12,7 @@ export interface SessionViewer {
 
 /**
  * Who entered ONE session's recording (the owner, 31/8: "גם בסשנים, מי
- * נכנסה"). Loaded lazily per click — the aggregated content_open_stats view
+ * נכנסה"). Loaded lazily per click - the aggregated content_open_stats view
  * keeps this a handful of rows per session instead of shipping member×content
  * history to the page (the 29/8 scale rule).
  */

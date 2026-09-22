@@ -68,7 +68,7 @@ function ContactForm({
         <Field label="שם מלא" htmlFor="ct-name">
           <Input id="ct-name" name="full_name" required defaultValue={contact?.full_name ?? ""} />
         </Field>
-        <Field label="מייל (איתו היא נכנסת — אפשר להשלים אחר כך)" htmlFor="ct-email">
+        <Field label="מייל (איתו היא נכנסת - אפשר להשלים אחר כך)" htmlFor="ct-email">
           <Input id="ct-email" name="email" type="email" dir="ltr" defaultValue={contact?.email ?? ""} />
         </Field>
         <Field label="טלפון" htmlFor="ct-phone">
@@ -80,7 +80,7 @@ function ContactForm({
       </Field>
       <div>
         <div className="t-label text-ink-700 mb-1.5">
-          המוסדות שלה — ולצד כל מוסד: האם היא מנהלת את חוות הדעת שלו
+          המוסדות שלה - ולצד כל מוסד: האם היא מנהלת את חוות הדעת שלו
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
           {institutionOptions.map((o) => {
@@ -209,7 +209,7 @@ export function ContactsManager({
                           <Mail size={13} /> {c.email}
                         </a>
                       ) : (
-                        <span className="text-[#8C5E0E] font-semibold">בלי מייל — לא יכולה להיכנס עדיין</span>
+                        <span className="text-[#8C5E0E] font-semibold">בלי מייל - לא יכולה להיכנס עדיין</span>
                       )}
                       {c.phone && (
                         <span dir="ltr" className="inline-flex items-center gap-1">
@@ -310,7 +310,7 @@ export function ContactsManager({
         ))}
         {contacts.length === 0 && (
           <div className="bg-white border border-ink-200 rounded-[16px] p-6 text-ink-500 text-sm">
-            עוד אין רכזות — הוסיפי את הראשונה למעלה 💜
+            עוד אין רכזות - הוסיפי את הראשונה למעלה 💜
           </div>
         )}
       </div>

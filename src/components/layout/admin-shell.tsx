@@ -14,7 +14,7 @@ export function AdminShell({
 }) {
   return (
     // translate="no": Chrome auto-translate rewraps text nodes and React then
-    // crashes on reconciliation (insertBefore NotFoundError — the owner hit it
+    // crashes on reconciliation (insertBefore NotFoundError - the owner hit it
     // clicking an internal tag, 3/9). The admin screens are Hebrew-only tools.
     <div translate="no" className="notranslate min-h-screen bg-ink-50">
       <MobileNav homeHref="/admin" dark>

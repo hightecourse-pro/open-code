@@ -2,7 +2,7 @@
 //
 // Supabase hands us a `<project>.supabase.co/auth/v1/verify?...&redirect_to=`
 // link. That link funnels into the PKCE `?code=` exchange, which only works in
-// the SAME browser that started the flow — a woman who signs up on her laptop
+// the SAME browser that started the flow - a woman who signs up on her laptop
 // and opens the mail on her phone gets "the link expired" on a link she never
 // clicked. It also depends on `redirect_to` being allow-listed in Supabase, and
 // silently falls back to the Site URL when it isn't.
@@ -22,7 +22,7 @@ const OTP_TYPE: Record<string, string> = {
   email: "email",
   email_change: "email_change",
   // GoTrue splits an address change into two mails but verifies both as one
-  // type — passing its raw action type through would produce a dead link.
+  // type - passing its raw action type through would produce a dead link.
   email_change_current: "email_change",
   email_change_new: "email_change",
 };
@@ -44,7 +44,7 @@ function landingFor(redirectTo: string | null, otpType: string): string {
       const next = new URL(redirectTo).searchParams.get("next");
       if (isSafePath(next)) return next;
     } catch {
-      // Not an absolute URL we can read — fall through to the default.
+      // Not an absolute URL we can read - fall through to the default.
     }
   }
   return LANDING[otpType] ?? "/forum";

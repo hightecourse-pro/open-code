@@ -22,7 +22,7 @@ type Opt = { value: string; label: string };
 type ProfileRow = Database["public"]["Tables"]["profiles"]["Row"];
 
 /**
- * Every member, paged past PostgREST's silent 1000-row cap — at 3,000 members
+ * Every member, paged past PostgREST's silent 1000-row cap - at 3,000 members
  * an un-ranged select quietly showed only the newest 1000 and made the rest
  * unfindable. Profile rows are small; the answers no longer ride along at all
  * (the candidate finder matches them in SQL, on demand).
@@ -78,7 +78,7 @@ export default async function AdminMembersPage({
   const remindersOf = new Map<string, string[]>();
   for (const r of reminderRows ?? []) remindersOf.set(r.profile_id, [...(remindersOf.get(r.profile_id) ?? []), r.sent_at]);
 
-  // Contact details per row (the owner, 1/9): emails from auth (paged — the
+  // Contact details per row (the owner, 1/9): emails from auth (paged - the
   // default listUsers page is 50), phones from the phone answer.
   const emailOf = new Map<string, string>();
   for (let page = 1; ; page++) {
@@ -98,7 +98,7 @@ export default async function AdminMembersPage({
       if (typeof p.value === "string" && p.value) phoneOf.set(p.profile_id, p.value);
     }
   }
-  // Payment state per member — for the Excel export (the owner, 1/9):
+  // Payment state per member - for the Excel export (the owner, 1/9):
   // a live subscription (with its renewal date), or presence on the imported
   // Nedarim payers list, or nothing.
   const DATE_IL = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", year: "numeric", timeZone: "Asia/Jerusalem" });
@@ -109,7 +109,7 @@ export default async function AdminMembersPage({
       .in("status", ["active", "trialing"]),
     admin.from("external_payments").select("email, claimed_by, needs_review").eq("needs_review", false),
     // Refused charges reported by Nedarim (the owner, 31/8: "היה לה סירוב,
-    // זה לא מתועד") — the newest refusal rides the payment column.
+    // זה לא מתועד") - the newest refusal rides the payment column.
     admin
       .from("payments")
       .select("profile_id, created_at, raw")
@@ -122,7 +122,7 @@ export default async function AdminMembersPage({
   const claimedBy = new Set((extPays ?? []).map((e) => e.claimed_by).filter(Boolean));
   const failOf = new Map<string, { at: string; msg: string }>();
   for (const f of failedPays ?? []) {
-    if (failOf.has(f.profile_id)) continue; // newest first — keep it
+    if (failOf.has(f.profile_id)) continue; // newest first - keep it
     const raw = (f.raw ?? {}) as Record<string, string>;
     failOf.set(f.profile_id, {
       at: String(raw.ErrorTime ?? "").split(" ")[0] || DATE_IL.format(new Date(f.created_at)),
@@ -142,7 +142,7 @@ export default async function AdminMembersPage({
     return failNote ? failNote.replace(" · ", "") : "";
   };
 
-  // Study place replaces the specialization column (the owner, 1/9) — stored
+  // Study place replaces the specialization column (the owner, 1/9) - stored
   // as the select's VALUE; resolve to the human label, free-typed אחר as-is.
   const studyQ = (questions ?? []).find((q) => q.key === "study_place");
   const studyOf = new Map<string, string>();
@@ -164,7 +164,7 @@ export default async function AdminMembersPage({
 
   // Filter definitions come from the CONFIGURED options (taxonomies + the
   // question's own options). The one data-driven definition left is the
-  // language chips — a single bounded query on that single question.
+  // language chips - a single bounded query on that single question.
   const filterDefs: FilterDef[] = [];
   for (const q of questions ?? []) {
     if (q.key === LANGUAGE_SKILLS_KEY) {
@@ -227,7 +227,7 @@ export default async function AdminMembersPage({
       continue;
     }
 
-    // Numbers and free-text fields filter by "contains" — evaluated in SQL.
+    // Numbers and free-text fields filter by "contains" - evaluated in SQL.
     filterDefs.push({ id: q.id, label: q.label_he, type: "text", options: [] });
   }
 
@@ -270,7 +270,7 @@ export default async function AdminMembersPage({
 
       {/* Placements moved to their own screen (the owner, 3/9). */}
       <a href="/admin/hires" className="text-[13px] font-semibold text-brand-purple hover:underline self-start">
-        🎉 גיוסים — כל ההשמות, הסטטוסים והחיובים ←
+        🎉 גיוסים - כל ההשמות, הסטטוסים והחיובים ←
       </a>
     </div>
   );

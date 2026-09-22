@@ -9,7 +9,7 @@ import { recordManualPayment, type FormState } from "@/app/(admin)/admin/actions
  * The webhook-failed fallback: a real charge happened at Nedarim but nothing
  * arrived here. Recording it by asmachta goes through the same door the
  * webhook uses, so the member gets a real subscription and a real payment row
- * — not a hand-flipped status that never expires and shows up in no report.
+ * - not a hand-flipped status that never expires and shows up in no report.
  */
 export function ManualPaymentForm({ profileId }: { profileId: string }) {
   const [state, action, pending] = useActionState<FormState, FormData>(
@@ -20,7 +20,7 @@ export function ManualPaymentForm({ profileId }: { profileId: string }) {
   return (
     <form action={action} className="flex flex-col gap-3">
       <p className="text-[12.5px] text-ink-500">
-        חיוב שבוצע בנדרים אבל לא נקלט כאן? רשמי אותו עם מספר האסמכתא — ייווצרו מנוי ותשלום
+        חיוב שבוצע בנדרים אבל לא נקלט כאן? רשמי אותו עם מספר האסמכתא - ייווצרו מנוי ותשלום
         אמיתיים, ואם ה־CallBack יגיע אחר כך הוא יזוהה כבר־רשום ולא ייכפל.
       </p>
       {state.error && <Alert variant="danger">{state.error}</Alert>}

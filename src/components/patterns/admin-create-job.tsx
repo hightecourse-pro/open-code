@@ -34,7 +34,7 @@ export function AdminCreateJob({
   const [source, setSource] = useState("ours");
   const [kind, setKind] = useState("immediate");
 
-  // Our jobs start from the client — the pipeline (portal, send-to-client,
+  // Our jobs start from the client - the pipeline (portal, send-to-client,
   // CRM) hangs off that link. The list is local so an inline quick-create can
   // append + select the new client without a page round-trip.
   const [clientList, setClientList] = useState(clients);
@@ -49,7 +49,7 @@ export function AdminCreateJob({
   const [quickError, setQuickError] = useState<string | null>(null);
   const [quickPending, startQuick] = useTransition();
 
-  // Application questions, composed right here during creation — each with a
+  // Application questions, composed right here during creation - each with a
   // Google-Forms-style answer type (+ options for choice types) and a
   // required/optional flag (required by default).
   const [questions, setQuestions] = useState<
@@ -64,7 +64,7 @@ export function AdminCreateJob({
   const newIsChoice = newType === "select" || newType === "multiselect";
   const canAddQuestion = !!newQuestion.trim() && (!newIsChoice || draftOptions.length >= 2);
 
-  // A question typed but not yet "added" must not be lost on submit — the
+  // A question typed but not yet "added" must not be lost on submit - the
   // hidden field carries it too (same shape, same validation server-side).
   const submittedQuestions = canAddQuestion
     ? [
@@ -105,7 +105,7 @@ export function AdminCreateJob({
   function selectClient(id: string) {
     setClientId(id);
     const c = clientList.find((x) => x.id === id);
-    // The job's company IS the client — prefill, still editable.
+    // The job's company IS the client - prefill, still editable.
     if (c) setCompany(c.company_name);
   }
 
@@ -138,7 +138,7 @@ export function AdminCreateJob({
 
       {source === "ours" && (
         <div className="rounded-md border border-brand-purple/30 bg-tint-purple/30 p-3 flex flex-col gap-2.5">
-          <Field label="שלב 1 — למי המשרה? בחרי לקוח" htmlFor="j-client">
+          <Field label="שלב 1 - למי המשרה? בחרי לקוח" htmlFor="j-client">
             <div className="flex items-center gap-2 flex-wrap">
               <Select
                 id="j-client"
@@ -194,7 +194,7 @@ export function AdminCreateJob({
                 {quickPending ? "יוצר…" : "יצירת לקוח ובחירה"}
               </Button>
               <p className="t-caption">
-                הלקוח ייווצר בסטטוס &quot;משרה בטיפול&quot; — פרטי גישה לפורטל מקצים אחר כך במסך
+                הלקוח ייווצר בסטטוס &quot;משרה בטיפול&quot; - פרטי גישה לפורטל מקצים אחר כך במסך
                 לקוחות פורטל.
               </p>
             </div>
@@ -204,7 +204,7 @@ export function AdminCreateJob({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {source === "ours" ? (
-          // The client IS the company — no duplicate typing, it rides along
+          // The client IS the company - no duplicate typing, it rides along
           // hidden. (Members never see it anyway; it's internal + portal-only.)
           <input type="hidden" name="company" value={company} />
         ) : (
@@ -285,14 +285,14 @@ export function AdminCreateJob({
         <RichTextEditor id="j-desc-rich" name="description_html" />
       </Field>
       <p className="t-caption -mt-1.5">
-        גרסת טקסט פשוט (למיילים) נוצרת אוטומטית מהתיאור — עם מעברי השורות, בלי העיצוב.
+        גרסת טקסט פשוט (למיילים) נוצרת אוטומטית מהתיאור - עם מעברי השורות, בלי העיצוב.
       </p>
 
       {source === "ours" && (
         <div className="rounded-md border border-ink-200 bg-ink-50/60 p-3 flex flex-col gap-2">
           <div className="text-sm font-semibold text-ink-900">שאלות למועמדות</div>
           <p className="t-caption -mt-1">
-            השאלה &quot;למה את חושבת שאת מתאימה למשרה?&quot; נשאלת תמיד — כאן מוסיפים שאלות לפי
+            השאלה &quot;למה את חושבת שאת מתאימה למשרה?&quot; נשאלת תמיד - כאן מוסיפים שאלות לפי
             דרישות המשרה, וכל שאלה אפשר לסמן כחובה או רשות. אפשר לערוך גם אחר כך בדף המשרה.
           </p>
           {questions.map((q, i) => (
@@ -413,10 +413,10 @@ export function AdminCreateJob({
         </div>
       )}
 
-      {/* The owner (14/9): make the save model explicit — on THIS screen
+      {/* The owner (14/9): make the save model explicit - on THIS screen
           nothing persists until the one big button. */}
       <p className="text-[12.5px] text-ink-700 bg-tint-warm/60 border border-[#EAD9A8] rounded-md px-3 py-2 w-fit">
-        💡 שום דבר לא נשמר עדיין — הפרטים והשאלות שהוספת נשמרים יחד, בלחיצה אחת על ״הוספת משרה״.
+        💡 שום דבר לא נשמר עדיין - הפרטים והשאלות שהוספת נשמרים יחד, בלחיצה אחת על ״הוספת משרה״.
       </p>
       <Button type="submit" disabled={pending} className="w-fit">
         {pending ? "מוסיף…" : "הוספת משרה"}

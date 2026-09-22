@@ -3,7 +3,7 @@ import { appEnv } from "@/lib/env";
 
 /**
  * The after-every-deploy check. Every silent failure this product has had was
- * a missing environment variable — no CRON_SECRET meant subscriptions never
+ * a missing environment variable - no CRON_SECRET meant subscriptions never
  * expired and no digest ever sent, no NEDARIM_CALLBACK_SECRET left payments
  * leaning on a single IP, no GOOGLE_* meant Drive automation simply never
  * happened. None of those crash anything, so this endpoint reports a boolean
@@ -59,7 +59,7 @@ export async function GET(req: Request) {
     driveConfigured: has("GOOGLE_SERVICE_ACCOUNT_EMAIL") && has("GOOGLE_PRIVATE_KEY"),
     cronConfigured: has("CRON_SECRET"),
     // The portal falls back to signing sessions with AI_KEY_SECRET when its
-    // own secret is missing — it "works", which is exactly why it needs naming.
+    // own secret is missing - it "works", which is exactly why it needs naming.
     portalSecret: has("PORTAL_SESSION_SECRET") ? "own" : "fallback",
   });
 }

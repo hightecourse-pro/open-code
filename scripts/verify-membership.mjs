@@ -7,7 +7,7 @@ const SHOTS = process.env.SHOTS_DIR || ".";
 const FIXTURE_PASS = requireEnv("VERIFY_FIXTURE_PASSWORD");
 const ADMIN_PASS = requireEnv("QA_ADMIN_PASSWORD");
 const results = [];
-const ok = (name, pass, extra = "") => results.push(`${pass ? "✅" : "❌"} ${name}${extra ? " — " + extra : ""}`);
+const ok = (name, pass, extra = "") => results.push(`${pass ? "✅" : "❌"} ${name}${extra ? " - " + extra : ""}`);
 
 const browser = await chromium.launch();
 process.on("uncaughtException", (e) => { console.log(results.join("\n")); console.error("FAILED:", e.message); process.exit(1); });
@@ -52,7 +52,7 @@ async function login(page, email, pass) {
 
   await page.goto(`${BASE}/forum`);
   await page.waitForLoadState("networkidle");
-  ok("app-wide cancel banner", (await page.locator("text=ביטלת את חידוש המנוי — הוא פעיל עד").count()) > 0
+  ok("app-wide cancel banner", (await page.locator("text=ביטלת את חידוש המנוי - הוא פעיל עד").count()) > 0
     || (await page.locator("text=ביטלת את החידוש").count()) > 0);
   await page.screenshot({ path: `${SHOTS}/mm-3-cancel-banner.png` });
 
@@ -62,7 +62,7 @@ async function login(page, email, pass) {
   ok("resume restores renewal", true);
 
   // course library: take a course, then the dates must print everywhere.
-  // A first pick asks "לבחור לחודש הקרוב?" (2026-08-30) — accept it.
+  // A first pick asks "לבחור לחודש הקרוב?" (2026-08-30) - accept it.
   page.on("dialog", (d) => d.accept());
   await page.goto(`${BASE}/courses`);
   await page.waitForLoadState("networkidle");
@@ -72,7 +72,7 @@ async function login(page, email, pass) {
     await page.waitForSelector("text=הקורס הפעיל שלך", { timeout: 25000 });
   }
   ok("active hero shows swap date", (await page.locator("text=זכאות החלפת קורס:").count()) > 0);
-  // The catalogue folded behind a section (PM feedback) — open it first.
+  // The catalogue folded behind a section (PM feedback) - open it first.
   const fold = page.locator('button:has-text("כל הקורסים בספרייה")').first();
   if (await fold.count()) await fold.click().catch(() => {});
   await page.waitForTimeout(400);
@@ -101,7 +101,7 @@ async function login(page, email, pass) {
   await page.waitForTimeout(4000);
   await page.goto(`${BASE}/admin/mentors`);
   await page.waitForLoadState("networkidle");
-  // Only OUR applicant must leave the queue — other pending applicants (e.g.
+  // Only OUR applicant must leave the queue - other pending applicants (e.g.
   // the gate script's checkout.probe) may legitimately be waiting there.
   const queueSection = page.locator("section, div").filter({ hasText: "בקשות הצטרפות כמנטורית" }).last();
   const stillQueued = (await queueSection.count())

@@ -1,4 +1,4 @@
-// Branded HTML email templates — Open Code colors, RTL Hebrew, warm microcopy.
+// Branded HTML email templates - Open Code colors, RTL Hebrew, warm microcopy.
 // Used for every member-facing email (auth + app notifications).
 
 const C = {
@@ -75,7 +75,7 @@ export interface BuiltEmail {
 }
 
 // The four auth emails below run their link through `toSiteAuthLink` so the
-// member always clicks a link on OUR domain that verifies server-side — a
+// member always clicks a link on OUR domain that verifies server-side - a
 // Supabase verify link only works in the browser that started the flow.
 
 export function confirmSignupEmail(actionUrl: string, name?: string): BuiltEmail {
@@ -84,7 +84,7 @@ export function confirmSignupEmail(actionUrl: string, name?: string): BuiltEmail
     html: renderEmail({
       heading: `${name ? `היי ${name}, ` : ""}ברוכה הבאה! 💜`,
       lines: [
-        "כיף גדול שהצטרפת לקוד פתוח — קהילה של מפתחות שתומכות אחת בשנייה.",
+        "כיף גדול שהצטרפת לקוד פתוח - קהילה של מפתחות שתומכות אחת בשנייה.",
         "נשאר רק לאשר את כתובת המייל שלך, ואנחנו ממשיכות מכאן:",
       ],
       ctaText: "אישור הכתובת",
@@ -100,12 +100,12 @@ export function resetPasswordEmail(actionUrl: string, name?: string): BuiltEmail
     html: renderEmail({
       heading: "בחירת סיסמה חדשה 🔑",
       lines: [
-        `${name ? `היי ${name}, ` : ""}אל דאגה — קורה לכולן.`,
+        `${name ? `היי ${name}, ` : ""}אל דאגה - קורה לכולן.`,
         "קיבלנו בקשה לאיפוס הסיסמה שלך. לחצי על הכפתור כדי לבחור סיסמה חדשה. הקישור תקף ל-60 דקות.",
       ],
       ctaText: "בחירת סיסמה חדשה",
       ctaUrl: toSiteAuthLink(actionUrl),
-      footnote: "לא ביקשת לאפס סיסמה? אפשר להתעלם — הסיסמה שלך לא תשתנה.",
+      footnote: "לא ביקשת לאפס סיסמה? אפשר להתעלם - הסיסמה שלך לא תשתנה.",
     }),
   };
 }
@@ -125,8 +125,8 @@ export function magicLinkEmail(actionUrl: string, name?: string): BuiltEmail {
 
 /**
  * Notify a member that someone wrote to her in chat. Any member may write to
- * any member, so the copy names only the sender — never a role ("המנטורית שלך",
- * "מנטי") — and reads the same whoever is on the other side.
+ * any member, so the copy names only the sender - never a role ("המנטורית שלך",
+ * "מנטי") - and reads the same whoever is on the other side.
  */
 export function newMessageEmail(fromName: string): BuiltEmail {
   return {
@@ -144,7 +144,7 @@ export function newMessageEmail(fromName: string): BuiltEmail {
   };
 }
 
-/** The team answered her request — the reply waits in her chat (30/8). */
+/** The team answered her request - the reply waits in her chat (30/8). */
 export function teamRepliedEmail(requestSubject: string, name?: string): BuiltEmail {
   return {
     subject: "הצוות ענה לך · קוד פתוח",
@@ -152,7 +152,7 @@ export function teamRepliedEmail(requestSubject: string, name?: string): BuiltEm
       heading: "יש לך תשובה מהצוות 💜",
       lines: [
         name ? `היי ${escapeHtml(name)},` : "היי,",
-        `ענינו על הפנייה שלך <b>"${escapeHtml(requestSubject)}"</b> — התשובה מחכה לך בצ'אט.`,
+        `ענינו על הפנייה שלך <b>"${escapeHtml(requestSubject)}"</b> - התשובה מחכה לך בצ'אט.`,
       ],
       ctaText: "לתשובה בצ'אט",
       ctaUrl: `${SITE}/chat`,
@@ -189,7 +189,7 @@ export function dailyDigestEmail(data: DigestData): BuiltEmail {
     const who = data.unreadFrom.slice(0, 3).join(", ");
     const count =
       data.unreadCount === 1 ? "הודעה חדשה אחת" : `${data.unreadCount} הודעות חדשות`;
-    rows.push(row("💬", `<b>${count}</b> בצ'אט${who ? ` — מ־${who}` : ""}`, "/chat", "לצ'אט"));
+    rows.push(row("💬", `<b>${count}</b> בצ'אט${who ? ` - מ־${who}` : ""}`, "/chat", "לצ'אט"));
   }
   if (data.newForumPosts > 0) {
     const count =
@@ -221,7 +221,7 @@ export function dailyDigestEmail(data: DigestData): BuiltEmail {
       ${rows.join("")}
       <a href="${SITE}/forum" style="display:inline-block; background:${C.gradient}; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:12px 28px; border-radius:10px; margin:18px 0 2px;">כניסה לקהילה</a>
       <p style="font-size:12.5px; line-height:1.7; color:${C.muted}; margin:18px 0 0;">
-        אפשר לשנות את תדירות המיילים או להפסיק אותם לגמרי בכל רגע —
+        אפשר לשנות את תדירות המיילים או להפסיק אותם לגמרי בכל רגע -
         <a href="${SITE}/profile" style="color:${C.pink}; text-decoration:underline;">בהגדרות שלך</a>.
       </p>
     </div>
@@ -241,7 +241,7 @@ export function applicationStatusEmail(
   status: "in_review" | "accepted" | "rejected",
   name?: string
 ): BuiltEmail {
-  // Internal jobs keep the client confidential — pass company: null there.
+  // Internal jobs keep the client confidential - pass company: null there.
   const at = company ? ` ב־${company}` : "";
   const per = {
     in_review: {
@@ -257,7 +257,7 @@ export function applicationStatusEmail(
     rejected: {
       subject: `עדכון על המועמדות שלך · ${jobTitle}`,
       heading: "הפעם זה לא התקדם 💜",
-      line: `המועמדות למשרת <b>${jobTitle}</b>${at} לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך. יש עוד משרות שמחכות לך, ואנחנו כאן בשבילך.`,
+      line: `המועמדות למשרת <b>${jobTitle}</b>${at} לא התקדמה הפעם. זה קורה לכולן - וזה לא אומר כלום עלייך. יש עוד משרות שמחכות לך, ואנחנו כאן בשבילך.`,
     },
   }[status];
 
@@ -283,7 +283,7 @@ export function driveEmailRequestEmail(name?: string): BuiltEmail {
       heading: "צריכות ממך כתובת Gmail 📩",
       lines: [
         `${name ? `היי ${name}, ` : ""}רצינו לשתף איתך את הקלטות הסשנים וחומרי הקורסים ב-Google Drive,`,
-        "אבל הכתובת שאיתה נרשמת אינה חשבון Google — ודרייב יודע לשתף רק עם חשבון Google.",
+        "אבל הכתובת שאיתה נרשמת אינה חשבון Google - ודרייב יודע לשתף רק עם חשבון Google.",
         "אם יש לך כתובת Gmail (או כל כתובת שמחוברת לחשבון Google), הוסיפי אותה בפרופיל ואנחנו נשתף איתך הכול אוטומטית תוך דקות.",
       ],
       ctaText: "הוספת כתובת Gmail",
@@ -295,7 +295,7 @@ export function driveEmailRequestEmail(name?: string): BuiltEmail {
 
 /** Tell the team a portal client just marked a candidate for an interview. */
 /**
- * End-of-review regret email — the owner's exact wording (8/9). Sent to every
+ * End-of-review regret email - the owner's exact wording (8/9). Sent to every
  * applicant who was not finally approved once the review round closes.
  */
 export function jobRegretEmail(jobTitle: string, name: string | undefined, subscriber: boolean): BuiltEmail {
@@ -316,7 +316,7 @@ export function jobRegretEmail(jobTitle: string, name: string | undefined, subsc
 }
 
 /**
- * "We submitted you" email — the owner's exact wording (8/9). Sent to every
+ * "We submitted you" email - the owner's exact wording (8/9). Sent to every
  * applicant whose CV was forwarded to the employer, including the placement-fee
  * note.
  */
@@ -329,7 +329,7 @@ export function jobSubmittedEmail(jobTitle: string, seminarFunded = false): Buil
         `רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרת <b>${jobTitle}</b> :)`,
         `עמותת קוד פתוח משקיעה משאבים רבים כדי לאתר משרות בתקופה כל כך מאתגרת.`,
         // אהל אברהם (הרב וולף) graduates of תשפ"ה-תשפ"ו: the seminary pays per
-        // its agreement — the placement-fee paragraph is replaced (the owner, 8/9).
+        // its agreement - the placement-fee paragraph is replaced (the owner, 8/9).
         seminarFunded
           ? `במידה ותתקבלי למשרה התשלום הוא מטעם הסמינר לפי ההסכם מולם.`
           : `העלות המינימלית שלנו לכל משרה כזו היא 2500 ש"ח, ולכן אנחנו גובים את הסכום הזה לאחר כל השמה מוצלחת בעז"ה (התשלום לאחר הודעת הקבלה לארגון)`,
@@ -360,7 +360,7 @@ export function clientInterviewEmail(
   };
 }
 
-/** Member-supplied text goes into email HTML — neutralize markup first. */
+/** Member-supplied text goes into email HTML - neutralize markup first. */
 function escapeHtml(text: string): string {
   return text
     .replaceAll("&", "&amp;")
@@ -399,7 +399,7 @@ export function mentorRequestEmail(
 
 /** Tell a member which mentor will accompany her, with a link to the chat. */
 /**
- * To the MENTOR: a member was matched to her, for a stated purpose — she has
+ * To the MENTOR: a member was matched to her, for a stated purpose - she has
  * to ACCEPT before the member sees her (the owner's flow, 2026-08-27).
  */
 export function mentorAssignmentInviteEmail(
@@ -409,13 +409,13 @@ export function mentorAssignmentInviteEmail(
   note: string | null
 ): BuiltEmail {
   return {
-    subject: "צוותה לך מנטית — מחכה לאישור שלך 👑",
+    subject: "צוותה לך מנטית - מחכה לאישור שלך 👑",
     html: renderEmail({
       heading: "צוותה לך מנטית 👑",
       lines: [
         `${mentorName ? `היי ${escapeHtml(mentorName)}, ` : ""}שמחות לספר ששיבצנו אלייך את <b>${escapeHtml(memberName)}</b>.`,
         `הצורך: <b>${escapeHtml(purposeLabel)}</b>.${note ? ` במילים שלה: "${escapeHtml(note)}"` : ""}`,
-        "כדי שהליווי יתחיל צריך את האישור שלך — היא תראה אותך רק אחרי שתאשרי. אם זה לא מתאים כרגע, אפשר גם לוותר ונשבץ מישהי אחרת.",
+        "כדי שהליווי יתחיל צריך את האישור שלך - היא תראה אותך רק אחרי שתאשרי. אם זה לא מתאים כרגע, אפשר גם לוותר ונשבץ מישהי אחרת.",
       ],
       ctaText: "לאישור השיבוץ",
       ctaUrl: `${SITE}/mentor`,
@@ -433,12 +433,12 @@ export function assignedMentorEmail(
     html: renderEmail({
       heading: "צוותה לך מנטורית לליווי 👑",
       lines: [
-        `${memberName ? `היי ${escapeHtml(memberName)}, ` : ""}חדשות משמחות — <b>${escapeHtml(mentorName)}</b> תלווה אותך מעכשיו 💜`,
-        "היא כבר יודעת עלייך — אפשר לכתוב לה בצ'אט מתי שנוח לך.",
+        `${memberName ? `היי ${escapeHtml(memberName)}, ` : ""}חדשות משמחות - <b>${escapeHtml(mentorName)}</b> תלווה אותך מעכשיו 💜`,
+        "היא כבר יודעת עלייך - אפשר לכתוב לה בצ'אט מתי שנוח לך.",
       ],
       ctaText: "לצ'אט",
       ctaUrl: `${SITE}/chat`,
-      footnote: "מאחלות לך המון הצלחה — ואנחנו כאן לכל דבר 💜",
+      footnote: "מאחלות לך המון הצלחה - ואנחנו כאן לכל דבר 💜",
     }),
   };
 }
@@ -446,7 +446,7 @@ export function assignedMentorEmail(
 /**
  * Tell a hiring client that candidates were sent for one of their jobs, with a
  * link straight into that job in the portal. Addressed to a company, so the
- * copy is neutral/plural — not the members' feminine voice.
+ * copy is neutral/plural - not the members' feminine voice.
  */
 export function jobCandidatesEmail(
   companyName: string,
@@ -494,7 +494,7 @@ export function jobCandidatesEmail(
       lines: [
         `שלום ${escapeHtml(companyName)},`,
         ...(note ? [note] : []),
-        `ריכזנו עבורכם מועמדות רלוונטיות למשרת <b>${escapeHtml(jobTitle)}</b>. אפשר לצפות בפרופיל המלא של כל אחת — ולהוריד קורות חיים אם תרצו.`,
+        `ריכזנו עבורכם מועמדות רלוונטיות למשרת <b>${escapeHtml(jobTitle)}</b>. אפשר לצפות בפרופיל המלא של כל אחת - ולהוריד קורות חיים אם תרצו.`,
         `${list}${more}`,
         creds ?? "הכניסה לפורטל עם שם המשתמש והסיסמה שקיבלתם.",
       ],
@@ -506,8 +506,8 @@ export function jobCandidatesEmail(
 }
 
 /**
- * Tell a member we submitted her CV to a client. `applied` — she applied to
- * the job herself; false — the admin curated her for it without an application.
+ * Tell a member we submitted her CV to a client. `applied` - she applied to
+ * the job herself; false - the admin curated her for it without an application.
  */
 export function candidateSubmittedEmail(
   name: string | undefined,
@@ -516,7 +516,7 @@ export function candidateSubmittedEmail(
 ): BuiltEmail {
   const firstLine = applied
     ? "רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרה שהגשת אליה מועמדות :)"
-    : `רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרת ${escapeHtml(jobTitle)} — אנחנו מאמינות שאת יכולה להתאים :)`;
+    : `רק רצינו לספר לך שהגשנו את קורות החיים שלך למשרת ${escapeHtml(jobTitle)} - אנחנו מאמינות שאת יכולה להתאים :)`;
 
   return {
     subject: "קוד פתוח מגישה אותך למשרה",
@@ -546,8 +546,8 @@ export function applicationPipelineEmail(
       subject: `המועמדות שלך הוגשה למעסיק 🤞 · ${jobTitle}`,
       heading: "המועמדות שלך אצל המעסיק 🤞",
       lines: [
-        `עדכון טוב — הגשנו את המועמדות שלך למשרת <b>${title}</b> למעסיק.`,
-        "ברגע שתהיה התקדמות נעדכן אותך מיד. בינתיים — מחזיקות אצבעות 💜",
+        `עדכון טוב - הגשנו את המועמדות שלך למשרת <b>${title}</b> למעסיק.`,
+        "ברגע שתהיה התקדמות נעדכן אותך מיד. בינתיים - מחזיקות אצבעות 💜",
       ],
       cta: true,
     },
@@ -555,7 +555,7 @@ export function applicationPipelineEmail(
       subject: `זומנת לראיון! 🎉 · ${jobTitle}`,
       heading: "זומנת לראיון! 🎉",
       lines: [
-        `חדשות מצוינות — המועמדות שלך למשרת <b>${title}</b> מתקדמת, ואת מוזמנת לראיון!`,
+        `חדשות מצוינות - המועמדות שלך למשרת <b>${title}</b> מתקדמת, ואת מוזמנת לראיון!`,
         "זה הזמן לנשום עמוק, לעבור שוב על פרטי המשרה ולהגיע בדיוק כמו שאת. מחזיקות לך אצבעות 💜",
       ],
       cta: true,
@@ -564,8 +564,8 @@ export function applicationPipelineEmail(
       subject: `יש מבחן בדרך 💪 · ${jobTitle}`,
       heading: "יש מבחן בדרך 💪",
       lines: [
-        `בהמשך למועמדות שלך למשרת <b>${title}</b> — השלב הבא הוא מבחן.`,
-        "קחי את הזמן להתכונן בנחת — את מסוגלת לזה לגמרי, ואנחנו כאן לכל שאלה 💜",
+        `בהמשך למועמדות שלך למשרת <b>${title}</b> - השלב הבא הוא מבחן.`,
+        "קחי את הזמן להתכונן בנחת - את מסוגלת לזה לגמרי, ואנחנו כאן לכל שאלה 💜",
       ],
       cta: true,
     },
@@ -573,8 +573,8 @@ export function applicationPipelineEmail(
       subject: `מזל טוב! התקבלת 🎉 · ${jobTitle}`,
       heading: "מזל טוב! התקבלת 🎉",
       lines: [
-        `איזו התרגשות — התקבלת למשרת <b>${title}</b>! 🎉`,
-        "עבדת בשביל זה, וזה כולו שלך. מאחלות לך המון הצלחה בתפקיד החדש — ותמיד נשמח לשמוע איך הולך 💜",
+        `איזו התרגשות - התקבלת למשרת <b>${title}</b>! 🎉`,
+        "עבדת בשביל זה, וזה כולו שלך. מאחלות לך המון הצלחה בתפקיד החדש - ותמיד נשמח לשמוע איך הולך 💜",
       ],
       cta: false,
     },
@@ -582,7 +582,7 @@ export function applicationPipelineEmail(
       subject: `עדכון על המועמדות שלך · ${jobTitle}`,
       heading: "הפעם זה לא התקדם 💜",
       lines: [
-        `המועמדות שלך למשרת <b>${title}</b> לא התקדמה הפעם. זה קורה לכולן — וזה לא אומר כלום עלייך.`,
+        `המועמדות שלך למשרת <b>${title}</b> לא התקדמה הפעם. זה קורה לכולן - וזה לא אומר כלום עלייך.`,
         "יש עוד משרות שמחכות לך, ואנחנו ממשיכות לחפש בשבילך. אנחנו כאן 💜",
       ],
       cta: true,
@@ -601,7 +601,7 @@ export function applicationPipelineEmail(
 
 /**
  * Tell a member a job was published specifically to her (targeted audience).
- * The description is a plain-text excerpt — never raw HTML from the editor.
+ * The description is a plain-text excerpt - never raw HTML from the editor.
  */
 export function jobPublishedEmail(
   name: string | undefined,
@@ -616,7 +616,7 @@ export function jobPublishedEmail(
       heading: "משרה חדשה בקוד פתוח 💼",
       lines: [
         `${name ? `היי ${escapeHtml(name)}, ` : "היי, "}פתחנו משרה חדשה בלוח המשרות:`,
-        // The client's name is confidential — the role speaks for itself.
+        // The client's name is confidential - the role speaks for itself.
         `<b>${escapeHtml(jobTitle)}</b> · משרה בלעדית דרך קוד פתוח`,
         ...(descriptionText ? [escapeHtml(descriptionText)] : []),
         "מחכות לראות את המועמדות שלך 💜",
@@ -624,15 +624,15 @@ export function jobPublishedEmail(
       ctaText: "לצפייה והגשה",
       ctaUrl: applyUrl,
       // Every job now goes to everyone, by the members' own request (the
-      // owner's copy, 14/9) — the email says so instead of implying targeting.
+      // owner's copy, 14/9) - the email says so instead of implying targeting.
       footnote:
-        "לבקשת המשתתפות, כרגע אנחנו שולחות כל משרה לכולן — את מוזמנת להגיש מועמדות רק אם את מתאימה לדרישות המשרה ואת אכן מעוניינת בה 💜",
+        "לבקשת המשתתפות, כרגע אנחנו שולחות כל משרה לכולן - את מוזמנת להגיש מועמדות רק אם את מתאימה לדרישות המשרה ואת אכן מעוניינת בה 💜",
     }),
   };
 }
 
 /**
- * A chat message sent from a job's review center (the owner, 16/9) — the
+ * A chat message sent from a job's review center (the owner, 16/9) - the
  * email is a NUDGE with her exact copy; the message itself waits in the chat.
  */
 export function jobChatNudgeEmail(
@@ -654,7 +654,7 @@ export function jobChatNudgeEmail(
 /** The coordinator-portal OTP (the owner, 14/9: "כניסה ב-OTP בלבד"). */
 export function coordinatorOtpEmail(code: string): BuiltEmail {
   return {
-    subject: `${code} — קוד הכניסה שלך לאזור הרכזות`,
+    subject: `${code} - קוד הכניסה שלך לאזור הרכזות`,
     html: renderEmail({
       heading: "קוד הכניסה שלך 🔑",
       lines: [
@@ -687,7 +687,7 @@ export function contactPersonalEmail(
 
 /**
  * The invite for a woman who PAYS through Nedarim but never opened an account
- * (the owner, 14/9) — her subscription is live, everything waits behind a
+ * (the owner, 14/9) - her subscription is live, everything waits behind a
  * signup. The one crucial instruction: register with the SAME email the keva
  * carries, so the payment attaches automatically.
  */
@@ -711,7 +711,7 @@ export function unregisteredPayerInviteEmail(name: string | undefined, payEmail:
 /** Short confirmation to a member right after she submits an application. */
 export function applyConfirmationEmail(name: string | undefined, jobTitle: string): BuiltEmail {
   return {
-    // The job title keeps every subject unique — identical subjects made
+    // The job title keeps every subject unique - identical subjects made
     // Gmail THREAD consecutive confirmations and trim the second one's
     // "repeated" body mid-card (the owner, 2/9: "המייל השני משובש").
     subject: `קיבלנו את המועמדות שלך למשרת ${jobTitle} 💜`,
@@ -719,7 +719,7 @@ export function applyConfirmationEmail(name: string | undefined, jobTitle: strin
       heading: "קיבלנו את המועמדות שלך 💜",
       lines: [
         `${name ? `היי ${escapeHtml(name)}, ` : ""}המועמדות שלך למשרת <b>${escapeHtml(jobTitle)}</b> הוגשה בהצלחה 🎉`,
-        "אנחנו עוברות על כל הגשה באופן אישי — נעדכן אותך בכל התקדמות.",
+        "אנחנו עוברות על כל הגשה באופן אישי - נעדכן אותך בכל התקדמות.",
       ],
       ctaText: "לכל המשרות",
       ctaUrl: `${SITE}/jobs`,
@@ -794,8 +794,8 @@ export function mentorApprovedEmail(name?: string): BuiltEmail {
     html: renderEmail({
       heading: `${name ? `${escapeHtml(name)}, ` : ""}ברוכה הבאה למנטוריות שלנו 👑`,
       lines: [
-        "עברנו על הבקשה שלך — ואנחנו שמחות לצרף אותך לצוות המנטוריות של הקהילה 💜",
-        "מהרגע הזה הפרופיל שלך מסומן כמנטורית: תוכלי לענות בפורום, להתכתב עם חברות, להצטרף לסשנים — ולעשות בדיוק את ההבדל שבשבילו באת.",
+        "עברנו על הבקשה שלך - ואנחנו שמחות לצרף אותך לצוות המנטוריות של הקהילה 💜",
+        "מהרגע הזה הפרופיל שלך מסומן כמנטורית: תוכלי לענות בפורום, להתכתב עם חברות, להצטרף לסשנים - ולעשות בדיוק את ההבדל שבשבילו באת.",
       ],
       ctaText: "כניסה לקהילה",
       ctaUrl: `${SITE}/forum`,
@@ -805,7 +805,7 @@ export function mentorApprovedEmail(name?: string): BuiltEmail {
 }
 
 /**
- * A free-form personal note from the team to one member (the owner, 1/9) —
+ * A free-form personal note from the team to one member (the owner, 1/9) -
  * e.g. explaining a past mentor decline to someone rejected before the
  * personal-note flow existed. The note IS the email.
  */
@@ -821,7 +821,7 @@ export function teamPersonalEmail(
       heading: `${name ? `${escapeHtml(name)}, ` : ""}רצינו לכתוב לך אישית`,
       lines: [
         note,
-        "ההודעה מחכה לך גם בצ'אט בקהילה — הכי נוח לענות לי שם, ישירות.",
+        "ההודעה מחכה לך גם בצ'אט בקהילה - הכי נוח לענות לי שם, ישירות.",
       ],
       ctaText: "לתשובה בצ'אט",
       ctaUrl: chatUrl ?? `${SITE}/chat`,
@@ -831,7 +831,7 @@ export function teamPersonalEmail(
 }
 
 /**
- * A mentor application was declined — with the admin's PERSONAL explanation
+ * A mentor application was declined - with the admin's PERSONAL explanation
  * (the owner, 1/9). She stays a regular member and is invited to the paid
  * track; the personal note is the heart of the email.
  */
@@ -844,11 +844,11 @@ export function mentorDeclinedEmail(name: string | undefined, personalNote: stri
       lines: [
         "עברנו על הבקשה שלך, והחלטנו שכרגע לא נצרף אותך לצוות המנטוריות. רצינו לכתוב לך את זה אישית:",
         `<i>${note}</i>`,
-        "החשבון שלך נשאר איתנו כרגיל — את מוזמנת להצטרף לקהילה כחברה במסלול מנוי, עם הקורסים, הסשנים, המשרות וכל השאר.",
+        "החשבון שלך נשאר איתנו כרגיל - את מוזמנת להצטרף לקהילה כחברה במסלול מנוי, עם הקורסים, הסשנים, המשרות וכל השאר.",
       ],
       ctaText: "להצטרפות לקהילה",
       ctaUrl: `${SITE}/join`,
-      footnote: "אם משהו לא ברור — פשוט השיבי למייל הזה ונדבר 💜",
+      footnote: "אם משהו לא ברור - פשוט השיבי למייל הזה ונדבר 💜",
     }),
   };
 }
@@ -858,17 +858,17 @@ export function mentorDeclinedEmail(name: string | undefined, personalNote: stri
 /** Right after she cancels auto-renewal in the app. */
 export function subscriptionCanceledEmail(name: string | undefined, activeUntil: string): BuiltEmail {
   return {
-    subject: "ביטלת את חידוש המנוי — את איתנו עד " + activeUntil,
+    subject: "ביטלת את חידוש המנוי - את איתנו עד " + activeUntil,
     html: renderEmail({
       heading: `${name ? `${escapeHtml(name)}, ` : ""}קיבלנו את הביטול 💜`,
       lines: [
-        `המנוי שלך יישאר פעיל עד <b>${activeUntil}</b> — עד אז הכול נשאר פתוח בדיוק כמו היום.`,
+        `המנוי שלך יישאר פעיל עד <b>${activeUntil}</b> - עד אז הכול נשאר פתוח בדיוק כמו היום.`,
         "אחרי התאריך הזה הגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI תיסגר, אבל תמיד אפשר לחזור.",
         "התחרטת? אפשר להפעיל את החידוש מחדש בלחיצה אחת מעמוד הפרופיל.",
       ],
       ctaText: "לעמוד הפרופיל שלי",
       ctaUrl: `${SITE}/profile`,
-      footnote: "אם הביטול לא היה מכוון — כתבי לנו ונסדר הכול יחד.",
+      footnote: "אם הביטול לא היה מכוון - כתבי לנו ונסדר הכול יחד.",
     }),
   };
 }
@@ -880,13 +880,13 @@ export function subscriptionCanceledEmail(name: string | undefined, activeUntil:
  */
 export function subscriptionEndingSoonEmail(name: string | undefined, endDateLine: string): BuiltEmail {
   return {
-    subject: `המנוי שלך מסתיים ב${endDateLine} — עוד אפשר להישאר 💜`,
+    subject: `המנוי שלך מסתיים ב${endDateLine} - עוד אפשר להישאר 💜`,
     html: renderEmail({
       heading: `${name ? `${escapeHtml(name)}, ` : ""}תזכורת קטנה 💜`,
       lines: [
         `המנוי שלך בקוד פתוח מסתיים ב<b>${endDateLine}</b>.`,
-        "עד אז הכול פתוח כרגיל. אם תרצי להמשיך איתנו — חידוש בלחיצה אחת, והכול נשאר בדיוק כמו שהוא.",
-        "אם לא — הגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI תיסגר עם סיום המנוי, ואת תמיד מוזמנת לחזור.",
+        "עד אז הכול פתוח כרגיל. אם תרצי להמשיך איתנו - חידוש בלחיצה אחת, והכול נשאר בדיוק כמו שהוא.",
+        "אם לא - הגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI תיסגר עם סיום המנוי, ואת תמיד מוזמנת לחזור.",
       ],
       ctaText: "להמשך המנוי",
       ctaUrl: `${SITE}/subscription`,
@@ -898,12 +898,12 @@ export function subscriptionEndingSoonEmail(name: string | undefined, endDateLin
 /** The day the subscription actually ends (sent by the daily cron). */
 export function subscriptionEndedEmail(name: string | undefined): BuiltEmail {
   return {
-    subject: "המנוי שלך בקוד פתוח הסתיים — נשמח לראות אותך חוזרת 💜",
+    subject: "המנוי שלך בקוד פתוח הסתיים - נשמח לראות אותך חוזרת 💜",
     html: renderEmail({
       heading: `${name ? `${escapeHtml(name)}, ` : ""}המנוי שלך הסתיים`,
       lines: [
         "תקופת המנוי שלך הגיעה לסיומה, והגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI הושהתה.",
-        "את עדיין חלק מהקהילה — אפשר להמשיך לקרוא ולהתעדכן, ולחדש מתי שמתאים לך.",
+        "את עדיין חלק מהקהילה - אפשר להמשיך לקרוא ולהתעדכן, ולחדש מתי שמתאים לך.",
       ],
       ctaText: "לחידוש המנוי",
       ctaUrl: `${SITE}/join`,
@@ -918,7 +918,7 @@ const REMINDER_COPY: Record<string, (title: string, time: string) => { subject: 
   morning: (title, time) => ({
     subject: `היום ב-${time}: ${title}`,
     heading: "יש לנו סשן היום 🎉",
-    line: `<b>${title}</b> מתחיל היום בשעה <b>${time}</b> (שעון ישראל). שמרי לך את הזמן — נשמח לראות אותך.`,
+    line: `<b>${title}</b> מתחיל היום בשעה <b>${time}</b> (שעון ישראל). שמרי לך את הזמן - נשמח לראות אותך.`,
   }),
   t30: (title, time) => ({
     subject: `בעוד חצי שעה: ${title}`,
@@ -928,7 +928,7 @@ const REMINDER_COPY: Record<string, (title: string, time: string) => { subject: 
   start: (title) => ({
     subject: `עכשיו מתחילים 💜 ${title}`,
     heading: "אנחנו מתחילות ממש עכשיו 💜",
-    line: `<b>${title}</b> מתחיל ברגעים אלה — מחכות לך בפנים.`,
+    line: `<b>${title}</b> מתחיל ברגעים אלה - מחכות לך בפנים.`,
   }),
 };
 

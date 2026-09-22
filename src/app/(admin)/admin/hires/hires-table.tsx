@@ -56,7 +56,7 @@ const STATUS_CLS: Record<string, string> = {
   paid: "bg-tint-mint text-success",
 };
 
-// Who she is in the community — detected live at page entry.
+// Who she is in the community - detected live at page entry.
 const MEMBERSHIP_HE: Record<string, { label: string; cls: string }> = {
   subscriber: { label: "מנויה 💜", cls: "bg-tint-pink text-brand-pink-deep" },
   member: { label: "משתתפת רגילה", cls: "bg-tint-purple text-brand-purple" },
@@ -80,7 +80,7 @@ export function HiresTable({
 }: {
   hires: HireRow[];
   clients: ClientOption[];
-  /** study_place labels — suggestions for the seminary editor (free text ok). */
+  /** study_place labels - suggestions for the seminary editor (free text ok). */
   seminaryOptions?: string[];
   defaultDate: string;
 }) {
@@ -169,7 +169,7 @@ export function HiresTable({
           onChange={(e) => setMemberFilter(e.target.value)}
           className="h-9 border border-ink-300 rounded-md px-2 text-sm bg-white"
         >
-          <option value="all">שיוך — הכל</option>
+          <option value="all">שיוך - הכל</option>
           <option value="subscriber">מנויות</option>
           <option value="community">בקהילה (כולן)</option>
           <option value="outside">מחוץ לקהילה</option>
@@ -179,7 +179,7 @@ export function HiresTable({
           onChange={(e) => setPayerFilter(e.target.value)}
           className="h-9 border border-ink-300 rounded-md px-2 text-sm bg-white"
         >
-          <option value="all">מי משלמת — הכל</option>
+          <option value="all">מי משלמת - הכל</option>
           <option value="institution">מוסד הלימודים</option>
           <option value="member">המשתתפת</option>
           <option value="none">טרם נקבע</option>
@@ -207,7 +207,7 @@ export function HiresTable({
       {showAdd && (
         <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
           <p className="text-[12.5px] text-ink-500">
-            השמה של מישהי שאינה חברת קהילה — לרישום ולבאנר החגיגי (60 יום מהתאריך). חסרה
+            השמה של מישהי שאינה חברת קהילה - לרישום ולבאנר החגיגי (60 יום מהתאריך). חסרה
             חברה ברשימה? הוסיפי אותה קודם כליד ב<a href="/admin/crm" className="text-brand-purple font-semibold hover:underline">פייפליין הלקוחות</a>.
           </p>
           {addState.error && <Alert variant="danger">{addState.error}</Alert>}
@@ -226,7 +226,7 @@ export function HiresTable({
                 className="w-full h-10 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
                 defaultValue=""
               >
-                <option value="">— ללא חברה —</option>
+                <option value="">- ללא חברה -</option>
                 {clients.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -241,7 +241,7 @@ export function HiresTable({
                 className="w-full h-10 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
                 defaultValue=""
               >
-                <option value="">— לא צוין —</option>
+                <option value="">- לא צוין -</option>
                 <option value="practicum_placement">פרקטיקום ולאחריו השמה</option>
                 <option value="temp">משרה זמנית</option>
                 <option value="immediate">השמה מיידית</option>
@@ -257,7 +257,7 @@ export function HiresTable({
         </div>
       )}
 
-      {/* Stacked rows — everything visible, nothing scrolls sideways
+      {/* Stacked rows - everything visible, nothing scrolls sideways
           (the owner, 3/9: "גורם גלילה משמאל לימין"). */}
       <datalist id="hire-seminaries">
         {seminaryOptions.map((s) => (
@@ -283,7 +283,7 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
   const [amount, setAmount] = useState(h.amount != null ? String(h.amount) : "");
   const [payer, setPayer] = useState(h.payer ?? "");
   const [institution, setInstitution] = useState(h.payer_institution ?? "");
-  // הסמינר — בולט על השורה, נערך בלחיצה (the owner, 15/9).
+  // הסמינר - בולט על השורה, נערך בלחיצה (the owner, 15/9).
   const [seminary, setSeminary] = useState(h.seminary ?? "");
   const [seminaryEdit, setSeminaryEdit] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -345,7 +345,7 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
                 : "bg-tint-warm text-[#8C5E0E] border-[#F0DCA8] hover:border-[#C99A2E]"
             )}
           >
-            🎓 {seminary || "חסר סמינר — עדכני"}
+            🎓 {seminary || "חסר סמינר - עדכני"}
           </button>
         )}
         {h.company && <span className="text-[12.5px] text-ink-700">{h.company}</span>}
@@ -425,7 +425,7 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
           }}
           className="h-8 border border-ink-200 rounded-md px-1.5 text-[12px] bg-white"
         >
-          <option value="">מי משלמת? — טרם נקבע</option>
+          <option value="">מי משלמת? - טרם נקבע</option>
           <option value="institution">מוסד הלימודים</option>
           <option value="member">המשתתפת</option>
         </select>
@@ -465,7 +465,7 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
               onChange={(e) => setDraft((d) => ({ ...d, client_id: e.target.value }))}
               className="w-full h-10 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
             >
-              <option value="">— ללא חברה —</option>
+              <option value="">- ללא חברה -</option>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.name}
@@ -480,7 +480,7 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
               onChange={(e) => setDraft((d) => ({ ...d, job_type: e.target.value }))}
               className="w-full h-10 border border-ink-300 rounded-md px-2.5 text-sm bg-white"
             >
-              <option value="">— לא צוין —</option>
+              <option value="">- לא צוין -</option>
               <option value="practicum_placement">פרקטיקום ולאחריו השמה</option>
               <option value="temp">משרה זמנית</option>
               <option value="immediate">השמה מיידית</option>

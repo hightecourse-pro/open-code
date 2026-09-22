@@ -6,7 +6,7 @@
 import { chromium } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
 const ADMIN_PASS = process.env.QA_ADMIN_PASSWORD;
-// The dedup index (scale round) rejects a replayed TransactionId — every run
+// The dedup index (scale round) rejects a replayed TransactionId - every run
 // gets a fresh one, and older leftovers are swept first.
 // Run with: node --env-file=.env.local scripts/verify-payments-screen.mjs
 const sb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
@@ -51,7 +51,7 @@ await page.goto(`${BASE}/admin/payments`);
 await page.waitForLoadState("networkidle");
 ok("screen: waiting list", (await page.locator("text=מחכות לבעלים").count()) > 0);
 ok("screen: the unverified row", (await page.locator("text=בדיקת מקור לא מזוהה").count()) > 0);
-ok("screen: review badge", (await page.locator("text=ממתין לאישור — מקור לא מזוהה").count()) > 0);
+ok("screen: review badge", (await page.locator("text=ממתין לאישור - מקור לא מזוהה").count()) > 0);
 ok("screen: waiting-since", ((await page.textContent("body")) ?? "").includes("מחכה"));
 await page.screenshot({ path: `${SHOTS}/payments-screen.png` });
 
@@ -61,7 +61,7 @@ await page.waitForTimeout(1500);
 await page.reload();
 await page.waitForLoadState("networkidle");
 ok("approve: badge cleared, assign control shows",
-  (await page.locator("text=ממתין לאישור — מקור לא מזוהה").count()) === 0 &&
+  (await page.locator("text=ממתין לאישור - מקור לא מזוהה").count()) === 0 &&
     (await page.locator('select[aria-label="שיוך לחברה"]').count()) > 0);
 
 // assign to the checkout-probe fixture (pending member → activation is real)

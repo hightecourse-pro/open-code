@@ -25,7 +25,7 @@ export default async function CoordinatorMemberPage({
   if (!me) redirect("/coordinator/login");
   const { id } = await params;
 
-  // She reaches ONLY her own graduates — anything else is a 404, not a hint.
+  // She reaches ONLY her own graduates - anything else is a 404, not a hint.
   const graduates = await loadGraduates(me.institutions);
   const grad = graduates.find((g) => g.id === id);
   if (!grad) notFound();
@@ -46,7 +46,7 @@ export default async function CoordinatorMemberPage({
       >
         חזרה לכל הבוגרות <ArrowRight size={14} />
       </Link>
-        {/* ─────────────────────────── the review — the reason she is here */}
+        {/* ─────────────────────────── the review - the reason she is here */}
         <section className="bg-white border border-[#DDC9EC] rounded-[18px] p-5 shadow-sm">
           <div className="flex items-center gap-3 mb-3">
             <Avatar size="lg" initials={grad.avatar_initials || grad.full_name.slice(0, 1)} />

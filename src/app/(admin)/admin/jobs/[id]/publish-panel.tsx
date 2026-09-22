@@ -20,7 +20,7 @@ const PREVIEW_DEBOUNCE_MS = 300;
  * The targeted-publish flow for an "ours" job: pick criteria over ANY profile
  * parameter (the catalogue mirrors the portal search: parameter select + value
  * chips + active-filter chips) plus experience, preview the matching audience
- * with per-member checkboxes, optionally add anyone by search, then publish —
+ * with per-member checkboxes, optionally add anyone by search, then publish -
  * which writes job_targets, opens the job and emails every target.
  *
  * After publish (published != null) it renders the summary + re-open option.
@@ -35,7 +35,7 @@ export function PublishPanel({
   jobId: string;
   /** Every filterable profile criterion, from buildAudienceCatalogue(). */
   catalogue: AudienceCatalogueField[];
-  /** Who the pool holds and who it leaves out — stated in the panel, not implied. */
+  /** Who the pool holds and who it leaves out - stated in the panel, not implied. */
   eligibility: AudienceEligibility | null;
   /** All active members, for the "add anyone" search (same list as the candidate picker). */
   allMembers: PickerMember[];
@@ -51,12 +51,12 @@ export function PublishPanel({
   const [exp, setExp] = useState<"all" | "yes" | "no">("all");
   const [incMentors, setIncMentors] = useState(false);
   // Every job goes to EVERYONE by default, mid-questionnaire included (the
-  // owner, 14/9: "לשלוח לכולן, גם מי שבאמצע למלא שאלון") — unchecking narrows.
+  // owner, 14/9: "לשלוח לכולן, גם מי שבאמצע למלא שאלון") - unchecking narrows.
   const [incIncomplete, setIncIncomplete] = useState(true);
   const [openAll, setOpenAll] = useState(false);
   const [openExp, setOpenExp] = useState(false);
   const [audience, setAudience] = useState<AudienceMember[] | null>(null);
-  // The community-wide eligible pool (before criteria) — for honest empty states.
+  // The community-wide eligible pool (before criteria) - for honest empty states.
   const [pool, setPool] = useState<number | null>(null);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [extras, setExtras] = useState<PickerMember[]>([]);
@@ -68,7 +68,7 @@ export function PublishPanel({
 
   const isDraft = published === null;
 
-  // Live audience preview — refetch whenever the criteria change (debounced,
+  // Live audience preview - refetch whenever the criteria change (debounced,
   // so rapid chip-toggling fires one request instead of one per click).
   useEffect(() => {
     if (!isDraft) return;
@@ -87,7 +87,7 @@ export function PublishPanel({
         setError(null);
         setPool(res.pool ?? null);
         setAudience(res.members);
-        // New criteria — start with everyone matched checked.
+        // New criteria - start with everyone matched checked.
         setChecked(new Set(res.members.map((m) => m.id)));
         // Anyone manually added who now matches the criteria is no longer "extra".
         const ids = new Set(res.members.map((m) => m.id));
@@ -115,23 +115,23 @@ export function PublishPanel({
 
   // The search used to fail in absolute silence: with no criteria the audience
   // IS the whole eligible pool, so every name "already there" returned nothing,
-  // and a mentor/staff/incomplete-profile name returned nothing either — the
+  // and a mentor/staff/incomplete-profile name returned nothing either - the
   // admin typed and nothing happened at all. Name the reason instead.
   const searchEmptyReason = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q || searchResults.length > 0) return null;
     const nameMatch = (m: { full_name: string }) => m.full_name.toLowerCase().includes(q);
     if ((audience ?? []).some((m) => nameMatch(m) && audienceIds.has(m.id))) {
-      return "היא כבר בקהל היעד — סמני אותה ברשימה שלמעלה.";
+      return "היא כבר בקהל היעד - סמני אותה ברשימה שלמעלה.";
     }
     if (extras.some(nameMatch)) {
-      return "היא כבר נוספה ידנית — מופיעה בתגיות שלמעלה.";
+      return "היא כבר נוספה ידנית - מופיעה בתגיות שלמעלה.";
     }
     return "לא נמצאה ברשימת הזמינות להשמה. מנטוריות, צוות, מושהות ומי שלא השלימה פרופיל אינן זמינות לפרסום משרות.";
   }, [query, searchResults, audience, audienceIds, extras]);
 
   const selectedCount = checked.size + extras.length;
-  /** Anything actually narrowing the pool — criteria chips or the experience select. */
+  /** Anything actually narrowing the pool - criteria chips or the experience select. */
   const narrowed = Object.keys(criteria).length > 0 || exp !== "all";
 
   const active = catalogue.find((f) => f.key === activeKey) ?? null;
@@ -142,7 +142,7 @@ export function PublishPanel({
     return q ? active.values.filter((v) => v.toLowerCase().includes(q)) : active.values;
   }, [active, valueQuery]);
 
-  // The active-filter chips row — every selected value across all parameters.
+  // The active-filter chips row - every selected value across all parameters.
   const chips = useMemo(
     () =>
       Object.entries(criteria).flatMap(([key, values]) =>
@@ -163,7 +163,7 @@ export function PublishPanel({
         : [...current, value];
       const out = { ...prev };
       if (next.length) out[key] = next;
-      else delete out[key]; // drop empty keys — they don't filter
+      else delete out[key]; // drop empty keys - they don't filter
       return out;
     });
   }
@@ -222,7 +222,7 @@ export function PublishPanel({
                   month: "long",
                   year: "numeric",
                 })
-              : "—"}
+              : "-"}
           </span>
           <span className="inline-flex items-center gap-1.5">
             <Users size={15} className="text-brand-purple" />
@@ -235,7 +235,7 @@ export function PublishPanel({
             {publishing ? "פותח…" : "פתיחה מחדש של הפרסום"}
           </Button>
           <span className="text-[12px] text-ink-500">
-            פתיחה מחדש מאפשרת להרחיב את הקהל — מייל יישלח רק לחברות חדשות שיתווספו.
+            פתיחה מחדש מאפשרת להרחיב את הקהל - מייל יישלח רק לחברות חדשות שיתווספו.
           </span>
         </div>
       </div>
@@ -247,7 +247,7 @@ export function PublishPanel({
     <div className="flex flex-col gap-4">
       {error && <Alert variant="danger">{error}</Alert>}
 
-      {/* Criteria — every profile parameter, mirroring the portal search */}
+      {/* Criteria - every profile parameter, mirroring the portal search */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="md:col-span-2 flex flex-col gap-2">
           <div className="text-xs font-semibold text-ink-700">פרמטר</div>
@@ -319,7 +319,7 @@ export function PublishPanel({
             <option value="yes">רק בעלות ניסיון</option>
             <option value="no">רק ג׳וניוריות</option>
           </Select>
-          {/* Senior roles reach mentors too — but only when the admin says so. */}
+          {/* Senior roles reach mentors too - but only when the admin says so. */}
           <label className="flex items-center gap-2 mt-3 text-[13px] text-ink-900 cursor-pointer">
             <input
               type="checkbox"
@@ -330,7 +330,7 @@ export function PublishPanel({
             לכלול גם מנטוריות (משרות לבעלות ניסיון)
           </label>
           {/* Everyone who signed up, mid-questionnaire included (the owner,
-              1/9) — they join wholesale, since there's nothing to match yet. */}
+              1/9) - they join wholesale, since there's nothing to match yet. */}
           <label className="flex items-center gap-2 mt-2 text-[13px] text-ink-900 cursor-pointer">
             <input
               type="checkbox"
@@ -340,7 +340,7 @@ export function PublishPanel({
             />
             לכלול גם מי שעוד לא סיימה את השאלון (מצטרפות בלי התאמת קריטריונים)
           </label>
-          {/* Board visibility beyond the audience — future joiners included
+          {/* Board visibility beyond the audience - future joiners included
               (the owner, 1/9: "האם המשרה תופיע גם למי שייכנס מחר?"). */}
           <label className="flex items-center gap-2 mt-2 text-[13px] text-ink-900 cursor-pointer">
             <input
@@ -349,7 +349,7 @@ export function PublishPanel({
               onChange={(e) => setOpenAll(e.target.checked)}
               className="accent-brand-purple"
             />
-            להציג בלוח המשרות לכל הקהילה — כולל מי שתצטרף בעתיד (מייל נשלח רק לקהל שנבחר)
+            להציג בלוח המשרות לכל הקהילה - כולל מי שתצטרף בעתיד (מייל נשלח רק לקהל שנבחר)
           </label>
           <label className="flex items-center gap-2 mt-2 text-[13px] text-ink-900 cursor-pointer">
             <input
@@ -358,21 +358,21 @@ export function PublishPanel({
               onChange={(e) => setOpenExp(e.target.checked)}
               className="accent-brand-purple"
             />
-            להציג בלוח לכל בעלות הניסיון — כולל בעלות ניסיון שיצטרפו בעתיד (מייל נשלח רק לקהל שנבחר)
+            להציג בלוח לכל בעלות הניסיון - כולל בעלות ניסיון שיצטרפו בעתיד (מייל נשלח רק לקהל שנבחר)
           </label>
           <p className="text-[12px] text-ink-400 mt-2">
-            בלי סימון קריטריונים נכללות כל הזמינות להשמה — הרשימה המלאה מופיעה למטה.
+            בלי סימון קריטריונים נכללות כל הזמינות להשמה - הרשימה המלאה מופיעה למטה.
           </p>
         </div>
       </div>
 
-      {/* Who the pool actually holds. Stated always, not only when it's empty —
+      {/* Who the pool actually holds. Stated always, not only when it's empty -
           "בלי קריטריונים" is NOT "כל הקהילה", and the admin compares this
           against /admin/members, which lists everyone with no gates at all. */}
       {eligibility && (
         <p className="text-[12px] text-ink-500 leading-relaxed bg-ink-50 border border-ink-200 rounded-md px-3 py-2">
           קהל היעד נבנה מהחברות שזמינות להשמה: ג׳וניוריות פעילות או חינמיות שהשלימו את
-          הפרופיל — <b className="text-ink-900">{eligibility.eligible}</b> כרגע. לא נכללות:{" "}
+          הפרופיל - <b className="text-ink-900">{eligibility.eligible}</b> כרגע. לא נכללות:{" "}
           {eligibility.notCompleted} שעדיין לא סיימו למלא את הפרופיל
           {eligibility.paused > 0 ? `, ${eligibility.paused} בהשהיה` : ""}, וגם מנטוריות
           וצוות ({eligibility.staff}). חברה שהקריטריונים סיננו החוצה אפשר להחזיר בשם דרך
@@ -428,12 +428,12 @@ export function PublishPanel({
         ) : audience.length === 0 ? (
           <p className="text-ink-500 text-sm py-1">
             {pool === 0
-              ? "אין כרגע בקהילה ג׳וניוריות פעילות שהשלימו את הפרופיל — הקהל ייבנה כאן ברגע שיהיו. (גם חברות חינמיות נכללות.)"
+              ? "אין כרגע בקהילה ג׳וניוריות פעילות שהשלימו את הפרופיל - הקהל ייבנה כאן ברגע שיהיו. (גם חברות חינמיות נכללות.)"
               : exp !== "all" && Object.keys(criteria).length === 0
                 ? exp === "yes"
-                  ? `אין כרגע בעלות ניסיון בקהל הזמין להשמה — כל ${pool} הזמינות הן בתחילת הדרך. סינון "הכל" יציג אותן.`
-                  : `אין כרגע ג׳וניוריות בתחילת הדרך בקהל הזמין להשמה — כל ${pool} הזמינות הן בעלות ניסיון. סינון "הכל" יציג אותן.`
-                : "אין חברות שמתאימות לקריטריונים — אפשר להרחיב אותם או להוסיף ידנית למטה."}
+                  ? `אין כרגע בעלות ניסיון בקהל הזמין להשמה - כל ${pool} הזמינות הן בתחילת הדרך. סינון "הכל" יציג אותן.`
+                  : `אין כרגע ג׳וניוריות בתחילת הדרך בקהל הזמין להשמה - כל ${pool} הזמינות הן בעלות ניסיון. סינון "הכל" יציג אותן.`
+                : "אין חברות שמתאימות לקריטריונים - אפשר להרחיב אותם או להוסיף ידנית למטה."}
           </p>
         ) : (
           <div className="flex flex-col max-h-[320px] overflow-y-auto">
@@ -450,7 +450,7 @@ export function PublishPanel({
                       <span className="font-medium text-ink-900 inline-flex items-center gap-1.5">
                         {m.full_name}
                         {m.is_vip && (
-                          <span title="VIP — עדיפות בהשמות" className="text-[13px]">⭐</span>
+                          <span title="VIP - עדיפות בהשמות" className="text-[13px]">⭐</span>
                         )}
                         {m.is_subscriber && (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-tint-pink text-brand-pink-deep">
@@ -459,7 +459,7 @@ export function PublishPanel({
                         )}
                       </span>
                       <span className="text-xs text-ink-500">
-                        {[m.specialization, m.region].filter(Boolean).join(" · ") || "—"}
+                        {[m.specialization, m.region].filter(Boolean).join(" · ") || "-"}
                       </span>
                     </span>
                   }
@@ -476,7 +476,7 @@ export function PublishPanel({
           הוספת חברה נוספת (מעבר לקריטריונים)
         </div>
         {/* Honest scope note: this search reads the SAME eligible pool, so it
-            can add back someone the criteria filtered out — but not a member
+            can add back someone the criteria filtered out - but not a member
             who hasn't finished her profile. */}
         <p className="text-[12px] text-ink-400 mb-2">
           החיפוש מציע את מי שזמינה להשמה וסוננה החוצה על ידי הקריטריונים. מי שעדיין לא
@@ -526,7 +526,7 @@ export function PublishPanel({
               <div key={m.id} className="flex items-center gap-3 px-3 py-2">
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-ink-900 truncate text-sm">{m.full_name}</div>
-                  <div className="text-xs text-ink-500 truncate">{m.specialization ?? "—"}</div>
+                  <div className="text-xs text-ink-500 truncate">{m.specialization ?? "-"}</div>
                 </div>
                 <button
                   type="button"
@@ -558,9 +558,9 @@ export function PublishPanel({
         </Button>
         <span className="text-[12px] text-ink-500">
           {openAll
-            ? "המשרה תופיע בלוח לכל הקהילה — כולל מי שתצטרף בעתיד; המייל נשלח רק לקהל שנבחר."
+            ? "המשרה תופיע בלוח לכל הקהילה - כולל מי שתצטרף בעתיד; המייל נשלח רק לקהל שנבחר."
             : openExp
-              ? "המשרה תופיע בלוח לכל בעלת ניסיון — גם מי שתצטרף ותסמן ניסיון בעתיד; המייל נשלח רק לקהל שנבחר."
+              ? "המשרה תופיע בלוח לכל בעלת ניסיון - גם מי שתצטרף ותסמן ניסיון בעתיד; המייל נשלח רק לקהל שנבחר."
               : "הפרסום פותח את המשרה לקהל שנבחר ושולח לכל אחת מייל אישי."}
         </span>
       </div>

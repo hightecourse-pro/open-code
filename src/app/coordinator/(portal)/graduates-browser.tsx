@@ -103,7 +103,7 @@ export function GraduatesBrowser({
   return (
     <div className="flex flex-col gap-3">
       <p className="t-body-sm text-ink-500">
-        מה שאת כותבת כאן — דירוגים, הערות ועדכוני תעסוקה — גלוי רק לך ולצוות קוד פתוח.
+        מה שאת כותבת כאן - דירוגים, הערות ועדכוני תעסוקה - גלוי רק לך ולצוות קוד פתוח.
       </p>
 
       <div className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm flex flex-col gap-3">
@@ -112,7 +112,7 @@ export function GraduatesBrowser({
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="חיפוש בוגרת בשם — בכל השנים…"
+            placeholder="חיפוש בוגרת בשם - בכל השנים…"
             className="pr-9"
             aria-label="חיפוש בוגרת"
           />

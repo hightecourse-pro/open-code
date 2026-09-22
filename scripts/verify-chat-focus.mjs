@@ -21,7 +21,7 @@ await editor.press("Enter");
 await page.waitForTimeout(3000);
 const focused = await page.evaluate(() => document.activeElement?.getAttribute("contenteditable") === "true");
 console.log("composer keeps focus after send:", focused ? "✅" : "❌");
-// type immediately without clicking — should land in the box
+// type immediately without clicking - should land in the box
 await page.keyboard.type("ממשיכה בלי קליק");
 const text = await editor.textContent();
 console.log("typing continues without a click:", text?.includes("ממשיכה") ? "✅" : "❌");

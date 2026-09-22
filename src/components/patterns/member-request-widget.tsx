@@ -13,7 +13,7 @@ export interface MyRequestRow {
   status: string;
   created_at: string;
   handled_at: string | null;
-  /** The admin who answered — "מי מהאדמיניות ענתה". */
+  /** The admin who answered - "מי מהאדמיניות ענתה". */
   handledByName: string | null;
 }
 
@@ -26,7 +26,7 @@ const REQ_DATE = new Intl.DateTimeFormat("he-IL", {
 /**
  * The floating "הודעה למערכת" button (PM ask): always in reach, opens a tiny
  * form, and the answer comes back to her in chat. The popup also lists her
- * recent requests — answered ones say WHO answered, and a fresh answer puts
+ * recent requests - answered ones say WHO answered, and a fresh answer puts
  * a ✓ on the floating button so she notices.
  */
 export function MemberRequestWidget({
@@ -34,14 +34,14 @@ export function MemberRequestWidget({
   launchNudge = true,
 }: {
   requests?: MyRequestRow[];
-  /** The launch-period "מצאת באג?" bubble — the admin turns it off in הגדרות. */
+  /** The launch-period "מצאת באג?" bubble - the admin turns it off in הגדרות. */
   launchNudge?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  // Anywhere in the app can open this widget with a ready-made subject —
+  // Anywhere in the app can open this widget with a ready-made subject -
   // "יש לך שאלה על המשרה?" on the apply screen dispatches it (30/8).
   const [subjectPrefill, setSubjectPrefill] = useState("");
   useEffect(() => {
@@ -53,8 +53,8 @@ export function MemberRequestWidget({
     window.addEventListener("oc:open-request", onOpen);
     return () => window.removeEventListener("oc:open-request", onOpen);
   }, []);
-  // A request answered in the last week — worth a nudge on the button.
-  // (now is captured once per mount — render must stay pure.)
+  // A request answered in the last week - worth a nudge on the button.
+  // (now is captured once per mount - render must stay pure.)
   const [now] = useState(() => Date.now());
   const freshAnswer = requests.some(
     (r) =>
@@ -70,7 +70,7 @@ export function MemberRequestWidget({
     ""
   );
   // The launch bubble can be dismissed per-browser (a member, 1/9: "הכפתור
-  // של מצאת באג מסתיר את המסך") — the small ✕ remembers the choice locally.
+  // של מצאת באג מסתיר את המסך") - the small ✕ remembers the choice locally.
   const [nudgeHidden, setNudgeHidden] = useState<boolean>(() => {
     try {
       return window.localStorage.getItem("oc:nudge-hidden") === "1";
@@ -83,7 +83,7 @@ export function MemberRequestWidget({
     try {
       window.localStorage.setItem("oc:nudge-hidden", "1");
     } catch {
-      /* private mode — hides for this page-load only */
+      /* private mode - hides for this page-load only */
     }
   };
   const [seenAnswerAt, setSeenAnswerAt] = useState<string>(() => {
@@ -99,7 +99,7 @@ export function MemberRequestWidget({
     try {
       window.localStorage.setItem("oc:req-seen", latestAnswerAt);
     } catch {
-      /* private mode — the pulse just stays for the visit */
+      /* private mode - the pulse just stays for the visit */
     }
   }
 
@@ -142,7 +142,7 @@ export function MemberRequestWidget({
               </Field>
               <AttachmentPicker>
                 <Field label="מה תרצי לספר לנו?" htmlFor="req-body">
-                  <Textarea id="req-body" name="body" required rows={3} placeholder="בקשה, שאלה, רעיון — הכול מתקבל 💜 אפשר גם להדביק צילום מסך" />
+                  <Textarea id="req-body" name="body" required rows={3} placeholder="בקשה, שאלה, רעיון - הכול מתקבל 💜 אפשר גם להדביק צילום מסך" />
                 </Field>
               </AttachmentPicker>
               <Button type="submit" size="sm" disabled={pending} className="self-start">
@@ -151,7 +151,7 @@ export function MemberRequestWidget({
             </form>
           )}
 
-          {/* Her recent requests — answered ones name the admin who answered. */}
+          {/* Her recent requests - answered ones name the admin who answered. */}
           {requests.length > 0 && (
             <div className="border-t border-ink-100 pt-2.5 flex flex-col gap-1.5">
               <div className="text-[11.5px] font-bold text-ink-400 uppercase tracking-wide">
@@ -221,7 +221,7 @@ export function MemberRequestWidget({
         </div>
       )}
 
-      {/* An UNSEEN answer announces itself — a label + pulse, not a quiet ✓
+      {/* An UNSEEN answer announces itself - a label + pulse, not a quiet ✓
           (the owner, 30/8: "צריך להיות נוטיפיקציה גם באתר לא רק במייל"). */}
       {unseenAnswer && !open && (
         <button
@@ -249,7 +249,7 @@ export function MemberRequestWidget({
         {freshAnswer && !open && (
           <span
             className="inline-flex items-center justify-center w-[18px] h-[18px] rounded-full bg-white text-success text-[11px] font-black"
-            title="ענו לך על פנייה — פתחי לפרטים"
+            title="ענו לך על פנייה - פתחי לפרטים"
           >
             ✓
           </span>

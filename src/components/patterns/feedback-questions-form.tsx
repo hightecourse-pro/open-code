@@ -6,7 +6,7 @@ import { updateFeedbackLabels, type PricingState } from "@/app/(admin)/admin/act
 import type { FeedbackAspect } from "@/lib/feedback-questions";
 
 /**
- * The wording of the four session-feedback rating questions — the admin's to
+ * The wording of the four session-feedback rating questions - the admin's to
  * phrase (the slots themselves are fixed). What she saves here is what the
  * "היית איתנו בסשן?" banner asks every member.
  */

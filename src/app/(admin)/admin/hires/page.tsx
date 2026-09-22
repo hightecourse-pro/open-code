@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "גיוסים" };
 export const dynamic = "force-dynamic";
 
 /**
- * גיוסים (the owner, 3/9): every placement in one place — community members
+ * גיוסים (the owner, 3/9): every placement in one place - community members
  * (a row appears the moment she's marked as placed-by-us) and off-community
  * placements added by hand. Each hire carries its billing trail: status
  * (התחילה עבודה → נשלח חשבונית → שולם), the amount, and who pays.
@@ -17,7 +17,7 @@ export default async function AdminHiresPage() {
   await requireRole("admin");
   const supabase = await createClient();
 
-  // An off-community hire whose email joined the community since — link her
+  // An off-community hire whose email joined the community since - link her
   // lazily, once, and remember it. Runs here (an admin visit) instead of on
   // every member page render (the Vercel cost round, 3/9).
   {
@@ -81,7 +81,7 @@ export default async function AdminHiresPage() {
     (placeQ?.options as { value: string; label: string }[] | null) ?? []
   ).map((o) => o.label);
 
-  // Who is she TODAY (the owner, 3/9: "לזהות מיד בכניסה") — every linked hire
+  // Who is she TODAY (the owner, 3/9: "לזהות מיד בכניסה") - every linked hire
   // gets her live community standing: מנויה, משתתפת רגילה, מנטורית, צוות.
   const linkedIds = [...new Set((hires ?? []).map((h) => h.profile_id).filter((v): v is string => !!v))];
   const { data: linkedProfiles } = linkedIds.length
@@ -107,7 +107,7 @@ export default async function AdminHiresPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;גיוסים/&gt;</span>
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">גיוסים 🎉</h1>
         <p className="t-body-sm text-ink-700">
-          כל ההשמות במקום אחד — חברות קהילה שגויסו וגם השמות מחוץ לקהילה. לכל גיוס: סטטוס,
+          כל ההשמות במקום אחד - חברות קהילה שגויסו וגם השמות מחוץ לקהילה. לכל גיוס: סטטוס,
           סכום ומי משלמת. השמות מופיעים בבאנר החגיגי למשך 60 יום.
         </p>
       </div>

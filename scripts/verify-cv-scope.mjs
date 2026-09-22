@@ -1,4 +1,4 @@
-// The /cv screen must show ONLY the signed-in member's files — an admin used
+// The /cv screen must show ONLY the signed-in member's files - an admin used
 // to see the entire community's CVs there, each with its owner's default badge.
 import { chromium } from "@playwright/test";
 const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); process.exit(1); })();
@@ -33,7 +33,7 @@ console.log(admin.rows.length >= 1 && admin.badges === 1
   : `❌ admin sees ${admin.rows.length} files / ${admin.badges} badges`);
 
 // sub.test's file count varies with the apply-flow scripts (each run uploads
-// a job-tailored CV) — the invariant is OWNERSHIP and at most one default.
+// a job-tailored CV) - the invariant is OWNERSHIP and at most one default.
 const member = await cvPage("sub.test@opencode.test", "QA_FIXTURE_PASSWORD", "member");
 console.log(`sub.test sees ${member.rows.length} files, ${member.badges} default badges:`, JSON.stringify(member.rows));
 const memberLeak = member.rows.filter((r) => /שרה-בתיה|qa-sweep/.test(r));

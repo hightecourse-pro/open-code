@@ -1,9 +1,9 @@
 /**
- * Open Code — email sender (Google Apps Script Web App) + send log.
+ * Open Code - email sender (Google Apps Script Web App) + send log.
  *
  * Sends email through your Google Workspace account (display name "קוד פתוח"),
  * and writes one row per recipient to a "Log" tab in the bound spreadsheet.
- * Runs under your account after a one-time authorization — no App Password and
+ * Runs under your account after a one-time authorization - no App Password and
  * no 2-Step Verification required.
  *
  * IMPORTANT: this script must be *bound to a Google Sheet* (open a Sheet →
@@ -15,7 +15,7 @@
  *     "subject": "כותרת",
  *     "html": "<div>… optional {{name}} …</div>",
  *     "to": "a@b.com", "name": "נועה"            // single recipient
- *     // — or — a group (mail-merge of {{name}} per recipient):
+ *     // - or - a group (mail-merge of {{name}} per recipient):
  *     "recipients": [ { "email": "a@b.com", "name": "נועה" }, … ]
  *   }
  */
@@ -26,7 +26,7 @@ const SECRET = "CHANGE_ME_TO_A_LONG_RANDOM_STRING";
 const SENDER_NAME = "קוד פתוח";
 const LOG_SHEET_NAME = "Log";
 
-/** Health check — opening the /exec URL in a browser shows this. */
+/** Health check - opening the /exec URL in a browser shows this. */
 function doGet() {
   return json_({ ok: true, service: "open-code-mailer", remainingDailyQuota: MailApp.getRemainingDailyQuota() });
 }
@@ -90,7 +90,7 @@ function doPost(e) {
 function appendLog_(rows) {
   if (!rows || !rows.length) return;
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  if (!ss) return; // not bound to a sheet — skip logging
+  if (!ss) return; // not bound to a sheet - skip logging
   var sheet = ss.getSheetByName(LOG_SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(LOG_SHEET_NAME);

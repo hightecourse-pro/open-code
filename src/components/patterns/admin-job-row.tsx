@@ -61,7 +61,7 @@ const KIND_LABEL = Object.fromEntries(JOB_KIND_OPTIONS.map((k) => [k.value, k.la
 >;
 
 // The recruitment-pipeline pill. Tone rules from the PM (2026-08-27): quiet
-// grays for drafts and endings — red/pink never marks a normal state; the
+// grays for drafts and endings - red/pink never marks a normal state; the
 // gradient stays for the one genuinely happy ending.
 const PIPELINE: Record<
   JobPipelineStatus,
@@ -83,14 +83,14 @@ const DATE_HE = new Intl.DateTimeFormat("he-IL", {
   timeZone: "Asia/Jerusalem",
 });
 
-/** "פתוחה 12 ימים" — from publish (or creation) until now/closing. */
+/** "פתוחה 12 ימים" - from publish (or creation) until now/closing. */
 export function daysOpen(j: AdminJob): number | null {
   const from = j.published_at ?? j.created_at;
   if (!from) return null;
   return Math.max(0, Math.floor((Date.now() - new Date(from).getTime()) / 86_400_000));
 }
 
-/** "הגשה אחת", "3 הגשות" — Hebrew that reads like Hebrew. */
+/** "הגשה אחת", "3 הגשות" - Hebrew that reads like Hebrew. */
 export function appsLabel(n: number): string {
   return n === 1 ? "הגשה אחת" : `${n} הגשות`;
 }
@@ -98,7 +98,7 @@ export function appsLabel(n: number): string {
 /**
  * One job in the admin list. The whole main area links to the job's full
  * management page; editing lives on its "פרטי המשרה" tab (the pencil links
- * there) and the row keeps only the quiet quick actions (lock, delete —
+ * there) and the row keeps only the quiet quick actions (lock, delete -
  * delete asks first). A job with fresh submissions is visibly highlighted.
  */
 export function AdminJobRow({
@@ -111,7 +111,7 @@ export function AdminJobRow({
   job: AdminJob;
   appCounts?: JobAppCounts;
   className?: string;
-  /** Bulk-selection checkbox state — rendered only when onSelect is given. */
+  /** Bulk-selection checkbox state - rendered only when onSelect is given. */
   selected?: boolean;
   onSelect?: (on: boolean) => void;
 }) {
@@ -176,7 +176,7 @@ export function AdminJobRow({
         )}
       </Badge>
 
-      {/* A draft's next step is publishing — offer it right on the row. */}
+      {/* A draft's next step is publishing - offer it right on the row. */}
       {job.pipeline_status === "draft" && (
         <Link
           href={`/admin/jobs/${job.id}?tab=publish`}

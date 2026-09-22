@@ -31,7 +31,7 @@ export function InterviewSetup({ hasKey }: { hasKey: boolean }) {
         {state.error && (
           <Alert variant={state.reason ? "warn" : "danger"}>
             {state.error}
-            {/* Only a real key problem points at the keys screen — a passing
+            {/* Only a real key problem points at the keys screen - a passing
                 "משהו השתבש" with that link reads as a broken key. */}
             {state.reason && state.reason !== "error" && (
               <a href="/ai/keys?next=/ai/interview" className="block mt-1 font-semibold text-brand-purple underline">
@@ -73,9 +73,9 @@ export function InterviewSetup({ hasKey }: { hasKey: boolean }) {
 
         <Field label="רמת קושי" htmlFor="difficulty">
           <Select id="difficulty" name="difficulty" defaultValue="standard">
-            <option value="basic">בסיסי — נעים ורגוע</option>
-            <option value="standard">סטנדרטי — לג&apos;וניורית</option>
-            <option value="hard">מאתגר — להעמיק</option>
+            <option value="basic">בסיסי - נעים ורגוע</option>
+            <option value="standard">סטנדרטי - לג&apos;וניורית</option>
+            <option value="hard">מאתגר - להעמיק</option>
           </Select>
         </Field>
 

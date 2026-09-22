@@ -26,22 +26,22 @@ export interface CourseCardProps {
   course: Course;
   /** Year summary, e.g. "שנות הקורס: 2023–2025" (courses with units). */
   cycles?: string | null;
-  /** Unit names+years — the "מה לומדים" syllabus peek (PM feedback). */
+  /** Unit names+years - the "מה לומדים" syllabus peek (PM feedback). */
   syllabus?: { name: string; year: number | null }[];
-  /** This is HER course this month — marked, never buttoned. */
+  /** This is HER course this month - marked, never buttoned. */
   isActive?: boolean;
   /** True when another course (or a still-running month) blocks this one. */
   locked: boolean;
   /** Inside a locked month, her last take may be re-opened. */
   resume?: boolean;
   /**
-   * When she is NOT yet allowed to swap: the ISO date her next swap unlocks —
+   * When she is NOT yet allowed to swap: the ISO date her next swap unlocks -
    * printed on the card, per the owner's library rule. Null once eligible.
    */
   swapEligibleAt?: string | null;
-  /** An admin opened this course for her personally — it isn't locked. */
+  /** An admin opened this course for her personally - it isn't locked. */
   gifted?: boolean;
-  /** True for a free member — the catalogue is visible, opening isn't. */
+  /** True for a free member - the catalogue is visible, opening isn't. */
   needsSubscription?: boolean;
   onStartError?: (msg: string) => void;
 }
@@ -70,11 +70,11 @@ export function CourseCard({
   }
 
   function onSwap() {
-    if (!confirm(`להחליף לקורס "${course.title}"? הגישה לקורס הנוכחי תיסגר — כמו החזרת ספר לספרייה 📚`)) return;
+    if (!confirm(`להחליף לקורס "${course.title}"? הגישה לקורס הנוכחי תיסגר - כמו החזרת ספר לספרייה 📚`)) return;
     onStart();
   }
 
-  // A first pick opens a rolling month — she confirms it knowingly (the
+  // A first pick opens a rolling month - she confirms it knowingly (the
   // owner: "האם את מעוניינת לבחור את הקורס הזה לחודש הקרוב").
   function onFirstPick() {
     if (!confirm(`לבחור את "${course.title}" לחודש הקרוב? זה יהיה הקורס הפעיל שלך, והחלפה תיפתח כעבור חודש 📚`)) return;
@@ -95,7 +95,7 @@ export function CourseCard({
         locked && !gifted && !swapReady ? "opacity-70" : "hover:-translate-y-0.5 hover:shadow-md"
       )}
     >
-      {/* The course NAME on the cover — a lone letter said nothing (PM). */}
+      {/* The course NAME on the cover - a lone letter said nothing (PM). */}
       <div className={cn("h-[104px] shrink-0 relative flex items-center justify-center px-4 text-center", cover)}>
         <span className="text-white font-display font-black text-[19px] leading-snug line-clamp-2 drop-shadow-sm">
           {course.title}
@@ -111,7 +111,7 @@ export function CourseCard({
           </div>
         )}
         {locked && !gifted && !swapReady && (
-          // A bottom strip, not a full veil — the course name must stay
+          // A bottom strip, not a full veil - the course name must stay
           // readable even while the month is locked.
           <div className="absolute inset-x-0 bottom-0 bg-ink-1000/75 text-white text-[11.5px] font-display font-semibold py-1 px-2 flex items-center justify-center gap-1.5">
             <Lock size={11} className="shrink-0" />
@@ -129,7 +129,7 @@ export function CourseCard({
           {cycles ? <span>{cycles}</span> : <span>{course.duration_hours} שעות</span>}
         </div>
 
-        {/* Syllabus peek — what's actually inside, before she commits. */}
+        {/* Syllabus peek - what's actually inside, before she commits. */}
         {syllabus.length > 0 && (
           <div className="mt-2">
             <button
@@ -167,7 +167,7 @@ export function CourseCard({
               className="w-full text-center font-display font-bold text-[13px] py-2 rounded-md bg-tint-pink text-brand-pink-deep flex items-center justify-center gap-1.5 cursor-pointer hover:bg-brand-pink-deep hover:text-white transition-colors"
               title="קפיצה לקורס"
             >
-              <CheckCircle2 size={14} /> את לומדת אותו עכשיו — לחצי למעבר לקורס
+              <CheckCircle2 size={14} /> את לומדת אותו עכשיו - לחצי למעבר לקורס
             </button>
           ) : needsSubscription ? (
             <Link

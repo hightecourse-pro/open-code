@@ -11,13 +11,13 @@ import { CoordinatorChatThread } from "./chat-thread";
 export const metadata: Metadata = { title: "צ'אט עם הצוות" };
 export const dynamic = "force-dynamic";
 
-/** Her line to the team — open any time (the owner, 16/9). */
+/** Her line to the team - open any time (the owner, 16/9). */
 export default async function CoordinatorChatPage() {
   const me = await getCoordinator();
   if (!me) redirect("/coordinator/login");
 
   const messages = await loadCoordinatorMessages(me.id);
-  // She is looking at the thread — the team's replies count as read.
+  // She is looking at the thread - the team's replies count as read.
   await markCoordinatorMessagesRead(me.id, "coordinator");
 
   return (
@@ -27,7 +27,7 @@ export default async function CoordinatorChatPage() {
           <MessageCircle size={18} className="text-brand-purple" /> צ&apos;אט עם צוות קוד פתוח
         </h2>
         <p className="text-[12px] text-ink-500">
-          אפשר לכתוב לנו כאן בכל עת — שאלות, עדכונים והמלצות. אנחנו עונות בהקדם 💜
+          אפשר לכתוב לנו כאן בכל עת - שאלות, עדכונים והמלצות. אנחנו עונות בהקדם 💜
         </p>
       </div>
       <CoordinatorChatThread messages={messages} />

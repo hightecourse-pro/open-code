@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * Refreshes the Supabase auth session cookie on each request.
  * Called from the root `proxy.ts` (Next.js 16's renamed Middleware).
  *
- * IMPORTANT: this only keeps the session fresh — it is NOT authorization.
+ * IMPORTANT: this only keeps the session fresh - it is NOT authorization.
  * Real gating happens in layouts/route handlers (requireRole / requireActiveSub)
  * backed by RLS. See the plan's auth section.
  */

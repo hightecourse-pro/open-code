@@ -6,7 +6,7 @@ import { Composer } from "@/components/patterns/composer";
 
 /**
  * The forum composer behind a button (the owner, 2026-08-28): the topics list
- * is what she came for — it must be visible without scrolling past a form.
+ * is what she came for - it must be visible without scrolling past a form.
  */
 export function ComposerFold({ kind = "forum" }: { kind?: "feed" | "forum" }) {
   const [open, setOpen] = useState(false);

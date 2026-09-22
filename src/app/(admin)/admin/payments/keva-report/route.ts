@@ -1,7 +1,7 @@
-// דוח הוראות הקבע — שורה אחת לכל חברה (the owner, 14/9: "שלא יהיה בו כפולים
+// דוח הוראות הקבע - שורה אחת לכל חברה (the owner, 14/9: "שלא יהיה בו כפולים
 // ויהיה נח לשימוש"). A member's kevas are merged into her one row: a replaced
 // card used to produce two rows, and a first charge captured without a keva
-// id produced a third. Charges are counted by distinct charge DAYS — the
+// id produced a third. Charges are counted by distinct charge DAYS - the
 // import recorded some charges twice (keva-N + bare transaction id).
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
@@ -9,7 +9,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
-// Team / test identities the owner asked OUT of the report (14/9) — their
+// Team / test identities the owner asked OUT of the report (14/9) - their
 // kevas are internal plumbing, not subscriber money.
 const EXCLUDED_EMAILS = new Set([
   "tehilab2002@gmail.com",
@@ -34,7 +34,7 @@ interface MemberRow {
   name: string;
   email: string;
   phone: string;
-  /** The CURRENT keva only (the owner, 14/9: "מעניין רק החדש") — the id
+  /** The CURRENT keva only (the owner, 14/9: "מעניין רק החדש") - the id
       seen on her most recent activity; a replaced card's old id drops off. */
   newestKeva: string | null;
   newestKevaAt: number;
@@ -75,7 +75,7 @@ export async function GET() {
       .select("profile_id, provider_payment_id, amount_agorot, paid_at, raw")
       .eq("status", "succeeded"),
     admin.from("subscriptions").select("profile_id, status, current_period_end, canceled_at"),
-    // The Nedarim export the owner loads — the authoritative keva start dates.
+    // The Nedarim export the owner loads - the authoritative keva start dates.
     admin.from("nedarim_kevas").select("keva_id, start_date, end_date"),
   ]);
   const registryOf = new Map(
@@ -88,7 +88,7 @@ export async function GET() {
   for (const u of usersPage?.users ?? []) {
     if (u.email) emailToId.set(u.email.toLowerCase(), u.id);
   }
-  // The excluded identities by ACCOUNT too — a charge captured without an
+  // The excluded identities by ACCOUNT too - a charge captured without an
   // email in its raw still resolves to the profile and must drop with it.
   const excludedProfileIds = new Set(
     [...EXCLUDED_EMAILS].map((e) => emailToId.get(e)).filter(Boolean)
@@ -111,7 +111,7 @@ export async function GET() {
   const kevaOf = (raw: Record<string, string>, providerId: string | null | undefined) =>
     raw.KevaId || /keva-(\d+)$/.exec(providerId ?? "")?.[1] || null;
 
-  // The imported Nedarim list — authoritative keva start dates + contact info.
+  // The imported Nedarim list - authoritative keva start dates + contact info.
   for (const ep of externals ?? []) {
     const email = (ep.email ?? "").toLowerCase();
     const pid = ep.claimed_by ?? emailToId.get(email) ?? null;
@@ -133,7 +133,7 @@ export async function GET() {
     if (created && (!r.nedarimCreated || created < r.nedarimCreated)) r.nedarimCreated = created;
   }
 
-  // Charges the system captured — merged into the member's row.
+  // Charges the system captured - merged into the member's row.
   for (const p of pays ?? []) {
     const raw = (p.raw ?? {}) as Record<string, string>;
     const r = rowFor(p.profile_id);
@@ -178,28 +178,28 @@ export async function GET() {
     const prof = r.profileId ? profOf.get(r.profileId) : null;
     const sub = r.profileId ? subOf.get(r.profileId) : null;
     const renewal =
-      !sub ? "—"
+      !sub ? "-"
       : sub.status !== "active" && sub.status !== "trialing" ? (SUB_STATUS_HE[sub.status] ?? sub.status)
-      : sub.canceled_at ? "כבוי — לא יתחדש"
+      : sub.canceled_at ? "כבוי - לא יתחדש"
       : "מתחדש";
     lines.push(
       [
-        prof?.full_name || r.name || "—",
+        prof?.full_name || r.name || "-",
         r.email,
         r.phone,
-        r.newestKeva ?? "—",
+        r.newestKeva ?? "-",
         // From the owner's Nedarim export first; the 2/9 import's CreatedDate
         // is the fallback for kevas that left the export since.
         (r.newestKeva && registryOf.get(r.newestKeva)?.start_date
           ? IL_DATE.format(new Date(registryOf.get(r.newestKeva)!.start_date + "T12:00:00Z"))
-          : r.nedarimCreated || "—"),
-        r.firstSeen ? IL_DATE.format(r.firstSeen) : "—",
-        r.lastSeen ? IL_DATE.format(r.lastSeen) : "—",
+          : r.nedarimCreated || "-"),
+        r.firstSeen ? IL_DATE.format(r.firstSeen) : "-",
+        r.lastSeen ? IL_DATE.format(r.lastSeen) : "-",
         r.chargeDays.size,
         sub?.current_period_end ? IL_DATE.format(new Date(sub.current_period_end)) : (prof ? "אין רשומת מנוי" : "לא רשומה לאתר"),
         renewal,
         prof ? (MEMBER_STATUS_HE[prof.status] ?? prof.status) : "לא רשומה",
-        r.amountAgorot != null ? (r.amountAgorot / 100).toFixed(0) : "—",
+        r.amountAgorot != null ? (r.amountAgorot / 100).toFixed(0) : "-",
       ]
         .map(csvCell)
         .join(",")

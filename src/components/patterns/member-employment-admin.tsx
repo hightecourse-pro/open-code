@@ -9,7 +9,7 @@ import {
 } from "@/app/(admin)/admin/actions";
 
 /**
- * Admin-editable employment status for a member — including retroactive
+ * Admin-editable employment status for a member - including retroactive
  * "גויסה דרך קוד פתוח" marking. Clearing "מצאה עבודה" clears everything
  * (hired_via_us, workplace, hired_at) server-side.
  */
@@ -24,7 +24,7 @@ export function MemberEmploymentForm({
   foundJob: boolean;
   hiredViaUs: boolean;
   workplace: string | null;
-  /** yyyy-mm-dd — existing hired_at or today, computed server-side. */
+  /** yyyy-mm-dd - existing hired_at or today, computed server-side. */
   hiredAtDate: string;
 }) {
   const [on, setOn] = useState(foundJob);
@@ -74,7 +74,7 @@ export function MemberEmploymentForm({
 }
 
 /**
- * Employment accompaniment is the admin's call — pick an active mentor to
+ * Employment accompaniment is the admin's call - pick an active mentor to
  * accompany the member in her first months on the job.
  */
 export function EmploymentMentorAssign({

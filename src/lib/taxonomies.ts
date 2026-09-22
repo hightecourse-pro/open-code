@@ -31,12 +31,12 @@ export async function getTaxonomyOptions(): Promise<Partial<Record<TaxonomyKind,
 }
 
 /**
- * The same lists, read with the service role — for the employer portal only.
+ * The same lists, read with the service role - for the employer portal only.
  * A hiring client is authenticated by our own signed cookie, not by Supabase,
  * so the cookie-bound client runs as `anon`; config_taxonomies_select is granted
  * TO AUTHENTICATED, so that client sees zero rows and every answer would render
  * as its raw English value ("center" instead of "מרכז"). The table holds no
- * member data — only the configured lists — so nothing private is exposed.
+ * member data - only the configured lists - so nothing private is exposed.
  */
 export async function getTaxonomyOptionsForPortal(): Promise<
   Partial<Record<TaxonomyKind, TaxonomyOption[]>>

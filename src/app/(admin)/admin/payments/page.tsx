@@ -51,7 +51,7 @@ export default async function AdminExternalPaymentsPage() {
           <span className="font-mono text-xs text-brand-pink-deep">&lt;תשלומים/&gt;</span>
           <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">תשלומים חיצוניים</h1>
           <p className="t-body-sm text-ink-500">
-            תשלומים שהגיעו מנדרים פלוס בלי לעבור דרך האתר — מי מחכה, ממתי, ולמי לשייך.
+            תשלומים שהגיעו מנדרים פלוס בלי לעבור דרך האתר - מי מחכה, ממתי, ולמי לשייך.
           </p>
         </div>
         {/* One row per keva: Nedarim's own start/next dates next to what the

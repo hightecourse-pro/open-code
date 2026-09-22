@@ -12,7 +12,7 @@ function countLabel(count: number, searching: boolean): string {
 
 /**
  * The topic list with instant search: rows arrive server-rendered and typing
- * filters them in place — no navigation, no URL writes. It searches over the
+ * filters them in place - no navigation, no URL writes. It searches over the
  * topics that are loaded (the page caps them at 50 newest), not the archive.
  */
 export function ForumInstantList({
@@ -24,14 +24,14 @@ export function ForumInstantList({
   belowSearch,
 }: {
   items: InstantItem[];
-  /** The "כל הנושאים / ששמרתי" chips — server-rendered links. */
+  /** The "כל הנושאים / ששמרתי" chips - server-rendered links. */
   chips?: ReactNode;
   savedOnly: boolean;
-  /** Free members get no search card — only the (gated) list below. */
+  /** Free members get no search card - only the (gated) list below. */
   canWrite: boolean;
   initialQuery?: string;
   /**
-   * Rendered between the search card and the rows — the composer lives here
+   * Rendered between the search card and the rows - the composer lives here
    * (the PM: search first, then "פתחי פוסט"), and hides while she searches so
    * the results stay under her eyes.
    */
@@ -72,12 +72,12 @@ export function ForumInstantList({
       {filtered.length === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
           {searching
-            ? "לא מצאנו נושא שמתאים לחיפוש — אולי לנסות מילה אחרת? 💜"
+            ? "לא מצאנו נושא שמתאים לחיפוש - אולי לנסות מילה אחרת? 💜"
             : savedOnly
-              ? "עוד לא שמרת נושאים. בכל שיחה יש כפתור שמירה 🔖 — מה שתשמרי יחכה לך כאן 💜"
+              ? "עוד לא שמרת נושאים. בכל שיחה יש כפתור שמירה 🔖 - מה שתשמרי יחכה לך כאן 💜"
               : canWrite
-                ? "הפורום שקט עכשיו — אולי דווקא את תפתחי את השיחה הראשונה?"
-                : "הפורום שקט עכשיו — ברגע שיהיו שיחות הן יופיעו כאן, פתוחות לקריאה גם בלי מנוי 💜"}
+                ? "הפורום שקט עכשיו - אולי דווקא את תפתחי את השיחה הראשונה?"
+                : "הפורום שקט עכשיו - ברגע שיהיו שיחות הן יופיעו כאן, פתוחות לקריאה גם בלי מנוי 💜"}
         </div>
       ) : (
         <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden divide-y divide-ink-100">

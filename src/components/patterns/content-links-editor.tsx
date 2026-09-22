@@ -4,7 +4,7 @@ import type { ContentLink, ContentOwner } from "@/types/database";
 
 /**
  * Admin editor for a course/session's Drive links. Each link is tagged as a
- * view-only video or a materials folder. Pure server component — every control
+ * view-only video or a materials folder. Pure server component - every control
  * is a server-action form.
  */
 export function ContentLinksEditor({

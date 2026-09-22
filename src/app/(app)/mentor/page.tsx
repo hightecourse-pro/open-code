@@ -22,7 +22,7 @@ const DATE_HE = new Intl.DateTimeFormat("he-IL", {
 
 /**
  * The MENTOR's side of this screen: assignments made to her. A pending one
- * is an invitation — she accepts (the member only then sees her) or passes.
+ * is an invitation - she accepts (the member only then sees her) or passes.
  */
 async function MentorAssignments({ mentorId }: { mentorId: string }) {
   const admin = createAdminClient();
@@ -60,7 +60,7 @@ async function MentorAssignments({ mentorId }: { mentorId: string }) {
                 </div>
                 {r.note && <p className="text-[13.5px] text-ink-700">במילים שלה: &quot;{r.note}&quot;</p>}
                 <p className="text-[12.5px] text-ink-500">
-                  היא תראה אותך ותקבל מייל רק אחרי שתאשרי — עד אז שום דבר לא קורה.
+                  היא תראה אותך ותקבל מייל רק אחרי שתאשרי - עד אז שום דבר לא קורה.
                 </p>
                 <div className="flex items-center gap-2">
                   <form action={acceptMentorAssignment.bind(null, r.id)}>
@@ -106,7 +106,7 @@ async function MentorAssignments({ mentorId }: { mentorId: string }) {
             })}
           </div>
         ) : (
-          <p className="text-ink-500 text-sm">עוד לא אישרת ליוויים. כשנשבץ אלייך מנטית — היא תופיע כאן 💜</p>
+          <p className="text-ink-500 text-sm">עוד לא אישרת ליוויים. כשנשבץ אלייך מנטית - היא תופיע כאן 💜</p>
         )}
       </div>
     </div>
@@ -142,7 +142,7 @@ export default async function MentorPage() {
   }
 
   // Mentoring is a match we make, not a directory she browses. Only an
-  // assignment the mentor ACCEPTED is visible to the member — until then the
+  // assignment the mentor ACCEPTED is visible to the member - until then the
   // request simply reads "בטיפול".
   const [{ data: generalRequests }, { data: settingsRow }] = await Promise.all([
     supabase
@@ -212,18 +212,18 @@ export default async function MentorPage() {
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">המנטוריות שלי 👑</h1>
         <p className="t-body-sm text-ink-700">
           {hasMentor
-            ? "המנטוריות ששובצו לך אישית. אפשר לכתוב להן ישירות — הן כאן בשבילך."
-            : "כאן תמצאי את המנטורית ששובצה לך אישית — נשים מנוסות שמלוות בדיוק בשלב הזה."}
+            ? "המנטוריות ששובצו לך אישית. אפשר לכתוב להן ישירות - הן כאן בשבילך."
+            : "כאן תמצאי את המנטורית ששובצה לך אישית - נשים מנוסות שמלוות בדיוק בשלב הזה."}
         </p>
       </div>
 
-      {/* The honest heads-up while the mentor pool is still being built —
+      {/* The honest heads-up while the mentor pool is still being built -
           togglable from הגדרות in the admin. */}
       {poolNotice && !hasMentor && (
         <div className="flex items-start gap-2.5 bg-tint-purple/60 border border-[#DDC9EC] rounded-md p-3.5 px-4 text-[13.5px] text-ink-900">
           <Hourglass size={17} className="text-brand-purple shrink-0 mt-0.5" />
           <span>
-            מאגר המנטוריות שלנו בבנייה — בקרוב כאן בשבילך 💜
+            מאגר המנטוריות שלנו בבנייה - בקרוב כאן בשבילך 💜
           </span>
         </div>
       )}
@@ -238,7 +238,7 @@ export default async function MentorPage() {
         ) : (
           <UpgradeCard
             title="ליווי אישי של מנטורית נפתח עם מנוי"
-            body="עם מנוי נחבר אותך למנטורית אישית — אישה מנוסה שכבר עברה את הדרך הזו, ותוכלי להתכתב איתה ישירות."
+            body="עם מנוי נחבר אותך למנטורית אישית - אישה מנוסה שכבר עברה את הדרך הזו, ותוכלי להתכתב איתה ישירות."
           />
         ))}
 
@@ -282,7 +282,7 @@ export default async function MentorPage() {
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700 flex flex-col gap-2">
           <p>
             {waiting
-              ? "הבקשה שלך אצלנו — אנחנו מחפשות לך את המנטורית המתאימה, ונעדכן אותך ברגע שהיא מאשרת 💜"
+              ? "הבקשה שלך אצלנו - אנחנו מחפשות לך את המנטורית המתאימה, ונעדכן אותך ברגע שהיא מאשרת 💜"
               : "עוד לא שובצה לך מנטורית. כשנחבר אותך לאחת, היא תופיע כאן ותוכלי לכתוב לה ישירות 💜"}
           </p>
           <p className="text-[13.5px] text-ink-500">
@@ -290,7 +290,7 @@ export default async function MentorPage() {
             <Link href="/members" className="font-semibold text-brand-purple hover:underline">
               המשתתפות שלנו
             </Link>{" "}
-            כאן — אפשר להכיר ולהתכתב עם כל אחת מהן.
+            כאן - אפשר להכיר ולהתכתב עם כל אחת מהן.
           </p>
         </div>
       )}

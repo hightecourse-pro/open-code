@@ -160,13 +160,13 @@ export function SubmissionsTable({ rows }: { rows: SubmissionRow[] }) {
                     <div className="text-[11px] text-ink-500">{r.specialization}</div>
                   )}
                 </td>
-                <td className="p-2 border-b border-ink-100 text-ink-700">{r.studyPlace || "—"}</td>
-                <td className="p-2 border-b border-ink-100 text-ink-700">{r.graduationYear || "—"}</td>
+                <td className="p-2 border-b border-ink-100 text-ink-700">{r.studyPlace || "-"}</td>
+                <td className="p-2 border-b border-ink-100 text-ink-700">{r.graduationYear || "-"}</td>
                 <td className="p-2 border-b border-ink-100 text-ink-700 whitespace-nowrap" dir="ltr">
-                  {r.phone || "—"}
+                  {r.phone || "-"}
                 </td>
                 <td className="p-2 border-b border-ink-100 text-ink-700" dir="ltr">
-                  {r.email || "—"}
+                  {r.email || "-"}
                 </td>
                 <td className="p-2 border-b border-ink-100">
                   <Link
@@ -191,7 +191,7 @@ export function SubmissionsTable({ rows }: { rows: SubmissionRow[] }) {
               <tr>
                 <td colSpan={9} className="p-6 text-center text-ink-500">
                   {rows.length === 0
-                    ? "עוד לא אושרו הגשות סופית — ברגע שתסמנו 'אישור סופי' במשרה, הן יופיעו כאן."
+                    ? "עוד לא אושרו הגשות סופית - ברגע שתסמנו 'אישור סופי' במשרה, הן יופיעו כאן."
                     : "לא נמצאו הגשות בחיפוש הזה."}
                 </td>
               </tr>

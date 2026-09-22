@@ -1,7 +1,7 @@
 // Candidate data for the employer portal.
 //
-// PRIVACY CONTRACT — everything in this file obeys it:
-//   * Only junior members (free or paying — placement reaches both, user
+// PRIVACY CONTRACT - everything in this file obeys it:
+//   * Only junior members (free or paying - placement reaches both, user
 //     decision 2026-07-29), with a completed profile, who haven't opted out
 //     (portal_listed) appear. Paused/rejected members never do.
 //   * Only answers to questions flagged employer_visible are ever returned.
@@ -85,7 +85,7 @@ const PORTAL_LABELS: Record<string, string> = {
 function portalLabel(q: ConfigQuestion): string {
   const mapped = PORTAL_LABELS[q.key];
   if (mapped) return mapped;
-  // The member-facing label may carry FORM hints ("(שורה לכל קישור)") — the
+  // The member-facing label may carry FORM hints ("(שורה לכל קישור)") - the
   // display is not a form (the owner, 30/8), so parenthetical hints drop.
   return q.label_he.replace(/\s*\((?:שורה לכל קישור|אופציונלי[^)]*|רשות[^)]*)\)/g, "").trim();
 }
@@ -133,13 +133,13 @@ function toDisplay(
 } {
   if (q.key === LANGUAGE_SKILLS_KEY) {
     return {
-      values: parseLangSkills(raw).map((s) => `${s.lang} — ${langLevelLabel(s.level)}`),
+      values: parseLangSkills(raw).map((s) => `${s.lang} - ${langLevelLabel(s.level)}`),
       kind: "chips",
     };
   }
   // Experience lists → rich entries: headline + tech chips + free description.
   if (EXPERIENCE_KEYS.has(q.key)) {
-    // Newest first (the owner, 31/8: "המשרות תמיד מהתאריך הנוכחי ומטה") —
+    // Newest first (the owner, 31/8: "המשרות תמיד מהתאריך הנוכחי ומטה") -
     // the current place leads, then by end date, then by start date.
     const sortKey = (e: { start: string; end: string; current?: boolean }) =>
       e.current ? "9999-99" : e.end === "current" ? "9998-99" : e.end || e.start || "";
@@ -169,7 +169,7 @@ function toDisplay(
       }));
     return {
       // Flattened copy so the free-text search still matches these answers
-      // (descriptions may be rich HTML — search the words, not the tags).
+      // (descriptions may be rich HTML - search the words, not the tags).
       values: entries.flatMap((e) => [e.headline, ...e.tech, htmlToPlainText(e.description)].filter(Boolean)),
       kind: "experience",
       entries,
@@ -189,7 +189,7 @@ function toDisplay(
     }
     const rawVals = raw.filter((v): v is string => typeof v === "string");
     const items = rawVals.map((v) => labels.get(v) ?? v);
-    // Tech chips are grouped by תת-נושא (the owner, 31/8) — group order
+    // Tech chips are grouped by תת-נושא (the owner, 31/8) - group order
     // follows the taxonomy, ungrouped/custom values close the list.
     if (q.taxonomy_kind === "tech" && items.length > 0) {
       const byGroup = new Map<string, string[]>();
@@ -218,7 +218,7 @@ function toDisplay(
 /**
  * The filter palette the recruiter sees. Built from the employer-visible
  * QUESTIONS (with their defined options / taxonomy values) unioned with any
- * values that actually occur in the data — so the parameters mirror the
+ * values that actually occur in the data - so the parameters mirror the
  * profile structure and show up even before any candidate is listed.
  */
 function buildCatalogue(
@@ -229,7 +229,7 @@ function buildCatalogue(
   const out: CatalogueField[] = [];
 
   for (const q of questions) {
-    // Experience lists are rich objects, not chip-filterable values — the
+    // Experience lists are rich objects, not chip-filterable values - the
     // free-text search covers them.
     if (EXPERIENCE_KEYS.has(q.key)) continue;
 
@@ -237,7 +237,7 @@ function buildCatalogue(
       const langs = new Set<string>(DEFAULT_LANGUAGES);
       for (const c of candidates) {
         for (const v of c.fields.find((f) => f.key === q.key)?.values ?? []) {
-          const lang = v.split(" — ")[0]?.trim();
+          const lang = v.split(" - ")[0]?.trim();
           if (lang) langs.add(lang);
         }
       }
@@ -282,7 +282,7 @@ function buildCatalogue(
         });
       }
     }
-    // Free text fields aren't offered as chips — the free-text search covers them.
+    // Free text fields aren't offered as chips - the free-text search covers them.
   }
 
   return out;
@@ -305,7 +305,7 @@ export async function loadCandidates(opts?: {
   catalogue: CatalogueField[];
 }> {
   // Mentors are not job-seekers: by default they simply don't exist in the
-  // portal. The owner's rule — they surface only behind an explicit toggle.
+  // portal. The owner's rule - they surface only behind an explicit toggle.
   const roles: UserRole[] = opts?.everyoneForTeam
     ? ["junior", "mentor", "admin"]
     : opts?.includeMentors
@@ -314,22 +314,22 @@ export async function loadCandidates(opts?: {
   const admin = createAdminClient();
   // Taxonomies come through the service role like everything else here: the
   // portal visitor is not a Supabase user, and the cookie-bound client would
-  // read zero rows — leaving every value unresolved ("center" instead of "מרכז").
+  // read zero rows - leaving every value unresolved ("center" instead of "מרכז").
   const [questions, taxonomies] = await Promise.all([
     employerQuestions(),
     getTaxonomyOptionsForPortal(),
   ]);
   const visibleIds = new Set(questions.map((q) => q.id));
   // The profiles row carries denormalized copies of a few answers. Honor the
-  // employer_visible flag for these too — hiding the question hides the column.
+  // employer_visible flag for these too - hiding the question hides the column.
   const visibleKeys = new Set(questions.map((q) => q.key));
   const showBio = visibleKeys.has("bio");
   const showSpecialization = visibleKeys.has("specialization");
   const showRegion = visibleKeys.has("region");
   const labelsFor = labelResolverFrom(taxonomies);
-  // Experience entries carry tech taxonomy VALUES — resolve them to labels.
+  // Experience entries carry tech taxonomy VALUES - resolve them to labels.
   const techLabels = new Map((taxonomies.tech ?? []).map((o) => [o.value, o.label]));
-  // GenAI options live inline on their question, not in the tech taxonomy —
+  // GenAI options live inline on their question, not in the tech taxonomy -
   // entry techs may reference them (the editors offer both lists since 31/8).
   {
     const genaiQ = questions.find((q) => q.key === "genai_practiced");
@@ -359,7 +359,7 @@ export async function loadCandidates(opts?: {
   const listed = opts?.everyoneForTeam || opts?.onlyId
     ? (profiles ?? [])
     : (profiles ?? []).filter((p) => p.portal_listed !== false && p.is_hidden !== true);
-  // No candidates yet — still return the full filter palette from the questions
+  // No candidates yet - still return the full filter palette from the questions
   // so the recruiter sees the parameters that mirror the profile.
   if (listed.length === 0) {
     return { candidates: [], questions, catalogue: buildCatalogue(questions, taxonomies, []) };
@@ -396,7 +396,7 @@ export async function loadCandidates(opts?: {
     byMember.set(a.profile_id, m);
   }
 
-  // Her city for the header (the owner, 9/9: "למה אין עיר מגורים?") — the
+  // Her city for the header (the owner, 9/9: "למה אין עיר מגורים?") - the
   // select's stored VALUE resolved to its label. Deliberately fetched outside
   // the employer_visible gate: it is location display only, shown exactly
   // where the region already shows.

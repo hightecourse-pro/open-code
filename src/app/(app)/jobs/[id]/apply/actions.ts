@@ -23,7 +23,7 @@ const CV_TYPES = [
 
 /**
  * Submit an application to one of OUR jobs through the wizard: required
- * per-job answers + the built-in "fit" question, plus a CV — the document she
+ * per-job answers + the built-in "fit" question, plus a CV - the document she
  * marked as her default, or a job-tailored upload.
  */
 export async function submitApplication(
@@ -37,9 +37,9 @@ export async function submitApplication(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Mentors are here to give, not to job-hunt — the board is hidden from
+  // Mentors are here to give, not to job-hunt - the board is hidden from
   // Mentors apply like anyone (2026-08-26 board decision; the leftover
-  // refusal here rejected them AFTER they filled the whole form — 30/8).
+  // refusal here rejected them AFTER they filled the whole form - 30/8).
 
   // The job must be visible to her (RLS gates targeted jobs), ours and open.
   const { data: job } = await supabase
@@ -50,13 +50,13 @@ export async function submitApplication(
   if (!job || job.source !== "ours" || job.status !== "open") {
     return { error: "המשרה כבר לא זמינה להגשה." };
   }
-  // Once the candidates went to the client (or further), the door is closed —
+  // Once the candidates went to the client (or further), the door is closed -
   // the owner: no submissions once the job moved to the next stage.
   if (job.pipeline_status !== "published") {
-    return { error: "המשרה הזו כבר התקדמה לשלב הבא — ההגשות הועברו למעסיק ואין מה להגיש כרגע 💜" };
+    return { error: "המשרה הזו כבר התקדמה לשלב הבא - ההגשות הועברו למעסיק ואין מה להגיש כרגע 💜" };
   }
 
-  // Required answers — validated per answer type against the job's questions
+  // Required answers - validated per answer type against the job's questions
   // in the DB, never against whatever the form happened to send.
   const { data: questions } = await supabase
     .from("job_questions")
@@ -107,7 +107,7 @@ export async function submitApplication(
     }
   }
   const fit = String(formData.get("fit") ?? "").trim();
-  if (!fit) return { error: "ספרי לנו למה את מתאימה למשרה — זו הדרך שלך לבלוט 💜" };
+  if (!fit) return { error: "ספרי לנו למה את מתאימה למשרה - זו הדרך שלך לבלוט 💜" };
   answers.fit = fit;
 
   // CV: her main (latest) document, or a job-tailored upload.
@@ -116,7 +116,7 @@ export async function submitApplication(
   if (cvMode === "upload") {
     const file = formData.get("cv_file");
     if (!(file instanceof File) || file.size === 0) return { error: "בחרי קובץ קורות חיים להעלאה." };
-    if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי — עד 10MB." };
+    if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי - עד 10MB." };
     const okType = /\.(pdf|docx?)$/i.test(file.name) || CV_TYPES.includes(file.type);
     if (!okType) return { error: "אפשר להעלות רק PDF או Word (doc/docx)." };
 
@@ -142,7 +142,7 @@ export async function submitApplication(
     cvId = doc.id;
   } else {
     // An explicit pick from her saved documents (the owner, 3/9: "לא ניתן
-    // לבחור מבין הקו\"ח ששמורים") — validated as hers before it counts.
+    // לבחור מבין הקו\"ח ששמורים") - validated as hers before it counts.
     const pickedId = String(formData.get("cv_doc_id") ?? "").trim();
     if (pickedId) {
       const { data: picked } = await supabase
@@ -153,7 +153,7 @@ export async function submitApplication(
         .maybeSingle();
       cvId = picked?.id ?? null;
     }
-    // The CV she marked as default on /cv — never "whatever she uploaded last",
+    // The CV she marked as default on /cv - never "whatever she uploaded last",
     // which could be a CV she tailored for a different job. Pre-migration the
     // column doesn't exist yet (42703), so newest-first stays the fallback.
     const marked = cvId
@@ -177,11 +177,11 @@ export async function submitApplication(
     }
   }
 
-  // An application is a CV in front of an employer — never let one through
+  // An application is a CV in front of an employer - never let one through
   // without a document behind it (the form preselects upload when she has
   // none, but the server is the gate).
   if (!cvId) {
-    return { error: "אי אפשר להגיש בלי קורות חיים — העלי קובץ מותאם או העלי קודם קו״ח בעמוד קורות החיים 💜" };
+    return { error: "אי אפשר להגיש בלי קורות חיים - העלי קובץ מותאם או העלי קודם קו״ח בעמוד קורות החיים 💜" };
   }
 
   const base = { job_id: jobId, applicant_id: user.id, status: "submitted" as const };
@@ -206,7 +206,7 @@ export async function submitApplication(
     link: `/admin/jobs/${jobId}`,
   });
 
-  // Best-effort confirmation email — the application is already in.
+  // Best-effort confirmation email - the application is already in.
   try {
     const [{ data: profile }, { data: authUser }] = await Promise.all([
       supabase.from("profiles").select("first_name, full_name").eq("id", user.id).single(),
@@ -234,7 +234,7 @@ function isUnlocked(app: { status: string; sent_to_client_at: string | null }): 
 }
 
 /**
- * Edit an existing application — answers, fit, and optionally the CV — as
+ * Edit an existing application - answers, fit, and optionally the CV - as
  * long as it's unlocked. The outgoing version is snapshotted so the team can
  * see exactly what changed (and when).
  */
@@ -255,7 +255,7 @@ export async function updateApplication(
     .eq("id", jobId)
     .maybeSingle();
   if (!job || job.source !== "ours" || job.status !== "open" || job.pipeline_status !== "published") {
-    return { error: "המשרה כבר התקדמה לשלב הבא — אי אפשר לעדכן את ההגשה 💜" };
+    return { error: "המשרה כבר התקדמה לשלב הבא - אי אפשר לעדכן את ההגשה 💜" };
   }
 
   const { data: app } = await supabase
@@ -266,10 +266,10 @@ export async function updateApplication(
     .maybeSingle();
   if (!app) return { error: "לא נמצאה הגשה לעדכון." };
   if (!isUnlocked(app)) {
-    return { error: "ההגשה שלך כבר בטיפול הצוות — אי אפשר לערוך אותה יותר 💜" };
+    return { error: "ההגשה שלך כבר בטיפול הצוות - אי אפשר לערוך אותה יותר 💜" };
   }
 
-  // Same validation as a fresh submit — questions from the DB, never the form.
+  // Same validation as a fresh submit - questions from the DB, never the form.
   const { data: questions } = await supabase
     .from("job_questions")
     .select("id, question, required, answer_type, options")
@@ -308,7 +308,7 @@ export async function updateApplication(
     }
   }
   const fit = String(formData.get("fit") ?? "").trim();
-  if (!fit) return { error: "ספרי לנו למה את מתאימה למשרה — זו הדרך שלך לבלוט 💜" };
+  if (!fit) return { error: "ספרי לנו למה את מתאימה למשרה - זו הדרך שלך לבלוט 💜" };
   answers.fit = fit;
 
   // CV: keep the attached one, switch to her main, or upload a fresh file.
@@ -317,7 +317,7 @@ export async function updateApplication(
   if (cvMode === "upload") {
     const file = formData.get("cv_file");
     if (!(file instanceof File) || file.size === 0) return { error: "בחרי קובץ קורות חיים להעלאה." };
-    if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי — עד 10MB." };
+    if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי - עד 10MB." };
     const okType = /\.(pdf|docx?)$/i.test(file.name) || CV_TYPES.includes(file.type);
     if (!okType) return { error: "אפשר להעלות רק PDF או Word (doc/docx)." };
     const safeName = file.name.replace(/[^\w.\-]+/g, "_");
@@ -356,7 +356,7 @@ export async function updateApplication(
   }
   if (!cvId) return { error: "אי אפשר לעדכן בלי קורות חיים 💜" };
 
-  // Snapshot the outgoing version (capped — the story matters, not infinity).
+  // Snapshot the outgoing version (capped - the story matters, not infinity).
   const history = (Array.isArray(app.previous_versions) ? app.previous_versions : []) as Json[];
   const snapshot = {
     saved_at: new Date().toISOString(),
@@ -365,7 +365,7 @@ export async function updateApplication(
   } as unknown as Json;
   const nextHistory = [...history, snapshot].slice(-10);
 
-  // Members have no UPDATE policy on applications (by design) — ownership and
+  // Members have no UPDATE policy on applications (by design) - ownership and
   // the lock were just verified, so the write runs with the service role.
   const { error } = await createAdminClient()
     .from("applications")
@@ -398,7 +398,7 @@ export async function withdrawApplication(jobId: string): Promise<ApplyState> {
     .maybeSingle();
   if (!app) return { error: "לא נמצאה הגשה." };
   if (!isUnlocked(app)) {
-    return { error: "ההגשה כבר בטיפול הצוות — אי אפשר להסיר אותה. אפשר לפנות אלינו מהכפתור הצף 💜" };
+    return { error: "ההגשה כבר בטיפול הצוות - אי אפשר להסיר אותה. אפשר לפנות אלינו מהכפתור הצף 💜" };
   }
   const { error } = await createAdminClient().from("applications").delete().eq("id", app.id);
   if (error) return { error: "ההסרה נכשלה. נסי שוב." };

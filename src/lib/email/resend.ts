@@ -12,7 +12,7 @@ export function isResendConfigured(): boolean {
 
 /**
  * Outside production, mail may only reach addresses on EMAIL_ALLOWLIST
- * (comma-separated) — the staging database holds real members' addresses, and
+ * (comma-separated) - the staging database holds real members' addresses, and
  * a staging test must never land in a real inbox looking exactly like the
  * real thing. Blocked sends return ok:false with a named reason so the caller
  * logs them instead of counting a phantom success.

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * The last-resort boundary — it replaces the ROOT layout, so it must carry its
+ * The last-resort boundary - it replaces the ROOT layout, so it must carry its
  * own <html>/<body> and inline styles (the app's CSS may be exactly what
  * failed). This is what a member sees when even the layout cannot render:
  * still Hebrew, still ours.
@@ -50,7 +50,7 @@ export default function GlobalError({
           />
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: "0 0 8px" }}>משהו השתבש רגע 🙈</h1>
           <p style={{ color: "#574C60", fontSize: 14.5, lineHeight: 1.6, margin: "0 0 24px" }}>
-            לא את — אנחנו. נסי לרענן, ואם זה חוזר — כתבי לנו ונטפל.
+            לא את - אנחנו. נסי לרענן, ואם זה חוזר - כתבי לנו ונטפל.
           </p>
           <button
             onClick={reset}

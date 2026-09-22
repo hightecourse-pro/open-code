@@ -1,6 +1,6 @@
 import { Bone, BoneCircle, BonePage } from "@/components/patterns/route-skeleton";
 
-/** Chat silhouette: title, then the two panes — thread list and open thread. */
+/** Chat silhouette: title, then the two panes - thread list and open thread. */
 export default function ChatLoading() {
   return (
     <BonePage>

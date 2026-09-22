@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Every member the team FINALLY submitted (admin mark "אישור סופי", or actually
- * sent to a client) — one table across all jobs, with the details the office
+ * sent to a client) - one table across all jobs, with the details the office
  * needs at hand: studies, contact, which client, when. Exportable to Excel.
  */
 export default async function AdminSubmissionsPage() {
@@ -75,7 +75,7 @@ export default async function AdminSubmissionsPage() {
     return Array.isArray(v) ? v.join(", ") : String(v);
   };
 
-  // Emails in ONE set-based call — the getUserById loop was seconds of
+  // Emails in ONE set-based call - the getUserById loop was seconds of
   // sequential auth API calls at a few hundred submissions.
   const { data: emailRows } = profileIds.length
     ? await admin.rpc("member_emails", { p_ids: profileIds })
@@ -99,8 +99,8 @@ export default async function AdminSubmissionsPage() {
       graduationYear: answerOf(a.applicant_id, "graduation_year"),
       phone: answerOf(a.applicant_id, "phone"),
       email: emailOf.get(a.applicant_id) ?? "",
-      jobTitle: j?.title ?? "—",
-      clientCompany: (j?.client_id ? clientNameOf.get(j.client_id) : null) ?? j?.company ?? "—",
+      jobTitle: j?.title ?? "-",
+      clientCompany: (j?.client_id ? clientNameOf.get(j.client_id) : null) ?? j?.company ?? "-",
       submittedAt: a.submitted_at,
       sentAt: a.sent_to_client_at,
       status: a.status,
@@ -116,7 +116,7 @@ export default async function AdminSubmissionsPage() {
           <ClipboardList size={24} className="text-brand-purple" /> רשימת הגשות
         </h1>
         <p className="t-body-sm text-ink-500">
-          כל מי שאושרה סופית או הוגשה ללקוח, מכל המשרות — עם פרטי הקשר, הלימודים והחברה.
+          כל מי שאושרה סופית או הוגשה ללקוח, מכל המשרות - עם פרטי הקשר, הלימודים והחברה.
           מתעדכן אוטומטית ברגע שמסמנים &quot;אישור סופי&quot; במשרה.
         </p>
       </div>

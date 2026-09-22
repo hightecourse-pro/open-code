@@ -7,13 +7,13 @@ import { questionnaireReminderEmail } from "@/lib/email/templates";
 
 /**
  * Questionnaire reminders (the owner, 18/9: "יש לנו הרבה שלא סיימו את
- * השאלון — אם עבר שבועיים מאז שנכנסו, לשלוח להן מייל ידידותי").
+ * השאלון - אם עבר שבועיים מאז שנכנסו, לשלוח להן מייל ידידותי").
  *
  * Who: junior / mentor accounts that joined at least 14 days ago and still
- * have profile_completed = false (pending or active — a paying member who
+ * have profile_completed = false (pending or active - a paying member who
  * never finished counts too). Never the team, never paused/rejected.
  * When: not on Shabbat / chag (isEmailDay), at most one reminder per 14 days
- * and at most MAX_REMINDERS in total per member — a nudge, not nagging.
+ * and at most MAX_REMINDERS in total per member - a nudge, not nagging.
  * Every send is written to profile_reminders so the members table shows it.
  *
  * Scheduled daily in vercel.json; also callable with ?secret=CRON_SECRET
@@ -39,7 +39,7 @@ export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
-  // Staging runs only with an EMAIL_ALLOWLIST — emailGate blocks everyone
+  // Staging runs only with an EMAIL_ALLOWLIST - emailGate blocks everyone
   // else, so the only inboxes reachable are the team's own.
   if (!isProductionEnv() && !process.env.EMAIL_ALLOWLIST) {
     return NextResponse.json({ skipped: "not_production", env: appEnv() });
@@ -109,7 +109,7 @@ export async function GET(request: Request) {
       results.push({ id: c.id, name: c.full_name, role: c.role, result: "sent" });
     } else {
       // A blocked address (staging allowlist) is not a failure worth retrying
-      // tomorrow with a different outcome — but it is not recorded as sent.
+      // tomorrow with a different outcome - but it is not recorded as sent.
       if (r.error === "blocked_by_allowlist") blocked++;
       results.push({ id: c.id, name: c.full_name, role: c.role, result: r.error ?? "failed" });
     }

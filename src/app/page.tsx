@@ -15,19 +15,19 @@ import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans, shekels } from "@/lib/payments/plans";
 
 export const metadata = {
-  title: "קוד פתוח — הדרך שלך להייטק מתחילה כאן",
-  description: "קהילה חמה ותומכת לג'וניוריות בפיתוח — קורסים, סשנים דו-שבועיים, משרות, מנטוריות וכלי AI.",
+  title: "קוד פתוח - הדרך שלך להייטק מתחילה כאן",
+  description: "קהילה חמה ותומכת לג'וניוריות בפיתוח - קורסים, סשנים דו-שבועיים, משרות, מנטוריות וכלי AI.",
 };
 
 const FEATURES = [
-  { icon: Briefcase, title: "משרות מותאמות", body: "משרות שלנו ומהשוק — מותאמות לפרופיל ולטכנולוגיות שלך." },
-  { icon: Trophy, title: "האקתון תחרותי", body: "אירוע האקתון עם שת\"פים מהתעשייה — כדי שתוכיחי לכולם את היכולות שלך." },
-  { icon: Users, title: "קהילה תומכת", body: "פורום וצ'אט עם מתכנתות אחרות — שאלות, התייעצויות ושיתופי ידע." },
-  { icon: GraduationCap, title: "ספריית קורסים", body: "קורסים מקצועיים של הייטקורס — קורס פעיל אחד בכל פעם, להחלפה חודשית." },
-  { icon: Video, title: "סשנים דו-שבועיים", body: "מפגשים מקצועיים חיים אחת לשבועיים — וכל ההקלטות זמינות לצפייה בכל זמן." },
-  { icon: Crown, title: "מנטוריות", body: "נשים מנוסות שמלוות אותך אישית — מהצעד הראשון ועד להשתלבות בעבודה." },
+  { icon: Briefcase, title: "משרות מותאמות", body: "משרות שלנו ומהשוק - מותאמות לפרופיל ולטכנולוגיות שלך." },
+  { icon: Trophy, title: "האקתון תחרותי", body: "אירוע האקתון עם שת\"פים מהתעשייה - כדי שתוכיחי לכולם את היכולות שלך." },
+  { icon: Users, title: "קהילה תומכת", body: "פורום וצ'אט עם מתכנתות אחרות - שאלות, התייעצויות ושיתופי ידע." },
+  { icon: GraduationCap, title: "ספריית קורסים", body: "קורסים מקצועיים של הייטקורס - קורס פעיל אחד בכל פעם, להחלפה חודשית." },
+  { icon: Video, title: "סשנים דו-שבועיים", body: "מפגשים מקצועיים חיים אחת לשבועיים - וכל ההקלטות זמינות לצפייה בכל זמן." },
+  { icon: Crown, title: "מנטוריות", body: "נשים מנוסות שמלוות אותך אישית - מהצעד הראשון ועד להשתלבות בעבודה." },
   { icon: FileCheck2, title: "בודקת קורות חיים", body: "ניתוח AI חכם של קורות החיים שלך, עם תובנות והתאמה למשרה." },
-  { icon: Mic, title: "סימולטור ראיונות", body: "תרגול ראיונות עם משוב מחזק — כדי שתגיעי בטוחה." },
+  { icon: Mic, title: "סימולטור ראיונות", body: "תרגול ראיונות עם משוב מחזק - כדי שתגיעי בטוחה." },
 ];
 
 export default async function Home({
@@ -73,7 +73,7 @@ export default async function Home({
           <div className="text-center mb-10">
             <span className="font-mono text-xs text-brand-pink-deep">&lt;מה מקבלים/&gt;</span>
             <h2 className="font-display text-[28px] font-black text-ink-1000 mt-1">הכול במנוי אחד</h2>
-            <p className="t-body text-ink-700 mt-1">כל מה שאת צריכה כדי לפרוץ לעולם הפיתוח — במקום אחד.</p>
+            <p className="t-body text-ink-700 mt-1">כל מה שאת צריכה כדי לפרוץ לעולם הפיתוח - במקום אחד.</p>
           </div>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {FEATURES.map((f) => {
@@ -105,7 +105,7 @@ export default async function Home({
                 : "אפשר לבטל בכל עת, בלי התחייבות."}
             </p>
           </div>
-          {/* One plan, one card — centred rather than stretched, so a single
+          {/* One plan, one card - centred rather than stretched, so a single
               price doesn't read like half a table with the other half missing. */}
           <div className="flex justify-center">
             <div className="bg-white border-[1.5px] border-brand-purple rounded-[20px] p-6 shadow-glow-purple text-center w-full max-w-[320px]">
@@ -124,11 +124,18 @@ export default async function Home({
         </div>
       </section>
 
+      {/* The public map of the site (the owner, 22/9: sitelinks under the
+          app) - crawlable links with descriptive text to every public page. */}
       <footer className="px-6 py-8 text-center text-ink-500 text-sm border-t border-ink-200">
-        קוד פתוח · קהילה למפתחות ג&apos;וניוריות 💜 ·{" "}
-        <Link href="/privacy" className="font-semibold text-brand-purple hover:underline">
-          מדיניות פרטיות
-        </Link>
+        <nav aria-label="אזורי האתר" className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 mb-3">
+          <Link href="/join" className="font-semibold text-brand-purple hover:underline">הצטרפות לקהילה</Link>
+          <Link href="/hackathon-2026" className="font-semibold text-brand-purple hover:underline">האקתון AI 2026</Link>
+          <Link href="/hackathon-2026/partners" className="font-semibold text-brand-purple hover:underline">שותפים וספונסרים</Link>
+          <Link href="/signup" className="font-semibold text-brand-purple hover:underline">הרשמה</Link>
+          <Link href="/login" className="font-semibold text-brand-purple hover:underline">כניסה לקהילה</Link>
+          <Link href="/privacy" className="font-semibold text-brand-purple hover:underline">מדיניות פרטיות</Link>
+        </nav>
+        קוד פתוח · קהילה למפתחות ג&apos;וניוריות 💜
       </footer>
     </main>
   );

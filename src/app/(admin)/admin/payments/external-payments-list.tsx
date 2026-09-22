@@ -61,7 +61,7 @@ function AssignControl({ ids, members }: { ids: string[]; members: MemberOption[
           const what = ids.length === 1 ? "התשלום" : `${ids.length} החיובים`;
           if (!window.confirm(`לשייך את ${what} ל-${name} ולהפעיל לה מנוי?`)) return;
           start(async () => {
-            // Her charges travel together — one שיוך covers the whole group.
+            // Her charges travel together - one שיוך covers the whole group.
             for (const id of ids) await assignExternalPayment(id, profileId);
           });
         }}
@@ -98,10 +98,10 @@ export function ExternalPaymentsList({
   const [pendingDelete, start] = useTransition();
 
   // One row per woman: all her waiting charges folded together, keyed by the
-  // keva's email (name as fallback). needs_review rows stay individual — each
+  // keva's email (name as fallback). needs_review rows stay individual - each
   // must be approved on its own merits.
   const reviewRows = waiting.filter((p) => p.needs_review);
-  // Plain computation, no memo — a couple dozen rows, and the compiler
+  // Plain computation, no memo - a couple dozen rows, and the compiler
   // handles the rest.
   const groups: WaitingGroup[] = (() => {
     const m = new Map<string, WaitingGroup>();
@@ -138,7 +138,7 @@ export function ExternalPaymentsList({
           מחכות לבעלים ({groups.length + reviewRows.length})
         </h3>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          תשלומים שנקלטו בלי חשבון תואם — שורה אחת לכל משלמת, גם כשיש לה כמה חיובים. ברגע שהיא
+          תשלומים שנקלטו בלי חשבון תואם - שורה אחת לכל משלמת, גם כשיש לה כמה חיובים. ברגע שהיא
           נרשמת עם אותו מייל ההפעלה אוטומטית; שילמה במייל אחד ונרשמה באחר? שייכי ידנית.
         </p>
         <div className="flex flex-col">
@@ -151,7 +151,7 @@ export function ExternalPaymentsList({
                     {((p.amount_agorot ?? 0) / 100).toFixed(0)} ₪
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-full bg-tint-warm border border-[#F0DCA8] text-[#8C5E0E] px-2 py-0.5 text-[11px] font-bold">
-                    <ShieldAlert size={11} /> ממתין לאישור — מקור לא מזוהה
+                    <ShieldAlert size={11} /> ממתין לאישור - מקור לא מזוהה
                   </span>
                 </div>
                 <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-2.5 flex-wrap">
@@ -215,7 +215,7 @@ export function ExternalPaymentsList({
                       g.rows.length === 1 ? "התשלום" : `${g.rows.length} החיובים`;
                     if (
                       !window.confirm(
-                        `למחוק את ${what} של ${g.name}? מוחקים רק תשלום שזוכה או שגוי — הפעולה אינה ניתנת לביטול.`
+                        `למחוק את ${what} של ${g.name}? מוחקים רק תשלום שזוכה או שגוי - הפעולה אינה ניתנת לביטול.`
                       )
                     )
                       return;
@@ -231,7 +231,7 @@ export function ExternalPaymentsList({
             );
           })}
           {groups.length === 0 && reviewRows.length === 0 && (
-            <p className="text-ink-500 text-sm py-3">אין תשלומים שמחכים — הכול משויך 💜</p>
+            <p className="text-ink-500 text-sm py-3">אין תשלומים שמחכים - הכול משויך 💜</p>
           )}
         </div>
       </div>
@@ -250,7 +250,7 @@ export function ExternalPaymentsList({
             {claimed.map((p) => (
               <div key={p.id} className="py-2.5 border-b border-ink-100 last:border-b-0 flex items-center gap-3 flex-wrap text-sm">
                 <UserCheck size={15} className="text-success shrink-0" />
-                <span className="font-medium text-ink-900">{p.client_name ?? p.email ?? "—"}</span>
+                <span className="font-medium text-ink-900">{p.client_name ?? p.email ?? "-"}</span>
                 <span className="font-display font-bold text-ink-700">
                   {((p.amount_agorot ?? 0) / 100).toFixed(0)} ₪
                 </span>

@@ -1,7 +1,7 @@
 /**
  * The wizard the member fills in, as data.
  *
- * The questionnaire is not a flat list — it is a sequence of titled steps, and
+ * The questionnaire is not a flat list - it is a sequence of titled steps, and
  * a question belongs to a step by its key. That grouping used to live inside
  * the form component alone, which meant the configuration screen showed a flat
  * list in a different order from the one members actually see: reordering a
@@ -19,14 +19,14 @@ export interface ProfileSection {
 export const PROFILE_SECTIONS: ProfileSection[] = [
   {
     title: "שאלת הפתיחה",
-    hint: "השאלה שקובעת אילו חלקים בשאלון יוצגו — מובנית ולא ניתנת לכיבוי.",
+    hint: "השאלה שקובעת אילו חלקים בשאלון יוצגו - מובנית ולא ניתנת לכיבוי.",
     keys: ["has_experience"],
   },
   {
     title: "קצת עלייך",
-    hint: "פרטי קשר בסיסיים — כדי שנכיר ונדע איך לחזור אלייך.",
+    hint: "פרטי קשר בסיסיים - כדי שנכיר ונדע איך לחזור אלייך.",
     // specialization/coordinator_email/bio used to dangle in the leftover
-    // "פרטים נוספים" step (the PM's "מיותר, יש קודם") — homed here and below.
+    // "פרטים נוספים" step (the PM's "מיותר, יש קודם") - homed here and below.
     keys: [
       "specialization", "id_number", "phone", "region", "city", "street", "house_number",
       "marital_status", "prev_surname", "language_skills",
@@ -34,7 +34,7 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
   },
   {
     title: "הרקע הלימודי",
-    hint: "איפה למדת ובמה התמחית — זה עוזר לנו להתאים לך קורסים ומשרות.",
+    hint: "איפה למדת ובמה התמחית - זה עוזר לנו להתאים לך קורסים ומשרות.",
     keys: [
       "study_place", "coordinator_name", "coordinator_email", "certificate",
       "track_specialization", "unique_courses", "graduation_year",
@@ -42,9 +42,9 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
   },
   {
     title: "ההתנסות והניסיון שלך",
-    // Practicum/bootcamp ARE hands-on experience (PM call) — they live here,
+    // Practicum/bootcamp ARE hands-on experience (PM call) - they live here,
     // not in a separate step.
-    hint: "ניסיון מהתעשייה, פרקטיקום ובוטקאמפ — ככה נדע לאילו משרות לכוון בשבילך.",
+    hint: "ניסיון מהתעשייה, פרקטיקום ובוטקאמפ - ככה נדע לאילו משרות לכוון בשבילך.",
     keys: [
       "years_experience", "exp_role", "exp_tech", "exp_languages", "work_history",
       "practical_experience", "practicum_done", "practicum_kind", "practicum_employer", "practicum_period",
@@ -54,7 +54,7 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
   },
   {
     title: "כישורים וכלים",
-    hint: "מה את יודעת לעשות בפועל — רק מה שבאמת התנסית בו, בלי לחץ 💜",
+    hint: "מה את יודעת לעשות בפועל - רק מה שבאמת התנסית בו, בלי לחץ 💜",
     keys: [
       "dev_tech", "genai_known", "genai_practiced", "ai_tools_used", "mentor_tech", "mentor_ai_experience", "github",
       "ai_project_links", "live_links", "ai_gaps",
@@ -87,7 +87,7 @@ export interface GroupedSection<T> {
 /**
  * Group questions into the wizard's steps, preserving the order they arrive in
  * (which is sort_order) inside each step. Anything whose key belongs to no step
- * lands in a final "פרטים נוספים" — so a question added in the admin screen
+ * lands in a final "פרטים נוספים" - so a question added in the admin screen
  * still reaches the member instead of vanishing.
  *
  * `keep` lets the member-facing form drop questions hidden by the experience
@@ -110,7 +110,7 @@ export function groupBySection<T extends { id: string; key: string }>(
 }
 
 /**
- * The questions in the exact order the member meets them — every step
+ * The questions in the exact order the member meets them - every step
  * flattened back into one list. Used to renumber sort_order after a move, so
  * the stored numbers and the rendered order never drift apart.
  */

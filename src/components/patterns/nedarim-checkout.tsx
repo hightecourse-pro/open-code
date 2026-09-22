@@ -37,7 +37,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   const ref = useRef<HTMLIFrameElement>(null);
   const [height, setHeight] = useState(420);
   const [status, setStatus] = useState<Status>("idle");
-  // Captured once per mount — render stays pure (lint: no Date.now() inline).
+  // Captured once per mount - render stays pure (lint: no Date.now() inline).
   const [renewal] = useState(() =>
     new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "long", timeZone: "Asia/Jerusalem" }).format(
       new Date(Date.now() + 30 * 24 * 3600 * 1000)
@@ -54,7 +54,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   const [idError, setIdError] = useState<string | null>(null);
 
   // After a successful charge, wait for the Nedarim CallBack to activate the
-  // member (it's asynchronous), then continue — avoids bouncing back to /join.
+  // member (it's asynchronous), then continue - avoids bouncing back to /join.
   useEffect(() => {
     if (status !== "success") return;
     let cancelled = false;
@@ -80,7 +80,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
 
   useEffect(() => {
     function onMessage(e: MessageEvent) {
-      // Only the payment iframe may drive this UI — otherwise any window could
+      // Only the payment iframe may drive this UI - otherwise any window could
       // shout "payment succeeded" and walk the member into the success screen.
       if (e.origin !== NEDARIM_ORIGIN) return;
       let raw: unknown = e.data;
@@ -98,7 +98,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
       // arbitrary postMessages drive the payment UI).
       if (typeof data.source === "string") return;
 
-      // Diagnostic — shows exactly what Nedarim posts back (check the console).
+      // Diagnostic - shows exactly what Nedarim posts back (check the console).
       console.log("[nedarim]", data);
 
       const name = (data.Name ?? data.name) as string | undefined;
@@ -127,20 +127,20 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
   }, []);
 
   function post(name: string, value: unknown) {
-    // Addressed to Nedarim explicitly — card details must never be posted to
+    // Addressed to Nedarim explicitly - card details must never be posted to
     // whatever happens to be in the frame.
     ref.current?.contentWindow?.postMessage({ Name: name, Value: value }, NEDARIM_ORIGIN);
   }
 
   if (status === "success") {
-    // OUR renewal date, said out loud — the Nedarim receipt sometimes prints
+    // OUR renewal date, said out loud - the Nedarim receipt sometimes prints
     // a confusing "NextDate" from their fixed keva day (e.g. a past 28/08 on
     // a 30/08 signup); the membership month is what we honor.
     return (
       <Alert variant="success" title="התשלום התקבל! 💜">
         {activationTimedOut ? (
           <>
-            תודה רבה! ההפעלה אורכת רגע. רענני את העמוד בעוד דקה —
+            תודה רבה! ההפעלה אורכת רגע. רענני את העמוד בעוד דקה -
             <Link href="/forum" className="font-semibold text-brand-purple underline">
               {" "}או נסי להמשיך לקהילה
             </Link>
@@ -148,7 +148,7 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
           </>
         ) : (
           <>
-            תודה רבה. מפעיל את החשבון שלך — עוד רגע נעביר אותך לקהילה…
+            תודה רבה. מפעיל את החשבון שלך - עוד רגע נעביר אותך לקהילה…
             <span className="block mt-1 text-[12.5px]">
               המנוי שלך מתחדש ב-{renewal}; את התאריך המדויק תמיד רואים ב״המנוי שלי״.
             </span>
@@ -194,12 +194,12 @@ export function NedarimCheckout({ fields }: { fields: Record<string, string> }) 
         </Field>
       </div>
       <p className="text-[12px] text-ink-500 -mt-1.5">
-        הפרטים משמשים לאישור התשלום ולקבלה — לא מוצגים לאף אחת אחרת.
+        הפרטים משמשים לאישור התשלום ולקבלה - לא מוצגים לאף אחת אחרת.
       </p>
       <iframe
         ref={ref}
         src={NEDARIM_IFRAME_URL}
-        title="תשלום מאובטח — נדרים פלוס"
+        title="תשלום מאובטח - נדרים פלוס"
         className="w-full rounded-md border border-ink-200"
         style={{ height }}
         onLoad={() => post("GetHeight", "")}

@@ -13,7 +13,7 @@ export function AddKeyForm({ next }: { next?: string | null }) {
   useEffect(() => {
     if (!state.ok) return;
     formRef.current?.reset();
-    // She came here from a tool that told her to add a key — take her back to
+    // She came here from a tool that told her to add a key - take her back to
     // it the moment the key is verified, with a beat to read the ✓ first.
     if (next) {
       const t = setTimeout(() => router.push(next), 900);

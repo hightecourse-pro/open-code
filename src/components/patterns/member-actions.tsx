@@ -50,7 +50,7 @@ export function MemberActions({
     start(async () => {
       const res = await setMemberStatus(profileId, s);
       // A refused activation must be SAID (e.g. junior with no live
-      // subscription) — a silent no-op reads as a broken button.
+      // subscription) - a silent no-op reads as a broken button.
       if (res?.error) alert(res.error);
     });
 

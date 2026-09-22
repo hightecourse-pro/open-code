@@ -30,13 +30,13 @@ async function canWrite(): Promise<boolean> {
  */
 /**
  * The composer sends editor HTML; legacy clients send plain text. HTML passes
- * the sanitizing allowlist, and every length rule is measured on the words —
+ * the sanitizing allowlist, and every length rule is measured on the words -
  * markup must never eat a member's character budget.
  */
 function normalizeBody(raw: string): { body: string; plain: string } {
   const trimmed = raw.trim();
   if (!isRichHtml(trimmed)) {
-    // Tagless editor output can still carry entities ("&nbsp;") — store it
+    // Tagless editor output can still carry entities ("&nbsp;") - store it
     // decoded so plain-path renderers never show entity codes.
     const decoded = decodeHtmlEntities(trimmed);
     return { body: decoded, plain: decoded };
@@ -61,7 +61,7 @@ export async function editPost(postId: string, formData: FormData): Promise<{ er
     .maybeSingle();
   if (!post || post.author_id !== user.id) return { error: "אפשר לערוך רק פוסט שכתבת." };
   if (!withinEditWindow(post.created_at)) {
-    return { error: "חלון העריכה נסגר — אפשר לערוך עד 10 דקות אחרי הפרסום." };
+    return { error: "חלון העריכה נסגר - אפשר לערוך עד 10 דקות אחרי הפרסום." };
   }
 
   const { error } = await supabase
@@ -95,7 +95,7 @@ export async function editComment(
     .maybeSingle();
   if (!comment || comment.author_id !== user.id) return { error: "אפשר לערוך רק תגובה שכתבת." };
   if (!withinEditWindow(comment.created_at)) {
-    return { error: "חלון העריכה נסגר — אפשר לערוך עד 10 דקות אחרי הפרסום." };
+    return { error: "חלון העריכה נסגר - אפשר לערוך עד 10 דקות אחרי הפרסום." };
   }
 
   const { error } = await supabase
@@ -183,13 +183,13 @@ export async function createPost(
     ? (intentRaw as PostIntent)
     : "knowledge";
   const kind: PostKind = String(formData.get("kind") ?? "feed") === "forum" ? "forum" : "feed";
-  // Optional explicit subject (the owner, 6/9) — empty stays null and the
+  // Optional explicit subject (the owner, 6/9) - empty stays null and the
   // list keeps deriving a title from the body's first line.
   const title = String(formData.get("title") ?? "").trim().slice(0, 120) || null;
 
   const attachIds = attachmentIdsFrom(formData);
   if (plain.length < 2 && attachIds.length === 0) return { error: "כתבי משהו קצר לפני ששולחים 🙂" };
-  if (plain.length > 5000) return { error: "הפוסט ארוך מדי — עד 5,000 תווים. אפשר לפצל לכמה פוסטים 💜" };
+  if (plain.length > 5000) return { error: "הפוסט ארוך מדי - עד 5,000 תווים. אפשר לפצל לכמה פוסטים 💜" };
 
   const supabase = await createClient();
   const {

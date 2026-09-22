@@ -6,7 +6,7 @@ import { saveCoordinatorReview, type ReviewState } from "../../../actions";
 import type { CoordinatorReview } from "@/lib/coordinator-data";
 
 const SCALE = [
-  { value: "", label: "— לא דירגתי —" },
+  { value: "", label: "- לא דירגתי -" },
   { value: "5", label: "5 · מצוינת" },
   { value: "4", label: "4 · טובה מאוד" },
   { value: "3", label: "3 · טובה" },
@@ -14,7 +14,7 @@ const SCALE = [
   { value: "1", label: "1 · דורשת חיזוק" },
 ];
 
-/** The coordinator's private assessment — hers and the team's eyes only. */
+/** The coordinator's private assessment - hers and the team's eyes only. */
 export function CoordinatorReviewForm({
   profileId,
   existing,
@@ -69,7 +69,7 @@ export function CoordinatorReviewForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="האם מצאה עבודה?" htmlFor="rv-found">
           <Select id="rv-found" name="found_job" value={found} onChange={(e) => setFound(e.target.value)}>
-            <option value="">— לא ידוע לי —</option>
+            <option value="">- לא ידוע לי -</option>
             <option value="yes">כן, מצאה עבודה 🎉</option>
             <option value="no">עדיין מחפשת</option>
           </Select>
@@ -94,7 +94,7 @@ export function CoordinatorReviewForm({
           rows={4}
           maxLength={4000}
           defaultValue={existing?.note ?? ""}
-          placeholder="כל מה שיעזור לנו להכיר אותה טוב יותר — חוזקות, אופי, דברים לשים לב אליהם…"
+          placeholder="כל מה שיעזור לנו להכיר אותה טוב יותר - חוזקות, אופי, דברים לשים לב אליהם…"
         />
       </Field>
 

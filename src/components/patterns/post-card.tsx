@@ -16,7 +16,7 @@ export interface FeedPost {
   is_official: boolean;
   is_pinned: boolean;
   created_at: string;
-  /** Set once she fixed her words — shown quietly next to the time. */
+  /** Set once she fixed her words - shown quietly next to the time. */
   edited_at?: string | null;
   /** True when the signed-in member wrote this one. */
   mine?: boolean;
@@ -28,7 +28,7 @@ export interface FeedPost {
   } | null;
   likeCount?: number;
   liked?: boolean;
-  /** Who liked — full names, shown under the buttons (the owner, 2/9). */
+  /** Who liked - full names, shown under the buttons (the owner, 2/9). */
   likerNames?: string[];
   saved?: boolean;
   comments?: PostComment[];

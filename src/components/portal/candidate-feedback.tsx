@@ -21,7 +21,7 @@ export function CandidateFeedback({
 }: {
   jobId: string;
   profileId: string;
-  /** Full display name — the heading invites by first name. */
+  /** Full display name - the heading invites by first name. */
   candidateName: string;
   initialMarked: boolean;
   initialNote: string | null;
@@ -39,7 +39,7 @@ export function CandidateFeedback({
 
   function toggleMark() {
     const next = !marked;
-    setMarked(next); // optimistic — revert on failure
+    setMarked(next); // optimistic - revert on failure
     startMark(async () => {
       const res = await saveCandidateFeedback(jobId, profileId, { interviewMarked: next });
       if (!res.ok) setMarked(!next);
@@ -109,7 +109,7 @@ export function CandidateFeedback({
           <span className="text-xs font-semibold text-success">נשמר ✓</span>
         )}
         {noteError && (
-          <span className="text-xs font-semibold text-danger">השמירה נכשלה — נסו שוב</span>
+          <span className="text-xs font-semibold text-danger">השמירה נכשלה - נסו שוב</span>
         )}
       </div>
     </div>

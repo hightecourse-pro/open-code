@@ -15,7 +15,7 @@ export interface ApplyQuestion {
   sort_order: number;
   required: boolean;
   answer_type: QuestionAnswerType;
-  /** Choice options (select/multiselect) — empty for free-text/number. */
+  /** Choice options (select/multiselect) - empty for free-text/number. */
   options: string[];
 }
 
@@ -23,14 +23,14 @@ export interface ApplyCvDoc {
   id: string;
   label: string;
   created_at: string;
-  /** The CV she marked as default on /cv — false for every doc pre-migration. */
+  /** The CV she marked as default on /cv - false for every doc pre-migration. */
   is_default?: boolean;
 }
 
 /**
  * The application wizard form: a friendly profile nudge, the job's questions
- * (required or optional — optional ones are labeled "רשות"), the built-in
- * "fit" question, and the CV choice — the CV she marked as default (or her
+ * (required or optional - optional ones are labeled "רשות"), the built-in
+ * "fit" question, and the CV choice - the CV she marked as default (or her
  * newest, if she hasn't marked one) or a job-tailored upload.
  */
 export function ApplyForm({
@@ -77,18 +77,18 @@ export function ApplyForm({
       {/* A successful submit REDIRECTS (the form is gone for good), so the
           stale draft just ages out on its 7-day TTL. */}
       {!edit && <FormDraft storageKey={`draft:apply:${jobId}`} />}
-      {/* Friendly nudge — never blocking */}
+      {/* Friendly nudge - never blocking */}
       <div className="flex gap-2.5 items-start bg-tint-indigo border border-[#C9D2F0] rounded-md p-3 px-4 text-[13.5px] text-ink-700">
         <Sparkles size={18} className="text-brand-indigo shrink-0 mt-0.5" />
         <span>
-          רגע לפני — כדאי לוודא שהפרופיל שלך מעודכן, כי הוא חלק ממה שנציג עלייך.{" "}
+          רגע לפני - כדאי לוודא שהפרופיל שלך מעודכן, כי הוא חלק ממה שנציג עלייך.{" "}
           <Link href="/profile" target="_blank" rel="noopener" className="text-brand-purple font-semibold">
             לעדכון הפרופיל
           </Link>
         </span>
       </div>
 
-      {/* Per-job questions — rendered by their answer type */}
+      {/* Per-job questions - rendered by their answer type */}
       {questions.map((q, i) => (
         <Field
           key={q.id}
@@ -146,7 +146,7 @@ export function ApplyForm({
             )
           ) : q.answer_type === "multiselect" ? (
             // At-least-one is enforced server-side (only when the question is
-            // required) — checkboxes can't carry a group-level required
+            // required) - checkboxes can't carry a group-level required
             // attribute.
             <div className="flex flex-col gap-2 rounded-sm border border-ink-300 bg-ink-0 px-3.5 py-3">
               {q.options.map((opt) => (
@@ -175,7 +175,7 @@ export function ApplyForm({
           id="fit"
           name="fit"
           required
-          placeholder="ספרי בכמה משפטים למה דווקא את — זו ההזדמנות שלך לבלוט 💜"
+          placeholder="ספרי בכמה משפטים למה דווקא את - זו ההזדמנות שלך לבלוט 💜"
           defaultValue={edit?.fit ?? ""}
         />
       </Field>
@@ -184,7 +184,7 @@ export function ApplyForm({
       <div className="flex flex-col gap-2">
         <span className="text-xs font-semibold text-ink-700">אילו קורות חיים לצרף?</span>
         <p className="text-[12px] text-ink-500 -mt-1">
-          רגע לפני ששולחות — רוצה שה-AI יעבור על קורות החיים שלך?{" "}
+          רגע לפני ששולחות - רוצה שה-AI יעבור על קורות החיים שלך?{" "}
           <Link href="/ai/cv-checker" target="_blank" rel="noopener" className="text-brand-purple font-semibold underline">
             לבדיקה מהירה ←
           </Link>

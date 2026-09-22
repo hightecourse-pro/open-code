@@ -48,7 +48,7 @@ const { data: after } = await sb.from("profiles").select("status, role").eq("id"
 console.log(`   after promote     → status=${after?.status} role=${after?.role}`);
 
 if (after?.status === "active" && after?.role === "admin") {
-  console.log(`\n🎉 ready — log in at /login with:\n   ${EMAIL}\n   ${PASSWORD}`);
+  console.log(`\n🎉 ready - log in at /login with:\n   ${EMAIL}\n   ${PASSWORD}`);
 } else {
-  console.log(`\n⚠️  guard still blocking — run supabase/migrations/20260615090300_guard_fix.sql, then re-run this script.`);
+  console.log(`\n⚠️  guard still blocking - run supabase/migrations/20260615090300_guard_fix.sql, then re-run this script.`);
 }

@@ -3,7 +3,7 @@
 //
 // PRIVACY: loadClientJob() returns the job only if it belongs to this client
 // (null → 404, without leaking whether the job exists), and its candidates come
-// through loadCandidates() — listed / employer-visible members only. No
+// through loadCandidates() - listed / employer-visible members only. No
 // member_crm, no personal fields, no VIP.
 
 import { cache } from "react";
@@ -24,7 +24,7 @@ import { requirePortalClient } from "@/app/portal/session";
  */
 const clientJob = cache(loadClientJob);
 
-/** "3 מועמדות" — with the singular form for one. */
+/** "3 מועמדות" - with the singular form for one. */
 function candidatesLabel(n: number): string {
   if (n === 0) return "אין מועמדות עדיין";
   if (n === 1) return "מועמדת אחת";
@@ -62,7 +62,7 @@ export default async function PortalJobPage({
     favoriteIds(client.id),
   ]);
 
-  // Not this client's job (or not a job at all) is a 404 either way — the check
+  // Not this client's job (or not a job at all) is a 404 either way - the check
   // lives in loadClientJob so this page can never surface someone else's roster.
   if (!job) notFound();
 
@@ -120,7 +120,7 @@ export default async function PortalJobPage({
 
         {job.candidates.length === 0 ? (
           <p className="t-body-sm rounded-xl border border-dashed border-ink-200 bg-white/70 px-4 py-10 text-center text-ink-500">
-            אנחנו עוד מחפשות מועמדות למשרה הזו. ברגע שנמצא — תראו אותן כאן ותקבלו עדכון.
+            אנחנו עוד מחפשות מועמדות למשרה הזו. ברגע שנמצא - תראו אותן כאן ותקבלו עדכון.
           </p>
         ) : (
           <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 list-none p-0 m-0">

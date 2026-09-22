@@ -1,7 +1,7 @@
 // Israeli calendar rules for outgoing member email (the owner, 10/9): nothing
 // goes out on Shabbat or on a יום טוב, and a send-date that lands on one moves
 // EARLIER to the nearest weekday. Uses @hebcal/core with the ISRAEL holiday
-// schedule (one-day chagim), so only actual יום-טוב days block — chol hamoed
+// schedule (one-day chagim), so only actual יום-טוב days block - chol hamoed
 // and diaspora second days do not.
 import { HDate, HebrewCalendar, flags } from "@hebcal/core";
 
@@ -47,7 +47,7 @@ export function shiftDay(ymd: string, days: number): string {
 }
 
 /**
- * The latest email-eligible day that is on or before the ideal one — a
+ * The latest email-eligible day that is on or before the ideal one - a
  * reminder scheduled for Shabbat/chag moves earlier, never later (up to a
  * week of festival days).
  */

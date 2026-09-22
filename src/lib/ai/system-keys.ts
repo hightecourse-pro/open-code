@@ -78,7 +78,7 @@ export type PoolResult<T> = { ok: true; data: T } | { ok: false; reason: "no_key
 /**
  * Run a Gemini call on the pool: try each active key in turn, stepping over
  * any that has run out, and record what happened. Exhausted keys are flagged
- * so the admin can see it — and revived automatically on their next success.
+ * so the admin can see it - and revived automatically on their next success.
  */
 export async function withPoolKey<T>(run: (apiKey: string) => Promise<T>): Promise<PoolResult<T>> {
   const admin = createAdminClient();

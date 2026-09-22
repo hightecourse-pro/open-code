@@ -17,7 +17,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
 
-  // A profile is complete only with at least one CV — the wizard collects one
+  // A profile is complete only with at least one CV - the wizard collects one
   // on the final step when she has none. Mentors included (Shira 2026-08-28):
   // the team wants to see a mentor's CV in her application too.
   const { count: cvCount } = await supabase
@@ -25,7 +25,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
     .select("id", { count: "exact", head: true })
     .eq("profile_id", profile.id);
   // A junior must leave a CV; a mentor is warmly encouraged, never blocked
-  // (the owner, 10/9 — was required for all since 28/8).
+  // (the owner, 10/9 - was required for all since 28/8).
   const requireCv = profile.role !== "mentor" && (cvCount ?? 0) === 0;
   const cvOptional = profile.role === "mentor" && (cvCount ?? 0) === 0;
 
@@ -56,13 +56,13 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
             </h1>
           </div>
         </div>
-        {/* The intro speaks to HER track — a mentor is here to give, not to be
+        {/* The intro speaks to HER track - a mentor is here to give, not to be
             placed (the owner, 10/9: "מה קשור המלל הזה למנטורית?"). */}
         {profile.role === "mentor" ? (
           <p className="t-body-sm text-ink-500 mb-5">
-            המידע הזה עוזר לנו להכיר אותך — במה את חזקה ואיך תרצי לתרום — כדי לחבר אלייך את
+            המידע הזה עוזר לנו להכיר אותך - במה את חזקה ואיך תרצי לתרום - כדי לחבר אלייך את
             הג׳וניוריות הנכונות. תמיד תוכלי לעדכן הכול מעמוד הפרופיל. מסירת הפרטים אינה חובה
-            חוקית — הכול מפורט ב
+            חוקית - הכול מפורט ב
             <a
               href="/privacy"
               target="_blank"
@@ -74,9 +74,9 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           </p>
         ) : (
           <p className="t-body-sm text-ink-500 mb-5">
-            המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות — ולבחור הזדמנויות במיוחד בשבילך.
+            המידע הזה עוזר לנו להתאים לך משרות, קורסים ומנטוריות - ולבחור הזדמנויות במיוחד בשבילך.
             תמיד תוכלי לעדכן הכול מעמוד הפרופיל. מסירת הפרטים אינה חובה חוקית; מה שמיועד למעסיקות
-            יוצג להן רק כשנגיש אותך למשרה — הכול מפורט ב
+            יוצג להן רק כשנגיש אותך למשרה - הכול מפורט ב
             <a
               href="/privacy"
               target="_blank"
@@ -92,7 +92,7 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
           // React otherwise KEEPS the wizard's state across the server
           // re-render, and the junior gate's unanswered expChoice=null carried
           // into the mentor question set (which has no gate to answer) leaves
-          // zero steps and a dead "הבא" — the owner's stuck wizard, 10/9.
+          // zero steps and a dead "הבא" - the owner's stuck wizard, 10/9.
           key={profile.role}
           firstName={profile.first_name ?? profile.full_name?.split(" ")[0] ?? ""}
           lastName={profile.last_name ?? profile.full_name?.split(" ").slice(1).join(" ") ?? ""}
@@ -107,11 +107,11 @@ export async function ProfileOnboarding({ profile }: { profile: Profile }) {
         />
         {profile.role === "mentor" && profile.status !== "active" && (
           /* The way out at EVERY stage (the owner, 31/8): a mis-click on the
-             mentor track must never trap her — one tap back to the regular
+             mentor track must never trap her - one tap back to the regular
              member questionnaire, shared answers kept. */
           <div className="mt-5 pt-4 border-t border-ink-100 flex items-center gap-3 flex-wrap">
             <span className="flex-1 min-w-[220px] text-[12.5px] text-ink-500">
-              לחצת על מסלול מנטורית בטעות? אפשר לחזור למסלול הרגיל — מה שכבר מילאת יישמר.
+              לחצת על מסלול מנטורית בטעות? אפשר לחזור למסלול הרגיל - מה שכבר מילאת יישמר.
             </span>
             <ConfirmActionButton
               action={revertMentorFromWizard}

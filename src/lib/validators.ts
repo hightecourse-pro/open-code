@@ -1,6 +1,6 @@
 // Field validators shared by the profile form (client) and saveProfile (server).
 
-/** Israeli ID (תעודת זהות) — 9 digits with the standard check-digit. */
+/** Israeli ID (תעודת זהות) - 9 digits with the standard check-digit. */
 export function isValidIsraeliId(raw: string): boolean {
   const id = String(raw).trim();
   if (!/^\d{5,9}$/.test(id)) return false;
@@ -14,7 +14,7 @@ export function isValidIsraeliId(raw: string): boolean {
   return sum % 10 === 0;
 }
 
-/** Israeli mobile number — 05X followed by 7 digits (dashes/spaces allowed). */
+/** Israeli mobile number - 05X followed by 7 digits (dashes/spaces allowed). */
 export function isValidIsraeliMobile(raw: string): boolean {
   const digits = String(raw).replace(/[\s-]/g, "");
   return /^05\d{8}$/.test(digits);

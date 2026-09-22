@@ -21,7 +21,7 @@ export default async function AdminAnalyticsPage() {
   ]);
 
   // Totals aggregated in the DATABASE (2026-08-29): content_views grows with
-  // every open forever — shipping member×content rows to this page stopped
+  // every open forever - shipping member×content rows to this page stopped
   // scaling (and silently truncated at 1000 rows).
   const adminClient = createAdminClient();
   const [{ data: ownerTotals }, { data: summaryRows }] = await Promise.all([
@@ -41,7 +41,7 @@ export default async function AdminAnalyticsPage() {
   const byCourse = rollup("course");
   const bySession = rollup("session");
 
-  // A משוב without a name is unusable — an admin needs to know who to answer.
+  // A משוב without a name is unusable - an admin needs to know who to answer.
   // Only the members who actually wrote something are looked up.
   // One merged feedback set: course_feedback wins per (member, course); the
   // enrollments copy fills anything predating the table.
@@ -55,8 +55,8 @@ export default async function AdminAnalyticsPage() {
   for (const f of extraFb ?? []) mergedFb.set(fbKey(f), f);
   const allFb = [...mergedFb.values()];
 
-  // Names for EVERY feedback row — a stars-only rating is listed per course
-  // too (30/8), and an admin needs to know whose it is — and for every
+  // Names for EVERY feedback row - a stars-only rating is listed per course
+  // too (30/8), and an admin needs to know whose it is - and for every
   // enrolled member: the per-course "מי רשומה" list (the owner, 31/8).
   const nameIds = [
     ...new Set([...allFb.map((e) => e.profile_id), ...(enrollments ?? []).map((e) => e.profile_id)]),
@@ -72,7 +72,7 @@ export default async function AdminAnalyticsPage() {
     const ratings = fbRows.map((e) => e.rating).filter((r): r is number => typeof r === "number");
     const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : null;
     const opens = byCourse.get(c.id);
-    // Who holds the course RIGHT NOW — "returned" means she swapped it back
+    // Who holds the course RIGHT NOW - "returned" means she swapped it back
     // into the rolling library, so she counts only in the all-time number.
     const current = es
       .filter((e) => e.status !== "returned")
@@ -103,7 +103,7 @@ export default async function AdminAnalyticsPage() {
     };
   });
 
-  // Only sessions anyone actually entered — the full list would be mostly
+  // Only sessions anyone actually entered - the full list would be mostly
   // zeroes and would bury the ones that matter.
   const sessionStats = (sessions ?? [])
     .map((s) => ({ ...s, opens: bySession.get(s.id) }))
@@ -127,8 +127,8 @@ export default async function AdminAnalyticsPage() {
   const summary = [
     { label: "לומדות פעילות", value: allLearnersCount },
     { label: "סה״כ כניסות לתוכן", value: totalOpens },
-    { label: "הקורס הנצפה ביותר", value: topCourse && topCourse.views > 0 ? topCourse.title : "—" },
-    { label: "הסשן הנצפה ביותר", value: topSession ? topSession.title : "—" },
+    { label: "הקורס הנצפה ביותר", value: topCourse && topCourse.views > 0 ? topCourse.title : "-" },
+    { label: "הסשן הנצפה ביותר", value: topSession ? topSession.title : "-" },
   ];
 
   return (
@@ -137,7 +137,7 @@ export default async function AdminAnalyticsPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;אנליטיקה/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">אנליטיקת למידה</h1>
         <p className="t-body-sm text-ink-700">
-          מי נכנסה לאיזה תוכן ומתי — קורסים והקלטות סשנים כאחד. הדירוגים והמשובים מתמלאים כשחברה
+          מי נכנסה לאיזה תוכן ומתי - קורסים והקלטות סשנים כאחד. הדירוגים והמשובים מתמלאים כשחברה
           מסמנת שלמדה קורס ומשאירה משוב במסך הקורס.
         </p>
       </div>

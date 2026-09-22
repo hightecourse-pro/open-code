@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 // The open/closed choice lives in localStorage (per storageKey) so it survives
 // reloads. It's read through useSyncExternalStore: the server snapshot says
 // "unknown", so SSR and hydration render defaultOpen and the remembered state
-// applies right after mount — a one-frame flash instead of a hydration
+// applies right after mount - a one-frame flash instead of a hydration
 // mismatch. A memory fallback keeps the toggle working when storage is
 // unavailable (private mode).
 const memoryStore = new Map<string, string>();
@@ -27,7 +27,7 @@ function readStored(key: string): string | null {
     const value = window.localStorage.getItem(key);
     if (value !== null) return value;
   } catch {
-    // Storage unavailable — the memory fallback answers.
+    // Storage unavailable - the memory fallback answers.
   }
   return memoryStore.get(key) ?? null;
 }
@@ -37,7 +37,7 @@ function writeStored(key: string, value: string) {
   try {
     window.localStorage.setItem(key, value);
   } catch {
-    // Not persisted — still toggles for this visit via the memory fallback.
+    // Not persisted - still toggles for this visit via the memory fallback.
   }
   listeners.forEach((notify) => notify());
 }
@@ -48,7 +48,7 @@ export function openCollapsible(storageKey: string) {
 }
 
 /**
- * A card section she can fold away — the whole header is the toggle, and her
+ * A card section she can fold away - the whole header is the toggle, and her
  * choice is remembered per section (storageKey) across visits. While it's
  * closed, a count badge keeps saying how much is waiting inside.
  */

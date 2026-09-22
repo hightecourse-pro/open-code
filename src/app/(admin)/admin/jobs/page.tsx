@@ -17,7 +17,7 @@ export default async function AdminJobsPage({
   searchParams: Promise<{ client?: string; created?: string }>;
 }) {
   await requireRole("admin");
-  // Arriving from the CRM's "משרה חדשה ללקוח" — preselect that client.
+  // Arriving from the CRM's "משרה חדשה ללקוח" - preselect that client.
   const { client: initialClientId, created } = await searchParams;
   const supabase = await createClient();
   const { data: jobs } = await supabase
@@ -38,7 +38,7 @@ export default async function AdminJobsPage({
     company_name: c.company_name,
   }));
 
-  // Applications are managed inside each job's מועמדות tab — here we only
+  // Applications are managed inside each job's מועמדות tab - here we only
   // surface per-job counts, aggregated in the database (the raw-rows fetch
   // silently truncated at 1000 applications).
   const { data: countRows } = await createAdminClient().rpc("job_app_counts");
@@ -53,7 +53,7 @@ export default async function AdminJobsPage({
         <span className="font-mono text-xs text-brand-pink-deep">&lt;משרות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">ניהול משרות</h1>
         <p className="text-sm text-ink-500 mt-1">
-          כל משרה נפתחת לדף ניהול מלא — פרסום, שאלות, מועמדות ולקוח.
+          כל משרה נפתחת לדף ניהול מלא - פרסום, שאלות, מועמדות ולקוח.
         </p>
       </div>
 

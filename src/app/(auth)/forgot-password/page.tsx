@@ -13,7 +13,7 @@ export default function ForgotPasswordPage() {
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="t-h2">שכחת סיסמה?</h1>
-        <p className="t-body-sm text-ink-500 mt-1">אין בעיה — נשלח לך קישור לאיפוס במייל.</p>
+        <p className="t-body-sm text-ink-500 mt-1">אין בעיה - נשלח לך קישור לאיפוס במייל.</p>
       </div>
 
       {state.error && <Alert variant="danger">{state.error}</Alert>}

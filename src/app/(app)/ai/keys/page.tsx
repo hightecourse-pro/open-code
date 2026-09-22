@@ -31,7 +31,7 @@ export default async function AiKeysPage({
   // A key is only useful with the AI tools, which are part of the membership.
   // A free member is EXPLAINED in place, never thrown at the checkout with no
   // context (the owner, 2026-08-30: "להציע בנחמדות לשדרג ולהעביר לתשלום
-  // בלחיצה — לאחר התשלום שיפתח").
+  // בלחיצה - לאחר התשלום שיפתח").
   const profile = await requireCommunityAccess();
   if (!isSubscriber(profile)) {
     return (
@@ -40,20 +40,20 @@ export default async function AiKeysPage({
           <span className="font-mono text-xs text-brand-pink-deep">&lt;מפתחות AI/&gt;</span>
           <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">מפתחות ה-AI שלי</h1>
           <p className="t-body-sm text-ink-700">
-            כאן שומרים את מפתח ה-Google שמפעיל את כלי ה-AI — בודקת קורות החיים וסימולטור
+            כאן שומרים את מפתח ה-Google שמפעיל את כלי ה-AI - בודקת קורות החיים וסימולטור
             הראיונות.
           </p>
         </div>
         <UpgradeCard
           mentorWaiting={profile.role === "mentor"}
           title="כלי ה-AI נפתחים עם מנוי 💜"
-          body="עם מנוי תוכלי לחבר מפתח Google משלך ולקבל ניתוח קורות חיים חכם והכנה לראיונות. לחיצה אחת — ואחרי התשלום הכול נפתח."
+          body="עם מנוי תוכלי לחבר מפתח Google משלך ולקבל ניתוח קורות חיים חכם והכנה לראיונות. לחיצה אחת - ואחרי התשלום הכול נפתח."
           cta="לשדרוג ולתשלום"
         />
       </div>
     );
   }
-  // Where she came from (a tool page) — saving a key sends her straight back
+  // Where she came from (a tool page) - saving a key sends her straight back
   // there. Internal paths only, so the param can never become an open redirect.
   const sp = await searchParams;
   const next = typeof sp.next === "string" && /^\/(?!\/)/.test(sp.next) ? sp.next : null;
@@ -66,14 +66,14 @@ export default async function AiKeysPage({
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מפתחות AI/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">מפתחות ה-AI שלי</h1>
         <p className="t-body-sm text-ink-700">
-          כלי ה-AI (בודקת קו&quot;ח וסימולטור הראיונות) עובדים עם מפתח Google משלך — כך השליטה והמכסה
+          כלי ה-AI (בודקת קו&quot;ח וסימולטור הראיונות) עובדים עם מפתח Google משלך - כך השליטה והמכסה
           בידיים שלך. המפתח נשמר אצלנו <b>מוצפן</b> ולא נחשף לאף אחת אחרת.
         </p>
       </div>
 
       {!hasActive && (
         <div className="bg-tint-warm border border-[#F8D98C] rounded-md p-4 text-[13.5px] text-[#8C5E0E]">
-          עדיין אין לך מפתח פעיל — כלי ה-AI לא יעבדו עד שתוסיפי מפתח אחד למטה.
+          עדיין אין לך מפתח פעיל - כלי ה-AI לא יעבדו עד שתוסיפי מפתח אחד למטה.
         </div>
       )}
 
@@ -151,7 +151,7 @@ export default async function AiKeysPage({
 
       {keys.some((k) => k.status !== "active") && (
         <div className="bg-tint-purple border border-[#DDC9EC] rounded-md p-4 text-[13.5px] text-ink-700">
-          💡 מפתח שנגמרה לו המכסה? פשוט צרי מפתח חדש מחשבון Google אחר והוסיפי אותו כאן — נשתמש בו אוטומטית.
+          💡 מפתח שנגמרה לו המכסה? פשוט צרי מפתח חדש מחשבון Google אחר והוסיפי אותו כאן - נשתמש בו אוטומטית.
         </div>
       )}
     </div>

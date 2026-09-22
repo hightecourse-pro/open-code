@@ -16,14 +16,14 @@ export interface UploadedAttachment {
   mime: string;
   sizeBytes: number;
   isImage: boolean;
-  /** For the composer's own preview only — short-lived. */
+  /** For the composer's own preview only - short-lived. */
   previewUrl: string | null;
 }
 
 /**
  * One file from a composer → the private bucket + an UNLINKED metadata row.
  * The send action stamps the context; the nightly sweep clears abandoned ones.
- * Validation runs here regardless of what the UI allowed — a server action is
+ * Validation runs here regardless of what the UI allowed - a server action is
  * an endpoint anyone can call.
  */
 export async function uploadAttachment(
@@ -44,11 +44,11 @@ export async function uploadAttachment(
   const isImage = IMAGE_MIMES.includes(file.type);
   const cap = isImage ? MAX_IMAGE_BYTES : MAX_FILE_BYTES;
   if (file.size > cap) {
-    return { ok: false, error: `הקובץ גדול מדי — עד ${isImage ? "5MB לתמונה" : "10MB לקובץ"}.` };
+    return { ok: false, error: `הקובץ גדול מדי - עד ${isImage ? "5MB לתמונה" : "10MB לקובץ"}.` };
   }
 
   // Her own folder, an unguessable name, the original name kept for display.
-  // The storage KEY must stay ASCII — Supabase rejects Hebrew letters in
+  // The storage KEY must stay ASCII - Supabase rejects Hebrew letters in
   // object keys, which is exactly how "צילום מסך….png" failed while a pasted
   // "image.png" sailed through (the owner + a member, 8/9). Only the key is
   // neutral; the Hebrew name lives on in the attachments row.
@@ -98,7 +98,7 @@ export async function uploadAttachment(
   };
 }
 
-/** Composing and changed her mind — remove an UNLINKED file of hers. */
+/** Composing and changed her mind - remove an UNLINKED file of hers. */
 export async function removeUnlinkedAttachment(id: string): Promise<void> {
   const profile = await getProfile();
   if (!profile) return;

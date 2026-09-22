@@ -4,11 +4,11 @@ const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); 
 const BASE = "https://open-code-psi.vercel.app";
 const SHOTS = process.env.SHOTS_DIR || ".";
 const results = [];
-const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " — " + x : ""}`);
+const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " - " + x : ""}`);
 const browser = await chromium.launch();
 process.on("uncaughtException", (e) => { console.log(results.join("\n")); console.error("FAILED:", e.message); process.exit(1); });
 
-// 1x1 red PNG as a data URI — what a pasted image looks like to the editor.
+// 1x1 red PNG as a data URI - what a pasted image looks like to the editor.
 const RED_PIXEL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==";
 
@@ -52,7 +52,7 @@ const RED_PIXEL =
   await page.goto(`${BASE}/mentor`);
   await page.waitForLoadState("networkidle");
   const mp = (await page.textContent("body")) ?? "";
-  ok("mentor: new pool-notice copy", mp.includes("מאגר המנטוריות שלנו בבנייה — בקרוב כאן בשבילך"));
+  ok("mentor: new pool-notice copy", mp.includes("מאגר המנטוריות שלנו בבנייה - בקרוב כאן בשבילך"));
 
   // profile wizard: specialization question gone
   await page.goto(`${BASE}/profile`);
@@ -73,7 +73,7 @@ const RED_PIXEL =
   await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 25000 });
   await page.goto(`${BASE}/profile`);
   await page.waitForLoadState("networkidle");
-  // All steps stay mounted — DOM order is the wizard order.
+  // All steps stay mounted - DOM order is the wizard order.
   const labels = await page.locator("label, .font-medium").allTextContents();
   const iTech = labels.findIndex((t) => t.includes("הטכנולוגיות שאת חזקה בהן"));
   const iGit = labels.findIndex((t) => t.includes("קישורים ל-GitHub"));
@@ -96,12 +96,12 @@ const RED_PIXEL =
 
   const title = `בדיקת תמונה ${Date.now()}`;
   await page.fill("#ar-title", title);
-  // Put a data-URI image straight into the rich editor — the paste scenario.
+  // Put a data-URI image straight into the rich editor - the paste scenario.
   await page.evaluate((src) => {
     const ed = document.querySelector('[contenteditable="true"]');
     if (ed) {
       ed.innerHTML = `<p>טקסט לפני</p><img src="${src}" /><p>טקסט אחרי</p>`;
-      // React mirrors the editor on input events — raw innerHTML alone
+      // React mirrors the editor on input events - raw innerHTML alone
       // never reaches the submitted form.
       ed.dispatchEvent(new InputEvent("input", { bubbles: true }));
     }

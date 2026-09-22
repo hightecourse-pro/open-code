@@ -39,7 +39,7 @@ export async function createSessionContent(formData: FormData): Promise<void> {
   const supabase = await createClient();
   // Nothing is shared here on purpose: a new session creates zero share rows.
   // The members entitled to it open it themselves from /recordings, and that
-  // is what creates the row — so what we later revoke is what she really used.
+  // is what creates the row - so what we later revoke is what she really used.
   await supabase.from("sessions").insert({
     title,
     topic: String(formData.get("topic") ?? "").trim() || null,
@@ -104,7 +104,7 @@ export async function updateCourseUnit(id: string, formData: FormData): Promise<
   revalidatePath("/courses");
 }
 
-/** Delete a unit. Its links go with it (FK cascade) — the form warns about that. */
+/** Delete a unit. Its links go with it (FK cascade) - the form warns about that. */
 export async function deleteCourseUnit(id: string): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();
@@ -116,7 +116,7 @@ export async function deleteCourseUnit(id: string): Promise<void> {
 /**
  * Open a session's recording to the whole community, or close it back to
  * paying members, mentors and the team. The share queue follows the decision
- * both ways — opening grants the free tier, closing takes it back.
+ * both ways - opening grants the free tier, closing takes it back.
  */
 export async function setSessionOpenToAll(id: string, open: boolean): Promise<void> {
   await requireRole("admin");
@@ -190,7 +190,7 @@ export async function updateSessionFiles(id: string, formData: FormData): Promis
 }
 
 /**
- * Add ONE materials item to a session as a content_links row — either an
+ * Add ONE materials item to a session as a content_links row - either an
  * uploaded file (hosted in session-files) or a pasted link, each with an
  * optional הסבר that becomes its title (the owner, 30/8: "רשימה של קישורים
  * וקבצים... אופציונלי להוסיף הסבר").
@@ -225,7 +225,7 @@ export async function addSessionMaterial(id: string, formData: FormData): Promis
     url,
     sort_order: (max?.sort_order ?? 0) + 1,
   });
-  // A file added after members were already shared must reach them too —
+  // A file added after members were already shared must reach them too -
   // the sessions-manager add paths skipped this requeue while the generic
   // content screen had it, so סשן 3's recording (added 9/9) never reached
   // the 54 members marked shared on the 6-8/9 materials (the owner, 14/9).
@@ -262,7 +262,7 @@ export async function addSessionVideo(id: string, formData: FormData): Promise<v
     url,
     sort_order: (max?.sort_order ?? 0) + 1,
   });
-  // The recording usually lands AFTER everyone was shared on the materials —
+  // The recording usually lands AFTER everyone was shared on the materials -
   // requeue so the worker grants the new file to them too (סשן 3, 14/9).
   try {
     await requeueOwnerForSharedMembers("session", id);
@@ -276,7 +276,7 @@ export async function addSessionVideo(id: string, formData: FormData): Promise<v
 
 /**
  * Remove the legacy pre-list materials link from a session (the owner, 31/8:
- * "לא הבנתי איך אני מוחקת את הקישור הישן") — the list rows have their own
+ * "לא הבנתי איך אני מוחקת את הקישור הישן") - the list rows have their own
  * trash; this gives the old sessions.materials_url one too.
  */
 export async function clearSessionLegacyMaterials(id: string): Promise<void> {
@@ -290,7 +290,7 @@ export async function clearSessionLegacyMaterials(id: string): Promise<void> {
 
 /**
  * The one-field recording shortcut on the session row (the owner: "בעדכון
- * סשן אני לא רואה עדכון של הקישור להקלטה") — maintains the session's FIRST
+ * סשן אני לא רואה עדכון של הקישור להקלטה") - maintains the session's FIRST
  * video content_link: set → update/insert, empty → remove.
  */
 export async function setSessionRecording(id: string, formData: FormData): Promise<void> {
@@ -321,7 +321,7 @@ export async function setSessionRecording(id: string, formData: FormData): Promi
     });
   }
   if (url) {
-    // New or replaced recording — the already-shared members need the grant
+    // New or replaced recording - the already-shared members need the grant
     // on THIS file too (the sessions-manager paths skipped this; סשן 3, 14/9).
     try {
       await requeueOwnerForSharedMembers("session", id);
@@ -344,7 +344,7 @@ export async function deleteSessionContent(id: string): Promise<void> {
 
 /**
  * Add a Drive link (video or materials folder) to a course/session. When the
- * course is split into units, the link belongs to one of them — sharing still
+ * course is split into units, the link belongs to one of them - sharing still
  * happens per course, so the Drive queue behaves identically either way.
  */
 export async function addContentLink(
@@ -396,7 +396,7 @@ export async function deleteContentLink(id: string): Promise<void> {
   await supabase.from("content_links").delete().eq("id", id);
   revalidatePath("/admin/content");
   revalidatePath("/courses");
-  // The sessions manager hosts the same delete (session materials panel) —
+  // The sessions manager hosts the same delete (session materials panel) -
   // without this the row survived on screen and read as "אין אפשרות למחוק".
   revalidatePath("/admin/sessions");
 }
@@ -413,7 +413,7 @@ export async function bulkDeleteContentLinks(ids: string[]): Promise<void> {
   revalidatePath("/admin/sessions");
 }
 
-/** Bulk-mark pending shares as done — all of them or a checked subset. */
+/** Bulk-mark pending shares as done - all of them or a checked subset. */
 export async function markSharesShared(ids: string[]): Promise<void> {
   await requireRole("admin");
   const clean = [...new Set(ids.filter(Boolean))].slice(0, 500);

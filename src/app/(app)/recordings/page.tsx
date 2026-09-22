@@ -20,7 +20,7 @@ function materialsUrl(session: object): string | null {
   return (session as { materials_url?: string | null }).materials_url ?? null;
 }
 
-/** Present only on the subscriber read — the free view omits the column. */
+/** Present only on the subscriber read - the free view omits the column. */
 function videoUrl(rec: object): string | null {
   return (rec as { video_url?: string | null }).video_url ?? null;
 }
@@ -30,11 +30,11 @@ export default async function RecordingsPage() {
   const user = await getUser();
   const profile = await requireCommunityAccess();
   const subscriber = isSubscriber(profile);
-  // Whose recordings these are: paying members, mentors and the team — the
+  // Whose recordings these are: paying members, mentors and the team - the
   // same rule the Drive grant enforces, so the button never refuses her.
   const paysForSessions = mayOpenSessions(profile);
 
-  // Free members read the sanitized views — no video URLs in them at all.
+  // Free members read the sanitized views - no video URLs in them at all.
   const [{ data: recordings }, { data: doneSessions }, { data: myShares }] = await Promise.all([
     supabase
       .from(subscriber ? "recordings" : "recordings_public")
@@ -48,7 +48,7 @@ export default async function RecordingsPage() {
       .eq("is_published", true)
       .order("scheduled_at", { ascending: false })
       .limit(60),
-    // What she has ALREADY opened. Those sessions skip the gate entirely —
+    // What she has ALREADY opened. Those sessions skip the gate entirely -
     // it costs her one press per session, ever.
     user
       ? supabase
@@ -67,7 +67,7 @@ export default async function RecordingsPage() {
   const sessions = (doneSessions ?? []).filter(
     (s) => !s.canceled_at && !curatedSessionIds.has(s.id)
   );
-  // A session opened to the whole community is free — but "the community"
+  // A session opened to the whole community is free - but "the community"
   // means an approved, live membership, the same floor `canAccess` applies
   // before it hands out a Drive permission. So a signup still waiting for
   // approval, and a member whose subscription ended, see the locked row rather
@@ -75,7 +75,7 @@ export default async function RecordingsPage() {
   const inCommunity = profile.status === "active";
   const mayOpen = (s: { open_to_all: boolean }) =>
     paysForSessions || (inCommunity && s.open_to_all);
-  // Drive links are paid material — never fetched for a free member.
+  // Drive links are paid material - never fetched for a free member.
   // A free member sees the recordings of sessions the team opened to the whole
   // community; everything else stays paid material. RLS enforces exactly the
   // same rule, so a hand-crafted request gets no more than this page shows.
@@ -104,7 +104,7 @@ export default async function RecordingsPage() {
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;הקלטות/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הקלטות סשנים</h1>
-        <p className="t-body-sm text-ink-700">כל הסשנים הדו-שבועיים — זמינים לצפייה מתי שנוח לך.</p>
+        <p className="t-body-sm text-ink-700">כל הסשנים הדו-שבועיים - זמינים לצפייה מתי שנוח לך.</p>
       </div>
 
       {!paysForSessions && (
@@ -201,7 +201,7 @@ export default async function RecordingsPage() {
                         </div>
                       </ContentGate>
                     ) : (
-                      // No recording yet: say so upfront — no "צפייה" button that
+                      // No recording yet: say so upfront - no "צפייה" button that
                       // opens onto nothing (the owner, 6/9). Materials, when they
                       // exist, still sit behind the Drive-access gate they need,
                       // under a label that promises exactly what it opens.
@@ -227,12 +227,12 @@ export default async function RecordingsPage() {
             );
           })}
 
-          {/* Curated recordings (the recordings table) — the SAME row shape
+          {/* Curated recordings (the recordings table) - the SAME row shape
               as every other session (the owner, 30/8: "כל סשן אמור להיות
               שורה"), not a card grid. */}
           {(recordings ?? []).map((rec) => {
             const href = subscriber ? videoUrl(rec) ?? "#" : "/join";
-            // Curated links live on `recordings.video_url` — but the WATCHING
+            // Curated links live on `recordings.video_url` - but the WATCHING
             // experience must match the session rows (the owner, 1/9: session
             // #1 opened only externally while #2 embedded): same gate, same
             // inline player.
@@ -299,7 +299,7 @@ export default async function RecordingsPage() {
 
       {sessions.length === 0 && (recordings?.length ?? 0) === 0 && (
         <div className="bg-white border border-ink-200 rounded-lg p-6 shadow-sm text-ink-700">
-          עדיין אין הקלטות — הראשונות יחכו לך כאן בקרוב 💜
+          עדיין אין הקלטות - הראשונות יחכו לך כאן בקרוב 💜
         </div>
       )}
     </div>

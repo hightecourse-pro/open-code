@@ -1,6 +1,6 @@
 // The interview simulator is OFFLINE by the owner's call (2026-08-29): the
 // session page redirects to the warm "בקרוב" screen. This script used to
-// verify the key-page's next= link back into a session — that check comes
+// verify the key-page's next= link back into a session - that check comes
 // back with the simulator (restore from git history at the comeback).
 import { chromium } from "@playwright/test";
 const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); process.exit(1); })();

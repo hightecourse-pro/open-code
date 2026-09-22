@@ -17,7 +17,7 @@ import {
 /**
  * Send a free-form WhatsApp reply from the admin inbox. Returns an explicit
  * verdict (the chat lesson, 31/8): the UI trusts it instead of guessing.
- * Refuses outside Meta's 24-hour service window — Meta would reject it
+ * Refuses outside Meta's 24-hour service window - Meta would reject it
  * anyway, with a worse error.
  */
 export async function sendWhatsAppReply(
@@ -38,7 +38,7 @@ export async function sendWhatsAppReply(
   if (waWindowLeftMs(contact.last_inbound_at) <= 0) {
     return {
       ok: false,
-      error: "חלון ה-24 שעות של מטא נסגר — אפשר לענות חופשי רק תוך יממה מההודעה האחרונה שלה.",
+      error: "חלון ה-24 שעות של מטא נסגר - אפשר לענות חופשי רק תוך יממה מההודעה האחרונה שלה.",
     };
   }
 
@@ -61,11 +61,11 @@ export async function sendWhatsAppReply(
   return { ok: true };
 }
 
-/** Vercel's serverless request cap is ~4.5MB — stay safely under it. */
+/** Vercel's serverless request cap is ~4.5MB - stay safely under it. */
 const MAX_WA_FILE_BYTES = 4 * 1024 * 1024;
 
 /**
- * Send a file — image, video, audio (voice note), or document — inside the
+ * Send a file - image, video, audio (voice note), or document - inside the
  * 24h window. The file also lands in our bucket so the thread shows it.
  */
 export async function sendWhatsAppMedia(
@@ -75,7 +75,7 @@ export async function sendWhatsAppMedia(
   const me = await requireRole("admin");
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "לא נבחר קובץ" };
-  if (file.size > MAX_WA_FILE_BYTES) return { ok: false, error: "הקובץ גדול מדי — עד 4MB" };
+  if (file.size > MAX_WA_FILE_BYTES) return { ok: false, error: "הקובץ גדול מדי - עד 4MB" };
   const caption = String(formData.get("caption") ?? "").trim().slice(0, 1024);
 
   const admin = createAdminClient();
@@ -86,7 +86,7 @@ export async function sendWhatsAppMedia(
     .maybeSingle();
   if (!contact) return { ok: false, error: "השיחה לא נמצאה" };
   if (waWindowLeftMs(contact.last_inbound_at) <= 0) {
-    return { ok: false, error: "חלון ה-24 שעות של מטא נסגר — קבצים אפשר לשלוח רק בתוכו." };
+    return { ok: false, error: "חלון ה-24 שעות של מטא נסגר - קבצים אפשר לשלוח רק בתוכו." };
   }
 
   const buf = Buffer.from(await file.arrayBuffer());
@@ -126,7 +126,7 @@ export async function sendWhatsAppMedia(
 }
 
 /**
- * Open a conversation with an APPROVED template — the only door Meta allows
+ * Open a conversation with an APPROVED template - the only door Meta allows
  * outside the 24h window (the owner, 1/9: "בפתיחת שיחה חדשה... רק מתוך
  * תבניות"). Recipient is a free number or a member picked from the list.
  */
@@ -163,7 +163,7 @@ export async function startTemplateConversation(formData: FormData): Promise<{
     .upsert({ wa_id: waId, last_message_at: new Date().toISOString() }, { onConflict: "wa_id" })
     .select("id")
     .single();
-  if (!contact) return { ok: false, error: "השיחה נשלחה אך לא נשמרה — רענני" };
+  if (!contact) return { ok: false, error: "השיחה נשלחה אך לא נשמרה - רענני" };
 
   // The rendered text, so the thread shows what she actually received.
   const rendered = tpl.bodyText.replace(/\{\{(\d+)\}\}/g, (_, n) => params[Number(n) - 1] ?? "");

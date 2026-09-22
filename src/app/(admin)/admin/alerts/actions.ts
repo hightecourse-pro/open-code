@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 
-/** Mark one alert as read. Goes through the user client — RLS is the gate. */
+/** Mark one alert as read. Goes through the user client - RLS is the gate. */
 export async function markAlertRead(id: string): Promise<void> {
   await requireRole("admin");
   const supabase = await createClient();

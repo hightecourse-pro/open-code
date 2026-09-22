@@ -23,7 +23,7 @@ export async function addSystemKeyAction(
   return { ok: true };
 }
 
-/** Put an exhausted/invalid key back in rotation — quotas reset daily. */
+/** Put an exhausted/invalid key back in rotation - quotas reset daily. */
 export async function reviveSystemKeyAction(id: string): Promise<void> {
   await requireRole("admin");
   await reviveSystemKey(id);

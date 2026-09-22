@@ -103,7 +103,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
             {m.full_name}
           </Link>
           <div className="text-[11.5px] text-ink-500">
-            ⭐ {m.score.score} נק&#39; — {m.score.answers} תשובות בפורום · {m.score.assignments} ליוויים
+            ⭐ {m.score.score} נק&#39; - {m.score.answers} תשובות בפורום · {m.score.assignments} ליוויים
             {m.score.bonus !== 0 && <> · {m.score.bonus} בונוס</>}
             <span className="text-ink-300"> · </span>
             הצטרפה <span dir="ltr">{FULL_DATE.format(new Date(m.created_at))}</span>
@@ -159,7 +159,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
           type="button"
           onClick={() => setMailOpen((v) => !v)}
           className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline cursor-pointer"
-          title="מייל אישי — מופיע גם בצ'אט שלה עם הצוות"
+          title="מייל אישי - מופיע גם בצ'אט שלה עם הצוות"
         >
           <Mail size={13} /> מייל
         </button>
@@ -193,7 +193,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
       {mailOpen && (
         <div className="bg-ink-50 border border-ink-200 rounded-md p-3 mt-2 flex flex-col gap-2">
           <p className="text-[12px] text-ink-500">
-            ההודעה נשלחת אליה במייל ממותג ומופיעה גם בצ&apos;אט שלה עם הצוות — התשובה שלה תגיע אלייך לצ&apos;אט.
+            ההודעה נשלחת אליה במייל ממותג ומופיעה גם בצ&apos;אט שלה עם הצוות - התשובה שלה תגיע אלייך לצ&apos;אט.
           </p>
           <textarea
             value={mailText}
@@ -237,7 +237,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
         <div className="bg-danger-bg/60 border border-[#F2BBC8] rounded-md p-3 mt-2 flex flex-col gap-2">
           <p className="text-[12.5px] text-[#A8254B] font-semibold">
             ביטול המינוי יחזיר אותה לחברה רגילה. כל מי שהיא מלווה כרגע תקבל מייל עדכון,
-            והבקשה שלה תיפתח מחדש לשיבוץ. חובה לציין סיבה — היא נשמרת בהיסטוריה.
+            והבקשה שלה תיפתח מחדש לשיבוץ. חובה לציין סיבה - היא נשמרת בהיסטוריה.
           </p>
           <div className="flex items-center gap-2 flex-wrap">
             <input
@@ -310,7 +310,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
               {m.log.map((l, i) => (
                 <div key={i} className="text-[12px] text-ink-500 tabular-nums">
                   🗂 {LOG_LABEL[l.action] ?? l.action}
-                  {l.reason ? ` — ${l.reason}` : ""} · {DATE_HE.format(new Date(l.at))}
+                  {l.reason ? ` - ${l.reason}` : ""} · {DATE_HE.format(new Date(l.at))}
                 </div>
               ))}
             </div>

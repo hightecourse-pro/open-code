@@ -35,18 +35,18 @@ import { CvPreviewButton } from "@/components/patterns/cv-preview";
 export interface ReviewQuestion {
   id: string;
   question: string;
-  /** Choice options — the fuel for the filter-by-answer control (3/9). */
+  /** Choice options - the fuel for the filter-by-answer control (3/9). */
   options?: string[];
 }
 
 export interface ReviewProfileSummary {
   fullName: string;
   specialization: string | null;
-  /** עיר מגורים — לצד האזור, בולט (the owner, 15/9). */
+  /** עיר מגורים - לצד האזור, בולט (the owner, 15/9). */
   city: string | null;
   region: string | null;
   isExperienced: boolean;
-  /** שנות ניסיון — rides the בעלת-ניסיון badge (the owner, 2/9). */
+  /** שנות ניסיון - rides the בעלת-ניסיון badge (the owner, 2/9). */
   years: number | null;
   studyPlace: string | null;
   track: string | null;
@@ -59,11 +59,11 @@ export interface ReviewApplication {
   submittedAt: string;
   status: string;
   adminMark: AdminMark | null;
-  /** Her private "why not fit" note — rides only with a not_fit mark. */
+  /** Her private "why not fit" note - rides only with a not_fit mark. */
   adminMarkReason: string | null;
   sentToClientAt: string | null;
   /**
-   * {questionId: answer} + the built-in "fit" answer — parsed server-side.
+   * {questionId: answer} + the built-in "fit" answer - parsed server-side.
    * Values follow the question's answer type: string (paragraph/select),
    * number (number) or string[] (multiselect).
    */
@@ -73,15 +73,15 @@ export interface ReviewApplication {
   profile: ReviewProfileSummary | null;
   curated: boolean;
   clientFeedback: { interviewMarked: boolean; clientNote: string | null } | null;
-  /** צוות / מנטורית — overrides the מנויה pill for staff accounts (31/8). */
+  /** צוות / מנטורית - overrides the מנויה pill for staff accounts (31/8). */
   memberLabel?: "team" | "mentor" | null;
-  /** מנויה (profiles.status === "active") — internal indication only. */
+  /** מנויה (profiles.status === "active") - internal indication only. */
   isSubscriber: boolean;
   /** Chat messages the team sent her from THIS job (the owner, 19/9). */
   sentMessages?: { body: string; at: string }[];
-  /** VIP from the admin-only member_crm — internal indication only. */
+  /** VIP from the admin-only member_crm - internal indication only. */
   isVip: boolean;
-  /** Internal profile tags (member_crm.internal_tags) — admin-only. */
+  /** Internal profile tags (member_crm.internal_tags) - admin-only. */
   memberTags: string[];
   /** Every place WE submitted her to, with the per-place outcome note (7/9). */
   forwards: {
@@ -102,7 +102,7 @@ export interface ReviewApplication {
     verdict: string | null;
   } | null;
   /**
-   * What her institution's coordinator(s) wrote about her (the owner, 14/9) —
+   * What her institution's coordinator(s) wrote about her (the owner, 14/9) -
    * team-only, shown while going over applicants and filterable.
    */
   coordinatorReviews: {
@@ -110,7 +110,7 @@ export interface ReviewApplication {
     contactId: string;
     communication: number | null;
     talent: number | null;
-    /** Imported phrasing ("מוכשרת מאוד") — preferred over the number. */
+    /** Imported phrasing ("מוכשרת מאוד") - preferred over the number. */
     talentLabel: string | null;
     communicationLabel: string | null;
     note: string | null;
@@ -119,11 +119,11 @@ export interface ReviewApplication {
   }[];
   /** She edited the application after submitting (the owner, 2/9). */
   editedAt: string | null;
-  /** Outgoing snapshots, oldest first — what each edit replaced. */
+  /** Outgoing snapshots, oldest first - what each edit replaced. */
   previousVersions: { savedAt: string; answers: Record<string, string | number | string[]>; cvChanged: boolean }[];
-  /** The team's general internal note about her (member_crm) — admin-only. */
+  /** The team's general internal note about her (member_crm) - admin-only. */
   crmNote: string | null;
-  /** Note tied to HER × THIS JOB (application_notes) — the table's הערה column. */
+  /** Note tied to HER × THIS JOB (application_notes) - the table's הערה column. */
   adminNote: string | null;
 }
 
@@ -188,7 +188,7 @@ function Stat({
   className: string;
   /** Is this tile's filter currently applied? */
   active?: boolean;
-  /** Tiles double as filters — clicking applies, clicking again clears. */
+  /** Tiles double as filters - clicking applies, clicking again clears. */
   onClick?: () => void;
 }) {
   return (
@@ -259,12 +259,12 @@ function NoteCell({
   );
 }
 
-/** ⭐ (VIP) + "מנויה" pill — internal indications, admin-only surface. */
+/** ⭐ (VIP) + "מנויה" pill - internal indications, admin-only surface. */
 function MemberFlair({ app, starClass }: { app: ReviewApplication; starClass?: string }) {
   return (
     <>
       {app.isVip && (
-        <span title="VIP — עדיפות בהשמות" className={cn("shrink-0 text-[13px]", starClass)}>
+        <span title="VIP - עדיפות בהשמות" className={cn("shrink-0 text-[13px]", starClass)}>
           ⭐
         </span>
       )}
@@ -290,7 +290,7 @@ function MemberFlair({ app, starClass }: { app: ReviewApplication; starClass?: s
 /**
  * The admin review center for a job's applications: dashboard counts, a
  * filterable list, and a detail pane with the applicant's answers, CV, the
- * internal review mark and the client-pipeline status. Marks are optimistic —
+ * internal review mark and the client-pipeline status. Marks are optimistic -
  * the server (revalidate) is the source of truth on the next load.
  */
 export function ReviewCenter({
@@ -316,7 +316,7 @@ export function ReviewCenter({
   const [query, setQuery] = useState("");
   const [markFilter, setMarkFilter] = useState<"all" | "none" | AdminMark>("all");
   // Filter by a specific answer to a per-job question (the owner, 3/9:
-  // "לסנן לפי תשובה מסוימת ולסמן לא מתאימה גורף") — then select-all + bulk.
+  // "לסנן לפי תשובה מסוימת ולסמן לא מתאימה גורף") - then select-all + bulk.
   const [answerQ, setAnswerQ] = useState<string>("");
   const [answerV, setAnswerV] = useState<string>("");
   // Filter by seminary / study institution (the owner, 7/9).
@@ -331,7 +331,7 @@ export function ReviewCenter({
   const [criteria, setCriteria] = useState<Record<string, string[]>>({});
   const [activeKey, setActiveKey] = useState(criteriaCatalogue[0]?.key ?? "");
   const [valueQuery, setValueQuery] = useState("");
-  // "בלי הלא רלוונטיות שכבר בדקתי" — not_fit rows are hidden by default.
+  // "בלי הלא רלוונטיות שכבר בדקתי" - not_fit rows are hidden by default.
   const [showNotFit, setShowNotFit] = useState(false);
   const [view, setView] = useState<"list" | "table">("list");
   const [selectedId, setSelectedId] = useState<string | null>(applications[0]?.id ?? null);
@@ -346,17 +346,17 @@ export function ReviewCenter({
   const [statuses, setStatuses] = useState<Record<string, string>>({});
   const [curatedLocal, setCuratedLocal] = useState<Set<string>>(() => new Set());
   const [actionError, setActionError] = useState<string | null>(null);
-  // A loud "it saved" line — the not_fit row vanishes from the default view
+  // A loud "it saved" line - the not_fit row vanishes from the default view
   // the moment it's marked, which read as "לא נשמר" (the owner, 2/9).
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
-  // Internal profile tags (member_crm) — optimistic per member.
+  // Internal profile tags (member_crm) - optimistic per member.
   const [tagsLocal, setTagsLocal] = useState<Record<string, string[]>>({});
-  // The inline "why not fit" box — open for at most one application at a time.
+  // The inline "why not fit" box - open for at most one application at a time.
   const [reasonEditor, setReasonEditor] = useState<{ id: string; draft: string } | null>(null);
   const [, startTransition] = useTransition();
   const [busy, setBusy] = useState(false);
 
-  // Optimistic per-application notes (application_notes) — the הערה column.
+  // Optimistic per-application notes (application_notes) - the הערה column.
   const [notes, setNotes] = useState<Record<string, string | null>>({});
   const noteValOf = useCallback(
     (a: ReviewApplication): string | null => (a.id in notes ? notes[a.id] : a.adminNote),
@@ -427,7 +427,7 @@ export function ReviewCenter({
     };
   }, [applications, markOf, statusOf]);
 
-  // Explicitly filtering by "לא מתאימות" is a request to see them — don't let
+  // Explicitly filtering by "לא מתאימות" is a request to see them - don't let
   // the default hide turn that filter into an empty list.
   const notFitVisible = showNotFit || markFilter === "not_fit";
 
@@ -442,7 +442,7 @@ export function ReviewCenter({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    // OR within one criterion, AND across criteria — same semantics as
+    // OR within one criterion, AND across criteria - same semantics as
     // previewAudience, matched against the lowercased applicant pools.
     const wanted = Object.entries(criteria)
       .map(([key, values]) => ({
@@ -505,7 +505,7 @@ export function ReviewCenter({
     coordFilter,
   ]);
 
-  // The effective selection is only ever the visible rows — a filter change
+  // The effective selection is only ever the visible rows - a filter change
   // narrows it (derived, no state pruning) and the bulk bar follows it.
   const visibleSelection = useMemo(() => {
     if (selection.size === 0) return selection;
@@ -517,7 +517,7 @@ export function ReviewCenter({
   // ------------------------------------------------ table per-column filters
 
   // The select options offer only values present among the (globally)
-  // filtered rows — no dead choices.
+  // filtered rows - no dead choices.
   const colOptions = useMemo(() => {
     const specs = new Set<string>();
     const regions = new Set<string>();
@@ -572,7 +572,7 @@ export function ReviewCenter({
       : activeField.values;
   }, [activeField, valueQuery]);
 
-  // The active-filter chips row — every selected value across all parameters.
+  // The active-filter chips row - every selected value across all parameters.
   const criteriaChips = useMemo(
     () =>
       Object.entries(criteria).flatMap(([key, values]) =>
@@ -593,7 +593,7 @@ export function ReviewCenter({
         : [...current, value];
       const out = { ...prev };
       if (next.length) out[key] = next;
-      else delete out[key]; // drop empty keys — they don't filter
+      else delete out[key]; // drop empty keys - they don't filter
       return out;
     });
   }
@@ -605,7 +605,7 @@ export function ReviewCenter({
   function applyMark(app: ReviewApplication, m: AdminMark) {
     const current = markOf(app);
     if (m === "not_fit" && current !== "not_fit") {
-      // "לא מתאימה" first asks (optionally) why — the save happens from the box.
+      // "לא מתאימה" first asks (optionally) why - the save happens from the box.
       setActionError(null);
       setReasonEditor({ id: app.id, draft: reasonOf(app) ?? "" });
       return;
@@ -615,7 +615,7 @@ export function ReviewCenter({
     setActionError(null);
     if (reasonEditor?.id === app.id) setReasonEditor(null);
     setMarks((prev) => ({ ...prev, [app.id]: next }));
-    // Any save that isn't not_fit clears the reason server-side — mirror it.
+    // Any save that isn't not_fit clears the reason server-side - mirror it.
     setReasons((prev) => ({ ...prev, [app.id]: null }));
     startTransition(async () => {
       const res = await setApplicationMark(app.id, next);
@@ -636,7 +636,7 @@ export function ReviewCenter({
     setReasonEditor(null);
     setMarks((prev) => ({ ...prev, [app.id]: "not_fit" }));
     setReasons((prev) => ({ ...prev, [app.id]: clean }));
-    // The row is about to disappear from the default view — move the detail
+    // The row is about to disappear from the default view - move the detail
     // pane to the next visible applicant (or the previous one, or none).
     if (!notFitVisible && selected?.id === app.id) {
       const idx = filtered.findIndex((x) => x.id === app.id);
@@ -650,7 +650,7 @@ export function ReviewCenter({
         setActionError(res.error);
       } else {
         setSavedFlash(
-          `נשמר ✓ ${app.profile?.fullName ?? "המועמדת"} סומנה "לא מתאימה"${clean ? " עם ההערה" : ""} — היא עברה ל"לא רלוונטיות" (מוסתרות כברירת מחדל; הסימון וההערה פנימיים לגמרי).`
+          `נשמר ✓ ${app.profile?.fullName ?? "המועמדת"} סומנה "לא מתאימה"${clean ? " עם ההערה" : ""} - היא עברה ל"לא רלוונטיות" (מוסתרות כברירת מחדל; הסימון וההערה פנימיים לגמרי).`
         );
         setTimeout(() => setSavedFlash(null), 7000);
       }
@@ -699,12 +699,12 @@ export function ReviewCenter({
   }
 
   /**
-   * Apply one mark (or clear) to the whole selection — optimistic like the
+   * Apply one mark (or clear) to the whole selection - optimistic like the
    * single mark: rows, counts and the auto-hide of not_fit react instantly,
    * a failure rolls everything back (selection included) with an error.
    */
   function applyBulk(mark: AdminMark | null, reason?: string | null) {
-    // The server caps a bulk at 200 rows — mirror it so the optimistic state
+    // The server caps a bulk at 200 rows - mirror it so the optimistic state
     // never claims more than what actually gets written.
     const ids = [...visibleSelection].slice(0, 200);
     if (ids.length === 0) return;
@@ -716,7 +716,7 @@ export function ReviewCenter({
       prevMarks[a.id] = markOf(a);
       prevReasons[a.id] = reasonOf(a);
     }
-    // The reason rides only with not_fit — mirror the server's clearing.
+    // The reason rides only with not_fit - mirror the server's clearing.
     const clean = mark === "not_fit" ? (reason ?? "").trim().slice(0, 500) || null : null;
     setActionError(null);
     setBulkReasonOpen(false);
@@ -732,7 +732,7 @@ export function ReviewCenter({
       for (const id of ids) next[id] = clean;
       return next;
     });
-    setSelection(new Set()); // cleared optimistically — restored on failure
+    setSelection(new Set()); // cleared optimistically - restored on failure
     startTransition(async () => {
       const res = await setApplicationMarkBulk(ids, mark, clean);
       if (res?.error) {
@@ -798,7 +798,7 @@ export function ReviewCenter({
             />
           </div>
         </div>
-        {/* The owner's four statuses (2026-08-30) — each tile filters AND
+        {/* The owner's four statuses (2026-08-30) - each tile filters AND
             opens the organized table; the מנויות/VIP counts live INSIDE
             "הגישו". The list view stays one click away on the toggle. */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
@@ -816,7 +816,7 @@ export function ReviewCenter({
                 setTierFilter("all");
                 setView("table");
               }}
-              title="כל ההגשות — פתיחה בטבלה"
+              title="כל ההגשות - פתיחה בטבלה"
               className="w-full cursor-pointer"
             >
               <div className="font-display text-xl font-black leading-none">{counts.total}</div>
@@ -830,7 +830,7 @@ export function ReviewCenter({
                   setTierFilter((v) => (v === "subscribers" ? "all" : "subscribers"));
                   setView("table");
                 }}
-                title="רק המנויות מבין המגישות — פתיחה בטבלה"
+                title="רק המנויות מבין המגישות - פתיחה בטבלה"
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10.5px] font-bold border cursor-pointer transition-colors",
                   tierFilter === "subscribers"
@@ -847,7 +847,7 @@ export function ReviewCenter({
                   setTierFilter((v) => (v === "vip" ? "all" : "vip"));
                   setView("table");
                 }}
-                title="רק ה-VIP מבין המגישות — פתיחה בטבלה"
+                title="רק ה-VIP מבין המגישות - פתיחה בטבלה"
                 className={cn(
                   "rounded-full px-2 py-0.5 text-[10.5px] font-bold border cursor-pointer transition-colors",
                   tierFilter === "vip"
@@ -916,7 +916,7 @@ export function ReviewCenter({
         </div>
       </div>
 
-      {/* Per-job note for whoever reviews — travels with the job, not a member. */}
+      {/* Per-job note for whoever reviews - travels with the job, not a member. */}
       <TeamNoteBox jobId={jobId} initial={teamNote} />
 
       {/* --------------------------------------------------------- filters */}
@@ -1013,7 +1013,7 @@ export function ReviewCenter({
                 className="w-auto max-w-[180px] py-2"
                 aria-label="הערך לסינון"
               >
-                <option value="">— בחרי תשובה —</option>
+                <option value="">- בחרי תשובה -</option>
                 {(questions.find((q) => q.id === answerQ)?.options ?? []).map((o) => (
                   <option key={o} value={o}>
                     {o}
@@ -1035,7 +1035,7 @@ export function ReviewCenter({
             )}
           </>
         )}
-        {/* מנויות בלבד — in the filter bar, both views (the owner, 19/9:
+        {/* מנויות בלבד - in the filter bar, both views (the owner, 19/9:
             "איך אני רואה רק מנויות בתצוגת רשימה?"). */}
         <button
           type="button"
@@ -1047,7 +1047,7 @@ export function ReviewCenter({
               ? "bg-brand-pink-deep text-white border-brand-pink-deep"
               : "bg-tint-pink text-brand-pink-deep border-[#F3C6DD] hover:border-brand-pink-deep"
           )}
-          title="הצגת המנויות בלבד — בשתי התצוגות"
+          title="הצגת המנויות בלבד - בשתי התצוגות"
         >
           מנויות בלבד ({counts.subscribers})
         </button>
@@ -1068,7 +1068,7 @@ export function ReviewCenter({
         >
           ייצוא לאקסל ({filtered.length})
         </button>
-        {/* view toggle — רשימה / טבלה */}
+        {/* view toggle - רשימה / טבלה */}
         <div
           className="ms-auto flex items-center gap-1"
           role="group"
@@ -1499,25 +1499,25 @@ export function ReviewCenter({
                         )}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
-                        {a.profile?.specialization ?? "—"}
+                        {a.profile?.specialization ?? "-"}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
-                        {[a.profile?.city, a.profile?.region].filter(Boolean).join(" · ") || "—"}
+                        {[a.profile?.city, a.profile?.region].filter(Boolean).join(" · ") || "-"}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 whitespace-nowrap">
-                        {a.profile?.isExperienced ? "בעלת ניסיון" : "—"}
+                        {a.profile?.isExperienced ? "בעלת ניסיון" : "-"}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top whitespace-nowrap">
                         {a.isSubscriber ? (
                           <span className="rounded-full bg-tint-pink text-brand-pink-deep px-2 py-0.5 text-[10.5px] font-bold">מנויה</span>
                         ) : (
-                          <span className="text-ink-400">—</span>
+                          <span className="text-ink-400">-</span>
                         )}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[12.5px] text-ink-800 max-w-[260px]">
                         {colFilters.qId ? (
                           <span className="block max-w-[260px] truncate" title={answerOfQ(a, colFilters.qId)}>
-                            {answerOfQ(a, colFilters.qId) || <span className="text-ink-400">— לא ענתה</span>}
+                            {answerOfQ(a, colFilters.qId) || <span className="text-ink-400">- לא ענתה</span>}
                           </span>
                         ) : (
                           <span className="text-ink-300">בחרי שאלה בכותרת</span>
@@ -1527,14 +1527,14 @@ export function ReviewCenter({
                         <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-bold text-ink-700">
                           {STATUS_LABEL[status] ?? status}
                         </span>
-                        {/* One-click "we submitted her" — with or without a
+                        {/* One-click "we submitted her" - with or without a
                             portal client (the PM couldn't find where). */}
                         {(status === "submitted" || status === "in_review") && (
                           <button
                             type="button"
                             onClick={() => applyPipeline(a, "sent")}
                             className="ms-1.5 rounded-full border border-brand-purple/40 px-2 py-0.5 text-[10.5px] font-bold text-brand-purple hover:bg-tint-purple cursor-pointer"
-                            title="סימון שהגשנו אותה למעסיק — עובר להוגשה ללקוח"
+                            title="סימון שהגשנו אותה למעסיק - עובר להוגשה ללקוח"
                           >
                             הוגשה ✓
                           </button>
@@ -1551,7 +1551,7 @@ export function ReviewCenter({
                             {MARK_LABEL[mark]}
                           </span>
                         ) : (
-                          <span className="text-ink-400">—</span>
+                          <span className="text-ink-400">-</span>
                         )}
                       </td>
                       <td className="border-b border-ink-100 px-3 py-2 align-top text-[13px] text-ink-700 tabular-nums whitespace-nowrap">
@@ -1640,16 +1640,16 @@ export function ReviewCenter({
                     <MemberFlair app={a} starClass="text-[12px]" />
                   </span>
                   <span className="text-[11.5px] text-ink-500 truncate">
-                    {a.profile?.specialization ?? "—"} · {fmtDate(a.submittedAt)}
+                    {a.profile?.specialization ?? "-"} · {fmtDate(a.submittedAt)}
                   </span>
                   <span className="flex flex-wrap gap-1">
-                    {/* חוות דעת המערכת — צ'יפ מהיר לסריקה (the owner, 5/9). */}
+                    {/* חוות דעת המערכת - צ'יפ מהיר לסריקה (the owner, 5/9). */}
                     {a.assessment?.depth && ASSESS_DEPTH[a.assessment.depth] && (
                       <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-bold", ASSESS_DEPTH[a.assessment.depth].cls)}>
-                        🧠 {a.assessment.aiDomain === "classic" ? "קלאסי" : a.assessment.aiDomain === "ml" ? "ML" : a.assessment.aiDomain === "basic" ? "בסיסי" : "—"} · {ASSESS_DEPTH[a.assessment.depth].label}
+                        🧠 {a.assessment.aiDomain === "classic" ? "קלאסי" : a.assessment.aiDomain === "ml" ? "ML" : a.assessment.aiDomain === "basic" ? "בסיסי" : "-"} · {ASSESS_DEPTH[a.assessment.depth].label}
                       </span>
                     )}
-                    {/* חוות דעת הרכזת — נראית במעבר מהיר (the owner, 14/9). */}
+                    {/* חוות דעת הרכזת - נראית במעבר מהיר (the owner, 14/9). */}
                     {(a.coordinatorReviews ?? []).length > 0 && (
                       <span className="rounded-full bg-tint-purple px-2 py-0.5 text-[10.5px] font-bold text-brand-purple border border-[#DDC9EC]">
                         🎓 רכזת{(() => {
@@ -1708,7 +1708,7 @@ export function ReviewCenter({
         {selected ? (
           <div className="rounded-[14px] border border-ink-200 bg-ink-0 p-4 flex flex-col gap-4">
             {/* Internal note, front and center while flipping through
-                candidates (the owner, 3/9) — admin-only, rides on HER. */}
+                candidates (the owner, 3/9) - admin-only, rides on HER. */}
             <MemberNoteBox key={selected.applicantId} app={selected} />
             {selected.assessment && <AssessmentBox a={selected.assessment} />}
             {(selected.coordinatorReviews ?? []).length > 0 && (
@@ -1756,15 +1756,15 @@ export function ReviewCenter({
                   <div className="mt-2 inline-flex flex-wrap items-center gap-x-4 gap-y-1 bg-tint-purple/40 border border-brand-purple/15 rounded-[10px] px-3 py-1.5 text-[12.5px]">
                     <span>
                       <span className="text-ink-500">🎓 מוסד: </span>
-                      <b className="text-ink-900">{selected.profile?.studyPlace ?? "—"}</b>
+                      <b className="text-ink-900">{selected.profile?.studyPlace ?? "-"}</b>
                     </span>
                     <span>
                       <span className="text-ink-500">מגמה: </span>
-                      <b className="text-ink-900">{selected.profile?.track ?? "—"}</b>
+                      <b className="text-ink-900">{selected.profile?.track ?? "-"}</b>
                     </span>
                     <span>
                       <span className="text-ink-500">שנת סיום: </span>
-                      <b className="text-ink-900 tabular-nums">{selected.profile?.gradYear ?? "—"}</b>
+                      <b className="text-ink-900 tabular-nums">{selected.profile?.gradYear ?? "-"}</b>
                     </span>
                   </div>
                 )}
@@ -1849,7 +1849,7 @@ export function ReviewCenter({
                 })}
               </div>
 
-              {/* the inline "why not fit" box — optional, admin-only */}
+              {/* the inline "why not fit" box - optional, admin-only */}
               {reasonEditor?.id === selected.id ? (
                 <div className="mt-2 flex flex-col gap-2 rounded-[12px] border border-ink-200 bg-ink-50 p-3">
                   <Textarea
@@ -1898,11 +1898,11 @@ export function ReviewCenter({
               )}
             </div>
 
-            {/* Internal profile tags — saved on HER, ride to every job,
+            {/* Internal profile tags - saved on HER, ride to every job,
                 admin-only (the owner, 2/9). */}
             <div>
               <div className="text-[12px] font-bold text-ink-700 mb-1.5">
-                תגיות פרופיל פנימיות — נשמרות עליה לכל המשרות (חסוי, רק במערכת הניהול)
+                תגיות פרופיל פנימיות - נשמרות עליה לכל המשרות (חסוי, רק במערכת הניהול)
               </div>
               <div className="flex flex-wrap gap-2">
                 {MEMBER_INTERNAL_TAGS.map((tag) => {
@@ -1931,7 +1931,7 @@ export function ReviewCenter({
             {/* pipeline status */}
             <div>
               <div className="text-[12px] font-bold text-ink-700 mb-1.5">
-                סטטוס מול הלקוח — עדכון שולח לה מייל
+                סטטוס מול הלקוח - עדכון שולח לה מייל
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <Select
@@ -2039,11 +2039,11 @@ export function ReviewCenter({
               })()}
 
               {/* Every version an edit replaced (the owner, 2/9: "לראות
-                  ערכים קודמים") — oldest first, collapsed by default. */}
+                  ערכים קודמים") - oldest first, collapsed by default. */}
               {selected.previousVersions.length > 0 && (
                 <details className="rounded-md border border-[#F0DCA8] bg-tint-warm/40 px-3.5 py-2.5">
                   <summary className="cursor-pointer text-[12.5px] font-bold text-[#8C5E0E]">
-                    גרסאות קודמות ({selected.previousVersions.length}) — מה היה לפני העריכות
+                    גרסאות קודמות ({selected.previousVersions.length}) - מה היה לפני העריכות
                   </summary>
                   <div className="flex flex-col gap-3 mt-2.5">
                     {selected.previousVersions.map((v, vi) => (
@@ -2085,7 +2085,7 @@ export function ReviewCenter({
 // ------------------------------------------------------------- team note box
 
 /**
- * The per-job internal note ("בדקנו מול הלקוח ש…") — for whoever reviews the
+ * The per-job internal note ("בדקנו מול הלקוח ש…") - for whoever reviews the
  * applicants of THIS job. Saved on blur/button, never shown outside admin.
  */
 function TeamNoteBox({ jobId, initial }: { jobId: string; initial: string | null }) {
@@ -2097,7 +2097,7 @@ function TeamNoteBox({ jobId, initial }: { jobId: string; initial: string | null
   return (
     <div className="rounded-[14px] border border-[#F0DCA8] bg-tint-warm/50 p-3.5 flex flex-col gap-2">
       <div className="text-[12.5px] font-bold text-[#8C5E0E]">
-        הערה שלנו למשרה הזו (פנימית — לצוות שעובר על ההגשות)
+        הערה שלנו למשרה הזו (פנימית - לצוות שעובר על ההגשות)
       </div>
       <Textarea
         value={note}
@@ -2194,7 +2194,7 @@ const ASSESS_DEPTH: Record<string, { label: string; cls: string }> = {
   fluff: { label: "⚠️ תשובות מנופחות", cls: "bg-danger-bg text-danger" },
 };
 
-/** חוות דעת המערכת — הקטלוגים + טקסט חופשי (the owner, 5/9). */
+/** חוות דעת המערכת - הקטלוגים + טקסט חופשי (the owner, 5/9). */
 function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> }) {
   const dom = a.aiDomain ? ASSESS_DOMAIN[a.aiDomain] : null;
   const ctx = a.context ? ASSESS_CONTEXT[a.context] : null;
@@ -2202,7 +2202,7 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
   return (
     <div className="rounded-[10px] border border-brand-purple/25 bg-tint-purple/25 p-3">
       <div className="text-[12px] font-bold text-brand-purple mb-1.5">
-        🧠 חוות דעת המערכת — קריאה של הפרופיל, הקו״ח והתשובות (פנימי בלבד)
+        🧠 חוות דעת המערכת - קריאה של הפרופיל, הקו״ח והתשובות (פנימי בלבד)
       </div>
       <div className="flex flex-wrap gap-1.5 mb-1.5">
         {dom && <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full", dom.cls)}>{dom.label}</span>}
@@ -2220,7 +2220,7 @@ function AssessmentBox({ a }: { a: NonNullable<ReviewApplication["assessment"]> 
 }
 
 /**
- * A chat message to the candidate from inside the job (the owner, 16/9) —
+ * A chat message to the candidate from inside the job (the owner, 16/9) -
  * lands in her chat + a nudge email "יש לך הודעה מקוד פתוח / בקשר למשרה".
  */
 function ChatToCandidate({
@@ -2293,7 +2293,7 @@ function ChatToCandidate({
                 const res = await sendJobChatMessage(applicantId, jobId, text);
                 if (res.error) setResult(res.error);
                 else {
-                  setResult("נשלח — בצ'אט שלה + מייל שמפנה לשם ✓");
+                  setResult("נשלח - בצ'אט שלה + מייל שמפנה לשם ✓");
                   setJustSent((l) => [...l, { body: text.trim(), at: new Date().toISOString() }]);
                   setShowSent(true);
                   setText("");
@@ -2312,7 +2312,7 @@ function ChatToCandidate({
   );
 }
 
-/** What her institution's coordinator wrote (the owner, 14/9) — team-only.
+/** What her institution's coordinator wrote (the owner, 14/9) - team-only.
  *  Since 16/9: imported phrasing shown verbatim + "שאלה לרכזת" that reaches
  *  her by email AND in the coordinator chat. */
 function CoordinatorReviewsBox({
@@ -2349,7 +2349,7 @@ function CoordinatorReviewsBox({
               )}
               {r.foundJob === true && (
                 <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-tint-mint text-success">
-                  לדבריה מצאה עבודה{r.foundJobPlace ? ` — ${r.foundJobPlace}` : ""}
+                  לדבריה מצאה עבודה{r.foundJobPlace ? ` - ${r.foundJobPlace}` : ""}
                 </span>
               )}
               <button
@@ -2381,7 +2381,7 @@ function CoordinatorReviewsBox({
                     onClick={() =>
                       startSending(async () => {
                         const res = await askCoordinatorQuestion(r.contactId, candidateName, question);
-                        setAskResult(res.error ?? "נשלח לרכזת — במייל ובצ'אט ✓");
+                        setAskResult(res.error ?? "נשלח לרכזת - במייל ובצ'אט ✓");
                         if (!res.error) {
                           setQuestion("");
                           setAsking(null);
@@ -2407,7 +2407,7 @@ function CoordinatorReviewsBox({
 
 /** One click closes the loop by email (the owner, 8/9): whoever went to the
  *  employer gets "הגשנו אותך" (with the placement-fee note), everyone else who
- *  was not finally approved gets the regret email. Stamped per application —
+ *  was not finally approved gets the regret email. Stamped per application -
  *  a second click reaches only whoever is still missing. */
 function OutcomeEmailsButton({ jobId }: { jobId: string }) {
   const [result, setResult] = useState<string | null>(null);
@@ -2426,7 +2426,7 @@ function OutcomeEmailsButton({ jobId }: { jobId: string }) {
             return;
           startSending(async () => {
             const r = await sendJobOutcomeEmails(jobId);
-            if (!r.ok) setResult(r.error ?? "משהו השתבש — נסי שוב.");
+            if (!r.ok) setResult(r.error ?? "משהו השתבש - נסי שוב.");
             else
               setResult(
                 `נשלחו: ${r.submitted} "הגשנו אותך" · ${r.regrets} עדכון` +
@@ -2444,7 +2444,7 @@ function OutcomeEmailsButton({ jobId }: { jobId: string }) {
   );
 }
 
-/** "הוגשה ל-N מקומות" — prominent count; click opens the list with a
+/** "הוגשה ל-N מקומות" - prominent count; click opens the list with a
  *  per-place note on why she did not continue (the owner, 7/9). */
 function ForwardsBox({ app }: { app: ReviewApplication }) {
   const [open, setOpen] = useState(false);
@@ -2521,7 +2521,7 @@ function ForwardRow({ app, f }: { app: ReviewApplication; f: ReviewApplication["
   );
 }
 
-/** The cross-job internal note — visible and editable at the top of the pane. */
+/** The cross-job internal note - visible and editable at the top of the pane. */
 function MemberNoteBox({ app }: { app: ReviewApplication }) {
   const [note, setNote] = useState(app.crmNote ?? "");
   const [savedAt, setSavedAt] = useState<number | null>(null);

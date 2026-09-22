@@ -4,10 +4,10 @@ import { cn } from "@/lib/utils";
 
 /**
  * The friendly nudge a free member sees wherever a paid feature would be.
- * Never scolding — it names what's waiting for her and offers the way in.
+ * Never scolding - it names what's waiting for her and offers the way in.
  *
  * mentorWaiting: a mentor-track account that isn't active yet (pending
- * approval / paused) must NEVER be pitched a payment — mentors don't pay.
+ * approval / paused) must NEVER be pitched a payment - mentors don't pay.
  * The card explains the approval instead (the owner, 2026-08-30: "זה נראה
  * בלגן שלם... מצד שני מציע לי לשלם").
  */
@@ -27,7 +27,7 @@ export function UpgradeCard({
   if (mentorWaiting) {
     title = "החשבון שלך כמנטורית עוד לא פעיל 👑";
     body =
-      "מנטוריות לא משלמות — הצוות עובר על הבקשה שלך, וברגע שתאושרי הכול נפתח מעצמו. אפשר לראות את המצב בכל רגע.";
+      "מנטוריות לא משלמות - הצוות עובר על הבקשה שלך, וברגע שתאושרי הכול נפתח מעצמו. אפשר לראות את המצב בכל רגע.";
     cta = "למצב הבקשה שלי";
   }
   return (
@@ -75,7 +75,7 @@ export function UpgradeNote({
       <Lock size={16} className="text-brand-purple shrink-0 mt-0.5" />
       <span className="flex-1">
         {mentorWaiting
-          ? "החלק הזה ייפתח ברגע שהצוות יאשר את הבקשה שלך כמנטורית — בלי תשלום 💜"
+          ? "החלק הזה ייפתח ברגע שהצוות יאשר את הבקשה שלך כמנטורית - בלי תשלום 💜"
           : children}
       </span>
       <Link href="/join" className="text-brand-purple font-semibold whitespace-nowrap hover:underline">

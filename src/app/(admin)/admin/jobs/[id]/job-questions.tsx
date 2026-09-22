@@ -13,7 +13,7 @@ import {
 import type { QuestionAnswerType } from "@/types/database";
 import { NO_PM_PROPS } from "@/lib/pm-guard";
 
-// Google-Forms-style answer types — labels and badge colors are shared with
+// Google-Forms-style answer types - labels and badge colors are shared with
 // the create-job builder so the two screens always speak the same language.
 export const ANSWER_TYPE_LABEL: Record<QuestionAnswerType, string> = {
   paragraph: "פסקה",
@@ -40,14 +40,14 @@ export interface JobQuestionItem {
   id: string;
   question: string;
   answer_type: QuestionAnswerType;
-  /** Choice options (select/multiselect) — empty for free-text/number. */
+  /** Choice options (select/multiselect) - empty for free-text/number. */
   options: string[];
   /** Must she answer? Optional questions render with a "רשות" badge. */
   required: boolean;
   sort_order: number;
 }
 
-/** The chips editor for choice options — shared by the add and edit forms. */
+/** The chips editor for choice options - shared by the add and edit forms. */
 function OptionsEditor({
   options,
   setOptions,
@@ -109,13 +109,13 @@ function OptionsEditor({
           ? `עוד ${2 - options.length} אפשרויות לפחות`
           : `${options.length} אפשרויות`}
       </p>
-      {/* The server action reads a comma-separated field — the chips feed it. */}
+      {/* The server action reads a comma-separated field - the chips feed it. */}
       <input type="hidden" name="options" value={options.join(", ")} />
     </div>
   );
 }
 
-/** The inline edit form a question row opens — saves via updateJobQuestion. */
+/** The inline edit form a question row opens - saves via updateJobQuestion. */
 function QuestionEditForm({
   jobId,
   question,
@@ -133,7 +133,7 @@ function QuestionEditForm({
         if (result.ok) onClose();
         return result;
       } catch {
-        return { error: "השמירה לא הגיעה לשרת — רענני את הדף ונסי שוב 💜" };
+        return { error: "השמירה לא הגיעה לשרת - רענני את הדף ונסי שוב 💜" };
       }
     },
     {}
@@ -195,7 +195,7 @@ function QuestionEditForm({
 /**
  * Per-job application questions (required or optional): add, edit, delete and
  * reorder. The list itself comes from the server page (ordered by sort_order)
- * — every action revalidates the page, so the server stays the source of
+ * - every action revalidates the page, so the server stays the source of
  * truth.
  */
 export function JobQuestionsManager({
@@ -216,8 +216,8 @@ export function JobQuestionsManager({
         return r;
       } catch {
         // A rejected dispatch (a tab from before a deploy, a killed request)
-        // must say so — a silent failure reads as "לא נשמר" (the owner, 14/9).
-        return { error: "השמירה לא הגיעה לשרת — רענני את הדף ונסי שוב 💜" };
+        // must say so - a silent failure reads as "לא נשמר" (the owner, 14/9).
+        return { error: "השמירה לא הגיעה לשרת - רענני את הדף ונסי שוב 💜" };
       }
     },
     {}
@@ -226,10 +226,10 @@ export function JobQuestionsManager({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* The owner (14/9): "לא ברור מתי שמירה אוטומטית ומתי צריך כפתור" — this
+      {/* The owner (14/9): "לא ברור מתי שמירה אוטומטית ומתי צריך כפתור" - this
           tab says it out loud, once, at the top. */}
       <p className="text-[12px] text-ink-700 bg-tint-mint/60 border border-[#B7E3B0] rounded-md px-3 py-2">
-        ✓ הכל כאן נשמר מיד — הוספה, עריכה, מחיקה וסידור נשמרים ברגע הלחיצה. אין כפתור שמירה נוסף.
+        ✓ הכל כאן נשמר מיד - הוספה, עריכה, מחיקה וסידור נשמרים ברגע הלחיצה. אין כפתור שמירה נוסף.
       </p>
       {questions.length > 0 ? (
         <ol className="flex flex-col">
@@ -317,7 +317,7 @@ export function JobQuestionsManager({
 
       <form action={action} className="flex flex-col gap-2">
         {state.error && <Alert variant="danger">{state.error}</Alert>}
-        {/* Loud confirmation per add — "הוספתי ולא נשמר" must never be a doubt. */}
+        {/* Loud confirmation per add - "הוספתי ולא נשמר" must never be a doubt. */}
         {seq > 0 && !state.error && !pending && (
           <p className="text-[12.5px] font-semibold text-success">השאלה נוספה ונשמרה ✓</p>
         )}
@@ -327,7 +327,7 @@ export function JobQuestionsManager({
   );
 }
 
-/** The add-form fields — remounted (fresh state) after every successful add. */
+/** The add-form fields - remounted (fresh state) after every successful add. */
 function AddQuestionFields({ pending }: { pending: boolean }) {
   const [newType, setNewType] = useState<QuestionAnswerType>("paragraph");
   // Choice options are composed one by one, Google-Forms style.
@@ -358,7 +358,7 @@ function AddQuestionFields({ pending }: { pending: boolean }) {
         </Select>
         {/* Checkbox present in the form data = required; unchecked = רשות. */}
         <Checkbox name="required" label="שאלת חובה" defaultChecked className="shrink-0" />
-        {/* A choice question can't leave without its options — the server used
+        {/* A choice question can't leave without its options - the server used
             to silently coerce it to a paragraph, which read as "לא נשמר". */}
         <Button
           type="submit"

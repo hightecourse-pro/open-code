@@ -2,7 +2,7 @@
 // באופן אוטומטי"): the member opens a NEW Nedarim standing order with the new
 // card through the same secure iframe as checkout. The webhook detects the
 // replacement and alerts the team to cancel the old keva in the Nedarim
-// console (Nedarim exposes no cancel API) — invisible to her.
+// console (Nedarim exposes no cancel API) - invisible to her.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
@@ -91,7 +91,7 @@ export default async function ReplaceCardPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;מנוי/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">החלפת כרטיס אשראי</h1>
         <p className="t-body-sm text-ink-700 mt-1">
-          מזינים כאן את פרטי הכרטיס החדש — נפתחת הוראת קבע חדשה במקום הישנה, והישנה מבוטלת אצלנו.
+          מזינים כאן את פרטי הכרטיס החדש - נפתחת הוראת קבע חדשה במקום הישנה, והישנה מבוטלת אצלנו.
           הכול מאובטח ישירות מול חברת הסליקה; פרטי הכרטיס לא עוברים דרכנו.
         </p>
       </div>
@@ -99,7 +99,7 @@ export default async function ReplaceCardPage() {
       {fields ? (
         <NedarimCheckout fields={fields} />
       ) : (
-        <Alert variant="warn">מערכת התשלומים לא זמינה כרגע — נסי שוב עוד רגע.</Alert>
+        <Alert variant="warn">מערכת התשלומים לא זמינה כרגע - נסי שוב עוד רגע.</Alert>
       )}
     </div>
   );

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -10,6 +11,11 @@ import { CheckoutPanel } from "@/components/patterns/checkout-panel";
 import { buildTransactionFields, isNedarimConfigured } from "@/lib/payments/nedarim";
 import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans } from "@/lib/payments/plans";
+
+export const metadata: Metadata = {
+  title: "הצטרפות לקהילה",
+  description: "מנוי לקהילת קוד פתוח - משרות מותאמות, מנטוריות, קורסים מוקלטים, כלי AI וסשנים חיים. הצטרפי עוד היום.",
+};
 import type { SubscriptionPlan } from "@/types/database";
 
 const MESSAGE: Record<string, { variant: "info" | "warn" | "danger"; title: string; body: string }> = {
@@ -21,7 +27,7 @@ const MESSAGE: Record<string, { variant: "info" | "warn" | "danger"; title: stri
   rejected: {
     variant: "danger",
     title: "לא הצלחנו לאשר את החברות הפעם",
-    body: "אם נראה לך שזו טעות — כתבי לנו ונשמח לבדוק יחד.",
+    body: "אם נראה לך שזו טעות - כתבי לנו ונשמח לבדוק יחד.",
   },
 };
 
@@ -71,7 +77,7 @@ export default async function JoinPage({
   }
 
   // She may have paid OUTSIDE the app (a direct Nedarim link) before signing
-  // up — the payment waits in external_payments under her email. Claiming it
+  // up - the payment waits in external_payments under her email. Claiming it
   // here means the checkout screen simply never asks a woman who already paid.
   {
     const { createClient } = await import("@/lib/supabase/server");
@@ -82,7 +88,7 @@ export default async function JoinPage({
     try {
       if (await reconcileSubscriberStatus(profile.id, user?.email)) redirect("/forum");
     } catch (e) {
-      // redirect() throws by design — let it through; log anything else.
+      // redirect() throws by design - let it through; log anything else.
       if ((e as { digest?: string })?.digest?.startsWith("NEXT_REDIRECT")) throw e;
       console.error("[join] external claim failed:", e);
     }
@@ -90,7 +96,7 @@ export default async function JoinPage({
 
   // The mentor track is marked by ROLE, not tier: choosing it sets
   // role=mentor (join/actions.ts). Tier free alone also describes a regular
-  // member whose subscription was canceled — אסתי, 5/9, hit the mentor
+  // member whose subscription was canceled - אסתי, 5/9, hit the mentor
   // application screen here instead of the checkout she asked for.
   const isMentorTier = profile.role === "mentor";
 
@@ -104,8 +110,8 @@ export default async function JoinPage({
             variant: "info" as const,
             title: "הבקשה שלך להצטרף כמנטורית אצלנו 👑",
             body: profile.profile_completed
-              ? "אנחנו עוברות עליה — ברגע שתאושרי יגיע לך מייל, ומשם הכול פתוח. בינתיים את מוזמנת להסתובב בקהילה ולקרוא."
-              : "נשאר רק למלא את שאלון המנטוריות — ניכנס לקהילה והשאלון יופיע. אחרי שתסיימי, נעבור על הבקשה ונעדכן אותך במייל.",
+              ? "אנחנו עוברות עליה - ברגע שתאושרי יגיע לך מייל, ומשם הכול פתוח. בינתיים את מוזמנת להסתובב בקהילה ולקרוא."
+              : "נשאר רק למלא את שאלון המנטוריות - ניכנס לקהילה והשאלון יופיע. אחרי שתסיימי, נעבור על הבקשה ונעדכן אותך במייל.",
           }
         : MESSAGE.pending;
     return (
@@ -144,7 +150,7 @@ export default async function JoinPage({
   // Paid tier, pending or paused → checkout. Pricing is admin-configurable.
   const pricing = await getPricing();
   const plansRec = buildPlans(pricing);
-  // Monthly only — a year up front is not an ask we make of a junior.
+  // Monthly only - a year up front is not an ask we make of a junior.
   const plans = [plansRec.monthly];
 
   const configured = isNedarimConfigured();
@@ -185,7 +191,7 @@ export default async function JoinPage({
       const v = q ? ansById.get(q.id) : undefined;
       return typeof v === "string" ? v : "";
     };
-    // City is stored as the option value — the report wants the Hebrew label.
+    // City is stored as the option value - the report wants the Hebrew label.
     const cityQ = qByKey.get("city");
     const cityOpts = Array.isArray(cityQ?.options)
       ? (cityQ.options as unknown as { value: string; label: string }[])
@@ -215,7 +221,7 @@ export default async function JoinPage({
         <h1 className="t-h2">{renewing ? "טוב שחזרת 💜" : "כמעט שם!"}</h1>
         <p className="t-body-sm text-ink-500 mt-1">
           {renewing
-            ? "המנוי שלך מושהה — אפשר לחדש ולחזור לקהילה. בינתיים את עדיין יכולה להסתובב ולקרוא."
+            ? "המנוי שלך מושהה - אפשר לחדש ולחזור לקהילה. בינתיים את עדיין יכולה להסתובב ולקרוא."
             : "בחרי מסלול והצטרפי לקהילה. אנחנו ביחד מהצעד הראשון."}
         </p>
       </div>
@@ -226,7 +232,7 @@ export default async function JoinPage({
         </Alert>
       )}
 
-      {/* What the membership actually opens — the owner's list, stated before
+      {/* What the membership actually opens - the owner's list, stated before
           the price asks anything. */}
       <div className="bg-tint-purple/60 border border-[#DDC9EC] rounded-md p-4">
         <div className="font-display font-bold text-[14px] text-ink-1000 mb-1.5">מה מקבלים במנוי?</div>
@@ -249,7 +255,7 @@ export default async function JoinPage({
             מגיעה בתור מנטורית? 👑
           </div>
           <p className="text-[13px] text-ink-700 leading-relaxed">
-            מפתחת מנוסה שרוצה לתרום לקהילה — מענה לשאלות, ליווי אישי, האקתונים? למנטוריות אין מנוי:
+            מפתחת מנוסה שרוצה לתרום לקהילה - מענה לשאלות, ליווי אישי, האקתונים? למנטוריות אין מנוי:
             ממלאות שאלון קצר, ואנחנו מאשרות.
           </p>
           <form action={applyAsMentor}>
@@ -260,7 +266,7 @@ export default async function JoinPage({
         </div>
       )}
 
-      {/* A free member is welcome inside — paying is what unlocks taking part. */}
+      {/* A free member is welcome inside - paying is what unlocks taking part. */}
       <Link
         href="/forum"
         className="text-center text-[13.5px] font-semibold text-brand-purple hover:underline"

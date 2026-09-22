@@ -12,7 +12,7 @@ import { topicTitle } from "@/components/patterns/forum-topic-row";
 import type { PostComment } from "@/components/patterns/post-interactions";
 import type { UserRole } from "@/types/database";
 
-// Always fresh — a new reply shows without a manual refresh.
+// Always fresh - a new reply shows without a manual refresh.
 export const dynamic = "force-dynamic";
 
 type ProfileLite = {
@@ -24,7 +24,7 @@ type ProfileLite = {
 };
 
 // cache()d because generateMetadata and the page body both ask for the same
-// topic — one fetch per request instead of two.
+// topic - one fetch per request instead of two.
 const loadPost = cache(async (id: string) => {
   const supabase = await createClient();
   const { data } = await supabase
@@ -56,7 +56,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
   const post = await loadPost(id);
   if (!post) notFound();
 
-  // Opening the topic is reading it — stamp her read state so the list can
+  // Opening the topic is reading it - stamp her read state so the list can
   // stop marking it "חדש" (Rachel Weinberger, 6/9). Own-rows RLS.
   if (user) {
     await supabase
@@ -67,12 +67,12 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       );
   }
 
-  // A hot topic at scale can hold hundreds of long replies — cap the load to
+  // A hot topic at scale can hold hundreds of long replies - cap the load to
   // the newest 200 (rendered oldest-first) instead of shipping the archive on
   // every 20-second refresh. Reactions: only HER two rows + the trigger-kept
-  // like_count on the post — never every reaction row.
+  // like_count on the post - never every reaction row.
   const COMMENTS_CAP = 200;
-  // Who liked (the owner, 2/9: "לא רואה מי לחץ אהבתי") — names are shown to
+  // Who liked (the owner, 2/9: "לא רואה מי לחץ אהבתי") - names are shown to
   // everyone; a like is a public gesture.
   const { data: likeRows } = await supabase
     .from("reactions")
@@ -177,7 +177,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
       </Link>
 
       <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)] gap-4 items-start">
-        {/* The topic rail — the rest of the forum beside the conversation. */}
+        {/* The topic rail - the rest of the forum beside the conversation. */}
         <aside className="hidden xl:block sticky top-4 bg-white border border-ink-200 rounded-[16px] shadow-sm overflow-hidden">
           <div className="px-3.5 py-2.5 text-[11.5px] font-bold text-ink-400 uppercase tracking-wide bg-ink-50/60 border-b border-ink-100">
             עוד בפורום
@@ -204,7 +204,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
 
         {truncated && (
           <p className="text-[12px] text-ink-500 bg-ink-50 border border-ink-200 rounded-md px-3 py-2">
-            שיחה ארוכה במיוחד — מוצגות {COMMENTS_CAP} התגובות האחרונות.
+            שיחה ארוכה במיוחד - מוצגות {COMMENTS_CAP} התגובות האחרונות.
           </p>
         )}
         <div className="min-w-0">
@@ -218,9 +218,9 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
         </div>
       </div>
       {/* A conversation, not a page: replies from other members show up on
-          their own. Faster than the topic list — here she is actively waiting
+          their own. Faster than the topic list - here she is actively waiting
           for an answer. Typed-but-unsent text survives the refresh. */}
-      <AutoRefresh seconds={20} />
+      <AutoRefresh seconds={60} />
     </div>
   );
 }

@@ -88,10 +88,10 @@ export async function setDriveEmail(
 export type EmploymentState = { ok?: boolean; error?: string };
 
 /**
- * "מצאתי עבודה" — the member updates her own employment status. hired_at is
+ * "מצאתי עבודה" - the member updates her own employment status. hired_at is
  * stamped only on the false→true transition (so the celebration window is
  * honest), workplace clears when she turns it off, and hired_via_us is
- * pipeline-owned — never touched here.
+ * pipeline-owned - never touched here.
  */
 export async function updateEmployment(
   _prev: EmploymentState,
@@ -117,12 +117,12 @@ export async function updateEmployment(
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
   if (error) {
-    // Same warm message for both writes — the log is what tells them apart.
+    // Same warm message for both writes - the log is what tells them apart.
     console.error("[employment] found_job write failed:", error);
     return { error: "לא הצלחנו לשמור כרגע. בואי ננסה שוב." };
   }
 
-  // Where she works stays between her and the team — member_private, never the
+  // Where she works stays between her and the team - member_private, never the
   // profile row the whole community can read.
   const { error: wpError } = await supabase.from("member_private").upsert(
     {
@@ -135,7 +135,7 @@ export async function updateEmployment(
     { onConflict: "profile_id" }
   );
   if (wpError) {
-    // Log the Postgres error itself (never the workplace value — on an internal
+    // Log the Postgres error itself (never the workplace value - on an internal
     // job that string IS the hiring client's name) so a schema/permission
     // failure is diagnosable instead of just "לא הצלחנו לשמור".
     console.error("[employment] workplace write failed:", wpError);
@@ -155,7 +155,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   if (!user) redirect("/login");
 
   // Draft mode (the owner, 6/9: "תשמור את הטיוטה לכל אחת בכל שלב"): every
-  // step-advance saves whatever is filled so far — no required checks, no CV
+  // step-advance saves whatever is filled so far - no required checks, no CV
   // gate, no completion flip, no redirect. A dropped final submit (רות) then
   // costs nothing: her answers already live on the server.
   const draft = formData.get("__draft") === "1";
@@ -176,7 +176,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   const firstCompletion = !before?.profile_completed;
 
   // Validate against the SAME question set the member actually sees (scope by
-  // role) — otherwise hidden questions block saving with "missing" errors.
+  // role) - otherwise hidden questions block saving with "missing" errors.
   const scope: QuestionScope[] = before?.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
   const { data: questions } = await supabase
     .from("config_questions")
@@ -189,7 +189,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   // array of {url,title,note} (legacy plain-line strings hydrate on render).
   const RICH_KEYS = new Set(["bio", "notes_for_us", "work_description", "ai_gaps", "practicum_description"]);
   const SAVE_LINK_KEYS = new Set(["github", "live_links", "ai_project_links"]);
-  // Selects where "אחר" is stored as-is — the form shows no פירוט field.
+  // Selects where "אחר" is stored as-is - the form shows no פירוט field.
   const PLAIN_OTHER_KEYS = new Set(["marital_status"]);
   const PAY_ACK_KEY = "paid_placement";
 
@@ -216,10 +216,10 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
 
   for (const q of questions ?? []) {
     const key = `q_${q.id}`;
-    // Skip questions hidden by the experience track — don't require/store them.
+    // Skip questions hidden by the experience track - don't require/store them.
     if (q.intake_track === "junior" && hasExperience) continue;
     if (q.intake_track === "experienced" && !hasExperience) continue;
-    // Skip conditional follow-ups whose parent is off — don't require them.
+    // Skip conditional follow-ups whose parent is off - don't require them.
     if (q.depends_on) {
       if (q.depends_on.includes("=")) {
         const [pk, pv] = q.depends_on.split("=");
@@ -265,7 +265,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       } catch {
         entries = [];
       }
-      // Rich descriptions ride in as HTML — sanitize each one, and treat
+      // Rich descriptions ride in as HTML - sanitize each one, and treat
       // markup-only bodies as empty.
       entries = entries.map((e) => {
         const clean = sanitizeRichHtml(e.description);
@@ -306,11 +306,11 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       if (!p.start && !p.end) {
         if (q.required) missing.push(q.label_he);
       } else if (!isValidYm(p.start)) {
-        invalid.push("סמני מתי התחלת את הפרקטיקום — ואם עוד לא סיימת, סמני את זה 🙂");
+        invalid.push("סמני מתי התחלת את הפרקטיקום - ואם עוד לא סיימת, סמני את זה 🙂");
       } else if (p.end !== "current" && !isValidYm(p.end)) {
-        invalid.push("סמני גם מתי הסתיים הפרקטיקום — או סמני \"עוד לא סיימתי\" 🙂");
+        invalid.push("סמני גם מתי הסתיים הפרקטיקום - או סמני \"עוד לא סיימתי\" 🙂");
       } else if (p.end !== "current" && p.end < p.start) {
-        invalid.push("רגע, תאריך סיום הפרקטיקום יוצא לפני ההתחלה — בדקי שוב את התאריכים 🙂");
+        invalid.push("רגע, תאריך סיום הפרקטיקום יוצא לפני ההתחלה - בדקי שוב את התאריכים 🙂");
       }
       answered.push({ question_id: q.id, value: { start: p.start, end: p.end } });
       continue;
@@ -374,7 +374,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
         badValue = true;
       }
     }
-    // A draft never persists a value that failed validation — it will be
+    // A draft never persists a value that failed validation - it will be
     // caught properly at the real submit.
     if (!(draft && badValue)) answered.push({ question_id: q.id, value });
   }
@@ -382,7 +382,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   if (!draft && invalid.length > 0) {
     return { error: invalid.join(" · ") };
   }
-  // Staff accounts aren't community members — don't hold their save hostage
+  // Staff accounts aren't community members - don't hold their save hostage
   // on member-intake required fields.
   if (!draft && missing.length > 0 && before?.role !== "admin") {
     return { error: `כמעט סיימנו 🙂 נשארו כמה שדות חובה: ${missing.slice(0, 6).join(", ")}` };
@@ -390,7 +390,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
 
   // A member profile is not complete without at least one CV. A file handed
   // in with the wizard lands in her documents like any other upload. Mentors
-  // included since 2026-08-28 (Shira — the team reviews a mentor's CV in her
+  // included since 2026-08-28 (Shira - the team reviews a mentor's CV in her
   // application); only staff accounts are exempt.
   if (!draft && before?.role !== "admin") {
     const { count: cvCount } = await supabase
@@ -400,16 +400,16 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     if ((cvCount ?? 0) === 0) {
       const cvFile = formData.get("cv_file");
       if (!(cvFile instanceof File) || cvFile.size === 0) {
-        // Mentors: recommended, never required (the owner, 10/9) — a mentor
+        // Mentors: recommended, never required (the owner, 10/9) - a mentor
         // without a file simply completes; one she DID attach still saves.
         if (before?.role === "mentor") {
           // fall through to the rest of the save with no CV
         } else {
-          return { error: "כמעט סיימנו 🙂 חסר רק קובץ קורות חיים — העלי אחד בשלב האחרון של השאלון." };
+          return { error: "כמעט סיימנו 🙂 חסר רק קובץ קורות חיים - העלי אחד בשלב האחרון של השאלון." };
         }
       }
       if (cvFile instanceof File && cvFile.size > 0) {
-      if (cvFile.size > 10 * 1024 * 1024) return { error: "קובץ קורות החיים גדול מדי — עד 10MB." };
+      if (cvFile.size > 10 * 1024 * 1024) return { error: "קובץ קורות החיים גדול מדי - עד 10MB." };
       if (!/\.(pdf|docx?)$/i.test(cvFile.name)) {
         return { error: "קורות חיים אפשר להעלות רק כ-PDF או Word (doc/docx)." };
       }
@@ -421,7 +421,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       if (upErr) return { error: "העלאת קורות החיים נכשלה. נסי שוב." };
       const row = { profile_id: user.id, label: cvFile.name, language: "he" as const, file_path: path, file_name: cvFile.name };
       // Her first document becomes the default; pre-migration DBs lack the
-      // column (42703) — retry without it, same as /cv does.
+      // column (42703) - retry without it, same as /cv does.
       let { error: docErr } = await supabase.from("cv_documents").insert({ ...row, is_default: true });
       if (docErr) ({ error: docErr } = await supabase.from("cv_documents").insert(row));
       if (docErr) return { error: "קורות החיים עלו אבל לא נשמרו. נסי שוב." };
@@ -471,7 +471,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   }
 
   // Grade sheet (the owner, 19/9): optional, juniors only; a failure here
-  // never costs her the questionnaire — it is reported, not fatal.
+  // never costs her the questionnaire - it is reported, not fatal.
   const gradesFile = formData.get("grades_file");
   if (!draft && gradesFile instanceof File && gradesFile.size > 0 && before?.role === "junior" && !hasExperience) {
     if (gradesFile.size <= 10 * 1024 * 1024 && /\.(pdf|docx?|jpe?g|png)$/i.test(gradesFile.name)) {
@@ -489,7 +489,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   }
 
   // Change-tracked save: one read of what's already stored, then upserts only
-  // for answers whose value actually changed (or is brand new) — so a row's
+  // for answers whose value actually changed (or is brand new) - so a row's
   // updated_at honestly means "when this answer last changed", not "when she
   // last hit save".
   const { data: storedRows } = await supabase
@@ -499,17 +499,17 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   const stored = new Map((storedRows ?? []).map((r) => [r.question_id, r.value]));
 
   const savedAt = new Date().toISOString();
-  // Every one of these used to be fired and forgotten. A failure — a policy, a
-  // constraint, a dropped connection — left the profile marked "completed" with
+  // Every one of these used to be fired and forgotten. A failure - a policy, a
+  // constraint, a dropped connection - left the profile marked "completed" with
   // the answers missing, and told her it had been saved. Nothing about that is
   // recoverable after the fact, so a failure has to stop and say so.
   const failures: string[] = [];
   for (const a of answered) {
     if (stored.has(a.question_id) && stableJson(stored.get(a.question_id)) === stableJson(a.value)) {
-      continue; // unchanged — leave the row (and its updated_at) alone
+      continue; // unchanged - leave the row (and its updated_at) alone
     }
     // The updated_at column exists on the table (its Row type carries it) but
-    // the hand-written Insert type omits DB-defaulted timestamps — cast through
+    // the hand-written Insert type omits DB-defaulted timestamps - cast through
     // the Insert shape so the explicit change stamp still reaches the row.
     const payload = {
       profile_id: user.id,
@@ -538,14 +538,14 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     return {
       error:
         failures.length === answered.length
-          ? "לא הצלחנו לשמור את התשובות שלך. בבקשה נסי שוב — ואם זה חוזר, כתבי לנו ונטפל בזה."
+          ? "לא הצלחנו לשמור את התשובות שלך. בבקשה נסי שוב - ואם זה חוזר, כתבי לנו ונטפל בזה."
           : `חלק מהתשובות לא נשמרו (${failures.length} מתוך ${answered.length}). בבקשה נסי לשמור שוב.`,
     };
   }
 
   // Denormalize the two card-facing answers into profiles: the members list,
   // the sidebar meta and the portal all read profiles.specialization/region
-  // directly — and until now nothing in the questionnaire ever wrote them, so
+  // directly - and until now nothing in the questionnaire ever wrote them, so
   // a member could answer both and still show an empty card. Stored as the
   // Hebrew label (that's what every reader displays as-is).
   {
@@ -580,10 +580,10 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       await supabase.from("profiles").update(patch).eq("id", user.id);
     }
 
-    // The "קצת על עצמי" answer too — the community library and the portal
+    // The "קצת על עצמי" answer too - the community library and the portal
     // header read profiles.bio, and until now (9/9) NOTHING ever wrote it:
     // all 226 members with a bio answer had an empty card. Stored as plain
-    // text — every reader renders it as-is.
+    // text - every reader renders it as-is.
     const bioQ = qByKey.get("bio");
     if (bioQ && answeredIds.has(bioQ.id)) {
       const raw = answered.find((a) => a.question_id === bioQ.id)?.value;
@@ -592,7 +592,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
       await supabase.from("profiles").update({ bio: text || null }).eq("id", user.id);
     }
 
-    // Warm the live-project screenshot cache (9/9) — best effort, never
+    // Warm the live-project screenshot cache (9/9) - best effort, never
     // holding her save; the profile view generates whatever this missed.
     const linkQs = ["live_links", "ai_project_links"].map((k) => qByKey.get(k)).filter(Boolean);
     const urls: string[] = [];
@@ -614,11 +614,11 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   if (draft) return { ok: true };
 
   revalidatePath("/profile");
-  // On first completion, the natural next step is the membership decision —
+  // On first completion, the natural next step is the membership decision -
   // pay, or apply as a mentor (the PM's call): /join offers both. A member
   // who is already active just lands in the community.
   if (firstCompletion) {
-    // She may have already paid OUTSIDE the app (a direct Nedarim link) —
+    // She may have already paid OUTSIDE the app (a direct Nedarim link) -
     // claim that payment by her email before deciding where she lands.
     try {
       await reconcileSubscriberStatus(user.id, user.email);
@@ -633,7 +633,7 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     redirect(after?.status === "active" ? "/forum" : "/join");
   }
   // An EDIT lands back on the top of the profile screen with a clear saved
-  // indication (the owner, 31/8) — not mid-wizard wondering if it took.
+  // indication (the owner, 31/8) - not mid-wizard wondering if it took.
   redirect("/profile?saved=1");
 }
 
@@ -656,7 +656,7 @@ function stableJson(v: unknown): string {
 
 /**
  * An experienced member asks to become a mentor, from her profile (the
- * owner's ask, 2026-08-26 — until now the door existed only on first entry).
+ * owner's ask, 2026-08-26 - until now the door existed only on first entry).
  * Deliberately a REQUEST to the team, not a self-serve track switch: she is
  * an active paying member, and flipping her tier automatically would cut her
  * off from everything she pays for before anyone approved anything.
@@ -668,7 +668,7 @@ export async function requestMentorRole(): Promise<void> {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // One open request at a time — the button becomes "הבקשה אצלנו" meanwhile.
+  // One open request at a time - the button becomes "הבקשה אצלנו" meanwhile.
   const { data: open } = await supabase
     .from("member_requests")
     .select("id")
@@ -692,7 +692,7 @@ export async function requestMentorRole(): Promise<void> {
     kind: "member_request",
     severity: "info",
     title: `${who?.full_name ?? "חברה"} מבקשת להצטרף כמנטורית`,
-    body: "הבקשה הוגשה מעמוד הפרופיל — מחכה להחלטה במסך הבקשות.",
+    body: "הבקשה הוגשה מעמוד הפרופיל - מחכה להחלטה במסך הבקשות.",
     context: { profileId: user.id },
     dedupeKey: `mentor-request:${user.id}`,
   });

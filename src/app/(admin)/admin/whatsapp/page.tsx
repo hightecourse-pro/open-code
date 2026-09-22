@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "וואטסאפ" };
 
 /**
  * The WhatsApp inbox (the owner, 31/8): the community number runs on Meta's
- * Cloud API — no phone, no app — and the team answers from here. Until the
+ * Cloud API - no phone, no app - and the team answers from here. Until the
  * owner completes the Meta signup, the screen shows exactly what is still
  * missing instead of a dead inbox.
  */
@@ -32,7 +32,7 @@ export default async function AdminWhatsAppPage({
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(500);
 
-  // Every member with a phone — names contacts in the list AND feeds the
+  // Every member with a phone - names contacts in the list AND feeds the
   // new-conversation picker (the owner, 1/9: "לשם מתוך רשימת הלקוחות").
   const memberNameOf = new Map<string, string>();
   const memberOptions: WaMemberOption[] = [];
@@ -76,7 +76,7 @@ export default async function AdminWhatsAppPage({
     }
   }
 
-  // Templates for the new-conversation dialog — pending ones ride along so
+  // Templates for the new-conversation dialog - pending ones ride along so
   // the dialog can SAY they're awaiting Meta instead of looking empty
   // (the owner, 1/9: "נראה שבשיחה חדשה אין תבניות").
   const templates: WaTemplateOption[] = (await listWaTemplates())
@@ -94,7 +94,7 @@ export default async function AdminWhatsAppPage({
         .limit(500)
     : { data: [] };
 
-  // Short-lived signed URLs for the thread's media — the bucket is private.
+  // Short-lived signed URLs for the thread's media - the bucket is private.
   const mediaUrlOf = new Map<string, string>();
   const withMedia = (messages ?? []).filter((m) => m.media_path);
   if (withMedia.length) {
@@ -118,12 +118,12 @@ export default async function AdminWhatsAppPage({
 
   return (
     <div className="flex flex-col gap-4">
-      <AutoRefresh seconds={20} />
+      <AutoRefresh seconds={45} />
       <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;וואטסאפ/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">וואטסאפ</h1>
         <p className="t-body-sm text-ink-500">
-          ההתכתבות של מספר הקהילה — נכנסות ותשובות, בלי טלפון ובלי אפליקציה.
+          ההתכתבות של מספר הקהילה - נכנסות ותשובות, בלי טלפון ובלי אפליקציה.
         </p>
       </div>
 
@@ -140,7 +140,7 @@ export default async function AdminWhatsAppPage({
               {webhookReady ? " (סוד ה-webhook כבר מוגדר ✓)" : ""}.
             </li>
           </ul>
-          המסך כבר מוכן — ברגע שהמפתחות ייכנסו, הכל יעבוד מיד.
+          המסך כבר מוכן - ברגע שהמפתחות ייכנסו, הכל יעבוד מיד.
         </div>
       )}
 

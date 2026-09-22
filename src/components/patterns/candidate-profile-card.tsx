@@ -20,12 +20,12 @@ import type { ExperienceEntryDisplay } from "@/lib/portal/types";
 type Icon = React.ComponentType<{ size?: number; className?: string }>;
 
 /**
- * THE candidate profile — one renderer for the member's preview, the team's
+ * THE candidate profile - one renderer for the member's preview, the team's
  * member view and the employer portal, so they can never drift apart again
  * (the owner, 31/8: "זה אמור להיות זהה אחד לאחד").
  *
  * Design round (the owner, 9/9: "לא נעים לעין ולא מייצג ולא יכול להחליף
- * קורות חיים"): the bento became a proper CV — a strong identity header with
+ * קורות חיים"): the bento became a proper CV - a strong identity header with
  * "קצת עליי" featured, a main column that reads like a resume (experience as
  * a timeline, then the practical work, then live projects), and a compact
  * skills sidebar. No stranded half-empty cards.
@@ -81,11 +81,11 @@ const GROUPS: { title: string; icon: Icon; tone: BadgeProps["variant"]; keys: st
   },
 ];
 
-/** The resume's main column — the story; everything else sits in the sidebar. */
+/** The resume's main column - the story; everything else sits in the sidebar. */
 const MAIN_TITLES = new Set(["ניסיון תעסוקתי", "ניסיון מעשי"]);
 
 /**
- * Her preferences, not her qualifications — an employer reading a submitted
+ * Her preferences, not her qualifications - an employer reading a submitted
  * profile has no business with these (the owner, 31/8: "גם רמת ההיברידיות
  * ומה מחפשת לא קשור למעסיק אחרי שהגשנו למשרה").
  */
@@ -128,7 +128,7 @@ function groupFields(candidate: CandidateDetail) {
 }
 
 /**
- * The practicum answers arrive as five separate fields — but on a CV they are
+ * The practicum answers arrive as five separate fields - but on a CV they are
  * ONE experience entry (the owner, 9/9: "הפרקטיקום צריך להיכנס ברצף ההתנסות
  * המעשית"): employer, kind, period, tech and description fold into a single
  * timeline stop, and the yes/no field disappears (the entry itself says it).
@@ -186,7 +186,7 @@ function prettyUrl(url: string): string {
   }
 }
 
-/** A code-host link — listed under קוד, never given a screenshot tile. */
+/** A code-host link - listed under קוד, never given a screenshot tile. */
 function isRepoUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname;
@@ -225,12 +225,12 @@ export function CandidateProfileCard({
   headerExtra?: React.ReactNode;
   /**
    * TEAM-ONLY contact details (the owner, 31/8). Passed exclusively by the
-   * admin member-profile page — the portal and the member preview never
+   * admin member-profile page - the portal and the member preview never
    * provide it, so nothing here can leak to a client.
    */
   teamContact?: { phone?: string | null; email?: string | null };
   /**
-   * url → base64 data URI of a live-site screenshot (lib/site-thumbs) —
+   * url → base64 data URI of a live-site screenshot (lib/site-thumbs) -
    * inlined so Netfree has no external image to intercept (9/9).
    */
   thumbs?: Record<string, string>;
@@ -333,12 +333,12 @@ export function CandidateProfileCard({
       >
         {hasMain && (
           <div className="flex flex-col gap-5">
-            {/* The proof leads (the owner, 9/9: "דוגמאות קוד/פרויקטים —
+            {/* The proof leads (the owner, 9/9: "דוגמאות קוד/פרויקטים -
                 תעלה יותר למעלה"): live work first, history after. */}
             {hasLinks && (
               <section className="rounded-[18px] border border-brand-purple/25 bg-tint-purple/40 p-5 sm:p-6 break-inside-avoid">
                 <SectionHead icon={Code2} title="פרויקטים וקוד" tone="purple" />
-                <p className="t-caption -mt-2 mb-3.5">קוד ופרויקטים חיים שהיא בנתה — שווה מבט לפני השיחה.</p>
+                <p className="t-caption -mt-2 mb-3.5">קוד ופרויקטים חיים שהיא בנתה - שווה מבט לפני השיחה.</p>
                 <ProjectLinks links={candidate.links} thumbs={thumbs} />
               </section>
             )}
@@ -384,7 +384,7 @@ export function CandidateProfileCard({
 /**
  * The projects area, in two symmetric halves (the owner, 9/9: "הקוביות לא
  * סימטריות ומעורבב גיט ופרויקטים חיים"): live sites as uniform screenshot
- * tiles (a compact preview strip — never a full-bleed banner), code repos as
+ * tiles (a compact preview strip - never a full-bleed banner), code repos as
  * uniform list rows below.
  */
 function ProjectLinks({
@@ -419,7 +419,7 @@ function ProjectLinks({
                         className="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
                       />
                     ) : (
-                      // Same-size stand-in while the screenshot bakes — the
+                      // Same-size stand-in while the screenshot bakes - the
                       // tiles stay symmetric either way.
                       <span className="flex h-full w-full items-center justify-center bg-gradient-to-br from-tint-purple to-tint-pink">
                         <ExternalLink size={22} className="text-brand-purple/50" />

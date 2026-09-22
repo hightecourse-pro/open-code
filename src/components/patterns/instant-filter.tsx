@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * One row of an instantly-filterable list: the server renders the node once
- * (card, topic row…) and pre-joins the text it should be findable by — the
+ * (card, topic row…) and pre-joins the text it should be findable by - the
  * client only decides which rows show as she types.
  */
 export interface InstantItem {
@@ -20,7 +20,7 @@ export interface InstantItem {
 }
 
 /**
- * Instant, client-side filtering: the list narrows as she types — no submit
+ * Instant, client-side filtering: the list narrows as she types - no submit
  * button, no navigation, no URL writes. useDeferredValue keeps the input
  * responsive while a longer list re-filters a beat behind her keystrokes.
  */
@@ -37,7 +37,7 @@ export function useInstantFilter<T>(
 }
 
 /**
- * The community's search box (icon + input), minus the form around it — this
+ * The community's search box (icon + input), minus the form around it - this
  * one filters in place. Plain controlled input: typing never navigates.
  */
 export function InstantSearchInput({
@@ -49,7 +49,7 @@ export function InstantSearchInput({
 }: {
   value: string;
   onChange: (value: string) => void;
-  /** aria-label — the design shows no separate label element. */
+  /** aria-label - the design shows no separate label element. */
   label: string;
   placeholder: string;
   className?: string;

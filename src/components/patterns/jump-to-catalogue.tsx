@@ -4,7 +4,7 @@ import { openCollapsible } from "./collapsible-section";
 
 /**
  * "לרשימה המלאה" from the top of the courses page (the owner, 2026-08-30):
- * with an active course the catalogue folds far below — this opens the fold
+ * with an active course the catalogue folds far below - this opens the fold
  * and brings her there in one click.
  */
 export function JumpToCatalogue({

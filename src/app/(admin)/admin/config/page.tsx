@@ -70,7 +70,7 @@ export default async function AdminConfigPage() {
   const launchNudgeOn = (nudgeRow?.value as { on?: boolean } | null)?.on !== false;
 
   // Tech values members typed under "אחר" (in the tech multiselects and inside
-  // experience entries) — surfaced in the tech taxonomy for one-click adoption.
+  // experience entries) - surfaced in the tech taxonomy for one-click adoption.
   const knownTech = new Set((taxonomies ?? []).filter((t) => t.kind === "tech").flatMap((t) => [t.value, t.label_he]));
   const techQIds = (questions ?? []).filter((q) => q.taxonomy_kind === "tech").map((q) => q.id);
   const expQIds = (questions ?? []).filter((q) => ["work_history", "practical_experience"].includes(q.key)).map((q) => q.id);
@@ -92,7 +92,7 @@ export default async function AdminConfigPage() {
   const plans = buildPlans(pricing);
 
   // What members typed under "אחר" on select questions (the owner, 30/8:
-  // "שנוכל לראות איזה אחר שמו כדי לשקול להוסיף לרשימה") — any stored answer
+  // "שנוכל לראות איזה אחר שמו כדי לשקול להוסיף לרשימה") - any stored answer
   // that isn't one of the question's options.
   const selectIds = (questions ?? [])
     .filter((q) => q.field_type === "select" && Array.isArray(q.options) && (q.options as unknown[]).length > 0)
@@ -134,7 +134,7 @@ export default async function AdminConfigPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;config/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">הגדרות</h1>
         <p className="t-body-sm text-ink-500">
-          כל שינוי כאן משתקף מיד אצל החברות — בלי לגעת בקוד.
+          כל שינוי כאן משתקף מיד אצל החברות - בלי לגעת בקוד.
         </p>
       </div>
 
@@ -161,7 +161,7 @@ export default async function AdminConfigPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <Collapsible title='הודעת "מאגר המנטוריות בבנייה"' defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          מוצגת לחברות במסך המנטוריות: המענה לבקשת ליווי עשוי לקחת קצת זמן. כשהמאגר מוכן — מכבות
+          מוצגת לחברות במסך המנטוריות: המענה לבקשת ליווי עשוי לקחת קצת זמן. כשהמאגר מוכן - מכבות
           כאן בלחיצה.
         </p>
         <form action={setMentorPoolNotice.bind(null, !mentorPoolNoticeOn)}>
@@ -174,7 +174,7 @@ export default async function AdminConfigPage() {
                 : "bg-ink-50 border-ink-200 text-ink-500 hover:border-brand-purple")
             }
           >
-            {mentorPoolNoticeOn ? "ההודעה מוצגת עכשיו — לחיצה תכבה" : "ההודעה כבויה — לחיצה תדליק"}
+            {mentorPoolNoticeOn ? "ההודעה מוצגת עכשיו - לחיצה תכבה" : "ההודעה כבויה - לחיצה תדליק"}
           </button>
         </form>
         </Collapsible>
@@ -184,8 +184,8 @@ export default async function AdminConfigPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <Collapsible title='הודעת ההרצה ("מצאת באג? זה הזמן")' defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-3">
-          הבועה עם החץ שמעל כפתור &quot;יש לך בקשה?&quot; — מזמינה את החברות לדווח על באגים בתקופת
-          ההרצה. כשההרצה נגמרת — מכבות כאן בלחיצה.
+          הבועה עם החץ שמעל כפתור &quot;יש לך בקשה?&quot; - מזמינה את החברות לדווח על באגים בתקופת
+          ההרצה. כשההרצה נגמרת - מכבות כאן בלחיצה.
         </p>
         <form action={setLaunchNudge.bind(null, !launchNudgeOn)}>
           <button
@@ -197,7 +197,7 @@ export default async function AdminConfigPage() {
                 : "bg-ink-50 border-ink-200 text-ink-500 hover:border-brand-purple")
             }
           >
-            {launchNudgeOn ? "ההודעה מוצגת עכשיו — לחיצה תכבה" : "ההודעה כבויה — לחיצה תדליק"}
+            {launchNudgeOn ? "ההודעה מוצגת עכשיו - לחיצה תכבה" : "ההודעה כבויה - לחיצה תדליק"}
           </button>
         </form>
         </Collapsible>
@@ -207,7 +207,7 @@ export default async function AdminConfigPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <Collapsible title="שאלות המשוב על סשן" defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-4">
-          מה שואלים חברה שהייתה בסשן — ארבע שאלות דירוג, בניסוח שלך.
+          מה שואלים חברה שהייתה בסשן - ארבע שאלות דירוג, בניסוח שלך.
         </p>
         <FeedbackQuestionsForm aspects={feedbackAspects} />
         </Collapsible>
@@ -217,9 +217,9 @@ export default async function AdminConfigPage() {
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <Collapsible title="שאלות הפרופיל" defaultOpen={false}>
         <p className="text-[12.5px] text-ink-500 mb-4">
-          השאלון מוצג לחברות כאשף בשלבים, והשאלות כאן מקובצות בדיוק לאותם שלבים ובאותו סדר — מה
+          השאלון מוצג לחברות כאשף בשלבים, והשאלות כאן מקובצות בדיוק לאותם שלבים ובאותו סדר - מה
           שאת רואה כאן הוא מה שהן רואות. החיצים מזיזים שאלה בתוך השלב שלה. כבי שאלה כדי להסתיר
-          אותה בלי למחוק, ושימי לב לתוויות — לשאלה יכולים להיות תנאי הצגה נוספים מלבד היותה פעילה.
+          אותה בלי למחוק, ושימי לב לתוויות - לשאלה יכולים להיות תנאי הצגה נוספים מלבד היותה פעילה.
         </p>
         <div className="flex flex-col gap-6">
           {groupBySection(questions ?? []).map((section) => (
@@ -232,7 +232,7 @@ export default async function AdminConfigPage() {
               </div>
               <p className="text-[11.5px] text-ink-500 mt-1 mb-1">{section.hint}</p>
           {section.questions.map((q, i) => {
-            // A follow-up question is asked only when its parent bool is "כן" —
+            // A follow-up question is asked only when its parent bool is "כן" -
             // so if the parent is switched off, the follow-up can never show up
             // even while it says "פעילה". Say that out loud instead of leaving
             // her to guess why an enabled question doesn't reach the members.
@@ -240,7 +240,7 @@ export default async function AdminConfigPage() {
               ? (questions ?? []).find((p) => p.key === q.depends_on)
               : undefined;
             const parentOff = !!q.depends_on && (!parent || !parent.active);
-            // Structural questions drive the form's logic — they can't be disabled.
+            // Structural questions drive the form's logic - they can't be disabled.
             const locked = q.key === "has_experience";
             const editable =
               (q.field_type === "select" || q.field_type === "multiselect") &&
@@ -279,8 +279,8 @@ export default async function AdminConfigPage() {
                     {q.active && parentOff && (
                       <p className="text-[11.5px] text-[#8C5E0E] bg-tint-warm border border-[#F0DCA8] rounded-md px-2.5 py-1.5 mt-1.5">
                         {parent
-                          ? `השאלה פעילה, אבל "${parent.label_he}" כבויה — כל עוד היא כבויה השאלה הזו לא תופיע אצל החברות. הפעילי אותה כדי שתחזור.`
-                          : `השאלה פעילה, אבל השאלה שהיא תלויה בה (${q.depends_on}) לא קיימת — כך היא לא תופיע אצל החברות.`}
+                          ? `השאלה פעילה, אבל "${parent.label_he}" כבויה - כל עוד היא כבויה השאלה הזו לא תופיע אצל החברות. הפעילי אותה כדי שתחזור.`
+                          : `השאלה פעילה, אבל השאלה שהיא תלויה בה (${q.depends_on}) לא קיימת - כך היא לא תופיע אצל החברות.`}
                       </p>
                     )}
                   </div>

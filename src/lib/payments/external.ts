@@ -1,4 +1,4 @@
-// Payments made OUTSIDE the app — a direct Nedarim link, a manual charge.
+// Payments made OUTSIDE the app - a direct Nedarim link, a manual charge.
 // Their webhooks arrive with no Param1, so there is no profile to activate.
 // Match by email when a member already exists; otherwise remember the payment
 // and claim it the moment she signs up ("אם היא תיכנס נדע שהיא שילמה").
@@ -10,7 +10,7 @@ import { activateSubscription } from "./subscription";
 import type { Json, SubscriptionPlan } from "@/types/database";
 
 /**
- * Find an auth user id by email — one indexed SQL lookup (the old paged
+ * Find an auth user id by email - one indexed SQL lookup (the old paged
  * listUsers scan serialized every auth record and sat in the webhook hot path).
  */
 async function userIdByEmail(email: string): Promise<string | null> {
@@ -21,13 +21,13 @@ async function userIdByEmail(email: string): Promise<string | null> {
 
 /**
  * A Nedarim charge-failure report (Status:"Error" + Message, usually a keva
- * charge that was refused — "סירוב"). Until 31/8 this shape bounced off the
+ * charge that was refused - "סירוב"). Until 31/8 this shape bounced off the
  * webhook with a 401, Nedarim emailed the owner a developer-report, and
- * NOTHING was documented — איילת טרבלסי's refused first charge left her
+ * NOTHING was documented - איילת טרבלסי's refused first charge left her
  * looking like a clean מנויה. Now it is attributed (email → keva id) and
  * written down as a failed payment + a named alert.
  *
- * Documentation only: it never touches the subscription — whether a refusal
+ * Documentation only: it never touches the subscription - whether a refusal
  * should pause anyone is the owner's call, made from the alert.
  */
 export async function recordChargeFailure(
@@ -40,7 +40,7 @@ export async function recordChargeFailure(
   const message = String(params.Message ?? "").slice(0, 300);
   const errorTime = (params.ErrorTime ?? "").trim();
 
-  // Attribute — the indexed email lookup first, then the keva id against
+  // Attribute - the indexed email lookup first, then the keva id against
   // every payment we ever recorded (live charges carry raw.KevaId; imported
   // rows carry it in provider_payment_id).
   let profileId = email ? await userIdByEmail(email) : null;
@@ -99,11 +99,11 @@ export async function recordChargeFailure(
       severity: profileId ? "critical" : "warning",
       title: profileId
         ? `חיוב נכשל אצל נדרים: ${name ?? email ?? "חברה"}`
-        : "נדרים דיווחו על חיוב שנכשל — לא זוהתה חברה",
+        : "נדרים דיווחו על חיוב שנכשל - לא זוהתה חברה",
       body: `${name ?? email ?? "מישהי"} חויבה ונדרים דיווחו סירוב: "${message}"${errorTime ? ` (${errorTime})` : ""}${kevaId ? ` · הוראת קבע ${kevaId}` : ""} · ${amountAgorot / 100} ₪. ${
         profileId
-          ? "הסירוב תועד ברשימת התשלומים שלה. המנוי לא שונה — ההחלטה אם להשהות היא שלך, ובינתיים כדאי לפנות אליה על עדכון הכרטיס."
-          : "לא נמצאה חברה עם הפרטים האלה — כדאי להצליב מול קונסולת נדרים."
+          ? "הסירוב תועד ברשימת התשלומים שלה. המנוי לא שונה - ההחלטה אם להשהות היא שלך, ובינתיים כדאי לפנות אליה על עדכון הכרטיס."
+          : "לא נמצאה חברה עם הפרטים האלה - כדאי להצליב מול קונסולת נדרים."
       }`,
       context: { params },
       dedupeKey: syntheticId,
@@ -120,7 +120,7 @@ export async function handleExternalPayment(
   params: Record<string, string>,
   tx: { transactionId: string; plan: SubscriptionPlan | null; amountAgorot: number | null },
   /**
-   * needsReview: the caller could NOT be authenticated (an unrecognized IP —
+   * needsReview: the caller could NOT be authenticated (an unrecognized IP -
    * usually Nedarim on a new server, conceivably not). The payment is stored
    * but must not activate anyone until the admin confirms it.
    */
@@ -147,7 +147,7 @@ export async function handleExternalPayment(
         kind: "external_payment_matched",
         severity: "info",
         title: `תשלום חיצוני זוהה לפי המייל והפעיל את ${name ?? email}`,
-        body: `אסמכתא ${tx.transactionId} · ${(tx.amountAgorot ?? 0) / 100} ₪ — התשלום לא הגיע דרך האתר (ללא זיהוי חברה), אבל הכתובת ${email} רשומה אצלנו והמנוי הופעל אוטומטית.`,
+        body: `אסמכתא ${tx.transactionId} · ${(tx.amountAgorot ?? 0) / 100} ₪ - התשלום לא הגיע דרך האתר (ללא זיהוי חברה), אבל הכתובת ${email} רשומה אצלנו והמנוי הופעל אוטומטית.`,
         context: { profileId, transactionId: tx.transactionId },
         dedupeKey: `ext-pay:${tx.transactionId}`,
       });
@@ -167,7 +167,7 @@ export async function handleExternalPayment(
     needs_review: needsReview,
   });
   if (error) {
-    // unique(provider_payment_id) — a replayed webhook is already recorded.
+    // unique(provider_payment_id) - a replayed webhook is already recorded.
     if (error.message.includes("duplicate")) return "external_duplicate";
     throw error;
   }
@@ -186,7 +186,7 @@ export async function handleExternalPayment(
     kind: "external_payment_stored",
     severity: "info",
     title: `תשלום מחוץ לאתר נשמר: ${name ?? email ?? "ללא שם"} · ${(tx.amountAgorot ?? 0) / 100} ₪`,
-    body: `אין עדיין חשבון עם הכתובת ${email ?? "?"} — ברגע שתירשם ותשלים פרופיל, המנוי יופעל לה אוטומטית. אסמכתא: ${tx.transactionId}.`,
+    body: `אין עדיין חשבון עם הכתובת ${email ?? "?"} - ברגע שתירשם ותשלים פרופיל, המנוי יופעל לה אוטומטית. אסמכתא: ${tx.transactionId}.`,
     context: { transactionId: tx.transactionId },
     dedupeKey: `ext-pay:${tx.transactionId}`,
   });
@@ -196,7 +196,7 @@ export async function handleExternalPayment(
 /**
  * Make her profile status agree with her money (the owner, 1/9: הדסה was a
  * payer, got demoted from the mentor track, and stayed "pending" although her
- * subscription was LIVE — the claim skips already-claimed rows). Claims any
+ * subscription was LIVE - the claim skips already-claimed rows). Claims any
  * unclaimed payment first, then: a pending junior with a live subscription
  * becomes active. Returns true when she ends up an active subscriber.
  */
@@ -213,7 +213,7 @@ export async function reconcileSubscriberStatus(
     .maybeSingle();
   if (!p || p.role !== "junior") return false;
   // Active alone is not subscriber-hood: a member whose subscription was
-  // canceled stays active on the FREE tier — and she is exactly who needs
+  // canceled stays active on the FREE tier - and she is exactly who needs
   // the checkout this reconcile used to bounce away (אסתי, 5/9).
   if (p.status === "active") return p.member_tier === "paid";
   if (p.status !== "pending") return false;
@@ -232,7 +232,7 @@ export async function reconcileSubscriberStatus(
 }
 
 /**
- * She exists now — claim any unclaimed external payment carrying her email.
+ * She exists now - claim any unclaimed external payment carrying her email.
  * Cheap when there is nothing to claim (one indexed select). Returns true
  * when something activated.
  */
@@ -243,9 +243,9 @@ export async function claimExternalPaymentsFor(profileId: string, email: string 
     .from("external_payments")
     .select("id, provider_payment_id, plan, amount_agorot, raw")
     .is("claimed_at", null)
-    // Unverified rows never auto-activate — the admin confirms them first.
+    // Unverified rows never auto-activate - the admin confirms them first.
     .eq("needs_review", false)
-    // Emails are lowercased on insert — exact match rides the partial index
+    // Emails are lowercased on insert - exact match rides the partial index
     // (ilike could never use it, and wildcards in a pasted email would match
     // more than intended).
     .eq("email", email.trim().toLowerCase());
@@ -266,7 +266,7 @@ export async function claimExternalPaymentsFor(profileId: string, email: string 
     await raiseAlert({
       kind: "external_payment_claimed",
       severity: "info",
-      title: "תשלום חיצוני שויך — חברה שנרשמה זוהתה כמי ששילמה",
+      title: "תשלום חיצוני שויך - חברה שנרשמה זוהתה כמי ששילמה",
       body: `אסמכתא ${row.provider_payment_id} שויכה והמנוי הופעל אוטומטית.`,
       context: { profileId, transactionId: row.provider_payment_id },
       dedupeKey: `ext-claim:${row.provider_payment_id}`,

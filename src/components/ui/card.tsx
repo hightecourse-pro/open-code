@@ -4,13 +4,13 @@ import { cn } from "@/lib/utils";
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   /** Lift + deepen shadow on hover (for clickable cards). */
   interactive?: boolean;
-  /** Selected state — brand border + purple glow. */
+  /** Selected state - brand border + purple glow. */
   selected?: boolean;
 }
 
 /**
  * The standard surface. White bg, subtle lavender border, 20px radius,
- * soft brand-tinted shadow, 24px padding — per the design system Card spec.
+ * soft brand-tinted shadow, 24px padding - per the design system Card spec.
  */
 export function Card({ className, interactive, selected, ...props }: CardProps) {
   return (

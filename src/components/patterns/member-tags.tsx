@@ -25,7 +25,7 @@ const ROLE: Record<UserRole, { label: string; cls: string }> = {
 
 /**
  * The rank next to a name in the forum (the owner, 18/9: "שיהיה ניתן לראות
- * מי צוות ומי מנטורית ומי משתתפת") — community wording, not the admin's.
+ * מי צוות ומי מנטורית ומי משתתפת") - community wording, not the admin's.
  */
 const FORUM_RANK: Record<UserRole, { label: string; cls: string }> = {
   admin: { label: "צוות קוד פתוח", cls: "bg-ink-1000 text-white" },
@@ -51,7 +51,7 @@ export function ForumRank({ role, size = "sm" }: { role: UserRole | null | undef
 
 export function RoleTag({ role, experienced = false }: { role: UserRole; experienced?: boolean }) {
   const r = ROLE[role];
-  // An experienced member is still role=junior in the data — but showing her
+  // An experienced member is still role=junior in the data - but showing her
   // as plain "ג'וניורית" misled the admin (tester finding). The tag says both.
   const label = role === "junior" && experienced ? "בעלת ניסיון" : r.label;
   const cls = role === "junior" && experienced ? "bg-tint-purple text-brand-purple" : r.cls;

@@ -7,8 +7,8 @@ import { Alert, Button, Field, Input, Switch } from "@/components/ui";
 import { updateEmployment, type EmploymentState } from "@/app/(app)/profile/actions";
 
 /**
- * "עדכון תעסוקה" — she tells us she found a job (workplace optional, shown
- * only to herself and the team). hired_via_us is pipeline-owned — here it only
+ * "עדכון תעסוקה" - she tells us she found a job (workplace optional, shown
+ * only to herself and the team). hired_via_us is pipeline-owned - here it only
  * earns her a celebratory gold badge. Mentor accompaniment is the admin's
  * call: when a mentor was assigned, the card shows her with a link to chat.
  */
@@ -40,7 +40,7 @@ export function EmploymentCard({
       )}
 
       <p className="t-body-sm text-ink-700">
-        מצאת עבודה? ספרי לנו — זה עוזר לנו לדייק את המשרות, וגם פשוט לשמוח איתך 🎉
+        מצאת עבודה? ספרי לנו - זה עוזר לנו לדייק את המשרות, וגם פשוט לשמוח איתך 🎉
       </p>
 
       {state.error && <Alert variant="danger">{state.error}</Alert>}
@@ -79,7 +79,7 @@ export function EmploymentCard({
             </h3>
           </div>
           <p className="t-body-sm text-ink-700">
-            היא מלווה אותך בחודשים הראשונים בתפקיד — שתהיה לך כתובת לכל שאלה 💜
+            היא מלווה אותך בחודשים הראשונים בתפקיד - שתהיה לך כתובת לכל שאלה 💜
           </p>
           <Link
             href="/chat"

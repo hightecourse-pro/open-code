@@ -24,18 +24,18 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
   if (!user) redirect("/login");
 
   // Opening a course now grants real Drive access, so verify membership here
-  // and not only in the page layout — a server action is directly callable.
+  // and not only in the page layout - a server action is directly callable.
   const [{ data: me }, { data: course }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("courses").select("id, is_published").eq("id", courseId).maybeSingle(),
   ]);
-  // The same rule the screen uses to show the button — otherwise an admin sees
+  // The same rule the screen uses to show the button - otherwise an admin sees
   // "התחילי קורס" and gets told to buy a subscription when she clicks it.
   if (!me || !isSubscriber(me)) {
     return { error: "פתיחת קורס נפתחת עם מנוי לקהילה 💜" };
   }
   if (me.role === "mentor") {
-    return { error: "ספריית הקורסים מיועדת לחברות הקהילה — למנטוריות פתוחים הסשנים וההקלטות 💜" };
+    return { error: "ספריית הקורסים מיועדת לחברות הקהילה - למנטוריות פתוחים הסשנים וההקלטות 💜" };
   }
   if (!course?.is_published) return { error: "הקורס הזה לא זמין כרגע." };
 
@@ -64,7 +64,7 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
     // Switching away also ends access to the old course's material.
     await queueRevokes(user.id, "course", [active.course_id]);
   } else {
-    // No active course — but "return then start" must not bypass the monthly
+    // No active course - but "return then start" must not bypass the monthly
     // limit. The rolling month counts from the most recent take, whatever its
     // status now; only THAT course may be resumed early.
     const { data: latest } = await supabase
@@ -107,7 +107,7 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
     });
   }
 
-  // Pressing "התחילי קורס" IS the access attempt — there is no reason to make
+  // Pressing "התחילי קורס" IS the access attempt - there is no reason to make
   // her press a second button. Grant it now; anything that fails leaves the
   // row pending and the worker finishes it.
   try {
@@ -121,7 +121,7 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
 }
 
 // `recordView` moved to src/app/(app)/content/actions.ts, where all the entry
-// logging lives — courses and sessions alike.
+// logging lives - courses and sessions alike.
 
 /** Mark the active course as studied (or not). */
 export async function setStudied(courseId: string, studied: boolean): Promise<void> {
@@ -151,7 +151,7 @@ export async function saveCourseFeedback(
   if (!user) return;
   const safe = Math.max(1, Math.min(5, Math.round(rating))) || null;
   const clean = feedback.trim() || null;
-  // The truth lives in course_feedback — it exists for EVERY member, admin or
+  // The truth lives in course_feedback - it exists for EVERY member, admin or
   // gifted-course included; the enrollments copy (when she has a row) keeps
   // the existing analytics working unchanged.
   await supabase.from("course_feedback").upsert(

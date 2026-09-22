@@ -3,7 +3,7 @@
 import { MessageCircle } from "lucide-react";
 
 /**
- * "יש לך שאלה על המשרה?" on the apply screen — opens the floating
+ * "יש לך שאלה על המשרה?" on the apply screen - opens the floating
  * request-to-the-team widget with the job already in the subject, so the
  * question lands in פניות לצוות (the owner, 2026-08-30), not in a chat.
  */

@@ -1,7 +1,7 @@
 "use client";
 
 // An outbound link that writes down that she went through it. Nothing is
-// awaited on her behalf — the navigation happens exactly as it would without
+// awaited on her behalf - the navigation happens exactly as it would without
 // the logging, and a failed log is invisible to her.
 
 import { useTransition } from "react";

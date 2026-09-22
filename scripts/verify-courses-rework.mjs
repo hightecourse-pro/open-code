@@ -1,5 +1,5 @@
 // Browser verification of the courses-screen rework on deployed staging.
-// sub.test has an active course (אוטומציה עסקית) taken 21.8 — perfect fixture.
+// sub.test has an active course (אוטומציה עסקית) taken 21.8 - perfect fixture.
 import { chromium } from "@playwright/test";
 const requireEnv = (k) => process.env[k] ?? (() => { console.error(`set ${k}`); process.exit(1); })();
 const PASS = requireEnv("VERIFY_FIXTURE_PASSWORD");

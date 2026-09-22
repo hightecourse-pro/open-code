@@ -9,11 +9,11 @@ import type { ContentOwner } from "@/types/database";
 export type ShareFormState = { ok?: string; error?: string };
 
 /**
- * Hand a member an extra course/session on purpose — outside the
+ * Hand a member an extra course/session on purpose - outside the
  * one-course-at-a-time model. The row is flagged granted_manually, which
  * exempts it from the monthly course swap (queueRevokes) and nothing else:
  * an admin can take it back with removeShare below, and leaving the community
- * takes it back by itself (queueRevokeAll — no exception for manual rows).
+ * takes it back by itself (queueRevokeAll - no exception for manual rows).
  *
  * Queued as "pending", exactly like an automatic share, so the same Drive
  * worker performs it (or the manual queue shows it when automation is off).
@@ -32,7 +32,7 @@ export async function grantShareManually(
   const admin = createAdminClient();
 
   // She may already hold this content automatically. Re-queueing it as
-  // "pending" would send the Drive worker to re-grant something she has —
+  // "pending" would send the Drive worker to re-grant something she has -
   // so an existing live row is only FLAGGED as manual, never reset.
   const { data: existing } = await admin
     .from("content_shares")
@@ -50,12 +50,12 @@ export async function grantShareManually(
         .eq("id", existing.id);
       if (error) {
         console.error("[drive] manual flag failed:", error.message);
-        return { error: "לא הצלחנו לסמן את השיתוף כאישי — ננסה שוב?" };
+        return { error: "לא הצלחנו לסמן את השיתוף כאישי - ננסה שוב?" };
       }
     }
     revalidatePath("/admin/shares");
     revalidatePath("/courses");
-    return { ok: "התוכן כבר פתוח עבורה — סימנו אותו כשיתוף אישי ✓" };
+    return { ok: "התוכן כבר פתוח עבורה - סימנו אותו כשיתוף אישי ✓" };
   }
 
   const { error } = await admin.from("content_shares").upsert(
@@ -71,7 +71,7 @@ export async function grantShareManually(
   );
   if (error) {
     console.error("[drive] manual grant failed:", error.message);
-    return { error: "לא הצלחנו לפתוח לה את התוכן — ננסה שוב?" };
+    return { error: "לא הצלחנו לפתוח לה את התוכן - ננסה שוב?" };
   }
 
   revalidatePath("/admin/shares");
@@ -80,8 +80,8 @@ export async function grantShareManually(
 }
 
 /**
- * Take a share back. A live one becomes "revoked" — the same state the engine
- * uses (src/lib/drive-shares.ts:82) — so the worker removes the access in
+ * Take a share back. A live one becomes "revoked" - the same state the engine
+ * uses (src/lib/drive-shares.ts:82) - so the worker removes the access in
  * Drive. One that was never granted is simply dropped: there is nothing to undo.
  */
 export async function removeShare(id: string): Promise<void> {

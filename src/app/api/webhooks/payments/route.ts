@@ -11,17 +11,17 @@ import { sendResendEmail } from "@/lib/email/resend";
 import type { Json } from "@/types/database";
 
 /**
- * Nedarim Plus server-to-server CallBack — the only path that turns a member
+ * Nedarim Plus server-to-server CallBack - the only path that turns a member
  * into a paying one, so it is treated as hostile input.
  *
  * NOTHING in the iframe payload can authenticate this call: Mosad, ApiValid and
  * the CallBack URL we hand the iframe all travel through the member's own
  * browser. So the caller is authenticated one of two ways, either is enough:
  *
- *   1. WHERE it comes from — Nedarim's own servers (NEDARIM_CALLBACK_IPS, or
+ *   1. WHERE it comes from - Nedarim's own servers (NEDARIM_CALLBACK_IPS, or
  *      the addresses observed in production below). A member's browser cannot
  *      forge a source address on a TCP request that has to reach us.
- *   2. A shared secret she never sees — set NEDARIM_CALLBACK_SECRET and put it
+ *   2. A shared secret she never sees - set NEDARIM_CALLBACK_SECRET and put it
  *      in the CallBack URL configured in the Nedarim ACCOUNT:
  *      https://<site>/api/webhooks/payments?key=<secret>
  *
@@ -32,12 +32,12 @@ import type { Json } from "@/types/database";
 
 /**
  * Nedarim's callback addresses, observed in production. Extend via
- * NEDARIM_CALLBACK_IPS rather than editing this — and if a real payment is
+ * NEDARIM_CALLBACK_IPS rather than editing this - and if a real payment is
  * ever refused as ip_not_allowed, the rejection email carries the address to
  * add.
  */
 // Every address a real Nedarim webhook has been SEEN from. They rotate AWS
-// servers — an unknown one no longer loses the payment (it lands flagged in
+// servers - an unknown one no longer loses the payment (it lands flagged in
 // external_payments); add it here once confirmed to restore auto-activation.
 const KNOWN_NEDARIM_IPS = ["18.194.219.73", "18.196.146.117"];
 
@@ -46,7 +46,7 @@ async function logEvent(value: Record<string, unknown>) {
   try {
     const admin = createAdminClient();
     const rows = [{ key: "last_webhook", value: value as unknown as Json }];
-    // Rejections are the interesting ones — a successful call would otherwise
+    // Rejections are the interesting ones - a successful call would otherwise
     // immediately overwrite the evidence of an attempt.
     if (value.outcome !== "activated") {
       rows.push({ key: "last_webhook_rejected", value: value as unknown as Json });
@@ -59,7 +59,7 @@ async function logEvent(value: Record<string, unknown>) {
 
 /**
  * Tell the team a payment callback was refused. A refusal means someone may
- * have paid without getting access — the one failure that must never sit
+ * have paid without getting access - the one failure that must never sit
  * quietly in a log. Throttled to once an hour so a hostile caller can't turn
  * this into a mail flood.
  */
@@ -83,12 +83,12 @@ async function alertAdmins(record: Record<string, unknown>) {
     const p = (record.params ?? {}) as Record<string, string>;
     const html = `
       <div dir="rtl" style="font-family:Arial,sans-serif;line-height:1.7">
-        <h2 style="color:#C81E66">שיחת תשלום נדחתה — ייתכן שמישהי שילמה ולא קיבלה גישה</h2>
+        <h2 style="color:#C81E66">שיחת תשלום נדחתה - ייתכן שמישהי שילמה ולא קיבלה גישה</h2>
         <p><b>סיבה:</b> ${record.outcome}</p>
         <p><b>כתובת השולח:</b> ${record.ip || "לא ידועה"}</p>
-        <p><b>שם:</b> ${p.ClientName ?? "—"} · <b>מייל:</b> ${p.Mail ?? "—"} ·
-           <b>סכום:</b> ${p.Amount ?? "—"} ₪ · <b>אישור נדרים:</b> ${p.ID ?? "—"}</p>
-        <p>אם זו קריאה אמיתית מנדרים — צריך להוסיף את הכתובת שלמעלה ל־NEDARIM_CALLBACK_IPS
+        <p><b>שם:</b> ${p.ClientName ?? "-"} · <b>מייל:</b> ${p.Mail ?? "-"} ·
+           <b>סכום:</b> ${p.Amount ?? "-"} ₪ · <b>אישור נדרים:</b> ${p.ID ?? "-"}</p>
+        <p>אם זו קריאה אמיתית מנדרים - צריך להוסיף את הכתובת שלמעלה ל־NEDARIM_CALLBACK_IPS
            (או להגדיר NEDARIM_CALLBACK_SECRET בכתובת ה־CallBack בחשבון נדרים), ואז להפעיל
            את המנוי ידנית.</p>
       </div>`;
@@ -141,7 +141,7 @@ async function handleCallback(req: Request) {
       for (const [k, v] of form.entries()) params[k] = String(v);
     }
   } catch {
-    // no/unsupported body — the query string may still carry the call
+    // no/unsupported body - the query string may still carry the call
   }
 
   // The secret never belongs in the diagnostic record.
@@ -161,12 +161,12 @@ async function handleCallback(req: Request) {
     await logEvent(record);
     // "ignored_incomplete" from an UNAUTHENTICATED caller is internet noise.
     // The same payload from Nedarim itself is a different animal: most likely
-    // a renewal callback that arrived without Param1/Param2 — a member whose
+    // a renewal callback that arrived without Param1/Param2 - a member whose
     // card was charged while nothing was recorded, who will be silently paused
     // 33 days later. That one wakes someone. Duplicates never do.
     const authedIncomplete = outcome === "ignored_incomplete" && !!record.authedBy;
     if ((outcome !== "ignored_incomplete" && outcome !== "duplicate_ignored") || authedIncomplete) {
-      // The alerts center is the permanent record (no throttle — dedupe
+      // The alerts center is the permanent record (no throttle - dedupe
       // collapses repeats); email stays as a secondary ping, hourly-throttled.
       const p = params as Record<string, string | undefined>;
       // Written for the admin who reads it, not for the developer who debugs
@@ -174,11 +174,11 @@ async function handleCallback(req: Request) {
       // The technical record still travels in `context` for whoever digs.
       const OUTCOME_HE: Record<string, string> = {
         not_configured: "המערכת קיבלה דיווח תשלום לפני שהוגדרו פרטי נדרים.",
-        unrecognized_mosad: "הדיווח נשא מספר מוסד שאינו שלנו — כנראה ניסיון זדוני או טעות של גורם אחר. לא נקלט כסף.",
-        missing_transaction_id: "הדיווח הגיע בלי מספר אסמכתא, אז אי אפשר לרשום אותו. אם מישהי שילמה עכשיו — כדאי להצליב מול קונסולת נדרים.",
-        external_payment_failed: "תשלום שנעשה מחוץ לאתר לא הצליח להישמר אצלנו. שווה לבדוק במסך התשלומים אם הוא מופיע, ואם לא — להצליב מול קונסולת נדרים.",
-        non_positive_amount: "הדיווח הגיע בלי סכום, אז לא נרשם. אם מישהי שילמה עכשיו — כדאי להצליב מול קונסולת נדרים.",
-        unknown_member: "התשלום מפנה לחברה שלא קיימת אצלנו — ייתכן חשבון שנמחק. הכסף נגבה בנדרים אבל לא הופעל מנוי.",
+        unrecognized_mosad: "הדיווח נשא מספר מוסד שאינו שלנו - כנראה ניסיון זדוני או טעות של גורם אחר. לא נקלט כסף.",
+        missing_transaction_id: "הדיווח הגיע בלי מספר אסמכתא, אז אי אפשר לרשום אותו. אם מישהי שילמה עכשיו - כדאי להצליב מול קונסולת נדרים.",
+        external_payment_failed: "תשלום שנעשה מחוץ לאתר לא הצליח להישמר אצלנו. שווה לבדוק במסך התשלומים אם הוא מופיע, ואם לא - להצליב מול קונסולת נדרים.",
+        non_positive_amount: "הדיווח הגיע בלי סכום, אז לא נרשם. אם מישהי שילמה עכשיו - כדאי להצליב מול קונסולת נדרים.",
+        unknown_member: "התשלום מפנה לחברה שלא קיימת אצלנו - ייתכן חשבון שנמחק. הכסף נגבה בנדרים אבל לא הופעל מנוי.",
       };
       const details = [
         p.ID ? `אסמכתא: ${p.ID}` : null,
@@ -188,10 +188,10 @@ async function handleCallback(req: Request) {
         kind: authedIncomplete ? "payment_renewal_incomplete" : "payment_rejected",
         severity: authedIncomplete || record.authedBy ? "critical" : "warning",
         title: authedIncomplete
-          ? "חיוב מנדרים הגיע בלי זיהוי חברה — ייתכן חידוש שלא נרשם"
+          ? "חיוב מנדרים הגיע בלי זיהוי חברה - ייתכן חידוש שלא נרשם"
           : "דיווח תשלום מנדרים לא נקלט",
         body: authedIncomplete
-          ? `נדרים שלחו דיווח מאומת בלי לציין איזו חברה שילמה. אם זה חיוב חוזר של הוראת קבע — הכרטיס חויב ואצלנו לא נרשם דבר.${details ? " " + details + "." : ""}`
+          ? `נדרים שלחו דיווח מאומת בלי לציין איזו חברה שילמה. אם זה חיוב חוזר של הוראת קבע - הכרטיס חויב ואצלנו לא נרשם דבר.${details ? " " + details + "." : ""}`
           : `${OUTCOME_HE[outcome] ?? "הדיווח לא תאם את מה שהמערכת מצפה לו ולכן לא נרשם."}${details ? " " + details + "." : ""}`,
         context: record,
         dedupeKey: `webhook:${outcome}:${p.ID ?? String(record.ip ?? "")}`,
@@ -203,12 +203,12 @@ async function handleCallback(req: Request) {
 
   if (!cfg) return reject("not_configured", 503, "payments not configured");
 
-  // Nedarim POSTs {"Status":"Error","Message":"..."} when a charge fails —
+  // Nedarim POSTs {"Status":"Error","Message":"..."} when a charge fails -
   // sometimes bare (no mosad, 1/9: "כרטיס זה חסום לסליקה"), sometimes the
   // full keva-refusal shape carrying MosadNumber, KevaId, name and email
   // (31/8: איילת טרבלסי, "סירוב - מסגרת מלאה או תוקף שגוי"). Answering 401
   // made Nedarim email the owner a developer-report and left the refusal
-  // undocumented. Accept both shapes BEFORE authentication — a failure report
+  // undocumented. Accept both shapes BEFORE authentication - a failure report
   // activates nobody, it only writes the refusal down; a wrong mosad number
   // still falls through to the normal rejection path.
   if (params.Status === "Error" && params.Message) {
@@ -219,7 +219,7 @@ async function handleCallback(req: Request) {
       } catch (e) {
         record.outcome = "charge_failure_error";
         record.error = String(e);
-        // The permanent record must survive a storage hiccup — fall back to
+        // The permanent record must survive a storage hiccup - fall back to
         // the anonymous alert rather than dropping the report.
         await raiseAlert({
           kind: "payment_provider_error",
@@ -247,10 +247,10 @@ async function handleCallback(req: Request) {
 
   if (!fromNedarim && !secretOk) {
     // Nedarim rotates its webhook servers (18.194.219.73 one day,
-    // 18.196.146.117 the next) — an unknown IP is more often THEM than an
+    // 18.196.146.117 the next) - an unknown IP is more often THEM than an
     // attacker, and a real payment must never be dropped on the floor. So:
     // a payload that carries OUR mosad number and a transaction id is stored
-    // as an external payment flagged needs_review — it activates nobody
+    // as an external payment flagged needs_review - it activates nobody
     // until the admin confirms it against the Nedarim console. Everything
     // else is still rejected outright.
     const mosadHere = params.MosadNumber ?? params.Mosad ?? "";
@@ -273,7 +273,7 @@ async function handleCallback(req: Request) {
       await logEvent(record);
       return NextResponse.json({ ok: true, outcome: record.outcome });
     }
-    // Plain internet noise — no auth, no key, not even our mosad number.
+    // Plain internet noise - no auth, no key, not even our mosad number.
     // A public endpoint gets probed constantly; giving every scanner hit 5-7
     // DB writes (logEvent + alert + admin email) turns noise into load on the
     // same database the members use. A quiet 401 is all it earns.
@@ -289,7 +289,7 @@ async function handleCallback(req: Request) {
   }
   record.authedBy = secretOk ? "secret" : "ip";
 
-  // 2. The Mosad number is required — never "checked only when present".
+  // 2. The Mosad number is required - never "checked only when present".
   const mosad = params.MosadNumber ?? params.Mosad ?? "";
   if (!mosad || mosad !== cfg.mosadId) {
     return reject("unrecognized_mosad", 401, "unrecognized mosad");
@@ -304,9 +304,9 @@ async function handleCallback(req: Request) {
   if (!cb.transactionId) {
     return reject("missing_transaction_id", 400, "missing transaction id");
   }
-  // A successful, authenticated payment with no Param1 — money taken OUTSIDE
+  // A successful, authenticated payment with no Param1 - money taken OUTSIDE
   // the app (a direct Nedarim link, a manual charge). Match it to a member by
-  // email and activate, or remember it so her future signup claims it — the
+  // email and activate, or remember it so her future signup claims it - the
   // owner's "צריך לזהות ולשמור כדי שאם היא תיכנס נדע שהיא שילמה".
   if (!cb.profileId || !cb.plan) {
     try {
@@ -324,7 +324,7 @@ async function handleCallback(req: Request) {
   }
 
   // 3. The amount is recorded as charged, and flagged when it doesn't match
-  // today's price — a standing order keeps charging the price it was created
+  // today's price - a standing order keeps charging the price it was created
   // at, so a mismatch usually means the price changed, not fraud. The caller
   // is already authenticated; refusing here would silently stop renewals.
   const plans = buildPlans(await getPricingAdmin());
@@ -342,7 +342,7 @@ async function handleCallback(req: Request) {
 
   const admin = createAdminClient();
 
-  // 5. Idempotency — a replayed callback must not extend anything.
+  // 5. Idempotency - a replayed callback must not extend anything.
   const { data: seen } = await admin
     .from("payments")
     .select("id")
@@ -362,10 +362,10 @@ async function handleCallback(req: Request) {
     .maybeSingle();
   if (!member) {
     // One Nedarim account serves both environments, and the account-level
-    // CallBack can point at only one URL — production. A payment made on
+    // CallBack can point at only one URL - production. A payment made on
     // STAGING therefore lands here carrying a Param1 production has never
     // heard of. Before crying "unknown member", hand the call to staging
-    // once — it will recognize its own member and activate her there.
+    // once - it will recognize its own member and activate her there.
     const fwdUrl = process.env.STAGING_WEBHOOK_URL;
     const fwdKey = process.env.STAGING_FORWARD_KEY;
     if (isProductionEnv() && fwdUrl && fwdKey) {
@@ -409,7 +409,7 @@ async function handleCallback(req: Request) {
 }
 
 // Nedarim's docs don't commit to a method, and their portal-only documentation
-// can't be checked from here. A POST-only route answered GET with a bare 405 —
+// can't be checked from here. A POST-only route answered GET with a bare 405 -
 // a callback delivered that way would vanish with no diagnostic row and no
 // alert, which is exactly the silent failure this route exists to prevent.
 // Both methods run the same authentication; the parser already reads the query

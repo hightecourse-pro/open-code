@@ -14,12 +14,12 @@ const DATE_HE = new Intl.DateTimeFormat("he-IL", {
   timeZone: "Asia/Jerusalem",
 });
 
-/** What ending the membership actually closes — the honest goodbye list. */
+/** What ending the membership actually closes - the honest goodbye list. */
 const LOSSES = [
   "ספריית הקורסים והחומרים שנפתחו לך",
   "הקלטות הסשנים והסשנים החיים",
   "הצ'אט עם חברות הקהילה והמנטוריות",
-  "כלי ה-AI — בודקת קורות החיים וסימולטור הראיונות",
+  "כלי ה-AI - בודקת קורות החיים וסימולטור הראיונות",
   "העדיפות שלך במשרות של הקהילה",
 ];
 
@@ -35,7 +35,7 @@ export function SubscriptionCard({
   canceledAt: string | null;
   /**
    * The renewal-off state came from a charge-limited standing order in
-   * Nedarim, NOT from her own cancel click — the copy must never say
+   * Nedarim, NOT from her own cancel click - the copy must never say
    * "ביטלת" (נחמה וולפא, 15/9: clicked resume in alarm over a cancellation
    * she never made).
    */
@@ -55,7 +55,7 @@ export function SubscriptionCard({
       const res = await cancelRenewal();
       if (res?.error) setError(res.error);
       setConfirming(false);
-      // Pull the fresh server state in — the invoked-in-transition action
+      // Pull the fresh server state in - the invoked-in-transition action
       // does not repaint the page by itself ("חידוש מנוי בלחיצה לא עובד").
       router.refresh();
     });
@@ -160,7 +160,7 @@ export function SubscriptionCard({
       {active && canceledAt && !limitedKeva && (
         <>
           <Alert variant="warn">
-            ביטלת את חידוש המנוי — הוא יישאר פעיל עד <b>{endDate ?? "סוף התקופה ששולמה"}</b> ואז ייסגר.
+            ביטלת את חידוש המנוי - הוא יישאר פעיל עד <b>{endDate ?? "סוף התקופה ששולמה"}</b> ואז ייסגר.
           </Alert>
           <button
             type="button"
@@ -168,7 +168,7 @@ export function SubscriptionCard({
             disabled={pending}
             className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-brand-purple hover:underline w-fit disabled:opacity-50"
           >
-            <RotateCcw size={14} /> {pending ? "רגע…" : "התחרטתי — להפעיל את החידוש מחדש"}
+            <RotateCcw size={14} /> {pending ? "רגע…" : "התחרטתי - להפעיל את החידוש מחדש"}
           </button>
         </>
       )}
@@ -176,7 +176,7 @@ export function SubscriptionCard({
       {!active && (
         <>
           <p className="text-[14px] text-ink-700">
-            המנוי לא פעיל כרגע{endDate ? ` (הסתיים ב-${endDate})` : ""} — הקהילה מחכה לך חזרה 💜
+            המנוי לא פעיל כרגע{endDate ? ` (הסתיים ב-${endDate})` : ""} - הקהילה מחכה לך חזרה 💜
           </p>
           <Link
             href="/join"

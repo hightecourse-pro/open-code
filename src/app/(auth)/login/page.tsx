@@ -12,7 +12,7 @@ const LINK_ERROR: Record<string, string> = {
   recovery:
     'הקישור לאיפוס הסיסמה כבר לא בתוקף (או שכבר השתמשת בו). בקשי קישור חדש דרך "שכחת סיסמה?" ונשלח לך אחד טרי 💌',
   signup:
-    "נראה שכבר השתמשת בקישור האישור — כנראה שהכתובת שלך כבר מאושרת. פשוט היכנסי כאן עם המייל והסיסמה שלך.",
+    "נראה שכבר השתמשת בקישור האישור - כנראה שהכתובת שלך כבר מאושרת. פשוט היכנסי כאן עם המייל והסיסמה שלך.",
 };
 const LINK_ERROR_DEFAULT =
   'הקישור מהמייל כבר לא בתוקף (או שכבר השתמשת בו). אפשר להיכנס עם הסיסמה, או לבקש קישור חדש דרך "שכחת סיסמה?".';
@@ -24,7 +24,7 @@ export default function LoginPage({
 }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(signIn, {});
   // The auth handlers land here with ?error=auth when an email link is
-  // expired or already used — without a message the failure is silent.
+  // expired or already used - without a message the failure is silent.
   const { error, type } = use(searchParams);
   const linkError = error === "auth";
   const linkMessage = (type && LINK_ERROR[type]) || LINK_ERROR_DEFAULT;

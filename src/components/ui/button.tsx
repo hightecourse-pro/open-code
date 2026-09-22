@@ -38,7 +38,7 @@ export interface ButtonProps
   asChild?: boolean;
   /**
    * RETIRED (the owner, 2026-08-30): the </…> code motif stays on headings
-   * and screens, but on buttons it read as noise — and bidi kept flipping it.
+   * and screens, but on buttons it read as noise - and bidi kept flipping it.
    * The prop is still accepted so existing call sites compile; it renders
    * nothing.
    */

@@ -28,7 +28,7 @@ function asOtpType(value: string | null): EmailOtpType | null {
   return value && OTP_TYPES.includes(value) ? (value as EmailOtpType) : null;
 }
 
-/** Only same-origin paths — an emailed `next` must never bounce her off-site. */
+/** Only same-origin paths - an emailed `next` must never bounce her off-site. */
 function safeNext(raw: string | null, type: EmailOtpType | null): string {
   if (raw && raw.startsWith("/") && !raw.startsWith("//")) return raw;
   return type === "recovery" ? "/reset-password" : "/forum";
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
   <main class="card">
     <div class="bar"></div>
     <h1>${HEADLINE[type] ?? "אישור"}</h1>
-    <p>קהילת קוד פתוח — פותחים לך דלת להייטק</p>
+    <p>קהילת קוד פתוח - פותחים לך דלת להייטק</p>
     <form method="post" action="/auth/confirm">
       <input type="hidden" name="token_hash" value="${esc(token_hash)}" />
       <input type="hidden" name="type" value="${esc(type)}" />

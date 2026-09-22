@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Signs ONE CV on demand and redirects to it. The files screen used to
- * pre-sign every document in the community on every page view — thousands of
+ * pre-sign every document in the community on every page view - thousands of
  * signed URLs nobody clicked. ?download=1 asks the browser to save.
  */
 export async function GET(req: Request) {

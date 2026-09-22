@@ -7,7 +7,7 @@ import { encryptPassword, generatePassword } from "@/lib/portal/auth";
 
 /**
  * The password is stored encrypted (not hashed) so the admin can re-read it
- * later on the clients screen — she's the one handing it to the client.
+ * later on the clients screen - she's the one handing it to the client.
  */
 export type ClientFormState = {
   error?: string;
@@ -48,7 +48,7 @@ export async function createPortalClient(
 
   if (!companyName) return { error: "שם החברה הוא שדה חובה." };
   if (!username) return { error: "שם המשתמש צריך להכיל אותיות באנגלית או ספרות." };
-  if (username.length < 3) return { error: "שם המשתמש קצר מדי — לפחות 3 תווים." };
+  if (username.length < 3) return { error: "שם המשתמש קצר מדי - לפחות 3 תווים." };
 
   const admin = createAdminClient();
 
@@ -67,7 +67,7 @@ export async function createPortalClient(
     username,
     contact_name: contactName,
     contact_email: contactEmail,
-    // Created straight with credentials — in CRM terms that's already
+    // Created straight with credentials - in CRM terms that's already
     // "משרה בטיפול" (the clients screen shows only this status).
     crm_status: "job_active" as const,
   };
@@ -88,7 +88,7 @@ export async function createPortalClient(
 }
 
 /**
- * Assign portal credentials to a CRM lead that reached "משרה בטיפול" — the
+ * Assign portal credentials to a CRM lead that reached "משרה בטיפול" - the
  * lead and the client are the same portal_clients row, so this UPDATES the
  * existing row by id (never inserts a duplicate).
  */
@@ -101,7 +101,7 @@ export async function assignPortalCredentials(
 
   const username = normaliseUsername(String(formData.get("username") ?? ""));
   if (!username) return { error: "שם המשתמש צריך להכיל אותיות באנגלית או ספרות." };
-  if (username.length < 3) return { error: "שם המשתמש קצר מדי — לפחות 3 תווים." };
+  if (username.length < 3) return { error: "שם המשתמש קצר מדי - לפחות 3 תווים." };
 
   const admin = createAdminClient();
 
@@ -140,7 +140,7 @@ export async function assignPortalCredentials(
 
 /**
  * Allow / block the portal's free candidate search for one client. Off by
- * default — a client sees only the candidates we sent her unless this is on.
+ * default - a client sees only the candidates we sent her unless this is on.
  */
 export async function setClientCanSearch(id: string, on: boolean): Promise<void> {
   await requireRole("admin");
@@ -175,7 +175,7 @@ export async function setPortalClientActive(id: string, isActive: boolean): Prom
   revalidatePath("/admin/clients");
 }
 
-/** Remove a client. Linked jobs survive — the FK detaches them (on delete set null). */
+/** Remove a client. Linked jobs survive - the FK detaches them (on delete set null). */
 export async function deletePortalClient(id: string): Promise<void> {
   await requireRole("admin");
   await createAdminClient().from("portal_clients").delete().eq("id", id);

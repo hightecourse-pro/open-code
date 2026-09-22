@@ -7,8 +7,8 @@ import { moveQuestion } from "./actions";
 
 /**
  * Up/down arrows for a question's position. The order decides where the
- * question sits inside its wizard step for the member — and the order a hiring
- * client reads her answers in — so it's worth being able to set it by hand.
+ * question sits inside its wizard step for the member - and the order a hiring
+ * client reads her answers in - so it's worth being able to set it by hand.
  */
 export function QuestionOrder({
   id,

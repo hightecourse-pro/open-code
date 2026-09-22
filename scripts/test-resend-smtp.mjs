@@ -1,4 +1,4 @@
-// Full SMTP send test against Resend — verifies auth + real delivery.
+// Full SMTP send test against Resend - verifies auth + real delivery.
 //   put RESEND_API_KEY=... in .env.local, then:
 //   node --env-file=.env.local scripts/test-resend-smtp.mjs
 import net from "node:net";
@@ -60,7 +60,7 @@ await cmd(secure, read, "DATA", 354, "DATA");
 const msg = [
   `From: =?UTF-8?B?${Buffer.from("קוד פתוח").toString("base64")}?= <${FROM}>`,
   `To: ${TO}`,
-  `Subject: =?UTF-8?B?${Buffer.from("בדיקת Resend — קוד פתוח").toString("base64")}?=`,
+  `Subject: =?UTF-8?B?${Buffer.from("בדיקת Resend - קוד פתוח").toString("base64")}?=`,
   `Content-Type: text/plain; charset=UTF-8`,
   ``,
   `Resend SMTP test. If this arrived, email works end-to-end.`,
@@ -69,5 +69,5 @@ secure.write(msg + "\r\n.\r\n");
 const finalReply = await read();
 console.log(`  DATA send → ${finalReply.trim().split(/\r?\n/).pop()}`);
 secure.write("QUIT\r\n");
-console.log(/^250/.test(finalReply) ? `\n✅ FULL SEND accepted — real email sent to ${TO}.` : `\n❌ Send rejected.`);
+console.log(/^250/.test(finalReply) ? `\n✅ FULL SEND accepted - real email sent to ${TO}.` : `\n❌ Send rejected.`);
 process.exit(0);

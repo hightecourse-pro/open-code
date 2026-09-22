@@ -2,7 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * The hires registry (the owner, 3/9): a community row appears the moment a
- * member is marked as placed-by-us — from the admin member page or from a job
+ * member is marked as placed-by-us - from the admin member page or from a job
  * pipeline reaching "גויסה". Fire-and-forget: a registry hiccup must never
  * fail the marking itself.
  */
@@ -15,7 +15,7 @@ export async function recordCommunityHire(profileId: string, hiredAtIso?: string
       .eq("id", profileId)
       .maybeSingle();
     if (!p) return;
-    // One row per placement — a re-mark inside half a year is the same hire,
+    // One row per placement - a re-mark inside half a year is the same hire,
     // a new mark long after is honestly a new job.
     const windowIso = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
     const { data: existing } = await admin
@@ -38,7 +38,7 @@ export async function recordCommunityHire(profileId: string, hiredAtIso?: string
 }
 
 /**
- * Un-marking a placement removes its registry row — but only while nothing
+ * Un-marking a placement removes its registry row - but only while nothing
  * financial happened on it (still "started", no amount). A billed hire stays;
  * the team deletes it deliberately from /admin/hires if needed.
  */

@@ -9,9 +9,9 @@ import { clientInterviewEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 
 /**
- * Save the client's feedback on a curated candidate — an interview mark and/or
+ * Save the client's feedback on a curated candidate - an interview mark and/or
  * a short note on the job_candidates row. Re-verifies the session and that the
- * job belongs to this client AND the candidate is actually curated on it — a
+ * job belongs to this client AND the candidate is actually curated on it - a
  * server action is directly POSTable, so nothing here trusts the caller.
  */
 export async function saveCandidateFeedback(
@@ -31,7 +31,7 @@ export async function saveCandidateFeedback(
   if (!job || job.client_id !== client.id) return { ok: false };
 
   // The sent_at gate applies to WRITES too: a candidate we curated but never
-  // submitted — or who opted out of the portal — must be untouchable here,
+  // submitted - or who opted out of the portal - must be untouchable here,
   // exactly as she is invisible to every read path.
   const { data: row } = await admin
     .from("job_candidates")
@@ -52,11 +52,11 @@ export async function saveCandidateFeedback(
   const { error } = await admin.from("job_candidates").update(update).eq("id", row.id);
   if (error) return { ok: false };
 
-  // A fresh interview mark is news the team wants NOW — email every admin
+  // A fresh interview mark is news the team wants NOW - email every admin
   // (best-effort, never blocks the client's click; only on the false→true flip).
   if (patch.interviewMarked === true && row.interview_marked !== true) {
     try {
-      // The name comes through the privacy door, not straight from profiles —
+      // The name comes through the privacy door, not straight from profiles -
       // this file must not become a second way to read member data.
       const clientJob = await loadClientJob(client.id, jobId);
       const candidate = clientJob?.candidates.find((c) => c.id === profileId);

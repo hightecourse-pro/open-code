@@ -5,19 +5,19 @@ import { InstantSearchInput, useInstantFilter, type InstantItem } from "./instan
 import { techKey } from "@/lib/tech-match";
 
 export interface JobListItem extends InstantItem {
-  /** Facet values for the filter selects — prepared by the server. */
+  /** Facet values for the filter selects - prepared by the server. */
   tech: string[];
   location: string | null;
-  /** The job's role bucket (פיתוח / בדיקות / …) — "אחר" when unset. */
+  /** The job's role bucket (פיתוח / בדיקות / …) - "אחר" when unset. */
   role: string;
 }
 
 /**
- * The jobs board: instant text search plus the PM's structured filters —
+ * The jobs board: instant text search plus the PM's structured filters -
  * technology, location, employment type. Everything arrives server-rendered
  * (cards, ordering, match badges); this component only shows and hides.
  *
- * The search/filters row sits at the TOP and governs the whole board — the
+ * The search/filters row sits at the TOP and governs the whole board - the
  * targeted "משרות בשבילך" section included (the owner, 2026-08-30: "הסינון
  * אמור להיות למעלה ולחול על הכל").
  */
@@ -32,7 +32,7 @@ export function JobsInstantList({
   facets,
 }: {
   items: JobListItem[];
-  /** Jobs published personally to this member — framed above the main grid. */
+  /** Jobs published personally to this member - framed above the main grid. */
   targeted?: JobListItem[];
   /** The frame's heading content (server-rendered). */
   targetedHeader?: ReactNode;
@@ -90,7 +90,7 @@ export function JobsInstantList({
           placeholder="תפקיד, טכנולוגיה או מילה מהתיאור…"
           className="min-w-44"
         />
-        {/* Type-ahead over the FULL technology list — contains-matching, so
+        {/* Type-ahead over the FULL technology list - contains-matching, so
             typing part of a name offers it (the owner, 30/8). */}
         <input
           list="job-tech-options"
@@ -143,7 +143,7 @@ export function JobsInstantList({
         <p className="text-[13px] text-ink-700 -mt-1">
           {totalShown === 1 ? "תוצאה אחת" : `${totalShown} תוצאות`}
           {needle.trim() ? ` עבור “${needle.trim()}”` : ""}
-          {fitOnly ? " — רק משרות שמתאימות לך" : ""}.
+          {fitOnly ? " - רק משרות שמתאימות לך" : ""}.
         </p>
       )}
 
@@ -166,7 +166,7 @@ export function JobsInstantList({
         emptyFallback
       ) : totalShown === 0 ? (
         <div className="bg-white border border-ink-200 rounded-lg p-5 shadow-sm text-ink-700 text-sm">
-          שום משרה לא עונה על הסינון הזה — נסי לשחרר מסנן אחד 💜
+          שום משרה לא עונה על הסינון הזה - נסי לשחרר מסנן אחד 💜
         </div>
       ) : (
         filtered.length > 0 && (

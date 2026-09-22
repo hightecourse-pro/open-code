@@ -46,7 +46,7 @@ function waitedHe(createdIso: string, handledIso: string | null): string {
   return days === 1 ? "טופלה תוך יום" : `טופלה תוך ${days} ימים`;
 }
 
-/** Reopen with a REQUIRED reason — the server refuses without one. */
+/** Reopen with a REQUIRED reason - the server refuses without one. */
 function ReopenControl({ requestId, mentorName }: { requestId: string; mentorName: string | null }) {
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");

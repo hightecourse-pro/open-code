@@ -10,7 +10,7 @@ export interface PendingShareRow {
   memberName: string;
   ownerType: string;
   contentTitle: string;
-  /** he-IL date — "מחכה מ-…". */
+  /** he-IL date - "מחכה מ-…". */
   since: string;
 }
 

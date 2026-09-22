@@ -1,26 +1,26 @@
 // Minimal Google Gemini (Generative Language API) client over REST.
-// The API key is the member's own BYO key, passed per request — never stored
+// The API key is the member's own BYO key, passed per request - never stored
 // in env. We surface quota/invalid-key conditions as typed errors so the UI
 // can prompt the member to add another key.
 
 export class QuotaError extends Error {}
 export class InvalidKeyError extends Error {}
-// A 400/403 that is NOT a key problem — the request itself was rejected
+// A 400/403 that is NOT a key problem - the request itself was rejected
 // ("Invalid JSON payload", unsupported field on this model). Deterministic per
 // model: worth trying the next model in the chain, but re-sending the same
 // request in later retry rounds just burns 8-26s per call for the same answer.
 export class RequestShapeError extends Error {}
-// The model returned no usable text — almost always the newer flash models
+// The model returned no usable text - almost always the newer flash models
 // spending the whole output budget on internal "thinking" and hitting
 // MAX_TOKENS before writing the answer. Transient: retried like a 503.
 export class EmptyResponseError extends Error {}
 
 // Try newest-first: Google retires old models (gemini-2.0-flash shut down
-// 1/6/2026; the 2.5 line is on its way out for 16/10/2026 — the AI tools
+// 1/6/2026; the 2.5 line is on its way out for 16/10/2026 - the AI tools
 // went dark when the whole old chain died), so a single hard-coded model
 // starts failing with 429/404 for every member. Fall through the chain on
 // quota/not-found and only give up if every model failed.
-// The lite tier sits on separate capacity — when a "high demand" 503 storm
+// The lite tier sits on separate capacity - when a "high demand" 503 storm
 // takes out the main flash models (29/8: flash-latest 503ing for minutes,
 // each failed call burning 8-26s), the lite models usually still answer.
 const MODELS = [
@@ -68,7 +68,7 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
             responseMimeType: "application/json",
             responseSchema: opts.jsonSchema,
             // Gemini 3.x flash "thinks" by default, and thinking tokens are
-            // drawn from maxOutputTokens — so a structured-JSON call could burn
+            // drawn from maxOutputTokens - so a structured-JSON call could burn
             // the whole budget thinking and return an empty body (finishReason
             // MAX_TOKENS). That surfaced to members as "משהו השתבש" on every CV
             // check while their key was fine. Structured extraction/scoring
@@ -99,7 +99,7 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
     const text = await res.text();
     // Match only genuine key/permission failures. A bare /invalid/ used to be
     // here and swallowed request-shape 400s ("Invalid JSON payload", "Invalid
-    // value at responseSchema") as bad-key errors — flagging a working key and
+    // value at responseSchema") as bad-key errors - flagging a working key and
     // hiding the real cause.
     if (/API_KEY_INVALID|API key not valid|PERMISSION_DENIED|API_KEY_SERVICE_BLOCKED/i.test(text)) {
       throw new InvalidKeyError("Gemini key invalid");
@@ -116,7 +116,7 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
     .map((p) => p.text ?? "")
     .join("")
     .trim();
-  // An empty body is a real failure, not an empty answer — returning "" here
+  // An empty body is a real failure, not an empty answer - returning "" here
   // let JSON.parse blow up two layers away with no clue why. Name it so the
   // chain can fall through to the next model and the logs say what happened.
   if (!text) {
@@ -127,7 +127,7 @@ async function generateWithModel(model: string, opts: GenerateOptions): Promise<
   return text;
 }
 
-// Google's free tier fails transiently all the time — 503 "model overloaded",
+// Google's free tier fails transiently all the time - 503 "model overloaded",
 // brief network blips. Without a quiet retry those surface to the member as an
 // alert she reads as a broken key, and her very next attempt works. A 503
 // storm outlives a 1.2s pause, so the later waits are longer.
@@ -142,7 +142,7 @@ async function generate(opts: GenerateOptions): Promise<string> {
       try {
         return await generateWithModel(model, opts);
       } catch (e) {
-        // An invalid key fails the same way on every model — stop immediately.
+        // An invalid key fails the same way on every model - stop immediately.
         if (e instanceof InvalidKeyError) throw e;
         if (e instanceof QuotaError) sawQuota = true;
         // A rejected request shape is deterministic: the next model may still
@@ -172,7 +172,7 @@ export async function geminiJson<T>(opts: GenerateOptions & { jsonSchema: unknow
     return JSON.parse(raw) as T;
   } catch {
     // A truncated or malformed JSON body is the model misbehaving, not the
-    // member's key — regenerate once before giving up.
+    // member's key - regenerate once before giving up.
     return JSON.parse(await generate(opts)) as T;
   }
 }
@@ -190,12 +190,12 @@ export async function verifyGeminiKey(apiKey: string): Promise<boolean> {
 }
 
 /**
- * Models live behind a knowledge cutoff and assume it is 2024/2025 — a CV
+ * Models live behind a knowledge cutoff and assume it is 2024/2025 - a CV
  * with a 2026 job then gets flagged as "chronological confusion" (members,
  * 6/9). Every experience-reasoning prompt appends today's real date.
  */
 export function todayLineHe(): string {
   const now = new Date();
   const d = new Intl.DateTimeFormat("he-IL", { dateStyle: "long" }).format(now);
-  return `התאריך היום: ${d} (שנת ${now.getFullYear()}). תאריכים בקורות חיים או בניסיון שהם בעבר או בהווה ביחס להיום — תקינים לחלוטין; אין לסמן שנים עדכניות כטעות או כ"תאריך עתידי".`;
+  return `התאריך היום: ${d} (שנת ${now.getFullYear()}). תאריכים בקורות חיים או בניסיון שהם בעבר או בהווה ביחס להיום - תקינים לחלוטין; אין לסמן שנים עדכניות כטעות או כ"תאריך עתידי".`;
 }

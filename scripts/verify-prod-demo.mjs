@@ -1,5 +1,5 @@
 // Verify the production demo seed: שירה's login, the targeted GRTH jobs,
-// the sessions, and the GRTH portal login. Read-only walk — nothing submitted.
+// the sessions, and the GRTH portal login. Read-only walk - nothing submitted.
 import { chromium } from "@playwright/test";
 const BASE = "https://app.opencode.org.il";
 const SHOTS = process.env.SHOTS_DIR || ".";

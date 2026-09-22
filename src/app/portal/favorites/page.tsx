@@ -1,4 +1,4 @@
-// The portal's "המועדפות שלי" — every candidate this client starred, in one place.
+// The portal's "המועדפות שלי" - every candidate this client starred, in one place.
 //
 // PRIVACY: the candidate cards come from listFavorites(), which reads only
 // through loadCandidates() (listed profiles, employer-visible answers). No

@@ -11,7 +11,7 @@ const MAX_INLINE_IMG_BYTES = 5 * 1024 * 1024;
 
 /**
  * A PASTED image lands in the editor as a data: URI, which the sanitizer
- * (rightly, https-only) used to strip — "התמונה נעלמת בשמירה". Host every
+ * (rightly, https-only) used to strip - "התמונה נעלמת בשמירה". Host every
  * inline image in the public article-images bucket and swap in its URL
  * BEFORE sanitizing, so the save keeps exactly what the editor showed.
  */
@@ -31,7 +31,7 @@ async function hostInlineImages(html: string): Promise<string> {
       const { error } = await admin.storage
         .from("article-images")
         .upload(path, bytes, { contentType: `image/${kind}`, upsert: false });
-      if (error) continue; // the sanitizer will drop it — same as before, not worse
+      if (error) continue; // the sanitizer will drop it - same as before, not worse
       const { data } = admin.storage.from("article-images").getPublicUrl(path);
       if (data?.publicUrl) jobs.push({ placeholder: full, url: data.publicUrl });
     } catch (e) {
@@ -56,7 +56,7 @@ async function articleFields(formData: FormData) {
   };
 }
 
-/** Create an article — as a draft or published, the admin's choice. */
+/** Create an article - as a draft or published, the admin's choice. */
 export async function createArticle(formData: FormData): Promise<void> {
   await requireRole("admin");
   const title = String(formData.get("title") ?? "").trim();

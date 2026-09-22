@@ -37,7 +37,7 @@ export function MentorRequestForm({ pendingRequest = false }: { pendingRequest?:
         </span>
         <div>
           <div className="font-display font-bold text-ink-1000">עדיין לא חיברנו לך מנטורית</div>
-          <p className="t-body-sm text-ink-700 mt-0.5">את יכולה לבקש כאן — ונמצא לך את ההתאמה הנכונה.</p>
+          <p className="t-body-sm text-ink-700 mt-0.5">את יכולה לבקש כאן - ונמצא לך את ההתאמה הנכונה.</p>
         </div>
       </div>
 

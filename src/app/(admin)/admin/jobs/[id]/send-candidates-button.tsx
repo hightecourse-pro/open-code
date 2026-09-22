@@ -6,7 +6,7 @@ import { sendJobCandidatesToClient } from "@/app/(admin)/admin/actions";
 
 /**
  * Emails the linked client the curated candidates for this job (with the
- * portal credentials), behind an inline confirm panel — the send is final, so
+ * portal credentials), behind an inline confirm panel - the send is final, so
  * no one-click accidents. An optional personal note is woven into the email.
  */
 export function SendCandidatesButton({
@@ -49,7 +49,7 @@ export function SendCandidatesButton({
       ) : (
         <div className="flex flex-col gap-3 rounded-[14px] border border-ink-200 bg-ink-50 p-4">
           <Alert variant="warn">
-            שימי לב — המייל יישלח ללקוח {clientName ?? "המקושר למשרה"} ויכלול את פרטי הגישה
+            שימי לב - המייל יישלח ללקוח {clientName ?? "המקושר למשרה"} ויכלול את פרטי הגישה
             לפורטל.
           </Alert>
           <div className="flex flex-col gap-1.5">
@@ -62,7 +62,7 @@ export function SendCandidatesButton({
               onChange={(e) => setNote(e.target.value)}
               rows={3}
               className="min-h-20 bg-ink-0"
-              placeholder="למשל: היה נעים לדבר השבוע — מצורפות המועמדות שסיכמנו עליהן."
+              placeholder="למשל: היה נעים לדבר השבוע - מצורפות המועמדות שסיכמנו עליהן."
             />
           </div>
           <div className="flex items-center gap-2">

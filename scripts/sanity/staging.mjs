@@ -1,4 +1,4 @@
-// Staging sanity — runs after EVERY staging deploy (the owner, 17/9: "סניטי
+// Staging sanity - runs after EVERY staging deploy (the owner, 17/9: "סניטי
 // על כל מה שרלוונטי בכל דחיפה"). Real browser, real pages, asserts on what
 // rendered. Exit 1 on any failure. Credentials = the staging test accounts
 // documented in the QA spec (חשבונות הבדיקה); override via env if rotated.
@@ -11,7 +11,7 @@ const MIRIAM = "7a52f440-41a8-4846-9bc3-e34cf7569c84"; // demo graduate with a f
 const JOB = "e03cc818-78c7-4a82-9d72-fc8055f02500"; // job she applied to
 
 const out = [];
-const ok = (name, cond, extra = "") => out.push(`${cond ? "PASS" : "FAIL"} ${name}${extra ? " — " + extra : ""}`);
+const ok = (name, cond, extra = "") => out.push(`${cond ? "PASS" : "FAIL"} ${name}${extra ? " - " + extra : ""}`);
 const browser = await chromium.launch();
 
 async function login(page, who) {
@@ -61,7 +61,7 @@ try {
   await a.goto(`${BASE}/admin`, { waitUntil: "networkidle" });
   ok("admin dashboard renders", (await a.textContent("body")).includes("דשבורד") || (await a.textContent("body")).includes("התראות"));
 } catch (e) {
-  out.push(`FAIL crashed — ${String(e).slice(0, 200)}`);
+  out.push(`FAIL crashed - ${String(e).slice(0, 200)}`);
 } finally {
   await browser.close();
 }

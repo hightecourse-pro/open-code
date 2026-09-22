@@ -3,7 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 /**
  * The task-trigger mechanism (the owner, 3/9): system events fire named
  * triggers; a task_rules row decides whether that event opens a task and
- * which team member always receives it. Rules are seeded DISABLED — the
+ * which team member always receives it. Rules are seeded DISABLED - the
  * owner enables and routes each one from /admin/tasks.
  *
  * Fire-and-forget by contract: a trigger must never break the flow that

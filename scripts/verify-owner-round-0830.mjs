@@ -14,7 +14,7 @@ const sb = createClient(requireEnv("NEXT_PUBLIC_SUPABASE_URL"), requireEnv("SUPA
 });
 
 const results = [];
-const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " — " + x : ""}`);
+const ok = (n, p, x = "") => results.push(`${p ? "✅" : "❌"} ${n}${x ? " - " + x : ""}`);
 const done = (code = 0) => { console.log(results.join("\n")); process.exit(code); };
 process.on("uncaughtException", (e) => { console.log(results.join("\n")); console.error("FAILED:", e.message); process.exit(1); });
 
@@ -96,7 +96,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await login(page, "sub.test@opencode.test", PASS);
 
-// B1-B2: jobs — filters at the top, applying to the targeted section too.
+// B1-B2: jobs - filters at the top, applying to the targeted section too.
 {
   // Ensure a targeted job for sub.test on a live published "ours" job.
   const { data: liveJob } = await sb
@@ -144,7 +144,7 @@ await login(page, "sub.test@opencode.test", PASS);
     .eq("pipeline_status", "published").limit(1).single();
   const probe = { ...src };
   delete probe.id; delete probe.created_at; delete probe.updated_at;
-  probe.title = "בדיקת שלב מתקדם — אוטומטי";
+  probe.title = "בדיקת שלב מתקדם - אוטומטי";
   probe.pipeline_status = "candidates_sent";
   probe.published_at = new Date().toISOString();
   const { data: made, error: mkErr } = await sb.from("jobs").insert(probe).select("id").single();
@@ -152,7 +152,7 @@ await login(page, "sub.test@opencode.test", PASS);
   else {
     await page.goto(`${BASE}/jobs`);
     await page.waitForLoadState("networkidle");
-    const card = page.locator("article", { hasText: "בדיקת שלב מתקדם — אוטומטי" }).first();
+    const card = page.locator("article", { hasText: "בדיקת שלב מתקדם - אוטומטי" }).first();
     const cardExists = (await card.count()) > 0;
     ok("jobs: advanced job on board", cardExists);
     if (cardExists) {
@@ -195,7 +195,7 @@ await login(page, "sub.test@opencode.test", PASS);
   if ((await jump.count()) > 0) {
     await jump.first().click();
     await page.waitForTimeout(700);
-    // With an active course every other card may be locked — assert the fold
+    // With an active course every other card may be locked - assert the fold
     // BODY became visible (cards render), not a specific CTA.
     const opened = await page.evaluate(() => {
       const sec = document.getElementById("course-catalogue");
@@ -209,7 +209,7 @@ await login(page, "sub.test@opencode.test", PASS);
   }
 }
 
-// B7: session feedback — visible stars, click-through, saved row.
+// B7: session feedback - visible stars, click-through, saved row.
 let seededSession = null;
 {
   const { data: s } = await sb
@@ -308,7 +308,7 @@ await page.close();
     }
   }
 
-  // C5: the review center — tiles, table, per-column filters, note column.
+  // C5: the review center - tiles, table, per-column filters, note column.
   {
     const { data: bigJob } = await sb.rpc("job_app_counts").then(async (r) => {
       if (r.data?.length) {

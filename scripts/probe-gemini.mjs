@@ -59,10 +59,10 @@ async function run(label, think) {
     }
     return;
   }
-  console.log(`${label.padEnd(24)} all models 503/429/404 (transient) — try again shortly`);
+  console.log(`${label.padEnd(24)} all models 503/429/404 (transient) - try again shortly`);
 }
 
-console.log("== OLD config (thinking on, 2048) — reproduces the bug ==");
+console.log("== OLD config (thinking on, 2048) - reproduces the bug ==");
 await run("OLD/thinking-on", true);
 console.log("== FIX (thinkingBudget:0, 4096) ==");
 await run("FIX/thinking-off", false);

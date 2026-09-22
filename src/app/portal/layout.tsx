@@ -7,7 +7,7 @@ import { portalClient } from "./session";
 
 export const metadata: Metadata = {
   title: "פורטל מועמדות",
-  description: "פורטל המועמדות של קוד פתוח — צפייה בפרופילים רלוונטיים למשרות שלכם.",
+  description: "פורטל המועמדות של קוד פתוח - צפייה בפרופילים רלוונטיים למשרות שלכם.",
   // The portal is private by definition; keep it out of search results.
   robots: { index: false, follow: false },
 };
@@ -16,14 +16,14 @@ export default async function PortalLayout({ children }: { children: React.React
   const client = await portalClient();
 
   // The login page lives under /portal but has no session yet, so it renders
-  // bare — the chrome below only makes sense once a company is signed in.
+  // bare - the chrome below only makes sense once a company is signed in.
   if (!client) return <>{children}</>;
 
   return (
     <div className="min-h-screen flex flex-col bg-ink-50">
       <header className="sticky top-0 z-30 bg-ink-1000">
         <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-4 px-6">
-          {/* The lockup is drawn for light surfaces — a white chip keeps it legible on the ink bar. */}
+          {/* The lockup is drawn for light surfaces - a white chip keeps it legible on the ink bar. */}
           <Link
             href={client.can_search ? "/portal" : "/portal/jobs"}
             className="inline-flex items-center rounded-sm bg-ink-0 px-2.5 py-1.5 hover:no-underline"
@@ -58,7 +58,7 @@ export default async function PortalLayout({ children }: { children: React.React
       <footer className="border-t border-ink-200 bg-ink-0">
         <div className="mx-auto max-w-[1200px] px-6 py-6">
           <p className="t-caption">
-            הפורטל של קוד פתוח. המידע כאן מיועד לגיוס שלכם בלבד — תודה ששומרים אותו בינינו.
+            הפורטל של קוד פתוח. המידע כאן מיועד לגיוס שלכם בלבד - תודה ששומרים אותו בינינו.
           </p>
         </div>
       </footer>

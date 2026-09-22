@@ -11,10 +11,10 @@ import {
 import type { ContentLink } from "@/types/database";
 
 /**
- * Everything a session TEACHES, managed on the session itself — reorganized
+ * Everything a session TEACHES, managed on the session itself - reorganized
  * (the owner, 31/8: "תארגן מחדש את עריכת הסשן בצורה נוחה") into four clear
  * sections: recordings, syllabus + pre-topics, materials, sharing. One list
- * per kind, every row deletable in place — the generic links editor that
+ * per kind, every row deletable in place - the generic links editor that
  * duplicated all of this is gone.
  */
 function Section({

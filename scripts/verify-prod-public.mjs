@@ -1,4 +1,4 @@
-// Post-release smoke on PRODUCTION public pages — render checks only, no
+// Post-release smoke on PRODUCTION public pages - render checks only, no
 // accounts are created or touched there.
 import { chromium } from "@playwright/test";
 const BASE = "https://app.opencode.org.il";

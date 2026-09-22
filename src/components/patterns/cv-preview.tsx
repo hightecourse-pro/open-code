@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * A floating side preview for a CV file (the owner, 18/9: "תצוגה מקדימה
- * לטפסי קורות חיים בכל מקום — מהצד, צף על המסך"). The file opens in an
+ * לטפסי קורות חיים בכל מקום - מהצד, צף על המסך"). The file opens in an
  * iframe drawer over the current screen, so nobody leaves the page she is
  * working on. PDFs render inline; a Word file cannot, so the drawer says so
  * and offers the download instead.
@@ -25,7 +25,7 @@ export function CvPreviewButton({
   /** Used to tell PDFs from Word files and as the drawer title. */
   fileName?: string | null;
   label?: string;
-  /** Drawer heading — e.g. the member's name. */
+  /** Drawer heading - e.g. the member's name. */
   title?: string;
   className?: string;
   /** Icon-only trigger for tight rows. */
@@ -66,7 +66,7 @@ export function CvPreviewButton({
         typeof document !== "undefined" &&
         createPortal(
           <div className="fixed inset-0 z-[70]" dir="rtl" role="dialog" aria-modal="true" aria-label="תצוגה מקדימה של קורות חיים">
-            {/* Click outside closes — the preview floats over the screen. */}
+            {/* Click outside closes - the preview floats over the screen. */}
             <button
               type="button"
               aria-label="סגירה"
@@ -107,7 +107,7 @@ export function CvPreviewButton({
               {isWord ? (
                 <div className="flex-1 flex flex-col items-center justify-center gap-3 text-center p-6">
                   <p className="text-sm text-ink-700 max-w-sm">
-                    זה קובץ Word — הדפדפן לא מציג אותו בתצוגה מקדימה. אפשר להוריד ולפתוח אותו במחשב.
+                    זה קובץ Word - הדפדפן לא מציג אותו בתצוגה מקדימה. אפשר להוריד ולפתוח אותו במחשב.
                   </p>
                   <a
                     href={url}

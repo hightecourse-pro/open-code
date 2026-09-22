@@ -10,7 +10,7 @@ export interface InboxRequest {
   id: string;
   profile_id: string;
   memberName: string;
-  /** Paying member — the מנויה pill (the owner, 2/9). */
+  /** Paying member - the מנויה pill (the owner, 2/9). */
   isSubscriber?: boolean;
   /** Screenshots she pasted into the widget (the owner, 2/9). */
   attachments?: { id: string; url: string; fileName: string; isImage: boolean }[];
@@ -48,7 +48,7 @@ function relativeHe(iso: string): string {
   return `לפני ${days} ימים`;
 }
 
-/** "חיכתה 3 ימים" — how long a request waited before it was handled. */
+/** "חיכתה 3 ימים" - how long a request waited before it was handled. */
 function waitedHe(createdIso: string, handledIso: string | null): string | null {
   const end = handledIso ? Date.parse(handledIso) : Date.now();
   const hours = Math.round((end - Date.parse(createdIso)) / 3_600_000);
@@ -185,7 +185,7 @@ function OpenRequestCard({
                 value={reply}
                 onChange={(e) => setReply(e.target.value)}
                 rows={3}
-                placeholder="התשובה שלך — תישלח אליה בצ'אט…"
+                placeholder="התשובה שלך - תישלח אליה בצ'אט…"
               />
               <div className="flex items-center gap-2.5 flex-wrap">
                 {teamNames.length > 0 && (
@@ -241,7 +241,7 @@ export function RequestsInbox({
   const [expandedId, setExpandedId] = useState<string | null>(open[0]?.id ?? null);
   const [q, setQ] = useState("");
   const [period, setPeriod] = useState<Period>("30");
-  // Snapshotted once — Date.now() must not run inside render/memo.
+  // Snapshotted once - Date.now() must not run inside render/memo.
   const [loadedAt] = useState(() => Date.now());
   const [page, setPage] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
@@ -268,7 +268,7 @@ export function RequestsInbox({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Waiting — emphasized, one open at a time */}
+      {/* Waiting - emphasized, one open at a time */}
       <div className="rounded-[18px] p-[2px] bg-brand-gradient">
         <div className="bg-white rounded-[16px] p-5 flex flex-col gap-3">
           <h3 className="font-display text-base font-bold">ממתינות ({open.length})</h3>
@@ -289,7 +289,7 @@ export function RequestsInbox({
         </div>
       </div>
 
-      {/* Handled — muted, searchable, paged */}
+      {/* Handled - muted, searchable, paged */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
         <div className="flex items-center gap-2.5 flex-wrap">
           <h3 className="font-display text-base font-bold">טופלו ({handled.length})</h3>
@@ -432,7 +432,7 @@ function InboxSettingsForm({ teamNames, canned }: { teamNames: string[]; canned:
   return (
     <div className="mt-3 flex flex-col gap-3">
       <label className="flex flex-col gap-1 text-[12.5px] font-semibold text-ink-600">
-        שמות הצוות (מופרדים בפסיק) — אלה השמות שנבחרים ב&quot;מי מטפלת?&quot;
+        שמות הצוות (מופרדים בפסיק) - אלה השמות שנבחרים ב&quot;מי מטפלת?&quot;
         <input
           value={names}
           onChange={(e) => setNames(e.target.value)}

@@ -65,7 +65,7 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
 
   const smartActive = smart.status === "ok" && !smartCleared;
 
-  // Structured filters first, then the AI's filters on top — both only narrow,
+  // Structured filters first, then the AI's filters on top - both only narrow,
   // so order doesn't change the result and the two searches compose freely.
   const results = useMemo(() => {
     const structured = applyFilters(candidates, selected, "");
@@ -190,7 +190,7 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
               <h2 className="font-display font-bold text-[17px] text-ink-1000">חיפוש חופשי</h2>
             </div>
             <p className="t-body-sm text-ink-500 mt-1">
-              תארו במשפט אחד את מי שאתם מחפשים — הסינון כבר עלינו.
+              תארו במשפט אחד את מי שאתם מחפשים - הסינון כבר עלינו.
             </p>
           </div>
 
@@ -224,7 +224,7 @@ export function CandidateSearch({ candidates, catalogue, favoriteIds }: Props) {
             <div className="rounded-sm bg-tint-purple p-3">
               <p className="t-body-sm text-ink-700">
                 <span className="font-semibold text-brand-purple">ככה הבנו אתכם: </span>
-                {smart.interpretation || "לא הצלחנו לחלץ פרמטרים מהמשפט — נסו לנסח אותו אחרת."}
+                {smart.interpretation || "לא הצלחנו לחלץ פרמטרים מהמשפט - נסו לנסח אותו אחרת."}
               </p>
             </div>
           )}

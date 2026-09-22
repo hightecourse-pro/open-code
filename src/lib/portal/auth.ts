@@ -29,16 +29,16 @@ function sessionSecret(): string {
   const secret = process.env.PORTAL_SESSION_SECRET || process.env.AI_KEY_SECRET || "";
   if (!secret) {
     // Silently returning "" used to hand out cookies that could never be
-    // accepted again — the client logged in "successfully" and then bounced on
+    // accepted again - the client logged in "successfully" and then bounced on
     // the login page forever, with nothing in the logs to explain it.
     throw new Error(
-      "portal_session_secret_missing: set PORTAL_SESSION_SECRET (see .env.example) — the employer portal cannot sign sessions without it"
+      "portal_session_secret_missing: set PORTAL_SESSION_SECRET (see .env.example) - the employer portal cannot sign sessions without it"
     );
   }
   return secret;
 }
 
-/** Whether portal sessions can work at all — for a clear message, not a guess. */
+/** Whether portal sessions can work at all - for a clear message, not a guess. */
 export function isPortalSessionConfigured(): boolean {
   return !!(process.env.PORTAL_SESSION_SECRET || process.env.AI_KEY_SECRET);
 }
@@ -97,7 +97,7 @@ function sign(value: string): string {
 /**
  * A fingerprint of the client's CURRENT credentials, mixed into the session
  * signature. Resetting the password changes it, which invalidates every live
- * cookie — otherwise "the old password stops working immediately" would only
+ * cookie - otherwise "the old password stops working immediately" would only
  * be true for the login form, and whoever was already inside stayed inside.
  */
 function credentialFingerprint(row: {
@@ -108,13 +108,13 @@ function credentialFingerprint(row: {
   return crypto.createHash("sha256").update(material).digest("base64url").slice(0, 16);
 }
 
-/** `<clientId>.<expiry>.<signature>` — stateless, tamper-evident. */
+/** `<clientId>.<expiry>.<signature>` - stateless, tamper-evident. */
 function buildToken(clientId: string, fingerprint: string): string {
   const payload = `${clientId}.${Date.now() + MAX_AGE * 1000}`;
   return `${payload}.${sign(`${payload}.${fingerprint}`)}`;
 }
 
-/** Parsed shape only — the signature needs the client row to be verified. */
+/** Parsed shape only - the signature needs the client row to be verified. */
 function parseToken(token: string): { clientId: string; expiry: string; signature: string } | null {
   const parts = token.split(".");
   if (parts.length !== 3) return null;
@@ -153,7 +153,7 @@ export async function startPortalSession(clientId: string): Promise<void> {
 export async function endPortalSession(): Promise<void> {
   const jar = await cookies();
   // The session cookie is scoped to path=/portal. A bare delete() targets
-  // path=/ — a different cookie as far as the browser cares — so logout would
+  // path=/ - a different cookie as far as the browser cares - so logout would
   // silently leave the real session alive. Expire it on its own path instead.
   jar.set(COOKIE, "", {
     httpOnly: true,
@@ -166,7 +166,7 @@ export async function endPortalSession(): Promise<void> {
 
 /** The signed-in client, or null. Also re-checks that access is still active. */
 export async function getPortalClient(): Promise<PortalClient | null> {
-  // sessionSecret() throws when unset — a loud misconfiguration beats a portal
+  // sessionSecret() throws when unset - a loud misconfiguration beats a portal
   // that quietly refuses every session it just issued.
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
@@ -181,7 +181,7 @@ export async function getPortalClient(): Promise<PortalClient | null> {
     .eq("id", parsed.clientId)
     .maybeSingle();
   if (!data || !data.is_active) return null;
-  // Signed against the credentials as they were at login — a password reset
+  // Signed against the credentials as they were at login - a password reset
   // since then ends this session too.
   if (!signatureMatches(parsed, credentialFingerprint(data))) return null;
   // A signed-in client always has credentials; leads without a username never log in.

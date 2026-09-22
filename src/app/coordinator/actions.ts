@@ -25,7 +25,7 @@ export async function requestCoordinatorOtp(_prev: OtpState, formData: FormData)
     const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
     if (!sent.ok) console.error("[coordinator] otp email failed:", sent.error);
   }
-  // Same answer either way — the form must not confirm which emails exist.
+  // Same answer either way - the form must not confirm which emails exist.
   return { sent: true, email };
 }
 
@@ -36,7 +36,7 @@ export async function verifyCoordinatorOtp(_prev: OtpState, formData: FormData):
   if (!email || !code) return { error: "חסר קוד.", sent: true, email };
   const contactId = await verifyOtp(email, code);
   if (!contactId) {
-    return { error: "הקוד לא נכון או שפג תוקפו — אפשר לבקש קוד חדש.", sent: true, email };
+    return { error: "הקוד לא נכון או שפג תוקפו - אפשר לבקש קוד חדש.", sent: true, email };
   }
   await startCoordinatorSession(contactId);
   redirect("/coordinator");
@@ -47,7 +47,7 @@ export async function coordinatorLogout(): Promise<void> {
   redirect("/coordinator/login");
 }
 
-/** Leave the admin's "view as coordinator" mode — back to the admin screen. */
+/** Leave the admin's "view as coordinator" mode - back to the admin screen. */
 export async function exitAdminView(): Promise<void> {
   await endCoordinatorSession();
   const { cookies } = await import("next/headers");
@@ -65,7 +65,7 @@ export async function exitAdminView(): Promise<void> {
 export type ReviewState = { error?: string; ok?: boolean };
 
 /**
- * Save the coordinator's assessment of ONE of her graduates — hers alone:
+ * Save the coordinator's assessment of ONE of her graduates - hers alone:
  * scoped by the session's contact id, upserted on (contact, profile).
  */
 export async function saveCoordinatorReview(
@@ -107,7 +107,7 @@ export async function saveCoordinatorReview(
   );
   if (error) {
     console.error("[coordinator] review save failed:", error.message);
-    return { error: "השמירה נכשלה — נסי שוב." };
+    return { error: "השמירה נכשלה - נסי שוב." };
   }
   revalidatePath("/coordinator");
   revalidatePath(`/coordinator/member/${profileId}`);
@@ -116,7 +116,7 @@ export async function saveCoordinatorReview(
 
 export type ChatState = { error?: string; ok?: boolean };
 
-/** She writes to the team — any time (the owner, 16/9). */
+/** She writes to the team - any time (the owner, 16/9). */
 export async function sendCoordinatorMessage(
   _prev: ChatState,
   formData: FormData
@@ -130,7 +130,7 @@ export async function sendCoordinatorMessage(
   const { error } = await admin
     .from("coordinator_messages")
     .insert({ contact_id: me.id, sender: "coordinator", body });
-  if (error) return { error: "ההודעה לא נשלחה — נסי שוב." };
+  if (error) return { error: "ההודעה לא נשלחה - נסי שוב." };
 
   const { raiseAlert } = await import("@/lib/alerts");
   await raiseAlert({
@@ -146,7 +146,7 @@ export async function sendCoordinatorMessage(
 
 /**
  * A graduate recommendation for a job we have not submitted anyone to yet
- * (the owner, 16/9) — lands in her chat thread + the alerts center.
+ * (the owner, 16/9) - lands in her chat thread + the alerts center.
  */
 export async function sendJobRecommendation(
   jobId: string,
@@ -189,7 +189,7 @@ export async function sendJobRecommendation(
   const { error } = await admin
     .from("coordinator_messages")
     .insert({ contact_id: me.id, sender: "coordinator", body });
-  if (error) return { error: "ההמלצה לא נשלחה — נסי שוב." };
+  if (error) return { error: "ההמלצה לא נשלחה - נסי שוב." };
 
   const { raiseAlert } = await import("@/lib/alerts");
   await raiseAlert({

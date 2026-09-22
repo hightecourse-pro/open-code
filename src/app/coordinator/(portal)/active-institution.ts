@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import type { Coordinator } from "@/lib/coordinators";
 
 /**
- * The seminary this multi-seminary coordinator is currently viewing — her
+ * The seminary this multi-seminary coordinator is currently viewing - her
  * cookie choice when valid, else her first institution. A single-seminary
  * coordinator always gets that one.
  */

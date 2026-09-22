@@ -8,7 +8,7 @@ import { adminCancelSubscription, adminKevaAction } from "@/app/(admin)/admin/ac
 /**
  * Subscription + standing-order controls on the member admin page (the owner,
  * 3/9): cancel her subscription in OUR system (e.g. after a refused charge),
- * and manage the Nedarim keva directly — freeze / reactivate / delete — now
+ * and manage the Nedarim keva directly - freeze / reactivate / delete - now
  * that Nedarim exposed the API (their support, 3/9).
  */
 export function MemberSubscriptionPanel({
@@ -30,12 +30,12 @@ export function MemberSubscriptionPanel({
   function runKeva(kevaId: string, action: "DisableKeva" | "EnableKevaNew" | "DeleteKeva", label: string) {
     const warning =
       action === "DeleteKeva"
-        ? `לבטל לצמיתות את הוראת הקבע ${kevaId} בנדרים? אי אפשר להחזיר — חידוש ידרוש הקמה חדשה עם הכרטיס.`
+        ? `לבטל לצמיתות את הוראת הקבע ${kevaId} בנדרים? אי אפשר להחזיר - חידוש ידרוש הקמה חדשה עם הכרטיס.`
         : `${label} את הוראת הקבע ${kevaId} בנדרים?`;
     if (!confirm(warning)) return;
     start(async () => {
       const r = await adminKevaAction(kevaId, action);
-      setResult({ ok: r.ok, text: `${label} (${kevaId}): ${r.ok ? "בוצע ✓" : "נכשל"} — תשובת נדרים: ${r.detail}` });
+      setResult({ ok: r.ok, text: `${label} (${kevaId}): ${r.ok ? "בוצע ✓" : "נכשל"} - תשובת נדרים: ${r.detail}` });
     });
   }
 
@@ -48,7 +48,7 @@ export function MemberSubscriptionPanel({
         </span>
         <span className="text-ink-300">·</span>
         <span className="text-ink-500">דרגה:</span>
-        <span className="font-bold text-ink-900">{memberTier ?? "—"}</span>
+        <span className="font-bold text-ink-900">{memberTier ?? "-"}</span>
       </div>
 
       {result && <Alert variant={result.ok ? "success" : "danger"}>{result.text}</Alert>}
@@ -60,13 +60,13 @@ export function MemberSubscriptionPanel({
           onClick={() => {
             if (
               confirm(
-                "לבטל את המנוי שלה במערכת? המנוי יסומן כמבוטל, הדרגה תרד לחינמית והגישה לחומרי הקורסים תיסגר. הוראת הקבע בנדרים לא מבוטלת כאן — לזה משמשים הכפתורים למטה."
+                "לבטל את המנוי שלה במערכת? המנוי יסומן כמבוטל, הדרגה תרד לחינמית והגישה לחומרי הקורסים תיסגר. הוראת הקבע בנדרים לא מבוטלת כאן - לזה משמשים הכפתורים למטה."
               )
             )
               start(async () => {
                 const r = await adminCancelSubscription(profileId);
                 setResult(
-                  r.error ? { ok: false, text: r.error } : { ok: true, text: "המנוי בוטל במערכת — הדרגה ירדה לחינמית." }
+                  r.error ? { ok: false, text: r.error } : { ok: true, text: "המנוי בוטל במערכת - הדרגה ירדה לחינמית." }
                 );
               });
           }}
@@ -78,7 +78,7 @@ export function MemberSubscriptionPanel({
 
       <div className="border-t border-ink-100 pt-3">
         <div className="text-xs font-semibold text-ink-700 mb-1.5">
-          הוראות קבע בנדרים {kevaIds.length === 0 && <span className="font-normal text-ink-400">— לא נמצאו ברישומים שלנו</span>}
+          הוראות קבע בנדרים {kevaIds.length === 0 && <span className="font-normal text-ink-400">- לא נמצאו ברישומים שלנו</span>}
         </div>
         {kevaIds.map((k, i) => (
           <div key={k} className="flex items-center gap-2 py-1.5 flex-wrap">

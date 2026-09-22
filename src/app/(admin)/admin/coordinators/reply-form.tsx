@@ -6,7 +6,7 @@ import { Send } from "lucide-react";
 import { Alert, Button, Textarea } from "@/components/ui";
 import { replyToCoordinator, type CoordChatState } from "./actions";
 
-/** The team's reply box — the answer is signed with the sender's name. */
+/** The team's reply box - the answer is signed with the sender's name. */
 export function CoordinatorReplyForm({
   contactId,
   signature,

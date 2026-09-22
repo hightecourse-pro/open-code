@@ -18,14 +18,14 @@ import {
 type Option = { value: string; label: string };
 
 export interface ExperienceListEditorProps {
-  /** Form field name — the hidden input submits a JSON array of entries. */
+  /** Form field name - the hidden input submits a JSON array of entries. */
   name: string;
   /** "practical" shows the kind select; "work" shows the current-place checkbox. */
   variant: "practical" | "work";
   initial: ExperienceEntry[];
   /** Tech taxonomy options (chips per entry, stored as VALUES). */
   techOptions: Option[];
-  /** work variant — the per-entry role select (the owner, 31/8). */
+  /** work variant - the per-entry role select (the owner, 31/8). */
   roleOptions?: Option[];
   error?: boolean;
 }
@@ -65,7 +65,7 @@ function splitYm(ym: string): { month: string; year: string } {
 }
 
 // She picks the month and the year one at a time, and each pick is written back
-// through the serialized string — so collapsing a half-filled pair to "" would
+// through the serialized string - so collapsing a half-filled pair to "" would
 // erase the choice she just made and the Select would snap back to "חודש…".
 // A half value ("2024-" / "-03") round-trips through splitYm and is still
 // rejected by isValidYm, so validation stays exactly as strict.
@@ -87,7 +87,7 @@ export function ExperienceListEditor({
     setEntries((list) => list.map((e, j) => (j === i ? { ...e, ...changes } : e)));
   }
 
-  /** work_history: only one entry may be "מקום נוכחי/אחרון" — checking clears the rest. */
+  /** work_history: only one entry may be "מקום נוכחי/אחרון" - checking clears the rest. */
   function setCurrent(i: number, on: boolean) {
     setEntries((list) =>
       list.map((e, j) => {
@@ -101,7 +101,7 @@ export function ExperienceListEditor({
 
   return (
     <div className="flex flex-col gap-3">
-      {/* One value for the whole list — the server action parses the array. */}
+      {/* One value for the whole list - the server action parses the array. */}
       <input type="hidden" name={name} value={JSON.stringify(entries)} />
 
       {entries.map((entry, i) => {
@@ -173,7 +173,7 @@ export function ExperienceListEditor({
             <div className="flex flex-col gap-1.5">
               <span className="text-xs font-semibold text-ink-700">טכנולוגיות</span>
               <div className="flex flex-wrap gap-2">
-                {/* Custom values she typed under "אחר" — removable chips. */}
+                {/* Custom values she typed under "אחר" - removable chips. */}
                 {entry.tech.filter((t) => !techOptions.some((o) => o.value === t)).map((t) => (
                   <button
                     key={t}
@@ -212,7 +212,7 @@ export function ExperienceListEditor({
                   );
                 })}
                 <input
-                  placeholder="אחר — הקלידי ו-Enter"
+                  placeholder="אחר - הקלידי ו-Enter"
                   className="w-40 text-xs border border-dashed border-ink-300 rounded-full px-3 py-[5px] outline-none focus:border-brand-purple"
                   onKeyDown={(e) => {
                     if (e.key !== "Enter") return;
@@ -235,7 +235,7 @@ export function ExperienceListEditor({
                 name={`${name}__rich_${i}`}
                 defaultValue={entry.description}
                 tools={["bold", "ul", "ol"]}
-                placeholder="מה עשית שם בפועל? אפשר הדגשות, בולטים ומספור — זה מה שהמגייסת תקרא."
+                placeholder="מה עשית שם בפועל? אפשר הדגשות, בולטים ומספור - זה מה שהמגייסת תקרא."
                 onHtmlChange={(html) =>
                   patch(i, { description: html.replace(/<[^>]*>/g, "").trim() ? html : "" })
                 }

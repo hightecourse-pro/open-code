@@ -74,11 +74,11 @@ export interface SidebarUser {
   meta: string;
   initials: string;
   isAdmin?: boolean;
-  /** Mentors contribute, they don't job-hunt or study — jobs + courses hide. */
+  /** Mentors contribute, they don't job-hunt or study - jobs + courses hide. */
   isMentor?: boolean;
   /** Free members see paid destinations marked with a lock. */
   isSubscriber?: boolean;
-  /** Chat messages waiting for her — shown as a badge on "צ'אטים". */
+  /** Chat messages waiting for her - shown as a badge on "צ'אטים". */
   unreadCount?: number;
 }
 
@@ -97,11 +97,11 @@ const DEFAULT_USER: SidebarUser = {
 export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
   const pathname = usePathname();
 
-  // "חדש" on the hackathon item until her first visit (the owner, 7/9) —
+  // "חדש" on the hackathon item until her first visit (the owner, 7/9) -
   // remembered per browser; entering the page clears it for good.
   const [hackathonSeen, setHackathonSeen] = useState(true);
   useEffect(() => {
-    // Deferred a tick — the set-state-in-effect rule (same treatment as the
+    // Deferred a tick - the set-state-in-effect rule (same treatment as the
     // error boundary's healing flag).
     const t = setTimeout(() => {
       try {

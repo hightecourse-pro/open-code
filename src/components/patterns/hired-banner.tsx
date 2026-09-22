@@ -6,17 +6,17 @@ import { Minus } from "lucide-react";
 import { markHiresSeen } from "@/app/(app)/hired-banner-actions";
 
 export interface HiredMember {
-  /** The hires-registry row — what "seen" is tracked by. */
+  /** The hires-registry row - what "seen" is tracked by. */
   id: string;
   full_name: string;
-  /** Her member card, when she's in the community — the name links to it. */
+  /** Her member card, when she's in the community - the name links to it. */
   profileId?: string | null;
 }
 
 /**
  * Festive congratulations for women who recently started a new job
- * (members with found_job + hired_at, and off-community placements — both
- * within the celebration window). Names only — a member's workplace is never
+ * (members with found_job + hired_at, and off-community placements - both
+ * within the celebration window). Names only - a member's workplace is never
  * shown to other members.
  *
  * Floats app-wide (the PM: not buried in the forum), bottom-start so it never
@@ -25,7 +25,7 @@ export interface HiredMember {
  * Per member, not per browser (the owner, 18/9): it opens by itself ONLY when
  * there is news she has not seen yet; unseen names carry a "חדש" mark; once
  * she has looked (the open banner, a few seconds), the names are recorded as
- * seen — the mark drops and the banner stays a 🎉 chip until the next hire.
+ * seen - the mark drops and the banner stays a 🎉 chip until the next hire.
  */
 export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seenIds: string[] }) {
   const seen = new Set(seenIds);
@@ -36,7 +36,7 @@ export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seen
     .sort()
     .join(",");
 
-  // Her minimize choice for THIS batch of news sticks per browser — a new
+  // Her minimize choice for THIS batch of news sticks per browser - a new
   // hire changes the key and the banner opens again.
   const storageKey = `hired-banner-min:${newsKey || "none"}`;
   const subscribe = useCallback((cb: () => void) => {
@@ -89,7 +89,7 @@ export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seen
     try {
       localStorage.setItem(storageKey, next ? "1" : "0");
     } catch {
-      /* private mode — the choice just won't stick */
+      /* private mode - the choice just won't stick */
     }
   }
 
@@ -99,7 +99,7 @@ export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seen
         <button
           type="button"
           onClick={() => toggle(false)}
-          aria-label="חברות שהתקבלו לעבודה — להרחבה"
+          aria-label="חברות שהתקבלו לעבודה - להרחבה"
           title={hasNews ? "יש חדשות משמחות 🎉" : "החברות שהתקבלו לעבודה 🎉"}
           className="relative w-11 h-11 rounded-full bg-brand-gradient text-white text-[20px] shadow-glow-pink flex items-center justify-center cursor-pointer hover:scale-105 transition-transform"
         >
@@ -120,7 +120,7 @@ export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seen
               <div className="font-display font-black text-[15px]">
                 מזל טוב לחברות שלנו שמתחילות עבודה :)
               </div>
-              {/* Name enlarged, and no i/N counter — how many were hired is
+              {/* Name enlarged, and no i/N counter - how many were hired is
                   the team's business, not the banner's (the owner, 3/9). */}
               <div
                 key={current.id}
@@ -143,7 +143,7 @@ export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seen
               </div>
               <style>{`@keyframes hired-swap { from { opacity: 0; translate: 0 6px } to { opacity: 1; translate: 0 0 } }`}</style>
               <div className="text-[12px] opacity-85">
-                כל הקהילה מאחלת חגיגית — שתהיה הצלחה ענקית 💜
+                כל הקהילה מאחלת חגיגית - שתהיה הצלחה ענקית 💜
               </div>
             </div>
             <button

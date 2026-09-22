@@ -16,7 +16,7 @@ export interface ActivateInput {
 
 /**
  * Records a successful payment and (re)activates the member's subscription.
- * Service-role only — called from the payment webhook and the dev simulator.
+ * Service-role only - called from the payment webhook and the dev simulator.
  * This is the single source of truth for "member becomes active".
  */
 export async function activateSubscription(input: ActivateInput) {
@@ -66,13 +66,13 @@ export async function activateSubscription(input: ActivateInput) {
 
   // Card replacement (the owner, 1/9): a NEW standing order for a member who
   // already has one means the OLD keva must be canceled in the Nedarim
-  // console — Nedarim exposes no cancel API, so the alert is the handoff.
+  // console - Nedarim exposes no cancel API, so the alert is the handoff.
   // Detected BEFORE recording the new payment, off the previous newest one.
   const newKeva = ((input.raw as Record<string, unknown> | null)?.KevaId as string | undefined) ?? null;
   if (newKeva) {
-    // EVERY keva id we ever saw for her — raw.KevaId when the webhook carried
+    // EVERY keva id we ever saw for her - raw.KevaId when the webhook carried
     // it, and the digits of "keva-X"/"nedarim-keva-X" provider ids (the
-    // imported Nedarim list stores ONLY those — טובה זק's original keva had
+    // imported Nedarim list stores ONLY those - טובה זק's original keva had
     // no raw.KevaId, so the old single-row comparison missed her replacement
     // and both kevas kept charging, 1/9).
     const { data: prevPays } = await admin
@@ -100,8 +100,8 @@ export async function activateSubscription(input: ActivateInput) {
       await raiseAlert({
         kind: "keva_replaced",
         severity: "critical",
-        title: `${who?.full_name ?? "חברה"} החליפה כרטיס אשראי — לבטל את הקבע הישן ${oldKeva} בנדרים`,
-        body: `הוקמה הוראת קבע חדשה (${newKeva}) במקום הישנה (${oldKeva}). את הישנה חייבים לבטל ידנית בקונסולת נדרים — אחרת הכרטיס הישן ימשיך להיות מחויב במקביל.`,
+        title: `${who?.full_name ?? "חברה"} החליפה כרטיס אשראי - לבטל את הקבע הישן ${oldKeva} בנדרים`,
+        body: `הוקמה הוראת קבע חדשה (${newKeva}) במקום הישנה (${oldKeva}). את הישנה חייבים לבטל ידנית בקונסולת נדרים - אחרת הכרטיס הישן ימשיך להיות מחויב במקביל.`,
         context: { profileId: input.profileId, oldKeva, newKeva },
         dedupeKey: `keva-replace:${newKeva}`,
       });
@@ -109,7 +109,7 @@ export async function activateSubscription(input: ActivateInput) {
   }
 
   // Keep the Nedarim registry current from the callbacks themselves (the
-  // owner, 14/9: "בפעמים הבאות תקבל מהקולבק, לא תצטרך מאקסל") — a keva's
+  // owner, 14/9: "בפעמים הבאות תקבל מהקולבק, לא תצטרך מאקסל") - a keva's
   // FIRST callback marks its start date; later charges only refresh the
   // contact fields. The one-time Excel load seeded the history; from here
   // the registry maintains itself.
@@ -157,10 +157,10 @@ export async function activateSubscription(input: ActivateInput) {
     raw: (input.raw ?? null) as never,
   });
 
-  // Activate the member — and RE-assert the paid tier: a junior who was
+  // Activate the member - and RE-assert the paid tier: a junior who was
   // downgraded to free mid-lifecycle (failed keva, cancel) and then charged
   // successfully again stayed free forever, locked out while paying
-  // (אסתי רוזנשטיין, 14/9 — this update used to touch status only).
+  // (אסתי רוזנשטיין, 14/9 - this update used to touch status only).
   // Mentors and team never pay, so only a junior's tier follows her money.
   await admin.from("profiles").update({ status: "active" }).eq("id", input.profileId);
   await admin
@@ -171,7 +171,7 @@ export async function activateSubscription(input: ActivateInput) {
 
   // No Drive work here, by design. Activation only decides what she MAY open;
   // the access itself is created when she opens it (ensureAccess). That also
-  // keeps this webhook free of Google round-trips — a timed-out webhook gets
+  // keeps this webhook free of Google round-trips - a timed-out webhook gets
   // retried by the provider, which would duplicate the payment.
   return { subscriptionId };
 }
@@ -187,11 +187,11 @@ export async function deactivateSubscription(profileId: string) {
     .eq("profile_id", profileId)
     .in("status", ["active", "trialing", "past_due"]);
   if (subErr) {
-    // Don't strip her access on a half-failed update — let the next run retry.
+    // Don't strip her access on a half-failed update - let the next run retry.
     console.error("[subscriptions] cancel failed, skipping revoke:", subErr.message);
     return;
   }
-  // Only an active member gets paused — never overwrite a deliberate
+  // Only an active member gets paused - never overwrite a deliberate
   // 'rejected' (or a pending) state set by an admin.
   await admin
     .from("profiles")
@@ -208,7 +208,7 @@ export async function deactivateSubscription(profileId: string) {
 }
 
 /**
- * Every Nedarim keva id we ever recorded for her — raw.KevaId from live
+ * Every Nedarim keva id we ever recorded for her - raw.KevaId from live
  * webhooks plus the digits of "keva-X"/"nedarim-keva-X" provider ids from the
  * imported list. Newest payment first, so the first id is the live order.
  */

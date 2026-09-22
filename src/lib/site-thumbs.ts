@@ -4,7 +4,7 @@
 // the server, cached in site_thumbnails, and inlined as a base64 data URI.
 //
 // mShots serves a GIF placeholder while it renders a site; only a real JPEG
-// is cached, so a "generating" frame is never frozen into the profile — the
+// is cached, so a "generating" frame is never frozen into the profile - the
 // next view simply tries again.
 import { createHash } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -12,7 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const MAX_BYTES = 300 * 1024; // a 560px JPEG is ~30-80KB; anything bigger is suspect
 const FETCH_TIMEOUT_MS = 6000;
 
-/** Which links deserve a screenshot — a live site, not a code host. */
+/** Which links deserve a screenshot - a live site, not a code host. */
 export function isLiveSiteUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname;
@@ -48,7 +48,7 @@ async function fetchShot(url: string): Promise<{ contentType: string; base64: st
  * Data URIs for whichever of the given urls have a cached screenshot; cache
  * misses trigger a fetch (in parallel) and are stored when mShots has the
  * shot ready. Call it at profile save to warm the cache, and at render to
- * read it — the page inlines whatever is available.
+ * read it - the page inlines whatever is available.
  */
 export async function siteThumbs(urls: string[]): Promise<Record<string, string>> {
   const live = [...new Set(urls.filter(isLiveSiteUrl))];

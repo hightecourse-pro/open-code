@@ -14,10 +14,10 @@ export const metadata: Metadata = { title: "קורות חיים" };
 export default async function AdminCvsPage() {
   await requireRole("admin");
 
-  // cv_documents is owner-only under RLS — staff browse via the service role.
+  // cv_documents is owner-only under RLS - staff browse via the service role.
   const admin = createAdminClient();
   // Bounded: the newest 1200 documents (well past today's community). Links
-  // are signed ON CLICK by /admin/cv-files/sign — not en masse per page view.
+  // are signed ON CLICK by /admin/cv-files/sign - not en masse per page view.
   const { data: docs } = await admin
     .from("cv_documents")
     .select("id, profile_id, label, language, file_path, file_name, created_at, is_default")
@@ -34,7 +34,7 @@ export default async function AdminCvsPage() {
     : { data: [] };
   const memberOf = new Map((members ?? []).map((m) => [m.id, m]));
 
-  // A job-tailored file was born inside an application — resolve which job,
+  // A job-tailored file was born inside an application - resolve which job,
   // so the row can link to it (Shira: "קובץ מותאם למשרה לא מקשר למשרה").
   const docIds = (docs ?? []).map((d) => d.id);
   const { data: appRows } = docIds.length
@@ -75,7 +75,7 @@ export default async function AdminCvsPage() {
         <span className="font-mono text-xs text-brand-pink-deep">&lt;קו&quot;ח/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">קורות חיים</h1>
         <p className="t-body-sm text-ink-500">
-          כל הקבצים שהחברות העלו, מקובצים לפי חברה — חיפוש, סינון, תצוגה מקדימה, הורדה בודדת
+          כל הקבצים שהחברות העלו, מקובצים לפי חברה - חיפוש, סינון, תצוגה מקדימה, הורדה בודדת
           או מרוכזת. הקישורים תקפים לשעה.
         </p>
       </div>
