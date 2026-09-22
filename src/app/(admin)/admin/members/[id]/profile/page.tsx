@@ -25,7 +25,9 @@ export default async function AdminMemberProfilePage({
   const { id } = await params;
   const admin = createAdminClient();
   const [{ candidates }, { data: authUser }, { data: phoneRow }] = await Promise.all([
-    loadCandidates({ includeMentors: true, everyoneForTeam: true }),
+    // ONE profile, any status/role (the owner, 22/9: paused members and team
+    // accounts must open here too) — and no 700-profile load for one card.
+    loadCandidates({ includeMentors: true, everyoneForTeam: true, onlyId: id }),
     admin.auth.admin.getUserById(id),
     // Phone is NOT employer_visible, so loadCandidates never returns it —
     // the team fetches it directly.
@@ -58,11 +60,9 @@ export default async function AdminMemberProfilePage({
         </Link>
         <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-ink-700 text-sm leading-relaxed">
           <b className="text-ink-1000">{bare.full_name}</b>{" "}
-          {bare.status === "rejected"
-            ? "— החשבון חסום/נדחה, ולכן אין פרופיל להצגה."
-            : bare.profile_completed
-              ? "— לחשבון הזה אין כרטיס פרופיל להצגה (חשבון צוות)."
-              : "עדיין באמצע מילוי השאלון — ברגע שתסיים, הפרופיל המלא יופיע כאן בדיוק כמו שמגייסת תראה אותו."}
+          {bare.profile_completed
+            ? "— אין לחשבון הזה תשובות בשאלון להצגה."
+            : "עדיין באמצע מילוי השאלון — ברגע שתסיים, הפרופיל המלא יופיע כאן בדיוק כמו שמגייסת תראה אותו."}
         </div>
       </div>
     );

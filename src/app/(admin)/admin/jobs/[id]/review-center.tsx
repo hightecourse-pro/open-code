@@ -1035,6 +1035,22 @@ export function ReviewCenter({
             )}
           </>
         )}
+        {/* מנויות בלבד — in the filter bar, both views (the owner, 19/9:
+            "איך אני רואה רק מנויות בתצוגת רשימה?"). */}
+        <button
+          type="button"
+          aria-pressed={tierFilter === "subscribers"}
+          onClick={() => setTierFilter((v) => (v === "subscribers" ? "all" : "subscribers"))}
+          className={cn(
+            "rounded-full px-3 py-1 text-[12px] font-bold border cursor-pointer transition-colors whitespace-nowrap",
+            tierFilter === "subscribers"
+              ? "bg-brand-pink-deep text-white border-brand-pink-deep"
+              : "bg-tint-pink text-brand-pink-deep border-[#F3C6DD] hover:border-brand-pink-deep"
+          )}
+          title="הצגת המנויות בלבד — בשתי התצוגות"
+        >
+          מנויות בלבד ({counts.subscribers})
+        </button>
         <Checkbox
           checked={showNotFit}
           onChange={(e) => setShowNotFit(e.target.checked)}

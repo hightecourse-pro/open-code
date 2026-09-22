@@ -293,6 +293,12 @@ export async function loadCandidates(opts?: {
   includeMentors?: boolean;
   /** TEAM view (the owner, 30/8): every member, hidden-from-portal included. */
   everyoneForTeam?: boolean;
+  /**
+   * ONE profile for the team, whatever its status/role/completion (the owner,
+   * 22/9: a paused member and team accounts must open in the admin file).
+   * Implies everyoneForTeam; never used by the portal.
+   */
+  onlyId?: string;
 }): Promise<{
   candidates: CandidateDetail[];
   questions: ConfigQuestion[];
@@ -336,18 +342,21 @@ export async function loadCandidates(opts?: {
     (taxonomies.tech ?? []).filter((o) => o.group).map((o) => [o.value, o.group as string])
   );
 
-  const { data: profiles } = await admin
+  const base = admin
     .from("profiles")
-    .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, is_hidden, status, profile_completed, role")
-    .in("status", ["active", "pending"])
-    .eq("profile_completed", true)
-    // Job-seeking members; never admins. Mentors only behind the toggle.
-    .in("role", roles)
-    .order("full_name", { ascending: true });
+    .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, is_hidden, status, profile_completed, role");
+  const { data: profiles } = opts?.onlyId
+    ? await base.eq("id", opts.onlyId)
+    : await base
+        .in("status", ["active", "pending"])
+        .eq("profile_completed", true)
+        // Job-seeking members; never admins. Mentors only behind the toggle.
+        .in("role", roles)
+        .order("full_name", { ascending: true });
 
   // Hidden (team test) accounts never reach employers; the team's own full
   // view still shows them so the admin can preview what she built.
-  const listed = opts?.everyoneForTeam
+  const listed = opts?.everyoneForTeam || opts?.onlyId
     ? (profiles ?? [])
     : (profiles ?? []).filter((p) => p.portal_listed !== false && p.is_hidden !== true);
   // No candidates yet — still return the full filter palette from the questions

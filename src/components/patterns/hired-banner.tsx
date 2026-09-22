@@ -143,7 +143,7 @@ export function HiredBanner({ members, seenIds }: { members: HiredMember[]; seen
               </div>
               <style>{`@keyframes hired-swap { from { opacity: 0; translate: 0 6px } to { opacity: 1; translate: 0 0 } }`}</style>
               <div className="text-[12px] opacity-85">
-                כל הקהילה מרימה איתן כוסית — שתהיה הצלחה ענקית 💜
+                כל הקהילה מאחלת חגיגית — שתהיה הצלחה ענקית 💜
               </div>
             </div>
             <button
