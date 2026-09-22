@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
@@ -10,6 +11,11 @@ import { CheckoutPanel } from "@/components/patterns/checkout-panel";
 import { buildTransactionFields, isNedarimConfigured } from "@/lib/payments/nedarim";
 import { getPricing } from "@/lib/payments/pricing";
 import { buildPlans } from "@/lib/payments/plans";
+
+export const metadata: Metadata = {
+  title: "הצטרפות לקהילה",
+  description: "מנוי לקהילת קוד פתוח - משרות מותאמות, מנטוריות, קורסים מוקלטים, כלי AI וסשנים חיים. הצטרפי עוד היום.",
+};
 import type { SubscriptionPlan } from "@/types/database";
 
 const MESSAGE: Record<string, { variant: "info" | "warn" | "danger"; title: string; body: string }> = {
