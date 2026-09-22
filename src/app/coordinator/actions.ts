@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { Database } from "@/types/database";
 import { sendResendEmail } from "@/lib/email/resend";
 import { coordinatorOtpEmail } from "@/lib/email/templates";
 import {
@@ -201,6 +202,32 @@ export async function sendJobRecommendation(
   });
   revalidatePath("/coordinator/jobs");
   revalidatePath("/coordinator/chat");
+  return { ok: true };
+}
+
+/**
+ * The coordinator corrects a graduate's graduation year (the owner, 22/9:
+ * "לתת לרכזת לשנות אם זה לא נכון") - written as the questionnaire's own
+ * select value so every screen agrees. "" clears it.
+ */
+export async function setGraduateYear(profileId: string, value: string): Promise<{ error?: string; ok?: boolean }> {
+  const me = await getCoordinator();
+  if (!me) redirect("/coordinator/login");
+  if (value && !/^5[78]\d\d$/.test(value)) return { error: "שנה לא תקינה." };
+  const { loadGraduates } = await import("@/lib/coordinator-data");
+  const grads = await loadGraduates(me.institutions);
+  if (!grads.some((g) => g.id === profileId)) return { error: "הבוגרת לא נמצאה ברשימה שלך." };
+
+  const admin = createAdminClient();
+  const { data: q } = await admin.from("config_questions").select("id").eq("key", "graduation_year").maybeSingle();
+  if (!q) return { error: "שאלת שנת הסיום לא נמצאה." };
+  // The hand-written Insert type omits updated_at - same cast as saveProfile.
+  const payload = { profile_id: profileId, question_id: q.id, value, updated_at: new Date().toISOString() };
+  const { error } = await admin
+    .from("profile_answers")
+    .upsert(payload as unknown as Database["public"]["Tables"]["profile_answers"]["Insert"], { onConflict: "profile_id,question_id" });
+  if (error) return { error: "השמירה נכשלה - נסי שוב." };
+  revalidatePath("/coordinator");
   return { ok: true };
 }
 

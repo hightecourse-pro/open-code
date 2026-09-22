@@ -261,14 +261,15 @@ export default async function AuthenticatedLayout({
       )}
       {cancelNotice && !cancelNoticeLimitedKeva && (
         <Link
-          href="/profile"
+          href="/subscription"
           className="flex items-center gap-2.5 bg-tint-warm border border-[#F8D98C] rounded-md p-3 px-4 mb-5 text-[13.5px] text-[#8C5E0E] hover:border-[#E5A93C] transition-colors"
         >
           <span className="flex-1">
             ביטלת את חידוש המנוי - הוא פעיל עד <b>{cancelNotice}</b>. התחרטת? אפשר להפעיל מחדש
             בלחיצה.
           </span>
-          <span className="font-display font-semibold whitespace-nowrap">לפרופיל ←</span>
+          {/* Straight to the resume button (the owner, 22/9), not the profile. */}
+          <span className="font-display font-semibold whitespace-nowrap">לחידוש המנוי ←</span>
         </Link>
       )}
       {gradesCount === 0 && <GradesNudge />}

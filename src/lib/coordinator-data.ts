@@ -5,6 +5,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { nameWithPrevSurname } from "@/lib/names";
 import { inChunks } from "@/lib/chunk";
+import { normalizeGradYear } from "@/lib/hebrew-year";
 
 /**
  * Display names for the coordinator portal: "שם (שם משפחה קודם)" whenever a
@@ -42,8 +43,14 @@ export interface Graduate {
   specialization: string | null;
   status: string;
   institution: string;
-  /** graduation_year option VALUE ("5785"…) - label resolved by the caller. */
+  /** Canonical graduation year VALUE ("5786"), null when unknown (22/9). */
   yearValue: string | null;
+  /** Hebrew label (תשפ"ו) or "לא ידוע". */
+  yearLabel: string;
+  /** What was actually stored - shown when it could not be read as a year. */
+  yearRaw: string;
+  /** Paying, active member - the coordinator sees a מנויה badge (22/9). */
+  isSubscriber: boolean;
   /** certificate option VALUE - label resolved by the caller. */
   certificateValue: string | null;
   /** The system's own placement fact (profiles.found_job). */
@@ -125,7 +132,7 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
     inChunks(ids, (part) =>
       admin
         .from("profiles")
-        .select("id, full_name, avatar_initials, specialization, status, role, found_job, is_hidden")
+        .select("id, full_name, avatar_initials, specialization, status, role, found_job, is_hidden, member_tier")
         .in("id", part)
     ),
     qid("graduation_year")
@@ -154,7 +161,12 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
       specialization: p.specialization,
       status: p.status,
       institution: instOf.get(p.id) ?? institutions[0],
-      yearValue: yearOf.get(p.id) ?? null,
+      // Whatever was typed becomes a Hebrew year (the owner, 22/9) - the
+      // raw text rides along so the coordinator can see what to correct.
+      yearValue: normalizeGradYear(yearOf.get(p.id)).value,
+      yearLabel: normalizeGradYear(yearOf.get(p.id)).label,
+      yearRaw: normalizeGradYear(yearOf.get(p.id)).raw,
+      isSubscriber: p.status === "active" && p.member_tier === "paid",
       certificateValue: certOf.get(p.id) ?? null,
       systemFoundJob: p.found_job === true,
     }));

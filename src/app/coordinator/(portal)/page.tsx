@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCoordinator } from "@/lib/coordinators";
 import { loadGraduates, loadOptionLabels, loadReviews } from "@/lib/coordinator-data";
 import { GraduatesBrowser, type GraduateRow } from "./graduates-browser";
+import { gradYearOptions } from "@/lib/hebrew-year";
 import { activeInstitution } from "./active-institution";
 
 export const metadata: Metadata = { title: "אזור הרכזות" };
@@ -31,7 +32,9 @@ export default async function CoordinatorGraduatesPage() {
         inst: g.institution,
         instLabel: labels.places.get(g.institution) ?? g.institution,
         year: g.yearValue ?? "",
-        yearLabel: g.yearValue ? (labels.years.get(g.yearValue) ?? g.yearValue) : "ללא שנת סיום",
+        yearLabel: g.yearLabel,
+        yearRaw: g.yearRaw,
+        subscriber: g.isSubscriber,
         cert: g.certificateValue ?? "",
         certLabel: g.certificateValue
           ? (labels.certificates.get(g.certificateValue) ?? g.certificateValue)
@@ -42,5 +45,5 @@ export default async function CoordinatorGraduatesPage() {
     })
     .sort((a, b) => a.name.localeCompare(b.name, "he"));
 
-  return <GraduatesBrowser rows={rows} multiInstitution={false} />;
+  return <GraduatesBrowser rows={rows} multiInstitution={false} yearOptions={gradYearOptions()} />;
 }
