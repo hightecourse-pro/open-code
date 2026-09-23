@@ -43,7 +43,7 @@ export function JobHiredClose({ jobId, candidates }: { jobId: string; candidates
     <div className="w-full mt-2 rounded-[14px] border border-brand-purple/40 bg-tint-purple/40 p-3 flex flex-col gap-2">
       <div className="font-display font-bold text-[14px] text-ink-1000">מי גויסה למשרה? 🎉</div>
       <p className="text-[12px] text-ink-600 -mt-1">
-        כל מי שתסמני תעבור לסטטוס "גויסה": הפרופיל שלה יסומן, היא תיכנס לרשימת הגיוסים ותקבל מייל. אחר כך המשרה תיסגר.
+        כל מי שתסמני תעבור לסטטוס ״גויסה״: הפרופיל שלה יסומן, היא תיכנס לרשימת הגיוסים ותקבל מייל. אחר כך המשרה תיסגר.
       </p>
       {candidates.length === 0 ? (
         <Alert variant="warn">
