@@ -323,6 +323,10 @@ export async function assignEmploymentMentor(
   await requireRole("admin");
   const mentorId = String(formData.get("mentor_id") ?? "");
   if (!mentorId) return { error: "בחרי מנטורית מהרשימה." };
+  // Proactive assignment for ANY member (the owner, 23/9: "לא מצליחה לצוות
+  // מנטורית באופן יזום") - general mentoring unless she is employed, then
+  // the first-months accompaniment.
+  const kind: "general" | "employment" = formData.get("kind") === "general" ? "general" : "employment";
   // Service role: RLS only lets a member insert her OWN request - here the
   // ADMIN creates the assignment on the member's behalf (role verified above).
   const supabase = createAdminClient();
@@ -332,7 +336,7 @@ export async function assignEmploymentMentor(
     .from("mentor_requests")
     .select("id")
     .eq("profile_id", profileId)
-    .eq("kind", "employment")
+    .eq("kind", kind)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -353,8 +357,8 @@ export async function assignEmploymentMentor(
         .from("mentor_requests")
         .insert({
           profile_id: profileId,
-          kind: "employment",
-          reason: "first_months",
+          kind,
+          reason: kind === "employment" ? "first_months" : "admin_assigned",
           status: "handled",
           assigned_mentor_id: mentorId,
           handled_at: now,
