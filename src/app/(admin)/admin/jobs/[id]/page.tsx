@@ -23,6 +23,8 @@ import { SaveButton } from "@/components/patterns/save-button";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import type { PortalClientOption } from "@/components/patterns/admin-job-row";
 import { CandidatePicker } from "./candidate-picker";
+import { JobHiredClose, type HireCandidate } from "./job-hired-close";
+import { JobFlowStrip } from "./job-flow-strip";
 import { JobDetailsForm, type JobDetailsData } from "./job-details-form";
 import { JobQuestionsManager } from "./job-questions";
 import { JobTabs, type JobTabDef } from "./job-tabs";
@@ -191,6 +193,10 @@ export default async function AdminJobPage({
   // active-junior list above (e.g. paused members).
   const appList = applications ?? [];
   const hiredCount = appList.filter((a) => a.status === "hired").length;
+  // Numbers for the flow strip (the owner, 23/9).
+  const flowApproved = appList.filter((a) => a.admin_mark === "approved").length;
+  const flowSent = appList.filter((a) => a.sent_to_client_at || ["sent", "interview", "exam", "hired"].includes(a.status)).length;
+  const flowInterviewing = appList.filter((a) => a.status === "interview" || a.status === "exam").length;
   const applicantIds = [...new Set(appList.map((a) => a.applicant_id))];
   const curatedIds = [...new Set((curated ?? []).map((c) => c.profile_id))];
   const needIds = [...new Set([...applicantIds, ...curatedIds])];
@@ -667,13 +673,31 @@ export default async function AdminJobPage({
                   כשסיימת לגייס, סגרי את המשרה:
                 </span>
               )}
-              <ConfirmActionButton
-                action={setJobOutcome.bind(null, job.id, "hired")}
-                message="לסמן את המשרה כגויסה? היא תרד מהלוח ותסומן 'גויס' אצל הלקוח."
-                className="inline-flex items-center rounded-full bg-brand-gradient text-white text-[12.5px] font-semibold px-3.5 py-1.5 hover:brightness-105 transition-[filter]"
-              >
-                סימון המשרה כגויסה 🎉
-              </ConfirmActionButton>
+              <JobHiredClose
+                jobId={job.id}
+                candidates={appList
+                  .filter((a) => !["rejected", "declined", "waitlisted"].includes(a.status))
+                  .map(
+                    (a): HireCandidate => ({
+                      applicationId: a.id,
+                      name: profileOf.get(a.applicant_id)?.full_name ?? "מועמדת",
+                      statusLabel:
+                        a.status === "hired"
+                          ? "גויסה"
+                          : a.status === "interview"
+                            ? "בראיונות"
+                            : a.status === "exam"
+                              ? "במבחן"
+                              : a.status === "sent" || a.sent_to_client_at
+                                ? "הוגשה ללקוח"
+                                : a.admin_mark === "approved"
+                                  ? "אושרה סופית"
+                                  : "הגישה",
+                      alreadyHired: a.status === "hired",
+                    })
+                  )
+                  .sort((x, y) => Number(y.alreadyHired) - Number(x.alreadyHired))}
+              />
               <ConfirmActionButton
                 action={setJobOutcome.bind(null, job.id, "closed_no_hire")}
                 message="לסגור את המשרה ללא גיוס? היא תרד מהלוח."
@@ -991,6 +1015,19 @@ export default async function AdminJobPage({
           </div>
         </div>
       </div>
+
+      {job.source === "ours" && (
+        <JobFlowStrip
+          jobId={job.id}
+          pipelineStatus={job.pipeline_status ?? "draft"}
+          hasClient={!!client}
+          applications={appList.length}
+          approved={flowApproved}
+          sentToClient={flowSent}
+          interviewing={flowInterviewing}
+          hired={hiredCount}
+        />
+      )}
 
       {interviewMarkedNames.length > 0 && (
         <Alert variant="success" title="🎯 הלקוח מסמן לראיון">

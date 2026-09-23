@@ -2164,6 +2164,30 @@ export async function updateApplicationPipeline(
   return { ok: true };
 }
 
+/**
+ * Close a job as hired WITH the hired candidates (the owner, 23/9: the
+ * job-level close never knew who was hired, so עדינה טייטלבוים never reached
+ * the hires list). Every chosen application goes through the same path as
+ * "גויסה" in the review pane, then the job closes.
+ */
+export async function closeJobAsHired(jobId: string, applicationIds: string[]): Promise<{ error?: string; ok?: boolean }> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const ids = [...new Set(applicationIds)].filter((v) => /^[0-9a-f-]{36}$/i.test(v)).slice(0, 50);
+  if (ids.length) {
+    const { data: apps } = await admin.from("applications").select("id, job_id, status").in("id", ids).eq("job_id", jobId);
+    for (const a of apps ?? []) {
+      if (a.status === "hired") continue;
+      const r = await updateApplicationPipeline(a.id, "hired");
+      if (r.error) return { error: r.error };
+    }
+  }
+  await setJobOutcome(jobId, "hired");
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/hires");
+  return { ok: true };
+}
+
 /** Update a candidate application's status (internal-job pipeline). */
 export async function setApplicationStatus(applicationId: string, status: ApplicationStatus): Promise<void> {
   await requireRole("admin");
