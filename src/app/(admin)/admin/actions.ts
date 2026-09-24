@@ -2093,7 +2093,7 @@ export async function updateApplicationPipeline(
 
   const { data: job } = await admin
     .from("jobs")
-    .select("title, company, pipeline_status")
+    .select("title, company, pipeline_status, client_id")
     .eq("id", app.job_id)
     .maybeSingle();
 
@@ -2122,7 +2122,11 @@ export async function updateApplicationPipeline(
       })
       .eq("id", app.applicant_id);
     if (hiredError) console.error("[pipeline] hired profile update failed:", hiredError);
-    await recordCommunityHire(app.applicant_id);
+    await recordCommunityHire(app.applicant_id, undefined, {
+      jobId: app.job_id,
+      clientId: job?.client_id ?? null,
+      company: job?.company ?? null,
+    });
     await fireTaskTrigger("member_hired", {
       title: "חברה סומנה כגויסה 🎉",
       link: "/admin/hires",
