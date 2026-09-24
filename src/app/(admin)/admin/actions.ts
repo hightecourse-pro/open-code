@@ -323,6 +323,10 @@ export async function assignEmploymentMentor(
   await requireRole("admin");
   const mentorId = String(formData.get("mentor_id") ?? "");
   if (!mentorId) return { error: "בחרי מנטורית מהרשימה." };
+  // Proactive assignment for ANY member (the owner, 23/9: "לא מצליחה לצוות
+  // מנטורית באופן יזום") - general mentoring unless she is employed, then
+  // the first-months accompaniment.
+  const kind: "general" | "employment" = formData.get("kind") === "general" ? "general" : "employment";
   // Service role: RLS only lets a member insert her OWN request - here the
   // ADMIN creates the assignment on the member's behalf (role verified above).
   const supabase = createAdminClient();
@@ -332,7 +336,7 @@ export async function assignEmploymentMentor(
     .from("mentor_requests")
     .select("id")
     .eq("profile_id", profileId)
-    .eq("kind", "employment")
+    .eq("kind", kind)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -353,8 +357,8 @@ export async function assignEmploymentMentor(
         .from("mentor_requests")
         .insert({
           profile_id: profileId,
-          kind: "employment",
-          reason: "first_months",
+          kind,
+          reason: kind === "employment" ? "first_months" : "admin_assigned",
           status: "handled",
           assigned_mentor_id: mentorId,
           handled_at: now,
@@ -2157,6 +2161,30 @@ export async function updateApplicationPipeline(
   revalidatePath(`/admin/jobs/${app.job_id}`);
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
+  return { ok: true };
+}
+
+/**
+ * Close a job as hired WITH the hired candidates (the owner, 23/9: the
+ * job-level close never knew who was hired, so עדינה טייטלבוים never reached
+ * the hires list). Every chosen application goes through the same path as
+ * "גויסה" in the review pane, then the job closes.
+ */
+export async function closeJobAsHired(jobId: string, applicationIds: string[]): Promise<{ error?: string; ok?: boolean }> {
+  await requireRole("admin");
+  const admin = createAdminClient();
+  const ids = [...new Set(applicationIds)].filter((v) => /^[0-9a-f-]{36}$/i.test(v)).slice(0, 50);
+  if (ids.length) {
+    const { data: apps } = await admin.from("applications").select("id, job_id, status").in("id", ids).eq("job_id", jobId);
+    for (const a of apps ?? []) {
+      if (a.status === "hired") continue;
+      const r = await updateApplicationPipeline(a.id, "hired");
+      if (r.error) return { error: r.error };
+    }
+  }
+  await setJobOutcome(jobId, "hired");
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/hires");
   return { ok: true };
 }
 

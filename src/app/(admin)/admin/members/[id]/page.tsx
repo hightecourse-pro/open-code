@@ -108,12 +108,11 @@ export default async function AdminMemberProfilePage({
       .eq("role", "mentor")
       .eq("status", "active")
       .order("full_name", { ascending: true }),
-    // Her latest employment accompaniment assignment (if any).
+    // Her latest mentor assignment of any kind (if any).
     supabase
       .from("mentor_requests")
       .select("assigned_mentor_id")
       .eq("profile_id", id)
-      .eq("kind", "employment")
       .not("assigned_mentor_id", "is", null)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -673,16 +672,23 @@ export default async function AdminMemberProfilePage({
           workplace={workplace}
           hiredAtDate={hiredAtDate}
         />
-        {profile.found_job && (
-          <div className="border-t border-ink-100 pt-4 flex flex-col gap-2">
-            <h4 className="font-display text-[14.5px] font-bold text-ink-1000">ליווי תעסוקתי</h4>
-            <EmploymentMentorAssign
-              profileId={profile.id}
-              mentors={mentors ?? []}
-              assignedMentorName={assignedMentorName}
-            />
-          </div>
-        )}
+        {/* Assignment for EVERY member (the owner, 23/9) - not only after a hire. */}
+        <div className="border-t border-ink-100 pt-4 flex flex-col gap-2">
+          <h4 className="font-display text-[14.5px] font-bold text-ink-1000">
+            {profile.found_job ? "ליווי תעסוקתי" : "ליווי מנטורית"}
+          </h4>
+          {!profile.found_job && (
+            <p className="text-[12px] text-ink-500 -mt-1">
+              שיוך יזום של מנטורית - המנטורית מקבלת הזמנה, וכשהיא מאשרת החברה רואה אותה בפרופיל.
+            </p>
+          )}
+          <EmploymentMentorAssign
+            profileId={profile.id}
+            mentors={mentors ?? []}
+            assignedMentorName={assignedMentorName}
+            kind={profile.found_job ? "employment" : "general"}
+          />
+        </div>
       </div>
 
       {/* Internal notes / CRM */}

@@ -81,10 +81,13 @@ export function EmploymentMentorAssign({
   profileId,
   mentors,
   assignedMentorName,
+  kind = "employment",
 }: {
   profileId: string;
   mentors: { id: string; full_name: string }[];
   assignedMentorName: string | null;
+  /** general = proactive mentoring for any member; employment = first months on the job. */
+  kind?: "general" | "employment";
 }) {
   const [state, assign, assigning] = useActionState<FormState, FormData>(
     assignEmploymentMentor.bind(null, profileId),
@@ -103,6 +106,7 @@ export function EmploymentMentorAssign({
 
       {mentors.length > 0 ? (
         <form action={assign} className="flex items-center gap-2 flex-wrap">
+          <input type="hidden" name="kind" value={kind} />
           <div className="w-56 max-w-full">
             <Select name="mentor_id" required defaultValue="" className="!py-2 text-[13px]">
               <option value="" disabled>
