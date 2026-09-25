@@ -40,7 +40,12 @@ function Wordmark({ name, tagline, color }: { name: string; tagline: string; col
 
 function PartnerLogo({ file, alt, fallback, className }: { file: string; alt: string; fallback: React.ReactNode; className: string }) {
   if (!hasPublicFile(file)) return <>{fallback}</>;
-  return <Image src={`/${file}`} alt={alt} width={400} height={160} className={`${className} w-auto`} priority />;
+  // Never wider than a third of the bar on a phone - the height gives way.
+  return (
+    <div className="max-w-[34%] sm:max-w-none shrink min-w-0">
+      <Image src={`/${file}`} alt={alt} width={400} height={160} className={`${className} w-auto max-w-full`} style={{ height: "auto" }} priority />
+    </div>
+  );
 }
 
 export function PartnersHeader({ compact = false }: { compact?: boolean }) {
@@ -49,7 +54,7 @@ export function PartnersHeader({ compact = false }: { compact?: boolean }) {
       <PartnerLogo
         file="masters-course/shufra.png"
         alt="שופרא - מרחב מקצועי מתקדם, מבית סמינר הרב וולף"
-        className="h-[72px] sm:h-[104px]"
+        className="max-h-[64px] sm:max-h-[104px]"
         fallback={<Wordmark name="שופרא" tagline="מרחב מקצועי מתקדם · מבית סמינר הרב וולף" color={C.orange} />}
       />
       <Link href="/masters-course" className="shrink-0">
@@ -65,7 +70,7 @@ export function PartnersHeader({ compact = false }: { compact?: boolean }) {
       <PartnerLogo
         file="masters-course/hightcourse.png"
         alt="הייטקורס - לחשוב בגדול"
-        className="h-[60px] sm:h-[88px]"
+        className="max-h-[52px] sm:max-h-[88px]"
         fallback={<Wordmark name="הייטקורס" tagline="לחשוב בגדול" color={C.navy} />}
       />
     </header>
