@@ -18,6 +18,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${site}/hackathon-2026/partners`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
     { url: `${site}/signup`, lastModified: now, changeFrequency: "yearly", priority: 0.6 },
     { url: `${site}/login`, lastModified: now, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${site}/masters-course`, lastModified: now, changeFrequency: "monthly", priority: 0.8 },
     { url: `${site}/privacy`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
   ];
 }
