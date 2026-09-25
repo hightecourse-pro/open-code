@@ -3,26 +3,13 @@ import path from "node:path";
 import Image from "next/image";
 import Link from "next/link";
 import { Rubik } from "next/font/google";
+import { C, WA_URL } from "./theme";
+
+export { C, WA_URL };
 
 // The ad's rounded, friendly Hebrew face (the owner, 25/9: "בצבעים ובנראות
 // של המודעה"). Loaded for the course pages only.
 export const rubik = Rubik({ subsets: ["hebrew", "latin"], weight: ["400", "500", "700", "900"], display: "swap" });
-
-// The ad's palette.
-export const C = {
-  bg: "#EEF4F4",
-  navy: "#23405F",
-  teal: "#9CCFCB",
-  tealDeep: "#5FB0AA",
-  yellow: "#F3C532",
-  pink: "#C9386C",
-  orange: "#F27A3D",
-  ink: "#2B3A4A",
-  muted: "#6B7A8A",
-};
-
-export const WA_URL =
-  "https://wa.me/97225800296?text=" + encodeURIComponent("היי, אשמח לפרטים על הקורס השנתי 'מאסטרית בהייטק'");
 
 /**
  * Partner logos. The owner sent שופרא and הייטקורס as pictures in the chat;

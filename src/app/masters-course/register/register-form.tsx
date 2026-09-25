@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { checkCourseEmail, registerForCourse } from "../actions";
-import { C } from "../shared";
+import { C } from "../theme";
 
 type Step = "details" | "subscriber" | "not_subscriber" | "redirecting";
 
