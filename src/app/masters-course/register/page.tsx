@@ -18,7 +18,7 @@ export default function MastersCourseRegisterPage() {
   return (
     <main dir="rtl" className={`${rubik.className} min-h-screen`} style={{ background: C.bg, color: C.ink }}>
       <div className="max-w-2xl mx-auto px-5 py-8 sm:py-12 flex flex-col gap-8">
-        <PartnersHeader compact />
+        <PartnersHeader />
 
         <section className="bg-white rounded-[32px] px-6 py-8 sm:px-10 sm:py-10 shadow-sm">
           <p className="text-[15px] font-medium" style={{ color: C.muted }}>
