@@ -10,6 +10,8 @@ export interface JobFlowInput {
   sentToClient: number;
   interviewing: number;
   hired: number;
+  /** The one-click action for the current step, when there is one. */
+  action?: React.ReactNode;
 }
 
 /**
@@ -91,6 +93,7 @@ export function JobFlowStrip(f: JobFlowInput) {
           לשם ←
         </Link>
       </p>
+      {f.action}
     </div>
   );
 }
