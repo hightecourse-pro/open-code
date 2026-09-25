@@ -7,10 +7,13 @@ export function AdminShell({
   children,
   alertsBadge = 0,
   requestsBadge = 0,
+  whatsappBadge = 0,
 }: {
   children: React.ReactNode;
   alertsBadge?: number;
   requestsBadge?: number;
+  /** WhatsApp conversations waiting for a reply (the owner, 25/9). */
+  whatsappBadge?: number;
 }) {
   return (
     // translate="no": Chrome auto-translate rewraps text nodes and React then
@@ -18,11 +21,11 @@ export function AdminShell({
     // clicking an internal tag, 3/9). The admin screens are Hebrew-only tools.
     <div translate="no" className="notranslate min-h-screen bg-ink-50">
       <MobileNav homeHref="/admin" dark>
-        <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} />
+        <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} whatsappBadge={whatsappBadge} />
       </MobileNav>
       <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr]">
         <div className="hidden lg:block">
-          <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} />
+          <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} whatsappBadge={whatsappBadge} />
         </div>
         <main className="px-6 py-7 md:px-8">{children}</main>
       </div>

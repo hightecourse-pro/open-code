@@ -25,6 +25,7 @@ import type { PortalClientOption } from "@/components/patterns/admin-job-row";
 import { CandidatePicker } from "./candidate-picker";
 import { JobHiredClose, type HireCandidate } from "./job-hired-close";
 import { JobFlowStrip } from "./job-flow-strip";
+import { JobSubmitButton } from "./job-submit-button";
 import { JobDetailsForm, type JobDetailsData } from "./job-details-form";
 import { JobQuestionsManager } from "./job-questions";
 import { JobTabs, type JobTabDef } from "./job-tabs";
@@ -1026,6 +1027,11 @@ export default async function AdminJobPage({
           sentToClient={flowSent}
           interviewing={flowInterviewing}
           hired={hiredCount}
+          action={
+            job.pipeline_status === "published" && client ? (
+              <JobSubmitButton jobId={job.id} approved={flowApproved} clientName={client.company_name} />
+            ) : null
+          }
         />
       )}
 

@@ -788,6 +788,20 @@ export function questionnaireReminderEmail(name: string | undefined, track: "men
   };
 }
 
+/** The office mailbox hears about a new WhatsApp conversation (the owner, 25/9). */
+export function waInboundEmail(from: string, preview: string, inboxUrl: string): BuiltEmail {
+  return {
+    subject: `הודעת וואטסאפ חדשה מ${from}`,
+    html: renderEmail({
+      heading: `הודעת וואטסאפ חדשה מ${escapeHtml(from)}`,
+      lines: [escapeHtml(preview), "המענה נעשה ממסך הוואטסאפ בניהול - הודעה חופשית אפשרית עד 24 שעות מההודעה שלה."],
+      ctaText: "למסך הוואטסאפ",
+      ctaUrl: inboxUrl,
+      footnote: "מייל אחד לכל שיחה חדשה; המשך התכתבות באותה שעה לא שולח שוב.",
+    }),
+  };
+}
+
 export function mentorApprovedEmail(name?: string): BuiltEmail {
   return {
     subject: "אושרת כמנטורית בקוד פתוח 👑",

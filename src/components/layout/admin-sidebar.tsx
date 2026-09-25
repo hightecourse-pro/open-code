@@ -88,7 +88,15 @@ const SECTIONS: AdminNavSection[] = [
   },
 ];
 
-export function AdminSidebar({ alertsBadge = 0, requestsBadge = 0 }: { alertsBadge?: number; requestsBadge?: number }) {
+export function AdminSidebar({
+  alertsBadge = 0,
+  requestsBadge = 0,
+  whatsappBadge = 0,
+}: {
+  alertsBadge?: number;
+  requestsBadge?: number;
+  whatsappBadge?: number;
+}) {
   const pathname = usePathname();
 
   return (
@@ -115,7 +123,9 @@ export function AdminSidebar({ alertsBadge = 0, requestsBadge = 0 }: { alertsBad
                 ? alertsBadge
                 : item.href === "/admin/requests" && requestsBadge > 0
                   ? requestsBadge
-                  : item.badge;
+                  : item.href === "/admin/whatsapp" && whatsappBadge > 0
+                    ? whatsappBadge
+                    : item.badge;
             return (
               <Link
                 key={item.href}

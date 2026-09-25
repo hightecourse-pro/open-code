@@ -2097,8 +2097,18 @@ export async function updateApplicationPipeline(
     .eq("id", app.job_id)
     .maybeSingle();
 
-  const { error } = await admin.from("applications").update({ status }).eq("id", applicationId);
+  const { error } = await admin
+    .from("applications")
+    .update(status === "sent" ? { status, sent_to_client_at: new Date().toISOString() } : { status })
+    .eq("id", applicationId);
   if (error) return { error: "עדכון הסטטוס נכשל. נסי שוב." };
+
+  // "הוגשה ✓" on a candidate is a submission (the owner, 25/9: the COBOL job
+  // had three sent candidates and still read "פתוחה"): stamp it and move
+  // the job to "בטיפול אצל הלקוח".
+  if (status === "sent" && job?.pipeline_status === "published") {
+    await admin.from("jobs").update({ pipeline_status: "candidates_sent" }).eq("id", app.job_id);
+  }
 
   // The first candidate reaching an interview/exam moves the JOB to
   // "ראיונות" automatically. Hiring never auto-closes the job - a role can
@@ -2190,6 +2200,25 @@ export async function closeJobAsHired(jobId: string, applicationIds: string[]): 
   revalidatePath(`/admin/jobs/${jobId}`);
   revalidatePath("/admin/hires");
   return { ok: true };
+}
+
+/**
+ * The one-click step the owner could not find (25/9): send the approved
+ * candidates to the client, then tell EVERY applicant where she stands and
+ * move the job to "בטיפול אצל הלקוח". Both halves are idempotent (stamps),
+ * so a second click never double-mails.
+ */
+export async function submitToClientAndNotify(
+  jobId: string
+): Promise<{ ok?: boolean; error?: string; submitted: number; regrets: number }> {
+  await requireRole("admin");
+  const sent = await sendJobCandidatesToClient(jobId);
+  if (sent.error) return { error: sent.error, submitted: 0, regrets: 0 };
+  const outcome = await sendJobOutcomeEmails(jobId);
+  revalidatePath(`/admin/jobs/${jobId}`);
+  revalidatePath("/admin/jobs");
+  revalidatePath("/jobs");
+  return { ok: true, submitted: outcome.submitted, regrets: outcome.regrets };
 }
 
 /** Update a candidate application's status (internal-job pipeline). */

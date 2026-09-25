@@ -30,6 +30,9 @@ function JobStatusBadge({ j }: { j: CoordinatorJob }) {
     return <Badge variant="gray">נסגרה</Badge>;
   if (j.pipeline_status === "interviews")
     return <Badge variant="warm">בתהליכי ראיונות</Badge>;
+  // Submitted by us = with the employer (the owner, 25/9: read as "פתוחה").
+  if (j.pipeline_status === "candidates_sent" || j.oursSubmittedAny)
+    return <Badge variant="warm">הוגשו מועמדות · בטיפול אצל המעסיק</Badge>;
   return <Badge variant="purple">פתוחה להגשות</Badge>;
 }
 

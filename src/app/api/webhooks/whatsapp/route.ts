@@ -3,6 +3,9 @@ import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
 import { fetchWaMedia, getWaVerifyToken } from "@/lib/whatsapp";
+import { sendResendEmail } from "@/lib/email/resend";
+import { waInboundEmail } from "@/lib/email/templates";
+import { getSiteUrl } from "@/lib/site";
 
 /**
  * Meta WhatsApp Cloud API webhook.
@@ -138,6 +141,16 @@ export async function POST(req: Request) {
         );
 
         for (const m of value.messages ?? []) {
+          // Before the upsert: when did this number last write? A message
+          // after a quiet quarter hour rings the office mailbox (the owner,
+          // 25/9: "שלא נפספס"); a burst is one conversation, one email.
+          const { data: prev } = await admin
+            .from("wa_contacts")
+            .select("last_inbound_at")
+            .eq("wa_id", m.from)
+            .maybeSingle();
+          const quietBefore =
+            !prev?.last_inbound_at || Date.now() - new Date(prev.last_inbound_at).getTime() > 15 * 60_000;
           // Contact row - upsert by wa_id, keep the freshest pushed name.
           const { data: contact } = await admin
             .from("wa_contacts")
@@ -221,6 +234,12 @@ export async function POST(req: Request) {
             // One alert per contact per hour - a burst is one conversation.
             dedupeKey: `wa:${m.from}:${new Date().toISOString().slice(0, 13)}`,
           });
+          if (quietBefore) {
+            const to = process.env.WA_NOTIFY_EMAIL?.trim() || "office@opencode.org.il";
+            const mail = waInboundEmail(contact.display_name ?? `+${m.from}`, body.slice(0, 300), `${getSiteUrl()}/admin/whatsapp`);
+            const r = await sendResendEmail({ to, subject: mail.subject, html: mail.html });
+            if (!r.ok) console.error("[wa webhook] office email failed:", r.error);
+          }
         }
 
         for (const s of value.statuses ?? []) {
