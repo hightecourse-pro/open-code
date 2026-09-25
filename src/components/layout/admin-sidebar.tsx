@@ -23,6 +23,7 @@ import {
   Library,
   Settings,
   Share2,
+  School,
   Shield,
   MessageSquareText,
   Users,
@@ -73,6 +74,7 @@ const SECTIONS: AdminNavSection[] = [
       { href: "/admin/articles", label: "מאמרים", icon: BookOpen },
       { href: "/admin/sessions", label: "סשנים", icon: Calendar },
       { href: "/admin/shares", label: "הרשאות לתכנים", icon: Share2 },
+      { href: "/admin/course-registrations", label: "נרשמות לקורס", icon: School },
     ],
   },
   {

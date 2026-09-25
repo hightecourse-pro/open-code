@@ -1977,6 +1977,40 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["profile_reminders"]["Insert"]>;
         Relationships: [];
       };
+      course_registrations: {
+        Row: {
+          id: string;
+          course_key: string;
+          email: string;
+          full_name: string;
+          phone: string | null;
+          profile_id: string | null;
+          is_subscriber: boolean;
+          membership_note: string | null;
+          status: string;
+          paid_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          course_key?: string;
+          email: string;
+          full_name: string;
+          phone?: string | null;
+          profile_id?: string | null;
+          is_subscriber?: boolean;
+          membership_note?: string | null;
+          status?: string;
+          paid_at?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["course_registrations"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       /**
