@@ -38,17 +38,18 @@ function Wordmark({ name, tagline, color }: { name: string; tagline: string; col
   );
 }
 
-function PartnerLogo({ file, alt, fallback }: { file: string; alt: string; fallback: React.ReactNode }) {
+function PartnerLogo({ file, alt, fallback, className }: { file: string; alt: string; fallback: React.ReactNode; className: string }) {
   if (!hasPublicFile(file)) return <>{fallback}</>;
-  return <Image src={`/${file}`} alt={alt} width={260} height={110} className="h-16 sm:h-24 w-auto" priority />;
+  return <Image src={`/${file}`} alt={alt} width={400} height={160} className={`${className} w-auto`} priority />;
 }
 
 export function PartnersHeader({ compact = false }: { compact?: boolean }) {
   return (
-    <header className={`flex items-center justify-between gap-4 sm:gap-8 ${compact ? "" : "flex-wrap"}`}>
+    <header className="flex items-center justify-between gap-3 sm:gap-8">
       <PartnerLogo
         file="masters-course/shufra.png"
         alt="שופרא - מרחב מקצועי מתקדם, מבית סמינר הרב וולף"
+        className="h-[72px] sm:h-[104px]"
         fallback={<Wordmark name="שופרא" tagline="מרחב מקצועי מתקדם · מבית סמינר הרב וולף" color={C.orange} />}
       />
       <Link href="/masters-course" className="shrink-0">
@@ -64,6 +65,7 @@ export function PartnersHeader({ compact = false }: { compact?: boolean }) {
       <PartnerLogo
         file="masters-course/hightcourse.png"
         alt="הייטקורס - לחשוב בגדול"
+        className="h-[60px] sm:h-[88px]"
         fallback={<Wordmark name="הייטקורס" tagline="לחשוב בגדול" color={C.navy} />}
       />
     </header>
