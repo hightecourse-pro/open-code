@@ -130,9 +130,12 @@ export async function setStudied(courseId: string, studied: boolean): Promise<vo
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
+  // "סמני שלמדת" is the one completion signal the app has - it IS the
+  // percent (the owner, 4/10: a member marked the course done and the bar
+  // still said 0%, because nothing ever wrote progress_pct).
   await supabase
     .from("enrollments")
-    .update({ studied })
+    .update({ studied, progress_pct: studied ? 100 : 0 })
     .eq("profile_id", user.id)
     .eq("course_id", courseId);
   revalidatePath("/courses");
