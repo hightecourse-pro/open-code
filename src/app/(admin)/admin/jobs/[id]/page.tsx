@@ -26,6 +26,7 @@ import { CandidatePicker } from "./candidate-picker";
 import { JobHiredClose, type HireCandidate } from "./job-hired-close";
 import { JobFlowStrip } from "./job-flow-strip";
 import { JobSubmitButton } from "./job-submit-button";
+import { decryptPassword } from "@/lib/portal/auth";
 import { JobDetailsForm, type JobDetailsData } from "./job-details-form";
 import { JobQuestionsManager } from "./job-questions";
 import { JobTabs, type JobTabDef } from "./job-tabs";
@@ -170,11 +171,14 @@ export default async function AdminJobPage({
     ? (
         await admin
           .from("portal_clients")
-          .select("id, company_name")
+          .select("id, company_name, contact_email, username, password_enc")
           .eq("id", job.client_id)
           .maybeSingle()
       ).data
     : null;
+  // Can the client email actually go out? Without an address or portal
+  // credentials the one-click step still runs - the client list goes by hand.
+  const clientReady = !!client?.contact_email && !!client?.username && !!decryptPassword(client.password_enc);
 
   // Who PASSES the privacy gate (includeUnsent - this is the admin preview).
   // A curated candidate outside it - opted out, paused, no longer a listed
@@ -1029,7 +1033,7 @@ export default async function AdminJobPage({
           hired={hiredCount}
           action={
             job.pipeline_status === "published" && client ? (
-              <JobSubmitButton jobId={job.id} approved={flowApproved} clientName={client.company_name} />
+              <JobSubmitButton jobId={job.id} approved={flowApproved} clientName={client.company_name} clientReady={clientReady} />
             ) : null
           }
         />

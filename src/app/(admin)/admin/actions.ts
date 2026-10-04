@@ -1657,8 +1657,9 @@ export async function removeJobCandidate(jobId: string, profileId: string): Prom
  */
 export async function sendJobCandidatesToClient(
   jobId: string,
-  personalNote?: string
-): Promise<{ ok?: boolean; error?: string }> {
+  personalNote?: string,
+  opts: { clientEmailManual?: boolean } = {}
+): Promise<{ ok?: boolean; error?: string; needsManual?: boolean; clientEmailed?: boolean }> {
   const me = await requireRole("admin");
   const admin = createAdminClient();
 
@@ -1677,12 +1678,17 @@ export async function sendJobCandidatesToClient(
     .select("company_name, contact_email, username, password_enc")
     .eq("id", job.client_id)
     .maybeSingle();
-  if (!client?.contact_email) {
-    return { error: "ללקוח אין אימייל ליצירת קשר. הוסיפי אותו במסך לקוחות פורטל." };
-  }
-  const password = decryptPassword(client.password_enc);
-  if (!client.username || !password) {
-    return { error: "ללקוח אין עדיין פרטי גישה - הקצי במסך לקוחות פורטל." };
+  // The client email needs an address AND portal credentials. Missing either:
+  // the team may still move the step (the owner, 4/10) - candidates are
+  // stamped and told, the job moves to "בטיפול אצל הלקוח", and the client gets
+  // the list by hand. That choice is explicit (clientEmailManual).
+  const password = client ? decryptPassword(client.password_enc) : null;
+  const clientReady = !!client?.contact_email && !!client?.username && !!password;
+  if (!clientReady && !opts.clientEmailManual) {
+    if (!client?.contact_email) {
+      return { error: "ללקוח אין אימייל ליצירת קשר. הוסיפי אותו במסך לקוחות פורטל.", needsManual: true };
+    }
+    return { error: "ללקוח אין עדיין פרטי גישה - הקצי במסך לקוחות פורטל.", needsManual: true };
   }
 
   // Forgiving auto-curation: "אישור סופי" alone is enough to send - every
@@ -1753,20 +1759,22 @@ export async function sendJobCandidatesToClient(
     };
   }
 
-  const built = jobCandidatesEmail(
-    client.company_name,
-    job.title,
-    names,
-    `${getSiteUrl()}/portal/job/${jobId}`,
-    {
-      personalNote: personalNote?.trim() || null,
-      credentials: { username: client.username, password },
+  if (clientReady && client) {
+    const built = jobCandidatesEmail(
+      client.company_name,
+      job.title,
+      names,
+      `${getSiteUrl()}/portal/job/${jobId}`,
+      {
+        personalNote: personalNote?.trim() || null,
+        credentials: { username: client.username!, password: password! },
+      }
+    );
+    const sent = await sendResendEmail({ to: client.contact_email!, subject: built.subject, html: built.html });
+    if (!sent.ok) {
+      console.error("[job candidates email] send failed:", sent.error);
+      return { error: "המייל לא נשלח. נסי שוב." };
     }
-  );
-  const sent = await sendResendEmail({ to: client.contact_email, subject: built.subject, html: built.html });
-  if (!sent.ok) {
-    console.error("[job candidates email] send failed:", sent.error);
-    return { error: "המייל לא נשלח. נסי שוב." };
   }
 
   // The client has the list - the job pipeline moves to "candidates sent".
@@ -1851,7 +1859,7 @@ export async function sendJobCandidatesToClient(
   revalidatePath(`/admin/jobs/${jobId}`);
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
-  return { ok: true };
+  return { ok: true, clientEmailed: clientReady };
 }
 
 // ------------------------------------------------------------- review center
@@ -2209,16 +2217,17 @@ export async function closeJobAsHired(jobId: string, applicationIds: string[]): 
  * so a second click never double-mails.
  */
 export async function submitToClientAndNotify(
-  jobId: string
-): Promise<{ ok?: boolean; error?: string; submitted: number; regrets: number }> {
+  jobId: string,
+  opts: { clientEmailManual?: boolean } = {}
+): Promise<{ ok?: boolean; error?: string; needsManual?: boolean; clientEmailed?: boolean; submitted: number; regrets: number }> {
   await requireRole("admin");
-  const sent = await sendJobCandidatesToClient(jobId);
-  if (sent.error) return { error: sent.error, submitted: 0, regrets: 0 };
+  const sent = await sendJobCandidatesToClient(jobId, undefined, opts);
+  if (sent.error) return { error: sent.error, needsManual: sent.needsManual, submitted: 0, regrets: 0 };
   const outcome = await sendJobOutcomeEmails(jobId);
   revalidatePath(`/admin/jobs/${jobId}`);
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
-  return { ok: true, submitted: outcome.submitted, regrets: outcome.regrets };
+  return { ok: true, clientEmailed: sent.clientEmailed, submitted: outcome.submitted, regrets: outcome.regrets };
 }
 
 /** Update a candidate application's status (internal-job pipeline). */

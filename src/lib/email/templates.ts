@@ -965,3 +965,33 @@ export function sessionReminderEmail(
     }),
   };
 }
+
+/**
+ * A woman registered for the annual course on /masters-course (the owner,
+ * 25/9: "אני רק צריכה להתעדכן על כל אחת שנרשמה"). Goes to the office mailbox.
+ */
+export function courseRegistrationEmail(r: {
+  fullName: string;
+  email: string;
+  phone: string;
+  isSubscriber: boolean;
+  membershipNote: string;
+}): BuiltEmail {
+  return {
+    subject: `נרשמה לקורס מאסטרית בהייטק: ${r.fullName}${r.isSubscriber ? " (מנויה)" : ""}`,
+    html: renderEmail({
+      heading: "נרשמה חדשה לקורס 🎓",
+      lines: [
+        `<b>${r.fullName}</b> נרשמה עכשיו לקורס השנתי "מאסטרית בהייטק" והופנתה לדף התשלום של שופרא בנדרים.`,
+        `מייל: ${r.email} · טלפון: ${r.phone}`,
+        r.isSubscriber
+          ? "היא מנויה פעילה בקוד פתוח - זכאית למלגת המנויות (4,500 ₪) כל עוד המנוי נשאר פעיל לאורך שנת הקורס."
+          : "אין לה מנוי פעיל בקוד פתוח - המלגה למנויות לא חלה עליה כרגע.",
+        r.membershipNote,
+        "התשלום עצמו נסלק אצל שופרא, לכן סמני \"שולם\" במסך הנרשמות אחרי שתקבלי אישור מהן.",
+      ],
+      ctaText: "לרשימת הנרשמות לקורס",
+      ctaUrl: `${SITE}/admin/course-registrations`,
+    }),
+  };
+}
