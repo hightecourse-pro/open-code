@@ -1897,6 +1897,12 @@ export async function sendJobCandidatesToClient(
         html: memberBuilt.html,
       });
       if (!memberSent.ok) console.error("[candidate submitted email] send failed:", memberSent.error);
+      else if (applicationId)
+        await admin
+          .from("applications")
+          .update({ outcome_email_sent_at: now })
+          .eq("id", applicationId)
+          .is("outcome_email_sent_at", null);
     } catch (e) {
       console.error("[candidate submitted email] failed:", e);
     }
@@ -2237,6 +2243,14 @@ export async function updateApplicationPipeline(
       const built = applicationPipelineEmail(name, job.title, status);
       const sentEmail = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
       if (!sentEmail.ok) console.error("[pipeline email] send failed:", sentEmail.error);
+      // "הגשנו אותך" went out - stamp it so the review center shows it (and
+      // the outcome-emails pass does not send her a second one).
+      else if (status === "sent")
+        await admin
+          .from("applications")
+          .update({ outcome_email_sent_at: new Date().toISOString() })
+          .eq("id", applicationId)
+          .is("outcome_email_sent_at", null);
     }
   } catch (e) {
     console.error("[pipeline email] failed:", e);
@@ -2286,10 +2300,17 @@ export async function submitToClientAndNotify(
   const sent = await sendJobCandidatesToClient(jobId, undefined, opts);
   if (sent.error) return { error: sent.error, needsManual: sent.needsManual, submitted: 0, regrets: 0 };
   const outcome = await sendJobOutcomeEmails(jobId);
+  // The submitted ones were mailed (and stamped) by the send itself - count
+  // them from the rows, not from the outcome pass that now skips them.
+  const { count: submittedCount } = await createAdminClient()
+    .from("applications")
+    .select("*", { count: "exact", head: true })
+    .eq("job_id", jobId)
+    .in("status", ["sent", "interview", "exam", "hired"]);
   revalidatePath(`/admin/jobs/${jobId}`);
   revalidatePath("/admin/jobs");
   revalidatePath("/jobs");
-  return { ok: true, clientEmailed: sent.clientEmailed, submitted: outcome.submitted, regrets: outcome.regrets };
+  return { ok: true, clientEmailed: sent.clientEmailed, submitted: submittedCount ?? outcome.submitted, regrets: outcome.regrets };
 }
 
 /** Update a candidate application's status (internal-job pipeline). */
