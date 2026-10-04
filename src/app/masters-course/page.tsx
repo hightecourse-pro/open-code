@@ -105,32 +105,13 @@ export default function MastersCoursePage() {
           <h3 className="font-black text-[22px] sm:text-[26px] text-center mt-9" style={{ color: C.navy }}>
             למה דווקא הנושאים האלה?
           </h3>
-          {/* The owner's own words (4/10). */}
-          <div className="max-w-xl mx-auto mt-3 text-[17px] leading-relaxed text-center">
-            <p>מהמחקר שלנו בתעשייה, אלו המיומנויות הנדרשות ביותר בשוק.</p>
-            <p className="font-bold mt-4" style={{ color: C.navy }}>
-              כי אנחנו מזהים שינוי טקטוני בתפקידי הפיתוח בתעשייה:
-            </p>
-            <ul className="mt-2 flex flex-col gap-1">
-              <li>לא עוד מיקוד בקוד ובאלגוריתמים.</li>
-              <li>לא עוד פיתוח מדויק של משימה אחר משימה.</li>
-            </ul>
-            <p className="mt-4">
-              אלא מיומנויות חדשות שהופכות להיות קריטיות -
-              <br />
-              <b style={{ color: C.navy }}>הבנה מערכתית, ארכיטקטורה, הבנה עסקית רחבה</b>
-            </p>
-            <p className="mt-4">
-              וכמובן,
-              <br />
-              <b style={{ color: C.navy }}>להיות מסוגלת לפתח פתרונות AI</b>
-              <br />
-              ולהשתמש נכון במגוון כלי AI לפיתוח,
-            </p>
-            <p className="mt-4 font-bold" style={{ color: C.pink }}>
-              באופן שימנף את היכולות שלך כמחליפה לצוות שלם של מפתחים מהדור הישן.
-            </p>
-          </div>
+          {/* The owner's own words (4/10) - one paragraph, one colour. */}
+          <p className="max-w-xl mx-auto mt-3 text-[17px] leading-relaxed text-center">
+            כי אנחנו מזהים שינוי טקטוני בתפקידי הפיתוח בתעשייה: לא עוד מיקוד בקוד ובאלגוריתמים, לא עוד פיתוח מדויק של משימה
+            אחר משימה, אלא מיומנויות חדשות שהופכות להיות קריטיות - הבנה מערכתית, ארכיטקטורה, הבנה עסקית רחבה, וכמובן להיות
+            מסוגלת לפתח פתרונות AI ולהשתמש נכון במגוון כלי AI לפיתוח, באופן שימנף את היכולות שלך כמחליפה לצוות שלם של מפתחים
+            מהדור הישן.
+          </p>
         </section>
 
         {/* Price */}
