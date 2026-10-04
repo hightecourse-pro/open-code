@@ -19,12 +19,12 @@ export function SendCandidatesButton({
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [pending, start] = useTransition();
-  const [result, setResult] = useState<{ ok?: boolean; error?: string } | null>(null);
+  const [result, setResult] = useState<{ ok?: boolean; error?: string; needsManual?: boolean; clientEmailed?: boolean } | null>(null);
 
-  function send() {
+  function send(clientEmailManual = false) {
     setResult(null);
     start(async () => {
-      const r = await sendJobCandidatesToClient(jobId, note.trim() || undefined);
+      const r = await sendJobCandidatesToClient(jobId, note.trim() || undefined, { clientEmailManual });
       setResult(r);
       if (r.ok) {
         setOpen(false);
@@ -66,7 +66,7 @@ export function SendCandidatesButton({
             />
           </div>
           <div className="flex items-center gap-2">
-            <Button type="button" size="sm" onClick={send} disabled={pending}>
+            <Button type="button" size="sm" onClick={() => send(false)} disabled={pending}>
               {pending ? "שולח…" : "שליחה סופית ללקוח 📧"}
             </Button>
             <Button
@@ -81,8 +81,24 @@ export function SendCandidatesButton({
           </div>
         </div>
       )}
-      {result?.ok && <Alert variant="success">המייל נשלח ללקוח ✓</Alert>}
-      {result?.error && <Alert variant="danger">{result.error}</Alert>}
+      {result?.ok && (
+        <Alert variant="success">
+          {result.clientEmailed
+            ? "המייל נשלח ללקוח ✓"
+            : "המועמדות עודכנו והמשרה בטיפול אצל הלקוח ✓ המייל ללקוח לא נשלח - שלחי לו את הרשימה ידנית."}
+        </Alert>
+      )}
+      {result?.error && !result.needsManual && <Alert variant="danger">{result.error}</Alert>}
+      {result?.error && result.needsManual && (
+        <Alert variant="warn">
+          {result.error} אפשר להעביר את השלב בכל זאת - המועמדות יעודכנו, המשרה תתקדם, והמייל ללקוח עליכן.
+          <div className="mt-2">
+            <Button type="button" size="sm" onClick={() => send(true)} disabled={pending}>
+              {pending ? "שולח…" : "להעביר שלב בלי מייל ללקוח"}
+            </Button>
+          </div>
+        </Alert>
+      )}
     </div>
   );
 }
