@@ -523,6 +523,68 @@ export async function recordManualPayment(
   return {};
 }
 
+/**
+ * תיקון תאריך החידוש (the owner, 4/10 - טובה זק): Nedarim charged her on
+ * 14/8, then on 31/8 instead of 14/9, and the next charge is 14/10 - so the
+ * app's "paid until 1/10" was wrong and the cron paused her. This sets the
+ * period end by hand and reactivates her WITHOUT inventing a payment row:
+ * the next keva callback extends from the real charge as usual.
+ */
+export async function setSubscriptionRenewalDate(
+  profileId: string,
+  _prev: FormState,
+  formData: FormData
+): Promise<FormState> {
+  await requireRole("admin");
+  const raw = String(formData.get("renewal_date") ?? "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return { error: "בחרי תאריך." };
+  // Noon Israel time - never a midnight that flips a day across time zones.
+  const periodEnd = new Date(`${raw}T09:00:00.000Z`);
+  const now = Date.now();
+  if (Number.isNaN(periodEnd.getTime())) return { error: "תאריך לא תקין." };
+  if (periodEnd.getTime() < now - 24 * 3600 * 1000) return { error: "התאריך כבר עבר - בחרי את מועד החיוב הבא." };
+  if (periodEnd.getTime() > now + 400 * 24 * 3600 * 1000) return { error: "יותר משנה קדימה? בדקי את התאריך." };
+
+  const admin = createAdminClient();
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("id, plan")
+    .eq("profile_id", profileId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const patch = {
+    status: "active" as const,
+    current_period_end: periodEnd.toISOString(),
+    canceled_at: null,
+    ending_reminder_sent_at: null,
+    ended_email_sent_at: null,
+  };
+  if (sub) {
+    const { error } = await admin.from("subscriptions").update(patch).eq("id", sub.id);
+    if (error) return { error: "העדכון נכשל. רענני ונסי שוב." };
+  } else {
+    const { error } = await admin.from("subscriptions").insert({
+      profile_id: profileId,
+      plan: "monthly",
+      provider: "nedarim",
+      min_term_months: 0,
+      ...patch,
+    });
+    if (error) return { error: "העדכון נכשל. רענני ונסי שוב." };
+  }
+
+  // Same profile side as a real activation: paused/pending → active, paid tier
+  // for juniors (admins and mentors keep their role's tier).
+  await admin.from("profiles").update({ status: "active" }).eq("id", profileId).in("status", ["paused", "pending"]);
+  await admin.from("profiles").update({ member_tier: "paid" }).eq("id", profileId).eq("role", "junior");
+
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
+  revalidatePath("/admin/payments");
+  return {};
+}
+
 /** Approve / reject / pause a member. Admin-gated (action + RLS + role check). */
 /**
  * Hide (or unhide) a profile from the other members - for the team's

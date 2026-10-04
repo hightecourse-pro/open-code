@@ -1,9 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { HandCoins } from "lucide-react";
+import { CalendarCheck, HandCoins } from "lucide-react";
 import { Alert, Button, Field, Input } from "@/components/ui";
-import { recordManualPayment, type FormState } from "@/app/(admin)/admin/actions";
+import { recordManualPayment, setSubscriptionRenewalDate, type FormState } from "@/app/(admin)/admin/actions";
 
 /**
  * The webhook-failed fallback: a real charge happened at Nedarim but nothing
@@ -35,6 +35,44 @@ export function ManualPaymentForm({ profileId }: { profileId: string }) {
       <Button type="submit" size="sm" disabled={pending} className="w-fit">
         <HandCoins size={14} /> {pending ? "רושמת…" : "רישום תשלום והפעלת מנוי"}
       </Button>
+    </form>
+  );
+}
+
+/**
+ * תיקון תאריך החידוש (the owner, 4/10): when Nedarim's charge day differs
+ * from what the app assumed (טובה זק: charged 14/8, 31/8, next 14/10), set
+ * the "paid until" date by hand. Reactivates a paused member; writes no
+ * payment row - the next callback carries the real charge.
+ */
+export function RenewalDateForm({ profileId, currentPeriodEnd }: { profileId: string; currentPeriodEnd: string | null }) {
+  const [state, action, pending] = useActionState<FormState, FormData>(setSubscriptionRenewalDate.bind(null, profileId), {});
+  const current = currentPeriodEnd
+    ? new Intl.DateTimeFormat("he-IL", { dateStyle: "short", timeZone: "Asia/Jerusalem" }).format(new Date(currentPeriodEnd))
+    : null;
+  const defaultValue = currentPeriodEnd ? new Date(currentPeriodEnd).toISOString().slice(0, 10) : "";
+
+  return (
+    <form action={action} className="flex flex-col gap-3">
+      <p className="text-[12.5px] text-ink-500">
+        הוראת הקבע מחייבת ביום אחר מזה שהמערכת הניחה? קבעי כאן עד מתי המנוי משולם (מועד החיוב הבא בנדרים). חברה
+        מושהית חוזרת לפעילה; לא נרשם תשלום - ה־CallBack של החיוב הבא ימשיך מכאן.
+        {current && (
+          <>
+            {" "}
+            כרגע: <b dir="ltr">{current}</b>.
+          </>
+        )}
+      </p>
+      {state.error && <Alert variant="danger">{state.error}</Alert>}
+      <div className="flex items-end gap-3 flex-wrap">
+        <Field label="משולם עד (מועד החיוב הבא)" htmlFor="rd-date">
+          <Input id="rd-date" name="renewal_date" type="date" dir="ltr" defaultValue={defaultValue} required />
+        </Field>
+        <Button type="submit" size="sm" disabled={pending} className="w-fit">
+          <CalendarCheck size={14} /> {pending ? "מעדכנת…" : "עדכון תאריך החידוש"}
+        </Button>
+      </div>
     </form>
   );
 }
