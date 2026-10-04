@@ -21,7 +21,7 @@ import {
   setMemberJunk,
 } from "@/app/(admin)/admin/actions";
 import { SaveButton } from "@/components/patterns/save-button";
-import { ManualPaymentForm } from "@/components/patterns/manual-payment-form";
+import { ManualPaymentForm, RenewalDateForm } from "@/components/patterns/manual-payment-form";
 import { MemberSubscriptionPanel } from "@/components/patterns/member-subscription-panel";
 import { kevaIdsFor } from "@/lib/payments/subscription";
 import {
@@ -636,6 +636,22 @@ export default async function AdminMemberProfilePage({
           💳 רישום תשלום ידני
         </h3>
         <ManualPaymentForm profileId={profile.id} />
+        <div className="border-t border-ink-100 pt-3">
+          <h4 className="font-display text-[14px] font-bold text-ink-1000 mb-2">📅 תיקון תאריך החידוש</h4>
+          <RenewalDateForm
+            profileId={profile.id}
+            currentPeriodEnd={await (async () => {
+              const { data: sub } = await createAdminClient()
+                .from("subscriptions")
+                .select("current_period_end")
+                .eq("profile_id", profile.id)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              return sub?.current_period_end ?? null;
+            })()}
+          />
+        </div>
       </div>
 
       {/* Subscription + Nedarim standing order (the owner, 3/9) */}
