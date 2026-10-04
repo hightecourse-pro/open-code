@@ -111,7 +111,7 @@ export default async function AdminJobPage({
   ] = await Promise.all([
       admin
         .from("applications")
-        .select("id, applicant_id, submitted_at, status, admin_mark, admin_mark_reason, answers, cv_document_id, sent_to_client_at, edited_at, previous_versions")
+        .select("id, applicant_id, submitted_at, status, admin_mark, admin_mark_reason, answers, cv_document_id, sent_to_client_at, outcome_email_sent_at, edited_at, previous_versions")
         .eq("job_id", id)
         .order("submitted_at", { ascending: false }),
       admin
@@ -522,6 +522,7 @@ export default async function AdminJobPage({
       adminMark: a.admin_mark ?? null,
       adminMarkReason: a.admin_mark_reason ?? null,
       sentToClientAt: a.sent_to_client_at ?? null,
+      outcomeEmailSentAt: a.outcome_email_sent_at ?? null,
       answers: parseAnswers(a.answers),
       cvUrl: path ? (cvUrlOf.get(path) ?? null) : null,
       profile: p

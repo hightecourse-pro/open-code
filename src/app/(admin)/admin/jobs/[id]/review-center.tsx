@@ -62,6 +62,8 @@ export interface ReviewApplication {
   /** Her private "why not fit" note - rides only with a not_fit mark. */
   adminMarkReason: string | null;
   sentToClientAt: string | null;
+  /** When her outcome mail went out: "הגשנו אותך" for forwarded, "התקדמנו" for the rest. */
+  outcomeEmailSentAt: string | null;
   /**
    * {questionId: answer} + the built-in "fit" answer - parsed server-side.
    * Values follow the question's answer type: string (paragraph/select),
@@ -260,6 +262,37 @@ function NoteCell({
 }
 
 /** ⭐ (VIP) + "מנויה" pill - internal indications, admin-only surface. */
+const FORWARDED_STATUSES = new Set(["sent", "interview", "exam", "hired"]);
+const MAIL_DATE = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", timeZone: "Asia/Jerusalem" });
+
+/**
+ * Did she get a mail about where she stands? (the owner, 4/10: "יש דרך שנראה
+ * בצורה ברורה שנשלח מייל הגשה?"). Forwarded: the "הגשנו אותך" mail, green with
+ * its date, amber when missing. Others: the progress mail, when it went out.
+ */
+function OutcomeMailChip({ status, sentAt, compact = false }: { status: string; sentAt: string | null; compact?: boolean }) {
+  const forwarded = FORWARDED_STATUSES.has(status);
+  if (!forwarded && !sentAt) return null;
+  const date = sentAt ? MAIL_DATE.format(new Date(sentAt)) : null;
+  const text = forwarded
+    ? sentAt
+      ? `✉️ מייל הגשה נשלח ${date}`
+      : "✉️ לא נשלח לה מייל הגשה"
+    : `✉️ מייל התקדמות נשלח ${date}`;
+  return (
+    <span
+      className={cn(
+        "inline-block rounded-full px-2 py-0.5 font-bold whitespace-nowrap",
+        compact ? "text-[10px]" : "text-[11px]",
+        forwarded && !sentAt ? "bg-amber-100 text-amber-800" : "bg-tint-green text-green-800"
+      )}
+      title={sentAt ? new Date(sentAt).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem" }) : "אין חותמת שליחה - אפשר לשלוח דרך ״מייל סיכום לכל המועמדות״"}
+    >
+      {text}
+    </span>
+  );
+}
+
 function MemberFlair({ app, starClass }: { app: ReviewApplication; starClass?: string }) {
   return (
     <>
@@ -744,6 +777,10 @@ export function ReviewCenter({
     });
   }
 
+  // Mail stamps set in this session ("הוגשה ✓" mails her at once).
+  const [mailStamps, setMailStamps] = useState<Record<string, string>>({});
+  const mailStampOf = (a: ReviewApplication): string | null => mailStamps[a.id] ?? a.outcomeEmailSentAt;
+
   function applyPipeline(app: ReviewApplication, value: PipelineStatus) {
     const current = statusOf(app);
     setActionError(null);
@@ -753,6 +790,8 @@ export function ReviewCenter({
       if (res?.error) {
         setStatuses((prev) => ({ ...prev, [app.id]: current }));
         setActionError(res.error);
+      } else if (value === "sent" && !mailStampOf(app)) {
+        setMailStamps((prev) => ({ ...prev, [app.id]: new Date().toISOString() }));
       }
     });
   }
@@ -1527,6 +1566,9 @@ export function ReviewCenter({
                         <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10.5px] font-bold text-ink-700">
                           {STATUS_LABEL[status] ?? status}
                         </span>
+                        <div className="mt-1">
+                          <OutcomeMailChip status={status} sentAt={mailStampOf(a)} compact />
+                        </div>
                         {/* One-click "we submitted her" - with or without a
                             portal client (the PM couldn't find where). */}
                         {(status === "submitted" || status === "in_review") && (
@@ -1743,6 +1785,7 @@ export function ReviewCenter({
                   {(selected.sentToClientAt || statusOf(selected) === "sent") && (
                     <Badge variant="pink">הוגשה ללקוח</Badge>
                   )}
+                  <OutcomeMailChip status={statusOf(selected)} sentAt={mailStampOf(selected)} />
                 </div>
                 {/* One click to her chat, job-context attached (the owner, 16/9). */}
                 <ChatToCandidate
