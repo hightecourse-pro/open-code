@@ -201,6 +201,23 @@ export default async function AdminJobPage({
   // Numbers for the flow strip (the owner, 23/9).
   const flowApproved = appList.filter((a) => a.admin_mark === "approved").length;
   const flowSent = appList.filter((a) => a.sent_to_client_at || ["sent", "interview", "exam", "hired"].includes(a.status)).length;
+
+  // Self-heal (the owner, 4/10 - the COBOL job): candidates marked "הוגשה"
+  // before 25/9 moved the application but not the job, so the job still read
+  // "פורסם" with 3 sent. An admin visit now moves it to "בטיפול אצל הלקוח" and
+  // stamps the legacy sends with the day the mark was made (edited_at /
+  // submitted_at - the closest timestamp the row carries).
+  if (job.pipeline_status === "published" && flowSent > 0) {
+    const { error: healError } = await admin.from("jobs").update({ pipeline_status: "candidates_sent" }).eq("id", job.id);
+    if (!healError) job.pipeline_status = "candidates_sent";
+    else console.error("[job heal] pipeline move failed:", healError);
+    for (const a of appList) {
+      if (a.sent_to_client_at || !["sent", "interview", "exam", "hired"].includes(a.status)) continue;
+      const when = a.edited_at ?? a.submitted_at ?? new Date().toISOString();
+      a.sent_to_client_at = when;
+      await admin.from("applications").update({ sent_to_client_at: when }).eq("id", a.id);
+    }
+  }
   const flowInterviewing = appList.filter((a) => a.status === "interview" || a.status === "exam").length;
   const applicantIds = [...new Set(appList.map((a) => a.applicant_id))];
   const curatedIds = [...new Set((curated ?? []).map((c) => c.profile_id))];
