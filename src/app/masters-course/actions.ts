@@ -29,7 +29,8 @@ export async function checkCourseEmail(emailRaw: string): Promise<CourseEmailChe
 
 export interface RegisterCourseInput {
   email: string;
-  fullName: string;
+  firstName: string;
+  lastName: string;
   phone: string;
   /** "join" = she chose to open a membership first; "pay" = straight to payment. */
   intent: "pay" | "join";
@@ -49,8 +50,11 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
   if (input.website) return { ok: true, paymentUrl: coursePaymentUrl(), subscriber: false, joinUrl: "/signup" };
   const email = normalizeEmail(input.email ?? "");
   if (!email) return { ok: false, error: "הכתובת לא נראית תקינה - בדקי אותה שוב." };
-  const fullName = (input.fullName ?? "").trim().replace(/\s+/g, " ");
-  if (fullName.length < 2 || fullName.length > 80) return { ok: false, error: "איך קוראים לך? שם מלא בבקשה." };
+  const firstName = (input.firstName ?? "").trim().replace(/\s+/g, " ");
+  const lastName = (input.lastName ?? "").trim().replace(/\s+/g, " ");
+  if (firstName.length < 2 || firstName.length > 40) return { ok: false, error: "איך קוראים לך? שם פרטי בבקשה." };
+  if (lastName.length < 2 || lastName.length > 40) return { ok: false, error: "ושם המשפחה?" };
+  const fullName = `${firstName} ${lastName}`;
   const phoneDigits = (input.phone ?? "").replace(/\D/g, "");
   if (!/^0\d{8,9}$/.test(phoneDigits)) return { ok: false, error: "מספר טלפון לא תקין (למשל 052-1234567)." };
   const intent = input.intent === "join" ? "join" : "pay";
@@ -74,6 +78,8 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
     course_key: COURSE_KEY,
     email,
     full_name: fullName,
+    first_name: firstName,
+    last_name: lastName,
     phone: phoneDigits,
     profile_id: m.profileId,
     is_subscriber: m.isSubscriber,

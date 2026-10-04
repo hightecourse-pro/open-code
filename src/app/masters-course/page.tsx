@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { C, CourseFooter, PartnersHeader, WA_URL, rubik } from "./shared";
+import { C, CourseFooter, PartnersHeader, rubik } from "./shared";
+import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF } from "./theme";
 
 export const metadata: Metadata = {
   title: "מאסטרית בהייטק - הקורס השנתי של שופרא, קוד פתוח והייטקורס",
@@ -32,7 +33,7 @@ const GETS: Array<[string, string, string, string]> = [
 export default function MastersCoursePage() {
   return (
     <main dir="rtl" className={`${rubik.className} min-h-screen`} style={{ background: C.bg, color: C.ink }}>
-      <div className="max-w-3xl mx-auto px-5 py-8 sm:py-12 flex flex-col gap-8">
+      <div className="max-w-3xl mx-auto px-5 py-10 sm:py-14 flex flex-col gap-10 sm:gap-12">
         <PartnersHeader />
 
         {/* Hero */}
@@ -172,12 +173,16 @@ export default function MastersCoursePage() {
           >
             אני נרשמת לקורס 💜
           </Link>
-          <p className="text-[13.5px] mt-3" style={{ color: C.muted }}>
+          <p className="text-[14px] mt-4 leading-relaxed" style={{ color: C.muted }}>
             ההרשמה לוקחת דקה: מייל, שם וטלפון, ומשם לדף התשלום המאובטח.
             <br />
-            רוצה לשאול קודם?{" "}
-            <a href={WA_URL} target="_blank" rel="noopener noreferrer" className="font-bold underline" style={{ color: C.navy }}>
-              דברי איתנו בוואטסאפ
+            רוצה לשאול קודם? טלפון{" "}
+            <a href={CONTACT_PHONE_HREF} dir="ltr" className="font-bold underline" style={{ color: C.navy }}>
+              {CONTACT_PHONE}
+            </a>{" "}
+            או מייל{" "}
+            <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold underline" style={{ color: C.navy }}>
+              {CONTACT_EMAIL}
             </a>
           </p>
         </section>

@@ -1983,6 +1983,8 @@ export interface Database {
           course_key: string;
           email: string;
           full_name: string;
+          first_name: string | null;
+          last_name: string | null;
           phone: string | null;
           profile_id: string | null;
           is_subscriber: boolean;
@@ -1998,6 +2000,8 @@ export interface Database {
           course_key?: string;
           email: string;
           full_name: string;
+          first_name?: string | null;
+          last_name?: string | null;
           phone?: string | null;
           profile_id?: string | null;
           is_subscriber?: boolean;

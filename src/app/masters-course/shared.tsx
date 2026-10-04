@@ -3,9 +3,9 @@ import path from "node:path";
 import Image from "next/image";
 import Link from "next/link";
 import { Rubik } from "next/font/google";
-import { C, WA_URL } from "./theme";
+import { C, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF } from "./theme";
 
-export { C, WA_URL };
+export { C };
 
 // The ad's rounded, friendly Hebrew face (the owner, 25/9: "בצבעים ובנראות
 // של המודעה"). Loaded for the course pages only.
@@ -50,11 +50,11 @@ function PartnerLogo({ file, alt, fallback, className }: { file: string; alt: st
 
 export function PartnersHeader() {
   return (
-    <header className="flex items-center justify-between gap-3 sm:gap-8">
+    <header className="flex items-center justify-between gap-4 sm:gap-10 px-1 sm:px-4 py-2">
       <PartnerLogo
         file="masters-course/shufra.png"
         alt="שופרא - מרחב מקצועי מתקדם, מבית סמינר הרב וולף"
-        className="max-h-[60px] sm:max-h-[100px]"
+        className="max-h-[50px] sm:max-h-[80px]"
         fallback={<Wordmark name="שופרא" tagline="מרחב מקצועי מתקדם · מבית סמינר הרב וולף" color={C.orange} />}
       />
       <Link href="/masters-course" className="max-w-[32%] sm:max-w-none shrink min-w-0">
@@ -63,7 +63,7 @@ export function PartnersHeader() {
           alt="קוד פתוח - השמה. הכשרה. תרבות."
           width={400}
           height={200}
-          className="max-h-[60px] sm:max-h-[100px] w-auto max-w-full"
+          className="max-h-[50px] sm:max-h-[80px] w-auto max-w-full"
           style={{ height: "auto" }}
           priority
         />
@@ -71,7 +71,7 @@ export function PartnersHeader() {
       <PartnerLogo
         file="masters-course/hightcourse.png"
         alt="הייטקורס - לחשוב בגדול"
-        className="max-h-[56px] sm:max-h-[96px]"
+        className="max-h-[46px] sm:max-h-[76px]"
         fallback={<Wordmark name="הייטקורס" tagline="לחשוב בגדול" color={C.navy} />}
       />
     </header>
@@ -85,14 +85,14 @@ export function CourseFooter() {
         • תוכנית גמישה ומותאמת למצב השוק •
       </p>
       <p className="text-[15px] mt-1">הקורס נולד מתוך מחקר שוק על מגמות השינויים הדרמטיים בהייטק.</p>
-      <p className="text-[13.5px] mt-3" style={{ color: C.muted }}>
-        שאלות? בוואטסאפ{" "}
-        <a href={WA_URL} target="_blank" rel="noopener noreferrer" className="font-bold underline" style={{ color: C.navy }}>
-          02-580-0296
+      <p className="text-[14px] mt-4" style={{ color: C.muted }}>
+        שאלות? בטלפון{" "}
+        <a href={CONTACT_PHONE_HREF} dir="ltr" className="font-bold underline" style={{ color: C.navy }}>
+          {CONTACT_PHONE}
         </a>{" "}
         או במייל{" "}
-        <a href="mailto:office@opencode.org.il" className="font-bold underline" style={{ color: C.navy }}>
-          office@opencode.org.il
+        <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold underline" style={{ color: C.navy }}>
+          {CONTACT_EMAIL}
         </a>
       </p>
     </footer>

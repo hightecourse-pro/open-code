@@ -13,6 +13,8 @@ export const C = {
   muted: "#6B7A8A",
 };
 
-export const WA_URL =
-  "https://wa.me/97225800296?text=" + encodeURIComponent("היי, אשמח לפרטים על הקורס השנתי 'מאסטרית בהייטק'");
-
+// Contact on the course pages (the owner, 4/10: phone + email, no WhatsApp).
+// The number is the community office line until the owner sends the course one.
+export const CONTACT_PHONE = "02-580-0296";
+export const CONTACT_PHONE_HREF = "tel:+97225800296";
+export const CONTACT_EMAIL = "office@opencode.org.il";

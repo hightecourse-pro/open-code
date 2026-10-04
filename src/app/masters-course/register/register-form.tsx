@@ -20,21 +20,23 @@ const BENEFITS = [
 export function RegisterForm() {
   const [step, setStep] = useState<Step>("details");
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState(""); // honeypot
-  const [firstName, setFirstName] = useState<string | null>(null);
+  const [greetName, setGreetName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   function check() {
     setError(null);
-    if (fullName.trim().length < 2) return setError("איך קוראים לך? שם מלא בבקשה.");
+    if (firstName.trim().length < 2) return setError("איך קוראים לך? שם פרטי בבקשה.");
+    if (lastName.trim().length < 2) return setError("ושם המשפחה?");
     if (!/^0\d{8,9}$/.test(phone.replace(/\D/g, ""))) return setError("מספר טלפון לא תקין (למשל 052-1234567).");
     start(async () => {
       const r = await checkCourseEmail(email);
       if (!r.ok) return setError(r.error);
-      setFirstName(r.firstName);
+      setGreetName(r.firstName);
       setStep(r.subscriber ? "subscriber" : "not_subscriber");
     });
   }
@@ -42,7 +44,7 @@ export function RegisterForm() {
   function go(intent: "pay" | "join") {
     setError(null);
     start(async () => {
-      const r = await registerForCourse({ email, fullName, phone, intent, website });
+      const r = await registerForCourse({ email, firstName, lastName, phone, intent, website });
       if (!r.ok) return setError(r.error);
       setStep("redirecting");
       window.location.href = intent === "join" ? r.joinUrl : r.paymentUrl;
@@ -104,21 +106,38 @@ export function RegisterForm() {
             אם את מנויה בקוד פתוח - הכניסי את המייל שאיתו נרשמת לקהילה.
           </span>
         </label>
-        <label className="flex flex-col gap-1.5">
-          <span className="font-bold text-[15px]" style={{ color: C.navy }}>
-            שם מלא
-          </span>
-          <input
-            type="text"
-            name="fullName"
-            autoComplete="name"
-            required
-            className={inputCls}
-            style={{ borderColor: C.teal }}
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-          />
-        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label className="flex flex-col gap-1.5">
+            <span className="font-bold text-[15px]" style={{ color: C.navy }}>
+              שם פרטי
+            </span>
+            <input
+              type="text"
+              name="firstName"
+              autoComplete="given-name"
+              required
+              className={inputCls}
+              style={{ borderColor: C.teal }}
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+            />
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="font-bold text-[15px]" style={{ color: C.navy }}>
+              שם משפחה
+            </span>
+            <input
+              type="text"
+              name="lastName"
+              autoComplete="family-name"
+              required
+              className={inputCls}
+              style={{ borderColor: C.teal }}
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+            />
+          </label>
+        </div>
         <label className="flex flex-col gap-1.5">
           <span className="font-bold text-[15px]" style={{ color: C.navy }}>
             טלפון נייד
@@ -165,7 +184,7 @@ export function RegisterForm() {
       <div className="flex flex-col gap-4">
         <div className="rounded-[22px] px-5 py-5" style={{ background: "#E4F3F1", borderRight: `6px solid ${C.tealDeep}` }}>
           <p className="font-black text-[22px]" style={{ color: C.navy }}>
-            {firstName ? `${firstName}, ` : ""}יש לך מנוי בקוד פתוח 💜
+            {greetName ? `${greetName}, ` : ""}יש לך מנוי בקוד פתוח 💜
           </p>
           <p className="text-[16px] leading-relaxed mt-2">
             המלגה למנויות - <b>4,500 ₪</b> - שלך. חשוב שיהיה ברור: המלגה מותנית בכך שהמנוי שלך בקוד פתוח נשאר פעיל{" "}
@@ -206,10 +225,11 @@ export function RegisterForm() {
 
       <div className="rounded-[22px] px-5 py-5 bg-white" style={{ border: `2px solid ${C.teal}` }}>
         <p className="font-black text-[21px]" style={{ color: C.navy }}>
-          מנוי מלא לקוד פתוח - 39 ₪ לחודש
+          הפתרון: מנוי מלא לקוד פתוח
         </p>
         <p className="text-[15.5px] leading-relaxed mt-1">
-          המנוי פותח לך את המלגה (חיסכון של 4,500 ₪ בקורס), וגם את כל מה שהקהילה נותנת:
+          המנוי עולה <b>39 ₪ לחודש</b>, ולשנת הקורס כולה <b>12 × 39 = 468 ₪</b>. הוא פותח לך את מלגת המנויות, חיסכון של 4,500 ₪
+          בקורס, ובנוסף את כל מה שהקהילה נותנת:
         </p>
         <ul className="mt-3 flex flex-col gap-1.5 text-[15.5px]">
           {BENEFITS.map((b) => (
@@ -229,7 +249,8 @@ export function RegisterForm() {
           {pending ? "רושמות אותך…" : "פותחת מנוי בקוד פתוח ואז ממשיכה לקורס"}
         </button>
         <p className="text-[13px] mt-2 leading-relaxed" style={{ color: C.muted }}>
-          נרשום אותך לקורס כבר עכשיו ונעביר אותך להצטרפות לקהילה. אחרי שהמנוי פעיל, חזרי לדף הזה עם אותו מייל - והמלגה תופיע.
+          נרשום אותך לקורס כבר עכשיו ונעביר אותך להצטרפות לקהילה: 468 ₪ לשנה במקום 4,500 ₪ יותר על הקורס. אחרי שהמנוי פעיל,
+          חזרי לדף הזה עם אותו מייל - והמלגה תופיע.
         </p>
       </div>
 
