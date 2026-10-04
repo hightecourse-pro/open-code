@@ -243,9 +243,11 @@ export default async function CoursesPage() {
             <div className="font-display text-[22px] font-black my-1">{activeCourse.title}</div>
             <div className="text-[13px] opacity-85 mb-2">{activeCourse.lessons_count} שיעורים</div>
             <div className="h-1.5 bg-white/20 rounded-full overflow-hidden max-w-[300px]">
-              <div className="h-full bg-white rounded-full" style={{ width: `${active?.progress_pct ?? 0}%` }} />
+              <div className="h-full bg-white rounded-full" style={{ width: `${active?.studied ? 100 : (active?.progress_pct ?? 0)}%` }} />
             </div>
-            <div className="text-xs opacity-85 mt-1.5">השלמת {active?.progress_pct ?? 0}% מהקורס</div>
+            <div className="text-xs opacity-85 mt-1.5">
+              {active?.studied ? "סימנת שסיימת את הקורס ✓ (100%)" : "עוד לא סימנת שסיימת - כשתסיימי, סמני למטה ✓"}
+            </div>
             <div className="text-xs opacity-85 mt-1">
               {swapReady
                 ? "זכאות ההחלפה שלך פתוחה - אפשר לבחור קורס אחר מהספרייה 📚"

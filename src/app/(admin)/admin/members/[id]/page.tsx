@@ -293,7 +293,7 @@ export default async function AdminMemberProfilePage({
   // the one thing the admin looks for first, so it renders apart and loud.
   const { data: enrollRows } = await adminClient
     .from("enrollments")
-    .select("course_id, status, last_switch_month, progress_pct, started_at, created_at, switched_at, rating")
+    .select("course_id, status, last_switch_month, progress_pct, studied, started_at, created_at, switched_at, rating")
     .eq("profile_id", id)
     .order("started_at", { ascending: false, nullsFirst: false });
   const enrollments = enrollRows ?? [];
@@ -812,11 +812,11 @@ export default async function AdminMemberProfilePage({
                 <div className="h-1.5 bg-ink-100 rounded-full overflow-hidden max-w-[260px] mt-2">
                   <div
                     className="h-full bg-brand-gradient rounded-full"
-                    style={{ width: `${activeEnrollment.progress_pct ?? 0}%` }}
+                    style={{ width: `${activeEnrollment.studied ? 100 : (activeEnrollment.progress_pct ?? 0)}%` }}
                   />
                 </div>
                 <div className="text-[11.5px] text-ink-500 mt-1">
-                  סימנה {activeEnrollment.progress_pct ?? 0}% מהקורס
+                  {activeEnrollment.studied ? "סימנה שסיימה את הקורס ✓" : "עדיין לא סימנה שסיימה את הקורס"}
                 </div>
               </div>
               <div className="shrink-0 flex flex-col items-end gap-2">
