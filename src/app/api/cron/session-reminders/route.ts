@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResendEmail } from "@/lib/email/resend";
 import { jobPublishedEmail, newMessageEmail, sessionReminderEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
+import { raiseAlert } from "@/lib/alerts";
 
 /**
  * The 10-minute notifications tick (pg_cron): session reminders and queued
@@ -22,11 +23,15 @@ import { getSiteUrl } from "@/lib/site";
  * address safe.
  */
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 150;
 
 // Bounded work per tick - ~35-45s of sequential sends at the worst.
 const REMINDER_BATCH = 90;
-const JOB_EMAIL_BATCH = 60;
+// 180 every 10 minutes ≈ 1,000 an hour: three jobs to ~950 members each
+// (the owner, 5/10) finish in under three hours instead of eight. Paced at
+// Resend's 2 requests/second, 180 sends take ~100 s of the 150 s budget.
+const JOB_EMAIL_BATCH = 180;
+const SEND_GAP_MS = 550;
 
 type Stage = "morning" | "t30" | "start";
 
@@ -196,6 +201,7 @@ async function drainJobEmails(admin: AdminClient) {
     .from("job_targets")
     .select("job_id, profile_id")
     .is("emailed_at", null)
+    .is("email_failed_at", null)
     .order("created_at", { ascending: true })
     .limit(JOB_EMAIL_BATCH);
   if (!targets?.length) return { sent: 0, remaining: 0 };
@@ -225,6 +231,9 @@ async function drainJobEmails(admin: AdminClient) {
   );
 
   let sent = 0;
+  let failed = 0;
+  const failedJobs = new Map<string, number>();
+  let rateLimited = false;
   for (const t of targets) {
     const job = jobOf.get(t.job_id);
     // Only live, published jobs still announce; a withdrawn one just drains -
@@ -237,7 +246,27 @@ async function drainJobEmails(admin: AdminClient) {
       const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
       const built = jobPublishedEmail(name, job.title, excerptOf.get(job.id) ?? "", applyUrl);
       const res = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
-      if (res.ok) sent++;
+      if (res.ok) {
+        sent++;
+      } else if (res.error === "blocked_by_allowlist") {
+        // Staging's environment gate, not a refusal - drains like before.
+      } else if ((res.error ?? "").startsWith("resend_429")) {
+        // Pace problem - leave her unstamped, the next run retries her first.
+        rateLimited = true;
+        console.error("[job email] rate limited, stopping this run:", res.error);
+        break;
+      } else {
+        // A refusal is recorded, never hidden (the owner, 5/10).
+        failed++;
+        failedJobs.set(t.job_id, (failedJobs.get(t.job_id) ?? 0) + 1);
+        await admin
+          .from("job_targets")
+          .update({ email_failed_at: new Date().toISOString(), email_error: (res.error ?? "send_failed").slice(0, 300) })
+          .eq("job_id", t.job_id)
+          .eq("profile_id", t.profile_id);
+        continue;
+      }
+      await new Promise((r) => setTimeout(r, SEND_GAP_MS));
     }
     await admin
       .from("job_targets")
@@ -245,6 +274,18 @@ async function drainJobEmails(admin: AdminClient) {
       .eq("job_id", t.job_id)
       .eq("profile_id", t.profile_id);
   }
+  for (const [jobId, n] of failedJobs) {
+    const title = jobOf.get(jobId)?.title ?? jobId;
+    await raiseAlert({
+      kind: "job_email_failed",
+      severity: "warning",
+      title: `${n} מיילי פרסום של ״${title}״ נדחו על ידי שירות המייל`,
+      body: "הכתובות שנדחו מסומנות בטאב פרסום של המשרה (״נכשלו״). רוב הדחיות הן כתובת לא תקינה או חסומה.",
+      context: { jobId },
+      dedupeKey: `job-email-failed:${jobId}:${new Date().toISOString().slice(0, 10)}`,
+    }).catch(() => {});
+  }
+  if (rateLimited) console.error("[job email] run ended early on a rate limit; the queue continues next run");
 
   const { count: remaining } = await admin
     .from("job_targets")

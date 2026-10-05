@@ -41,11 +41,20 @@ export async function sendResendEmail(args: {
   if (!gate.ok) return { ok: false, error: gate.error };
   args = { ...args, subject: gate.subjectPrefix + args.subject };
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: [args.to], subject: args.subject, html: args.html }),
-    });
+    const post = () =>
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({ from: FROM, to: [args.to], subject: args.subject, html: args.html }),
+      });
+    let res = await post();
+    // Resend allows 2 requests/second - a 429 is a pace problem, not a bad
+    // address. One breath and one retry before giving up (the owner, 5/10:
+    // job announcements were silently dropped on refusals).
+    if (res.status === 429) {
+      await new Promise((r) => setTimeout(r, 1200));
+      res = await post();
+    }
     if (!res.ok) {
       const text = await res.text();
       return { ok: false, error: `resend_${res.status}: ${text.slice(0, 140)}` };

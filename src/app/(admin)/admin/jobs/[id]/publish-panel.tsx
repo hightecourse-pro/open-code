@@ -40,7 +40,7 @@ export function PublishPanel({
   /** All active members, for the "add anyone" search (same list as the candidate picker). */
   allMembers: PickerMember[];
   /** Null while the job is a draft; otherwise the published summary. */
-  published: { at: string | null; audienceCount: number } | null;
+  published: { at: string | null; audienceCount: number; emails?: { sent: number; queued: number; failed: number } } | null;
 }) {
   const router = useRouter();
   // question key → selected values. Filters accumulate across parameters, so
@@ -230,6 +230,21 @@ export function PublishPanel({
           </span>
           <Badge variant="mint">מפורסמת ✓</Badge>
         </div>
+        {published.emails && (
+          <div className="text-[12.5px] text-ink-700 flex items-center gap-2 flex-wrap">
+            <span>✉️ מיילי הפרסום:</span>
+            <span className="rounded-full bg-tint-green text-green-800 px-2 py-0.5 font-bold">{published.emails.sent} נשלחו</span>
+            {published.emails.queued > 0 && (
+              <span className="rounded-full bg-tint-purple text-brand-purple px-2 py-0.5 font-bold">
+                {published.emails.queued} בתור - יוצאים בקצב של כ-1,000 בשעה
+              </span>
+            )}
+            {published.emails.failed > 0 && (
+              <span className="rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 font-bold">{published.emails.failed} נדחו ע״י שירות המייל</span>
+            )}
+            {published.emails.queued === 0 && published.emails.failed === 0 && <span className="text-ink-500">כולן קיבלו ✓</span>}
+          </div>
+        )}
         <div className="flex items-center gap-3 flex-wrap">
           <Button size="sm" variant="secondary" onClick={onReopen} disabled={publishing}>
             {publishing ? "פותח…" : "פתיחה מחדש של הפרסום"}

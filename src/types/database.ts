@@ -269,6 +269,8 @@ export interface Database {
           profile_id: string;
           source: "criteria" | "manual";
           emailed_at: string | null;
+          email_failed_at: string | null;
+          email_error: string | null;
           created_at: string;
         };
         Insert: {
@@ -276,6 +278,8 @@ export interface Database {
           profile_id: string;
           source?: "criteria" | "manual";
           emailed_at?: string | null;
+          email_failed_at?: string | null;
+          email_error?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["job_targets"]["Insert"]>;

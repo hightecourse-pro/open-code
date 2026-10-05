@@ -104,7 +104,7 @@ export default async function AdminJobPage({
     { data: curated },
     { data: members },
     { data: questions },
-    { count: targetsCount },
+    { data: targetRows },
     { data: clientRows },
     audienceCatalogue,
     audienceEligibility,
@@ -134,8 +134,9 @@ export default async function AdminJobPage({
         .order("created_at", { ascending: true }),
       admin
         .from("job_targets")
-        .select("profile_id", { count: "exact", head: true })
-        .eq("job_id", id),
+        .select("profile_id, emailed_at, email_failed_at")
+        .eq("job_id", id)
+        .limit(5000),
       // Portal clients the edit form can link the job to.
       admin
         .from("portal_clients")
@@ -761,7 +762,15 @@ export default async function AdminJobPage({
           published={
             job.pipeline_status === "draft"
               ? null
-              : { at: job.published_at, audienceCount: targetsCount ?? 0 }
+              : {
+                at: job.published_at,
+                audienceCount: targetRows?.length ?? 0,
+                emails: {
+                  sent: (targetRows ?? []).filter((t) => t.emailed_at).length,
+                  failed: (targetRows ?? []).filter((t) => t.email_failed_at).length,
+                  queued: (targetRows ?? []).filter((t) => !t.emailed_at && !t.email_failed_at).length,
+                },
+              }
           }
         />
       </div>

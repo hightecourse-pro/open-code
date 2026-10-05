@@ -1568,9 +1568,17 @@ export async function publishJob(
         if (result.ok) {
           sent++;
           delivered.push(profileId);
+          // Resend's pace: 2 requests/second.
+          await new Promise((r) => setTimeout(r, 550));
         } else {
           failed++;
           console.error("[publish job email] send failed:", result.error);
+          if (result.error !== "blocked_by_allowlist")
+            await admin
+              .from("job_targets")
+              .update({ email_failed_at: new Date().toISOString(), email_error: (result.error ?? "send_failed").slice(0, 300) })
+              .eq("job_id", jobId)
+              .eq("profile_id", profileId);
         }
       } catch (e) {
         failed++;
