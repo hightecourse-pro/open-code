@@ -41,11 +41,20 @@ export async function sendResendEmail(args: {
   if (!gate.ok) return { ok: false, error: gate.error };
   args = { ...args, subject: gate.subjectPrefix + args.subject };
   try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: FROM, to: [args.to], subject: args.subject, html: args.html }),
-    });
+    const post = () =>
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({ from: FROM, to: [args.to], subject: args.subject, html: args.html }),
+      });
+    let res = await post();
+    // Resend allows 2 requests/second - a 429 is a pace problem, not a bad
+    // address. One breath and one retry before giving up (the owner, 5/10:
+    // job announcements were silently dropped on refusals).
+    if (res.status === 429) {
+      await new Promise((r) => setTimeout(r, 1200));
+      res = await post();
+    }
     if (!res.ok) {
       const text = await res.text();
       return { ok: false, error: `resend_${res.status}: ${text.slice(0, 140)}` };
@@ -54,4 +63,61 @@ export async function sendResendEmail(args: {
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "send_failed" };
   }
+}
+
+export interface BatchItem {
+  to: string;
+  subject: string;
+  html: string;
+}
+export type BatchOutcome = { ok: true } | { ok: false; error: string };
+
+/**
+ * Resend's batch endpoint: up to 100 emails per request, and the rate limit
+ * (2 requests/second) counts requests - so ~200 emails a second instead of 2
+ * (the owner, 5/10: "זה לוקח הרבה מידי זמן!!"). Each item gets its own
+ * outcome; a refused request marks every item in it. Outside production the
+ * allowlist gate applies per item, exactly like the single sender.
+ */
+export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[]> {
+  const key = process.env.RESEND_API_KEY;
+  const outcomes: BatchOutcome[] = items.map(() => ({ ok: false, error: "resend_not_configured" }));
+  if (!key) return outcomes;
+  const allowed: { idx: number; item: BatchItem }[] = [];
+  items.forEach((item, idx) => {
+    const gate = emailGate(item.to);
+    if (!gate.ok) {
+      outcomes[idx] = { ok: false, error: gate.error };
+      return;
+    }
+    allowed.push({ idx, item: { ...item, subject: gate.subjectPrefix + item.subject } });
+  });
+  for (let i = 0; i < allowed.length; i += 100) {
+    const chunk = allowed.slice(i, i + 100);
+    const post = () =>
+      fetch("https://api.resend.com/emails/batch", {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify(chunk.map(({ item }) => ({ from: FROM, to: [item.to], subject: item.subject, html: item.html }))),
+      });
+    try {
+      let res = await post();
+      if (res.status === 429) {
+        await new Promise((r) => setTimeout(r, 1200));
+        res = await post();
+      }
+      if (!res.ok) {
+        const text = (await res.text()).slice(0, 140);
+        for (const { idx } of chunk) outcomes[idx] = { ok: false, error: `resend_${res.status}: ${text}` };
+      } else {
+        for (const { idx } of chunk) outcomes[idx] = { ok: true };
+      }
+    } catch (e) {
+      const error = e instanceof Error ? e.message : "send_failed";
+      for (const { idx } of chunk) outcomes[idx] = { ok: false, error };
+    }
+    // Pace: 2 requests a second.
+    if (i + 100 < allowed.length) await new Promise((r) => setTimeout(r, 550));
+  }
+  return outcomes;
 }
