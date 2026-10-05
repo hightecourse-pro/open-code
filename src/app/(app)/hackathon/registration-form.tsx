@@ -34,12 +34,20 @@ export function RegistrationForm({
   const [done, setDone] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  // "Contains" autocomplete (the owner, 5/10): every typed word must appear
+  // somewhere in the name - any order, any position; brackets and quotes in
+  // names (maiden names) do not get in the way.
+  const norm = (s: string) => s.toLowerCase().replace(/[\[\]()"'״׳]/g, " ").replace(/\s+/g, " ").trim();
   const matches = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return candidates.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+    const words = norm(query).split(" ").filter(Boolean);
+    if (!words.length) return [];
+    return candidates.filter((c) => {
+      const n = norm(c.name);
+      return words.every((w) => n.includes(w));
+    }).slice(0, 10);
   }, [query, candidates]);
   const chosen = candidates.find((c) => c.id === partnerId) ?? null;
+  const showList = mode === "pair" && !chosen && matches.length > 0;
 
   function submit() {
     setError(null);
@@ -131,8 +139,8 @@ export function RegistrationForm({
               data-lpignore="true"
             />
             {chosen && <div className="text-[12.5px] text-green-800 mt-1">נבחרה: {chosen.name} ✓</div>}
-            {!chosen && matches.length > 0 && (
-              <ul className="absolute z-10 mt-1 w-full bg-white border border-ink-200 rounded-[12px] shadow-md overflow-hidden">
+            {showList && (
+              <ul className="absolute z-10 mt-1 w-full bg-white border border-ink-200 rounded-[12px] shadow-md overflow-hidden max-h-64 overflow-y-auto">
                 {matches.map((m) => (
                   <li key={m.id}>
                     <button
@@ -149,7 +157,8 @@ export function RegistrationForm({
                 ))}
               </ul>
             )}
-            {!chosen && query.trim() && matches.length === 0 && <div className="text-[12.5px] text-ink-500 mt-1">לא נמצאה מנויה בשם הזה.</div>}
+            {!chosen && query.trim() && matches.length === 0 && <div className="text-[12.5px] text-ink-500 mt-1">לא נמצאה מנויה פעילה בשם הזה - אפשר לחפש לפי חלק מהשם.</div>}
+            {!chosen && !query.trim() && <div className="text-[12px] text-ink-500 mt-1">הקלידי חלק מהשם הפרטי או המשפחה - הרשימה מסננת תוך כדי.</div>}
             <p className="text-[12px] text-ink-500 mt-1.5">שתיכן תירשמנה לאותו אתגר. אם היא כבר רשומה לאתגר אחר, ההרשמה שלה תתעדכן.</p>
           </div>
         )}
