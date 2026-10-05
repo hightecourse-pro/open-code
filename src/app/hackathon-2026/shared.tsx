@@ -107,6 +107,8 @@ export function Wave({ flip = false, tint = "#FDF3F9" }: { flip?: boolean; tint?
 /* ---------------------------------------------------------------- content */
 
 export type Challenge = {
+  /** Stable key - the in-community challenge page and registrations use it. */
+  key?: string;
   short: string;
   org: string | null;
   emoji: string;
@@ -118,25 +120,70 @@ export type Challenge = {
   badgeLogo?: string;
   /** Wide partner logo shown inside/under the card. */
   partnerLogo?: string;
+  /** The brief, point by point - shown on the challenge page in the community. */
+  details?: string[];
   tilt: string;
   tint: string;
 };
 
+export { HACKATHON_UPDATED } from "./version";
+export const HACKATHON_UPDATES: { date: string; text: string }[] = [
+  { date: "5.10", text: "ההרשמה לאתגרים נפתחה - לבד או כזוג חברות, ואפשר להחליף עד האירוע." },
+  { date: "5.10", text: "אתגר חדש: הפניקס - בוט שעונה נכון מתוך כל המידע שבאתר החברה." },
+  { date: "5.10", text: "שותף חדש: Aman (אמן) - פרטי האתגר בקרוב." },
+  { date: "5.10", text: "המעבדה המרכזית לנגיפים: הפירוט המלא של האתגר + קבצי דוגמה להורדה (למנויות)." },
+];
+
 export const CHALLENGES: Challenge[] = [
   {
+    key: "virology",
     short: "המעבדה המרכזית לנגיפים",
     org: "משרד הבריאות · המרכז הרפואי שיבא",
     emoji: "🧬",
     challenge:
-      "חילוץ מידע על המטופל מתוך טפסי 17 שמגיעים בפורמטים שונים ומשונים - סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך צריך לקבל טופס ולהחזיר את פרטי המטופל בצורה מובנית ואמינה.",
+      "המעבדה המרכזית לנגיפים מקבלת מקופות החולים ומבתי החולים דגימות, ויחד איתן טפסי התחייבות בפורמטים שונים ומשונים - סרוקים, מצולמים, מודפסים וכתובים ביד. המנוע שלך מקבל התחייבות ומחזיר, לאקסל, את הנתונים שהמעבדה צריכה - בצורה מובנית ואמינה.",
+    details: [
+      "שם פרטי",
+      "שם משפחה",
+      "מספר תעודת זהות",
+      "מספר מרכזי - בדרך כלל על גבי מדבקה שרשום בצידה ״מרכזי״, לפעמים בכתב יד; ייתכנו כמה מספרים מרכזיים לאותה בדיקה",
+      "תאריך קבלת הדגימה - חותמת ״התקבל״ או בכתב יד מתחת למספר המרכזי",
+      "גורם שולח - קופת חולים / בית חולים",
+      "מספר התחייבות - יכול להופיע גם כ״דרישה״, ובלאומית כ״דגימה״; ייתכנו מספר התחייבויות לאותה בדיקה",
+      "הפלט: קובץ אקסל, שורה לכל התחייבות, עם כל השדות שלמעלה",
+    ],
     samples: true,
     badgeLogo: "/hackathon-2026/logo-virology.png",
     partnerLogo: "/hackathon-2026/logo-moh.jpg",
     tilt: "md:-rotate-2",
     tint: "bg-white",
   },
-  { short: "שת\"פ יוכרז בקרוב", org: null, emoji: "🤫", tilt: "md:rotate-2", tint: "bg-tint-purple/40" },
-  { short: "שת\"פ יוכרז בקרוב", org: null, emoji: "🎁", tilt: "md:rotate-1", tint: "bg-tint-warm/50" },
+  {
+    key: "phoenix",
+    short: "הפניקס",
+    org: "קבוצת הפניקס",
+    emoji: "🔥",
+    challenge:
+      "בוט שיודע לענות נכון על המידע הנדרש - מתוך כל המידע שנמצא באתר של החברה. שואלים אותו שאלה, והוא עונה תשובה מדויקת ומבוססת, בלי להמציא.",
+    details: [
+      "המקור היחיד לתשובות: התוכן באתר הפניקס, על כל עמודיו",
+      "תשובה נכונה ומדויקת לשאלה - וכשהמידע לא קיים באתר, הבוט אומר זאת",
+      "כיווני מחשבה: איסוף התוכן מהאתר, אחזור חכם (RAG), ציון המקור של כל תשובה",
+    ],
+    badgeLogo: "/hackathon-2026/logo-phoenix.png",
+    tilt: "md:rotate-2",
+    tint: "bg-tint-warm/50",
+  },
+  {
+    key: "aman",
+    short: "Aman",
+    org: "קבוצת אמן",
+    emoji: "🎁",
+    teaser: "פרטי האתגר בקרוב",
+    badgeLogo: "/hackathon-2026/logo-aman.jpg",
+    tilt: "md:rotate-1",
+    tint: "bg-tint-purple/40",
+  },
   { short: "שת\"פ יוכרז בקרוב", org: null, emoji: "🚀", tilt: "md:-rotate-1", tint: "bg-tint-mint/40" },
 ];
 
@@ -291,7 +338,7 @@ export function TickerStrip() {
 }
 
 /** The four challenges, orbiting the core - same design on both pages; the
-    partners variant sells the scarcity: only 4 slots, 3 left (7/9). */
+    partners variant sells the scarcity: only 4 slots, 1 left (5/10). */
 export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
     <section className="px-6 pt-10 pb-20 bg-[#FBF7FF] relative">
@@ -306,7 +353,7 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
                 רק 4 ארגונים נכנסים להאקתון הזה
               </h2>
               <p className="t-body text-ink-700 mt-1">
-                המקום הראשון כבר נתפס - <span className="font-bold text-brand-pink-deep">נשארו 3</span>
+                שלושה מקומות כבר נתפסו - <span className="font-bold text-brand-pink-deep">נשאר אחד</span>
               </p>
             </>
           ) : (
@@ -383,7 +430,7 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
                           className="inline-flex w-fit items-center gap-1.5 text-[15.5px] font-semibold text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-3 py-1.5 rotate-1"
                           style={{ borderRadius: "12px 16px 12px 18px" }}
                         >
-                          📄 טפסי דוגמה להורדה - יעלו כאן עם פתיחת ההרשמה
+                          📄 טפסי דוגמה להורדה - למנויות, בתוך הקהילה
                         </span>
                       )}
                     </div>

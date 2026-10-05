@@ -1981,6 +1981,18 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["profile_reminders"]["Insert"]>;
         Relationships: [];
       };
+      hackathon_registrations: {
+        Row: { id: string; profile_id: string; challenge_key: string; partner_profile_id: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; profile_id: string; challenge_key: string; partner_profile_id?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_registrations"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_materials: {
+        Row: { id: string; challenge_key: string; title: string; file_path: string; size_bytes: number | null; created_at: string };
+        Insert: { id?: string; challenge_key: string; title: string; file_path: string; size_bytes?: number | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_materials"]["Insert"]>;
+        Relationships: [];
+      };
       course_registrations: {
         Row: {
           id: string;

@@ -27,6 +27,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { HACKATHON_UPDATED } from "@/app/hackathon-2026/version";
 import { Logo } from "@/components/ui";
 import { signOut } from "@/app/(auth)/actions";
 
@@ -105,11 +106,13 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
     // error boundary's healing flag).
     const t = setTimeout(() => {
       try {
+        // Versioned (the owner, 5/10): every hackathon update brings the
+        // pill back until she has seen the new version.
         if (pathname === "/hackathon" || pathname.startsWith("/hackathon/")) {
-          localStorage.setItem("oc-hackathon-seen", "1");
+          localStorage.setItem("oc-hackathon-seen", HACKATHON_UPDATED);
           setHackathonSeen(true);
         } else {
-          setHackathonSeen(localStorage.getItem("oc-hackathon-seen") === "1");
+          setHackathonSeen(localStorage.getItem("oc-hackathon-seen") === HACKATHON_UPDATED);
         }
       } catch {}
     }, 0);

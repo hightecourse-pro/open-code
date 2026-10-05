@@ -24,6 +24,7 @@ import {
   Settings,
   Share2,
   School,
+  Trophy,
   Shield,
   MessageSquareText,
   Users,
@@ -75,6 +76,7 @@ const SECTIONS: AdminNavSection[] = [
       { href: "/admin/sessions", label: "סשנים", icon: Calendar },
       { href: "/admin/shares", label: "הרשאות לתכנים", icon: Share2 },
       { href: "/admin/course-registrations", label: "נרשמות לקורס", icon: School },
+      { href: "/admin/hackathon", label: "האקתון", icon: Trophy },
     ],
   },
   {
