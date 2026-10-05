@@ -236,7 +236,7 @@ export function PublishPanel({
             <span className="rounded-full bg-tint-green text-green-800 px-2 py-0.5 font-bold">{published.emails.sent} נשלחו</span>
             {published.emails.queued > 0 && (
               <span className="rounded-full bg-tint-purple text-brand-purple px-2 py-0.5 font-bold">
-                {published.emails.queued} בתור - יוצאים בקצב של כ-1,000 בשעה
+                {published.emails.queued} בתור - יוצאים תוך דקות
               </span>
             )}
             {published.emails.failed > 0 && (

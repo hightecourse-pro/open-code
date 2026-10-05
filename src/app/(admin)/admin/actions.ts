@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { recordCommunityHire, removeCommunityHireIfUnbilled } from "@/lib/admin/hires";
 import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
-import { sendResendEmail } from "@/lib/email/resend";
+import { sendResendEmail, sendResendBatch } from "@/lib/email/resend";
 import {
   applicationPipelineEmail,
   applicationStatusEmail,
@@ -1530,12 +1531,17 @@ export async function publishJob(
   // mailed right here (publishing feels instant); anything bigger is left on
   // the queue for the 10-minute notifications cron - a serverless action must
   // never loop thousands of sends (it gets killed mid-loop and nobody knows).
-  const INLINE_LIMIT = 25;
+  // One batch request (100 emails) goes out right here; the rest stays on
+  // the queue, and the drain is kicked the moment this response is sent
+  // (after()) - so a 950-member audience is done in under a minute, not
+  // "by tonight" (the owner, 5/10).
+  const INLINE_LIMIT = 100;
   const { data: pending } = await admin
     .from("job_targets")
     .select("profile_id")
     .eq("job_id", jobId)
-    .is("emailed_at", null);
+    .is("emailed_at", null)
+    .is("email_failed_at", null);
   const toEmail = (pending ?? []).map((t) => t.profile_id);
   const inline = toEmail.slice(0, INLINE_LIMIT);
   const queued = Math.max(0, toEmail.length - inline.length);
@@ -1553,44 +1559,57 @@ export async function publishJob(
     );
     const excerpt = jobExcerpt(job.description_html, job.description);
     const applyUrl = `${getSiteUrl()}/jobs`;
-    const delivered: string[] = [];
+    const items: { profileId: string; to: string; subject: string; html: string }[] = [];
     for (const profileId of inline) {
-      try {
-        const email = emailOf.get(profileId);
-        if (!email) {
-          failed++;
-          continue;
-        }
-        const p = nameOf.get(profileId);
-        const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
-        const built = jobPublishedEmail(name, job.title, excerpt, applyUrl);
-        const result = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
-        if (result.ok) {
-          sent++;
-          delivered.push(profileId);
-          // Resend's pace: 2 requests/second.
-          await new Promise((r) => setTimeout(r, 550));
-        } else {
-          failed++;
-          console.error("[publish job email] send failed:", result.error);
-          if (result.error !== "blocked_by_allowlist")
-            await admin
-              .from("job_targets")
-              .update({ email_failed_at: new Date().toISOString(), email_error: (result.error ?? "send_failed").slice(0, 300) })
-              .eq("job_id", jobId)
-              .eq("profile_id", profileId);
-        }
-      } catch (e) {
+      const email = emailOf.get(profileId);
+      if (!email) {
         failed++;
-        console.error("[publish job email] failed:", e);
+        continue;
+      }
+      const p = nameOf.get(profileId);
+      const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
+      const built = jobPublishedEmail(name, job.title, excerpt, applyUrl);
+      items.push({ profileId, to: email, subject: built.subject, html: built.html });
+    }
+    const outcomes = items.length ? await sendResendBatch(items.map(({ to, subject, html }) => ({ to, subject, html }))) : [];
+    const delivered: string[] = [];
+    const nowIso = new Date().toISOString();
+    for (let i = 0; i < items.length; i++) {
+      const res = outcomes[i];
+      if (res.ok || res.error === "blocked_by_allowlist") {
+        if (res.ok) sent++;
+        delivered.push(items[i].profileId);
+      } else {
+        failed++;
+        console.error("[publish job email] send failed:", res.error);
+        await admin
+          .from("job_targets")
+          .update({ email_failed_at: nowIso, email_error: res.error.slice(0, 300) })
+          .eq("job_id", jobId)
+          .eq("profile_id", items[i].profileId);
       }
     }
     if (delivered.length > 0) {
       await admin
         .from("job_targets")
-        .update({ emailed_at: new Date().toISOString() })
+        .update({ emailed_at: nowIso })
         .eq("job_id", jobId)
         .in("profile_id", delivered);
+    }
+  }
+
+  // Kick the queue drain now - not in up to ten minutes.
+  if (queued > 0) {
+    const secret = process.env.CRON_SECRET;
+    if (secret) {
+      const url = `${getSiteUrl()}/api/cron/session-reminders?secret=${encodeURIComponent(secret)}`;
+      after(async () => {
+        try {
+          await fetch(url, { cache: "no-store" });
+        } catch (e) {
+          console.error("[publish job] immediate drain failed (the cron will catch up):", e);
+        }
+      });
     }
   }
 

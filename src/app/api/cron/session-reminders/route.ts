@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendResendEmail } from "@/lib/email/resend";
+import { sendResendBatch, sendResendEmail } from "@/lib/email/resend";
 import { jobPublishedEmail, newMessageEmail, sessionReminderEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { raiseAlert } from "@/lib/alerts";
@@ -27,11 +27,11 @@ export const maxDuration = 150;
 
 // Bounded work per tick - ~35-45s of sequential sends at the worst.
 const REMINDER_BATCH = 90;
-// 180 every 10 minutes ≈ 1,000 an hour: three jobs to ~950 members each
-// (the owner, 5/10) finish in under three hours instead of eight. Paced at
-// Resend's 2 requests/second, 180 sends take ~100 s of the 150 s budget.
-const JOB_EMAIL_BATCH = 180;
-const SEND_GAP_MS = 550;
+// Batch sending (100 per request, 2 requests/second ≈ 200 emails/second):
+// 2,000 targets are ~20 requests, ~12 s - the whole three-job backlog of
+// 5/10 (~2,900) clears in two runs instead of eight hours. The publish action
+// also kicks this drain right away, so a run rarely waits for the cron.
+const JOB_EMAIL_BATCH = 2000;
 
 type Stage = "morning" | "t30" | "start";
 
@@ -233,46 +233,64 @@ async function drainJobEmails(admin: AdminClient) {
   let sent = 0;
   let failed = 0;
   const failedJobs = new Map<string, number>();
-  let rateLimited = false;
+  const now = new Date().toISOString();
+  // Build every email first, then send in batches; targets whose job is no
+  // longer live just drain (the owner, 2026-08-30: no nudges once a job moved on).
+  const drainOnly: { job_id: string; profile_id: string }[] = [];
+  const toSend: { t: { job_id: string; profile_id: string }; to: string; subject: string; html: string }[] = [];
   for (const t of targets) {
     const job = jobOf.get(t.job_id);
-    // Only live, published jobs still announce; a withdrawn one just drains -
-    // and so does a job already sent to the client / in interviews / hired
-    // (the owner, 2026-08-30: no submission nudges once the job moved on).
     const live = job && job.status === "open" && job.pipeline_status === "published";
     const email = live ? emailOf.get(t.profile_id) : null;
-    if (email && job) {
-      const p = nameOf.get(t.profile_id);
-      const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
-      const built = jobPublishedEmail(name, job.title, excerptOf.get(job.id) ?? "", applyUrl);
-      const res = await sendResendEmail({ to: email, subject: built.subject, html: built.html });
-      if (res.ok) {
-        sent++;
-      } else if (res.error === "blocked_by_allowlist") {
-        // Staging's environment gate, not a refusal - drains like before.
-      } else if ((res.error ?? "").startsWith("resend_429")) {
-        // Pace problem - leave her unstamped, the next run retries her first.
-        rateLimited = true;
-        console.error("[job email] rate limited, stopping this run:", res.error);
-        break;
-      } else {
-        // A refusal is recorded, never hidden (the owner, 5/10).
-        failed++;
-        failedJobs.set(t.job_id, (failedJobs.get(t.job_id) ?? 0) + 1);
-        await admin
-          .from("job_targets")
-          .update({ email_failed_at: new Date().toISOString(), email_error: (res.error ?? "send_failed").slice(0, 300) })
-          .eq("job_id", t.job_id)
-          .eq("profile_id", t.profile_id);
-        continue;
-      }
-      await new Promise((r) => setTimeout(r, SEND_GAP_MS));
+    if (!email || !job) {
+      drainOnly.push(t);
+      continue;
     }
-    await admin
-      .from("job_targets")
-      .update({ emailed_at: new Date().toISOString() })
-      .eq("job_id", t.job_id)
-      .eq("profile_id", t.profile_id);
+    const p = nameOf.get(t.profile_id);
+    const name = p?.first_name || p?.full_name?.split(" ")[0] || undefined;
+    const built = jobPublishedEmail(name, job.title, excerptOf.get(job.id) ?? "", applyUrl);
+    toSend.push({ t, to: email, subject: built.subject, html: built.html });
+  }
+  const outcomes = toSend.length ? await sendResendBatch(toSend.map(({ to, subject, html }) => ({ to, subject, html }))) : [];
+  const stampByJob = new Map<string, string[]>();
+  const stamp = (t: { job_id: string; profile_id: string }) => {
+    const list = stampByJob.get(t.job_id) ?? [];
+    list.push(t.profile_id);
+    stampByJob.set(t.job_id, list);
+  };
+  for (const t of drainOnly) stamp(t);
+  let rateLimited = false;
+  for (let i = 0; i < toSend.length; i++) {
+    const { t } = toSend[i];
+    const res = outcomes[i];
+    if (res.ok) {
+      sent++;
+      stamp(t);
+    } else if (res.error === "blocked_by_allowlist") {
+      // Staging's environment gate, not a refusal - drains like before.
+      stamp(t);
+    } else if (res.error.startsWith("resend_429")) {
+      // Pace problem - leave her unstamped, the next run retries her first.
+      rateLimited = true;
+    } else {
+      // A refusal is recorded, never hidden (the owner, 5/10).
+      failed++;
+      failedJobs.set(t.job_id, (failedJobs.get(t.job_id) ?? 0) + 1);
+      await admin
+        .from("job_targets")
+        .update({ email_failed_at: now, email_error: res.error.slice(0, 300) })
+        .eq("job_id", t.job_id)
+        .eq("profile_id", t.profile_id);
+    }
+  }
+  for (const [jobId, ids] of stampByJob) {
+    for (let i = 0; i < ids.length; i += 200) {
+      await admin
+        .from("job_targets")
+        .update({ emailed_at: now })
+        .eq("job_id", jobId)
+        .in("profile_id", ids.slice(i, i + 200));
+    }
   }
   for (const [jobId, n] of failedJobs) {
     const title = jobOf.get(jobId)?.title ?? jobId;
@@ -280,12 +298,13 @@ async function drainJobEmails(admin: AdminClient) {
       kind: "job_email_failed",
       severity: "warning",
       title: `${n} מיילי פרסום של ״${title}״ נדחו על ידי שירות המייל`,
-      body: "הכתובות שנדחו מסומנות בטאב פרסום של המשרה (״נכשלו״). רוב הדחיות הן כתובת לא תקינה או חסומה.",
+      body: "הכתובות שנדחו מסומנות בטאב פרסום של המשרה (״נדחו״). רוב הדחיות הן כתובת לא תקינה או חסומה.",
       context: { jobId },
-      dedupeKey: `job-email-failed:${jobId}:${new Date().toISOString().slice(0, 10)}`,
+      dedupeKey: `job-email-failed:${jobId}:${now.slice(0, 10)}`,
     }).catch(() => {});
   }
-  if (rateLimited) console.error("[job email] run ended early on a rate limit; the queue continues next run");
+  if (rateLimited) console.error("[job email] some batches were rate limited; the queue continues next run");
+  if (failed) console.error(`[job email] ${failed} refusals recorded`);
 
   const { count: remaining } = await admin
     .from("job_targets")
