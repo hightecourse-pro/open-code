@@ -1598,8 +1598,14 @@ export async function publishJob(
     }
   }
 
-  // Kick the queue drain now - not in up to ten minutes.
-  if (queued > 0) {
+  // Kick the queue drain now - not in up to ten minutes. Anything pending
+  // anywhere (this job's remainder, or an earlier job's backlog) goes out.
+  const { count: pendingAnywhere } = await admin
+    .from("job_targets")
+    .select("*", { count: "exact", head: true })
+    .is("emailed_at", null)
+    .is("email_failed_at", null);
+  if ((pendingAnywhere ?? 0) > 0) {
     const secret = process.env.CRON_SECRET;
     if (secret) {
       const url = `${getSiteUrl()}/api/cron/session-reminders?secret=${encodeURIComponent(secret)}`;
