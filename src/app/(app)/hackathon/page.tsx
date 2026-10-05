@@ -38,7 +38,7 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
           האקתון{" "}
           <span className="relative inline-block">
             <span className="t-gradient">AI</span>
-            <Squiggle className="absolute -bottom-1.5 right-0 w-full" />
+            <Squiggle className="absolute -bottom-0.5 right-0 w-full" />
           </span>{" "}
           קוד פתוח 2026
         </h1>
