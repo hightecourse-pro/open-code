@@ -2,14 +2,17 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import Image from "next/image";
 import Link from "next/link";
-import { Rubik } from "next/font/google";
+import localFont from "next/font/local";
 import { C, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF } from "./theme";
 
 export { C };
 
 // The ad's rounded, friendly Hebrew face (the owner, 25/9: "בצבעים ובנראות
 // של המודעה"). Loaded for the course pages only.
-export const rubik = Rubik({ subsets: ["hebrew", "latin"], weight: ["400", "500", "700", "900"], display: "swap" });
+// Self-hosted (5/10): Vercel builds started failing on the Google Fonts fetch
+// ("next/font/google queries have exactly one entry") - the variable TTF in
+// the repo removes that network dependency from every build.
+export const rubik = localFont({ src: "./fonts/Rubik-Variable.ttf", weight: "300 900", display: "swap" });
 
 /**
  * Partner logos. The owner sent שופרא and הייטקורס as pictures in the chat;
