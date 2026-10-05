@@ -766,7 +766,7 @@ export default async function AdminJobPage({
                 at: job.published_at,
                 audienceCount: targetRows?.length ?? 0,
                 emails: {
-                  sent: (targetRows ?? []).filter((t) => t.emailed_at).length,
+                  sent: (targetRows ?? []).filter((t) => t.emailed_at && !t.email_failed_at).length,
                   failed: (targetRows ?? []).filter((t) => t.email_failed_at).length,
                   queued: (targetRows ?? []).filter((t) => !t.emailed_at && !t.email_failed_at).length,
                 },
