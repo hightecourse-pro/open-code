@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { challengeByKey } from "@/lib/hackathon";
 
-const BUCKET = "attachments";
+const BUCKET = "hackathon";
 
 /**
  * Step 1 of a material upload: a signed upload slot in the private bucket.

@@ -16,7 +16,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const admin = createAdminClient();
   const { data: m } = await admin.from("hackathon_materials").select("file_path, title").eq("id", id).maybeSingle();
   if (!m) return new NextResponse("not found", { status: 404 });
-  const { data: signed, error } = await admin.storage.from("attachments").createSignedUrl(m.file_path, 60 * 60, {
+  const { data: signed, error } = await admin.storage.from("hackathon").createSignedUrl(m.file_path, 60 * 60, {
     download: m.title,
   });
   if (error || !signed?.signedUrl) return new NextResponse("unavailable", { status: 503 });

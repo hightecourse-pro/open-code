@@ -33,7 +33,7 @@ export function MaterialsManager({ challenges, materials: initial }: { challenge
     }
     setProgress(`מעלה ${formatBytes(file.size)}…`);
     const supabase = createClient();
-    const { error: upErr } = await supabase.storage.from("attachments").uploadToSignedUrl(slot.path, slot.token, file, { upsert: true });
+    const { error: upErr } = await supabase.storage.from("hackathon").uploadToSignedUrl(slot.path, slot.token, file, { upsert: true });
     if (upErr) {
       setProgress(null);
       return setError(`ההעלאה נכשלה: ${upErr.message}`);
