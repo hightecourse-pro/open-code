@@ -207,7 +207,7 @@ export default function HackathonPartnersPage() {
             <Sparkle className="absolute top-8 left-1/4 w-3 h-3" color="#FFFFFF" delay="0.5s" />
                         <div className="font-display font-black text-[22px] mt-1">רוצים להיות שותפים למהלך?</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              נשארו 3 מקומות - אתגר, חסות או רעיון אחר, נשמח לתפור יחד את השותפות שנכונה לכם
+              נשאר מקום אחד - אתגר, חסות או רעיון אחר, נשמח לתפור יחד את השותפות שנכונה לכם
             </div>
           </div>
 

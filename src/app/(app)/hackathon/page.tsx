@@ -1,188 +1,195 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, FileDown, Lock } from "lucide-react";
+import { ArrowLeft, CalendarDays, FileDown, Lock, Trophy } from "lucide-react";
 import { requireCommunityAccess, isSubscriber } from "@/lib/auth";
-import { CHALLENGES, H26Style, Sparkle, Squiggle, SwirlArrow } from "@/app/hackathon-2026/shared";
+import { CHALLENGES, HACKATHON_UPDATES, H26Style, Squiggle } from "@/app/hackathon-2026/shared";
+import { loadMaterials, loadMyRegistration, loadPairCandidates, loadPendingInvites, registrableChallenges } from "@/lib/hackathon";
+import { RegistrationForm } from "./registration-form";
+import { PairInvites } from "./pair-invites";
 
 export const metadata: Metadata = { title: "האקתון" };
+export const dynamic = "force-dynamic";
 
 /**
- * The in-community hackathon page (the owner, 7/9): community design, still
- * playful. The challenges live here, the full story lives on /hackathon-2026
- * (the members' page - NOT the partners one). The challenge-pick form is not
- * open yet; picking + downloading materials is for paid subscribers only.
+ * The in-community hackathon page (the owner, 5/10: "יותר נח ונקי אבל עדיין
+ * מגניב" + the community header motif): the standard page header, one
+ * gradient banner, a short "what's new" strip, pair invitations waiting for
+ * her answer, challenge cards in a grid, and the registration card.
+ * Registration counts are for the team only - never shown here.
  */
-export default async function HackathonPage() {
+export default async function HackathonPage({ searchParams }: { searchParams: Promise<{ challenge?: string }> }) {
   const profile = await requireCommunityAccess();
   const subscriber = isSubscriber(profile);
+  const { challenge: preselect } = await searchParams;
+  const [registration, candidates, materials, invites] = subscriber
+    ? await Promise.all([loadMyRegistration(profile.id), loadPairCandidates(profile.id), loadMaterials(), loadPendingInvites(profile.id)])
+    : [null, [], [], []];
+  const materialsByKey = new Map<string, number>();
+  for (const m of materials) materialsByKey.set(m.challenge_key, (materialsByKey.get(m.challenge_key) ?? 0) + 1);
+  const myChallenge = registration ? CHALLENGES.find((c) => c.key === registration.challengeKey) : null;
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div className="flex flex-col gap-6 max-w-4xl">
       <H26Style />
-
-      {/* ── header ── */}
-      <div className="relative">
-        <Sparkle className="absolute -top-1 left-[30%] w-4 h-4" color="#F0B429" delay="0.8s" />
+      {/* ── header - the community motif: gradient AI with the squiggle ── */}
+      <div>
         <span className="font-mono text-xs text-brand-pink-deep">&lt;האקתון/&gt;</span>
         <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">
           האקתון{" "}
           <span className="relative inline-block">
             <span className="t-gradient">AI</span>
-            <Squiggle className="absolute -bottom-1.5 right-0 w-full" />
+            <Squiggle className="absolute -bottom-0.5 right-0 w-full" />
           </span>{" "}
           קוד פתוח 2026
         </h1>
-        <p className="t-body-sm text-ink-700 mt-1">
-          אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.
-        </p>
+        <p className="t-body-sm text-ink-700">אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.</p>
       </div>
 
-      {/* ── the promise, loud ── */}
-      <div className="relative overflow-hidden bg-brand-gradient rounded-[22px] p-6 text-white shadow-glow-pink -rotate-[0.5deg]">
-        <Sparkle className="absolute top-3 left-6 w-5 h-5" color="#FFFFFF" />
-        <Sparkle className="absolute bottom-4 right-8 w-4 h-4" color="#F8D98C" delay="1.1s" />
-        <div className="font-display font-black text-[22px] leading-snug">
-          את בוחרת אתגר. בונה מנוע AI וממשק. עולה על הבמה 🏆
-        </div>
-        <div className="flex items-center gap-2 flex-wrap mt-3">
-          <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
-            💜 למנויות הקהילה
+      {/* ── banner ── */}
+      <section className="relative overflow-hidden bg-brand-gradient rounded-[22px] px-6 py-5 text-white shadow-glow-pink flex items-center gap-3 flex-wrap">
+        <div className="font-display font-black text-[19px] leading-snug">את בוחרת אתגר. בונה מנוע AI וממשק. עולה על הבמה 🏆</div>
+        <div className="flex items-center gap-2 flex-wrap ms-auto">
+          <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
+            <CalendarDays size={14} /> גמר · יום רביעי 28/10 · י״ז חשוון
           </span>
           <a
             href="/hackathon-2026"
             target="_blank"
             rel="noopener noreferrer"
-            className="ms-auto inline-flex items-center gap-1.5 bg-white text-brand-purple font-display font-bold text-[13.5px] px-4 py-1.5 rounded-full hover:bg-tint-purple transition-colors"
+            className="inline-flex items-center gap-1.5 bg-white text-brand-purple font-display font-bold text-[13.5px] px-4 py-1.5 rounded-full hover:bg-tint-purple transition-colors"
           >
             לדף האירוע המלא <ArrowLeft size={14} />
           </a>
         </div>
-      </div>
+      </section>
+
+      {/* ── what's new ── */}
+      <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <h2 className="font-display font-bold text-[15px] text-ink-1000">מה חדש</h2>
+          <span className="rounded-full bg-brand-gradient text-white text-[10.5px] font-bold px-2 py-0.5">חדש</span>
+        </div>
+        <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+          {HACKATHON_UPDATES.map((u) => (
+            <li key={u.text} className="flex items-start gap-2 text-[13.5px] text-ink-800">
+              <span className="font-mono text-[11.5px] text-ink-500 mt-0.5 shrink-0">{u.date}</span>
+              <span>{u.text}</span>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* ── invitations waiting for her ── */}
+      {subscriber && invites.length > 0 && (
+        <PairInvites invites={invites.map((i) => ({ inviterId: i.inviterId, inviterName: i.inviterName, challengeShort: i.challengeShort }))} />
+      )}
+
+      {/* ── my registration, at a glance ── */}
+      {subscriber && registration && myChallenge && (
+        <section
+          className={`border rounded-[18px] px-5 py-3.5 flex items-center gap-3 flex-wrap ${
+            registration.partner && !registration.partnerConfirmed ? "bg-amber-50 border-amber-300" : "bg-tint-mint/60 border-[#1B7A4B]/30"
+          }`}
+        >
+          <span className="text-[14px] text-ink-900">
+            {registration.partner && !registration.partnerConfirmed ? "⏳" : "✓"} את רשומה לאתגר <b>{myChallenge.short}</b>
+            {registration.partner
+              ? registration.partnerConfirmed
+                ? ` יחד עם ${registration.partner.name}`
+                : ` - ביקשת להגיש כזוג עם ${registration.partner.name}, ממתינות לאישורה`
+              : " (לבד)"}
+          </span>
+          <Link href={`/hackathon/${myChallenge.key}`} className="ms-auto text-[13px] font-bold text-brand-purple hover:underline">
+            לדף האתגר והחומרים ←
+          </Link>
+        </section>
+      )}
 
       {/* ── the challenges ── */}
       <section className="flex flex-col gap-3">
-        <div className="flex items-end gap-1">
-          <h2 className="font-display text-[20px] font-black text-ink-1000 -rotate-1">
-            האתגרים
-            <Squiggle className="block w-20 -mt-0.5" />
-          </h2>
-          <SwirlArrow className="h26-float w-10 h-9 mb-1" color="#E0418D" />
-        </div>
-
-        {CHALLENGES.map((c, i) =>
-          c.challenge ? (
-            <details
-              key={i}
-              className="group bg-white border-2 border-ink-900/10 shadow-[3px_4px_0_0_#F3C6DD] open:border-brand-pink transition-all md:-rotate-[0.6deg] hover:rotate-0"
-              style={{ borderRadius: "18px 22px 16px 24px" }}
-            >
-              <summary className="list-none cursor-pointer p-4 flex items-center gap-3 [&::-webkit-details-marker]:hidden">
-                {c.badgeLogo && (
-                  <span className="w-12 h-12 shrink-0 -rotate-6 rounded-full overflow-hidden bg-white border-2 border-brand-pink/30 shadow-sm flex items-center justify-center p-1">
+        <h2 className="font-display text-[20px] font-black text-ink-1000">האתגרים</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {CHALLENGES.map((c, i) =>
+            c.challenge && c.key ? (
+              <article
+                key={c.key}
+                className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3 hover:border-brand-purple/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  {c.badgeLogo && (
+                    <span className="w-12 h-12 shrink-0 rounded-full overflow-hidden bg-white border border-ink-200 flex items-center justify-center p-1">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={c.badgeLogo} alt={c.short} className="w-full h-full object-contain" />
+                    </span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="block font-display font-black text-[16.5px] leading-tight">{c.short}</span>
+                    {c.org && <span className="block text-[12.5px] text-ink-500 mt-0.5">{c.org}</span>}
+                  </span>
+                </div>
+                <p className="text-[13.5px] text-ink-800 leading-relaxed">{c.challenge}</p>
+                <div className="mt-auto flex items-center gap-3 flex-wrap text-[12.5px] text-ink-600">
+                  <Link
+                    href={`/hackathon/${c.key}`}
+                    className="inline-flex items-center gap-1.5 text-[13px] font-bold text-white bg-brand-gradient px-3.5 py-1.5 rounded-full hover:brightness-105"
+                  >
+                    לפרטי האתגר והחומרים <ArrowLeft size={13} />
+                  </Link>
+                  {(materialsByKey.get(c.key) ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <FileDown size={13} /> {materialsByKey.get(c.key)} קבצים
+                    </span>
+                  )}
+                </div>
+              </article>
+            ) : (
+              <div key={i} className={`${c.tint} border border-dashed border-ink-300 rounded-[18px] p-5 flex items-center gap-3`}>
+                {c.badgeLogo ? (
+                  <span className="w-12 h-12 shrink-0 rounded-full overflow-hidden bg-white border border-ink-200 flex items-center justify-center p-1">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={c.badgeLogo} alt={c.short} className="w-full h-full object-contain" />
                   </span>
+                ) : (
+                  <span className="w-12 h-12 shrink-0 rounded-full bg-white border border-ink-200 text-[20px] flex items-center justify-center">{c.emoji}</span>
                 )}
-                <span className="flex-1 min-w-0">
-                  <span className="block font-display font-black text-[16px] leading-tight">{c.short}</span>
-                  {c.org && <span className="block text-[12.5px] text-ink-500 mt-0.5">{c.org}</span>}
+                <span>
+                  <span className="block font-display font-bold text-[15px] text-ink-700">{c.short}</span>
+                  <span className="block text-[12.5px] text-ink-500">{c.teaser ?? "האתגר בדרך…"}</span>
                 </span>
-                <span className="font-mono text-brand-pink-deep text-sm group-open:rotate-90 transition-transform">&gt;</span>
-              </summary>
-              <div className="px-4 pb-4 pt-0 flex flex-col gap-2.5">
-                <p className="t-body-sm text-ink-900 leading-relaxed">{c.challenge}</p>
-                {c.partnerLogo && (
-                  <span className="self-center bg-white border border-ink-100 rounded-[12px] px-4 py-2 shadow-sm">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={c.partnerLogo} alt={c.org ?? ""} className="h-12 w-auto max-w-full" />
-                  </span>
-                )}
               </div>
-            </details>
-          ) : (
-            <div
-              key={i}
-              className={`${c.tint} border-2 border-dashed border-ink-300/70 p-3.5 flex items-center gap-3 md:rotate-[0.5deg]`}
-              style={{ borderRadius: "20px 16px 22px 18px" }}
-            >
-              <span
-                className="w-10 h-10 bg-white border border-ink-200 text-[18px] flex items-center justify-center shrink-0 rotate-6"
-                style={{ borderRadius: "50% 46% 54% 50% / 45% 55% 52% 48%" }}
-              >
-                <span className="h26-wiggle" style={{ animationDelay: `${i * 0.5}s` }}>{c.emoji}</span>
-              </span>
-              <span className="flex-1">
-                <span className="block font-display font-bold text-[14.5px] text-ink-500">{c.short}</span>
-                <span className="block text-[12px] text-ink-400">האתגר בדרך…</span>
-              </span>
-            </div>
-          )
-        )}
+            )
+          )}
+        </div>
       </section>
 
-      {/* ── picking a challenge: not open yet, subscribers only ── */}
-      <section
-        className={`relative border-2 p-5 ${subscriber ? "bg-tint-purple/30 border-brand-purple/40" : "bg-ink-50 border-ink-200"}`}
-        style={{ borderRadius: "24px 18px 26px 20px" }}
-      >
-        <Sparkle className="absolute -top-2.5 -right-2 w-6 h-6" color="#E0418D" />
-        <h2 className="font-display text-[17px] font-black text-ink-1000 flex items-center gap-2">
-          <Lock size={16} className={subscriber ? "text-brand-purple" : "text-ink-400"} />
-          בחירת אתגר והורדת חומרים
+      {/* ── registration ── */}
+      <section id="register" className="bg-white border border-ink-200 rounded-[18px] p-5 sm:p-6 shadow-sm scroll-mt-4">
+        <h2 className="font-display text-[18px] font-black text-ink-1000 flex items-center gap-2">
+          {subscriber ? <Trophy size={18} className="text-brand-purple" /> : <Lock size={16} className="text-ink-400" />}
+          {registration ? "ההרשמה שלך" : "הרשמה לאתגר"}
         </h2>
         {subscriber ? (
           <>
-            <p className="t-body-sm text-ink-700 mt-1.5">
-              טופס בחירת האתגר ייפתח כאן ממש בקרוב - ויחד איתו יעלו חומרי האתגרים להורדה.
-              שווה כבר עכשיו לבחור בלב איזה אתגר מדליק אותך 😉
-            </p>
-            <div className="flex items-center gap-2.5 flex-wrap mt-3">
-              <span
-                className="h26-bounce inline-flex items-center gap-2 bg-white border-2 border-dashed border-brand-pink/50 px-5 py-2.5 font-display font-bold text-[14px] text-ink-700 -rotate-1 shadow-[3px_4px_0_0_#F3C6DD]"
-                style={{ borderRadius: "999px" }}
-              >
-                🔒 הטופס ייפתח בקרוב
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[13px] text-ink-500">
-                <FileDown size={14} /> חומרי האתגרים - יעלו עם פתיחת הטופס
-              </span>
-            </div>
+            <p className="text-[13.5px] text-ink-600 mt-1 mb-4">אתגר אחד, לבד או כזוג חברות. אפשר להחליף בכל רגע עד האירוע.</p>
+            <RegistrationForm
+              challenges={registrableChallenges().map((c) => ({ key: c.key!, short: c.short, org: c.org }))}
+              candidates={candidates}
+              current={registration}
+              preselect={preselect}
+            />
           </>
         ) : (
           <>
-            <p className="t-body-sm text-ink-700 mt-1.5">
-              ההשתתפות בהאקתון, בחירת האתגר והורדת החומרים - למנויות הקהילה.
-            </p>
-            <p className="font-display font-bold text-[15px] text-ink-1000 mt-2">
-              רוצה להשתתף? הצטרפי 💜
-            </p>
+            <p className="text-[13.5px] text-ink-700 mt-1">ההשתתפות בהאקתון, בחירת האתגר והורדת החומרים - למנויות הקהילה.</p>
             <Link
               href="/join"
-              className="inline-flex items-center gap-1.5 mt-2.5 text-[13.5px] font-bold text-white bg-brand-gradient px-4 py-2 rounded-full hover:brightness-105 transition-[filter]"
+              className="inline-flex items-center gap-1.5 mt-3 text-[13.5px] font-bold text-white bg-brand-gradient px-4 py-2 rounded-full hover:brightness-105 transition-[filter]"
             >
-              להצטרפות <ArrowLeft size={14} />
+              רוצה להשתתף? הצטרפי 💜 <ArrowLeft size={14} />
             </Link>
           </>
         )}
       </section>
-
-      {/* ── the finale tease ── */}
-      <div
-        className="relative overflow-hidden bg-white border-2 border-ink-900/10 shadow-[4px_5px_0_0_#DDC9EC] p-5 text-center rotate-[0.5deg]"
-        style={{ borderRadius: "20px 26px 18px 24px" }}
-      >
-        <Sparkle className="absolute top-3 right-5 w-4 h-4" delay="0.4s" />
-        <Sparkle className="absolute bottom-3 left-6 w-4 h-4" color="#F0B429" delay="1.4s" />
-        <div className="font-display font-black text-[17px] text-ink-1000">אירוע סיום נוצץ ✨</div>
-        <p className="t-body-sm font-bold text-ink-900 mt-1">יום רביעי | 28/10 | י״ז חשוון</p>
-        <p className="t-body-sm text-ink-700 mt-1">
-          הקהילה חוגגת, והזוכות עולות לבמה 🏆 כל הפרטים, ההכנה והצעדים{" "}
-          <a href="/hackathon-2026" target="_blank" rel="noopener noreferrer" className="font-semibold text-brand-purple hover:underline">
-            בדף האירוע המלא
-          </a>
-          .
-        </p>
-      </div>
     </div>
   );
 }
