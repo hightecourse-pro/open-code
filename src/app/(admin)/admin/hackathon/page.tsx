@@ -20,7 +20,7 @@ export default async function AdminHackathonPage() {
   const [{ data: regs }, materials] = await Promise.all([
     admin
       .from("hackathon_registrations")
-      .select("profile_id, challenge_key, partner_profile_id, created_at, updated_at")
+      .select("profile_id, challenge_key, partner_profile_id, partner_confirmed_at, created_at, updated_at")
       .order("updated_at", { ascending: false })
       .limit(5000),
     loadMaterials(),
@@ -42,6 +42,7 @@ export default async function AdminHackathonPage() {
     challenge: CHALLENGES.find((c) => c.key === r.challenge_key)?.short ?? r.challenge_key,
     partnerId: r.partner_profile_id,
     partnerName: r.partner_profile_id ? (nameOf.get(r.partner_profile_id)?.name ?? null) : null,
+    partnerConfirmed: !!r.partner_confirmed_at,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   }));

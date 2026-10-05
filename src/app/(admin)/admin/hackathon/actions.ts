@@ -66,7 +66,7 @@ export async function deleteHackathonMaterial(id: string): Promise<{ error?: str
 export async function adminRemoveHackathonRegistration(profileId: string): Promise<{ error?: string }> {
   await requireRole("admin");
   const admin = createAdminClient();
-  await admin.from("hackathon_registrations").update({ partner_profile_id: null }).eq("partner_profile_id", profileId);
+  await admin.from("hackathon_registrations").update({ partner_profile_id: null, partner_confirmed_at: null }).eq("partner_profile_id", profileId);
   const { error } = await admin.from("hackathon_registrations").delete().eq("profile_id", profileId);
   if (error) return { error: error.message };
   revalidatePath("/admin/hackathon");

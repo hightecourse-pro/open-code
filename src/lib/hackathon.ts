@@ -16,6 +16,8 @@ export function challengeByKey(key: string): Challenge | null {
 export interface RegistrationView {
   challengeKey: string;
   partner: { id: string; name: string } | null;
+  /** False while the invited partner has not confirmed yet. */
+  partnerConfirmed: boolean;
   updatedAt: string;
 }
 
@@ -24,7 +26,7 @@ export async function loadMyRegistration(profileId: string): Promise<Registratio
   const admin = createAdminClient();
   const { data } = await admin
     .from("hackathon_registrations")
-    .select("challenge_key, partner_profile_id, updated_at")
+    .select("challenge_key, partner_profile_id, partner_confirmed_at, updated_at")
     .eq("profile_id", profileId)
     .maybeSingle();
   if (!data) return null;
@@ -33,7 +35,35 @@ export async function loadMyRegistration(profileId: string): Promise<Registratio
     const { data: p } = await admin.from("profiles").select("id, full_name").eq("id", data.partner_profile_id).maybeSingle();
     if (p) partner = { id: p.id, name: p.full_name };
   }
-  return { challengeKey: data.challenge_key, partner, updatedAt: data.updated_at };
+  return { challengeKey: data.challenge_key, partner, partnerConfirmed: !!data.partner_confirmed_at, updatedAt: data.updated_at };
+}
+
+export interface PairInvite {
+  inviterId: string;
+  inviterName: string;
+  challengeKey: string;
+  challengeShort: string;
+  since: string;
+}
+
+/** Invitations waiting for HER answer: rows naming her as partner, unconfirmed. */
+export async function loadPendingInvites(profileId: string): Promise<PairInvite[]> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("hackathon_registrations")
+    .select("profile_id, challenge_key, updated_at")
+    .eq("partner_profile_id", profileId)
+    .is("partner_confirmed_at", null);
+  if (!data?.length) return [];
+  const { data: names } = await admin.from("profiles").select("id, full_name").in("id", data.map((r) => r.profile_id));
+  const nameOf = new Map((names ?? []).map((p) => [p.id, p.full_name]));
+  return data.map((r) => ({
+    inviterId: r.profile_id,
+    inviterName: nameOf.get(r.profile_id) ?? "חברה",
+    challengeKey: r.challenge_key,
+    challengeShort: challengeByKey(r.challenge_key)?.short ?? r.challenge_key,
+    since: r.updated_at,
+  }));
 }
 
 /** Subscribers she can pair with (active paid juniors, not herself). */
@@ -58,13 +88,4 @@ export async function loadMaterials(challengeKey?: string): Promise<MaterialRow[
   if (challengeKey) q = q.eq("challenge_key", challengeKey);
   const { data } = await q;
   return (data ?? []) as MaterialRow[];
-}
-
-/** Count of registrations per challenge (members + pairs count as people). */
-export async function loadRegistrationCounts(): Promise<Record<string, number>> {
-  const admin = createAdminClient();
-  const { data } = await admin.from("hackathon_registrations").select("challenge_key").limit(5000);
-  const out: Record<string, number> = {};
-  for (const r of data ?? []) out[r.challenge_key] = (out[r.challenge_key] ?? 0) + 1;
-  return out;
 }

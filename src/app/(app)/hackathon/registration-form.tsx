@@ -23,7 +23,7 @@ export function RegistrationForm({
 }: {
   challenges: ChallengeOption[];
   candidates: { id: string; name: string }[];
-  current: { challengeKey: string; partner: { id: string; name: string } | null } | null;
+  current: { challengeKey: string; partner: { id: string; name: string } | null; partnerConfirmed?: boolean } | null;
   preselect?: string;
 }) {
   const [key, setKey] = useState<string>(current?.challengeKey ?? preselect ?? challenges[0]?.key ?? "");
@@ -58,7 +58,13 @@ export function RegistrationForm({
       const r = await registerForHackathon({ challengeKey: key, partnerId: mode === "pair" ? partnerId : null });
       if (r.error) return setError(r.error);
       const c = challenges.find((x) => x.key === key);
-      setDone(`נרשמת לאתגר ״${c?.short ?? key}״${mode === "pair" && chosen ? ` יחד עם ${chosen.name}` : ""} ✓`);
+      setDone(
+        mode === "pair" && chosen
+          ? r.invited
+            ? `נרשמת לאתגר ״${c?.short ?? key}״. שלחנו ל${chosen.name} מייל - ההרשמה כזוג תיכנס לתוקף כשהיא תאשר.`
+            : `נרשמת לאתגר ״${c?.short ?? key}״ יחד עם ${chosen.name} ✓`
+          : `נרשמת לאתגר ״${c?.short ?? key}״ ✓`
+      );
     });
   }
 
@@ -77,7 +83,12 @@ export function RegistrationForm({
       {current && !done && (
         <Alert variant="info">
           את רשומה לאתגר ״{challenges.find((c) => c.key === current.challengeKey)?.short ?? current.challengeKey}״
-          {current.partner ? ` יחד עם ${current.partner.name}` : " (לבד)"}. אפשר להחליף למטה בכל רגע.
+          {current.partner
+            ? current.partnerConfirmed
+              ? ` יחד עם ${current.partner.name} ✓`
+              : ` - ביקשת להגיש כזוג עם ${current.partner.name}, ממתינות לאישורה (שלחנו לה מייל)`
+            : " (לבד)"}
+          . אפשר להחליף למטה בכל רגע.
         </Alert>
       )}
       {done && <Alert variant="success">{done}</Alert>}
@@ -159,7 +170,7 @@ export function RegistrationForm({
             )}
             {!chosen && query.trim() && matches.length === 0 && <div className="text-[12.5px] text-ink-500 mt-1">לא נמצאה מנויה פעילה בשם הזה - אפשר לחפש לפי חלק מהשם.</div>}
             {!chosen && !query.trim() && <div className="text-[12px] text-ink-500 mt-1">הקלידי חלק מהשם הפרטי או המשפחה - הרשימה מסננת תוך כדי.</div>}
-            <p className="text-[12px] text-ink-500 mt-1.5">שתיכן תירשמנה לאותו אתגר. אם היא כבר רשומה לאתגר אחר, ההרשמה שלה תתעדכן.</p>
+            <p className="text-[12px] text-ink-500 mt-1.5">היא תקבל מייל ותצטרך לאשר בכניסה לקהילה; עד אז ההרשמה כזוג ממתינה לאישורה.</p>
           </div>
         )}
       </fieldset>

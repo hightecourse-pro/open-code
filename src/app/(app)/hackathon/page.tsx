@@ -1,53 +1,54 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, FileDown, Lock, Sparkles, Trophy, Users } from "lucide-react";
+import { ArrowLeft, CalendarDays, FileDown, Lock, Trophy } from "lucide-react";
 import { requireCommunityAccess, isSubscriber } from "@/lib/auth";
 import { CHALLENGES, HACKATHON_UPDATES } from "@/app/hackathon-2026/shared";
-import { loadMaterials, loadMyRegistration, loadPairCandidates, loadRegistrationCounts, registrableChallenges } from "@/lib/hackathon";
+import { loadMaterials, loadMyRegistration, loadPairCandidates, loadPendingInvites, registrableChallenges } from "@/lib/hackathon";
 import { RegistrationForm } from "./registration-form";
+import { PairInvites } from "./pair-invites";
 
 export const metadata: Metadata = { title: "האקתון" };
 export const dynamic = "force-dynamic";
 
 /**
  * The in-community hackathon page (the owner, 5/10: "יותר נח ונקי אבל עדיין
- * מגניב"): a calm layout - one gradient header, a short "what's new" strip,
- * challenge cards in a grid, and the registration card. The playful public
- * page keeps the sparkles; here the content leads.
+ * מגניב" + the community header motif): the standard page header, one
+ * gradient banner, a short "what's new" strip, pair invitations waiting for
+ * her answer, challenge cards in a grid, and the registration card.
+ * Registration counts are for the team only - never shown here.
  */
 export default async function HackathonPage({ searchParams }: { searchParams: Promise<{ challenge?: string }> }) {
   const profile = await requireCommunityAccess();
   const subscriber = isSubscriber(profile);
   const { challenge: preselect } = await searchParams;
-  const [registration, candidates, materials, counts] = subscriber
-    ? await Promise.all([loadMyRegistration(profile.id), loadPairCandidates(profile.id), loadMaterials(), loadRegistrationCounts()])
-    : [null, [], [], {} as Record<string, number>];
+  const [registration, candidates, materials, invites] = subscriber
+    ? await Promise.all([loadMyRegistration(profile.id), loadPairCandidates(profile.id), loadMaterials(), loadPendingInvites(profile.id)])
+    : [null, [], [], []];
   const materialsByKey = new Map<string, number>();
   for (const m of materials) materialsByKey.set(m.challenge_key, (materialsByKey.get(m.challenge_key) ?? 0) + 1);
   const myChallenge = registration ? CHALLENGES.find((c) => c.key === registration.challengeKey) : null;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl">
-      {/* ── header ── */}
-      <section className="relative overflow-hidden bg-brand-gradient rounded-[24px] p-6 sm:p-8 text-white shadow-glow-pink">
-        <Sparkles className="absolute top-5 left-6 w-5 h-5 opacity-70" aria-hidden />
-        <span className="font-mono text-[12px] opacity-80">&lt;האקתון/&gt;</span>
-        <h1 className="font-display text-[30px] sm:text-[34px] font-black leading-tight mt-1">האקתון AI קוד פתוח 2026</h1>
-        <p className="text-[15px] opacity-90 mt-1.5 max-w-xl">
-          את בוחרת אתגר אמיתי מהתעשייה, בונה מנוע AI וממשק, ועולה על הבמה בערב הגמר.
-        </p>
-        <div className="flex items-center gap-2 flex-wrap mt-4">
+      {/* ── header - the community motif ── */}
+      <div>
+        <span className="font-mono text-xs text-brand-pink-deep">&lt;האקתון/&gt;</span>
+        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">האקתון AI קוד פתוח 2026</h1>
+        <p className="t-body-sm text-ink-700">אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.</p>
+      </div>
+
+      {/* ── banner ── */}
+      <section className="relative overflow-hidden bg-brand-gradient rounded-[22px] px-6 py-5 text-white shadow-glow-pink flex items-center gap-3 flex-wrap">
+        <div className="font-display font-black text-[19px] leading-snug">את בוחרת אתגר. בונה מנוע AI וממשק. עולה על הבמה 🏆</div>
+        <div className="flex items-center gap-2 flex-wrap ms-auto">
           <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
-            <CalendarDays size={14} /> ערב גמר · יום רביעי 28/10 · י״ז חשוון
-          </span>
-          <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
-            <Trophy size={14} /> למנויות הקהילה
+            <CalendarDays size={14} /> גמר · יום רביעי 28/10 · י״ז חשוון
           </span>
           <a
             href="/hackathon-2026"
             target="_blank"
             rel="noopener noreferrer"
-            className="ms-auto inline-flex items-center gap-1.5 bg-white text-brand-purple font-display font-bold text-[13.5px] px-4 py-1.5 rounded-full hover:bg-tint-purple transition-colors"
+            className="inline-flex items-center gap-1.5 bg-white text-brand-purple font-display font-bold text-[13.5px] px-4 py-1.5 rounded-full hover:bg-tint-purple transition-colors"
           >
             לדף האירוע המלא <ArrowLeft size={14} />
           </a>
@@ -70,12 +71,25 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
         </ul>
       </section>
 
+      {/* ── invitations waiting for her ── */}
+      {subscriber && invites.length > 0 && (
+        <PairInvites invites={invites.map((i) => ({ inviterId: i.inviterId, inviterName: i.inviterName, challengeShort: i.challengeShort }))} />
+      )}
+
       {/* ── my registration, at a glance ── */}
       {subscriber && registration && myChallenge && (
-        <section className="bg-tint-mint/60 border border-[#1B7A4B]/30 rounded-[18px] px-5 py-3.5 flex items-center gap-3 flex-wrap">
+        <section
+          className={`border rounded-[18px] px-5 py-3.5 flex items-center gap-3 flex-wrap ${
+            registration.partner && !registration.partnerConfirmed ? "bg-amber-50 border-amber-300" : "bg-tint-mint/60 border-[#1B7A4B]/30"
+          }`}
+        >
           <span className="text-[14px] text-ink-900">
-            ✓ את רשומה לאתגר <b>{myChallenge.short}</b>
-            {registration.partner ? ` יחד עם ${registration.partner.name}` : " (לבד)"}
+            {registration.partner && !registration.partnerConfirmed ? "⏳" : "✓"} את רשומה לאתגר <b>{myChallenge.short}</b>
+            {registration.partner
+              ? registration.partnerConfirmed
+                ? ` יחד עם ${registration.partner.name}`
+                : ` - ביקשת להגיש כזוג עם ${registration.partner.name}, ממתינות לאישורה`
+              : " (לבד)"}
           </span>
           <Link href={`/hackathon/${myChallenge.key}`} className="ms-auto text-[13px] font-bold text-brand-purple hover:underline">
             לדף האתגר והחומרים ←
@@ -116,11 +130,6 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
                   {(materialsByKey.get(c.key) ?? 0) > 0 && (
                     <span className="inline-flex items-center gap-1">
                       <FileDown size={13} /> {materialsByKey.get(c.key)} קבצים
-                    </span>
-                  )}
-                  {subscriber && (counts[c.key] ?? 0) > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                      <Users size={13} /> {counts[c.key]} רשומות
                     </span>
                   )}
                 </div>

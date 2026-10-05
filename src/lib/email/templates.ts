@@ -995,3 +995,21 @@ export function courseRegistrationEmail(r: {
     }),
   };
 }
+
+/** A member invited her to submit a hackathon challenge as a pair (the owner, 5/10). */
+export function hackathonPairInviteEmail(inviteeFirstName: string | undefined, inviterName: string, challengeShort: string): BuiltEmail {
+  return {
+    subject: `${inviterName} מזמינה אותך להאקתון כזוג 👯‍♀️`,
+    html: renderEmail({
+      heading: `${inviteeFirstName ? `${inviteeFirstName}, ` : ""}יש לך הזמנה להאקתון`,
+      lines: [
+        `${inviterName} ביקשה להגיש איתך כזוג את האתגר ״${challengeShort}״ בהאקתון AI של קוד פתוח.`,
+        "ההרשמה שלכן כזוג תיכנס לתוקף רק אחרי שתאשרי - היכנסי לעמוד ההאקתון בקהילה ולחצי ״כן, נרשמות יחד״.",
+        "לא מתאים? אפשר לבחור ״לא הפעם״ - היא תישאר רשומה לבד, ואת תוכלי להירשם בנפרד לכל אתגר.",
+      ],
+      ctaText: "לאישור ההזמנה",
+      ctaUrl: `${SITE}/hackathon`,
+      footnote: "ההאקתון למנויות הקהילה. ערב הגמר: יום רביעי 28/10.",
+    }),
+  };
+}

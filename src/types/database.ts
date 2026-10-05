@@ -1982,8 +1982,8 @@ export interface Database {
         Relationships: [];
       };
       hackathon_registrations: {
-        Row: { id: string; profile_id: string; challenge_key: string; partner_profile_id: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; profile_id: string; challenge_key: string; partner_profile_id?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; profile_id: string; challenge_key: string; partner_profile_id: string | null; partner_confirmed_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; profile_id: string; challenge_key: string; partner_profile_id?: string | null; partner_confirmed_at?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_registrations"]["Insert"]>;
         Relationships: [];
       };

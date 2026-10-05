@@ -15,6 +15,7 @@ export interface RegistrationRow {
   challenge: string;
   partnerId: string | null;
   partnerName: string | null;
+  partnerConfirmed: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -33,7 +34,8 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
     for (const r of rows) c[r.challengeKey] = (c[r.challengeKey] ?? 0) + 1;
     return c;
   }, [rows]);
-  const pairs = rows.filter((r) => r.partnerId).length / 2;
+  const pairs = rows.filter((r) => r.partnerId && r.partnerConfirmed).length / 2;
+  const awaiting = rows.filter((r) => r.partnerId && !r.partnerConfirmed).length;
   const shown = rows.filter((r) => (filter === "all" || r.challengeKey === filter) && (!q.trim() || r.name.includes(q.trim()) || (r.partnerName ?? "").includes(q.trim())));
 
   function remove(r: RegistrationRow) {
@@ -48,8 +50,8 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
 
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const head = ["שם", "אתגר", "זוג עם", "נרשמה", "עודכן"];
-    const lines = shown.map((r) => [r.name, r.challenge, r.partnerName ?? "", fmt.format(new Date(r.createdAt)), fmt.format(new Date(r.updatedAt))].map(esc).join(","));
+    const head = ["שם", "אתגר", "זוג עם", "סטטוס זוג", "נרשמה", "עודכן"];
+    const lines = shown.map((r) => [r.name, r.challenge, r.partnerName ?? "", r.partnerId ? (r.partnerConfirmed ? "אושר" : "ממתין לאישור") : "", fmt.format(new Date(r.createdAt)), fmt.format(new Date(r.updatedAt))].map(esc).join(","));
     const blob = new Blob(["﻿" + [head.map(esc).join(","), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -62,7 +64,9 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
   return (
     <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
       <div className="flex items-center gap-2 flex-wrap">
-        <h2 className="font-display text-base font-bold">🏁 רשומות ({rows.length}{pairs > 0 ? ` · ${Math.floor(pairs)} זוגות` : ""})</h2>
+        <h2 className="font-display text-base font-bold">
+          🏁 רשומות ({rows.length}{pairs > 0 ? ` · ${Math.floor(pairs)} זוגות` : ""}{awaiting > 0 ? ` · ${awaiting} ממתינות לאישור זוג` : ""})
+        </h2>
         <div className="relative ms-auto min-w-[200px]">
           <Search className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-ink-400" aria-hidden />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש שם" className="pe-9" />
@@ -117,9 +121,16 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
                   <td className="px-3 py-2">{r.challenge}</td>
                   <td className="px-3 py-2 text-ink-700">
                     {r.partnerId ? (
-                      <Link href={`/admin/members/${r.partnerId}`} className="hover:underline">
-                        👯‍♀️ {r.partnerName ?? "-"}
-                      </Link>
+                      <span className="inline-flex items-center gap-1.5 flex-wrap">
+                        <Link href={`/admin/members/${r.partnerId}`} className="hover:underline">
+                          👯‍♀️ {r.partnerName ?? "-"}
+                        </Link>
+                        {r.partnerConfirmed ? (
+                          <Badge className="bg-tint-green text-green-800">אושר ✓</Badge>
+                        ) : (
+                          <Badge className="bg-amber-100 text-amber-800">ממתין לאישור</Badge>
+                        )}
+                      </span>
                     ) : (
                       <span className="text-ink-400">לבד</span>
                     )}
