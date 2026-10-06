@@ -134,7 +134,7 @@ export default async function AdminJobPage({
         .order("created_at", { ascending: true }),
       admin
         .from("job_targets")
-        .select("profile_id, emailed_at, email_failed_at")
+        .select("profile_id, emailed_at, email_failed_at, email_error")
         .eq("job_id", id)
         .limit(5000),
       // Portal clients the edit form can link the job to.
@@ -766,7 +766,8 @@ export default async function AdminJobPage({
                 at: job.published_at,
                 audienceCount: targetRows?.length ?? 0,
                 emails: {
-                  sent: (targetRows ?? []).filter((t) => t.emailed_at && !t.email_failed_at).length,
+                  sent: (targetRows ?? []).filter((t) => t.emailed_at && !t.email_failed_at && t.email_error !== "opted_out").length,
+                  optedOut: (targetRows ?? []).filter((t) => t.email_error === "opted_out").length,
                   failed: (targetRows ?? []).filter((t) => t.email_failed_at).length,
                   queued: (targetRows ?? []).filter((t) => !t.emailed_at && !t.email_failed_at).length,
                 },

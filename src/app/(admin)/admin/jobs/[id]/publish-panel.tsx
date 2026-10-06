@@ -40,7 +40,7 @@ export function PublishPanel({
   /** All active members, for the "add anyone" search (same list as the candidate picker). */
   allMembers: PickerMember[];
   /** Null while the job is a draft; otherwise the published summary. */
-  published: { at: string | null; audienceCount: number; emails?: { sent: number; queued: number; failed: number } } | null;
+  published: { at: string | null; audienceCount: number; emails?: { sent: number; queued: number; failed: number; optedOut?: number } } | null;
 }) {
   const router = useRouter();
   // question key → selected values. Filters accumulate across parameters, so
@@ -242,7 +242,12 @@ export function PublishPanel({
             {published.emails.failed > 0 && (
               <span className="rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 font-bold">{published.emails.failed} נדחו ע״י שירות המייל</span>
             )}
-            {published.emails.queued === 0 && published.emails.failed === 0 && <span className="text-ink-500">כולן קיבלו ✓</span>}
+            {(published.emails.optedOut ?? 0) > 0 && (
+              <span className="rounded-full bg-ink-100 text-ink-700 px-2 py-0.5 font-bold">{published.emails.optedOut} ביקשו בלי מיילים</span>
+            )}
+            {published.emails.queued === 0 && published.emails.failed === 0 && (published.emails.optedOut ?? 0) === 0 && (
+              <span className="text-ink-500">כולן קיבלו ✓</span>
+            )}
           </div>
         )}
         <div className="flex items-center gap-3 flex-wrap">

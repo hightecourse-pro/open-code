@@ -130,7 +130,7 @@ export async function GET(req: Request) {
   // processed either way - that is what moves the window forward.
   const recipients = batch.filter((p) => {
     const freq = p.digest_frequency || "daily";
-    if (freq === "off") return false;
+    if (freq === "off" || freq === "none") return false;
     if (freq === "unread") return (unreadByRecipient.get(p.id)?.count ?? 0) > 0;
     return true;
   });

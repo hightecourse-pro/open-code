@@ -1560,7 +1560,19 @@ export async function publishJob(
     const excerpt = jobExcerpt(job.description_html, job.description);
     const applyUrl = `${getSiteUrl()}/jobs`;
     const items: { profileId: string; to: string; subject: string; html: string }[] = [];
+    // "בלי מיילים בכלל" (the owner, 6/10): the job still shows on her board,
+    // the announcement mail does not go out - recorded as opted out.
+    const { optedOutOfEmails } = await import("@/lib/email-prefs");
+    const optedOut = await optedOutOfEmails(admin, inline);
+    if (optedOut.size > 0) {
+      await admin
+        .from("job_targets")
+        .update({ emailed_at: new Date().toISOString(), email_error: "opted_out" })
+        .eq("job_id", jobId)
+        .in("profile_id", [...optedOut]);
+    }
     for (const profileId of inline) {
+      if (optedOut.has(profileId)) continue;
       const email = emailOf.get(profileId);
       if (!email) {
         failed++;
