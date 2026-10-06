@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { formatSharedContacts, formatSharedLocation, type WaSharedContact, type WaSharedLocation } from "@/lib/whatsapp-format";
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
@@ -48,6 +49,10 @@ type WaInboundMessage = {
   audio?: WaMediaPayload;
   document?: WaMediaPayload;
   sticker?: WaMediaPayload;
+  /** A shared contact card (type "contacts") - names and numbers. */
+  contacts?: WaSharedContact[];
+  /** A shared location (type "location"). */
+  location?: WaSharedLocation;
 };
 type WaWebhookValue = {
   contacts?: { wa_id: string; profile?: { name?: string } }[];
@@ -64,6 +69,10 @@ function bodyOf(m: WaInboundMessage): string {
   if (m.button?.text) return m.button.text;
   if (m.interactive?.button_reply?.title) return m.interactive.button_reply.title;
   if (m.interactive?.list_reply?.title) return m.interactive.list_reply.title;
+  // A shared contact / location carries no text - spell it out, so the
+  // number she was sent is right there in the thread (the owner, 6/10).
+  const shared = formatSharedContacts(m.contacts) || formatSharedLocation(m.location);
+  if (shared) return shared;
   return "";
 }
 
@@ -206,7 +215,9 @@ export async function POST(req: Request) {
           const body =
             bodyOf(m) ||
             caption ||
-            (mediaKind ? `[${KIND_HE[mediaKind]}${stored ? "" : " - לא הצלחנו למשוך את הקובץ"}]` : "[הודעה]");
+            (mediaKind
+              ? `[${KIND_HE[mediaKind]}${stored ? "" : " - לא הצלחנו למשוך את הקובץ"}]`
+              : `[הודעה מסוג שלא מוצג כאן${m.type ? `: ${m.type}` : ""} - אפשר לראות אותה בטלפון]`);
           // Idempotent on Meta's message id - redeliveries change nothing.
           await admin
             .from("wa_messages")
