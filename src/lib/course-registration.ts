@@ -31,11 +31,69 @@ export const COURSE_PRICE = {
 export const MEMBERSHIP_MONTHLY = 39;
 
 /**
- * Where "ממשיכה לתשלום" sends her. COURSE_PAYMENT_URL (Vercel env) wins;
- * the fallback is Nedarim Plus's public payment page for Shufra's mosad.
+ * Shufra's Nedarim payment page for the course (the owner, 6/10:
+ * https://nedar.im/cSpv). The short link is a saved configuration on their
+ * mosad: 1,500 ₪ locked, 12 payments, group "שימור מקצועי הנדסת תוכנה" - the
+ * subscriber price. The long form is used because it takes extra URL
+ * parameters (the short one drops them on its redirect).
+ * COURSE_PAYMENT_URL (Vercel env) overrides it.
  */
 export function coursePaymentUrl(): string {
-  return process.env.COURSE_PAYMENT_URL?.trim() || `https://www.matara.pro/nedarimplus/online/?mosad=${SHUFRA_MOSAD_ID}`;
+  return process.env.COURSE_PAYMENT_URL?.trim() || "https://www.matara.pro/nedarimplus/online/?S=cSpv";
+}
+
+/** Without the subscriber scholarship there is no saved link yet - the mosad's open page. */
+export function coursePaymentUrlFull(): string {
+  return process.env.COURSE_PAYMENT_URL_FULL?.trim() || `https://www.matara.pro/nedarimplus/online/?mosad=${SHUFRA_MOSAD_ID}`;
+}
+
+export interface PaymentLinkInput {
+  subscriber: boolean;
+  fullName: string;
+  email: string;
+  phone: string;
+  regCode: string;
+  payToken: string;
+  siteUrl: string;
+}
+
+/**
+ * No callback is possible on someone else's mosad - but their payment page
+ * reads URL parameters (verified against the page's own script, 6/10):
+ *   ClientName / Email / Phone - prefilled, so the payment carries the same
+ *                                details as the registration;
+ *   Analytic  - prefixed to the payment's comment: our registration code
+ *               shows up in Shufra's Nedarim report next to the charge;
+ *   Redirect  - after a SUCCESSFUL charge the page sends her browser there:
+ *               our /masters-course/paid?r=<token> marks "reported as paid".
+ * Values are encodeURIComponent'ed (the page decodes with decodeURIComponent,
+ * which does not turn "+" into a space).
+ */
+export function buildCoursePaymentUrl(i: PaymentLinkInput): string {
+  const base = i.subscriber ? coursePaymentUrl() : coursePaymentUrlFull();
+  const back = `${i.siteUrl.replace(/\/$/, "")}/masters-course/paid?r=${i.payToken}`;
+  const params: [string, string][] = [
+    ["ClientName", i.fullName],
+    ["Email", i.email],
+    ["Phone", i.phone],
+    ["Analytic", i.regCode],
+    ["Redirect", back],
+  ];
+  const qs = params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
+  return `${base}${base.includes("?") ? "&" : "?"}${qs}`;
+}
+
+/** "OC-7K3F9Q" - short enough to read over the phone, unambiguous letters. */
+export function newRegCode(): string {
+  const alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
+  let out = "";
+  const bytes = crypto.getRandomValues(new Uint8Array(6));
+  for (const b of bytes) out += alphabet[b % alphabet.length];
+  return `OC-${out}`;
+}
+
+export function newPayToken(): string {
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 /** Who hears about every registration (the owner: office@ by default). */

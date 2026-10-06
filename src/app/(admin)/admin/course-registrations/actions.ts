@@ -5,7 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 
-export type CourseRegistrationStatus = "registered" | "paid" | "canceled";
+export type CourseRegistrationStatus = "registered" | "paid_reported" | "paid" | "canceled";
 
 /** Team bookkeeping on a registrant: paid (confirmed by Shufra) / canceled / note. */
 export async function updateCourseRegistration(
@@ -16,7 +16,7 @@ export async function updateCourseRegistration(
   const admin = createAdminClient();
   const row: Database["public"]["Tables"]["course_registrations"]["Update"] = { updated_at: new Date().toISOString() };
   if (patch.status) {
-    if (!["registered", "paid", "canceled"].includes(patch.status)) return { error: "סטטוס לא מוכר" };
+    if (!["registered", "paid_reported", "paid", "canceled"].includes(patch.status)) return { error: "סטטוס לא מוכר" };
     row.status = patch.status;
     row.paid_at = patch.status === "paid" ? new Date().toISOString() : null;
   }

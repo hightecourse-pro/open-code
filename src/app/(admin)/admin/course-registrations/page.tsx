@@ -17,7 +17,7 @@ export default async function CourseRegistrationsPage() {
   const admin = createAdminClient();
   const { data } = await admin
     .from("course_registrations")
-    .select("id, email, full_name, phone, profile_id, is_subscriber, membership_note, status, paid_at, notes, created_at")
+    .select("id, email, full_name, phone, profile_id, is_subscriber, membership_note, status, paid_at, notes, created_at, reg_code, payment_reported_at")
     .eq("course_key", COURSE_KEY)
     .order("created_at", { ascending: false })
     .limit(2000);
@@ -41,7 +41,9 @@ export default async function CourseRegistrationsPage() {
       <div>
         <h1 className="font-display font-bold text-[24px] text-ink-1000">נרשמות לקורס {COURSE_TITLE}</h1>
         <p className="text-[13.5px] text-ink-600 mt-1 leading-relaxed">
-          כל מי שנרשמה בדף הציבורי (/masters-course/register). התשלום נסלק אצל שופרא בנדרים - אחרי אישור מהן סמני ״שולם״ כאן.
+          כל מי שנרשמה בדף הציבורי (/masters-course/register). התשלום נסלק אצל שופרא בנדרים. מי שהשלימה תשלום חוזרת
+          אלינו אוטומטית מדף התשלום ומסומנת ״חזרה מדף התשלום - לאימות״; קוד ההרשמה שלה מופיע בהערת התשלום בדוח נדרים של
+          שופרא. אחרי אימות סמני ״שולם ✓״.
           על כל הרשמה חדשה יוצאים התראה בניהול ומייל ל-{courseNotifyEmail()}.
         </p>
         <p className="text-[12px] text-ink-500 mt-1" dir="ltr">

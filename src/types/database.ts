@@ -2001,6 +2001,9 @@ export interface Database {
           full_name: string;
           first_name: string | null;
           last_name: string | null;
+          reg_code: string | null;
+          pay_token: string | null;
+          payment_reported_at: string | null;
           phone: string | null;
           profile_id: string | null;
           is_subscriber: boolean;
@@ -2018,6 +2021,9 @@ export interface Database {
           full_name: string;
           first_name?: string | null;
           last_name?: string | null;
+          reg_code?: string | null;
+          pay_token?: string | null;
+          payment_reported_at?: string | null;
           phone?: string | null;
           profile_id?: string | null;
           is_subscriber?: boolean;

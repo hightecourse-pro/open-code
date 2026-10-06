@@ -1013,3 +1013,38 @@ export function hackathonPairInviteEmail(inviteeFirstName: string | undefined, i
     }),
   };
 }
+
+/** She came back from Shufra's payment page - a warm confirmation (the owner, 6/10). */
+export function coursePaymentThanksEmail(firstName: string | undefined, regCode: string): BuiltEmail {
+  return {
+    subject: "קיבלנו! ההרשמה שלך לקורס מאסטרית בהייטק 🎓",
+    html: renderEmail({
+      heading: `${firstName ? `${firstName}, ` : ""}נרשמת לקורס מאסטרית בהייטק 🎉`,
+      lines: [
+        "התשלום נקלט בדף התשלום של שופרא, וההרשמה שלך אצלנו.",
+        "בימים הקרובים נשלח לך את כל הפרטים: מועדי המפגשים, הקבוצה וחומרי הפתיחה.",
+        `קוד ההרשמה שלך: <b>${regCode}</b> - כדאי לשמור, הוא מזהה את התשלום שלך.`,
+        "תזכורת: מלגת המנויות מותנית במנוי פעיל בקוד פתוח לאורך כל שנת הקורס.",
+      ],
+      footnote: "שאלות? office@opencode.org.il",
+    }),
+  };
+}
+
+/** The team hears that a registrant returned from the payment page. */
+export function coursePaymentReportedEmail(r: { fullName: string; email: string; phone: string; regCode: string; isSubscriber: boolean }): BuiltEmail {
+  return {
+    subject: `חזרה מדף התשלום: ${r.fullName} (${r.regCode})`,
+    html: renderEmail({
+      heading: "תשלום לקורס - לאימות 💳",
+      lines: [
+        `<b>${r.fullName}</b> חזרה עכשיו מדף התשלום של שופרא בנדרים אחרי חיוב מוצלח.`,
+        `מייל: ${r.email} · טלפון: ${r.phone} · ${r.isSubscriber ? "מנויה (מחיר מלגה 1,500 ₪)" : "לא מנויה"}`,
+        `קוד ההרשמה <b>${r.regCode}</b> מופיע בהערת התשלום בדוח נדרים של שופרא - לפיו מאמתים.`,
+        "אחרי האימות מול שופרא סמני ״שולם ✓״ במסך הנרשמות.",
+      ],
+      ctaText: "לרשימת הנרשמות לקורס",
+      ctaUrl: `${SITE}/admin/course-registrations`,
+    }),
+  };
+}
