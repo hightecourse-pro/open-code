@@ -4,6 +4,7 @@ import { sendResendBatch, sendResendEmail } from "@/lib/email/resend";
 import { jobPublishedEmail, newMessageEmail, sessionReminderEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { raiseAlert } from "@/lib/alerts";
+import { optedOutOfEmails } from "@/lib/email-prefs";
 
 /**
  * The 10-minute notifications tick (pg_cron): session reminders and queued
@@ -165,12 +166,14 @@ async function drainReminderQueue(admin: AdminClient) {
     .in("id", sessionIds);
   const sessionOf = new Map((sessions ?? []).map((s) => [s.id, s]));
   const emailOf = await emailsFor(admin, [...new Set(batch.map((b) => b.profile_id))]);
+  // "בלי מיילים בכלל" (the owner, 6/10) - her reminders drain unsent.
+  const optedOut = await optedOutOfEmails(admin, batch.map((b) => b.profile_id));
 
   let sent = 0;
   for (const row of batch) {
     const session = sessionOf.get(row.session_id);
     // A canceled/finished session voids its queued reminders.
-    const voided = !session || session.status === "done" || session.canceled_at;
+    const voided = !session || session.status === "done" || session.canceled_at || optedOut.has(row.profile_id);
     const email = voided ? null : emailOf.get(row.profile_id);
     if (email && session) {
       const time = TIME_IL.format(new Date(session.scheduled_at));
@@ -238,9 +241,16 @@ async function drainJobEmails(admin: AdminClient) {
   // longer live just drain (the owner, 2026-08-30: no nudges once a job moved on).
   const drainOnly: { job_id: string; profile_id: string }[] = [];
   const toSend: { t: { job_id: string; profile_id: string }; to: string; subject: string; html: string }[] = [];
+  // "בלי מיילים בכלל" - recorded as opted out, never mailed, never "sent".
+  const optedOut = await optedOutOfEmails(admin, profileIds);
+  const optedOutTargets: { job_id: string; profile_id: string }[] = [];
   for (const t of targets) {
     const job = jobOf.get(t.job_id);
     const live = job && job.status === "open" && job.pipeline_status === "published";
+    if (live && optedOut.has(t.profile_id)) {
+      optedOutTargets.push(t);
+      continue;
+    }
     const email = live ? emailOf.get(t.profile_id) : null;
     if (!email || !job) {
       drainOnly.push(t);
@@ -282,6 +292,13 @@ async function drainJobEmails(admin: AdminClient) {
         .eq("job_id", t.job_id)
         .eq("profile_id", t.profile_id);
     }
+  }
+  for (const t of optedOutTargets) {
+    await admin
+      .from("job_targets")
+      .update({ emailed_at: now, email_error: "opted_out" })
+      .eq("job_id", t.job_id)
+      .eq("profile_id", t.profile_id);
   }
   for (const [jobId, ids] of stampByJob) {
     for (let i = 0; i < ids.length; i += 200) {
@@ -373,7 +390,7 @@ async function drainChatEmailGrace(admin: ReturnType<typeof createAdminClient>) 
       .select("digest_frequency")
       .eq("id", recipientId)
       .maybeSingle();
-    const wantsEmail = (rp?.digest_frequency || "daily") !== "off";
+    const wantsEmail = !["off", "none"].includes(rp?.digest_frequency || "daily");
     if ((replied ?? 0) === 0 && wantsEmail) {
       try {
         const { data: ru } = await admin.auth.admin.getUserById(recipientId);

@@ -48,7 +48,8 @@ export const metadata: Metadata = { title: "פרופיל חברה" };
 const DIGEST_LABEL: Record<string, string> = {
   daily: "מייל יומי",
   unread: "רק כשיש הודעות שלא נקראו",
-  off: "בלי מיילים",
+  off: "בלי המייל היומי",
+  none: "בלי מיילים בכלל (גם לא משרות)",
 };
 
 const CV_LANG: Record<string, string> = {

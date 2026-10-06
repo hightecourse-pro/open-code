@@ -33,7 +33,7 @@ export async function setDigestFrequency(freq: string): Promise<void> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  const valid = ["daily", "unread", "off"].includes(freq) ? freq : "daily";
+  const valid = ["daily", "unread", "off", "none"].includes(freq) ? freq : "daily";
   await supabase.from("profiles").update({ digest_frequency: valid }).eq("id", user.id);
   revalidatePath("/profile");
 }

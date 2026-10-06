@@ -8,7 +8,12 @@ import { setDigestFrequency } from "@/app/(app)/profile/actions";
 const OPTIONS: { value: string; label: string; desc: string }[] = [
   { value: "daily", label: "כל יום", desc: "סיכום יומי קצר של מה שחדש בקהילה" },
   { value: "unread", label: "רק כשיש חדש", desc: "מייל רק כשמחכות לך הודעות חדשות בצ'אט" },
-  { value: "off", label: "בלי מיילים", desc: "לא לקבל את המייל היומי" },
+  { value: "off", label: "בלי המייל היומי", desc: "לא לקבל את הסיכום היומי. עדכונים על משרות חדשות ימשיכו להגיע" },
+  {
+    value: "none",
+    label: "בלי מיילים בכלל",
+    desc: "שימי לב: לא יגיעו אלייך במייל עדכונים על משרות שמתפרסמות, וגם לא הסיכום היומי, תזכורות לסשנים והתראות על הודעות. מיילים אישיים - על המנוי שלך, על מועמדות שהגשת והודעה מהצוות - ימשיכו להגיע",
+  },
 ];
 
 export function DigestPreferences({ current }: { current: string }) {
@@ -32,7 +37,7 @@ export function DigestPreferences({ current }: { current: string }) {
         <h2 className="font-display text-lg font-bold text-ink-1000">העדפות מייל</h2>
         {saved && <span className="text-[12px] text-[#1B7A4B] flex items-center gap-1 ms-auto"><Check size={13} /> נשמר</span>}
       </div>
-      <p className="t-body-sm text-ink-500 mb-4">מתי לשלוח לך את המייל היומי של הקהילה?</p>
+      <p className="t-body-sm text-ink-500 mb-4">אילו מיילים לשלוח לך מהקהילה?</p>
       <div className="flex flex-col gap-2.5">
         {OPTIONS.map((o) => {
           const active = value === o.value;
@@ -56,7 +61,7 @@ export function DigestPreferences({ current }: { current: string }) {
               </span>
               <span>
                 <span className="font-display font-bold text-[14.5px] text-ink-1000 block">{o.label}</span>
-                <span className="text-[12.5px] text-ink-500">{o.desc}</span>
+                <span className={cn("text-[12.5px]", o.value === "none" && active ? "text-amber-800" : "text-ink-500")}>{o.desc}</span>
               </span>
             </button>
           );

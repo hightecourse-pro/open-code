@@ -55,6 +55,7 @@ export async function GET(request: Request) {
   const { data: candidates, error } = await admin
     .from("profiles")
     .select("id, full_name, role, status, created_at")
+    .neq("digest_frequency", "none")
     .eq("profile_completed", false)
     .in("role", ["junior", "mentor"])
     .in("status", ["pending", "active"])
