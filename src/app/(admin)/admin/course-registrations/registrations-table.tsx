@@ -19,12 +19,21 @@ export interface RegistrationRow {
   paid_at: string | null;
   notes: string | null;
   created_at: string;
+  reg_code?: string | null;
+  payment_reported_at?: string | null;
+  /** What Shufra's callback (or a manual attach) wrote on her. */
+  payment_amount_agorot?: number | null;
+  payment_installments?: number | null;
+  nedarim_transaction_id?: string | null;
   /** Membership right now (the page computes it); the snapshot is is_subscriber. */
   subscriber_now?: boolean;
 }
 
+const nis = (agorot: number) => new Intl.NumberFormat("he-IL").format(agorot / 100);
+
 const STATUS: Record<string, { label: string; cls: string }> = {
   registered: { label: "נרשמה", cls: "bg-tint-purple text-brand-purple" },
+  paid_reported: { label: "חזרה מדף התשלום - לאימות", cls: "bg-amber-100 text-amber-800" },
   paid: { label: "שולם ✓", cls: "bg-tint-green text-green-800" },
   canceled: { label: "בוטל", cls: "bg-ink-100 text-ink-600" },
 };
@@ -33,15 +42,20 @@ const fmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit",
 
 function csvOf(rows: RegistrationRow[]): string {
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["שם", "מייל", "טלפון", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "שולם ב", "הערה", "נרשמה ב"];
+  const head = ["שם", "מייל", "טלפון", "קוד הרשמה", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "סכום ששולם", "תשלומים", "אסמכתא נדרים", "חזרה מדף התשלום", "שולם ב", "הערה", "נרשמה ב"];
   const lines = rows.map((r) =>
     [
       r.full_name,
       r.email,
       r.phone ?? "",
+      r.reg_code ?? "",
       r.is_subscriber ? "כן" : "לא",
       r.subscriber_now ? "כן" : "לא",
       STATUS[r.status]?.label ?? r.status,
+      r.payment_amount_agorot != null ? String(r.payment_amount_agorot / 100) : "",
+      r.payment_installments ?? "",
+      r.nedarim_transaction_id ?? "",
+      r.payment_reported_at ? fmt.format(new Date(r.payment_reported_at)) : "",
       r.paid_at ? fmt.format(new Date(r.paid_at)) : "",
       r.notes ?? "",
       fmt.format(new Date(r.created_at)),
@@ -55,7 +69,7 @@ function csvOf(rows: RegistrationRow[]): string {
 export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] }) {
   const [rows, setRows] = useState(initial);
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "subscribers" | "paid" | "open">("all");
+  const [filter, setFilter] = useState<"all" | "subscribers" | "paid" | "open" | "verify">("all");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -65,8 +79,9 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
       if (filter === "subscribers" && !(r.is_subscriber || r.subscriber_now)) return false;
       if (filter === "paid" && r.status !== "paid") return false;
       if (filter === "open" && r.status !== "registered") return false;
+      if (filter === "verify" && r.status !== "paid_reported") return false;
       if (!needle) return true;
-      return [r.full_name, r.email, r.phone ?? "", r.notes ?? ""].some((s) => s.toLowerCase().includes(needle));
+      return [r.full_name, r.email, r.phone ?? "", r.notes ?? "", r.reg_code ?? ""].some((s) => s.toLowerCase().includes(needle));
     });
   }, [rows, q, filter]);
 
@@ -121,7 +136,8 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
           [
             ["all", `הכל (${counts.total})`],
             ["subscribers", `מנויות (${counts.subscribers})`],
-            ["open", `ממתינות לתשלום (${counts.total - counts.paid - rows.filter((r) => r.status === "canceled").length})`],
+            ["open", `טרם שילמו (${rows.filter((r) => r.status === "registered").length})`],
+            ["verify", `לאימות (${rows.filter((r) => r.status === "paid_reported").length})`],
             ["paid", `שולם (${counts.paid})`],
           ] as const
         ).map(([k, label]) => (
@@ -139,7 +155,7 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
         ))}
         <div className="relative ms-auto min-w-[220px]">
           <Search className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-ink-400" aria-hidden />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש שם / מייל / טלפון" className="pe-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש שם / מייל / טלפון / קוד" className="pe-9" />
         </div>
         <Button type="button" size="sm" variant="secondary" onClick={exportCsv} disabled={shown.length === 0}>
           ייצוא CSV ({shown.length})
@@ -184,6 +200,11 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
                     <div dir="ltr" className="text-start text-ink-500">
                       {r.phone}
                     </div>
+                    {r.reg_code && (
+                      <div dir="ltr" className="text-start font-mono text-[11.5px] text-brand-purple mt-0.5" title="קוד ההרשמה - מופיע בהערת התשלום בנדרים">
+                        {r.reg_code}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2">
                     {r.subscriber_now || r.is_subscriber ? (
@@ -211,6 +232,19 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
                         </option>
                       ))}
                     </select>
+                    {r.payment_reported_at && r.status !== "paid" && (
+                      <div className="text-[11px] text-amber-700 mt-1">חזרה מדף התשלום {fmt.format(new Date(r.payment_reported_at))}</div>
+                    )}
+                    {r.payment_amount_agorot != null && (
+                      <div className="text-[11.5px] text-green-800 mt-1 whitespace-nowrap" title={r.nedarim_transaction_id ? `אסמכתא נדרים ${r.nedarim_transaction_id}` : undefined}>
+                        💳 {nis(r.payment_amount_agorot)} ₪{r.payment_installments && r.payment_installments > 1 ? ` · ${r.payment_installments} תשלומים` : ""}
+                        {r.nedarim_transaction_id && (
+                          <span dir="ltr" className="text-ink-400 ms-1">
+                            #{r.nedarim_transaction_id}
+                          </span>
+                        )}
+                      </div>
+                    )}
                     {r.paid_at && <div className="text-[11px] text-ink-500 mt-1">{fmt.format(new Date(r.paid_at))}</div>}
                   </td>
                   <td className="px-3 py-2 min-w-[180px]">

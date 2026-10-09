@@ -6,8 +6,11 @@ import { sendEmail } from "@/lib/email/send";
 import { courseRegistrationEmail } from "@/lib/email/templates";
 import {
   COURSE_KEY,
+  buildCoursePaymentUrl,
   coursePaymentUrl,
   courseNotifyEmail,
+  newPayToken,
+  newRegCode,
   lookupMembership,
   normalizeEmail,
 } from "@/lib/course-registration";
@@ -69,10 +72,14 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
   const admin = createAdminClient();
   const { data: existing } = await admin
     .from("course_registrations")
-    .select("id")
+    .select("id, reg_code, pay_token")
     .eq("course_key", COURSE_KEY)
     .ilike("email", email)
     .maybeSingle();
+  // Her registration code (goes into the payment's comment at Nedarim) and
+  // the token of her way back from the payment page. Stable across re-submits.
+  const regCode = existing?.reg_code || newRegCode();
+  const payToken = existing?.pay_token || newPayToken();
 
   const row = {
     course_key: COURSE_KEY,
@@ -84,6 +91,8 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
     profile_id: m.profileId,
     is_subscriber: m.isSubscriber,
     membership_note: membershipNote,
+    reg_code: regCode,
+    pay_token: payToken,
     updated_at: new Date().toISOString(),
   };
   const { error } = existing
@@ -99,7 +108,7 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
         kind: "course_registration",
         severity: "info",
         title: `נרשמה לקורס מאסטרית: ${fullName}`,
-        body: `${email} · ${phoneDigits} · ${m.isSubscriber ? "מנויה ✓" : "לא מנויה"} · ${membershipNote}`,
+        body: `${email} · ${phoneDigits} · ${m.isSubscriber ? "מנויה ✓" : "לא מנויה"} · קוד ${regCode} · ${membershipNote}`,
         dedupeKey: `course_registration:${COURSE_KEY}:${email}`,
       });
     } catch {
@@ -113,5 +122,17 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
     }
   }
 
-  return { ok: true, paymentUrl: coursePaymentUrl(), subscriber: m.isSubscriber, joinUrl: m.profileId ? "/join" : "/signup" };
+  const { getSiteUrl } = await import("@/lib/site");
+  const { effectiveAmountOverride } = await import("@/lib/course-settings");
+  const paymentUrl = buildCoursePaymentUrl({
+    subscriber: m.isSubscriber,
+    fullName,
+    email,
+    phone: phoneDigits,
+    regCode,
+    payToken,
+    siteUrl: getSiteUrl(),
+    amountOverride: await effectiveAmountOverride(),
+  });
+  return { ok: true, paymentUrl, subscriber: m.isSubscriber, joinUrl: m.profileId ? "/join" : "/signup" };
 }

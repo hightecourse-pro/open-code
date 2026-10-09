@@ -18,3 +18,10 @@ export const C = {
 export const CONTACT_PHONE = "02-580-0296";
 export const CONTACT_PHONE_HREF = "tel:+97225800296";
 export const CONTACT_EMAIL = "office@opencode.org.il";
+// Questions about the registration go to Shufra too (the owner, 9/10) - each
+// mail link opens with a subject that says what it is about.
+export const SHUFRA_EMAIL = "info@shufra.org.il";
+export const COURSE_MAIL_SUBJECT = "שאלה על ההרשמה לקורס מאסטרית בהייטק";
+export function courseMailto(address: string): string {
+  return `mailto:${address}?subject=${encodeURIComponent(COURSE_MAIL_SUBJECT)}`;
+}

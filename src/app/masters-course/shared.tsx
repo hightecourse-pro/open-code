@@ -3,7 +3,7 @@ import path from "node:path";
 import Image from "next/image";
 import Link from "next/link";
 import localFont from "next/font/local";
-import { C, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF } from "./theme";
+import { C, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF, SHUFRA_EMAIL, courseMailto } from "./theme";
 
 export { C };
 
@@ -88,13 +88,17 @@ export function CourseFooter() {
         • תוכנית גמישה ומותאמת למצב השוק •
       </p>
       <p className="text-[15px] mt-1">הקורס נולד מתוך מחקר שוק על מגמות השינויים הדרמטיים בהייטק.</p>
-      <p className="text-[14px] mt-4" style={{ color: C.muted }}>
-        שאלות? בטלפון{" "}
+      <p className="text-[14px] mt-4 leading-relaxed" style={{ color: C.muted }}>
+        שאלות על ההרשמה? לשופרא במייל{" "}
+        <a href={courseMailto(SHUFRA_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
+          {SHUFRA_EMAIL}
+        </a>
+        , או לקוד פתוח בטלפון{" "}
         <a href={CONTACT_PHONE_HREF} dir="ltr" className="font-bold underline" style={{ color: C.navy }}>
           {CONTACT_PHONE}
         </a>{" "}
         או במייל{" "}
-        <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold underline" style={{ color: C.navy }}>
+        <a href={courseMailto(CONTACT_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
           {CONTACT_EMAIL}
         </a>
       </p>

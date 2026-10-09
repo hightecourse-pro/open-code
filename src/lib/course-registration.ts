@@ -6,42 +6,19 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * sold on the public page /masters-course (the owner, 25/9).
  *
  * Money: the clearing is Shufra's own Nedarim account (mosad 7009686), not
- * ours - so no payment callback ever reaches this app. We register the woman,
- * tell the team, and hand her over to Shufra's payment page. "Paid" is then
- * confirmed by the team on /admin/course-registrations.
+ * ours. We register the woman, tell the team, and hand her over to Shufra's
+ * payment page with her registration code in the payment comment. Since 9/10
+ * Shufra's account calls our CallBack (/api/webhooks/course-payments), which
+ * matches the payment back to her; the browser redirect to /masters-course/paid
+ * remains the fallback signal ("reported as paid", verified by the team).
+ *
+ * Prices, links and the pure helpers live in course-links.ts (testable
+ * without a server); this file adds what needs the database.
  */
+export * from "./course-links";
+
 export const COURSE_KEY = "masters-2026";
 export const COURSE_TITLE = "מאסטרית בהייטק";
-export const SHUFRA_MOSAD_ID = "7009686";
-
-/** The price ladder the ad shows, in whole shekels. */
-export const COURSE_PRICE = {
-  full: 12000,
-  shufraFunding: 6000,
-  subscriberScholarship: 4500,
-  /** What a subscriber pays: 12 × 125. */
-  subscriberTotal: 1500,
-  subscriberMonthly: 125,
-  installments: 12,
-  /** Without the subscriber scholarship: full minus Shufra's funding. */
-  nonSubscriberTotal: 6000,
-} as const;
-
-/** Membership price used in the "join first" offer (₪ per month). */
-export const MEMBERSHIP_MONTHLY = 39;
-
-/**
- * Where "ממשיכה לתשלום" sends her. COURSE_PAYMENT_URL (Vercel env) wins;
- * the fallback is Nedarim Plus's public payment page for Shufra's mosad.
- */
-export function coursePaymentUrl(): string {
-  return process.env.COURSE_PAYMENT_URL?.trim() || `https://www.matara.pro/nedarimplus/online/?mosad=${SHUFRA_MOSAD_ID}`;
-}
-
-/** Who hears about every registration (the owner: office@ by default). */
-export function courseNotifyEmail(): string {
-  return process.env.COURSE_NOTIFY_EMAIL?.trim() || "office@opencode.org.il";
-}
 
 export interface MembershipLookup {
   profileId: string | null;
