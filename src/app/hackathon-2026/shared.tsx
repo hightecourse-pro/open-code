@@ -268,7 +268,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
         {"ai.teachMe(\"how-it-works\")"}
       </span>
       <span aria-hidden className="h26-float absolute bottom-24 left-[7%] font-mono text-[15.5px] text-brand-pink-deep/50 rotate-12 select-none hidden md:block" style={{ animationDelay: "1.8s" }}>
-        {"if (stuck) askMentor() 💜"}
+        {"if (stuck) tryAgain() 💜"}
       </span>
       <span aria-hidden className="h26-float absolute bottom-10 right-[14%] font-mono text-[15.5px] text-[#B48A0A]/60 -rotate-3 select-none hidden lg:block" style={{ animationDelay: "2.4s" }}>
         {"deploy(\"cloud\") // ✨"}
