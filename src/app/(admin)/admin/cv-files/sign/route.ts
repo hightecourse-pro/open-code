@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { netfreeSafeUrl } from "@/lib/netfree";
 
 /**
  * Signs ONE CV on demand and redirects to it. The files screen used to
  * pre-sign every document in the community on every page view - thousands of
- * signed URLs nobody clicked. ?download=1 asks the browser to save.
+ * signed URLs nobody clicked. ?download=1 asks the browser to save. The
+ * redirect lands on our own domain (Netfree blocks the storage host).
  */
 export async function GET(req: Request) {
   await requireRole("admin");
@@ -28,5 +30,5 @@ export async function GET(req: Request) {
   if (error || !data?.signedUrl) {
     return NextResponse.json({ error: "sign failed" }, { status: 500 });
   }
-  return NextResponse.redirect(data.signedUrl, 302);
+  return NextResponse.redirect(new URL(netfreeSafeUrl(data.signedUrl), req.url), 302);
 }

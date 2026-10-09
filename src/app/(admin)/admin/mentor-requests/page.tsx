@@ -3,6 +3,7 @@ import Link from "next/link";
 import { FileText, MessageCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { netfreeSafeUrl } from "@/lib/netfree";
 import { requireRole } from "@/lib/auth";
 import { Badge, Button, Select } from "@/components/ui";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
@@ -152,7 +153,7 @@ export default async function AdminMentorRequestsPage({
   const { data: cvSigned } = cvPaths.length
     ? await admin.storage.from("cvs").createSignedUrls(cvPaths, 3600)
     : { data: [] };
-  const cvUrlOfPath = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
+  const cvUrlOfPath = new Map((cvSigned ?? []).map((s) => [s.path, netfreeSafeUrl(s.signedUrl)]));
   const cvUrlOf = (pid: string) => {
     const p = cvPathOf.get(pid);
     return p ? (cvUrlOfPath.get(p) ?? null) : null;

@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWaConfig, getWaVerifyToken, listWaTemplates, toWaId, waWindowLeftMs } from "@/lib/whatsapp";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
+import { netfreeSafeUrl } from "@/lib/netfree";
 import { WaInbox, type WaContactRow, type WaMemberOption, type WaMessageRow, type WaTemplateOption } from "./wa-inbox";
 
 export const metadata: Metadata = { title: "וואטסאפ" };
@@ -103,7 +104,7 @@ export default async function AdminWhatsAppPage({
       .createSignedUrls(withMedia.map((m) => m.media_path!), 3600);
     withMedia.forEach((m, i) => {
       const u = signed?.[i]?.signedUrl;
-      if (u) mediaUrlOf.set(m.id, u);
+      if (u) mediaUrlOf.set(m.id, netfreeSafeUrl(u));
     });
   }
 

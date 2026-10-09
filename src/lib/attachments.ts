@@ -1,7 +1,8 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { netfreeSafeUrl } from "@/lib/netfree";
 
-/** What a screen needs to show one attachment. URLs are signed and expire. */
+/** What a screen needs to show one attachment. URLs are signed and expire (and stream through our domain - Netfree). */
 export interface AttachmentView {
   id: string;
   fileName: string;
@@ -60,7 +61,7 @@ export async function attachmentsFor(
       fileName: r.file_name,
       mime: r.mime,
       sizeBytes: r.size_bytes,
-      url,
+      url: netfreeSafeUrl(url),
       isImage: IMAGE_MIMES.includes(r.mime),
     });
     out.set(r.context_id, list);

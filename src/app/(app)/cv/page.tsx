@@ -10,6 +10,7 @@ import { CvName } from "@/components/patterns/cv-name";
 import { deleteCv, setDefaultCv } from "./actions";
 import type { CvLanguage } from "@/types/database";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
+import { netfreeSafeUrl } from "@/lib/netfree";
 import { GradeSheetUploadForm } from "@/components/patterns/grade-sheet-upload-form";
 import { deleteGradeSheet } from "./grades-actions";
 import { GraduationCap } from "lucide-react";
@@ -54,7 +55,7 @@ export default async function CvPage() {
   const signed = new Map<string, string>();
   for (const d of docs ?? []) {
     const { data } = await supabase.storage.from("cvs").createSignedUrl(d.file_path, 3600);
-    if (data?.signedUrl) signed.set(d.id, data.signedUrl);
+    if (data?.signedUrl) signed.set(d.id, netfreeSafeUrl(data.signedUrl));
   }
 
   // Grade sheets (the owner, 19/9) - juniors only; optional, hers to manage.
@@ -66,7 +67,7 @@ export default async function CvPage() {
   const gradeUrls = new Map<string, string>();
   for (const g of grades ?? []) {
     const { data } = await supabase.storage.from("cvs").createSignedUrl(g.file_path, 3600);
-    if (data?.signedUrl) gradeUrls.set(g.id, data.signedUrl);
+    if (data?.signedUrl) gradeUrls.set(g.id, netfreeSafeUrl(data.signedUrl));
   }
 
   return (

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, Pencil, Sparkles, UserCheck, UserPlus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { netfreeSafeUrl } from "@/lib/netfree";
 import { loadClientJob } from "@/lib/portal/jobs";
 import {
   buildAudienceCatalogue,
@@ -478,7 +479,7 @@ export default async function AdminJobPage({
   const { data: cvSigned } = cvPaths.length
     ? await admin.storage.from("cvs").createSignedUrls(cvPaths, 3600)
     : { data: [] };
-  const cvUrlOf = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
+  const cvUrlOf = new Map((cvSigned ?? []).map((s) => [s.path, netfreeSafeUrl(s.signedUrl)]));
 
   // Study facts + years for the review pane (the owner, 2/9: "בצורה בולטת").
   const reviewStudy = await studyInfoOf(applicantIds);

@@ -9,6 +9,7 @@ import {
   updateSessionFiles,
 } from "@/app/(admin)/admin/content/actions";
 import type { ContentLink } from "@/types/database";
+import { netfreeSafeUrl } from "@/lib/netfree";
 
 /**
  * Everything a session TEACHES, managed on the session itself - reorganized
@@ -128,7 +129,7 @@ export function SessionContentPanel({
             {session.syllabus_url && (
               <>
                 <a
-                  href={session.syllabus_url}
+                  href={netfreeSafeUrl(session.syllabus_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[12px] font-semibold text-brand-purple hover:underline"
@@ -171,7 +172,7 @@ export function SessionContentPanel({
           <div className="flex items-center gap-2 text-[12.5px] bg-tint-warm/40 border border-[#EAD9B0] rounded-md px-2.5 py-1.5">
             <span className="font-semibold text-[#8C5E0E] shrink-0">קישור ישן:</span>
             <a
-              href={session.materials_url}
+              href={netfreeSafeUrl(session.materials_url)}
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand-purple hover:underline truncate flex-1"

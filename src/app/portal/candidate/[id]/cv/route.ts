@@ -12,6 +12,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getPortalClient } from "@/lib/portal/auth";
 import { candidateSentToClient } from "@/lib/portal/jobs";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { netfreeSafeUrl } from "@/lib/netfree";
 
 /** Matches the signed-URL lifetime used elsewhere in the app. */
 const SIGNED_URL_TTL = 3600;
@@ -77,7 +78,8 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ id: str
     return noStore(NextResponse.redirect(profileUrl));
   }
 
-  return noStore(NextResponse.redirect(signed.signedUrl));
+  // Through our own domain - the storage host is blocked on Netfree.
+  return noStore(NextResponse.redirect(new URL(netfreeSafeUrl(signed.signedUrl), request.url)));
 }
 
 /**

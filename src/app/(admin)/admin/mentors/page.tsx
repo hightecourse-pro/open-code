@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/ui";
 import { ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { netfreeSafeUrl } from "@/lib/netfree";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
 import { MentorsList, type MentorRowData } from "./mentor-admin-row";
 import { PendingMentorApplications } from "./pending-applications";
@@ -96,7 +97,7 @@ export default async function AdminMentorsPage() {
   const { data: cvSigned } = cvPaths.length
     ? await admin.storage.from("cvs").createSignedUrls(cvPaths, 3600)
     : { data: [] };
-  const cvUrlOfPath = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
+  const cvUrlOfPath = new Map((cvSigned ?? []).map((s) => [s.path, netfreeSafeUrl(s.signedUrl)]));
   const cvUrlOf = (pid: string) => {
     const p = cvPathOf.get(pid);
     return p ? (cvUrlOfPath.get(p) ?? null) : null;

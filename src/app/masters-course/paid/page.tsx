@@ -89,7 +89,7 @@ export default async function CoursePaidPage({ searchParams }: { searchParams: P
                 {confirmed
                   ? `התשלום שלך נקלט ואושר${nis ? ` (${nis} ₪${reg.payment_installments && reg.payment_installments > 1 ? ` ב-${reg.payment_installments} תשלומים` : ""})` : ""}, וההרשמה שלך אצלנו.`
                   : "התשלום נקלט בדף התשלום של שופרא, וההרשמה שלך אצלנו."}{" "}
-                שלחנו לך מייל אישור, ובימים הקרובים נשלח את כל הפרטים: מועדי המפגשים, הקבוצה וחומרי הפתיחה.
+                שלחנו לך מייל אישור, ובקרוב נשלח את כל הפרטים: מועדי המפגשים והקבוצה.
               </p>
               {reg.reg_code && (
                 <p className="mt-5 text-[15px]" style={{ color: C.muted }}>

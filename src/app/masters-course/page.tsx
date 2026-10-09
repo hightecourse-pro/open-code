@@ -177,11 +177,22 @@ export default function MastersCoursePage() {
           </div>
 
           <div className="max-w-xl mx-auto mt-7 rounded-[22px] px-5 py-5" style={{ background: C.bg }}>
+            {/* The owner's copy (9/10), her line breaks kept. */}
             <p className="font-black text-[19px] sm:text-[21px] leading-snug" style={{ color: C.navy }}>
-              איך יכול להיות שנה שלמה עם התכנים הכי יקרים במחיר כזה?
+              איך זה כל כך זול?
             </p>
             <p className="text-[16.5px] sm:text-[17.5px] leading-relaxed mt-2">
-              כי אנחנו מאמינים שאת צריכה עבודה, ולא לשלם הרבה כסף על חלומות. לכן השגנו בשבילך מימון.
+              שנה שלמה עם התכנים הכי יקרים במחיר כזה?
+              <br />
+              זו בדיוק היתה המטרה של הקורס!
+              <br />
+              אנחנו מאמינות שנמאס לך לשלם על חלומות...
+              <br />
+              בטוח שאת רוצה להתקדם ולהתעדכן
+              <br />
+              אבל לשלם עוד כסף לפני שמבטיחים לך עבודה?
+              <br />
+              לכן השגנו בשבילך מימון!
             </p>
           </div>
 
@@ -195,15 +206,15 @@ export default function MastersCoursePage() {
           <p className="text-[14px] mt-4 leading-relaxed" style={{ color: C.muted }}>
             ההרשמה לוקחת דקה: מייל, שם וטלפון, ומשם לדף התשלום המאובטח.
             <br />
-            שאלות על ההרשמה? לשופרא במייל{" "}
-            <a href={courseMailto(SHUFRA_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
-              {SHUFRA_EMAIL}
-            </a>
-            , או לקוד פתוח בטלפון{" "}
+            שאלות על ההרשמה? לשופרא בטלפון{" "}
             <a href={CONTACT_PHONE_HREF} dir="ltr" className="font-bold underline" style={{ color: C.navy }}>
               {CONTACT_PHONE}
             </a>{" "}
             או במייל{" "}
+            <a href={courseMailto(SHUFRA_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
+              {SHUFRA_EMAIL}
+            </a>
+            , או לקוד פתוח במייל{" "}
             <a href={courseMailto(CONTACT_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
               {CONTACT_EMAIL}
             </a>

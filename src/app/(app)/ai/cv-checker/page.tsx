@@ -7,6 +7,7 @@ import { AiKeyBanner } from "@/components/patterns/ai-key-banner";
 import { CvCheckerForm } from "@/components/patterns/cv-checker-form";
 import { CvHistoryList } from "@/components/patterns/cv-history-list";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
+import { netfreeSafeUrl } from "@/lib/netfree";
 
 export const metadata: Metadata = { title: "בודקת קורות חיים" };
 
@@ -88,7 +89,7 @@ export default async function CvCheckerPage() {
       // 12h: a member who keeps the tab open past an hour used to land on a
       // foreign storage error page from "צפייה בקובץ שנבדק" (18/9).
       const { data: signed } = await supabase.storage.from("cvs").createSignedUrls(paths, 12 * 3600);
-      for (const s of signed ?? []) if (s.signedUrl && s.path) historyFileUrls.set(s.path, s.signedUrl);
+      for (const s of signed ?? []) if (s.signedUrl && s.path) historyFileUrls.set(s.path, netfreeSafeUrl(s.signedUrl));
     }
   }
 
