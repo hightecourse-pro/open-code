@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
 import { nedarimCallbackIps } from "@/lib/payments/nedarim";
-import { courseCallbackSecret, courseMosadId } from "@/lib/course-registration";
+import { courseCallbackSecret, courseForwardUrl, courseMosadId } from "@/lib/course-registration";
 import { recordCoursePayment } from "@/lib/course-payment";
 import type { Json } from "@/types/database";
 
 export const dynamic = "force-dynamic";
+// Processing + passing the update on to Shufra's own hook.
+export const maxDuration = 30;
 
 /**
  * Shufra's Nedarim CallBack for the course (the owner, 9/10).
@@ -20,7 +22,14 @@ export const dynamic = "force-dynamic";
  * Their account reports EVERY payment Shufra takes. The separation lives in
  * recordCoursePayment: registration code in the comment → email → the saved
  * page's group / a course amount → otherwise ignored.
+ *
+ * Nedarim allows one URL per event, and Shufra already had one there (a
+ * Google Apps Script). Every authenticated update is therefore passed on to
+ * COURSE_CALLBACK_FORWARD_URL (declines: COURSE_CALLBACK_FORWARD_URL_DECLINES)
+ * with the same body and content type, after we are done with it.
  */
+
+const FORWARDED_HEADER = "x-course-forwarded";
 
 function constantEquals(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
@@ -44,6 +53,44 @@ async function logEvent(key: string, value: Record<string, unknown>) {
   }
 }
 
+/** Pass the update on to Shufra's own hook, unchanged. Never throws; the outcome lands in the record. */
+async function forward(
+  req: Request,
+  raw: string,
+  contentType: string,
+  params: Record<string, string>,
+  record: Record<string, unknown>
+) {
+  // A call that is itself a forward never fans out again.
+  if (req.headers.get(FORWARDED_HEADER)) return;
+  const isDecline = params.Status === "Error" && !!params.Message;
+  const url = courseForwardUrl(isDecline ? "declines" : "transactions");
+  if (!url) return;
+  const body = raw || JSON.stringify(params);
+  const type = raw ? contentType || "application/json" : "application/json";
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "content-type": type, [FORWARDED_HEADER]: "1" },
+      body,
+      redirect: "follow",
+      signal: AbortSignal.timeout(20_000),
+    });
+    record.forward = { status: res.status, ok: res.ok };
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch (e) {
+    record.forward = { ...(record.forward as object | undefined), error: String(e) };
+    await raiseAlert({
+      kind: "course_forward_failed",
+      severity: "warning",
+      title: `עדכון מנדרים של שופרא לא הועבר הלאה למערכת שלהן: ${params.ClientName ?? params.TransactionId ?? ""}`.trim(),
+      body: `אצלנו העדכון נקלט, אבל ההעברה לכתובת שהיתה מוגדרת אצל שופרא לפני שלנו נכשלה (${String(e).slice(0, 120)}). הנתונים שמורים בהתראה הזו - אפשר לשלוח אותם ידנית או לבקש מנדרים לשלוח שוב.`,
+      context: { url, params, contentType: type },
+      dedupeKey: `course-forward:${params.TransactionId ?? params.ID ?? params.ErrorTime ?? Date.now()}`,
+    });
+  }
+}
+
 async function handleCallback(req: Request) {
   const url = new URL(req.url);
   const params: Record<string, string> = {};
@@ -51,15 +98,18 @@ async function handleCallback(req: Request) {
     params[key] = value;
   });
   const contentType = req.headers.get("content-type") ?? "";
+  let raw = "";
   try {
-    if (contentType.includes("application/json")) {
-      Object.assign(params, await req.json());
-    } else {
-      const form = await req.formData();
-      for (const [k, v] of form.entries()) params[k] = String(v);
+    raw = req.method === "GET" ? "" : await req.text();
+    if (raw) {
+      if (contentType.includes("application/json")) {
+        Object.assign(params, JSON.parse(raw));
+      } else {
+        for (const [k, v] of new URLSearchParams(raw).entries()) params[k] = v;
+      }
     }
   } catch {
-    /* no body - the query string may carry the call */
+    /* unreadable body - the query string may still carry the call */
   }
 
   const providedKey = params.key ?? req.headers.get("x-callback-key") ?? "";
@@ -104,13 +154,10 @@ async function handleCallback(req: Request) {
   try {
     const r = await recordCoursePayment(params);
     Object.assign(record, { outcome: r.outcome, registrationId: r.registrationId ?? null, transactionId: r.transactionId ?? null, matchedBy: r.matchedBy ?? null });
-    await logEvent(r.outcome === "ignored_unrelated" || r.outcome === "failure_ignored" ? "last_course_webhook_ignored" : "last_course_webhook", record);
-    return NextResponse.json({ ok: true, outcome: r.outcome });
   } catch (e) {
     record.outcome = "error";
     record.error = String(e);
     console.error("[webhook/course-payments]", String(e));
-    await logEvent("last_course_webhook_rejected", record);
     await raiseAlert({
       kind: "course_payment_error",
       severity: "critical",
@@ -119,8 +166,16 @@ async function handleCallback(req: Request) {
       context: record,
       dedupeKey: `course-error:${params.TransactionId ?? params.ID ?? ip}`,
     });
-    return NextResponse.json({ error: "failed" }, { status: 500 });
   }
+  // Shufra's own hook hears everything we heard - ours or not.
+  await forward(req, raw, contentType, params, record);
+  const key =
+    record.outcome === "error" ? "last_course_webhook_rejected"
+    : record.outcome === "ignored_unrelated" || record.outcome === "failure_ignored" ? "last_course_webhook_ignored"
+    : "last_course_webhook";
+  await logEvent(key, record);
+  if (record.outcome === "error") return NextResponse.json({ error: "failed" }, { status: 500 });
+  return NextResponse.json({ ok: true, outcome: record.outcome });
 }
 
 // Nedarim does not commit to a method - both run the same path.

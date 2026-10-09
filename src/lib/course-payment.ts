@@ -195,7 +195,9 @@ export async function recordCoursePayment(params: Record<string, string>): Promi
   const txId = params.TransactionId?.trim() || params.ID?.trim() || (params.KevaId?.trim() ? `keva-${params.KevaId.trim()}` : null);
 
   const { reg, by } = await findRegistration(params);
-  const looksLikeCourse = !!reg || (!!groupe && courseNedarimGroups().includes(groupe)) || isCourseAmount(amountAgorot);
+  const { effectiveAmountOverride } = await import("@/lib/course-settings");
+  const looksLikeCourse =
+    !!reg || (!!groupe && courseNedarimGroups().includes(groupe)) || isCourseAmount(amountAgorot, await effectiveAmountOverride());
 
   // A refused charge (Status:Error + Message) - documented only when it names
   // one of our registrants; Shufra's other refusals are not our business.

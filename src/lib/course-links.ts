@@ -58,6 +58,8 @@ export interface PaymentLinkInput {
   regCode: string;
   payToken: string;
   siteUrl: string;
+  /** Test mode set by the admin (app_settings) - wins over the env override. */
+  amountOverride?: number | null;
 }
 
 /**
@@ -84,7 +86,7 @@ export function buildCoursePaymentUrl(i: PaymentLinkInput): string {
     ["Analytic", i.regCode],
     ["Redirect", back],
   ];
-  const override = coursePaymentAmountOverride();
+  const override = i.amountOverride ?? coursePaymentAmountOverride();
   if (override) params.push(["Amount", String(override)]);
   const qs = params.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join("&");
   return `${base}${base.includes("?") ? "&" : "?"}${qs}`;
@@ -144,12 +146,23 @@ export function courseNedarimGroups(): string[] {
 }
 
 /** Whole-course and per-installment amounts (agorot) that read as the course even without a group - and the test amount. */
-export function isCourseAmount(agorot: number | null): boolean {
+export function isCourseAmount(agorot: number | null, amountOverride?: number | null): boolean {
   if (!agorot) return false;
   const whole = [COURSE_PRICE.subscriberTotal, COURSE_PRICE.nonSubscriberTotal].map((n) => n * 100);
   const monthly = [COURSE_PRICE.subscriberMonthly * 100, Math.round((COURSE_PRICE.nonSubscriberTotal / COURSE_PRICE.installments) * 100)];
-  const override = coursePaymentAmountOverride();
+  const override = amountOverride ?? coursePaymentAmountOverride();
   return whole.includes(agorot) || monthly.includes(agorot) || (!!override && agorot === override * 100);
+}
+
+/**
+ * Nedarim allows ONE webhook URL per event type, and Shufra's account already
+ * has one (a Google Apps Script, 9/10 screenshot). Ours takes the slot and
+ * passes every authenticated update on to theirs, unchanged, so nothing on
+ * their side stops working. Declines go to their declines hook, if they have one.
+ */
+export function courseForwardUrl(kind: "transactions" | "declines"): string | null {
+  const v = (kind === "declines" ? process.env.COURSE_CALLBACK_FORWARD_URL_DECLINES : process.env.COURSE_CALLBACK_FORWARD_URL)?.trim();
+  return v && /^https:\/\//.test(v) ? v : null;
 }
 
 export const REG_CODE_RE = /OC-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}/;

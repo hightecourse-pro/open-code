@@ -123,6 +123,7 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
   }
 
   const { getSiteUrl } = await import("@/lib/site");
+  const { effectiveAmountOverride } = await import("@/lib/course-settings");
   const paymentUrl = buildCoursePaymentUrl({
     subscriber: m.isSubscriber,
     fullName,
@@ -131,6 +132,7 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
     regCode,
     payToken,
     siteUrl: getSiteUrl(),
+    amountOverride: await effectiveAmountOverride(),
   });
   return { ok: true, paymentUrl, subscriber: m.isSubscriber, joinUrl: m.profileId ? "/join" : "/signup" };
 }

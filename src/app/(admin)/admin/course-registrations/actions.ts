@@ -36,6 +36,21 @@ export async function deleteCourseRegistration(id: string): Promise<{ error?: st
   return {};
 }
 
+/** Test mode: the amount on Shufra's payment page (null = the real prices). */
+export async function setCourseTestAmount(value: number | null): Promise<{ error?: string }> {
+  await requireRole("admin");
+  if (value !== null && (!Number.isInteger(value) || value < 1 || value > 20000)) return { error: "סכום בין 1 ל-20,000 ₪." };
+  try {
+    const { saveCourseSettings } = await import("@/lib/course-settings");
+    await saveCourseSettings({ amountOverride: value });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "לא נשמר" };
+  }
+  revalidatePath("/admin/course-registrations");
+  revalidatePath("/masters-course/register");
+  return {};
+}
+
 /**
  * A course payment the callback could not match, attached by hand to a
  * registration - from here on it is exactly as if the code had been in the

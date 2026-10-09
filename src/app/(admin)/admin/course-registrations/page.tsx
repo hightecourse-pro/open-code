@@ -7,6 +7,7 @@ import {
   COURSE_TITLE,
   SHUFRA_MOSAD_ID,
   courseCallbackUrl,
+  courseForwardUrl,
   courseNedarimGroups,
   courseNotifyEmail,
   coursePaymentAmountOverride,
@@ -16,6 +17,7 @@ import {
 } from "@/lib/course-registration";
 import { RegistrationsTable, type RegistrationRow } from "./registrations-table";
 import { UnmatchedPayments, type UnmatchedPayment } from "./unmatched-payments";
+import { CourseSettingsForm } from "./course-settings-form";
 
 export const metadata: Metadata = { title: "נרשמות לקורס" };
 export const dynamic = "force-dynamic";
@@ -67,7 +69,10 @@ export default async function CourseRegistrationsPage() {
     .map((r) => ({ id: r.id, full_name: r.full_name, email: r.email, reg_code: r.reg_code ?? null, status: r.status }));
 
   const callbackUrl = courseCallbackUrl(getSiteUrl());
-  const amountOverride = coursePaymentAmountOverride();
+  const { getCourseSettings } = await import("@/lib/course-settings");
+  const settings = await getCourseSettings();
+  const envOverride = coursePaymentAmountOverride();
+  const forwardTo = courseForwardUrl("transactions");
 
   return (
     <div className="flex flex-col gap-5">
@@ -85,18 +90,23 @@ export default async function CourseRegistrationsPage() {
           <br />
           דף התשלום בלי מלגה (6,000 ₪): {coursePaymentUrlFull()}
         </p>
-        {amountOverride && (
-          <p className="mt-2 rounded-[12px] bg-red-50 border border-red-200 text-red-800 px-3 py-2 text-[13px] font-semibold">
-            ⚠️ מצב בדיקה: כל קישור תשלום שנבנה עכשיו מעביר לדף התשלום עם סכום {amountOverride} ₪ במקום המחיר האמיתי
-            (COURSE_PAYMENT_AMOUNT_OVERRIDE). להסיר מהסביבה לפני שנרשמות אמיתיות משלמות.
-          </p>
-        )}
+        <div className="mt-2">
+          <CourseSettingsForm amountOverride={settings.amountOverride} envOverride={envOverride} />
+        </div>
         <details className="mt-2 rounded-[14px] border border-ink-100 bg-white px-4 py-3 text-[13px] text-ink-700">
           <summary className="cursor-pointer font-semibold text-ink-900">הגדרת ה-CallBack בנדרים של שופרא (פעם אחת)</summary>
           <ol className="list-decimal ps-5 mt-2 flex flex-col gap-1.5 leading-relaxed">
             <li>
-              בממשק הניהול של נדרים פלוס של שופרא (מוסד {SHUFRA_MOSAD_ID}): הגדרות ← עדכוני עסקאות / כתובת CallBack (אצלנו הסעיף
-              נקרא ״כתובת לעדכון עסקאות״; אם יש גם ״הקמת הוראת קבע״ - אותה כתובת).
+              בממשק הניהול של נדרים פלוס של שופרא (מוסד {SHUFRA_MOSAD_ID}): הגדרות ← Webhook ← ״עדכוני עסקאות״. נדרים מאפשרים כתובת
+              אחת לכל סוג עדכון; אם כבר יש שם כתובת של שופרא, הכתובת שלנו מחליפה אותה{" "}
+              {forwardTo ? (
+                <>
+                  ומעבירה אליה כל עדכון כמו שהוא (מוגדר: <span dir="ltr">{forwardTo.slice(0, 60)}…</span>).
+                </>
+              ) : (
+                <>- ואז צריך להגדיר אצלנו את הכתובת הישנה (COURSE_CALLBACK_FORWARD_URL) כדי שהעדכונים ימשיכו להגיע גם אליה.</>
+              )}{" "}
+              ״עדכוני סירובים״: אפשר להדביק את אותה כתובת (סירוב של נרשמת שלנו יתועד); ״הקמת הוראת קבע״ לא נחוץ.
             </li>
             <li>
               מדביקים את הכתובת הזו בדיוק כמו שהיא, כולל המפתח שבסוף:
