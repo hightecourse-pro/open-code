@@ -27,6 +27,19 @@ export function isNedarimConfigured(): boolean {
   return getNedarimConfig() !== null;
 }
 
+/**
+ * Every address a real Nedarim webhook has been SEEN from (they rotate AWS
+ * servers), plus NEDARIM_CALLBACK_IPS. The membership webhook keeps its own
+ * copy; the course webhook (Shufra's account) reads this one.
+ */
+export const KNOWN_NEDARIM_IPS = ["18.194.219.73", "18.196.146.117"];
+export function nedarimCallbackIps(): string[] {
+  return [
+    ...KNOWN_NEDARIM_IPS,
+    ...(process.env.NEDARIM_CALLBACK_IPS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
+  ];
+}
+
 export interface TransactionParty {
   profileId: string;
   fullName: string;

@@ -3,9 +3,9 @@ import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
 import { sendEmail } from "@/lib/email/send";
-import { sendResendEmail } from "@/lib/email/resend";
-import { coursePaymentReportedEmail, coursePaymentThanksEmail } from "@/lib/email/templates";
+import { coursePaymentReportedEmail } from "@/lib/email/templates";
 import { courseNotifyEmail } from "@/lib/course-registration";
+import { sendCourseConfirmationOnce } from "@/lib/course-payment";
 import { C, CourseFooter, PartnersHeader, rubik } from "../shared";
 
 export const metadata: Metadata = { title: "ההרשמה לקורס התקבלה", robots: { index: false } };
@@ -14,10 +14,14 @@ export const dynamic = "force-dynamic";
 /**
  * Where Shufra's Nedarim page sends her browser after a successful charge
  * (the Redirect parameter we attach to the payment link - the owner, 6/10).
- * No callback exists on their mosad, so this return IS our signal: the
- * registration moves to "reported as paid", she gets a confirmation, the team
- * gets an alert and verifies against Shufra's report by the registration code.
- * Idempotent - a refresh changes nothing.
+ *
+ * Since 9/10 Shufra's account also calls our CallBack, which usually lands
+ * first and marks her "paid" with the amount. This page is then only a thank
+ * you. When the callback has not arrived (yet, or at all) the return itself
+ * is the signal: "reported as paid", an alert, a mail to the team who verify
+ * against Shufra's report by the registration code. Her confirmation mail is
+ * sent once, whichever path gets there first. Idempotent - a refresh changes
+ * nothing.
  */
 export default async function CoursePaidPage({ searchParams }: { searchParams: Promise<{ r?: string }> }) {
   const { r } = await searchParams;
@@ -26,7 +30,7 @@ export default async function CoursePaidPage({ searchParams }: { searchParams: P
   const { data: reg } = /^[0-9a-f]{32}$/.test(token)
     ? await admin
         .from("course_registrations")
-        .select("id, full_name, first_name, email, phone, reg_code, status, is_subscriber")
+        .select("id, full_name, first_name, email, phone, reg_code, status, is_subscriber, payment_amount_agorot, payment_installments")
         .eq("pay_token", token)
         .maybeSingle()
     : { data: null };
@@ -47,7 +51,7 @@ export default async function CoursePaidPage({ searchParams }: { searchParams: P
           kind: "course_payment_reported",
           severity: "info",
           title: `חזרה מדף התשלום לקורס: ${reg.full_name} (${regCode})`,
-          body: `${reg.email} · ${reg.phone ?? ""} · לאמת מול דוח נדרים של שופרא לפי הקוד, ואז לסמן ״שולם ✓״.`,
+          body: `${reg.email} · ${reg.phone ?? ""} · הקולבק של שופרא עוד לא דיווח על התשלום הזה. אם לא יגיע תוך כמה דקות - לאמת מול דוח נדרים של שופרא לפי הקוד, ואז לסמן ״שולם ✓״.`,
           dedupeKey: `course_payment_reported:${reg.id}`,
         });
       } catch {
@@ -59,16 +63,13 @@ export default async function CoursePaidPage({ searchParams }: { searchParams: P
       } catch {
         /* best-effort */
       }
-      try {
-        const mail = coursePaymentThanksEmail(reg.first_name ?? reg.full_name.split(/\s+/)[0], regCode);
-        await sendResendEmail({ to: reg.email, subject: mail.subject, html: mail.html });
-      } catch {
-        /* best-effort */
-      }
+      await sendCourseConfirmationOnce(reg);
     }
   }
 
   const first = reg?.first_name ?? reg?.full_name?.split(/\s+/)[0] ?? null;
+  const confirmed = reg?.status === "paid";
+  const nis = reg?.payment_amount_agorot ? new Intl.NumberFormat("he-IL").format(reg.payment_amount_agorot / 100) : null;
   return (
     <main dir="rtl" className={`${rubik.className} min-h-screen`} style={{ background: C.bg, color: C.ink }}>
       <div className="max-w-2xl mx-auto px-5 py-10 sm:py-14 flex flex-col gap-8">
@@ -85,8 +86,10 @@ export default async function CoursePaidPage({ searchParams }: { searchParams: P
                 ברוכה הבאה לקורס <span style={{ color: C.pink }}>מאסטרית בהייטק</span>
               </h1>
               <p className="text-[17px] leading-relaxed mt-4">
-                התשלום נקלט בדף התשלום של שופרא, וההרשמה שלך אצלנו. שלחנו לך מייל אישור, ובימים הקרובים נשלח את כל הפרטים:
-                מועדי המפגשים, הקבוצה וחומרי הפתיחה.
+                {confirmed
+                  ? `התשלום שלך נקלט ואושר${nis ? ` (${nis} ₪${reg.payment_installments && reg.payment_installments > 1 ? ` ב-${reg.payment_installments} תשלומים` : ""})` : ""}, וההרשמה שלך אצלנו.`
+                  : "התשלום נקלט בדף התשלום של שופרא, וההרשמה שלך אצלנו."}{" "}
+                שלחנו לך מייל אישור, ובימים הקרובים נשלח את כל הפרטים: מועדי המפגשים, הקבוצה וחומרי הפתיחה.
               </p>
               {reg.reg_code && (
                 <p className="mt-5 text-[15px]" style={{ color: C.muted }}>

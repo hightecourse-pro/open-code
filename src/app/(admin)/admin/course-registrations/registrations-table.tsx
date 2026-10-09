@@ -21,9 +21,15 @@ export interface RegistrationRow {
   created_at: string;
   reg_code?: string | null;
   payment_reported_at?: string | null;
+  /** What Shufra's callback (or a manual attach) wrote on her. */
+  payment_amount_agorot?: number | null;
+  payment_installments?: number | null;
+  nedarim_transaction_id?: string | null;
   /** Membership right now (the page computes it); the snapshot is is_subscriber. */
   subscriber_now?: boolean;
 }
+
+const nis = (agorot: number) => new Intl.NumberFormat("he-IL").format(agorot / 100);
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   registered: { label: "נרשמה", cls: "bg-tint-purple text-brand-purple" },
@@ -36,7 +42,7 @@ const fmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit",
 
 function csvOf(rows: RegistrationRow[]): string {
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["שם", "מייל", "טלפון", "קוד הרשמה", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "חזרה מדף התשלום", "שולם ב", "הערה", "נרשמה ב"];
+  const head = ["שם", "מייל", "טלפון", "קוד הרשמה", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "סכום ששולם", "תשלומים", "אסמכתא נדרים", "חזרה מדף התשלום", "שולם ב", "הערה", "נרשמה ב"];
   const lines = rows.map((r) =>
     [
       r.full_name,
@@ -46,6 +52,9 @@ function csvOf(rows: RegistrationRow[]): string {
       r.is_subscriber ? "כן" : "לא",
       r.subscriber_now ? "כן" : "לא",
       STATUS[r.status]?.label ?? r.status,
+      r.payment_amount_agorot != null ? String(r.payment_amount_agorot / 100) : "",
+      r.payment_installments ?? "",
+      r.nedarim_transaction_id ?? "",
       r.payment_reported_at ? fmt.format(new Date(r.payment_reported_at)) : "",
       r.paid_at ? fmt.format(new Date(r.paid_at)) : "",
       r.notes ?? "",
@@ -225,6 +234,16 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
                     </select>
                     {r.payment_reported_at && r.status !== "paid" && (
                       <div className="text-[11px] text-amber-700 mt-1">חזרה מדף התשלום {fmt.format(new Date(r.payment_reported_at))}</div>
+                    )}
+                    {r.payment_amount_agorot != null && (
+                      <div className="text-[11.5px] text-green-800 mt-1 whitespace-nowrap" title={r.nedarim_transaction_id ? `אסמכתא נדרים ${r.nedarim_transaction_id}` : undefined}>
+                        💳 {nis(r.payment_amount_agorot)} ₪{r.payment_installments && r.payment_installments > 1 ? ` · ${r.payment_installments} תשלומים` : ""}
+                        {r.nedarim_transaction_id && (
+                          <span dir="ltr" className="text-ink-400 ms-1">
+                            #{r.nedarim_transaction_id}
+                          </span>
+                        )}
+                      </div>
                     )}
                     {r.paid_at && <div className="text-[11px] text-ink-500 mt-1">{fmt.format(new Date(r.paid_at))}</div>}
                   </td>

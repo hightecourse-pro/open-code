@@ -101,6 +101,60 @@ export function courseNotifyEmail(): string {
   return process.env.COURSE_NOTIFY_EMAIL?.trim() || "office@opencode.org.il";
 }
 
+/** Shufra's inbox - gets a mail per course payment (the owner, 9/10: name + amount). */
+export function courseShufraEmail(): string {
+  return process.env.COURSE_SHUFRA_EMAIL?.trim() || "info@shufra.org.il";
+}
+
+// ------------------------------------------------------- Shufra's CallBack
+// The owner (9/10): Shufra's Nedarim account CAN call a CallBack URL after
+// every charge - but it reports all of Shufra's payments, so ours are told
+// apart by the registration code we plant in the payment comment, then by
+// email, and as a last resort by the saved page's group or a course amount.
+
+/** The Nedarim mosad whose callbacks the course webhook accepts. */
+export function courseMosadId(): string {
+  return process.env.COURSE_NEDARIM_MOSAD_ID?.trim() || SHUFRA_MOSAD_ID;
+}
+
+/** The shared secret in the CallBack URL configured on Shufra's account. */
+export function courseCallbackSecret(): string | null {
+  const s = process.env.COURSE_CALLBACK_SECRET?.trim();
+  return s && s.length >= 16 ? s : null;
+}
+
+/** The URL the owner pastes into Shufra's Nedarim admin (null until the secret is set). */
+export function courseCallbackUrl(siteUrl: string): string | null {
+  const secret = courseCallbackSecret();
+  if (!secret) return null;
+  return `${siteUrl.replace(/\/$/, "")}/api/webhooks/course-payments?key=${encodeURIComponent(secret)}`;
+}
+
+/** The "קבוצה" of the saved payment page(s) - a payment in it is a course payment even without a code. */
+export function courseNedarimGroups(): string[] {
+  const env = (process.env.COURSE_NEDARIM_GROUPS ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+  return env.length ? env : ["שימור מקצועי הנדסת תוכנה"];
+}
+
+/** Whole-course and per-installment amounts (agorot) that read as the course even without a group. */
+export function isCourseAmount(agorot: number | null): boolean {
+  if (!agorot) return false;
+  const whole = [COURSE_PRICE.subscriberTotal, COURSE_PRICE.nonSubscriberTotal].map((n) => n * 100);
+  const monthly = [COURSE_PRICE.subscriberMonthly * 100, Math.round((COURSE_PRICE.nonSubscriberTotal / COURSE_PRICE.installments) * 100)];
+  return whole.includes(agorot) || monthly.includes(agorot);
+}
+
+export const REG_CODE_RE = /OC-[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}/;
+
+/** The registration code planted in the payment comment (Analytic → Comments). */
+export function findRegCode(...texts: (string | null | undefined)[]): string | null {
+  for (const t of texts) {
+    const m = (t ?? "").toUpperCase().match(REG_CODE_RE);
+    if (m) return m[0];
+  }
+  return null;
+}
+
 export interface MembershipLookup {
   profileId: string | null;
   /** Active account on the paid tier right now - the scholarship condition. */

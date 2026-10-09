@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { C, CourseFooter, PartnersHeader, rubik } from "./shared";
-import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF } from "./theme";
+import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF, SHUFRA_EMAIL, courseMailto } from "./theme";
 
 export const metadata: Metadata = {
   title: "מאסטרית בהייטק - הקורס השנתי של שופרא, קוד פתוח והייטקורס",
@@ -195,12 +195,16 @@ export default function MastersCoursePage() {
           <p className="text-[14px] mt-4 leading-relaxed" style={{ color: C.muted }}>
             ההרשמה לוקחת דקה: מייל, שם וטלפון, ומשם לדף התשלום המאובטח.
             <br />
-            רוצה לשאול קודם? טלפון{" "}
+            שאלות על ההרשמה? לשופרא במייל{" "}
+            <a href={courseMailto(SHUFRA_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
+              {SHUFRA_EMAIL}
+            </a>
+            , או לקוד פתוח בטלפון{" "}
             <a href={CONTACT_PHONE_HREF} dir="ltr" className="font-bold underline" style={{ color: C.navy }}>
               {CONTACT_PHONE}
             </a>{" "}
-            או מייל{" "}
-            <a href={`mailto:${CONTACT_EMAIL}`} className="font-bold underline" style={{ color: C.navy }}>
+            או במייל{" "}
+            <a href={courseMailto(CONTACT_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
               {CONTACT_EMAIL}
             </a>
           </p>

@@ -2004,6 +2004,10 @@ export interface Database {
           reg_code: string | null;
           pay_token: string | null;
           payment_reported_at: string | null;
+          payment_amount_agorot: number | null;
+          payment_installments: number | null;
+          nedarim_transaction_id: string | null;
+          confirmation_email_sent_at: string | null;
           phone: string | null;
           profile_id: string | null;
           is_subscriber: boolean;
@@ -2024,6 +2028,10 @@ export interface Database {
           reg_code?: string | null;
           pay_token?: string | null;
           payment_reported_at?: string | null;
+          payment_amount_agorot?: number | null;
+          payment_installments?: number | null;
+          nedarim_transaction_id?: string | null;
+          confirmation_email_sent_at?: string | null;
           phone?: string | null;
           profile_id?: string | null;
           is_subscriber?: boolean;
@@ -2035,6 +2043,47 @@ export interface Database {
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["course_registrations"]["Insert"]>;
+        Relationships: [];
+      };
+      /** One row per Nedarim transaction reported by Shufra's CallBack that looks like a course payment (9/10). */
+      course_payments: {
+        Row: {
+          id: string;
+          course_key: string;
+          registration_id: string | null;
+          transaction_id: string;
+          amount_agorot: number | null;
+          installments: number | null;
+          first_installment_agorot: number | null;
+          client_name: string | null;
+          email: string | null;
+          phone: string | null;
+          groupe: string | null;
+          comments: string | null;
+          matched_by: string | null;
+          status: string;
+          raw: Json | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          course_key?: string;
+          registration_id?: string | null;
+          transaction_id: string;
+          amount_agorot?: number | null;
+          installments?: number | null;
+          first_installment_agorot?: number | null;
+          client_name?: string | null;
+          email?: string | null;
+          phone?: string | null;
+          groupe?: string | null;
+          comments?: string | null;
+          matched_by?: string | null;
+          status?: string;
+          raw?: Json | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["course_payments"]["Insert"]>;
         Relationships: [];
       };
     };

@@ -1026,7 +1026,88 @@ export function coursePaymentThanksEmail(firstName: string | undefined, regCode:
         `קוד ההרשמה שלך: <b>${regCode}</b> - כדאי לשמור, הוא מזהה את התשלום שלך.`,
         "תזכורת: מלגת המנויות מותנית במנוי פעיל בקוד פתוח לאורך כל שנת הקורס.",
       ],
-      footnote: "שאלות? office@opencode.org.il",
+      footnote: "שאלות על ההרשמה? שופרא: info@shufra.org.il · קוד פתוח: office@opencode.org.il",
+    }),
+  };
+}
+
+const nis = (agorot: number) => new Intl.NumberFormat("he-IL").format(agorot / 100);
+
+/** Shufra hears about every course payment that landed through their CallBack (the owner, 9/10: name + amount). */
+export function courseShufraPaymentEmail(r: {
+  fullName: string;
+  email: string;
+  phone: string;
+  amountAgorot: number;
+  installments: number;
+  regCode: string;
+  isSubscriber: boolean;
+  transactionId: string;
+}): BuiltEmail {
+  return {
+    subject: `נרשמה ושילמה לקורס מאסטרית בהייטק: ${r.fullName} - ${nis(r.amountAgorot)} ₪`,
+    html: renderEmail({
+      heading: "תשלום חדש לקורס מאסטרית בהייטק 🎓",
+      lines: [
+        `<b>${r.fullName}</b> נרשמה לקורס דרך קוד פתוח, והתשלום שלה נקלט בנדרים.`,
+        `סכום: <b>${nis(r.amountAgorot)} ₪</b>${r.installments > 1 ? ` ב-${r.installments} תשלומים` : " בתשלום אחד"} · אסמכתא נדרים: ${r.transactionId}`,
+        `מייל: ${r.email}${r.phone ? ` · טלפון: ${r.phone}` : ""}`,
+        `${r.isSubscriber ? "מנויה בקוד פתוח - מחיר המלגה." : "לא מנויה בקוד פתוח - מחיר ללא מלגת המנויות."} קוד ההרשמה ${r.regCode} מופיע בהערת התשלום.`,
+      ],
+      footnote: "נשלח אוטומטית מהמערכת של קוד פתוח. שאלות: office@opencode.org.il",
+    }),
+  };
+}
+
+/** The office hears the same, plus what the system already did. */
+export function coursePaidTeamEmail(r: {
+  fullName: string;
+  email: string;
+  phone: string;
+  amountAgorot: number;
+  installments: number;
+  regCode: string;
+  isSubscriber: boolean;
+  transactionId: string;
+  shufraEmail: string;
+  matchedBy: string;
+}): BuiltEmail {
+  return {
+    subject: `שולם לקורס: ${r.fullName} · ${nis(r.amountAgorot)} ₪`,
+    html: renderEmail({
+      heading: "תשלום לקורס נקלט ✓",
+      lines: [
+        `<b>${r.fullName}</b> שילמה <b>${nis(r.amountAgorot)} ₪</b>${r.installments > 1 ? ` ב-${r.installments} תשלומים` : ""} בנדרים של שופרא. זוהתה לפי ${r.matchedBy}.`,
+        `מייל: ${r.email}${r.phone ? ` · טלפון: ${r.phone}` : ""} · ${r.isSubscriber ? "מנויה (מחיר מלגה)" : "לא מנויה"} · קוד ${r.regCode} · אסמכתא ${r.transactionId}`,
+        `ההרשמה סומנה ״שולם ✓״ אוטומטית, נשלח מייל לשופרא (${r.shufraEmail}) ומייל אישור לנרשמת.`,
+      ],
+      ctaText: "לרשימת הנרשמות לקורס",
+      ctaUrl: `${SITE}/admin/course-registrations`,
+    }),
+  };
+}
+
+/** A course-looking payment arrived with no registration to hang it on. */
+export function courseUnmatchedPaymentEmail(r: {
+  name: string | null;
+  email: string | null;
+  phone: string | null;
+  amountAgorot: number;
+  installments: number;
+  groupe: string | null;
+  transactionId: string;
+}): BuiltEmail {
+  return {
+    subject: `תשלום לקורס בלי הרשמה תואמת: ${r.name ?? r.email ?? "ללא שם"} · ${nis(r.amountAgorot)} ₪`,
+    html: renderEmail({
+      heading: "תשלום לקורס - לשיוך ידני",
+      lines: [
+        `הגיע דיווח תשלום מנדרים של שופרא שנראה כמו תשלום לקורס${r.groupe ? ` (קבוצה ״${r.groupe}״)` : ""}, אבל לא נמצאה הרשמה עם הקוד או המייל.`,
+        `${r.name ?? "ללא שם"}${r.email ? ` · ${r.email}` : ""}${r.phone ? ` · ${r.phone}` : ""} · <b>${nis(r.amountAgorot)} ₪</b>${r.installments > 1 ? ` ב-${r.installments} תשלומים` : ""} · אסמכתא ${r.transactionId}`,
+        "במסך הנרשמות, בקטע ״תשלומים לשיוך״, אפשר לשייך אותו להרשמה - ואז יישלחו המיילים לשופרא ולנרשמת.",
+      ],
+      ctaText: "לרשימת הנרשמות לקורס",
+      ctaUrl: `${SITE}/admin/course-registrations`,
     }),
   };
 }
