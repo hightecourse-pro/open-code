@@ -1071,15 +1071,19 @@ export function coursePaidTeamEmail(r: {
   transactionId: string;
   shufraEmail: string;
   matchedBy: string;
+  /** A test payment (test amount / under 100 ₪): Shufra was NOT mailed. */
+  isTest?: boolean;
 }): BuiltEmail {
   return {
-    subject: `שולם לקורס: ${r.fullName} · ${nis(r.amountAgorot)} ₪`,
+    subject: `${r.isTest ? "[בדיקה] " : ""}שולם לקורס: ${r.fullName} · ${nis(r.amountAgorot)} ₪`,
     html: renderEmail({
-      heading: "תשלום לקורס נקלט ✓",
+      heading: r.isTest ? "תשלום בדיקה לקורס נקלט (לא נשלח לשופרא)" : "תשלום לקורס נקלט ✓",
       lines: [
         `<b>${r.fullName}</b> שילמה <b>${nis(r.amountAgorot)} ₪</b>${r.installments > 1 ? ` ב-${r.installments} תשלומים` : ""} בנדרים של שופרא. זוהתה לפי ${r.matchedBy}.`,
         `מייל: ${r.email}${r.phone ? ` · טלפון: ${r.phone}` : ""} · ${r.isSubscriber ? "מנויה (מחיר מלגה)" : "לא מנויה"} · קוד ${r.regCode} · אסמכתא ${r.transactionId}`,
-        `ההרשמה סומנה ״שולם ✓״ אוטומטית, נשלח מייל לשופרא (${r.shufraEmail}) ומייל אישור לנרשמת.`,
+        r.isTest
+          ? `זה תשלום בדיקה (סכום בדיקה או פחות מ-100 ₪), לכן לא נשלח מייל לשופרא. ההרשמה סומנה ״שולם ✓״ ונשלח מייל אישור לנרשמת.`
+          : `ההרשמה סומנה ״שולם ✓״ אוטומטית, נשלח מייל לשופרא (${r.shufraEmail}) ומייל אישור לנרשמת.`,
       ],
       ctaText: "לרשימת הנרשמות לקורס",
       ctaUrl: `${SITE}/admin/course-registrations`,
