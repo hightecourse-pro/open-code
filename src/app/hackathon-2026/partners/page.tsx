@@ -161,7 +161,7 @@ export default function HackathonPartnersPage() {
                 style={{ borderRadius: "22px 32px 24px 30px" }}
               >
                 <h3 className="font-display font-black text-[17px] mt-2">עשרות מפתחות AI</h3>
-                <p className="t-body text-ink-700 mt-1">כל אחת בונה מנוע AI וממשק בענן - בליווי מנטוריות מהתעשייה.</p>
+                <p className="t-body text-ink-700 mt-1">כל אחת בונה מנוע AI וממשק בענן - פתרון עובד לאתגר אמיתי.</p>
               </div>
             </div>
 
