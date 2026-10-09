@@ -9,7 +9,9 @@ import {
   courseCallbackUrl,
   courseNedarimGroups,
   courseNotifyEmail,
+  coursePaymentAmountOverride,
   coursePaymentUrl,
+  coursePaymentUrlFull,
   courseShufraEmail,
 } from "@/lib/course-registration";
 import { RegistrationsTable, type RegistrationRow } from "./registrations-table";
@@ -65,6 +67,7 @@ export default async function CourseRegistrationsPage() {
     .map((r) => ({ id: r.id, full_name: r.full_name, email: r.email, reg_code: r.reg_code ?? null, status: r.status }));
 
   const callbackUrl = courseCallbackUrl(getSiteUrl());
+  const amountOverride = coursePaymentAmountOverride();
 
   return (
     <div className="flex flex-col gap-5">
@@ -78,8 +81,16 @@ export default async function CourseRegistrationsPage() {
           של שופרא לא נרשמים. מי שחזרה מדף התשלום לפני שהקולבק הגיע מסומנת ״חזרה מדף התשלום - לאימות״.
         </p>
         <p className="text-[12px] text-ink-500 mt-1" dir="ltr">
-          דף התשלום: {coursePaymentUrl()}
+          דף התשלום למנויות (1,500 ₪): {coursePaymentUrl()}
+          <br />
+          דף התשלום בלי מלגה (6,000 ₪): {coursePaymentUrlFull()}
         </p>
+        {amountOverride && (
+          <p className="mt-2 rounded-[12px] bg-red-50 border border-red-200 text-red-800 px-3 py-2 text-[13px] font-semibold">
+            ⚠️ מצב בדיקה: כל קישור תשלום שנבנה עכשיו מעביר לדף התשלום עם סכום {amountOverride} ₪ במקום המחיר האמיתי
+            (COURSE_PAYMENT_AMOUNT_OVERRIDE). להסיר מהסביבה לפני שנרשמות אמיתיות משלמות.
+          </p>
+        )}
         <details className="mt-2 rounded-[14px] border border-ink-100 bg-white px-4 py-3 text-[13px] text-ink-700">
           <summary className="cursor-pointer font-semibold text-ink-900">הגדרת ה-CallBack בנדרים של שופרא (פעם אחת)</summary>
           <ol className="list-decimal ps-5 mt-2 flex flex-col gap-1.5 leading-relaxed">
