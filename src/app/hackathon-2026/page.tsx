@@ -245,12 +245,13 @@ export default function Hackathon2026Page() {
 
           <div className="text-center mt-10 flex flex-col items-center gap-3 relative">
             <CurlyArrow className="w-12 h-14 absolute -top-12 right-[26%] rotate-[24deg] hidden sm:block" color="#7C3AED" />
-            <span
-              className="h26-bounce inline-flex items-center gap-2 bg-white border-2 border-dashed border-brand-pink/50 px-6 py-3 font-display font-bold text-[16.5px] text-ink-700 -rotate-1 shadow-[4px_5px_0_0_#F3C6DD]"
+            <Link
+              href="/hackathon"
+              className="h26-bounce inline-flex items-center gap-2 bg-white border-2 border-brand-pink px-6 py-3 font-display font-bold text-[16.5px] text-ink-900 -rotate-1 shadow-[4px_5px_0_0_#F3C6DD] hover:bg-tint-pink transition-colors"
               style={{ borderRadius: "999px" }}
             >
-              🔒 טופס הבחירה ייפתח בקהילה ממש בקרוב
-            </span>
+              ✅ ההרשמה לאתגרים פתוחה - בוחרות אתגר בקהילה
+            </Link>
             <p className="t-body text-ink-500 max-w-md">
               ההשתתפות למנויות הקהילה בלבד - עוד לא איתנו?{" "}
               <Link href="/join" className="font-semibold text-brand-purple hover:underline">
