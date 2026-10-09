@@ -142,13 +142,18 @@ async function handleCallback(req: Request) {
   }
   record.authedBy = secretOk ? "secret" : "ip";
 
-  // Only Shufra's mosad. A refusal report may arrive bare (no mosad) - let it
-  // through to the matcher, which documents it only for a known registrant.
+  // Only Shufra's mosad is ever recorded. A refusal report may arrive bare (no
+  // mosad) - let it through to the matcher, which documents it only for a
+  // known registrant. Anything else from an authenticated caller - another
+  // mosad, or Nedarim's own "שליחת בדיקה" ping with no mosad at all - is not
+  // ours: nothing is recorded, but the answer is a friendly 200 so their test
+  // tool shows green, and Shufra's hook still hears it as before.
   const isFailure = params.Status === "Error" && !!params.Message;
   if (mosad !== courseMosadId() && !(isFailure && !mosad)) {
-    record.outcome = "unrecognized_mosad";
-    await logEvent("last_course_webhook_rejected", record);
-    return NextResponse.json({ error: "unrecognized mosad" }, { status: 401 });
+    record.outcome = mosad ? "other_mosad" : "no_mosad";
+    await forward(req, raw, contentType, params, record);
+    await logEvent("last_course_webhook_ignored", record);
+    return NextResponse.json({ ok: true, outcome: record.outcome });
   }
 
   try {
