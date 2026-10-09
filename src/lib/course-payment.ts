@@ -145,14 +145,25 @@ export async function markRegistrationPaid(
     })
     .eq("id", reg.id);
 
-  const nis = new Intl.NumberFormat("he-IL").format((pay.amountAgorot ?? 0) / 100);
+  // A test payment (the owner, 9/10: "הבדיקות לא יישלחו לשופרא גם בפרוד") -
+  // the test amount from the admin screen, or anything under 100 ₪, which no
+  // real course price ever is. Shufra does not hear about it; the office and
+  // the registrant (the tester herself) still do, clearly marked.
+  const { effectiveAmountOverride } = await import("@/lib/course-settings");
+  const override = await effectiveAmountOverride();
+  const amount = pay.amountAgorot ?? 0;
+  const isTest = amount < 100 * 100 || (!!override && amount === override * 100);
+
+  const nis = new Intl.NumberFormat("he-IL").format(amount / 100);
   const installmentsText = pay.installments > 1 ? ` ב-${pay.installments} תשלומים` : "";
   await raiseAlert({
     kind: "course_paid",
     severity: "info",
-    title: `שולם לקורס מאסטרית: ${reg.full_name} · ${nis} ₪${installmentsText}`,
-    body: `${reg.email}${reg.phone ? ` · ${reg.phone}` : ""} · ${reg.is_subscriber ? "מנויה (מחיר מלגה)" : "לא מנויה"} · קוד ${reg.reg_code ?? "-"} · זוהה לפי ${MATCHED_BY_HE[by]} · אסמכתא נדרים ${pay.transactionId}. ההרשמה סומנה ״שולם ✓״, נשלח מייל לשופרא ולנרשמת.`,
-    context: { registrationId: reg.id, transactionId: pay.transactionId },
+    title: `${isTest ? "בדיקה: " : ""}שולם לקורס מאסטרית: ${reg.full_name} · ${nis} ₪${installmentsText}`,
+    body: `${reg.email}${reg.phone ? ` · ${reg.phone}` : ""} · ${reg.is_subscriber ? "מנויה (מחיר מלגה)" : "לא מנויה"} · קוד ${reg.reg_code ?? "-"} · זוהה לפי ${MATCHED_BY_HE[by]} · אסמכתא נדרים ${pay.transactionId}. ההרשמה סומנה ״שולם ✓״, ${
+      isTest ? "מצב בדיקה: לא נשלח מייל לשופרא, נשלח מייל למשרד ולנרשמת." : "נשלח מייל לשופרא ולנרשמת."
+    }`,
+    context: { registrationId: reg.id, transactionId: pay.transactionId, isTest },
     dedupeKey: `course-paid:${pay.transactionId}`,
   });
 
@@ -166,14 +177,16 @@ export async function markRegistrationPaid(
     isSubscriber: reg.is_subscriber,
     transactionId: pay.transactionId,
   };
-  try {
-    const mail = courseShufraPaymentEmail(details);
-    await sendEmail({ to: courseShufraEmail(), subject: mail.subject, html: mail.html });
-  } catch {
-    /* best-effort */
+  if (!isTest) {
+    try {
+      const mail = courseShufraPaymentEmail(details);
+      await sendEmail({ to: courseShufraEmail(), subject: mail.subject, html: mail.html });
+    } catch {
+      /* best-effort */
+    }
   }
   try {
-    const mail = coursePaidTeamEmail({ ...details, shufraEmail: courseShufraEmail(), matchedBy: MATCHED_BY_HE[by] });
+    const mail = coursePaidTeamEmail({ ...details, shufraEmail: courseShufraEmail(), matchedBy: MATCHED_BY_HE[by], isTest });
     await sendEmail({ to: courseNotifyEmail(), subject: mail.subject, html: mail.html });
   } catch {
     /* best-effort */
