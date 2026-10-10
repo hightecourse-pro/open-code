@@ -27,6 +27,7 @@ import { CandidatePicker } from "./candidate-picker";
 import { JobHiredClose, type HireCandidate } from "./job-hired-close";
 import { JobFlowStrip } from "./job-flow-strip";
 import { JobSubmitButton } from "./job-submit-button";
+import { JobCandidatesMail, type MailCandidate } from "./job-candidates-mail";
 import { decryptPassword } from "@/lib/portal/auth";
 import { JobDetailsForm, type JobDetailsData } from "./job-details-form";
 import { JobQuestionsManager } from "./job-questions";
@@ -590,6 +591,15 @@ export default async function AdminJobPage({
     };
   });
 
+  // Who the "mail to all candidates" step reaches (the owner, 10/10): the women
+  // at the client, or everyone who applied minus drafts / withdrawals / rejections.
+  const mailCandidate = (a: { applicant_id: string }): MailCandidate => ({
+    id: a.applicant_id,
+    name: profileOf.get(a.applicant_id)?.full_name ?? "מועמדת",
+  });
+  const mailSent: MailCandidate[] = appList.filter((a) => ["sent", "interview", "exam", "hired"].includes(a.status)).map(mailCandidate);
+  const mailAll: MailCandidate[] = appList.filter((a) => !["draft", "declined", "rejected"].includes(a.status)).map(mailCandidate);
+
   const jobDetails: JobDetailsData = {
     id: job.id,
     company: job.company,
@@ -1063,6 +1073,8 @@ export default async function AdminJobPage({
           action={
             job.pipeline_status === "published" && client ? (
               <JobSubmitButton jobId={job.id} approved={flowApproved} clientName={client.company_name} clientReady={clientReady} />
+            ) : job.pipeline_status === "candidates_sent" || job.pipeline_status === "interviews" ? (
+              <JobCandidatesMail jobId={job.id} jobTitle={job.title} sent={mailSent} all={mailAll} />
             ) : null
           }
         />
