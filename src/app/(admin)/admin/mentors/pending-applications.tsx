@@ -8,6 +8,7 @@ import { langLevelLabel, parseLangSkills } from "@/lib/language-skills";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { approveMentorApplication, rejectMentorApplication, sendPersonalEmail } from "../actions";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
+import { netfreeSafeUrl } from "@/lib/netfree";
 
 /**
  * The mentor-approval queue with the WHOLE application in front of her - the
@@ -65,7 +66,7 @@ export async function PendingMentorApplications({
       const urlOfPath = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
       for (const [pid, path] of cvPathOf) {
         const url = urlOfPath.get(path);
-        if (url) cvUrlOf.set(pid, url);
+        if (url) cvUrlOf.set(pid, netfreeSafeUrl(url));
       }
     }
   }

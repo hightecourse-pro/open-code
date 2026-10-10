@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { UpgradeNote } from "@/components/patterns/upgrade-prompt";
+import { netfreeSafeUrl } from "@/lib/netfree";
 // Vercel renders in UTC; these formatters pin every session time to Israel time.
 import { fmtIsraelDate, fmtIsraelTime } from "@/lib/utils";
 
@@ -42,7 +43,7 @@ function SessionFiles({
     <span className="flex items-center gap-3 flex-wrap">
       {syllabus && (
         <a
-          href={syllabus}
+          href={netfreeSafeUrl(syllabus)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-purple hover:underline"
@@ -52,7 +53,7 @@ function SessionFiles({
       )}
       {materials && subscriber && (
         <a
-          href={materials}
+          href={netfreeSafeUrl(materials)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1 text-[12px] font-semibold text-brand-purple hover:underline"

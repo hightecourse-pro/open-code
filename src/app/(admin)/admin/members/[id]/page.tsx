@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, BookOpen, Briefcase, Download, FileText, Mail, PlayCircle, StickyNote } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { netfreeSafeUrl } from "@/lib/netfree";
 import { requireRole } from "@/lib/auth";
 import { Avatar, Badge, Button } from "@/components/ui";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
@@ -195,13 +196,13 @@ export default async function AdminMemberProfilePage({
   const { data: gradeSigned } = (gradeRows ?? []).length
     ? await adminClient.storage.from("cvs").createSignedUrls((gradeRows ?? []).map((g) => g.file_path), 3600)
     : { data: [] };
-  const gradeUrl = new Map((gradeSigned ?? []).map((s) => [s.path, s.signedUrl]));
+  const gradeUrl = new Map((gradeSigned ?? []).map((s) => [s.path, netfreeSafeUrl(s.signedUrl)]));
   const { data: cvSigned } = (cvDocs ?? []).length
     ? await adminClient.storage
         .from("cvs")
         .createSignedUrls((cvDocs ?? []).map((d) => d.file_path), 3600)
     : { data: [] };
-  const cvUrlOf = new Map((cvSigned ?? []).map((s) => [s.path, s.signedUrl]));
+  const cvUrlOf = new Map((cvSigned ?? []).map((s) => [s.path, netfreeSafeUrl(s.signedUrl)]));
 
   // ---- What she actually watched ------------------------------------------
   // Since access opens on attempt, this is also the answer to "why does she

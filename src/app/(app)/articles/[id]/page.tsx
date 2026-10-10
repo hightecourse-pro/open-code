@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireCommunityAccess } from "@/lib/auth";
 import { Badge } from "@/components/ui";
 import { sanitizeArticleHtml } from "@/lib/rich-text";
+import { netfreeSafeHtml } from "@/lib/netfree";
 
 const DATE_HE = new Intl.DateTimeFormat("he-IL", {
   day: "numeric",
@@ -75,7 +76,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
             "[&_img]:rounded-xl [&_img]:my-3 [&_img]:max-w-full",
             "[&_.rt-video]:block [&_.rt-video]:my-3 [&_.rt-video_iframe]:w-full [&_.rt-video_iframe]:aspect-video [&_.rt-video_iframe]:rounded-xl [&_.rt-video_iframe]:border-0",
           ].join(" ")}
-          dangerouslySetInnerHTML={{ __html: sanitizeArticleHtml(article.body_html) }}
+          dangerouslySetInnerHTML={{ __html: netfreeSafeHtml(sanitizeArticleHtml(article.body_html)) }}
         />
       </article>
     </div>

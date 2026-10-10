@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile } from "@/lib/auth";
+import { netfreeSafeUrl } from "@/lib/netfree";
 import {
   FILE_MIMES,
   IMAGE_MIMES,
@@ -93,7 +94,7 @@ export async function uploadAttachment(
       mime: file.type,
       sizeBytes: file.size,
       isImage,
-      previewUrl: signed?.signedUrl ?? null,
+      previewUrl: netfreeSafeUrl(signed?.signedUrl ?? null),
     },
   };
 }

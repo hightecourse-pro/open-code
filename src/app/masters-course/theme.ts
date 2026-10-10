@@ -14,9 +14,9 @@ export const C = {
 };
 
 // Contact on the course pages (the owner, 4/10: phone + email, no WhatsApp).
-// The number is the community office line until the owner sends the course one.
-export const CONTACT_PHONE = "02-580-0296";
-export const CONTACT_PHONE_HREF = "tel:+97225800296";
+// The phone is Shufra's office (the owner, 9/10); the email is Open Code's.
+export const CONTACT_PHONE = "03-617-1270";
+export const CONTACT_PHONE_HREF = "tel:+97236171270";
 export const CONTACT_EMAIL = "office@opencode.org.il";
 // Questions about the registration go to Shufra too (the owner, 9/10) - each
 // mail link opens with a subject that says what it is about.

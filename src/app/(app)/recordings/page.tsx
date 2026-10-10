@@ -8,6 +8,7 @@ import { ContentGate } from "@/components/patterns/content-gate";
 import { SessionWatch } from "@/components/patterns/session-watch";
 import { UpgradeCard } from "@/components/patterns/upgrade-prompt";
 import { fmtIsraelDate } from "@/lib/utils";
+import { netfreeSafeUrl } from "@/lib/netfree";
 
 export const metadata: Metadata = { title: "הקלטות סשנים" };
 
@@ -142,7 +143,7 @@ export default async function RecordingsPage() {
                 {/* The syllabus is community-wide and survives the recording. */}
                 {s.syllabus_url && (
                   <a
-                    href={s.syllabus_url}
+                    href={netfreeSafeUrl(s.syllabus_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"

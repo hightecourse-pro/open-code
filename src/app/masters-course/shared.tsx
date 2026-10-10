@@ -89,15 +89,15 @@ export function CourseFooter() {
       </p>
       <p className="text-[15px] mt-1">הקורס נולד מתוך מחקר שוק על מגמות השינויים הדרמטיים בהייטק.</p>
       <p className="text-[14px] mt-4 leading-relaxed" style={{ color: C.muted }}>
-        שאלות על ההרשמה? לשופרא במייל{" "}
-        <a href={courseMailto(SHUFRA_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
-          {SHUFRA_EMAIL}
-        </a>
-        , או לקוד פתוח בטלפון{" "}
+        שאלות על ההרשמה? לשופרא בטלפון{" "}
         <a href={CONTACT_PHONE_HREF} dir="ltr" className="font-bold underline" style={{ color: C.navy }}>
           {CONTACT_PHONE}
         </a>{" "}
         או במייל{" "}
+        <a href={courseMailto(SHUFRA_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
+          {SHUFRA_EMAIL}
+        </a>
+        , או לקוד פתוח במייל{" "}
         <a href={courseMailto(CONTACT_EMAIL)} className="font-bold underline" style={{ color: C.navy }}>
           {CONTACT_EMAIL}
         </a>
