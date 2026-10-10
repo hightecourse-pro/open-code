@@ -21,6 +21,7 @@ import {
   mentorDeclinedEmail,
   teamPersonalEmail,
   jobChatNudgeEmail,
+  jobCandidatesUpdateEmail,
   teamRepliedEmail,
   mentorAssignmentInviteEmail,
 } from "@/lib/email/templates";
@@ -2769,6 +2770,112 @@ export async function sendJobChatMessage(
     if (!sent.ok) console.error("[jobs] chat nudge email failed:", applicantId, sent.error);
   }
   return {};
+}
+
+/** The chat between the acting admin and a member - found or opened. */
+async function ensureConversation(
+  admin: ReturnType<typeof createAdminClient>,
+  meId: string,
+  otherId: string
+): Promise<string | null> {
+  const [a_id, b_id] = [meId, otherId].sort();
+  const { data: existing } = await admin.from("conversations").select("id").eq("a_id", a_id).eq("b_id", b_id).maybeSingle();
+  if (existing?.id) return existing.id;
+  const { data: created } = await admin.from("conversations").insert({ a_id, b_id }).select("id").single();
+  return created?.id ?? null;
+}
+
+export interface JobCandidatesMailInput {
+  /** "sent" = the women submitted to the client (default); "all" = everyone who applied (minus draft / declined / rejected). */
+  audience: "sent" | "all";
+  subject: string;
+  body: string;
+  /** A copy of the text in each candidate's chat with the acting admin - the review center shows it, she can answer there. */
+  chatCopy: boolean;
+}
+
+export interface JobCandidatesMailResult {
+  error?: string;
+  total?: number;
+  sent?: number;
+  /** Staging guard: addresses outside the allowlist are not mailed. */
+  skipped?: number;
+  failed?: number;
+  names?: string[];
+}
+
+/**
+ * One email, in the admin's own words, to every candidate of a job that is
+ * already with the client (the owner, 10/10: "למשרה שכבר אצל הלקוח לשלוח מייל
+ * בתוכן שנבחר לכל המועמדות יחד"). Transactional - it goes out regardless of
+ * digest preferences, like a personal mail. Each recipient gets her own copy
+ * (first name in the heading); nobody sees the others.
+ */
+export async function sendJobCandidatesMail(jobId: string, input: JobCandidatesMailInput): Promise<JobCandidatesMailResult> {
+  const me = await requireRole("admin");
+  const subject = (input.subject ?? "").trim().slice(0, 200);
+  const body = (input.body ?? "").trim().slice(0, 6000);
+  if (!subject) return { error: "כתבי נושא למייל." };
+  if (!body) return { error: "כתבי את תוכן המייל." };
+  const admin = createAdminClient();
+  const { data: job } = await admin.from("jobs").select("id, title, company").eq("id", jobId).maybeSingle();
+  if (!job) return { error: "המשרה לא נמצאה." };
+
+  const FORWARDED = new Set(["sent", "interview", "exam", "hired"]);
+  const EXCLUDED = new Set(["draft", "declined", "rejected"]);
+  const { data: apps } = await admin.from("applications").select("applicant_id, status, sent_to_client_at").eq("job_id", jobId);
+  const ids = [
+    ...new Set(
+      (apps ?? [])
+        .filter((a) => (input.audience === "all" ? !EXCLUDED.has(a.status) : FORWARDED.has(a.status) || !!a.sent_to_client_at))
+        .map((a) => a.applicant_id)
+    ),
+  ];
+  if (ids.length === 0) return { error: "אין מועמדות לשלוח להן." };
+
+  const { inChunks } = await import("@/lib/chunk");
+  const profiles = await inChunks<{ id: string; first_name: string | null; full_name: string }>(ids, (chunk) =>
+    admin.from("profiles").select("id, first_name, full_name").in("id", chunk)
+  );
+  const { data: emailRows } = await admin.rpc("member_emails", { p_ids: ids });
+  const emailOf = new Map(((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email]));
+  const site = getSiteUrl();
+  const now = new Date().toISOString();
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+  const names: string[] = [];
+  for (const p of profiles) {
+    let chatUrl: string | null = null;
+    if (input.chatCopy) {
+      const convId = await ensureConversation(admin, me.id, p.id);
+      if (convId) {
+        // email_notified_at: this flow sends its OWN email - the grace cron skips it.
+        await admin.from("messages").insert({ conversation_id: convId, sender_id: me.id, body: `בקשר למשרת «${job.title}»:\n${body}`, email_notified_at: now });
+        await admin.from("conversations").update({ last_message_at: now }).eq("id", convId);
+        chatUrl = `${site}/chat?c=${convId}`;
+      }
+    }
+    const email = emailOf.get(p.id);
+    if (!email) {
+      failed++;
+      continue;
+    }
+    const mail = jobCandidatesUpdateEmail(p.first_name ?? p.full_name.split(" ")[0], job.title, job.company ?? null, subject, body, chatUrl);
+    const r = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+    if (r.ok) {
+      sent++;
+      names.push(p.full_name);
+    } else if (r.error === "blocked_by_allowlist") {
+      skipped++;
+    } else {
+      failed++;
+      console.error("[jobs] candidates mail failed:", p.id, r.error);
+    }
+  }
+  revalidatePath(`/admin/jobs/${jobId}`);
+  return { total: profiles.length, sent, skipped, failed, names };
 }
 
 /**
