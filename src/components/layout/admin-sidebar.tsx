@@ -12,6 +12,7 @@ import {
   CreditCard,
   Building2,
   Calendar,
+  Eye,
   ContactRound,
   Crown,
   FileText,
@@ -82,6 +83,7 @@ const SECTIONS: AdminNavSection[] = [
   {
     title: "מערכת",
     items: [
+      { href: "/admin/visits", label: "כניסות לאתר", icon: Eye },
       { href: "/admin/analytics", label: "נתוני למידה", icon: BarChart3 },
       { href: "/admin/payments", label: "תשלומים", icon: CreditCard },
       { href: "/admin/whatsapp", label: "וואטסאפ", icon: MessageSquareText },
