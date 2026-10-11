@@ -2086,6 +2086,35 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["course_payments"]["Insert"]>;
         Relationships: [];
       };
+      /** One row per page view from the browser beacon (the owner, 11/10: "כמה נכנסו"). */
+      page_views: {
+        Row: {
+          id: number;
+          at: string;
+          area: string;
+          path: string;
+          visitor: string;
+          profile_id: string | null;
+          referrer: string | null;
+          utm_source: string | null;
+          utm_campaign: string | null;
+          device: string | null;
+        };
+        Insert: {
+          id?: number;
+          at?: string;
+          area: string;
+          path: string;
+          visitor: string;
+          profile_id?: string | null;
+          referrer?: string | null;
+          utm_source?: string | null;
+          utm_campaign?: string | null;
+          device?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["page_views"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: {
       /**
@@ -2152,6 +2181,19 @@ export interface Database {
       analytics_summary: {
         Args: Record<string, never>;
         Returns: { active_learners: number; total_opens: number }[];
+      };
+      /** Visits per area in a window, plus one '*' row for everything. */
+      page_views_summary: {
+        Args: { p_from: string; p_to: string };
+        Returns: { area: string; views: number; visitors: number; members: number }[];
+      };
+      page_views_daily: {
+        Args: { p_from: string; p_to: string };
+        Returns: { day: string; area: string; views: number; visitors: number }[];
+      };
+      page_views_top_paths: {
+        Args: { p_from: string; p_to: string; p_limit: number };
+        Returns: { area: string; path: string; views: number; visitors: number }[];
       };
       match_answer_ids: {
         Args: { p_question: string; p_values: string[] };
