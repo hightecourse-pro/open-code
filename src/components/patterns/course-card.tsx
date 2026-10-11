@@ -123,10 +123,18 @@ export function CourseCard({
         {course.category && (
           <div className="font-mono text-[11px] text-brand-pink-deep mb-1">{course.category}</div>
         )}
+        {/* Counts only when known - a course we have not measured yet (or an
+            external one) must not read "0 שיעורים · 0 שעות" (11/10). */}
         <div className="text-[12.5px] text-ink-500 flex gap-2.5 flex-wrap">
-          <span>{course.lessons_count} שיעורים</span>
-          <span>·</span>
-          {cycles ? <span>{cycles}</span> : <span>{course.duration_hours} שעות</span>}
+          {course.lessons_count > 0 && <span>{course.lessons_count} שיעורים</span>}
+          {course.lessons_count > 0 && (cycles || course.duration_hours > 0 || course.access_kind === "external") && <span>·</span>}
+          {cycles ? (
+            <span>{cycles}</span>
+          ) : course.access_kind === "external" ? (
+            <span>באתר חיצוני, עם פרטי כניסה</span>
+          ) : course.duration_hours > 0 ? (
+            <span>{course.duration_hours} שעות</span>
+          ) : null}
         </div>
 
         {/* Syllabus peek - what's actually inside, before she commits. */}
