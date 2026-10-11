@@ -161,8 +161,8 @@ const OUR_TEMPLATE_HE: Record<string, string> = {
   wa_follow_up: "בהמשך לשיחתנו",
   wa_reminder: "תזכורת ובקשת עדכון",
   wa_general: "כללית",
-  // The owner's natural continuation after the 24h window (11/10): "היי, / {תוכן} / תודה ויום טוב" - one parameter, no team intro.
-  wa_continue: "המשך שיחה (היי / תוכן / תודה)",
+  // The owner's natural continuation after the 24h window (11/10): "היי, / {תוכן} / תודה ויום טוב" - one parameter, no team intro, no emoji.
+  wa_continue_chat: "המשך שיחה (היי / תוכן / תודה ויום טוב)",
 };
 
 /** The template-only door for NEW conversations (Meta's rule). */
