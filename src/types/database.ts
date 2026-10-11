@@ -1905,6 +1905,13 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["wa_contacts"]["Insert"]>;
         Relationships: [];
       };
+      /** Per-admin "I looked at this conversation" stamp (11/10) - the badge and the חדש marker are per team member. */
+      wa_contact_reads: {
+        Row: { contact_id: string; admin_id: string; read_at: string };
+        Insert: { contact_id: string; admin_id: string; read_at?: string };
+        Update: Partial<Database["public"]["Tables"]["wa_contact_reads"]["Insert"]>;
+        Relationships: [];
+      };
       wa_messages: {
         Row: {
           id: string;
@@ -2222,6 +2229,11 @@ export interface Database {
       page_views_top_paths: {
         Args: { p_from: string; p_to: string; p_limit: number };
         Returns: { area: string; path: string; views: number; visitors: number }[];
+      };
+      /** Visits per logged-in member in a window (the report with names and emails, 11/10). */
+      page_views_members: {
+        Args: { p_from: string; p_to: string };
+        Returns: { profile_id: string; views: number; first_at: string; last_at: string; areas: string }[];
       };
       match_answer_ids: {
         Args: { p_question: string; p_values: string[] };
