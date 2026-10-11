@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { cleanWaParam } from "@/lib/whatsapp-format";
 import { sendWhatsAppMedia, sendWhatsAppReply, startTemplateConversation, renameWaContact } from "./actions";
 
 export interface WaContactRow {
@@ -203,7 +204,8 @@ function NewChatDialog({
   const matches = memberQuery.trim()
     ? members.filter((mm) => (mm.name + " " + mm.waId).includes(memberQuery.trim())).slice(0, 6)
     : [];
-  const preview = tpl ? tpl.bodyText.replace(/\{\{(\d+)\}\}/g, (_, n) => params[Number(n) - 1] || "____") : "";
+  // The preview shows the parameters exactly as they will be sent (cleaned).
+  const preview = tpl ? tpl.bodyText.replace(/\{\{(\d+)\}\}/g, (_, n) => cleanWaParam(params[Number(n) - 1] ?? "") || "____") : "";
 
   return (
     <div className="fixed inset-0 z-50 bg-ink-1000/40 flex items-center justify-center p-4" onClick={onClose}>
@@ -294,6 +296,9 @@ function NewChatDialog({
                     className="w-full border border-ink-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-brand-purple"
                   />
                 ))}
+                <p className="text-[11.5px] text-ink-500">
+                  קישורים מותרים. שורות, טאבים ורווחים כפולים מתאחדים לרווח אחד ותווים נסתרים מוסרים - מגבלה של וואטסאפ על שדות בתבנית.
+                </p>
               </div>
             )}
 

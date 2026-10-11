@@ -38,3 +38,20 @@ export function formatSharedLocation(loc: WaSharedLocation | undefined | null): 
   const label = [loc.name, loc.address].filter(Boolean).join(", ");
   return `📍 מיקום${label ? `: ${label}` : ""} · https://maps.google.com/?q=${loc.latitude},${loc.longitude}`;
 }
+
+/**
+ * A template parameter Meta will accept. Their rule (error 132018, "There's
+ * an issue with the parameters in your template"): no line breaks, no tabs,
+ * no run of more than four spaces - and text pasted from a document often
+ * carries invisible bidi / zero-width marks that trip the same check (the
+ * owner, 11/10, with a link in the content). Links themselves are fine.
+ * One line, single spaces, nothing invisible.
+ */
+export function cleanWaParam(value: string): string {
+  return value
+    .replace(/[​-‍﻿‎‏‪-‮⁦-⁩]/g, "")
+    .replace(/[   \t\r\n]+/g, " ")
+    .replace(/[\u0000-\u001F\u007F]/g, " ")
+    .replace(/ {2,}/g, " ")
+    .trim();
+}
