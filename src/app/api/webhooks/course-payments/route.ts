@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
 import { nedarimCallbackIps } from "@/lib/payments/nedarim";
@@ -7,8 +7,10 @@ import { recordCoursePayment } from "@/lib/course-payment";
 import type { Json } from "@/types/database";
 
 export const dynamic = "force-dynamic";
-// Processing + passing the update on to Shufra's own hook.
-export const maxDuration = 30;
+// Processing, then (after our answer to Nedarim) passing the update on to
+// Shufra's own hook - a Google Apps Script that can take tens of seconds to
+// wake up, with one retry.
+export const maxDuration = 90;
 
 /**
  * Shufra's Nedarim CallBack for the course (the owner, 9/10).
@@ -68,17 +70,29 @@ async function forward(
   if (!url) return;
   const body = raw || JSON.stringify(params);
   const type = raw ? contentType || "application/json" : "application/json";
-  try {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "content-type": type, [FORWARDED_HEADER]: "1" },
-      body,
-      redirect: "follow",
-      signal: AbortSignal.timeout(20_000),
-    });
-    record.forward = { status: res.status, ok: res.ok };
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  } catch (e) {
+  // Their Apps Script sometimes needs a cold start (11/10: a 20s timeout on a
+  // registration-fee update) - two attempts, 30s each.
+  let lastError: unknown = null;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": type, [FORWARDED_HEADER]: "1" },
+        body,
+        redirect: "follow",
+        signal: AbortSignal.timeout(30_000),
+      });
+      record.forward = { status: res.status, ok: res.ok, attempt };
+      if (res.ok) return;
+      lastError = new Error(`HTTP ${res.status}`);
+    } catch (e) {
+      lastError = e;
+      record.forward = { attempt, error: String(e) };
+    }
+    if (attempt === 1) await new Promise((r) => setTimeout(r, 3000));
+  }
+  {
+    const e = lastError;
     record.forward = { ...(record.forward as object | undefined), error: String(e) };
     await raiseAlert({
       kind: "course_forward_failed",
@@ -151,8 +165,10 @@ async function handleCallback(req: Request) {
   const isFailure = params.Status === "Error" && !!params.Message;
   if (mosad !== courseMosadId() && !(isFailure && !mosad)) {
     record.outcome = mosad ? "other_mosad" : "no_mosad";
-    await forward(req, raw, contentType, params, record);
-    await logEvent("last_course_webhook_ignored", record);
+    after(async () => {
+      await forward(req, raw, contentType, params, record);
+      await logEvent("last_course_webhook_ignored", record);
+    });
     return NextResponse.json({ ok: true, outcome: record.outcome });
   }
 
@@ -172,13 +188,18 @@ async function handleCallback(req: Request) {
       dedupeKey: `course-error:${params.TransactionId ?? params.ID ?? ip}`,
     });
   }
-  // Shufra's own hook hears everything we heard - ours or not.
-  await forward(req, raw, contentType, params, record);
+  // Shufra's own hook hears everything we heard - ours or not. It runs after
+  // Nedarim already has our answer, so a slow script never makes Nedarim
+  // time out and resend.
   const key =
     record.outcome === "error" ? "last_course_webhook_rejected"
     : record.outcome === "ignored_unrelated" || record.outcome === "failure_ignored" ? "last_course_webhook_ignored"
     : "last_course_webhook";
   await logEvent(key, record);
+  after(async () => {
+    await forward(req, raw, contentType, params, record);
+    await logEvent(key, record);
+  });
   if (record.outcome === "error") return NextResponse.json({ error: "failed" }, { status: 500 });
   return NextResponse.json({ ok: true, outcome: record.outcome });
 }
