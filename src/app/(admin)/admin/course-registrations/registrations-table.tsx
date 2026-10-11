@@ -32,7 +32,7 @@ export interface RegistrationRow {
 const nis = (agorot: number) => new Intl.NumberFormat("he-IL").format(agorot / 100);
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  registered: { label: "נרשמה", cls: "bg-tint-purple text-brand-purple" },
+  registered: { label: "התעניינה - לא שילמה", cls: "bg-tint-purple text-brand-purple" },
   paid_reported: { label: "חזרה מדף התשלום - לאימות", cls: "bg-amber-100 text-amber-800" },
   paid: { label: "שולם ✓", cls: "bg-tint-green text-green-800" },
   canceled: { label: "בוטל", cls: "bg-ink-100 text-ink-600" },
@@ -136,7 +136,7 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
           [
             ["all", `הכל (${counts.total})`],
             ["subscribers", `מנויות (${counts.subscribers})`],
-            ["open", `טרם שילמו (${rows.filter((r) => r.status === "registered").length})`],
+            ["open", `התעניינו - לא שילמו (${rows.filter((r) => r.status === "registered").length})`],
             ["verify", `לאימות (${rows.filter((r) => r.status === "paid_reported").length})`],
             ["paid", `שולם (${counts.paid})`],
           ] as const
