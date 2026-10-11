@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { cn } from "@/lib/utils";
 import { VISIT_AREAS, VISIT_RANGES, visitWindow, type VisitArea, type VisitRange } from "@/lib/visits";
+import { loadVisitingMembers } from "@/lib/visits-report";
 
 export const metadata: Metadata = { title: "כניסות לאתר" };
 export const dynamic = "force-dynamic";
@@ -25,10 +26,11 @@ export default async function VisitsPage({ searchParams }: { searchParams: Promi
   const { from, to } = visitWindow(range);
   const args = { p_from: from.toISOString(), p_to: to.toISOString() };
   const admin = createAdminClient();
-  const [{ data: summaryRows }, { data: dailyRows }, { data: topRows }] = await Promise.all([
+  const [{ data: summaryRows }, { data: dailyRows }, { data: topRows }, members] = await Promise.all([
     admin.rpc("page_views_summary", args),
     admin.rpc("page_views_daily", args),
     admin.rpc("page_views_top_paths", { ...args, p_limit: 40 }),
+    loadVisitingMembers(range),
   ]);
   const summary = new Map((summaryRows ?? []).map((r) => [r.area, { views: Number(r.views), visitors: Number(r.visitors), members: Number(r.members) }]));
   const total = summary.get("*") ?? { views: 0, visitors: 0, members: 0 };
@@ -160,6 +162,56 @@ export default async function VisitsPage({ searchParams }: { searchParams: Promi
             </tbody>
           </table>
         )}
+      </section>
+
+      {/* Who came in - members by name, with the CSV the owner asked for (11/10). */}
+      <section className="rounded-[16px] border border-ink-200 bg-white px-4 py-3">
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <h2 className="font-display font-bold text-[16px] text-ink-1000">מי נכנסה - חברות ({nf.format(members.length)})</h2>
+            <p className="text-[12px] text-ink-500">חברות מחוברות בלבד; מבקרות אנונימיות נמצאות בסה״כ למעלה. הדוח המלא עם שם ומייל - בייצוא.</p>
+          </div>
+          <a
+            href={`/admin/visits/export?range=${range}`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-brand-purple bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-brand-purple hover:bg-tint-purple"
+          >
+            ⬇ ייצוא דוח כניסות (CSV, {VISIT_RANGES.find((r) => r.key === range)?.label})
+          </a>
+        </div>
+        {members.length === 0 ? (
+          <p className="text-[13px] text-ink-500 mt-2">אין כניסות של חברות בטווח הזה.</p>
+        ) : (
+          <table className="w-full text-[12.5px] mt-2">
+            <thead className="text-ink-500 text-[11.5px]">
+              <tr>
+                <th className="text-start font-semibold py-1">שם</th>
+                <th className="text-start font-semibold py-1">מייל</th>
+                <th className="text-start font-semibold py-1 w-16">כניסות</th>
+                <th className="text-start font-semibold py-1 w-32">אחרונה</th>
+                <th className="text-start font-semibold py-1">אזורים</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.slice(0, 25).map((m) => (
+                <tr key={m.profileId} className="border-t border-ink-100">
+                  <td className="py-1.5 font-semibold text-ink-1000">
+                    <Link href={`/admin/members/${m.profileId}`} className="hover:underline text-brand-purple">
+                      {m.name}
+                    </Link>
+                    {m.subscriber && <span className="ms-1.5 text-[10.5px] text-green-800 bg-tint-green rounded-full px-1.5 py-0.5">מנויה</span>}
+                  </td>
+                  <td className="py-1.5 text-ink-700" dir="ltr" style={{ textAlign: "start" }}>
+                    {m.email}
+                  </td>
+                  <td className="py-1.5 font-semibold tabular-nums">{nf.format(m.views)}</td>
+                  <td className="py-1.5 text-ink-700 whitespace-nowrap">{dayFmt.format(new Date(m.lastAt))}</td>
+                  <td className="py-1.5 text-ink-700">{m.areas.map((a) => areaMeta.get(a)?.label ?? a).join(" / ")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {members.length > 25 && <p className="text-[12px] text-ink-500 mt-1">מוצגות 25 הראשונות לפי כניסות; כולן בייצוא.</p>}
       </section>
 
       {/* The most visited pages. */}

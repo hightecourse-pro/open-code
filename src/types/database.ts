@@ -2230,6 +2230,11 @@ export interface Database {
         Args: { p_from: string; p_to: string; p_limit: number };
         Returns: { area: string; path: string; views: number; visitors: number }[];
       };
+      /** Visits per logged-in member in a window (the report with names and emails, 11/10). */
+      page_views_members: {
+        Args: { p_from: string; p_to: string };
+        Returns: { profile_id: string; views: number; first_at: string; last_at: string; areas: string }[];
+      };
       match_answer_ids: {
         Args: { p_question: string; p_values: string[] };
         Returns: { profile_id: string }[];
