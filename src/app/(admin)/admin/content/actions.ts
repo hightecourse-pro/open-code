@@ -10,6 +10,39 @@ import {
   syncSessionAudience,
 } from "@/lib/drive-shares";
 import type { ContentOwner, LinkKind, ShareStatus } from "@/types/database";
+import { saveExternalAccess, setCourseAccessKind, type CourseAccessKind, type ExternalAccessInput } from "@/lib/course-external";
+
+/**
+ * Which kind of course this is (the owner, 11/10): a Drive folder we share,
+ * or an external site with a link + shared login per year cycle. For the
+ * external kind the rows replace the course's units and Drive links.
+ */
+export async function saveCourseAccess(
+  courseId: string,
+  input: { kind: CourseAccessKind; rows: ExternalAccessInput[] }
+): Promise<{ error?: string }> {
+  await requireRole("admin");
+  const kind: CourseAccessKind = input.kind === "external" ? "external" : "drive";
+  const rows = (input.rows ?? [])
+    .map((r) => ({ label: (r.label ?? "").trim(), url: (r.url ?? "").trim(), username: (r.username ?? "").trim(), password: (r.password ?? "").trim() }))
+    .filter((r) => r.label || r.url || r.username || r.password)
+    .slice(0, 10);
+  if (kind === "external") {
+    for (const r of rows) {
+      if (!r.label) return { error: "לכל שורה צריך שם (למשל ״הקלטות משנת 2025״)." };
+      if (!/^https?:\/\/\S+$/.test(r.url)) return { error: `הקישור של ״${r.label}״ לא נראה תקין - כתובת מלאה שמתחילה ב-https://.` };
+    }
+  }
+  try {
+    await setCourseAccessKind(courseId, kind);
+    await saveExternalAccess(courseId, kind === "external" ? rows : []);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "לא נשמר" };
+  }
+  revalidatePath("/admin/content");
+  revalidatePath("/courses");
+  return {};
+}
 
 /** Create a course (published immediately; links added separately). */
 export async function createCourse(formData: FormData): Promise<void> {

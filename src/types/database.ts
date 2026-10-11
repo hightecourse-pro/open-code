@@ -1347,9 +1347,12 @@ export interface Database {
           is_published: boolean;
           /** The Excel import key - one course per קוד קורס. */
           code: number | null;
+          /** drive (a folder we share) | external (a link + shared login on another site, 11/10). */
+          access_kind: string;
         } & Timestamps;
         Insert: {
           id?: string;
+          access_kind?: string;
           title: string;
           category?: string | null;
           tech_tags?: string[];
@@ -2084,6 +2087,31 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["course_payments"]["Insert"]>;
+        Relationships: [];
+      };
+      /** External course access: link + shared login per year cycle, password encrypted (11/10). */
+      course_external_access: {
+        Row: {
+          id: string;
+          course_id: string;
+          label: string;
+          url: string;
+          username: string | null;
+          password_enc: string | null;
+          sort_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          course_id: string;
+          label: string;
+          url: string;
+          username?: string | null;
+          password_enc?: string | null;
+          sort_order?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["course_external_access"]["Insert"]>;
         Relationships: [];
       };
       /** One row per page view from the browser beacon (the owner, 11/10: "כמה נכנסו"). */

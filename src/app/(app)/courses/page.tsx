@@ -10,6 +10,8 @@ import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { CollapsibleSection } from "@/components/patterns/collapsible-section";
 import { JumpToCatalogue } from "@/components/patterns/jump-to-catalogue";
 import { COURSE_DATE_HE, releasedByTeam, swapEligibleAt } from "@/lib/course-library";
+import { loadExternalAccess, type ExternalAccessRow } from "@/lib/course-external";
+import { ExternalCoursePanel } from "@/components/patterns/external-course-panel";
 import type { ContentLink } from "@/types/database";
 
 export const metadata: Metadata = { title: "ספריית הקורסים" };
@@ -126,6 +128,16 @@ export default async function CoursesPage() {
     (id) => id !== activeCourse?.id
   );
   const giftedCourses = (courses ?? []).filter((c) => giftedIds.includes(c.id));
+
+  // External courses (link + shared login on another site, the owner 11/10):
+  // the credentials are read with the service role, only for the courses that
+  // are hers right now - the active take and the ones opened for her.
+  const activeExternal: ExternalAccessRow[] | null =
+    activeCourse?.access_kind === "external" ? await loadExternalAccess(activeCourse.id) : null;
+  const giftedExternal = new Map<string, ExternalAccessRow[]>();
+  for (const c of giftedCourses) {
+    if (c.access_kind === "external") giftedExternal.set(c.id, await loadExternalAccess(c.id));
+  }
 
   // Her feedback for gifted courses lives in course_feedback (no enrollment).
   const { data: giftedFb } = user && giftedCourses.length
@@ -265,16 +277,28 @@ export default async function CoursesPage() {
             {/* Only once she really holds the Drive share - otherwise this
                 button would land her on Google's sign-in screen. Before that
                 the gate below is the way in. */}
-            {activeLinks.length > 0 && unlockedCourses.has(activeCourse.id) && (
+            {activeExternal && activeExternal.length > 0 ? (
               <LoggedLink
-                href={activeLinks[0].url}
+                href={activeExternal[0].url}
                 ownerType="course"
                 ownerId={activeCourse.id}
-                linkId={activeLinks[0].id}
                 className="font-display font-semibold text-[13.5px] px-[18px] py-2.5 rounded-md bg-white text-brand-pink-deep text-center"
               >
-                המשיכי לקורס
+                לכניסה לקורס
               </LoggedLink>
+            ) : (
+              activeLinks.length > 0 &&
+              unlockedCourses.has(activeCourse.id) && (
+                <LoggedLink
+                  href={activeLinks[0].url}
+                  ownerType="course"
+                  ownerId={activeCourse.id}
+                  linkId={activeLinks[0].id}
+                  className="font-display font-semibold text-[13.5px] px-[18px] py-2.5 rounded-md bg-white text-brand-pink-deep text-center"
+                >
+                  המשיכי לקורס
+                </LoggedLink>
+              )
             )}
             {/* "החזרת קורס" is gone from here on the PM's feedback: returning
                 mid-month closed her access without unlocking a new pick - pure
@@ -292,6 +316,7 @@ export default async function CoursesPage() {
           rating={active?.rating ?? null}
           feedback={active?.feedback ?? null}
           unlocked={unlockedCourses.has(activeCourse.id)}
+          materialOverride={activeExternal ? <ExternalCoursePanel rows={activeExternal} /> : undefined}
         />
       )}
 
@@ -319,6 +344,7 @@ export default async function CoursesPage() {
               rating={giftedFbOf.get(course.id)?.rating ?? null}
               feedback={giftedFbOf.get(course.id)?.feedback ?? null}
               unlocked={unlockedCourses.has(course.id)}
+              materialOverride={giftedExternal.has(course.id) ? <ExternalCoursePanel rows={giftedExternal.get(course.id)!} /> : undefined}
             />
           </div>
         );
