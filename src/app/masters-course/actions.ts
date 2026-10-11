@@ -107,7 +107,7 @@ export async function registerForCourse(input: RegisterCourseInput): Promise<Reg
       await raiseAlert({
         kind: "course_registration",
         severity: "info",
-        title: `נרשמה לקורס מאסטרית: ${fullName}`,
+        title: `התעניינה בקורס מאסטרית: ${fullName}`,
         body: `${email} · ${phoneDigits} · ${m.isSubscriber ? "מנויה ✓" : "לא מנויה"} · קוד ${regCode} · ${membershipNote}`,
         dedupeKey: `course_registration:${COURSE_KEY}:${email}`,
       });
