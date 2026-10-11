@@ -14,6 +14,10 @@ export interface WaContactRow {
   isMember: boolean;
   lastMessageAt: string | null;
   windowLeftMs: number;
+  /** She wrote something the viewing team member has not looked at (per admin, 11/10). */
+  unread?: boolean;
+  /** Her latest message is newer than anything the team sent her. */
+  awaitingReply?: boolean;
 }
 
 export interface WaMessageRow {
@@ -497,24 +501,33 @@ export function WaInbox({
               href={`/admin/whatsapp?c=${c.id}`}
               className={cn(
                 "block px-3.5 py-2.5 border-b border-ink-50 hover:bg-ink-50 transition-colors",
-                c.id === activeId && "bg-tint-purple/40"
+                c.id === activeId && "bg-tint-purple/40",
+                c.unread && c.id !== activeId && "bg-tint-pink/30"
               )}
+              data-unread={c.unread ? "1" : undefined}
             >
               <span className="flex items-center gap-1.5">
-                <span className="font-semibold text-[13.5px] text-ink-900 truncate flex-1">{c.name}</span>
+                {c.unread && <span className="w-2 h-2 rounded-full bg-brand-pink-deep shrink-0" aria-hidden />}
+                <span className={cn("text-[13.5px] text-ink-900 truncate flex-1", c.unread ? "font-black" : "font-semibold")}>{c.name}</span>
+                {c.unread && (
+                  <span className="text-[10px] font-bold bg-brand-pink-deep text-white px-1.5 py-0.5 rounded-full shrink-0">חדש</span>
+                )}
                 {c.isMember && (
                   <span className="text-[10px] font-bold bg-tint-purple text-brand-purple px-1.5 py-0.5 rounded-full shrink-0">
                     חברת קהילה
                   </span>
                 )}
               </span>
-              <span className="flex items-center justify-between mt-0.5">
+              <span className="flex items-center justify-between mt-0.5 gap-2">
                 <span className="font-mono text-[11px] text-ink-400" dir="ltr">
                   +{c.waId}
                 </span>
-                {c.lastMessageAt && (
-                  <span className="text-[11px] text-ink-400">{TIME_IL.format(new Date(c.lastMessageAt))}</span>
-                )}
+                <span className="flex items-center gap-2">
+                  {c.awaitingReply && !c.unread && <span className="text-[10.5px] text-ink-400">ממתינה למענה</span>}
+                  {c.lastMessageAt && (
+                    <span className="text-[11px] text-ink-400">{TIME_IL.format(new Date(c.lastMessageAt))}</span>
+                  )}
+                </span>
               </span>
             </Link>
           ))}

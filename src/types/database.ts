@@ -1905,6 +1905,13 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["wa_contacts"]["Insert"]>;
         Relationships: [];
       };
+      /** Per-admin "I looked at this conversation" stamp (11/10) - the badge and the חדש marker are per team member. */
+      wa_contact_reads: {
+        Row: { contact_id: string; admin_id: string; read_at: string };
+        Insert: { contact_id: string; admin_id: string; read_at?: string };
+        Update: Partial<Database["public"]["Tables"]["wa_contact_reads"]["Insert"]>;
+        Relationships: [];
+      };
       wa_messages: {
         Row: {
           id: string;

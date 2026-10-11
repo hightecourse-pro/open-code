@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getWaConfig, getWaVerifyToken, listWaTemplates, toWaId, waWindowLeftMs } from "@/lib/whatsapp";
+import { markWaContactRead, waInboxState } from "@/lib/whatsapp-inbox";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { WaInbox, type WaContactRow, type WaMemberOption, type WaMessageRow, type WaTemplateOption } from "./wa-inbox";
@@ -32,6 +33,12 @@ export default async function AdminWhatsAppPage({
     .select("id, wa_id, display_name, profile_id, last_message_at, last_inbound_at")
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(500);
+
+  // Opening a conversation is reading it - for THIS team member only (the
+  // owner, 11/10). Stamped before the unread set is computed, so the row she
+  // is looking at never says "חדש" to her.
+  if (activeId && (contacts ?? []).some((ct) => ct.id === activeId)) await markWaContactRead(viewer.id, activeId);
+  const inboxState = await waInboxState(viewer.id);
 
   // Every member with a phone - names contacts in the list AND feeds the
   // new-conversation picker (the owner, 1/9: "לשם מתוך רשימת הלקוחות").
@@ -115,6 +122,8 @@ export default async function AdminWhatsAppPage({
     isMember: memberNameOf.has(ct.id),
     lastMessageAt: ct.last_message_at,
     windowLeftMs: waWindowLeftMs(ct.last_inbound_at),
+    unread: inboxState.unread.has(ct.id),
+    awaitingReply: inboxState.awaitingReply.has(ct.id),
   }));
 
   return (
