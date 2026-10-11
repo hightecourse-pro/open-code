@@ -38,3 +38,24 @@ export function formatSharedLocation(loc: WaSharedLocation | undefined | null): 
   const label = [loc.name, loc.address].filter(Boolean).join(", ");
   return `📍 מיקום${label ? `: ${label}` : ""} · https://maps.google.com/?q=${loc.latitude},${loc.longitude}`;
 }
+
+/**
+ * A template parameter Meta will accept. Their rule (error 132018, "There's
+ * an issue with the parameters in your template"): no line breaks, no tabs,
+ * no run of more than four spaces - and text pasted from a document often
+ * carries invisible bidi / zero-width marks that trip the same check (the
+ * owner, 11/10, with a link in the content). Links themselves are fine.
+ * One line, single spaces, nothing invisible.
+ *
+ * The character classes are built from code points on purpose: literal
+ * zero-width / line-separator characters inside a regex literal broke the
+ * build once (11/10).
+ */
+const ch = (...codes: number[]) => codes.map((c) => String.fromCharCode(c)).join("");
+const WA_INVISIBLE = new RegExp(`[${ch(0x200b, 0x200c, 0x200d, 0xfeff, 0x200e, 0x200f)}${ch(0x202a)}-${ch(0x202e)}${ch(0x2066)}-${ch(0x2069)}]`, "g");
+const WA_BREAKS = new RegExp(`[${ch(0x00a0, 0x2028, 0x2029, 0x09, 0x0d, 0x0a)}]+`, "g");
+const WA_CONTROL = new RegExp(`[${ch(0x01)}-${ch(0x1f)}${ch(0x7f)}]`, "g");
+
+export function cleanWaParam(value: string): string {
+  return value.replace(WA_INVISIBLE, "").replace(WA_BREAKS, " ").replace(WA_CONTROL, " ").replace(/ {2,}/g, " ").trim();
+}

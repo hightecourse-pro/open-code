@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { cleanWaParam } from "@/lib/whatsapp-format";
 import {
   listWaTemplates,
   sendWaMedia,
@@ -159,7 +160,8 @@ export async function startTemplateConversation(formData: FormData): Promise<{
   for (let i = 1; i <= 10; i++) {
     const v = formData.get(`param${i}`);
     if (v === null) break;
-    params.push(String(v).trim());
+    // Meta's parameter rules (no line breaks / tabs / 4+ spaces / invisible marks).
+    params.push(cleanWaParam(String(v)));
   }
   const waId = toWaId(phoneRaw);
   if (!waId) return { ok: false, error: "המספר לא נראה תקין" };
@@ -172,7 +174,14 @@ export async function startTemplateConversation(formData: FormData): Promise<{
   if (params.length !== tpl.paramCount) return { ok: false, error: "מספר השדות לא תואם לתבנית" };
 
   const sent = await sendWaTemplate(waId, tpl.name, tpl.language, params);
-  if (!sent.ok) return { ok: false, error: sent.error };
+  if (!sent.ok) {
+    return {
+      ok: false,
+      error: /132018/.test(sent.error)
+        ? `וואטסאפ דחו את תוכן השדות (#132018): אסור שורות, טאבים, יותר מ-4 רווחים רצופים או תווים נסתרים בשדה. נקינו את הטקסט - נסי שוב, ואם זה חוזר קצרי את השדה. (${sent.error})`
+        : sent.error,
+    };
+  }
 
   const admin = createAdminClient();
   const { data: contact } = await admin
