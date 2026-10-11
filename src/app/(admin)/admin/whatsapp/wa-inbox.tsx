@@ -161,6 +161,8 @@ const OUR_TEMPLATE_HE: Record<string, string> = {
   wa_follow_up: "בהמשך לשיחתנו",
   wa_reminder: "תזכורת ובקשת עדכון",
   wa_general: "כללית",
+  // The owner's short one (11/10): "היי, / {תוכן} / תודה" - a single parameter, the content.
+  wa_general_plain: "כללית קצרה (היי / תוכן / תודה)",
 };
 
 /** The template-only door for NEW conversations (Meta's rule). */
