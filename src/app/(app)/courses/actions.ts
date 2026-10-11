@@ -27,7 +27,7 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
   // and not only in the page layout - a server action is directly callable.
   const [{ data: me }, { data: course }] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
-    supabase.from("courses").select("id, is_published").eq("id", courseId).maybeSingle(),
+    supabase.from("courses").select("id, is_published, access_kind").eq("id", courseId).maybeSingle(),
   ]);
   // The same rule the screen uses to show the button - otherwise an admin sees
   // "התחילי קורס" and gets told to buy a subscription when she clicks it.
@@ -109,11 +109,14 @@ export async function startCourse(courseId: string): Promise<{ error?: string; o
 
   // Pressing "התחילי קורס" IS the access attempt - there is no reason to make
   // her press a second button. Grant it now; anything that fails leaves the
-  // row pending and the worker finishes it.
-  try {
-    await ensureAccess(user.id, "course", courseId);
-  } catch (e) {
-    console.error("[drive] course access failed:", e);
+  // row pending and the worker finishes it. An external course (link + shared
+  // login on another site, the owner 11/10) has nothing to share in Drive.
+  if (course.access_kind !== "external") {
+    try {
+      await ensureAccess(user.id, "course", courseId);
+    } catch (e) {
+      console.error("[drive] course access failed:", e);
+    }
   }
 
   revalidatePath("/courses");

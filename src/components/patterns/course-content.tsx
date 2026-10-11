@@ -30,6 +30,11 @@ export interface CourseContentProps {
    * is behind one "צפייה" press, which is what actually opens it in Drive.
    */
   unlocked?: boolean;
+  /**
+   * An external course (link + shared login on another site) renders this
+   * instead of the Drive material and its gate; studied + feedback stay.
+   */
+  materialOverride?: React.ReactNode;
 }
 
 export function CourseContent({
@@ -40,6 +45,7 @@ export function CourseContent({
   rating,
   feedback,
   unlocked = false,
+  materialOverride,
 }: CourseContentProps) {
   const videos = links.filter((l) => l.kind === "video");
   const materials = links.filter((l) => l.kind === "materials");
@@ -67,7 +73,7 @@ export function CourseContent({
   const unitList = (units ?? []).filter((u) => u.links.length > 0);
   const hasUnits = unitList.length > 0;
 
-  if (!hasUnits && links.length === 0) {
+  if (!materialOverride && !hasUnits && links.length === 0) {
     return (
       <div className="bg-white border border-ink-200 rounded-[16px] p-5 text-sm text-ink-500">
         נשתף איתך את חומרי הקורס אישית בקרוב 💜
@@ -214,14 +220,16 @@ export function CourseContent({
 
   return (
     <div className="flex flex-col gap-4">
-      <ContentGate
-        ownerType="course"
-        ownerId={courseId}
-        unlocked={unlocked}
-        label="פתחי את חומרי הקורס"
-      >
-        {material}
-      </ContentGate>
+      {materialOverride ?? (
+        <ContentGate
+          ownerType="course"
+          ownerId={courseId}
+          unlocked={unlocked}
+          label="פתחי את חומרי הקורס"
+        >
+          {material}
+        </ContentGate>
+      )}
 
       {/* Studied + feedback */}
       <div className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm flex flex-col gap-3">

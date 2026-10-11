@@ -3,8 +3,10 @@ import Link from "next/link";
 import { Trash2, BookOpen } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { CourseUnitsEditor } from "@/components/patterns/course-units-editor";
+import { CourseAccessEditor } from "@/components/patterns/course-access-editor";
 import { Collapsible } from "@/components/patterns/collapsible";
 import { createCourse, deleteCourse } from "./actions";
+import { loadExternalAccess, type CourseAccessKind, type ExternalAccessInput } from "@/lib/course-external";
 import type { ContentLink, CourseUnit } from "@/types/database";
 
 export const metadata: Metadata = { title: "ניהול תכנים" };
@@ -37,6 +39,17 @@ export default async function AdminContentPage() {
     const arr = linksByUnit.get(l.unit_id) ?? [];
     arr.push(l);
     linksByUnit.set(l.unit_id, arr);
+  }
+
+  // External courses: the link + login rows, decrypted for the editor (admin only).
+  const externalRows = new Map<string, ExternalAccessInput[]>();
+  for (const c of courses ?? []) {
+    if (c.access_kind !== "external") continue;
+    const rows = await loadExternalAccess(c.id);
+    externalRows.set(
+      c.id,
+      rows.map((r) => ({ label: r.label, url: r.url, username: r.username ?? "", password: r.password ?? "" }))
+    );
   }
 
   return (
@@ -79,7 +92,7 @@ export default async function AdminContentPage() {
         {(courses ?? []).map((c) => (
           <div key={c.id} className="bg-white border border-ink-200 rounded-[16px] p-4 shadow-sm">
             <Collapsible
-              title={`${c.title}${c.category ? ` · ${c.category}` : ""} (${c.lessons_count} שיעורים${
+              title={`${c.title}${c.category ? ` · ${c.category}` : ""}${c.access_kind === "external" ? " · אתר חיצוני" : ""} (${c.lessons_count} שיעורים${
                 (unitsByCourse.get(c.id)?.length ?? 0) > 0
                   ? `, ${unitsByCourse.get(c.id)!.length} קוביות`
                   : ""
@@ -93,12 +106,19 @@ export default async function AdminContentPage() {
                   </button>
                 </form>
               </div>
-              <CourseUnitsEditor
+              <CourseAccessEditor
                 courseId={c.id}
-                units={unitsByCourse.get(c.id) ?? []}
-                linksByUnit={linksByUnit}
-                unassigned={(linksByOwner.get(`course:${c.id}`) ?? []).filter((l) => !l.unit_id)}
+                kind={(c.access_kind === "external" ? "external" : "drive") as CourseAccessKind}
+                rows={externalRows.get(c.id) ?? []}
               />
+              {c.access_kind !== "external" && (
+                <CourseUnitsEditor
+                  courseId={c.id}
+                  units={unitsByCourse.get(c.id) ?? []}
+                  linksByUnit={linksByUnit}
+                  unassigned={(linksByOwner.get(`course:${c.id}`) ?? []).filter((l) => !l.unit_id)}
+                />
+              )}
             </Collapsible>
           </div>
         ))}
