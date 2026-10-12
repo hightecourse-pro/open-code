@@ -16,6 +16,16 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // The hackathon's free-tools guide - same treatment.
+        source: "/hackathon-2026/ai-tools-guide.pdf",
+        headers: [
+          {
+            key: "Content-Disposition",
+            value: `attachment; filename="hackathon-ai-tools.pdf"; filename*=UTF-8''${encodeURIComponent("ארגז הכלים החינמי - האקתון.pdf")}`,
+          },
+        ],
+      },
     ];
   },
   async redirects() {

@@ -10,6 +10,10 @@ import { PairInvites } from "./pair-invites";
 export const metadata: Metadata = { title: "האקתון" };
 export const dynamic = "force-dynamic";
 
+/** The free-tools guide is a static PDF in public/ (our own domain - Netfree). */
+const TOOLS_GUIDE_HREF = "/hackathon-2026/ai-tools-guide.pdf";
+const TOOLS_GUIDE_FILENAME = "ארגז הכלים החינמי - האקתון.pdf";
+
 /**
  * The in-community hackathon page (the owner, 5/10: "יותר נח ונקי אבל עדיין
  * מגניב" + the community header motif): the standard page header, one
@@ -77,6 +81,27 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
             </li>
           ))}
         </ul>
+      </section>
+
+      {/* ── the free toolbox (the owner, 12/10): open to every member ── */}
+      <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-4 shadow-sm flex items-center gap-4 flex-wrap">
+        <span className="w-12 h-12 shrink-0 rounded-full bg-tint-purple text-[22px] flex items-center justify-center" aria-hidden>
+          🧰
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-display font-bold text-[15px] text-ink-1000">ארגז הכלים החינמי</h2>
+          <p className="text-[13.5px] text-ink-700 mt-0.5">
+            כל הכלים שנותנים מפתח API חינמי, תקופות ניסיון, מה מתאים לאיזה אתגר - עם המגבלה החינמית והמחיר אם צריך יותר. נבדק
+            12.10.
+          </p>
+        </div>
+        <a
+          href={TOOLS_GUIDE_HREF}
+          download={TOOLS_GUIDE_FILENAME}
+          className="inline-flex items-center gap-1.5 text-[13px] font-bold text-white bg-brand-gradient px-3.5 py-1.5 rounded-full hover:brightness-105"
+        >
+          <FileDown size={13} /> להורדת המסמך (PDF)
+        </a>
       </section>
 
       {/* ── invitations waiting for her ── */}
