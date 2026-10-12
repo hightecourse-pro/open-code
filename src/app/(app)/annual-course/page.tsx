@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, FileDown, ExternalLink, Phone, Mail } from "lucide-react";
 import { requireCommunityAccess, isSubscriber } from "@/lib/auth";
@@ -12,6 +13,13 @@ export const dynamic = "force-dynamic";
     opens behind Netfree too (same reason as /api/files). */
 const SYLLABUS_HREF = "/masters-course/syllabus.pdf";
 const SYLLABUS_FILENAME = "סילבוס מאסטרית בהייטק.pdf";
+
+// The partner logos of the sales page (public/masters-course/), in the ad's order.
+const PARTNERS = [
+  { file: "/masters-course/shufra.png", alt: "שופרא - מרחב מקצועי מתקדם, מבית סמינר הרב וולף", className: "max-h-[44px] sm:max-h-[64px]" },
+  { file: "/masters-course/opencode.png", alt: "קוד פתוח - השמה. הכשרה. תרבות.", className: "max-h-[44px] sm:max-h-[64px]" },
+  { file: "/masters-course/hightcourse.png", alt: "הייטקורס - לחשוב בגדול", className: "max-h-[40px] sm:max-h-[60px]" },
+];
 
 // The four courses: the ad's titles (the owner, 25/9: "בקוביות תשאיר את
 // הטקסט כמו במודעה"), with the syllabus' one-line taglines under them.
@@ -49,6 +57,22 @@ export default async function AnnualCoursePage() {
         </h1>
         <p className="t-body-sm text-ink-700">הקורס השנתי של שופרא, קוד פתוח והייטקורס - 4 קורסים מבוקשים בקורס מעמיק אחד, ב-90% מימון.</p>
       </div>
+
+      {/* ── the three partners, like the sales page (the owner, 12/10) ── */}
+      <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-4 shadow-sm flex items-center justify-between gap-4 sm:gap-10">
+        {PARTNERS.map((p) => (
+          <span key={p.file} className="max-w-[32%] sm:max-w-none shrink min-w-0 flex items-center justify-center">
+            <Image
+              src={p.file}
+              alt={p.alt}
+              width={400}
+              height={200}
+              className={`${p.className} w-auto max-w-full`}
+              style={{ height: "auto" }}
+            />
+          </span>
+        ))}
+      </section>
 
       {/* ── banner ── */}
       <section className="relative overflow-hidden bg-brand-gradient rounded-[22px] px-6 py-5 text-white shadow-glow-pink flex items-center gap-3 flex-wrap">
