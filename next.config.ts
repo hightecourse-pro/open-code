@@ -1,6 +1,33 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        // The syllabus is a static file in public/ (served from our own
+        // domain for Netfree). Vercel's default is `inline; filename=
+        // "syllabus.pdf"`, and the browser prefers that header over the
+        // link's download attribute - so the Hebrew file name is set here.
+        source: "/masters-course/syllabus.pdf",
+        headers: [
+          {
+            key: "Content-Disposition",
+            value: `attachment; filename="masters-syllabus.pdf"; filename*=UTF-8''${encodeURIComponent("סילבוס מאסטרית בהייטק.pdf")}`,
+          },
+        ],
+      },
+      {
+        // The hackathon's free-tools guide - same treatment.
+        source: "/hackathon-2026/ai-tools-guide.pdf",
+        headers: [
+          {
+            key: "Content-Disposition",
+            value: `attachment; filename="hackathon-ai-tools.pdf"; filename*=UTF-8''${encodeURIComponent("ארגז הכלים החינמי - האקתון.pdf")}`,
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {
