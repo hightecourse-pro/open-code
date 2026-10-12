@@ -952,6 +952,32 @@ export function subscriptionEndedEmail(name: string | undefined): BuiltEmail {
   };
 }
 
+/**
+ * The subscription lapsed because the monthly keva charge was REFUSED (the
+ * owner, 12/10, after זהבה הררי: the plain "הסתיים" mail told her it was
+ * over, the standing order kept retrying in Nedarim, and six days later the
+ * charge went through). This one says what is actually true: the keva is
+ * still live, a successful retry revives the subscription by itself, and
+ * here is how to replace the card or stop the charges.
+ */
+export function subscriptionLapsedAfterFailedChargeEmail(name: string | undefined): BuiltEmail {
+  return {
+    subject: "החיוב החודשי של המנוי לא עבר - המנוי הושהה בינתיים",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}החיוב של המנוי לא עבר`,
+      lines: [
+        "ניסינו לחייב את הכרטיס שלך דרך הוראת הקבע בנדרים, והחיוב סורב (לרוב: מסגרת מלאה או תוקף שגוי). לכן הגישה לקורסים, להקלטות, לצ'אט ולכלי ה-AI הושהתה בינתיים.",
+        "<b>חשוב לדעת:</b> הוראת הקבע שלך עדיין פעילה, ונדרים ינסו לחייב שוב בימים הקרובים. אם החיוב יצליח - המנוי יחזור לפעול מעצמו, ואת לא צריכה לעשות דבר.",
+        "רוצה להמשיך איתנו עם כרטיס אחר? אפשר להחליף אותו בלחיצה, דרך אותו דף תשלום מאובטח.",
+        `לא רוצה להמשיך? כתבי לנו ל-<a href="mailto:office@opencode.org.il?subject=${encodeURIComponent("ביטול הוראת הקבע של המנוי")}" style="color:${C.pink}; font-weight:700;">office@opencode.org.il</a> ונבטל את הוראת הקבע - בלי חיובים נוספים.`,
+      ],
+      ctaText: "להחלפת הכרטיס",
+      ctaUrl: `${SITE}/subscription/replace-card`,
+      footnote: "יש שאלה על החיוב? השיבי למייל הזה או כתבי לנו ונעזור.",
+    }),
+  };
+}
+
 // ------------------------------------------------------- session reminders
 
 const REMINDER_COPY: Record<string, (title: string, time: string) => { subject: string; heading: string; line: string }> = {

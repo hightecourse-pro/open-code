@@ -4,7 +4,7 @@ import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { deactivateSubscription } from "@/lib/payments/subscription";
 import { sendResendEmail } from "@/lib/email/resend";
-import { subscriptionEndedEmail, subscriptionEndingSoonEmail } from "@/lib/email/templates";
+import { subscriptionEndedEmail, subscriptionEndingSoonEmail, subscriptionLapsedAfterFailedChargeEmail } from "@/lib/email/templates";
 import { backToEligible, hebDateLine, isEmailDay, shiftDay, ymdIL } from "@/lib/il-calendar";
 import { processShareQueue } from "@/lib/drive-shares";
 
@@ -106,7 +106,28 @@ export async function GET(request: Request) {
     .gt("canceled_at", new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString())
     .limit(50);
 
+  // Which of the ended ones lapsed because the KEVA CHARGE WAS REFUSED (the
+  // owner, 12/10, after זהבה הררי): refused charges in the last two weeks.
+  // Those get the honest mail - the standing order is still live in Nedarim
+  // and a successful retry revives the subscription - instead of "הסתיים".
+  const endedCandidates = [...new Set([...ids, ...(endedUnmailed ?? []).map((s) => s.profile_id)])];
+  const failedRecently = new Set<string>();
+  if (endedCandidates.length) {
+    const { data: failedRows } = await admin
+      .from("payments")
+      .select("profile_id")
+      .in("profile_id", endedCandidates)
+      .eq("status", "failed")
+      .gt("created_at", new Date(now.getTime() - 14 * 24 * 3600 * 1000).toISOString());
+    for (const r of failedRows ?? []) if (r.profile_id) failedRecently.add(r.profile_id);
+  }
+  const endedMailFor = (profileId: string) => {
+    const first = whoOf.get(profileId)?.first_name ?? undefined;
+    return failedRecently.has(profileId) ? subscriptionLapsedAfterFailedChargeEmail(first) : subscriptionEndedEmail(first);
+  };
+
   if (dryRun) {
+    const preview = new URL(request.url).searchParams.get("preview") === "1";
     return NextResponse.json({
       dryRun: true,
       todayIL,
@@ -114,6 +135,8 @@ export async function GET(request: Request) {
       expiring: ids.length,
       remindersDue: reminderDue.length,
       endedEmailsDue: (endedUnmailed ?? []).length,
+      lapsedAfterFailedCharge: [...failedRecently],
+      ...(preview ? { lapsedPreview: subscriptionLapsedAfterFailedChargeEmail("דוגמה") } : {}),
     });
   }
 
@@ -188,12 +211,13 @@ export async function GET(request: Request) {
 
   // 3. ended emails - the first eligible day on/after the block
   let endedEmailsSent = 0;
+  let lapsedEmailsSent = 0;
   if (emailDay) {
     for (const s of endedUnmailed ?? []) {
       try {
         const email = emailOf.get(s.profile_id);
         if (!email) continue;
-        const mail = subscriptionEndedEmail(whoOf.get(s.profile_id)?.first_name ?? undefined);
+        const mail = endedMailFor(s.profile_id);
         const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
         if (sent.ok) {
           await admin
@@ -201,6 +225,7 @@ export async function GET(request: Request) {
             .update({ ended_email_sent_at: now.toISOString() })
             .eq("id", s.id);
           endedEmailsSent++;
+          if (failedRecently.has(s.profile_id)) lapsedEmailsSent++;
         }
       } catch (e) {
         console.error("[subscriptions] ended email failed:", s.profile_id, e);
@@ -222,7 +247,7 @@ export async function GET(request: Request) {
           .limit(1)
           .maybeSingle();
         if (!row) continue;
-        const mail = subscriptionEndedEmail(whoOf.get(profileId)?.first_name ?? undefined);
+        const mail = endedMailFor(profileId);
         const sent = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
         if (sent.ok) {
           await admin
@@ -230,6 +255,7 @@ export async function GET(request: Request) {
             .update({ ended_email_sent_at: now.toISOString() })
             .eq("id", row.id);
           endedEmailsSent++;
+          if (failedRecently.has(profileId)) lapsedEmailsSent++;
         }
       } catch (e) {
         console.error("[subscriptions] ended email (fresh) failed:", profileId, e);
@@ -313,6 +339,7 @@ export async function GET(request: Request) {
     expired: expiredCount,
     remindersSent,
     endedEmailsSent,
+    lapsedEmailsSent,
     reconciled,
     drive,
     attachmentsSwept,

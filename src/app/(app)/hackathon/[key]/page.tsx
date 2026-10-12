@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, FileDown, Lock } from "lucide-react";
 import { requireCommunityAccess, isSubscriber } from "@/lib/auth";
 import { H26Style, Sparkle } from "@/app/hackathon-2026/shared";
 import { challengeByKey, formatBytes, loadMaterials, loadMyRegistration } from "@/lib/hackathon";
+import { StraussMockSection } from "./strauss-mock-section";
 
 export const dynamic = "force-dynamic";
 
@@ -73,6 +74,9 @@ export default async function ChallengePage({ params }: { params: Promise<{ key:
           </div>
         )}
       </section>
+
+      {/* Strauss: the fictitious data on the page itself (the owner, 12/10) */}
+      {key === "strauss" && <StraussMockSection />}
 
       {/* materials */}
       <section
