@@ -59,6 +59,9 @@ export function PostInteractions({
   const [, start] = useTransition();
   const replyRef = useRef<RichEditorHandle | null>(null);
   const [replyEpoch, setReplyEpoch] = useState(0);
+  // One reply in flight at a time (see the form's action).
+  const sendingRef = useRef(false);
+  const [sending, setSending] = useState(false);
 
   function onLike() {
     setLike((s) => ({ on: !s.on, count: s.count + (s.on ? -1 : 1) }));
@@ -169,11 +172,24 @@ export function PostInteractions({
           {canWrite ? (
             <form
               action={async (fd) => {
+                // One send at a time: a second submit while the first is in
+                // flight (held Enter, double click) is dropped here, the
+                // editor's Enter handler reads data-submitting, and the server
+                // drops an identical repeat within two minutes anyway.
+                if (sendingRef.current) return;
                 if (replyRef.current?.isEmpty() && !fd.get("attach_ids")) return;
-                await addComment(postId, fd);
-                replyRef.current?.clear();
-                setReplyEpoch((n) => n + 1);
+                sendingRef.current = true;
+                setSending(true);
+                try {
+                  await addComment(postId, fd);
+                  replyRef.current?.clear();
+                  setReplyEpoch((n) => n + 1);
+                } finally {
+                  sendingRef.current = false;
+                  setSending(false);
+                }
               }}
+              data-submitting={sending ? "1" : undefined}
               className="flex flex-col gap-1.5"
             >
               <AttachmentPicker key={replyEpoch}>
@@ -189,7 +205,8 @@ export function PostInteractions({
                 <button
                   type="submit"
                   aria-label="שליחת תגובה"
-                  className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0 mb-9"
+                  disabled={sending}
+                  className="bg-brand-gradient text-white rounded-md p-2.5 shrink-0 mb-9 disabled:opacity-60"
                 >
                   <Send size={16} />
                 </button>
