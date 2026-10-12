@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Mic,
   Play,
+  Rocket,
   Shield,
   Sparkles,
   User,
@@ -28,6 +29,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { HACKATHON_UPDATED } from "@/app/hackathon-2026/version";
+import { ANNUAL_COURSE_UPDATED } from "@/app/masters-course/version";
 import { Logo } from "@/components/ui";
 import { signOut } from "@/app/(auth)/actions";
 
@@ -48,6 +50,7 @@ const SECTIONS: NavSection[] = [
       { href: "/courses", label: "ספריית קורסים", icon: GraduationCap, paid: true },
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
       { href: "/hackathon", label: "האקתון", icon: Trophy },
+      { href: "/annual-course", label: "קורס שנתי ממומן", icon: Rocket },
     ],
   },
   {
@@ -69,6 +72,13 @@ const SECTIONS: NavSection[] = [
     ],
   },
 ];
+
+/** Destinations that carry a versioned "חדש" pill: the localStorage key that
+ * remembers the version she has seen, and the current version. */
+const NEW_ITEMS: Record<string, { key: string; version: string }> = {
+  "/hackathon": { key: "oc-hackathon-seen", version: HACKATHON_UPDATED },
+  "/annual-course": { key: "oc-annual-course-seen", version: ANNUAL_COURSE_UPDATED },
+};
 
 export interface SidebarUser {
   name: string;
@@ -98,22 +108,26 @@ const DEFAULT_USER: SidebarUser = {
 export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
   const pathname = usePathname();
 
-  // "חדש" on the hackathon item until her first visit (the owner, 7/9) -
-  // remembered per browser; entering the page clears it for good.
-  const [hackathonSeen, setHackathonSeen] = useState(true);
+  // "חדש" on the hackathon item until her first visit (the owner, 7/9), and
+  // on the annual course (12/10) - remembered per browser; entering the page
+  // clears it for good. Versioned (the owner, 5/10): every update of the
+  // destination brings the pill back until she has seen the new version.
+  const [seen, setSeen] = useState<Record<string, boolean>>({});
   useEffect(() => {
     // Deferred a tick - the set-state-in-effect rule (same treatment as the
     // error boundary's healing flag).
     const t = setTimeout(() => {
       try {
-        // Versioned (the owner, 5/10): every hackathon update brings the
-        // pill back until she has seen the new version.
-        if (pathname === "/hackathon" || pathname.startsWith("/hackathon/")) {
-          localStorage.setItem("oc-hackathon-seen", HACKATHON_UPDATED);
-          setHackathonSeen(true);
-        } else {
-          setHackathonSeen(localStorage.getItem("oc-hackathon-seen") === HACKATHON_UPDATED);
+        const next: Record<string, boolean> = {};
+        for (const [href, { key, version }] of Object.entries(NEW_ITEMS)) {
+          if (pathname === href || pathname.startsWith(href + "/")) {
+            localStorage.setItem(key, version);
+            next[href] = true;
+          } else {
+            next[href] = localStorage.getItem(key) === version;
+          }
         }
+        setSeen(next);
       } catch {}
     }, 0);
     return () => clearTimeout(t);
@@ -144,7 +158,9 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
             const label =
               item.href === "/mentor" && user.isMentor ? "הליוויים שלי" : item.label;
             const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : item.badge?.toString();
-            const isNew = item.href === "/hackathon" && !hackathonSeen;
+            // `false` only once the browser has answered - no pill flashes
+            // before hydration.
+            const isNew = seen[item.href] === false;
             return (
               <Link
                 key={item.href}
