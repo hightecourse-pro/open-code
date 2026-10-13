@@ -285,37 +285,6 @@ export async function GET(request: Request) {
         .in("id", liveIds)
         .eq("role", "junior")
         .neq("member_tier", "paid");
-      // 13/10 (תמר גרוסמן): the same tearing, on STATUS - a paused profile
-      // under a live, paid-up subscription (three refusal alerts after a
-      // successful charge, then a manual pause). A paying member is never
-      // locked: back to active, with an alert so the pause is not silent.
-      const { data: pausedPaying } = await admin
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", liveIds)
-        .eq("role", "junior")
-        .eq("status", "paused");
-      for (const p of pausedPaying ?? []) {
-        const { data: live } = await admin
-          .from("subscriptions")
-          .select("current_period_end")
-          .eq("profile_id", p.id)
-          .in("status", ["active", "trialing"])
-          .gt("current_period_end", now.toISOString())
-          .limit(1)
-          .maybeSingle();
-        if (!live) continue;
-        await admin.from("profiles").update({ status: "active" }).eq("id", p.id);
-        reconciled++;
-        await raiseAlert({
-          kind: "subscription_reconciled",
-          severity: "warning",
-          title: `${p.full_name} משלמת אבל הייתה מושהית - הוחזרה לפעילה אוטומטית`,
-          body: `יש לה מנוי חי ומשולם (עד ${new Date(live.current_period_end as string).toLocaleDateString("he-IL", { timeZone: "Asia/Jerusalem" })}) אבל הפרופיל היה מושהה - כנראה השהיה ידנית אחרי התראות סירוב. אם ההשהיה מכוונת, יש לבטל קודם את המנוי.`,
-          context: { profileId: p.id, previousStatus: "paused" },
-          dedupeKey: `sub-reconciled-status:${p.id}:${todayIL}`,
-        });
-      }
       for (const p of torn ?? []) {
         await admin.from("profiles").update({ member_tier: "paid" }).eq("id", p.id);
         reconciled++;
