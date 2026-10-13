@@ -117,6 +117,17 @@ export async function recordChargeFailure(
  * Returns the outcome string for the webhook's diagnostic record.
  */
 /**
+ * "הקמת הו\"ק" - Nedarim reporting that a standing order was CREATED, not
+ * that money moved: TransactionType says so, or the call carries a KevaId
+ * and no TransactionId (the account-level keva webhook). 13/10: such a call
+ * opened a full month for תמר גרוסמן while every real charge was refused.
+ */
+export function isKevaSetupCallback(params: Record<string, string>): boolean {
+  if (/הקמת/.test(params.TransactionType ?? "")) return true;
+  return !params.TransactionId && !!params.KevaId?.trim();
+}
+
+/**
  * A REFUND callback (negative amount; Nedarim's Comments say "זיכוי עסקה: <id>").
  * It is money going BACK, so it must never activate or extend anything -
  * 12/10: the owner refunded זהבה הררי 39 ₪ in Nedarim right after canceling
@@ -210,6 +221,7 @@ export async function handleExternalPayment(
         providerPaymentId: tx.transactionId,
         amountAgorot: tx.amountAgorot ?? undefined,
         raw: params,
+        setupOnly: isKevaSetupCallback(params),
       });
       await raiseAlert({
         kind: "external_payment_matched",
