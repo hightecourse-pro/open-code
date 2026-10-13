@@ -414,7 +414,7 @@ async function handleCallback(req: Request) {
   }
 
   await logEvent(record);
-  return NextResponse.json({ ok: record.outcome === "activated" });
+  return NextResponse.json({ ok: record.outcome === "activated" || record.outcome === "activated_setup_grace", outcome: record.outcome });
 }
 
 // Nedarim's docs don't commit to a method, and their portal-only documentation
