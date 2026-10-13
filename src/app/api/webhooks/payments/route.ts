@@ -3,7 +3,7 @@ import { isProductionEnv } from "@/lib/env";
 import { raiseAlert } from "@/lib/alerts";
 import { getNedarimConfig, parseNedarimCallback } from "@/lib/payments/nedarim";
 import { activateSubscription } from "@/lib/payments/subscription";
-import { handleExternalPayment, recordChargeFailure, recordRefund } from "@/lib/payments/external";
+import { handleExternalPayment, isKevaSetupCallback, recordChargeFailure, recordRefund } from "@/lib/payments/external";
 import { buildPlans } from "@/lib/payments/plans";
 import { getPricingAdmin } from "@/lib/payments/pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -397,14 +397,16 @@ async function handleCallback(req: Request) {
   }
 
   try {
+    const setupOnly = isKevaSetupCallback(params);
     await activateSubscription({
       profileId: cb.profileId,
       plan: cb.plan,
       providerPaymentId: cb.transactionId,
       amountAgorot: cb.amountAgorot ?? undefined,
       raw: params,
+      setupOnly,
     });
-    record.outcome = "activated";
+    record.outcome = setupOnly ? "activated_setup_grace" : "activated";
     console.log("[webhook/payments] activated member", cb.profileId);
   } catch (e) {
     record.outcome = `activate_error: ${String(e)}`;

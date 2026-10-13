@@ -12,7 +12,17 @@ export interface ActivateInput {
   providerSubId?: string | null;
   amountAgorot?: number;
   raw?: unknown;
+  /**
+   * A standing-order SETUP callback ("הקמת הו\"ק"), not a charge (13/10,
+   * תמר גרוסמן: her new keva was recorded as a 39 ₪ payment and opened a
+   * month while all three real charges were refused). Opens a short grace
+   * only; the charge callback that follows opens the month.
+   */
+  setupOnly?: boolean;
 }
+
+/** Days of access a keva setup opens on its own, until the charge callback. */
+export const KEVA_SETUP_GRACE_DAYS = 3;
 
 /**
  * Records a successful payment and (re)activates the member's subscription.
@@ -24,15 +34,23 @@ export async function activateSubscription(input: ActivateInput) {
   const plan = buildPlans(pricing)[input.plan];
   const admin = createAdminClient();
 
-  const periodEnd = new Date();
-  periodEnd.setMonth(periodEnd.getMonth() + plan.periodMonths);
-
   // Upsert the subscription for this member (one active sub per member).
   const { data: existing } = await admin
     .from("subscriptions")
-    .select("id")
+    .select("id, current_period_end")
     .eq("profile_id", input.profileId)
     .maybeSingle();
+
+  const periodEnd = new Date();
+  if (input.setupOnly) {
+    // Grace until the charge arrives - never shorter than a period she has
+    // already paid for (a card replaced mid-month keeps the month).
+    periodEnd.setDate(periodEnd.getDate() + KEVA_SETUP_GRACE_DAYS);
+    const paidUntil = existing?.current_period_end ? new Date(existing.current_period_end) : null;
+    if (paidUntil && paidUntil > periodEnd) periodEnd.setTime(paidUntil.getTime());
+  } else {
+    periodEnd.setMonth(periodEnd.getMonth() + plan.periodMonths);
+  }
 
   let subscriptionId = existing?.id ?? null;
 
@@ -145,12 +163,13 @@ export async function activateSubscription(input: ActivateInput) {
     }
   }
 
-  // Record the payment.
+  // Record the payment - a keva setup is recorded for the registry and the
+  // card-replacement check, but it is 0 ₪: no money moved yet.
   await admin.from("payments").insert({
     subscription_id: subscriptionId,
     profile_id: input.profileId,
     provider_payment_id: input.providerPaymentId ?? null,
-    amount_agorot: input.amountAgorot ?? plan.amountAgorot,
+    amount_agorot: input.setupOnly ? 0 : (input.amountAgorot ?? plan.amountAgorot),
     currency: "ILS",
     status: "succeeded",
     paid_at: new Date().toISOString(),
