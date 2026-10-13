@@ -144,6 +144,22 @@ export async function addComment(postId: string, formData: FormData): Promise<vo
     data: { user },
   } = await supabase.auth.getUser();
   if (!user || !(await canWrite())) return;
+  // A stuck button / repeated Enter must not post the same thing twelve
+  // times (12/10: רחל's reply landed 13 times in 13 seconds). The SAME author,
+  // post and text within two minutes is one comment - the repeat is dropped.
+  const { data: recent } = await supabase
+    .from("comments")
+    .select("id")
+    .eq("post_id", postId)
+    .eq("author_id", user.id)
+    .eq("body", body)
+    .gt("created_at", new Date(Date.now() - 2 * 60 * 1000).toISOString())
+    .limit(1)
+    .maybeSingle();
+  if (recent) {
+    revalidatePath(`/forum/${postId}`);
+    return;
+  }
   const { data: created } = await supabase
     .from("comments")
     .insert({ post_id: postId, author_id: user.id, body })

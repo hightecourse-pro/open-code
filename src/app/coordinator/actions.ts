@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database";
 import { sendResendEmail } from "@/lib/email/resend";
 import { coordinatorOtpEmail } from "@/lib/email/templates";
+import { ratingLabel } from "@/lib/review-scale";
 import {
   createOtp,
   endCoordinatorSession,
@@ -93,12 +94,18 @@ export async function saveCoordinatorReview(
   const found_job = foundRaw === "yes" ? true : foundRaw === "no" ? false : null;
 
   const admin = createAdminClient();
+  const communication = num("communication");
+  const talent = num("talent");
   const { error } = await admin.from("coordinator_reviews").upsert(
     {
       contact_id: me.id,
       profile_id: profileId,
-      communication: num("communication"),
-      talent: num("talent"),
+      communication,
+      talent,
+      // The original wording travels with the number (the owner, 13/10) -
+      // the review center and the portal show the text, never "4/5".
+      communication_label: ratingLabel("communication", communication),
+      talent_label: ratingLabel("talent", talent),
       note: String(formData.get("note") ?? "").trim().slice(0, 4000) || null,
       found_job,
       found_job_place: String(formData.get("found_job_place") ?? "").trim().slice(0, 200) || null,

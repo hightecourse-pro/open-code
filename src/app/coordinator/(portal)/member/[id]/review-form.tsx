@@ -4,15 +4,12 @@ import { startTransition, useActionState, useState } from "react";
 import { Alert, Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { saveCoordinatorReview, type ReviewState } from "../../../actions";
 import type { CoordinatorReview } from "@/lib/coordinator-data";
+import { COMMUNICATION_SCALE, TALENT_SCALE } from "@/lib/review-scale";
 
-const SCALE = [
-  { value: "", label: "- לא דירגתי -" },
-  { value: "5", label: "5 · מצוינת" },
-  { value: "4", label: "4 · טובה מאוד" },
-  { value: "3", label: "3 · טובה" },
-  { value: "2", label: "2 · בסדר" },
-  { value: "1", label: "1 · דורשת חיזוק" },
-];
+// The owner's original wording (13/10) - two different scales, no numbers shown.
+const NONE = { value: "", label: "- לא דירגתי -" };
+const COMM = [NONE, ...COMMUNICATION_SCALE.map((s) => ({ value: String(s.value), label: s.label }))];
+const TAL = [NONE, ...TALENT_SCALE.map((s) => ({ value: String(s.value), label: s.label }))];
 
 /** The coordinator's private assessment - hers and the team's eyes only. */
 export function CoordinatorReviewForm({
@@ -48,7 +45,7 @@ export function CoordinatorReviewForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="רמת תקשורת" htmlFor="rv-comm">
           <Select id="rv-comm" name="communication" defaultValue={existing?.communication?.toString() ?? ""}>
-            {SCALE.map((o) => (
+            {COMM.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>
@@ -57,7 +54,7 @@ export function CoordinatorReviewForm({
         </Field>
         <Field label="כישרון ויכולת מקצועית" htmlFor="rv-talent">
           <Select id="rv-talent" name="talent" defaultValue={existing?.talent?.toString() ?? ""}>
-            {SCALE.map((o) => (
+            {TAL.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
               </option>

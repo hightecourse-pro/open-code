@@ -3,7 +3,7 @@ import { isProductionEnv } from "@/lib/env";
 import { raiseAlert } from "@/lib/alerts";
 import { getNedarimConfig, parseNedarimCallback } from "@/lib/payments/nedarim";
 import { activateSubscription } from "@/lib/payments/subscription";
-import { handleExternalPayment, recordChargeFailure } from "@/lib/payments/external";
+import { handleExternalPayment, recordChargeFailure, recordRefund } from "@/lib/payments/external";
 import { buildPlans } from "@/lib/payments/plans";
 import { getPricingAdmin } from "@/lib/payments/pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -335,6 +335,13 @@ async function handleCallback(req: Request) {
     console.warn(
       `[webhook/payments] amount ${cb.amountAgorot} != plan ${expected} for ${cb.plan}`
     );
+  }
+  // A refund that still carries Param1 (12/10): record it on her row and
+  // raise the alert - never extend, never reject as "missing amount".
+  if (cb.amountAgorot !== null && cb.amountAgorot < 0) {
+    record.outcome = await recordRefund(params, { transactionId: cb.transactionId, amountAgorot: cb.amountAgorot }, cb.profileId);
+    await logEvent(record);
+    return NextResponse.json({ ok: true, refund: true, outcome: record.outcome });
   }
   if (!cb.amountAgorot || cb.amountAgorot <= 0) {
     return reject("non_positive_amount", 400, "amount missing");

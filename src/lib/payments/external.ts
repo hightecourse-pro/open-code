@@ -116,6 +116,63 @@ export async function recordChargeFailure(
  * An authenticated, successful payment webhook with nobody to hang it on.
  * Returns the outcome string for the webhook's diagnostic record.
  */
+/**
+ * A REFUND callback (negative amount; Nedarim's Comments say "זיכוי עסקה: <id>").
+ * It is money going BACK, so it must never activate or extend anything -
+ * 12/10: the owner refunded זהבה הררי 39 ₪ in Nedarim right after canceling
+ * her, the -39 callback matched her email and re-activated her for a month.
+ * Recorded as a refunded payment on her row (negative amount) + an alert.
+ */
+export async function recordRefund(
+  params: Record<string, string>,
+  tx: { transactionId: string; amountAgorot: number },
+  knownProfileId?: string | null
+): Promise<"refund_recorded" | "refund_unmatched" | "refund_duplicate"> {
+  const admin = createAdminClient();
+  const email = params.Mail?.trim().toLowerCase() || null;
+  const name = params.ClientName?.trim() || null;
+  const kevaId = params.KevaId?.trim() || null;
+  const original = /זיכוי עסקה:\s*(\d+)/.exec(params.Comments ?? "")?.[1] ?? null;
+  let profileId = knownProfileId ?? (email ? await userIdByEmail(email) : null);
+  if (!profileId && kevaId) {
+    const { data: prev } = await admin
+      .from("payments")
+      .select("profile_id")
+      .or(`provider_payment_id.eq.keva-${kevaId},raw->>KevaId.eq.${kevaId}`)
+      .limit(1)
+      .maybeSingle();
+    profileId = prev?.profile_id ?? null;
+  }
+  const shekels = Math.abs(tx.amountAgorot) / 100;
+  if (profileId) {
+    const { data: seen } = await admin
+      .from("payments")
+      .select("id")
+      .eq("provider_payment_id", tx.transactionId)
+      .maybeSingle();
+    if (seen) return "refund_duplicate";
+    await admin.from("payments").insert({
+      profile_id: profileId,
+      provider_payment_id: tx.transactionId,
+      amount_agorot: tx.amountAgorot,
+      status: "refunded",
+      paid_at: new Date().toISOString(),
+      raw: params as unknown as Json,
+    });
+  }
+  await raiseAlert({
+    kind: "payment_refunded",
+    severity: "info",
+    title: profileId ? `זיכוי מנדרים: ${name ?? email ?? "חברה"} · ${shekels} ₪` : `זיכוי מנדרים בלי חברה מזוהה · ${shekels} ₪`,
+    body: `${name ?? email ?? "מישהי"} זוכתה ב-${shekels} ₪${original ? ` (החזר על עסקה ${original})` : ""} · אסמכתא ${tx.transactionId}. ${
+      profileId ? "הזיכוי נרשם ברשימת התשלומים שלה; המנוי לא שונה." : "לא נמצאה חברה עם הפרטים האלה - כדאי להצליב מול קונסולת נדרים."
+    }`,
+    context: { profileId, transactionId: tx.transactionId, originalTransactionId: original },
+    dedupeKey: `refund:${tx.transactionId}`,
+  });
+  return profileId ? "refund_recorded" : "refund_unmatched";
+}
+
 export async function handleExternalPayment(
   params: Record<string, string>,
   tx: { transactionId: string; plan: SubscriptionPlan | null; amountAgorot: number | null },
@@ -126,12 +183,23 @@ export async function handleExternalPayment(
    */
   opts?: { needsReview?: boolean; callerIp?: string }
 ): Promise<
-  "external_matched_activated" | "external_stored" | "external_stored_unverified" | "external_duplicate"
+  | "external_matched_activated"
+  | "external_stored"
+  | "external_stored_unverified"
+  | "external_duplicate"
+  | "refund_recorded"
+  | "refund_unmatched"
+  | "refund_duplicate"
 > {
   const admin = createAdminClient();
   const email = params.Mail?.trim().toLowerCase() || null;
   const name = params.ClientName?.trim() || null;
   const needsReview = opts?.needsReview === true;
+
+  // Money going back is never a payment (see recordRefund) - from any caller.
+  if (tx.amountAgorot !== null && tx.amountAgorot < 0) {
+    return recordRefund(params, { transactionId: tx.transactionId, amountAgorot: tx.amountAgorot });
+  }
 
   if (email && !needsReview) {
     const profileId = await userIdByEmail(email);

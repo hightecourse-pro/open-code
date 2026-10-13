@@ -21,6 +21,32 @@ export interface RegistrationView {
   updatedAt: string;
 }
 
+/**
+ * Who among these members is registered to the hackathon - as the registrant
+ * or as a CONFIRMED partner (the owner, 13/10: a "נרשמה להאקתון" label next to
+ * the graduate's name in the coordinators' portal). Chunked: PostgREST .in()
+ * overflows past ~300 ids.
+ */
+export async function loadHackathonRegistrantIds(profileIds: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  if (profileIds.length === 0) return out;
+  const admin = createAdminClient();
+  for (let i = 0; i < profileIds.length; i += 200) {
+    const chunk = profileIds.slice(i, i + 200);
+    const [{ data: own }, { data: partner }] = await Promise.all([
+      admin.from("hackathon_registrations").select("profile_id").in("profile_id", chunk),
+      admin
+        .from("hackathon_registrations")
+        .select("partner_profile_id")
+        .in("partner_profile_id", chunk)
+        .not("partner_confirmed_at", "is", null),
+    ]);
+    for (const r of own ?? []) out.add(r.profile_id);
+    for (const r of partner ?? []) if (r.partner_profile_id) out.add(r.partner_profile_id);
+  }
+  return out;
+}
+
 /** Her own registration, with the partner's name resolved. */
 export async function loadMyRegistration(profileId: string): Promise<RegistrationView | null> {
   const admin = createAdminClient();

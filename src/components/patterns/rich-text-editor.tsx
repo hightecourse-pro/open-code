@@ -297,8 +297,15 @@ export function RichTextEditor({
           ? (e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
+                // A held key auto-repeats (12/10: one reply landed 13 times
+                // in 13 seconds - "נתקע לי הכפתור"); an IME composition's
+                // Enter is not a send; and while the form is already sending
+                // (data-submitting, set by the comment form) nothing more goes.
+                if (e.repeat || e.nativeEvent.isComposing) return;
+                const form = e.currentTarget.closest("form");
+                if (form?.dataset.submitting === "1") return;
                 sync();
-                e.currentTarget.closest("form")?.requestSubmit();
+                form?.requestSubmit();
               }
             }
           : undefined
