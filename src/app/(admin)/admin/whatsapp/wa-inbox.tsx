@@ -167,9 +167,8 @@ const OUR_TEMPLATE_HE: Record<string, string> = {
   wa_reminder: "תזכורת ובקשת עדכון",
   wa_general: "כללית",
   // The owner's natural continuation after the 24h window (11/10): "היי, / {תוכן} / תודה ויום טוב" - one parameter, no team intro, no emoji.
+  // Approved by Meta 13/10; the backup submission (wa_continue_v2) was deleted the same day.
   wa_continue_chat: "המשך שיחה (היי / תוכן / תודה ויום טוב)",
-  // A second submission while the first sat in Meta's queue (12/10) - whichever is approved first is used.
-  wa_continue_v2: "המשך שיחה ב (היי / תוכן / תודה רבה ויום טוב)",
 };
 
 /** The template-only door for NEW conversations (Meta's rule). */
