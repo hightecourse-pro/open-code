@@ -10,6 +10,7 @@ import {
   deleteContact,
   saveContact,
   sendContactEmail,
+  setContactEmail,
   setContactPortalEnabled,
   viewAsCoordinator,
   type ContactEmailState,
@@ -140,6 +141,31 @@ function ContactForm({
   );
 }
 
+/** "בלי מייל" becomes a one-field form right on the row (the owner, 13/10). */
+function EmailInline({ contactId }: { contactId: string }) {
+  const [state, action, pending] = useActionState<ContactFormState, FormData>(setContactEmail, {});
+  return (
+    <form action={action} className="inline-flex items-center gap-1.5 flex-wrap">
+      <input type="hidden" name="id" value={contactId} />
+      <span className="text-[#8C5E0E] font-semibold">בלי מייל - לא יכולה להיכנס עדיין:</span>
+      <input
+        type="email"
+        name="email"
+        required
+        dir="ltr"
+        placeholder="כתובת המייל שלה"
+        aria-label="כתובת המייל של הרכזת"
+        className="h-7 w-[220px] max-w-full rounded-md border border-ink-200 bg-white px-2 text-[12.5px] focus:outline-none focus:border-brand-purple"
+      />
+      <Button type="submit" size="sm" disabled={pending}>
+        {pending ? "שומרת…" : "שמירת המייל"}
+      </Button>
+      {state.error && <span className="text-[12px] font-semibold text-[#B42318]">{state.error}</span>}
+      {state.ok && <span className="text-[12px] font-semibold text-[#1B7A4B]">נשמר ✓</span>}
+    </form>
+  );
+}
+
 function ComposeForm({ contact, onClose }: { contact: AdminContact; onClose: () => void }) {
   const [state, action, pending] = useActionState<ContactEmailState, FormData>(sendContactEmail, {});
 
@@ -209,7 +235,7 @@ export function ContactsManager({
                           <Mail size={13} /> {c.email}
                         </a>
                       ) : (
-                        <span className="text-[#8C5E0E] font-semibold">בלי מייל - לא יכולה להיכנס עדיין</span>
+                        <EmailInline contactId={c.id} />
                       )}
                       {c.phone && (
                         <span dir="ltr" className="inline-flex items-center gap-1">

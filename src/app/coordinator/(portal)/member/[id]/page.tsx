@@ -10,6 +10,7 @@ import {
   loadReviews,
 } from "@/lib/coordinator-data";
 import { loadCandidates } from "@/lib/portal/candidates";
+import { loadHackathonRegistrantIds } from "@/lib/hackathon";
 import { CandidateProfileCard } from "@/components/patterns/candidate-profile-card";
 import { CoordinatorReviewForm } from "./review-form";
 
@@ -30,8 +31,9 @@ export default async function CoordinatorMemberPage({
   const grad = graduates.find((g) => g.id === id);
   if (!grad) notFound();
 
-  const [labels, reviews] = await Promise.all([loadOptionLabels(), loadReviews(me.id)]);
+  const [labels, reviews, hackathonIds] = await Promise.all([loadOptionLabels(), loadReviews(me.id), loadHackathonRegistrantIds([id])]);
   const review = reviews.get(id) ?? null;
+  const inHackathon = hackathonIds.has(id);
 
   // The polished candidate profile when she completed it; a clean summary
   // card otherwise (mid-questionnaire graduates have little to show yet).
@@ -59,6 +61,7 @@ export default async function CoordinatorMemberPage({
                   <span>· {labels.certificates.get(grad.certificateValue) ?? grad.certificateValue}</span>
                 )}
                 {grad.systemFoundJob && <Badge variant="mint">עובדת 🎉</Badge>}
+                {inHackathon && <Badge variant="purple">נרשמה להאקתון 🏆</Badge>}
               </div>
             </div>
           </div>

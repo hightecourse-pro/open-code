@@ -24,7 +24,10 @@ export interface GraduateRow {
   certLabel: string;
   working: boolean;
   subscriber: boolean;
-  review: { c: number | null; t: number | null; hasAny: boolean } | null;
+  /** cl/tl: the original wording of the ratings (the owner, 13/10). */
+  review: { c: number | null; t: number | null; cl?: string | null; tl?: string | null; hasAny: boolean } | null;
+  /** Registered to the hackathon (herself or as a confirmed partner). */
+  hackathon?: boolean;
 }
 
 export interface YearOption {
@@ -150,10 +153,11 @@ export function GraduatesBrowser({
         </button>
       )}
       {g.working && <Badge variant="mint">עובדת 🎉</Badge>}
+      {g.hackathon && <Badge variant="purple">נרשמה להאקתון 🏆</Badge>}
       <Link href={`/coordinator/member/${g.id}`} className="shrink-0">
         {g.review?.hasAny ? (
           <span className="text-[11.5px] font-semibold text-[#8C5E0E] whitespace-nowrap">
-            ⭐ {[g.review.c && `תקשורת ${g.review.c}`, g.review.t && `כישרון ${g.review.t}`]
+            ⭐ {[g.review.cl ?? (g.review.c && `תקשורת ${g.review.c}`), g.review.tl ?? (g.review.t && `כישרון ${g.review.t}`)]
               .filter(Boolean)
               .join(" · ") || "חוות דעת ✓"}
           </span>

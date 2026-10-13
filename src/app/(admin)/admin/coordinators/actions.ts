@@ -71,6 +71,27 @@ export async function saveContact(
   return { ok: true };
 }
 
+/**
+ * Just the email, inline on the contact's row (the owner, 13/10: "לא מצליחה
+ * לעדכן כתובת מייל לרכזות") - one field, one update, nothing else can get in
+ * the way of the thing she actually came to do.
+ */
+export async function setContactEmail(_prev: ContactFormState, formData: FormData): Promise<ContactFormState> {
+  await requireRole("admin");
+  const id = String(formData.get("id") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
+  if (!id) return { error: "לא נמצאה הרכזת." };
+  if (!email || !EMAIL_RE.test(email)) return { error: "כתובת המייל לא נראית תקינה." };
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("institution_contacts")
+    .update({ email, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) return { error: error.code === "23505" ? "כבר קיימת רכזת עם המייל הזה." : "השמירה נכשלה. נסי שוב." };
+  revalidatePath("/admin/coordinators");
+  return { ok: true };
+}
+
 /** The owner's per-coordinator portal switch (16/9). */
 export async function setContactPortalEnabled(id: string, enabled: boolean): Promise<void> {
   await requireRole("admin");
