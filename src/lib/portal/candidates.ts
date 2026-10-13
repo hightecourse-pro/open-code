@@ -12,6 +12,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { chunk } from "@/lib/chunk";
 import { getTaxonomyOptionsForPortal, type TaxonomyOption } from "@/lib/taxonomies";
 import { parseLinkItems } from "@/lib/link-items";
+import { isTeamIdentity } from "@/lib/team";
 import { htmlToPlainText } from "@/lib/rich-text";
 import {
   DEFAULT_LANGUAGES,
@@ -356,9 +357,10 @@ export async function loadCandidates(opts?: {
 
   // Hidden (team test) accounts never reach employers; the team's own full
   // view still shows them so the admin can preview what she built.
+  // The team's own accounts - hidden or not (13/10) - never reach employers.
   const listed = opts?.everyoneForTeam || opts?.onlyId
     ? (profiles ?? [])
-    : (profiles ?? []).filter((p) => p.portal_listed !== false && p.is_hidden !== true);
+    : (profiles ?? []).filter((p) => p.portal_listed !== false && !isTeamIdentity(p));
   // No candidates yet - still return the full filter palette from the questions
   // so the recruiter sees the parameters that mirror the profile.
   if (listed.length === 0) {

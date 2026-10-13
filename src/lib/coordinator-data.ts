@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { nameWithPrevSurname } from "@/lib/names";
 import { inChunks } from "@/lib/chunk";
 import { normalizeGradYear } from "@/lib/hebrew-year";
+import { isTeamIdentity } from "@/lib/team";
 
 /**
  * Display names for the coordinator portal: "שם (שם משפחה קודם)" whenever a
@@ -153,7 +154,8 @@ export async function loadGraduates(institutions: string[]): Promise<Graduate[]>
   return (profs ?? [])
     // Graduates only (the owner, 15/9: "אין צורך שהמנטוריות יופיעו בבוגרות")
     // - mentors and staff who once studied there are not her placement story.
-    .filter((p) => p.role === "junior" && p.status !== "rejected" && p.is_hidden !== true)
+    // The team never (13/10) - hidden or not, see isTeamIdentity.
+    .filter((p) => p.role === "junior" && p.status !== "rejected" && !isTeamIdentity(p))
     .map((p) => ({
       id: p.id,
       full_name: nameOf.get(p.id) ?? p.full_name,
