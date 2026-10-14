@@ -670,7 +670,11 @@ export async function setMemberEmail(profileId: string, _prev: MemberEmailState,
   if ((current.user.email ?? "").toLowerCase() === email) return { error: "זו כבר הכתובת של החשבון." };
   const { error } = await admin.auth.admin.updateUserById(profileId, { email, email_confirm: true });
   if (error) {
-    return { error: /already|exists|registered/i.test(error.message) ? "הכתובת הזו כבר שייכת לחשבון אחר." : `השינוי נכשל: ${error.message}` };
+    // GoTrue answers a taken address with code "email_exists" and an empty
+    // message (seen on staging, 14/10) - look at the code too.
+    const code = (error as { code?: string }).code ?? "";
+    const taken = /email_exists|already|exists|registered/i.test(`${code} ${error.message ?? ""}`);
+    return { error: taken ? "הכתובת הזו כבר שייכת לחשבון אחר." : `השינוי נכשל${error.message ? `: ${error.message}` : " - נסי שוב"}.` };
   }
   revalidatePath(`/admin/members/${profileId}`);
   revalidatePath("/admin/members");
