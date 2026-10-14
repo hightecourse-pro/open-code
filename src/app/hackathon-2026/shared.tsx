@@ -132,7 +132,6 @@ export const HACKATHON_UPDATES: { date: string; text: string }[] = [
   { date: "9.10", text: "אתגר חדש: שטראוס - איג׳נט לבחירת רכב חברה ולהשוואת שכר, עם האפיון ומאגר שווי השימוש להורדה." },
   { date: "5.10", text: "ההרשמה לאתגרים נפתחה - לבד או כזוג חברות, ואפשר להחליף עד האירוע." },
   { date: "5.10", text: "אתגר חדש: הפניקס - בוט שעונה נכון מתוך כל המידע שבאתר החברה." },
-  { date: "5.10", text: "שותף חדש: Aman (אמן) - פרטי האתגר בקרוב." },
   { date: "5.10", text: "המעבדה המרכזית לנגיפים: הפירוט המלא של האתגר + קבצי דוגמה להורדה (למנויות)." },
 ];
 
@@ -177,12 +176,12 @@ export const CHALLENGES: Challenge[] = [
     tint: "bg-tint-warm/50",
   },
   {
-    key: "aman",
-    short: "Aman",
-    org: "קבוצת אמן",
-    emoji: "🎁",
-    teaser: "פרטי האתגר בקרוב",
-    badgeLogo: "/hackathon-2026/logo-aman.jpg",
+    // The fourth slot is open again (the owner, 14/10: Aman is out; the
+    // partners page must show there is room, the community sees "פרטים יבואו").
+    short: "המקום הרביעי פתוח",
+    org: "",
+    emoji: "✨",
+    teaser: "פרטים יבואו - מקום לשותף נוסף",
     tilt: "md:rotate-1",
     tint: "bg-tint-purple/40",
   },
@@ -374,13 +373,14 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
                 רק 4 ארגונים נכנסים להאקתון הזה
               </h2>
               <p className="t-body text-ink-700 mt-1">
-                <span className="font-bold text-brand-pink-deep">כל ארבעת המקומות נתפסו</span> - שטראוס, הפניקס, Aman והמעבדה המרכזית לנגיפים
+                <span className="font-bold text-brand-pink-deep">שלושה מקומות נתפסו</span> - שטראוס, הפניקס והמעבדה המרכזית לנגיפים.{" "}
+                <span className="font-bold text-brand-pink-deep">נשאר מקום אחד</span>
               </p>
             </>
           ) : (
             <>
               <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
-                ארבעה שת״פים. ארבעה אתגרים.
+                ארבעה מקומות. שלושה אתגרים כבר כאן.
               </h2>
               <p className="t-body text-ink-700 mt-1">
                 כל ארגון מביא בעיה אמיתית מהשטח - לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
