@@ -44,7 +44,7 @@ export function StraussMockSection() {
           </span>
         ))}
         <span className="rounded-full border border-ink-200 bg-white px-3 py-1">
-          מסלול משפחתי: {n(M.familyTrack.carPrice)} ₪ · {M.familyTrack.minChildren}+ ילדים עד {M.familyTrack.childMaxAge} · הפער 50/50
+          מסלול משפחתי: {M.familyTrack.priceNote} · {M.familyTrack.minChildren}+ ילדים עד {M.familyTrack.childMaxAge} · הפער 50/50
         </span>
         <span className="rounded-full border border-ink-200 bg-white px-3 py-1">רכב חשמלי: +{M.electricNetBonus} ₪ נטו (מגולם)</span>
       </div>
