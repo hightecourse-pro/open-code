@@ -8,6 +8,7 @@ import { ConfirmActionButton } from "@/components/patterns/confirm-action-button
 import { CvUploadForm } from "@/components/patterns/cv-upload-form";
 import { CvName } from "@/components/patterns/cv-name";
 import { deleteCv, setDefaultCv } from "./actions";
+import { CvReplaceButton } from "@/components/patterns/cv-replace";
 import type { CvLanguage } from "@/types/database";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
 import { netfreeSafeUrl } from "@/lib/netfree";
@@ -124,6 +125,7 @@ export default async function CvPage() {
                       </a>
                     </>
                   )}
+                  <CvReplaceButton id={d.id} label={d.label} />
                   <ConfirmActionButton
                     action={deleteCv.bind(null, d.id)}
                     message={`למחוק את "${d.label}"? אי אפשר לשחזר את הקובץ.`}

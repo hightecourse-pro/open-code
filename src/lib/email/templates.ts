@@ -978,6 +978,42 @@ export function subscriptionLapsedAfterFailedChargeEmail(name: string | undefine
   };
 }
 
+/**
+ * To the NEW address after the team changed it for her (the owner, 14/10:
+ * "למה בלי אימות?"): the switch takes effect only once she clicks here, so
+ * a typo in the address can never lock her out.
+ */
+export function emailChangeConfirmEmail(name: string | undefined, confirmUrl: string, newEmail: string): BuiltEmail {
+  return {
+    subject: "אישור הכתובת החדשה בחשבון קוד פתוח 💜",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}עוד לחיצה והכתובת החדשה פעילה`,
+      lines: [
+        `לפי בקשתך, צוות קוד פתוח מחליף את כתובת המייל של החשבון שלך ל-<b dir="ltr">${escapeHtml(newEmail)}</b>.`,
+        "ההחלפה תיכנס לתוקף רק אחרי הלחיצה על הכפתור - עד אז הכניסה ממשיכה עם הכתובת הקודמת.",
+      ],
+      ctaText: "אישור הכתובת החדשה",
+      ctaUrl: confirmUrl,
+      footnote: "לא ביקשת? פשוט אל תלחצי, וכתבי לנו ל-office@opencode.org.il.",
+    }),
+  };
+}
+
+/** To the OLD address at the same moment - so a change she did not ask for never goes unnoticed. */
+export function emailChangeNoticeEmail(name: string | undefined, newEmail: string): BuiltEmail {
+  return {
+    subject: "כתובת המייל בחשבון קוד פתוח שלך מוחלפת",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}שינוי בכתובת המייל של החשבון`,
+      lines: [
+        `לפי בקשה שקיבלנו, כתובת המייל של החשבון שלך מוחלפת ל-<b dir="ltr">${escapeHtml(newEmail)}</b>. שלחנו לכתובת החדשה מייל אישור; ההחלפה תיכנס לתוקף אחרי הלחיצה שם.`,
+        "אם לא ביקשת את זה - כתבי לנו מיד ל-office@opencode.org.il ונעצור.",
+      ],
+      footnote: "המייל הזה נשלח לכתובת הקודמת בלבד, ליידוע.",
+    }),
+  };
+}
+
 // ------------------------------------------------------- session reminders
 
 const REMINDER_COPY: Record<string, (title: string, time: string) => { subject: string; heading: string; line: string }> = {
