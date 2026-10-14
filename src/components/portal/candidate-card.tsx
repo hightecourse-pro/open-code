@@ -20,7 +20,7 @@ export function CandidateCard({
       <div className="absolute end-3 top-3 z-10">
         <FavoriteButton profileId={candidate.id} initial={favorited} size="sm" />
       </div>
-      <Link href={`/portal/candidate/${candidate.id}`} className="block h-full no-underline">
+      <Link href={`/portal/candidate/${candidate.id}`} target="_blank" rel="noopener" className="block h-full no-underline">
         <Card interactive className="h-full flex flex-col gap-3">
           <div className="flex items-center gap-3 pe-9">
             <Avatar initials={candidate.initials} size="md" />

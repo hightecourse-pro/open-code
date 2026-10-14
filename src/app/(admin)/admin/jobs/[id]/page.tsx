@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -105,7 +106,7 @@ export default async function AdminJobPage({
   const [
     { data: applications },
     { data: curated },
-    { data: members },
+    { data: membersRaw },
     { data: questions },
     { data: targetRows },
     { data: clientRows },
@@ -223,6 +224,7 @@ export default async function AdminJobPage({
     }
   }
   const flowInterviewing = appList.filter((a) => a.status === "interview" || a.status === "exam").length;
+  const members = await withPrevSurnames(membersRaw);
   const applicantIds = [...new Set(appList.map((a) => a.applicant_id))];
   const curatedIds = [...new Set((curated ?? []).map((c) => c.profile_id))];
   const needIds = [...new Set([...applicantIds, ...curatedIds])];
@@ -243,7 +245,7 @@ export default async function AdminJobPage({
           role: string;
         }[],
       };
-  const profileOf = new Map((named ?? []).map((p) => [p.id, p]));
+  const profileOf = new Map((await withPrevSurnames(named)).map((p) => [p.id, p]));
   const curatedSet = new Set(curatedIds);
 
   // Off-community applications recorded by email - claimed automatically the

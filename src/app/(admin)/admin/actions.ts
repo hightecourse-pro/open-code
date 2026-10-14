@@ -1,5 +1,6 @@
 "use server";
 
+import { withPrevSurnames } from "@/lib/prev-surname";
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { recordCommunityHire, removeCommunityHireIfUnbilled } from "@/lib/admin/hires";
@@ -1464,7 +1465,7 @@ export async function previewAudience(
       .in("status", ["active", "pending"])
       .eq("profile_completed", false);
     const seen = new Set(members.map((m) => m.id));
-    for (const p of incomplete ?? []) {
+    for (const p of await withPrevSurnames(incomplete)) {
       if (seen.has(p.id)) continue;
       members = [
         ...members,
@@ -1890,7 +1891,7 @@ export async function sendJobCandidatesToClient(
         .from("profiles")
         .select("id, full_name, role, status, profile_completed, portal_listed")
         .in("id", hiddenIds);
-      const parts = (hiddenProfiles ?? []).map((p) => {
+      const parts = (await withPrevSurnames(hiddenProfiles)).map((p) => {
         const reason =
           p.role === "admin"
             ? "חשבון אדמין (רק ג'וניוריות מוצגות)"
@@ -2884,8 +2885,10 @@ export async function sendJobCandidatesMail(jobId: string, input: JobCandidatesM
   if (ids.length === 0) return { error: "אין מועמדות לשלוח להן." };
 
   const { inChunks } = await import("@/lib/chunk");
-  const profiles = await inChunks<{ id: string; first_name: string | null; full_name: string }>(ids, (chunk) =>
-    admin.from("profiles").select("id, first_name, full_name").in("id", chunk)
+  const profiles = await withPrevSurnames(
+    await inChunks<{ id: string; first_name: string | null; full_name: string }>(ids, (chunk) =>
+      admin.from("profiles").select("id, first_name, full_name").in("id", chunk)
+    )
   );
   const { data: emailRows } = await admin.rpc("member_emails", { p_ids: ids });
   const emailOf = new Map(((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email]));

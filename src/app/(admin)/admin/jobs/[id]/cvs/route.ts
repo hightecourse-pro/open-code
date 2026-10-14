@@ -5,6 +5,7 @@
 // marked "אישור סופי" on this job. Each applicant contributes the CV she
 // attached to THIS application when there is one (she tailored it), else her
 // newest CV (Hebrew first) - the same preference order the portal uses.
+import { withPrevSurnames } from "@/lib/prev-surname";
 import { NextResponse } from "next/server";
 import JSZip from "jszip";
 import { requireRole } from "@/lib/auth";
@@ -47,7 +48,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ id: string
       .in("profile_id", applicantIds)
       .order("created_at", { ascending: false }),
   ]);
-  const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.full_name || "מועמדת"]));
+  const nameOf = new Map((await withPrevSurnames(profiles)).map((p) => [p.id, p.full_name || "מועמדת"]));
   const docById = new Map((docs ?? []).map((d) => [d.id, d]));
   const docsOf = new Map<string, { file_path: string; language: string | null }[]>();
   for (const d of docs ?? []) {

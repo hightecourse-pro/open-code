@@ -1,3 +1,4 @@
+import { withPrevSurnamesByProfile } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -47,7 +48,7 @@ export default async function AdminCrmPage() {
     contactsOf.set(c.client_id, list);
   }
   const hiresOf = new Map<string, CrmHireRow[]>();
-  for (const h of hires ?? []) {
+  for (const h of await withPrevSurnamesByProfile(hires)) {
     if (!h.client_id) continue;
     const list = hiresOf.get(h.client_id) ?? [];
     list.push({

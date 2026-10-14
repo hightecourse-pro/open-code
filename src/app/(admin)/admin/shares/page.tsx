@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Share2, UserCheck, Zap, ZapOff, Eye, BookOpen, Search, Gift } from "lucide-react";
@@ -110,7 +111,7 @@ export default async function AdminSharesPage({
     (openStats ?? []).map((r) => [`${r.profile_id}:${r.owner_type}:${r.owner_id}`, r.first_open])
   );
 
-  const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+  const nameOf = new Map((await withPrevSurnames(profiles)).map((p) => [p.id, p.full_name]));
   const titleOf = new Map<string, string>([
     ...(courses ?? []).map((c) => [`course:${c.id}`, c.title] as [string, string]),
     ...(sessions ?? []).map((s) => [`session:${s.id}`, s.title] as [string, string]),
@@ -226,7 +227,7 @@ export default async function AdminSharesPage({
           </p>
         </div>
         <ManualShareForm
-          members={(members ?? []).map((m) => ({ id: m.id, label: m.full_name }))}
+          members={(await withPrevSurnames(members)).map((m) => ({ id: m.id, label: m.full_name }))}
           courses={(allCourses ?? []).map((c) => ({ id: c.id, label: c.title }))}
           sessions={(allSessions ?? []).map((s) => ({ id: s.id, label: s.title }))}
         />

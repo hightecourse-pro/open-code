@@ -3,6 +3,8 @@
 // the employer portal renders, but for EVERY member, portal-hidden included,
 // PLUS her contact details (phone + email), which only the team sees
 // (the owner, 31/8: "תוסיף בפרופיל גם טלפון ומייל").
+import { nameWithPrevSurname } from "@/lib/names";
+import { prevSurnamesOf } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -63,7 +65,7 @@ export default async function AdminMemberProfilePage({
           חזרה לתיק החברה
         </Link>
         <div className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-ink-700 text-sm leading-relaxed">
-          <b className="text-ink-1000">{bare.full_name}</b>{" "}
+          <b className="text-ink-1000">{nameWithPrevSurname(bare.full_name, (await prevSurnamesOf([id])).get(id))}</b>{" "}
           {bare.profile_completed
             ? "- אין לחשבון הזה תשובות בשאלון להצגה."
             : "עדיין באמצע מילוי השאלון - ברגע שתסיים, הפרופיל המלא יופיע כאן בדיוק כמו שמגייסת תראה אותו."}

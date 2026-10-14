@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FileText, MessageCircle } from "lucide-react";
@@ -102,7 +103,7 @@ export default async function AdminMentorRequestsPage({
   const { data: members } = ids.length
     ? await supabase.from("profiles").select("id, full_name, specialization").in("id", ids)
     : { data: [] };
-  const memberOf = new Map((members ?? []).map((m) => [m.id, m]));
+  const memberOf = new Map((await withPrevSurnames(members)).map((m) => [m.id, m]));
 
   const open = (requests ?? []).filter((r) => r.status === "open");
   const handled = (requests ?? []).filter((r) => r.status !== "open");
@@ -230,7 +231,7 @@ export default async function AdminMentorRequestsPage({
                   >
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <Link
-                        href={`/admin/members/${r.profile_id}`}
+                        href={`/admin/members/${r.profile_id}`} target="_blank" rel="noopener"
                         className="font-medium text-ink-900 hover:text-brand-purple hover:underline"
                       >
                         {m?.full_name ?? "חברת קהילה"}
@@ -277,7 +278,7 @@ export default async function AdminMentorRequestsPage({
                     )}
                     <div className="flex items-center gap-3 flex-wrap text-[12.5px]">
                       <Link
-                        href={`/admin/members/${r.profile_id}`}
+                        href={`/admin/members/${r.profile_id}`} target="_blank" rel="noopener"
                         className="font-semibold text-brand-purple hover:underline"
                       >
                         לפרופיל המלא ←
@@ -395,7 +396,7 @@ export default async function AdminMentorRequestsPage({
                   className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0 flex-wrap"
                 >
                   <Link
-                    href={`/admin/members/${j.id}`}
+                    href={`/admin/members/${j.id}`} target="_blank" rel="noopener"
                     className="font-medium text-ink-900 hover:text-brand-purple hover:underline"
                   >
                     {j.full_name}

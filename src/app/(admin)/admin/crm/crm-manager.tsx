@@ -164,7 +164,7 @@ function HireChipRow({ hire, jobs }: { hire: CrmHireRow; jobs: CrmJobRow[] }) {
       <span className="text-ink-300">↳</span>
       {hire.profile_id ? (
         <a
-          href={`/admin/members/${hire.profile_id}`}
+          href={`/admin/members/${hire.profile_id}`} target="_blank" rel="noopener"
           className="text-[13px] font-medium text-ink-900 hover:text-brand-purple hover:underline"
         >
           {hire.full_name}

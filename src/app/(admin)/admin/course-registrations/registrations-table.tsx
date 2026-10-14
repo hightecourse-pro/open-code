@@ -186,7 +186,7 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
                 <tr key={r.id} className="border-t border-ink-100 align-top">
                   <td className="px-3 py-2 font-semibold text-ink-1000 whitespace-nowrap">
                     {r.profile_id ? (
-                      <Link href={`/admin/members/${r.profile_id}`} className="text-brand-purple hover:underline">
+                      <Link href={`/admin/members/${r.profile_id}`} target="_blank" rel="noopener" className="text-brand-purple hover:underline">
                         {r.full_name}
                       </Link>
                     ) : (

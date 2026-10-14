@@ -1,5 +1,6 @@
 "use server";
 
+import { withPrevSurnames } from "@/lib/prev-surname";
 import { createClient } from "@/lib/supabase/server";
 import { requireRole } from "@/lib/auth";
 
@@ -31,7 +32,7 @@ export async function sessionViewers(sessionId: string): Promise<SessionViewer[]
     .from("profiles")
     .select("id, full_name")
     .in("id", [...new Set(stats.map((s) => s.profile_id))]);
-  const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+  const nameOf = new Map((await withPrevSurnames(profiles)).map((p) => [p.id, p.full_name]));
   return stats.map((s) => ({
     profileId: s.profile_id,
     name: nameOf.get(s.profile_id) ?? "חברת קהילה",

@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ExternalLink } from "lucide-react";
@@ -47,7 +48,7 @@ export default async function AdminModerationPage() {
   const { data: authors } = authorIds.length
     ? await supabase.from("profiles").select("id, full_name").in("id", authorIds)
     : { data: [] };
-  const nameOf = new Map((authors ?? []).map((a) => [a.id, a.full_name]));
+  const nameOf = new Map((await withPrevSurnames(authors)).map((a) => [a.id, a.full_name]));
 
   const postMap = new Map((posts ?? []).map((p) => [p.id, p]));
   const commentMap = new Map((comments ?? []).map((c) => [c.id, c]));

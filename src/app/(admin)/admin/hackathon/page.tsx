@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,7 +33,7 @@ export default async function AdminHackathonPage() {
     const profs = await inChunks<{ id: string; full_name: string; status: string }>(ids, (chunk) =>
       admin.from("profiles").select("id, full_name, status").in("id", chunk)
     );
-    for (const p of profs) nameOf.set(p.id, { name: p.full_name, status: p.status });
+    for (const p of await withPrevSurnames(profs)) nameOf.set(p.id, { name: p.full_name, status: p.status });
   }
   const rows: RegistrationRow[] = (regs ?? []).map((r) => ({
     profileId: r.profile_id,

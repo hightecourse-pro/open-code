@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
@@ -33,7 +34,7 @@ export default async function AdminRequestsPage() {
   const { data: members } = ids.length
     ? await supabase.from("profiles").select("id, full_name, status, member_tier, role").in("id", ids)
     : { data: [] };
-  const nameOf = new Map((members ?? []).map((m) => [m.id, m.full_name]));
+  const nameOf = new Map((await withPrevSurnames(members)).map((m) => [m.id, m.full_name]));
   // מנויה badge (the owner, 2/9) - paying junior; team/mentor labeled apart.
   const subscriberOf = new Map(
     (members ?? []).map((m) => [

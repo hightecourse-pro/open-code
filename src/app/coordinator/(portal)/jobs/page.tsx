@@ -123,7 +123,7 @@ export default async function CoordinatorJobsPage() {
                 {j.applicants.map((a) => (
                   <span key={a.id} className="inline-flex items-center gap-1.5">
                     <Link
-                      href={`/coordinator/member/${a.id}`}
+                      href={`/coordinator/member/${a.id}`} target="_blank" rel="noopener"
                       className="font-medium hover:text-brand-purple hover:underline"
                     >
                       {a.full_name}

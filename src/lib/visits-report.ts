@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inChunks } from "@/lib/chunk";
@@ -32,7 +33,7 @@ export async function loadVisitingMembers(range: VisitRange): Promise<VisitingMe
     ),
     inChunks<{ id: string; email: string | null }>(ids, (chunk) => admin.rpc("member_emails", { p_ids: chunk })),
   ]);
-  const profileOf = new Map(profiles.map((p) => [p.id, p]));
+  const profileOf = new Map((await withPrevSurnames(profiles)).map((p) => [p.id, p]));
   const emailOf = new Map(emailRows.map((e) => [e.id, e.email ?? ""]));
   return rows.map((r) => {
     const p = profileOf.get(r.profile_id);

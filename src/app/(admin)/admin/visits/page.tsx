@@ -195,7 +195,7 @@ export default async function VisitsPage({ searchParams }: { searchParams: Promi
               {members.slice(0, 25).map((m) => (
                 <tr key={m.profileId} className="border-t border-ink-100">
                   <td className="py-1.5 font-semibold text-ink-1000">
-                    <Link href={`/admin/members/${m.profileId}`} className="hover:underline text-brand-purple">
+                    <Link href={`/admin/members/${m.profileId}`} target="_blank" rel="noopener" className="hover:underline text-brand-purple">
                       {m.name}
                     </Link>
                     {m.subscriber && <span className="ms-1.5 text-[10.5px] text-green-800 bg-tint-green rounded-full px-1.5 py-0.5">מנויה</span>}

@@ -163,7 +163,7 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
                 {r.current.map((m) => (
                   <a
                     key={m.profileId}
-                    href={`/admin/members/${m.profileId}`}
+                    href={`/admin/members/${m.profileId}`} target="_blank" rel="noopener"
                     className="bg-white border border-ink-200 rounded-full px-3 py-1 text-[12.5px] text-ink-900 hover:text-brand-purple hover:border-brand-purple transition-colors"
                     title={`בקורס מאז ${dmy(m.since)}`}
                   >
@@ -180,7 +180,7 @@ export function CoursesStatsTable({ rows }: { rows: CourseStatRow[] }) {
               <div key={i} className="bg-white border border-ink-100 rounded-md px-3 py-2">
                 <div className="flex items-center gap-2 text-xs text-ink-500">
                   <a
-                    href={`/admin/members/${f.profileId}`}
+                    href={`/admin/members/${f.profileId}`} target="_blank" rel="noopener"
                     className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
                   >
                     {f.name}
@@ -278,7 +278,7 @@ export function SessionsStatsTable({ rows }: { rows: SessionStatRow[] }) {
                 {list.map((v) => (
                   <a
                     key={v.profileId}
-                    href={`/admin/members/${v.profileId}`}
+                    href={`/admin/members/${v.profileId}`} target="_blank" rel="noopener"
                     className="bg-white border border-ink-200 rounded-full px-3 py-1 text-[12.5px] text-ink-900 hover:text-brand-purple hover:border-brand-purple transition-colors"
                     title={`כניסה אחרונה ${dmy(v.last)}`}
                   >
