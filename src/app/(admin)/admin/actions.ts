@@ -668,6 +668,11 @@ export async function setMemberEmail(profileId: string, _prev: MemberEmailState,
   const { data: current } = await admin.auth.admin.getUserById(profileId);
   if (!current?.user) return { error: "החשבון לא נמצא." };
   if ((current.user.email ?? "").toLowerCase() === email) return { error: "זו כבר הכתובת של החשבון." };
+  // Taken by another account? Ask first - GoTrue's own refusal arrives with
+  // an empty message (seen on staging, 14/10). Same lookup the payment
+  // webhook uses to match an email to a member.
+  const { data: owner } = await admin.rpc("auth_user_id_by_email", { p_email: email });
+  if (owner && owner !== profileId) return { error: "הכתובת הזו כבר שייכת לחשבון אחר." };
   const { error } = await admin.auth.admin.updateUserById(profileId, { email, email_confirm: true });
   if (error) {
     // GoTrue answers a taken address with code "email_exists" and an empty
