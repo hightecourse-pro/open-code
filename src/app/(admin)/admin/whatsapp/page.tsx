@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/chunk";
 import { getWaConfig, getWaVerifyToken, listWaTemplates, toWaId, waWindowLeftMs } from "@/lib/whatsapp";
 import { markWaContactRead, waInboxState } from "@/lib/whatsapp-inbox";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
@@ -51,13 +52,12 @@ export default async function AdminWhatsAppPage({
       .eq("key", "phone")
       .maybeSingle();
     if (phoneQ) {
-      const { data: phones } = await admin
-        .from("profile_answers")
-        .select("profile_id, value")
-        .eq("question_id", phoneQ.id)
-        .limit(5000);
+      // Paged: one request stops at 1,000 rows and there are more phones than that (14/10).
+      const phones = await fetchAll<{ profile_id: string; value: unknown }>((from, to) =>
+        admin.from("profile_answers").select("profile_id, value").eq("question_id", phoneQ.id).order("profile_id").range(from, to)
+      );
       const byWa = new Map<string, string>();
-      for (const p of phones ?? []) {
+      for (const p of phones) {
         if (typeof p.value !== "string") continue;
         const wa = toWaId(p.value);
         if (wa) byWa.set(wa, p.profile_id);

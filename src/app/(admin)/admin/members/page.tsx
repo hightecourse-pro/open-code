@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/chunk";
 import { requireRole } from "@/lib/auth";
 import {
   MembersTable,
@@ -89,12 +90,11 @@ export default async function AdminMembersPage({
   const phoneQ = (questions ?? []).find((q) => q.key === "phone");
   const phoneOf = new Map<string, string>();
   if (phoneQ) {
-    const { data: phones } = await admin
-      .from("profile_answers")
-      .select("profile_id, value")
-      .eq("question_id", phoneQ.id)
-      .limit(5000);
-    for (const p of phones ?? []) {
+    // Paged - 1,047 phone answers already, and one request stops at 1,000.
+    const phones = await fetchAll<{ profile_id: string; value: unknown }>((from, to) =>
+      admin.from("profile_answers").select("profile_id, value").eq("question_id", phoneQ.id).order("profile_id").range(from, to)
+    );
+    for (const p of phones) {
       if (typeof p.value === "string" && p.value) phoneOf.set(p.profile_id, p.value);
     }
   }
@@ -106,8 +106,11 @@ export default async function AdminMembersPage({
     admin
       .from("subscriptions")
       .select("profile_id, status, current_period_end, canceled_at")
-      .in("status", ["active", "trialing"]),
-    admin.from("external_payments").select("email, claimed_by, needs_review").eq("needs_review", false),
+      .in("status", ["active", "trialing"])
+      .limit(1000),
+    // (both bounded at the server's 1,000 either way - 232 live subscriptions
+    // today; the paged loaders above are the ones that already crossed it)
+    admin.from("external_payments").select("email, claimed_by, needs_review").eq("needs_review", false).limit(1000),
     // Refused charges reported by Nedarim (the owner, 31/8: "היה לה סירוב,
     // זה לא מתועד") - the newest refusal rides the payment column.
     admin
@@ -152,12 +155,10 @@ export default async function AdminMembersPage({
         (o) => [o.value, o.label]
       )
     );
-    const { data: studies } = await admin
-      .from("profile_answers")
-      .select("profile_id, value")
-      .eq("question_id", studyQ.id)
-      .limit(5000);
-    for (const s of studies ?? []) {
+    const studies = await fetchAll<{ profile_id: string; value: unknown }>((from, to) =>
+      admin.from("profile_answers").select("profile_id, value").eq("question_id", studyQ.id).order("profile_id").range(from, to)
+    );
+    for (const s of studies) {
       if (typeof s.value === "string" && s.value) studyOf.set(s.profile_id, labelOf.get(s.value) ?? s.value);
     }
   }
@@ -168,13 +169,11 @@ export default async function AdminMembersPage({
   const filterDefs: FilterDef[] = [];
   for (const q of questions ?? []) {
     if (q.key === LANGUAGE_SKILLS_KEY) {
-      const { data: langAnswers } = await admin
-        .from("profile_answers")
-        .select("value")
-        .eq("question_id", q.id)
-        .limit(5000);
+      const langAnswers = await fetchAll<{ profile_id: string; value: unknown }>((from, to) =>
+        admin.from("profile_answers").select("profile_id, value").eq("question_id", q.id).order("profile_id").range(from, to)
+      );
       const byLang = new Map<string, Set<string>>();
-      for (const a of langAnswers ?? []) {
+      for (const a of langAnswers) {
         for (const s of parseLangSkills(a.value)) {
           let levels = byLang.get(s.lang);
           if (!levels) {

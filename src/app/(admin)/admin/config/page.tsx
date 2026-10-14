@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/chunk";
 import { Badge } from "@/components/ui";
 import { QuestionToggle } from "@/components/patterns/question-toggle";
 import { TaxonomyManager } from "@/components/patterns/taxonomy-manager";
@@ -99,10 +100,10 @@ export default async function AdminConfigPage() {
     .map((q) => q.id);
   const otherValuesOf = new Map<string, string[]>();
   if (selectIds.length) {
-    const { data: ans } = await supabase
-      .from("profile_answers")
-      .select("question_id, value")
-      .in("question_id", selectIds);
+    // Every answer of every select question - thousands; paged (14/10).
+    const ans = await fetchAll<{ question_id: string; value: unknown }>((from, to) =>
+      supabase.from("profile_answers").select("question_id, value").in("question_id", selectIds).order("question_id").order("profile_id").range(from, to)
+    );
     const optValues = new Map(
       (questions ?? []).map((q) => [
         q.id,

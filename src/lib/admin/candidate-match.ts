@@ -4,6 +4,7 @@
 // from "טכנולוגיות שלמדת" - לימודים יש לכולן וזה לא משנה (the owner).
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/chunk";
 import { getTaxonomyOptions } from "@/lib/taxonomies";
 
 /** Practical-tech question keys. dev_tech (learning) is deliberately absent. */
@@ -62,12 +63,18 @@ export async function studyInfoOf(profileIds: string[]): Promise<Map<string, Stu
     ])
   );
   for (let i = 0; i < profileIds.length; i += 300) {
-    const { data } = await admin
-      .from("profile_answers")
-      .select("profile_id, question_id, value")
-      .in("question_id", questions.map((q) => q.id))
-      .in("profile_id", profileIds.slice(i, i + 300));
-    for (const a of data ?? []) {
+    // 300 members × several questions passes 1,000 rows - paged (14/10).
+    const data = await fetchAll<{ profile_id: string; question_id: string; value: unknown }>((from, to) =>
+      admin
+        .from("profile_answers")
+        .select("profile_id, question_id, value")
+        .in("question_id", questions.map((q) => q.id))
+        .in("profile_id", profileIds.slice(i, i + 300))
+        .order("profile_id")
+        .order("question_id")
+        .range(from, to)
+    );
+    for (const a of data) {
       const q = byId.get(a.question_id);
       if (!q) continue;
       const resolve = (v: unknown): string | null => {
@@ -126,12 +133,17 @@ export async function matchCandidates(
 
   const answers: { profile_id: string; question_id: string; value: unknown }[] = [];
   for (let i = 0; i < profileIds.length; i += 300) {
-    const { data } = await admin
-      .from("profile_answers")
-      .select("profile_id, question_id, value")
-      .in("question_id", qIds)
-      .in("profile_id", profileIds.slice(i, i + 300));
-    answers.push(...(data ?? []));
+    const data = await fetchAll<{ profile_id: string; question_id: string; value: unknown }>((from, to) =>
+      admin
+        .from("profile_answers")
+        .select("profile_id, question_id, value")
+        .in("question_id", qIds)
+        .in("profile_id", profileIds.slice(i, i + 300))
+        .order("profile_id")
+        .order("question_id")
+        .range(from, to)
+    );
+    answers.push(...data);
   }
 
   const practicalOf = new Map<string, Set<string>>();

@@ -3,6 +3,7 @@ import { ClipboardList } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { nameWithPrevSurname } from "@/lib/names";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/chunk";
 import { SubmissionsTable, type SubmissionRow } from "./submissions-table";
 
 export const metadata: Metadata = { title: "רשימת הגשות" };
@@ -57,14 +58,20 @@ export default async function AdminSubmissionsPage() {
   // study place / graduation year / phone live in profile_answers.
   const qIdOf = new Map((questions ?? []).map((q) => [q.key, q.id]));
   const answerIds = [...qIdOf.values()];
-  const { data: answers } =
+  // Paged (14/10): submissions × questions passes 1,000 rows, and one request stops there.
+  const answers =
     profileIds.length && answerIds.length
-      ? await admin
-          .from("profile_answers")
-          .select("profile_id, question_id, value")
-          .in("profile_id", profileIds)
-          .in("question_id", answerIds)
-      : { data: [] };
+      ? await fetchAll<{ profile_id: string; question_id: string; value: unknown }>((from, to) =>
+          admin
+            .from("profile_answers")
+            .select("profile_id, question_id, value")
+            .in("profile_id", profileIds)
+            .in("question_id", answerIds)
+            .order("profile_id")
+            .order("question_id")
+            .range(from, to)
+        )
+      : [];
   const answerMap = new Map(
     (answers ?? []).map((a) => [`${a.profile_id}:${a.question_id}`, a.value])
   );

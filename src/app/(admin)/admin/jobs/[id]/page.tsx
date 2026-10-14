@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowRight, Inbox, ListChecks, Mail, Megaphone, Pencil, Sparkles, UserCheck, UserPlus } from "lucide-react";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fetchAll } from "@/lib/chunk";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { loadClientJob } from "@/lib/portal/jobs";
 import {
@@ -134,11 +135,11 @@ export default async function AdminJobPage({
         .eq("job_id", id)
         .order("sort_order", { ascending: true })
         .order("created_at", { ascending: true }),
-      admin
-        .from("job_targets")
-        .select("profile_id, emailed_at, email_failed_at, email_error")
-        .eq("job_id", id)
-        .limit(5000),
+      // Paged (14/10): a job published to the whole community has ~1,000
+      // targets, and one request stops at 1,000 whatever the limit says.
+      fetchAll<{ profile_id: string; emailed_at: string | null; email_failed_at: string | null; email_error: string | null }>((from, to) =>
+        admin.from("job_targets").select("profile_id, emailed_at, email_failed_at, email_error").eq("job_id", id).order("profile_id").range(from, to)
+      ).then((rows) => ({ data: rows })),
       // Portal clients the edit form can link the job to.
       admin
         .from("portal_clients")
