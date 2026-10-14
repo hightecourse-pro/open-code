@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireRole } from "@/lib/auth";
@@ -26,7 +27,8 @@ export default async function AdminExternalPaymentsPage() {
       .order("full_name", { ascending: true }),
   ]);
 
-  const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
+  const named = await withPrevSurnames(profiles);
+  const nameOf = new Map(named.map((p) => [p.id, p.full_name]));
   const rows: ExternalPaymentRow[] = (payments ?? []).map((p) => ({
     id: p.id,
     client_name: p.client_name,
@@ -39,7 +41,7 @@ export default async function AdminExternalPaymentsPage() {
     claimed_at: p.claimed_at,
     claimedName: p.claimed_by ? (nameOf.get(p.claimed_by) ?? null) : null,
   }));
-  const members: MemberOption[] = (profiles ?? []).map((p) => ({
+  const members: MemberOption[] = named.map((p) => ({
     id: p.id,
     label: p.full_name || p.id.slice(0, 8),
   }));

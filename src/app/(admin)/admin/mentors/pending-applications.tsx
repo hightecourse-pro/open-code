@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { FileText } from "lucide-react";
@@ -41,7 +42,7 @@ export async function PendingMentorApplications({
     // The owner (18/9): finished questionnaires first, then oldest first.
     .order("profile_completed", { ascending: false })
     .order("created_at", { ascending: true });
-  const pending = pendingApps ?? [];
+  const pending = await withPrevSurnames(pendingApps);
   if (pending.length === 0 && !showEmpty) return null;
 
   const admin = createAdminClient();
@@ -166,7 +167,7 @@ export async function PendingMentorApplications({
               <Avatar size="sm" tone="gold" initials={p.avatar_initials || p.full_name.slice(0, 1)} />
               <div className="flex-1 min-w-0">
                 <Link
-                  href={`/admin/members/${p.id}`}
+                  href={`/admin/members/${p.id}`} target="_blank" rel="noopener"
                   className="font-medium text-ink-900 hover:text-brand-purple hover:underline"
                 >
                   {p.full_name}

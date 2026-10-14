@@ -302,7 +302,7 @@ function HireLine({ h, clients }: { h: HireRow; clients: ClientOption[] }) {
       <div className="flex items-center gap-2.5 flex-wrap">
         {h.profile_id ? (
           <a
-            href={`/admin/members/${h.profile_id}`}
+            href={`/admin/members/${h.profile_id}`} target="_blank" rel="noopener"
             className="font-semibold text-[14px] text-ink-900 hover:text-brand-purple hover:underline"
           >
             {h.full_name}

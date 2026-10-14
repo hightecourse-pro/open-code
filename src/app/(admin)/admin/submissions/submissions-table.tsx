@@ -143,7 +143,7 @@ export function SubmissionsTable({ rows }: { rows: SubmissionRow[] }) {
               <tr key={r.id}>
                 <td className="p-2 border-b border-ink-100">
                   <Link
-                    href={`/admin/members/${r.profileId}`}
+                    href={`/admin/members/${r.profileId}`} target="_blank" rel="noopener"
                     className="font-medium text-ink-900 hover:text-brand-purple hover:underline whitespace-nowrap"
                   >
                     {r.name}

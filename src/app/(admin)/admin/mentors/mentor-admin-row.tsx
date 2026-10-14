@@ -97,7 +97,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
         <Avatar size="sm" tone="gold" crown initials={m.avatar_initials || m.full_name.slice(0, 1)} />
         <div className="flex-1 min-w-0">
           <Link
-            href={`/admin/members/${m.id}`}
+            href={`/admin/members/${m.id}`} target="_blank" rel="noopener"
             className="font-medium text-ink-900 truncate hover:text-brand-purple hover:underline"
           >
             {m.full_name}

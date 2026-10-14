@@ -492,7 +492,7 @@ export function MembersTable({
                   <div className="flex items-center gap-2">
                     <Avatar size="xs" tone={m.role === "mentor" ? "gold" : "pink"} initials={m.avatar_initials || m.full_name.slice(0, 1) || "ק"} />
                     <a
-                      href={`/admin/members/${m.id}`}
+                      href={`/admin/members/${m.id}`} target="_blank" rel="noopener"
                       title="לפרופיל המלא"
                       className="font-medium text-ink-900 hover:text-brand-purple hover:underline inline-flex items-center gap-1"
                     >
@@ -500,7 +500,7 @@ export function MembersTable({
                       <UserRound size={12} className="text-ink-400" />
                     </a>
                     <a
-                      href={`/admin/members/${m.id}/profile`}
+                      href={`/admin/members/${m.id}/profile`} target="_blank" rel="noopener"
                       title="הפרופיל המלא - כמו שמגייסת רואה"
                       className="text-ink-400 hover:text-brand-purple"
                     >

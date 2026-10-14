@@ -113,7 +113,7 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
               {shown.map((r) => (
                 <tr key={r.profileId} className="border-t border-ink-100">
                   <td className="px-3 py-2 font-semibold whitespace-nowrap">
-                    <Link href={`/admin/members/${r.profileId}`} className="text-brand-purple hover:underline">
+                    <Link href={`/admin/members/${r.profileId}`} target="_blank" rel="noopener" className="text-brand-purple hover:underline">
                       {r.name}
                     </Link>
                     {r.status !== "active" && <Badge className="ms-2 bg-amber-100 text-amber-800">{r.status}</Badge>}
@@ -122,7 +122,7 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
                   <td className="px-3 py-2 text-ink-700">
                     {r.partnerId ? (
                       <span className="inline-flex items-center gap-1.5 flex-wrap">
-                        <Link href={`/admin/members/${r.partnerId}`} className="hover:underline">
+                        <Link href={`/admin/members/${r.partnerId}`} target="_blank" rel="noopener" className="hover:underline">
                           👯‍♀️ {r.partnerName ?? "-"}
                         </Link>
                         {r.partnerConfirmed ? (

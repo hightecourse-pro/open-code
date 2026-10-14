@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { AdminCreateSession } from "@/components/patterns/admin-create-session";
@@ -58,7 +59,7 @@ export default async function AdminSessionsPage() {
     const pids = [...new Set((fbRows ?? []).map((f) => f.profile_id))];
     if (pids.length) {
       const { data: ps } = await supabase.from("profiles").select("id, full_name").in("id", pids);
-      for (const pr of ps ?? []) fbNames.set(pr.id, pr.full_name);
+      for (const pr of await withPrevSurnames(ps)) fbNames.set(pr.id, pr.full_name);
     }
   }
   const fbBySession = new Map<string, AdminSessionRow["feedback"]>();

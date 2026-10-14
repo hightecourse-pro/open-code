@@ -101,7 +101,7 @@ export function GraduatesBrowser({
 
   const Row = ({ g }: { g: GraduateRow }) => (
     <div className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0 hover:bg-tint-purple/30 rounded-md px-2 -mx-2 transition-colors">
-      <Link href={`/coordinator/member/${g.id}`} className="flex items-center gap-3 flex-1 min-w-0">
+      <Link href={`/coordinator/member/${g.id}`} target="_blank" rel="noopener" className="flex items-center gap-3 flex-1 min-w-0">
         <Avatar size="sm" initials={g.initials} />
         <span className="flex-1 min-w-0">
           <span className="font-medium text-ink-900 truncate block leading-tight">
@@ -154,7 +154,7 @@ export function GraduatesBrowser({
       )}
       {g.working && <Badge variant="mint">עובדת 🎉</Badge>}
       {g.hackathon && <Badge variant="purple">נרשמה להאקתון 🏆</Badge>}
-      <Link href={`/coordinator/member/${g.id}`} className="shrink-0">
+      <Link href={`/coordinator/member/${g.id}`} target="_blank" rel="noopener" className="shrink-0">
         {g.review?.hasAny ? (
           <span className="text-[11.5px] font-semibold text-[#8C5E0E] whitespace-nowrap">
             ⭐ {[g.review.cl ?? (g.review.c && `תקשורת ${g.review.c}`), g.review.tl ?? (g.review.t && `כישרון ${g.review.t}`)]

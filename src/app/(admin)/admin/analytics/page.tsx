@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -64,7 +65,7 @@ export default async function AdminAnalyticsPage() {
   const { data: namedProfiles } = nameIds.length
     ? await supabase.from("profiles").select("id, full_name").in("id", nameIds)
     : { data: [] };
-  const nameOf = new Map((namedProfiles ?? []).map((p) => [p.id, p.full_name]));
+  const nameOf = new Map((await withPrevSurnames(namedProfiles)).map((p) => [p.id, p.full_name]));
 
   const courseStats = (courses ?? []).map((c) => {
     const es = (enrollments ?? []).filter((e) => e.course_id === c.id);

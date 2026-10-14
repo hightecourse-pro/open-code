@@ -140,7 +140,7 @@ function OpenRequestCard({
           )}
           <div className="flex items-center gap-3 flex-wrap text-[12.5px]">
             <Link
-              href={`/admin/members/${r.profile_id}`}
+              href={`/admin/members/${r.profile_id}`} target="_blank" rel="noopener"
               className="font-semibold text-brand-purple hover:underline"
             >
               לפרופיל שלה ←
@@ -343,7 +343,7 @@ export function RequestsInbox({
                   className="w-full text-start flex items-center gap-2.5 flex-wrap opacity-80 hover:opacity-100 cursor-pointer"
                 >
                   <Link
-                    href={`/admin/members/${r.profile_id}`}
+                    href={`/admin/members/${r.profile_id}`} target="_blank" rel="noopener"
                     onClick={(e) => e.stopPropagation()}
                     className="font-medium text-ink-900 hover:text-brand-purple hover:underline"
                   >

@@ -234,6 +234,8 @@ export function AlertsList({ alerts }: { alerts: AlertItem[] }) {
                       {action && (
                         <Link
                           href={action.href}
+                          target={action.href.startsWith("/admin/members/") ? "_blank" : undefined}
+                          rel="noopener"
                           className="inline-flex items-center gap-1 text-[12.5px] font-bold text-white bg-brand-gradient rounded-md px-3 py-1"
                         >
                           {action.label} <ArrowLeft size={12} />

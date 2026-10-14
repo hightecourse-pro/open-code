@@ -336,7 +336,7 @@ export function AdminCvTable({ rows }: { rows: AdminCvRow[] }) {
                       {head ? (
                         <>
                           <a
-                            href={`/admin/members/${g.profile_id}`}
+                            href={`/admin/members/${g.profile_id}`} target="_blank" rel="noopener"
                             className="font-medium text-ink-900 hover:text-brand-purple hover:underline"
                           >
                             {g.member_name}

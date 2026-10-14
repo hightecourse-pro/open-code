@@ -496,7 +496,7 @@ export default async function AdminMemberProfilePage({
           <h1 className="font-display text-[24px] font-black text-ink-1000">{nameWithPrevSurname(profile.full_name, prevSurname)}</h1>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <Link
-              href={`/admin/members/${profile.id}/profile`}
+              href={`/admin/members/${profile.id}/profile`} target="_blank" rel="noopener"
               className="inline-flex items-center gap-1 text-[12px] font-bold text-white bg-brand-gradient px-2.5 py-0.5 rounded-full hover:opacity-95"
             >
               הפרופיל המלא ↗

@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -25,7 +26,7 @@ export default async function AdminMentorsPage() {
     .order("mentor_declined_at", { ascending: false })
     .then((r) => r.data ?? []);
 
-  const [{ data: mentors }, { data: candidates }] = await Promise.all([
+  const [{ data: mentorsRaw }, { data: candidates }] = await Promise.all([
     supabase
       .from("profiles")
       .select("id, full_name, avatar_initials, specialization, created_at, mentor_available")
@@ -42,12 +43,13 @@ export default async function AdminMentorsPage() {
       .order("full_name"),
   ]);
 
-  const mentorIds = (mentors ?? []).map((m) => m.id);
+  const mentors = await withPrevSurnames(mentorsRaw);
+  const mentorIds = mentors.map((m) => m.id);
   const scores = await mentorScores(mentorIds);
 
   // Per-mentor accompaniment history + bonus ledger + admin log + CV links.
   const admin = createAdminClient();
-  const declined = await declinedPromise;
+  const declined = await withPrevSurnames(await declinedPromise);
   const cvOwnerIds = mentorIds;
   const [{ data: historyRows }, { data: bonusRows }, { data: logRows }, { data: cvDocs }] =
     await Promise.all([
@@ -86,7 +88,7 @@ export default async function AdminMentorsPage() {
   const { data: memberNames } = memberIds.length
     ? await admin.from("profiles").select("id, full_name").in("id", memberIds)
     : { data: [] as { id: string; full_name: string }[] };
-  const memberNameOf = new Map((memberNames ?? []).map((m) => [m.id, m.full_name]));
+  const memberNameOf = new Map((await withPrevSurnames(memberNames)).map((m) => [m.id, m.full_name]));
 
   // One CV per owner (default first), resolved to short-lived signed links.
   const cvPathOf = new Map<string, string>();
@@ -219,7 +221,7 @@ export default async function AdminMentorsPage() {
                 מופיעה כאן; המינוי מאשר ומפעיל אותה.
               </p>
               <AppointMentorPicker
-                candidates={(candidates ?? []).map((c) => ({
+                candidates={(await withPrevSurnames(candidates)).map((c) => ({
                   id: c.id,
                   name: c.full_name,
                   pending: c.status === "pending",
@@ -239,7 +241,7 @@ export default async function AdminMentorsPage() {
                   <div key={d.id} className="flex items-center gap-3 py-2 border-b border-ink-100 last:border-b-0">
                     <Avatar size="sm" tone="pink" initials={d.avatar_initials || d.full_name.slice(0, 1)} />
                     <Link
-                      href={`/admin/members/${d.id}`}
+                      href={`/admin/members/${d.id}`} target="_blank" rel="noopener"
                       className="flex-1 font-medium text-ink-900 hover:text-brand-purple hover:underline"
                     >
                       {d.full_name}

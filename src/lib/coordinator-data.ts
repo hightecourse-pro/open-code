@@ -3,39 +3,10 @@
 // only) after the signed session already proved who she is.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { nameWithPrevSurname } from "@/lib/names";
+import { displayNamesOf } from "@/lib/prev-surname";
 import { inChunks } from "@/lib/chunk";
 import { normalizeGradYear } from "@/lib/hebrew-year";
 import { isTeamIdentity } from "@/lib/team";
-
-/**
- * Display names for the coordinator portal: "שם (שם משפחה קודם)" whenever a
- * previous surname exists (the owner, 15/9: seminary records live under the
- * maiden name - "הוא צריך תמיד להופיע בסוגריים").
- */
-async function displayNamesOf(profileIds: string[]): Promise<Map<string, string>> {
-  const out = new Map<string, string>();
-  if (profileIds.length === 0) return out;
-  const admin = createAdminClient();
-  const { data: q } = await admin
-    .from("config_questions")
-    .select("id")
-    .eq("key", "prev_surname")
-    .maybeSingle();
-  const [profs, prevRows] = await Promise.all([
-    inChunks(profileIds, (part) => admin.from("profiles").select("id, full_name").in("id", part)),
-    q
-      ? inChunks(profileIds, (part) =>
-          admin.from("profile_answers").select("profile_id, value").eq("question_id", q.id).in("profile_id", part)
-        )
-      : Promise.resolve([] as { profile_id: string; value: unknown }[]),
-  ]);
-  const prevOf = new Map(
-    (prevRows ?? []).map((r) => [r.profile_id, typeof r.value === "string" ? r.value : null])
-  );
-  for (const p of profs ?? []) out.set(p.id, nameWithPrevSurname(p.full_name, prevOf.get(p.id)));
-  return out;
-}
 
 export interface Graduate {
   id: string;

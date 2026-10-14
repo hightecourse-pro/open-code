@@ -1,3 +1,4 @@
+import { withPrevSurnamesByProfile } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -64,7 +65,7 @@ export default async function AdminHiresPage() {
     }
   }
 
-  const [{ data: hires }, { data: clientRows }, { data: placeQ }] = await Promise.all([
+  const [{ data: hiresRaw }, { data: clientRows }, { data: placeQ }] = await Promise.all([
     supabase
       .from("hires")
       .select(
@@ -77,6 +78,7 @@ export default async function AdminHiresPage() {
     // Seminary suggestions come from the study_place options (free text allowed).
     createAdminClient().from("config_questions").select("options").eq("key", "study_place").maybeSingle(),
   ]);
+  const hires = await withPrevSurnamesByProfile(hiresRaw);
   const seminaryOptions = (
     (placeQ?.options as { value: string; label: string }[] | null) ?? []
   ).map((o) => o.label);

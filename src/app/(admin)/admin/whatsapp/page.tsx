@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -69,8 +70,9 @@ export default async function AdminWhatsAppPage({
           .select("id, full_name, status")
           .in("id", [...waOfProfile.keys()])
           .neq("status", "rejected");
-        const nameById = new Map((profs ?? []).map((p) => [p.id, p.full_name]));
-        for (const p of profs ?? []) {
+        const named = await withPrevSurnames(profs);
+        const nameById = new Map(named.map((p) => [p.id, p.full_name]));
+        for (const p of named) {
           const wa = waOfProfile.get(p.id);
           if (wa) memberOptions.push({ name: p.full_name, waId: wa });
         }

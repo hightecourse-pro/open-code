@@ -1,3 +1,4 @@
+import { withPrevSurnamesByProfile } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -39,7 +40,7 @@ export default async function CourseRegistrationsPage() {
     .eq("course_key", COURSE_KEY)
     .order("created_at", { ascending: false })
     .limit(2000);
-  const rows = (data ?? []) as RegistrationRow[];
+  const rows = await withPrevSurnamesByProfile((data ?? []) as RegistrationRow[]);
 
   // Live membership beside the snapshot: a woman who joined AFTER registering
   // should read as a subscriber now (the scholarship follows the membership).

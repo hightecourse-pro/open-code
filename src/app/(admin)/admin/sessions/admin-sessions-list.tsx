@@ -213,7 +213,7 @@ function Row({ s, past, panel }: { s: AdminSessionRow; past: boolean; panel?: Re
           {s.feedback.entries.map((e, i) => (
             <div key={i} className="bg-white border border-ink-100 rounded-md px-3 py-2 text-[12.5px]">
               <div className="flex items-center gap-2 flex-wrap">
-                <a href={`/admin/members/${e.profileId}`} className="font-semibold text-ink-900 hover:text-brand-purple hover:underline">
+                <a href={`/admin/members/${e.profileId}`} target="_blank" rel="noopener" className="font-semibold text-ink-900 hover:text-brand-purple hover:underline">
                   {e.name}
                 </a>
                 <span className="text-ink-500" dir="ltr">

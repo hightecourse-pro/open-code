@@ -141,7 +141,7 @@ export function HandledRequestsList({ rows }: { rows: HandledRequestRow[] }) {
             className="flex items-center gap-3 py-2.5 border-b border-ink-100 last:border-b-0 flex-wrap opacity-80"
           >
             <Link
-              href={`/admin/members/${r.profileId}`}
+              href={`/admin/members/${r.profileId}`} target="_blank" rel="noopener"
               className="font-medium text-ink-900 hover:text-brand-purple hover:underline"
             >
               {r.memberName}

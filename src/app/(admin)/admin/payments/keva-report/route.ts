@@ -3,6 +3,7 @@
 // card used to produce two rows, and a first charge captured without a keva
 // id produced a third. Charges are counted by distinct charge DAYS - the
 // import recorded some charges twice (keva-N + bare transaction id).
+import { withPrevSurnames } from "@/lib/prev-surname";
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -157,7 +158,7 @@ export async function GET() {
   const { data: profs } = profileIds.length
     ? await admin.from("profiles").select("id, full_name, status, member_tier").in("id", profileIds)
     : { data: [] };
-  const profOf = new Map((profs ?? []).map((p) => [p.id, p]));
+  const profOf = new Map((await withPrevSurnames(profs)).map((p) => [p.id, p]));
   const subOf = new Map((subs ?? []).map((s) => [s.profile_id, s]));
 
   const rows = [...members.values()].sort((a, b) => {

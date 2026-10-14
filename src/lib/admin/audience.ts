@@ -10,6 +10,7 @@
 // SERVER ONLY - never import this into a Client Component (types are fine via
 // `import type`).
 
+import { withPrevSurnames } from "@/lib/prev-surname";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getTaxonomyOptions, type TaxonomyOption } from "@/lib/taxonomies";
 import {
@@ -134,7 +135,7 @@ async function fetchAllProfiles(profileIds?: string[], includeMentors = false) {
     out.push(...((data ?? []) as AudienceData["members"]));
     if (!data || data.length < PAGE) break;
   }
-  return out;
+  return withPrevSurnames(out);
 }
 
 /**

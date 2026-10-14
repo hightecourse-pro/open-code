@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -61,7 +62,7 @@ export default async function AdminMembersPage({
   const admin = createAdminClient();
 
   const [members, { data: questions }, { data: crm }, taxonomyOptions, { data: reminderRows }] = await Promise.all([
-    fetchAllProfiles(),
+    fetchAllProfiles().then(withPrevSurnames),
     supabase
       .from("config_questions")
       .select("*")

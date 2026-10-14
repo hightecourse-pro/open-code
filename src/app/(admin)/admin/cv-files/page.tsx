@@ -1,3 +1,4 @@
+import { withPrevSurnames } from "@/lib/prev-surname";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -32,7 +33,7 @@ export default async function AdminCvsPage() {
         .select("id, full_name, specialization")
         .in("id", memberIds)
     : { data: [] };
-  const memberOf = new Map((members ?? []).map((m) => [m.id, m]));
+  const memberOf = new Map((await withPrevSurnames(members)).map((m) => [m.id, m]));
 
   // A job-tailored file was born inside an application - resolve which job,
   // so the row can link to it (Shira: "קובץ מותאם למשרה לא מקשר למשרה").
