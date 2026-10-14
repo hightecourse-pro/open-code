@@ -10,7 +10,9 @@ import crypto from "node:crypto";
 const TTL_MS = 48 * 3600 * 1000;
 
 function secret(): string {
-  const s = process.env.AI_KEY_SECRET ?? process.env.CRON_SECRET;
+  // The same secret that signs coordinator sessions (PORTAL_SESSION_SECRET);
+  // AI_KEY_SECRET is a sealed env entry and only a fallback.
+  const s = process.env.PORTAL_SESSION_SECRET || process.env.AI_KEY_SECRET || process.env.CRON_SECRET;
   if (!s) throw new Error("email-change: no server secret configured");
   return s;
 }
