@@ -77,6 +77,59 @@ export async function uploadCv(_prev: CvDocState, formData: FormData): Promise<C
 }
 
 /**
+ * Replace the FILE of an existing document, keeping its label, language,
+ * default flag and every application that points at it (the member, 13/10:
+ * "מציק מאוד שאי אפשר לערוך או להחליף קובץ... חייבים למחוק ולהעלות עוד פעם").
+ * The old object is removed after the row points at the new one.
+ */
+export async function replaceCvFile(id: string, _prev: CvDocState, formData: FormData): Promise<CvDocState> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "צריך להתחבר מחדש." };
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "בחרי קובץ להעלאה." };
+  if (file.size > MAX_BYTES) return { error: "הקובץ גדול מדי - עד 10MB." };
+  const okType =
+    /\.(pdf|docx?)$/i.test(file.name) ||
+    ["application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"].includes(file.type);
+  if (!okType) return { error: "אפשר להעלות רק PDF או Word (doc/docx)." };
+
+  // Hers only - the profile_id on every statement (an admin's RLS reaches all rows).
+  const { data: doc } = await supabase
+    .from("cv_documents")
+    .select("id, file_path")
+    .eq("id", id)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  if (!doc) return { error: "המסמך לא נמצא." };
+
+  const safeName = file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `${user.id}/${Date.now()}-${safeName}`;
+  const { error: upErr } = await supabase.storage
+    .from("cvs")
+    .upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+  if (upErr) return { error: "ההעלאה נכשלה. נסי שוב." };
+
+  const { error } = await supabase
+    .from("cv_documents")
+    .update({ file_path: path, file_name: file.name })
+    .eq("id", id)
+    .eq("profile_id", user.id);
+  if (error) {
+    await supabase.storage.from("cvs").remove([path]);
+    return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
+  }
+  if (doc.file_path && doc.file_path !== path) await supabase.storage.from("cvs").remove([doc.file_path]);
+
+  revalidatePath("/cv");
+  revalidatePath("/jobs");
+  return { ok: true };
+}
+
+/**
  * Mark one of her documents as the default - the CV every application attaches
  * unless she picked another. Cleared then set (two statements, not one
  * transaction) so the partial unique index can never be violated; if the second

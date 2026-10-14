@@ -651,6 +651,32 @@ export async function setMemberStatus(profileId: string, status: ProfileStatus) 
   return {};
 }
 
+export type MemberEmailState = { error?: string; ok?: boolean };
+
+/**
+ * Change the login email of a member for her (מלכה מרילס, 7/10: "אני רוצה
+ * לשנות את המייל שעל החשבון שלי"). Done by the team from her member file -
+ * no confirmation round trip, the new address is marked confirmed. Every
+ * place that keys on the email (external payments, the keva registry) is
+ * matched by the email in auth, so the change is immediate there too.
+ */
+export async function setMemberEmail(profileId: string, _prev: MemberEmailState, formData: FormData): Promise<MemberEmailState> {
+  await requireRole("admin");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 200);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "כתובת המייל לא נראית תקינה." };
+  const admin = createAdminClient();
+  const { data: current } = await admin.auth.admin.getUserById(profileId);
+  if (!current?.user) return { error: "החשבון לא נמצא." };
+  if ((current.user.email ?? "").toLowerCase() === email) return { error: "זו כבר הכתובת של החשבון." };
+  const { error } = await admin.auth.admin.updateUserById(profileId, { email, email_confirm: true });
+  if (error) {
+    return { error: /already|exists|registered/i.test(error.message) ? "הכתובת הזו כבר שייכת לחשבון אחר." : `השינוי נכשל: ${error.message}` };
+  }
+  revalidatePath(`/admin/members/${profileId}`);
+  revalidatePath("/admin/members");
+  return { ok: true };
+}
+
 /** Change a member's role (e.g. promote to mentor). */
 export async function setMemberRole(profileId: string, role: UserRole) {
   await requireRole("admin");

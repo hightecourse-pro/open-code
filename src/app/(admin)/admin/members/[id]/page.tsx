@@ -23,6 +23,7 @@ import {
 } from "@/app/(admin)/admin/actions";
 import { SaveButton } from "@/components/patterns/save-button";
 import { ManualPaymentForm, RenewalDateForm } from "@/components/patterns/manual-payment-form";
+import { MemberEmailForm } from "./member-email-form";
 import { MemberSubscriptionPanel } from "@/components/patterns/member-subscription-panel";
 import { kevaIdsFor } from "@/lib/payments/subscription";
 import {
@@ -638,6 +639,16 @@ export default async function AdminMemberProfilePage({
           💳 רישום תשלום ידני
         </h3>
         <ManualPaymentForm profileId={profile.id} />
+        <div className="border-t border-ink-100 pt-3">
+          <h4 className="font-display text-[14px] font-bold text-ink-1000 mb-2">✉️ שינוי כתובת המייל של החשבון</h4>
+          <MemberEmailForm
+            profileId={profile.id}
+            currentEmail={await (async () => {
+              const { data } = await createAdminClient().auth.admin.getUserById(profile.id);
+              return data?.user?.email ?? null;
+            })()}
+          />
+        </div>
         <div className="border-t border-ink-100 pt-3">
           <h4 className="font-display text-[14px] font-bold text-ink-1000 mb-2">📅 תיקון תאריך החידוש</h4>
           <RenewalDateForm
