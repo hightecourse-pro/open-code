@@ -10,7 +10,11 @@ export function MemberEmailForm({ profileId, currentEmail }: { profileId: string
   return (
     <form action={action} className="flex flex-col gap-2">
       {state.error && <Alert variant="danger">{state.error}</Alert>}
-      {state.ok && <Alert variant="success">הכתובת הוחלפה ✓ מעכשיו היא נכנסת עם המייל החדש.</Alert>}
+      {state.ok && (
+        <Alert variant="success">
+          נשלח מייל אישור לכתובת החדשה ✓ ההחלפה תיכנס לתוקף אחרי שתלחץ שם; עד אז היא נכנסת עם הכתובת הקודמת. לכתובת הקודמת נשלחה הודעה.
+        </Alert>
+      )}
       <Field label={`כתובת חדשה (היום: ${currentEmail ?? "לא ידוע"})`} htmlFor="member-email">
         <Input id="member-email" name="email" type="email" dir="ltr" required placeholder="new@address.com" />
       </Field>
@@ -18,7 +22,7 @@ export function MemberEmailForm({ profileId, currentEmail }: { profileId: string
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "מחליפה…" : "החלפת המייל"}
         </Button>
-        <span className="text-[11.5px] text-ink-500">בלי מייל אימות - הכתובת החדשה נכנסת לתוקף מיד. אמרי לה.</span>
+        <span className="text-[11.5px] text-ink-500">היא מקבלת מייל אישור בכתובת החדשה; רק אחרי הלחיצה שם הכניסה עוברת. הכתובת הקודמת מקבלת הודעה.</span>
       </div>
     </form>
   );

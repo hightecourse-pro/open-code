@@ -19,6 +19,8 @@ import {
   jobPublishedEmail,
   mentorApprovedEmail,
   mentorDeclinedEmail,
+  emailChangeConfirmEmail,
+  emailChangeNoticeEmail,
   teamPersonalEmail,
   jobChatNudgeEmail,
   jobCandidatesUpdateEmail,
@@ -33,6 +35,7 @@ import { loadAudiencePools } from "@/lib/admin/audience";
 import { loadClientJob } from "@/lib/portal/jobs";
 import { decryptPassword } from "@/lib/portal/auth";
 import { getSiteUrl } from "@/lib/site";
+import { signEmailChange } from "@/lib/email-change";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import { buildTechLabelMap, techKey } from "@/lib/tech-match";
 import type {
@@ -668,21 +671,33 @@ export async function setMemberEmail(profileId: string, _prev: MemberEmailState,
   const { data: current } = await admin.auth.admin.getUserById(profileId);
   if (!current?.user) return { error: "החשבון לא נמצא." };
   if ((current.user.email ?? "").toLowerCase() === email) return { error: "זו כבר הכתובת של החשבון." };
-  // Taken by another account? Ask first - GoTrue's own refusal arrives with
-  // an empty message (seen on staging, 14/10). Same lookup the payment
-  // webhook uses to match an email to a member.
+  // Taken by another account? Ask first - same lookup the payment webhook
+  // uses to match an email to a member.
   const { data: owner } = await admin.rpc("auth_user_id_by_email", { p_email: email });
   if (owner && owner !== profileId) return { error: "הכתובת הזו כבר שייכת לחשבון אחר." };
-  const { error } = await admin.auth.admin.updateUserById(profileId, { email, email_confirm: true });
-  if (error) {
-    // GoTrue answers a taken address with code "email_exists" and an empty
-    // message (seen on staging, 14/10) - look at the code too.
-    const code = (error as { code?: string }).code ?? "";
-    const taken = /email_exists|already|exists|registered/i.test(`${code} ${error.message ?? ""}`);
-    return { error: taken ? "הכתובת הזו כבר שייכת לחשבון אחר." : `השינוי נכשל${error.message ? `: ${error.message}` : " - נסי שוב"}.` };
+
+  // Nothing changes yet (the owner, 14/10: "למה בלי אימות?"): the NEW address
+  // gets a signed link that applies the change when she clicks it, the OLD
+  // address gets a notice. A typo can never lock her out, and a change she
+  // did not ask for never goes unnoticed.
+  const { data: prof } = await admin.from("profiles").select("first_name, full_name").eq("id", profileId).maybeSingle();
+  const first = prof?.first_name ?? prof?.full_name?.split(" ")[0] ?? undefined;
+  const link = `${getSiteUrl()}/auth/email-change?token=${encodeURIComponent(signEmailChange(profileId, email))}`;
+  const confirm = emailChangeConfirmEmail(first, link, email);
+  const sent = await sendResendEmail({ to: email, subject: confirm.subject, html: confirm.html });
+  if (!sent.ok) {
+    return {
+      error:
+        sent.error === "blocked_by_allowlist"
+          ? "בסביבת הבדיקות מיילים נשלחים רק לכתובות מאושרות - מייל האישור לא נשלח."
+          : "מייל האישור לא נשלח. נסי שוב בעוד רגע.",
+    };
+  }
+  if (current.user.email) {
+    const notice = emailChangeNoticeEmail(first, email);
+    await sendResendEmail({ to: current.user.email, subject: notice.subject, html: notice.html });
   }
   revalidatePath(`/admin/members/${profileId}`);
-  revalidatePath("/admin/members");
   return { ok: true };
 }
 

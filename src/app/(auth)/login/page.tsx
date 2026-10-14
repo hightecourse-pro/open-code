@@ -20,14 +20,22 @@ const LINK_ERROR_DEFAULT =
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; type?: string }>;
+  searchParams: Promise<{ error?: string; type?: string; notice?: string }>;
 }) {
   const [state, action, pending] = useActionState<AuthState, FormData>(signIn, {});
   // The auth handlers land here with ?error=auth when an email link is
   // expired or already used - without a message the failure is silent.
-  const { error, type } = use(searchParams);
+  const { error, type, notice } = use(searchParams);
   const linkError = error === "auth";
   const linkMessage = (type && LINK_ERROR[type]) || LINK_ERROR_DEFAULT;
+  // The team-prepared email change (14/10): the confirmation link lands here.
+  const emailChanged = notice === "email_changed";
+  const emailChangeError =
+    error === "email_change_taken"
+      ? "הכתובת החדשה כבר שייכת לחשבון אחר - כתבי לנו ונסדר."
+      : error === "email_change"
+        ? "קישור האישור כבר לא בתוקף או לא תקין - כתבי לנו ונשלח חדש."
+        : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -37,6 +45,8 @@ export default function LoginPage({
       </div>
 
       {linkError && !state.error && <Alert variant="warn">{linkMessage}</Alert>}
+      {emailChanged && !state.error && <Alert variant="success">הכתובת החדשה אושרה ✓ מעכשיו נכנסים איתה.</Alert>}
+      {emailChangeError && !state.error && <Alert variant="warn">{emailChangeError}</Alert>}
       {state.error && <Alert variant="danger">{state.error}</Alert>}
 
       <form action={action} className="flex flex-col gap-4">
