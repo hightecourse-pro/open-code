@@ -8,7 +8,6 @@
 //     Anything not opted in (ID number, phone, address…) never leaves the DB.
 //   * member_crm (VIP flag, VIP reason, internal notes) is never read here.
 
-import { withPrevSurnames } from "@/lib/prev-surname";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chunk } from "@/lib/chunk";
 import { getTaxonomyOptionsForPortal, type TaxonomyOption } from "@/lib/taxonomies";
@@ -347,7 +346,7 @@ export async function loadCandidates(opts?: {
   const base = admin
     .from("profiles")
     .select("id, full_name, avatar_initials, specialization, region, bio, is_experienced, portal_listed, is_hidden, status, profile_completed, role");
-  const { data: profilesRaw } = opts?.onlyId
+  const { data: profiles } = opts?.onlyId
     ? await base.eq("id", opts.onlyId)
     : await base
         .in("status", ["active", "pending"])
@@ -356,7 +355,8 @@ export async function loadCandidates(opts?: {
         .in("role", roles)
         .order("full_name", { ascending: true });
 
-  const profiles = await withPrevSurnames(profilesRaw);
+  // Employers see the CURRENT name only (the owner, 14/10: "המעסיקות לא צריכות שם קודם") -
+  // the "(שם משפחה קודם)" decoration stays on the team's and the coordinators' screens.
   // Hidden (team test) accounts never reach employers; the team's own full
   // view still shows them so the admin can preview what she built.
   // The team's own accounts - hidden or not (13/10) - never reach employers.
