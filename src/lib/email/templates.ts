@@ -871,6 +871,25 @@ export function jobCandidatesUpdateEmail(
 }
 
 /**
+ * The team's own words to the mentors the admin filtered (the owner, 14/10):
+ * subject and body verbatim, her first name in the heading, a chat copy when
+ * the admin asked for one.
+ */
+export function mentorsMailEmail(name: string | undefined, subject: string, bodyText: string, chatUrl: string | null): BuiltEmail {
+  const body = escapeHtml(bodyText).replace(/\r?\n/g, "<br/>");
+  return {
+    subject,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(subject)}`,
+      lines: [body, ...(chatUrl ? ["ההודעה מחכה לך גם בצ'אט בקהילה - אם יש שאלה, הכי נוח לענות לנו שם."] : [])],
+      ctaText: chatUrl ? "לתשובה בצ'אט" : undefined,
+      ctaUrl: chatUrl ?? undefined,
+      footnote: "צוות קוד פתוח 💜",
+    }),
+  };
+}
+
+/**
  * A mentor application was declined - with the admin's PERSONAL explanation
  * (the owner, 1/9). She stays a regular member and is invited to the paid
  * track; the personal note is the heart of the email.
