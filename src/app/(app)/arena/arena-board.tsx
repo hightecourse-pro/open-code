@@ -17,6 +17,10 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
   const mentorSide = role !== "participant";
   // A focused question (from an email link) must be visible whatever the default filter.
   const [filter, setFilter] = useState<Filter>(() => (focusId ? "all" : mentorSide ? "open" : "mine"));
+  // A question she just answered stays in place with its "+10" confirmation -
+  // otherwise it would jump to נענו and vanish from the filter she is in.
+  const [pinned, setPinned] = useState<string[]>([]);
+  const pin = (id: string) => setPinned((cur) => (cur.includes(id) ? cur : [...cur, id]));
 
   const counts = useMemo(
     () => ({
@@ -33,13 +37,14 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
   const shown = useMemo(
     () =>
       questions.filter((q) => {
+        if (pinned.includes(q.id)) return true;
         if (filter === "all") return true;
         if (filter === "open") return q.status === "open";
         if (filter === "answered") return q.status === "answered";
         if (filter === "ai") return q.aiOnly && q.status === "open";
         return mentorSide ? q.status === "open" && q.targetMentorId === viewerId : q.authorId === viewerId;
       }),
-    [questions, filter, viewerId, mentorSide]
+    [questions, filter, viewerId, mentorSide, pinned]
   );
 
   useEffect(() => {
@@ -90,18 +95,22 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
         </p>
       )}
       {shown.map((q) => (
-        <QuestionCard key={q.id} q={q} viewerId={viewerId} role={role} focused={q.id === focusId} />
+        <QuestionCard key={q.id} q={q} viewerId={viewerId} role={role} focused={q.id === focusId} onAnswered={pin} />
       ))}
     </section>
   );
 }
 
-function QuestionCard({ q, viewerId, role, focused }: { q: ArenaQuestion; viewerId: string; role: ArenaRole; focused: boolean }) {
+function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQuestion; viewerId: string; role: ArenaRole; focused: boolean; onAnswered: (id: string) => void }) {
   const mentorSide = role !== "participant";
   const mine = q.authorId === viewerId;
   const forMe = q.targetMentorId === viewerId;
   const alreadyAnswered = q.answers.some((a) => a.mentorId === viewerId);
-  const [state, action, pending] = useActionState<ArenaFormState, FormData>(answerArenaQuestion.bind(null, q.id), {});
+  const [state, action, pending] = useActionState<ArenaFormState, FormData>(async (prev, fd) => {
+    const r = await answerArenaQuestion(q.id, prev, fd);
+    if (r.ok) onAnswered(q.id);
+    return r;
+  }, {});
   const [busy, start] = useTransition();
   const [open, setOpen] = useState(false);
   return (
