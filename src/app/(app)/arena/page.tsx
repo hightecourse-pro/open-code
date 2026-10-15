@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { Trophy } from "lucide-react";
+import { CalendarDays, Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { requireCommunityAccess } from "@/lib/auth";
 import { arenaLeaderboard, arenaRoleFor, loadArenaMentors, loadArenaQuestions, mentorArenaStats } from "@/lib/arena";
 import { ARENA_ANSWER_POINTS } from "@/lib/arena-shared";
+import { loadMyRegistration, registrableChallenges } from "@/lib/hackathon";
+import { CHALLENGES, H26Style, Squiggle } from "@/app/hackathon-2026/shared";
 import { AskForm } from "./ask-form";
 import { ArenaBoard } from "./arena-board";
 
@@ -14,16 +17,20 @@ export const dynamic = "force-dynamic";
 /**
  * זירת המנטוריות (the owner, 15/10): hackathon registrants ask - a random
  * mentor, a random mentor who knows AI, or a chosen one; every mentor sees
- * every question, answers, and sees plainly that answers earn points.
+ * every question, answers, and sees plainly that answers earn points. Dressed
+ * in the hackathon's own elements: the AI squiggle, the challenge logos, the
+ * finals date, the asker's challenge on every question.
  */
 export default async function ArenaPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const profile = await requireCommunityAccess();
   const role = await arenaRoleFor(profile);
   const { q: focusId } = await searchParams;
+  const challenges = registrableChallenges();
 
   if (!role) {
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-5 max-w-4xl">
+        <H26Style />
         <Header subtitle="שאלות למנטוריות - לרשומות להאקתון." />
         <section className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14px] text-ink-800 leading-relaxed">
           <p>
@@ -38,14 +45,20 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
     );
   }
 
-  const [questions, mentors] = await Promise.all([loadArenaQuestions(), loadArenaMentors()]);
   const isMentorSide = role !== "participant";
+  const [questions, mentors, registration] = await Promise.all([
+    loadArenaQuestions(),
+    loadArenaMentors(),
+    isMentorSide ? Promise.resolve(null) : loadMyRegistration(profile.id),
+  ]);
   const [stats, leaders] = isMentorSide ? await Promise.all([mentorArenaStats(profile.id), arenaLeaderboard(5)]) : [null, []];
   const open = questions.filter((q) => q.status === "open").length;
   const forMe = questions.filter((q) => q.status === "open" && q.targetMentorId === profile.id).length;
+  const myChallenge = registration ? CHALLENGES.find((c) => c.key === registration.challengeKey) ?? null : null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 max-w-4xl">
+      <H26Style />
       <Header
         subtitle={
           isMentorSide
@@ -54,9 +67,34 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
         }
       />
 
+      {/* ── the hackathon strip: challenges, finals ── */}
+      <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-3 shadow-sm flex items-center gap-x-5 gap-y-2 flex-wrap">
+        <span className="font-display font-bold text-[13.5px] text-ink-1000 inline-flex items-center gap-1.5">
+          <Trophy size={15} className="text-brand-pink-deep" /> האתגרים בזירה
+        </span>
+        {challenges.map((c) => (
+          <span key={c.key} className="inline-flex items-center gap-2 text-[13px] text-ink-800">
+            {c.badgeLogo ? (
+              <Image src={c.badgeLogo} alt="" width={26} height={26} className="h-[26px] w-[26px] rounded-full object-contain bg-white border border-ink-200" />
+            ) : (
+              <span className="text-[18px]">{c.emoji}</span>
+            )}
+            <span>
+              {c.emoji} {c.short}
+            </span>
+          </span>
+        ))}
+        <span className="ms-auto inline-flex items-center gap-1.5 bg-tint-purple text-brand-purple px-3 py-1 rounded-full text-[12.5px] font-bold">
+          <CalendarDays size={13} /> גמר · יום רביעי 28/10 · י״ז חשוון
+        </span>
+      </section>
+
       {isMentorSide && stats && (
-        <section className="rounded-[22px] bg-brand-gradient text-white p-5 md:p-6 shadow-glow-pink">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <section className="relative overflow-hidden rounded-[22px] bg-brand-gradient text-white p-5 md:p-6 shadow-glow-pink">
+          <span className="absolute -top-6 -start-4 text-[120px] opacity-10 select-none" aria-hidden>
+            🏆
+          </span>
+          <div className="relative flex flex-wrap items-center gap-x-6 gap-y-3">
             <div className="flex-1 min-w-[220px]">
               <div className="font-mono text-[11.5px] text-white/80">&lt;הנקודות שלך/&gt;</div>
               <div className="font-display text-[26px] md:text-[30px] font-black leading-tight mt-1">
@@ -72,7 +110,7 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
               <Stat label="נק׳ סה״כ" value={stats.totalScore} />
             </dl>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-2 text-[13px]">
+          <div className="relative mt-4 flex flex-wrap items-center gap-2 text-[13px]">
             <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">{open} שאלות פתוחות</span>
             {forMe > 0 && <span className="rounded-full bg-white text-brand-purple px-3 py-1 font-bold">{forMe} ממתינות לך אישית</span>}
             {leaders.length > 0 && (
@@ -82,11 +120,41 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
                 {leaders.map((l, i) => (
                   <span key={l.id} className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5">
                     <Avatar size="xs" initials={l.initials} />
-                    <span>{i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : ""}{l.name}</span>
+                    <span>
+                      {i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : ""}
+                      {l.name}
+                    </span>
                     <span className="text-white/80">· {l.points} נק׳</span>
                   </span>
                 ))}
               </span>
+            )}
+          </div>
+        </section>
+      )}
+
+      {!isMentorSide && (
+        <section className="relative overflow-hidden rounded-[22px] bg-brand-gradient text-white px-6 py-5 shadow-glow-pink flex items-center gap-3 flex-wrap">
+          <span className="absolute -top-6 -start-4 text-[120px] opacity-10 select-none" aria-hidden>
+            {myChallenge?.emoji ?? "🏆"}
+          </span>
+          <div className="relative font-display font-black text-[19px] leading-snug">
+            {myChallenge ? (
+              <>
+                את באתגר <span className="underline decoration-white/60 underline-offset-4">{myChallenge.short}</span> {myChallenge.emoji} ·
+                המנטוריות כאן בשבילך
+              </>
+            ) : (
+              <>האקתון AI קוד פתוח 2026 · המנטוריות כאן בשבילך 🏆</>
+            )}
+          </div>
+          <div className="relative flex items-center gap-2 flex-wrap ms-auto text-[13px]">
+            <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available).length} מנטוריות זמינות</span>
+            <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available && m.ai).length} מבינות ב-AI 🤖</span>
+            {myChallenge && (
+              <Link href={`/hackathon/${myChallenge.key}`} className="bg-white text-brand-purple px-3 py-1 rounded-full font-display font-bold hover:bg-tint-purple">
+                לדף האתגר ←
+              </Link>
             )}
           </div>
         </section>
@@ -103,7 +171,18 @@ function Header({ subtitle }: { subtitle: string }) {
   return (
     <div>
       <span className="font-mono text-xs text-brand-pink-deep">&lt;זירת המנטוריות/&gt;</span>
-      <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">זירת המנטוריות 🏟️</h1>
+      <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">
+        זירת המנטוריות 🏟️{" "}
+        <span className="text-ink-400 font-bold text-[20px]">·</span>{" "}
+        <span className="text-[20px]">
+          האקתון{" "}
+          <span className="relative inline-block">
+            <span className="t-gradient">AI</span>
+            <Squiggle className="absolute -bottom-0.5 right-0 w-full" />
+          </span>{" "}
+          2026
+        </span>
+      </h1>
       <p className="t-body-sm text-ink-700 mt-1">{subtitle}</p>
     </div>
   );

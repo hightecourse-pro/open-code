@@ -20,6 +20,18 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
   // A question she just answered stays in place with its "+10" confirmation -
   // otherwise it would jump to נענו and vanish from the filter she is in.
   const [pinned, setPinned] = useState<string[]>([]);
+  // The hackathon's challenges on the board (the owner, 15/10): a chip per challenge.
+  const [challenge, setChallenge] = useState<string>("");
+  const challengeChips = useMemo(() => {
+    const seen = new Map<string, { label: string; n: number }>();
+    for (const q of questions) {
+      if (!q.challengeKey) continue;
+      const cur = seen.get(q.challengeKey) ?? { label: `${q.challengeEmoji ?? ""} ${q.challengeShort ?? ""}`.trim(), n: 0 };
+      cur.n++;
+      seen.set(q.challengeKey, cur);
+    }
+    return [...seen].map(([key, v]) => ({ key, ...v }));
+  }, [questions]);
   const pin = (id: string) => setPinned((cur) => (cur.includes(id) ? cur : [...cur, id]));
 
   const counts = useMemo(
@@ -38,13 +50,14 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
     () =>
       questions.filter((q) => {
         if (pinned.includes(q.id)) return true;
+        if (challenge && q.challengeKey !== challenge) return false;
         if (filter === "all") return true;
         if (filter === "open") return q.status === "open";
         if (filter === "answered") return q.status === "answered";
         if (filter === "ai") return q.aiOnly && q.status === "open";
         return mentorSide ? q.status === "open" && q.targetMentorId === viewerId : q.authorId === viewerId;
       }),
-    [questions, filter, viewerId, mentorSide, pinned]
+    [questions, filter, viewerId, mentorSide, pinned, challenge]
   );
 
   useEffect(() => {
@@ -89,6 +102,30 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
           </button>
         ))}
       </div>
+      {challengeChips.length > 1 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-[12px] font-semibold text-ink-600">לפי אתגר:</span>
+          <button
+            type="button"
+            onClick={() => setChallenge("")}
+            aria-pressed={challenge === ""}
+            className={cn("rounded-full border px-2.5 py-0.5 text-[12px] font-semibold", challenge === "" ? "bg-ink-900 text-white border-ink-900" : "bg-white border-ink-300 text-ink-700 hover:border-ink-900")}
+          >
+            כל האתגרים
+          </button>
+          {challengeChips.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setChallenge(challenge === c.key ? "" : c.key)}
+              aria-pressed={challenge === c.key}
+              className={cn("rounded-full border px-2.5 py-0.5 text-[12px] font-semibold", challenge === c.key ? "bg-ink-900 text-white border-ink-900" : "bg-white border-ink-300 text-ink-700 hover:border-ink-900")}
+            >
+              {c.label} ({c.n})
+            </button>
+          ))}
+        </div>
+      )}
       {shown.length === 0 && (
         <p className="bg-white border border-ink-200 rounded-[18px] p-5 text-ink-500 text-sm shadow-sm">
           {mentorSide ? "אין שאלות בסינון הזה. 🎉" : "עדיין אין שאלות כאן - השאלה הראשונה שלך תופיע למעלה."}
@@ -134,6 +171,14 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
                 <span className="text-ink-300">·</span>
                 <span>
                   נשלחה ל<b className="text-ink-700">{q.targetMentorName}</b>
+                </span>
+              </>
+            )}
+            {q.challengeShort && (
+              <>
+                <span className="text-ink-300">·</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-tint-pink text-brand-pink-deep px-2 py-px font-bold">
+                  {q.challengeEmoji} אתגר {q.challengeShort}
                 </span>
               </>
             )}

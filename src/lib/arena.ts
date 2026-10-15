@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inChunks } from "@/lib/chunk";
 import { loadHackathonRegistrantIds } from "@/lib/hackathon";
+import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { mentorScores } from "@/lib/mentor-score";
 import { ARENA_AI_VALUES, ARENA_ANSWER_POINTS, type ArenaRole, type ArenaStatus } from "@/lib/arena-shared";
 
@@ -89,6 +90,28 @@ export interface ArenaQuestion {
   status: ArenaStatus;
   createdAt: string;
   answers: ArenaAnswer[];
+  /** The hackathon challenge the asker is registered to (own or as a partner). */
+  challengeKey: string | null;
+  challengeShort: string | null;
+  challengeEmoji: string | null;
+}
+
+/** profile id → challenge key, for registrants and confirmed partners. */
+async function challengesOf(profileIds: string[]): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  if (profileIds.length === 0) return out;
+  const admin = createAdminClient();
+  const [own, partner] = await Promise.all([
+    inChunks<{ profile_id: string; challenge_key: string }>(profileIds, (part) =>
+      admin.from("hackathon_registrations").select("profile_id, challenge_key").in("profile_id", part)
+    ),
+    inChunks<{ partner_profile_id: string | null; challenge_key: string }>(profileIds, (part) =>
+      admin.from("hackathon_registrations").select("partner_profile_id, challenge_key").in("partner_profile_id", part).not("partner_confirmed_at", "is", null)
+    ),
+  ]);
+  for (const r of partner) if (r.partner_profile_id) out.set(r.partner_profile_id, r.challenge_key);
+  for (const r of own) out.set(r.profile_id, r.challenge_key);
+  return out;
 }
 
 /** The board: newest first, with authors, targets and answers resolved. */
@@ -111,10 +134,18 @@ export async function loadArenaQuestions(limit = 200): Promise<ArenaQuestion[]> 
       ...answers.map((a) => a.mentor_id),
     ]),
   ];
-  const profs = await inChunks<{ id: string; full_name: string; avatar_initials: string | null }>(ids, (part) =>
-    admin.from("profiles").select("id, full_name, avatar_initials").in("id", part)
-  );
+  const [profs, challengeOf] = await Promise.all([
+    inChunks<{ id: string; full_name: string; avatar_initials: string | null }>(ids, (part) =>
+      admin.from("profiles").select("id, full_name, avatar_initials").in("id", part)
+    ),
+    challengesOf([...new Set(qs.map((q) => q.author_id))]),
+  ]);
   const pOf = new Map(profs.map((p) => [p.id, p]));
+  const challenge = (authorId: string) => {
+    const key = challengeOf.get(authorId) ?? null;
+    const c = key ? CHALLENGES.find((x) => x.key === key) : null;
+    return { challengeKey: key, challengeShort: c?.short ?? null, challengeEmoji: c?.emoji ?? null };
+  };
   const nameOf = (id: string) => pOf.get(id)?.full_name || "חברת קהילה";
   const initialsOf = (id: string) => pOf.get(id)?.avatar_initials || nameOf(id).slice(0, 1);
   return qs.map((q) => ({
@@ -129,6 +160,7 @@ export async function loadArenaQuestions(limit = 200): Promise<ArenaQuestion[]> 
     aiOnly: q.ai_only === true,
     status: q.status as ArenaStatus,
     createdAt: q.created_at,
+    ...challenge(q.author_id),
     answers: answers
       .filter((a) => a.question_id === q.id)
       .map((a) => ({ id: a.id, mentorId: a.mentor_id, mentorName: nameOf(a.mentor_id), mentorInitials: initialsOf(a.mentor_id), body: a.body, createdAt: a.created_at })),
