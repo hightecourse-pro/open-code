@@ -52,7 +52,7 @@ export function CoursePromoPopup({ show }: { show: boolean }) {
           type="button"
           onClick={dismiss}
           aria-label="סגירה"
-          className="absolute top-4 end-5 h-7 w-7 inline-flex items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/35"
+          className="absolute top-6 end-9 h-7 w-7 inline-flex items-center justify-center rounded-full bg-white/25 text-white hover:bg-white/40"
         >
           <X size={15} />
         </button>
