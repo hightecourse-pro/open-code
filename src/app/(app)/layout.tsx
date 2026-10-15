@@ -6,7 +6,7 @@ import { HiredBanner, type HiredMember } from "@/components/patterns/hired-banne
 import { MemberRequestWidget } from "@/components/patterns/member-request-widget";
 import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
-import { CoursePromoPopup } from "@/components/patterns/course-promo-popup";
+import { CoursePromoStrip } from "@/components/patterns/course-promo-popup";
 import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
 import { COURSE_KEY } from "@/lib/course-registration";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
@@ -294,6 +294,8 @@ export default async function AuthenticatedLayout({
           <span className="font-display font-semibold whitespace-nowrap">לחידוש המנוי ←</span>
         </Link>
       )}
+      {/* The course strip (the owner, 15/10) - in the flow, hides nothing. */}
+      <CoursePromoStrip show={showCoursePromo} />
       {gradesCount === 0 && <GradesNudge />}
       {!subscriber && (
         <Link
@@ -317,7 +319,6 @@ export default async function AuthenticatedLayout({
       <MemberRequestWidget requests={myRequests} launchNudge={launchNudgeOn} />
       {/* The hired celebration - floating, minimizable, on every screen. */}
       <HiredBanner members={hired} seenIds={hiresSeen} />
-      <CoursePromoPopup show={showCoursePromo} />
     </AppShell>
   );
 }

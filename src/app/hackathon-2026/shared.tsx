@@ -177,16 +177,6 @@ export const CHALLENGES: Challenge[] = [
     tint: "bg-tint-warm/50",
   },
   {
-    // The fourth slot is open again (the owner, 14/10: Aman is out; the
-    // partners page must show there is room, the community sees "פרטים יבואו").
-    short: "המקום הרביעי פתוח",
-    org: "",
-    emoji: "✨",
-    teaser: "פרטים יבואו - מקום לשותף נוסף",
-    tilt: "md:rotate-1",
-    tint: "bg-tint-purple/40",
-  },
-  {
     key: "strauss",
     short: "שטראוס",
     org: "קבוצת שטראוס",
@@ -358,7 +348,7 @@ export function TickerStrip() {
   );
 }
 
-/** The four challenges, orbiting the core - same design on both pages; the
+/** The challenges, orbiting the core - same design on both pages; the
     partners variant sells the scarcity: only 4 slots, 1 left (5/10). */
 export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
@@ -371,17 +361,16 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
           {variant === "partners" ? (
             <>
               <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
-                רק 4 ארגונים נכנסים להאקתון הזה
+                שלושה ארגונים נכנסים להאקתון הזה
               </h2>
               <p className="t-body text-ink-700 mt-1">
-                <span className="font-bold text-brand-pink-deep">שלושה מקומות נתפסו</span> - שטראוס, הפניקס והמעבדה המרכזית לנגיפים.{" "}
-                <span className="font-bold text-brand-pink-deep">נשאר מקום אחד</span>
+                <span className="font-bold text-brand-pink-deep">שטראוס, הפניקס והמעבדה המרכזית לנגיפים</span> - כל אחד מביא בעיה אמיתית מהשטח.
               </p>
             </>
           ) : (
             <>
               <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
-                ארבעה מקומות. שלושה אתגרים כבר כאן.
+                שלושה אתגרים. שלוש בעיות אמיתיות מהשטח.
               </h2>
               <p className="t-body text-ink-700 mt-1">
                 כל ארגון מביא בעיה אמיתית מהשטח - לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
