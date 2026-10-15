@@ -109,8 +109,9 @@ export default async function AuthenticatedLayout({
   // enter; mentors and the team see how many questions are open.
   const arenaRole = await arenaRoleFor(profile);
   const arenaOpen = arenaRole && arenaRole !== "participant" ? await countOpenArenaQuestions() : 0;
-  // The floating course card (15/10): job-seeking members who have not registered.
-  let showCoursePromo = false;
+  // The floating course card (15/10): job-seeking members who have not
+  // registered - and the team, so the owner sees what members see.
+  let showCoursePromo = profile.role === "admin";
   if (profile.role === "junior") {
     const { count } = await createAdminClient()
       .from("course_registrations")
