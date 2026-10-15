@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/ui";
-import { ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
+import { ANSWER_POINTS, ARENA_ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inChunks } from "@/lib/chunk";
 import { netfreeSafeUrl } from "@/lib/netfree";
@@ -203,7 +203,7 @@ export default async function AdminMentorsPage() {
       languages: (Array.isArray(ans.get("language_skills")) ? (ans.get("language_skills") as { lang?: unknown }[]) : [])
         .map((l) => (l && typeof l.lang === "string" ? l.lang.trim() : ""))
         .filter(Boolean),
-      score: scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0 },
+      score: scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0, arena: 0 },
       history,
       bonuses: (bonusRows ?? [])
         .filter((b) => b.mentor_id === m.id)
@@ -262,7 +262,7 @@ export default async function AdminMentorsPage() {
             <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
               <h3 className="font-display text-base font-bold mb-1">מנטוריות פעילות ({mentors?.length ?? 0})</h3>
               <p className="text-[12.5px] text-ink-500 mb-3">
-                הניקוד גלוי לכל הקהילה: {ANSWER_POINTS} נק&#39; על תשובה בפורום · {ASSIGNMENT_POINTS} נק&#39; על
+                הניקוד גלוי לכל הקהילה: {ANSWER_POINTS} נק&#39; על תשובה בפורום · {ARENA_ANSWER_POINTS} נק&#39; על תשובה בזירת המנטוריות · {ASSIGNMENT_POINTS} נק&#39; על
                 ליווי שאושר · ובונוסים ידניים על תרומה (סשנים, האקתונים…).
               </p>
               {rows.length > 0 ? (

@@ -130,6 +130,20 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
         </section>
       )}
 
+      {/* ── the mentors' arena (the owner, 15/10) - open to every registrant ── */}
+      {subscriber && registration && (
+        <Link
+          href="/arena"
+          className="border border-[#DDC9EC] bg-brand-gradient-soft rounded-[18px] px-5 py-3.5 flex items-center gap-3 flex-wrap hover:border-brand-purple transition-colors"
+        >
+          <span className="text-[22px]">🏟️</span>
+          <span className="flex-1 text-[14px] text-ink-900">
+            <b>זירת המנטוריות</b> פתוחה לך: שאלה למנטורית אקראית, למנטורית שמבינה ב-AI, או למי שתבחרי - והתשובה מגיעה גם למייל.
+          </span>
+          <span className="font-display font-bold text-brand-purple whitespace-nowrap">לזירה ←</span>
+        </Link>
+      )}
+
       {/* ── the challenges ── */}
       <section className="flex flex-col gap-3">
         <h2 className="font-display text-[20px] font-black text-ink-1000">האתגרים</h2>

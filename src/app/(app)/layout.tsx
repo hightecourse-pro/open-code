@@ -6,6 +6,9 @@ import { HiredBanner, type HiredMember } from "@/components/patterns/hired-banne
 import { MemberRequestWidget } from "@/components/patterns/member-request-widget";
 import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
+import { CoursePromoPopup } from "@/components/patterns/course-promo-popup";
+import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
+import { COURSE_KEY } from "@/lib/course-registration";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { claimExternalApplications } from "@/lib/claim-external";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
@@ -101,6 +104,22 @@ export default async function AuthenticatedLayout({
   const subscriber = isSubscriber(profile);
   // A free member reads the history she already has, so the count is hers too.
   const unreadCount = await unreadMessageCount(profile.id);
+
+  // זירת המנטוריות (the owner, 15/10): the item shows only to those who may
+  // enter; mentors and the team see how many questions are open.
+  const arenaRole = await arenaRoleFor(profile);
+  const arenaOpen = arenaRole && arenaRole !== "participant" ? await countOpenArenaQuestions() : 0;
+  // The floating course card (15/10): job-seeking members who have not registered.
+  let showCoursePromo = false;
+  if (profile.role === "junior") {
+    const { count } = await createAdminClient()
+      .from("course_registrations")
+      .select("id", { count: "exact", head: true })
+      .eq("course_key", COURSE_KEY)
+      .eq("profile_id", profile.id)
+      .neq("status", "canceled");
+    showCoursePromo = (count ?? 0) === 0;
+  }
 
   // "היית איתנו בסשן?" - for a week after a session ends, until she answers.
   // Only women who may actually ATTEND sessions are asked (the owner, 30/8:
@@ -233,6 +252,8 @@ export default async function AuthenticatedLayout({
         isMentor: profile.role === "mentor",
         isSubscriber: subscriber,
         unreadCount,
+        arena: !!arenaRole,
+        arenaOpen,
       }}
     >
       {feedbackSession && (
@@ -295,6 +316,7 @@ export default async function AuthenticatedLayout({
       <MemberRequestWidget requests={myRequests} launchNudge={launchNudgeOn} />
       {/* The hired celebration - floating, minimizable, on every screen. */}
       <HiredBanner members={hired} seenIds={hiresSeen} />
+      <CoursePromoPopup show={showCoursePromo} />
     </AppShell>
   );
 }

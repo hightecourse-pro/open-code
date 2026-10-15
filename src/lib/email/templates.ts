@@ -12,6 +12,7 @@ const C = {
   pink: "#E0418D",
 };
 
+import { ARENA_ANSWER_POINTS } from "@/lib/arena-shared";
 import { getSiteUrl } from "@/lib/site";
 import { toSiteAuthLink } from "./auth-links";
 
@@ -885,6 +886,61 @@ export function mentorsMailEmail(name: string | undefined, subject: string, body
       ctaText: chatUrl ? "לתשובה בצ'אט" : undefined,
       ctaUrl: chatUrl ?? undefined,
       footnote: "צוות קוד פתוח 💜",
+    }),
+  };
+}
+
+// ------------------------------------------------------------ mentors' arena
+
+/** The mentor a question was addressed to hears right away (the owner, 15/10). */
+export function arenaQuestionEmail(name: string | undefined, questionTitle: string, askerName: string, url: string): BuiltEmail {
+  return {
+    subject: "שאלה בזירת המנטוריות מחכה לך 🏟️",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} שאלה אותך בזירה`,
+      lines: [
+        `<b>«${escapeHtml(questionTitle)}»</b>`,
+        `התשובה הראשונה שלך לשאלה = <b>+${ARENA_ANSWER_POINTS} נקודות</b> לניקוד המנטוריות שלך. כל המנטוריות רואות את השאלה - מי שעונה ראשונה, זוכה.`,
+      ],
+      ctaText: "לזירה ולתשובה",
+      ctaUrl: url,
+      footnote: "תודה שאת שם בשביל הצוותים 💜",
+    }),
+  };
+}
+
+/** The asker hears that a mentor answered. */
+export function arenaAnsweredEmail(name: string | undefined, questionTitle: string, mentorName: string, url: string): BuiltEmail {
+  return {
+    subject: "יש תשובה לשאלה שלך בזירה 💜",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(mentorName)} ענתה לך`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, "התשובה מחכה לך בזירה. יש המשך? אפשר לשאול שוב, אותה או מנטורית אחרת."],
+      ctaText: "לתשובה בזירה",
+      ctaUrl: url,
+      footnote: "בהצלחה בהאקתון 🏆",
+    }),
+  };
+}
+
+/** Once a day: open questions + her points, to the mentors who know AI. */
+export function arenaDigestEmail(
+  name: string | undefined,
+  d: { titles: string[]; open: number; arenaPoints: number; totalScore: number; url: string }
+): BuiltEmail {
+  const list = `<ul style="margin:0;padding-inline-start:18px">${d.titles.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>`;
+  const more = d.open > d.titles.length ? `<i>ועוד ${d.open - d.titles.length}…</i>` : "";
+  return {
+    subject: d.open === 1 ? "שאלה פתוחה בזירת המנטוריות מחכה לך 🏟️" : `${d.open} שאלות פתוחות בזירת המנטוריות מחכות לך 🏟️`,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}בזירה מחכות ${d.open === 1 ? "שאלה פתוחה" : `${d.open} שאלות פתוחות`}`,
+      lines: [
+        list + more,
+        `<b>הניקוד שלך:</b> ${d.arenaPoints} נק' מהזירה · ${d.totalScore} נק' סה"כ. כל תשובה ראשונה לשאלה = <b>+${ARENA_ANSWER_POINTS} נק'</b>.`,
+      ],
+      ctaText: "לזירה",
+      ctaUrl: d.url,
+      footnote: "המייל הזה נשלח פעם ביום, רק כשיש שאלות שלא נענו 💜",
     }),
   };
 }

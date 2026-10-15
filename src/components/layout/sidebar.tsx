@@ -23,6 +23,7 @@ import {
   Rocket,
   Shield,
   Sparkles,
+  Swords,
   User,
   Users,
   type LucideIcon,
@@ -30,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { HACKATHON_UPDATED } from "@/app/hackathon-2026/version";
 import { ANNUAL_COURSE_UPDATED } from "@/app/masters-course/version";
+import { ARENA_UPDATED } from "@/lib/arena-shared";
 import { Logo } from "@/components/ui";
 import { signOut } from "@/app/(auth)/actions";
 
@@ -50,6 +52,7 @@ const SECTIONS: NavSection[] = [
       { href: "/courses", label: "ספריית קורסים", icon: GraduationCap, paid: true },
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
       { href: "/hackathon", label: "האקתון", icon: Trophy },
+      { href: "/arena", label: "זירת המנטוריות", icon: Swords },
       { href: "/annual-course", label: "קורס שנתי ממומן", icon: Rocket },
     ],
   },
@@ -78,6 +81,7 @@ const SECTIONS: NavSection[] = [
 const NEW_ITEMS: Record<string, { key: string; version: string }> = {
   "/hackathon": { key: "oc-hackathon-seen", version: HACKATHON_UPDATED },
   "/annual-course": { key: "oc-annual-course-seen", version: ANNUAL_COURSE_UPDATED },
+  "/arena": { key: "oc-arena-seen", version: ARENA_UPDATED },
 };
 
 export interface SidebarUser {
@@ -91,6 +95,10 @@ export interface SidebarUser {
   isSubscriber?: boolean;
   /** Chat messages waiting for her - shown as a badge on "צ'אטים". */
   unreadCount?: number;
+  /** May enter זירת המנטוריות (hackathon registrant, mentor, team). */
+  arena?: boolean;
+  /** Open arena questions - the badge mentors see. */
+  arenaOpen?: number;
 }
 
 /** Destinations that are not part of the mentor experience. Jobs ARE (senior
@@ -148,13 +156,14 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
           )}
           {section.items
             .filter((item) => !(user.isMentor && NOT_FOR_MENTORS.has(item.href)))
+            .filter((item) => item.href !== "/arena" || user.arena)
             .map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;
             const locked = item.paid && user.isSubscriber === false;
             // The chat count comes from the server on every render; a static
             // `badge` on the item would be a number nobody updates.
-            const unread = item.href === "/chat" ? (user.unreadCount ?? 0) : 0;
+            const unread = item.href === "/chat" ? (user.unreadCount ?? 0) : item.href === "/arena" ? (user.arenaOpen ?? 0) : 0;
             const label =
               item.href === "/mentor" && user.isMentor ? "הליוויים שלי" : item.label;
             const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : item.badge?.toString();

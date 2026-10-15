@@ -1997,6 +1997,18 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hackathon_registrations"]["Insert"]>;
         Relationships: [];
       };
+      arena_questions: {
+        Row: { id: string; author_id: string; title: string; body: string; target_mentor_id: string | null; ai_only: boolean; status: string; created_at: string; updated_at: string; answered_at: string | null };
+        Insert: { id?: string; author_id: string; title: string; body: string; target_mentor_id?: string | null; ai_only?: boolean; status?: string; created_at?: string; updated_at?: string; answered_at?: string | null };
+        Update: Partial<Database["public"]["Tables"]["arena_questions"]["Insert"]>;
+        Relationships: [];
+      };
+      arena_answers: {
+        Row: { id: string; question_id: string; mentor_id: string; body: string; created_at: string };
+        Insert: { id?: string; question_id: string; mentor_id: string; body: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["arena_answers"]["Insert"]>;
+        Relationships: [];
+      };
       hackathon_materials: {
         Row: { id: string; challenge_key: string; title: string; file_path: string; size_bytes: number | null; created_at: string };
         Insert: { id?: string; challenge_key: string; title: string; file_path: string; size_bytes?: number | null; created_at?: string };
@@ -2198,6 +2210,10 @@ export interface Database {
       job_app_counts: {
         Args: Record<string, never>;
         Returns: { job_id: string; total: number; new_count: number }[];
+      };
+      mentor_arena_counts: {
+        Args: { p_ids: string[] };
+        Returns: { mentor_id: string; answers: number }[];
       };
       mentor_answer_counts: {
         Args: { p_ids: string[] };

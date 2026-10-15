@@ -216,7 +216,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             )}
             {score && (
               <div className="text-[12px] text-ink-500">
-                ⭐ {score.answers} תשובות בפורום · {score.assignments} ליוויים אישיים
+                ⭐ {score.answers} תשובות בפורום · {score.arena} בזירה · {score.assignments} ליוויים אישיים
               </div>
             )}
           </div>

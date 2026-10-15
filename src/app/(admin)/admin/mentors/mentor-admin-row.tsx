@@ -48,7 +48,7 @@ export interface MentorRowData {
   years: number | null;
   region: { value: string; label: string } | null;
   languages: string[];
-  score: { score: number; answers: number; assignments: number; bonus: number };
+  score: { score: number; answers: number; assignments: number; bonus: number; arena: number };
   history: MentorHistoryRow[];
   bonuses: MentorBonusRow[];
   log: MentorLogRow[];
@@ -111,7 +111,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
             {m.full_name}
           </Link>
           <div className="text-[11.5px] text-ink-500">
-            ⭐ {m.score.score} נק&#39; - {m.score.answers} תשובות בפורום · {m.score.assignments} ליוויים
+            ⭐ {m.score.score} נק&#39; - {m.score.answers} תשובות בפורום · {m.score.arena} בזירה · {m.score.assignments} ליוויים
             {m.score.bonus !== 0 && <> · {m.score.bonus} בונוס</>}
             <span className="text-ink-300"> · </span>
             הצטרפה <span dir="ltr">{FULL_DATE.format(new Date(m.created_at))}</span>
