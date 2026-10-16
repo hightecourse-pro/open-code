@@ -22,6 +22,7 @@ import {
   Play,
   Rocket,
   Shield,
+  Gavel,
   Sparkles,
   Swords,
   User,
@@ -53,6 +54,7 @@ const SECTIONS: NavSection[] = [
       { href: "/articles", label: "מאמרים מקצועיים", icon: BookOpen },
       { href: "/hackathon", label: "האקתון", icon: Trophy },
       { href: "/arena", label: "זירת המנטוריות", icon: Swords },
+      { href: "/judge", label: "שיפוט ההאקתון", icon: Gavel },
       { href: "/annual-course", label: "קורס שנתי ממומן", icon: Rocket },
     ],
   },
@@ -99,6 +101,8 @@ export interface SidebarUser {
   arena?: boolean;
   /** Open arena questions - the badge mentors see. */
   arenaOpen?: number;
+  /** Appointed hackathon judge (or the team) - sees ״שיפוט ההאקתון״. */
+  judge?: boolean;
 }
 
 /** Destinations that are not part of the mentor experience. Jobs ARE (senior
@@ -157,6 +161,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
           {section.items
             .filter((item) => !(user.isMentor && NOT_FOR_MENTORS.has(item.href)))
             .filter((item) => item.href !== "/arena" || user.arena)
+            .filter((item) => item.href !== "/judge" || user.judge)
             .map((item) => {
             const active = pathname === item.href || pathname.startsWith(item.href + "/");
             const Icon = item.icon;

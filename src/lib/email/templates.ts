@@ -890,6 +890,25 @@ export function mentorsMailEmail(name: string | undefined, subject: string, body
   };
 }
 
+// --------------------------------------------------------- hackathon judging
+
+/** A mentor was appointed as a judge (the owner, 16/10). */
+export function hackathonJudgeAppointedEmail(name: string | undefined, url: string): BuiltEmail {
+  return {
+    subject: "מונית לשופטת בהאקתון AI 🏆",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}תודה שאת שופטת איתנו`,
+      lines: [
+        "הצוות מינה אותך לשופטת בהאקתון AI קוד פתוח 2026. בלוח השיפוט תמצאי כל הגשה שהוגשה: המוצר החי, הקוד, הסרטון, דשבורד הבדיקה האוטומטית - והרובריקה שלך (100 נקודות, שישה קריטריונים).",
+        "את רואה רק את הציונים שלך. אפשר לשמור ולחזור, ולעדכן ציון עד ערב הגמר.",
+      ],
+      ctaText: "ללוח השיפוט",
+      ctaUrl: url,
+      footnote: "ערב הגמר: יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים 💜",
+    }),
+  };
+}
+
 // ------------------------------------------------------- hackathon submission
 
 /** The whole team hears that the submission landed (the owner, 16/10). */
