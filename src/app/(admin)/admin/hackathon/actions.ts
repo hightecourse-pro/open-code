@@ -7,6 +7,7 @@ import { challengeByKey } from "@/lib/hackathon";
 import { sendResendEmail } from "@/lib/email/resend";
 import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
+import { runArenaDigest } from "@/lib/arena-digest";
 
 const BUCKET = "hackathon";
 
@@ -102,4 +103,12 @@ export async function setHackathonJudge(profileId: string, on: boolean): Promise
   revalidatePath("/admin/hackathon");
   revalidatePath("/judge");
   return {};
+}
+
+/** The team pushes the open arena questions to every available mentor right now (16/10). */
+export async function pushArenaToMentors(): Promise<{ error?: string; info?: string }> {
+  await requireRole("admin");
+  const r = await runArenaDigest({ everyone: true });
+  if (r.open === 0) return { info: "אין שאלות פתוחות לדחוף." };
+  return { info: `נשלח ל-${r.sent} מנטוריות${r.skipped ? ` · ${r.skipped} נחסמו (מגן סטייג'ינג)` : ""}${r.failed ? ` · ${r.failed} נכשלו` : ""}` };
 }

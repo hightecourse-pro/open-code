@@ -48,7 +48,7 @@ export interface MentorRowData {
   years: number | null;
   region: { value: string; label: string } | null;
   languages: string[];
-  score: { score: number; answers: number; assignments: number; bonus: number; arena: number };
+  score: { score: number; answers: number; assignments: number; bonus: number; arena: number; helpful: number };
   history: MentorHistoryRow[];
   bonuses: MentorBonusRow[];
   log: MentorLogRow[];

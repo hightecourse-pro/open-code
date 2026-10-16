@@ -1,14 +1,17 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
-import { Bot, CheckCircle2, Lock, Trash2 } from "lucide-react";
+import { Bot, CheckCircle2, Lock, Megaphone, Pin, Star, Trash2 } from "lucide-react";
 import { Alert, Avatar, Badge, Button } from "@/components/ui";
+import { RichTextEditor } from "@/components/patterns/rich-text-editor";
 import { cn } from "@/lib/utils";
 import type { ArenaQuestion } from "@/lib/arena";
-import { ARENA_ANSWER_POINTS, type ArenaRole } from "@/lib/arena-shared";
-import { answerArenaQuestion, closeArenaQuestion, deleteArenaQuestion, type ArenaFormState } from "./actions";
+import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS, ARENA_TOPICS, NUDGE_AFTER_HOURS, topicOf, type ArenaRole } from "@/lib/arena-shared";
+import { answerArenaQuestion, closeArenaQuestion, deleteArenaQuestion, markHelpful, nudgeQuestion, replyFollowUp, togglePin, type ArenaFormState } from "./actions";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+const RICH = "text-[14px] text-ink-800 leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_pre]:bg-ink-900 [&_pre]:text-white [&_pre]:rounded-[10px] [&_pre]:px-3 [&_pre]:py-2 [&_pre]:text-[12.5px] [&_pre]:leading-snug [&_pre]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_code]:font-mono [&_img]:max-w-full [&_img]:rounded-[10px] [&_img]:border [&_img]:border-ink-200 [&_img]:my-1";
+const EDITOR_TOOLS = ["bold", "ul", "ol", "link", "code", "image"] as const;
 
 type Filter = "open" | "mine" | "ai" | "answered" | "all";
 
@@ -17,11 +20,22 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
   const mentorSide = role !== "participant";
   // A focused question (from an email link) must be visible whatever the default filter.
   const [filter, setFilter] = useState<Filter>(() => (focusId ? "all" : mentorSide ? "open" : "mine"));
-  // A question she just answered stays in place with its "+10" confirmation -
-  // otherwise it would jump to נענו and vanish from the filter she is in.
+  const [topic, setTopic] = useState("");
+  const [challenge, setChallenge] = useState("");
+  // A question she just answered stays in place with its confirmation.
   const [pinned, setPinned] = useState<string[]>([]);
-  // The hackathon's challenges on the board (the owner, 15/10): a chip per challenge.
-  const [challenge, setChallenge] = useState<string>("");
+  const pin = (id: string) => setPinned((cur) => (cur.includes(id) ? cur : [...cur, id]));
+
+  const counts = useMemo(
+    () => ({
+      open: questions.filter((q) => q.status === "open").length,
+      mine: mentorSide ? questions.filter((q) => q.status === "open" && q.targetMentorId === viewerId).length : questions.filter((q) => q.authorId === viewerId).length,
+      ai: questions.filter((q) => q.aiOnly && q.status === "open").length,
+      answered: questions.filter((q) => q.status !== "open").length,
+      all: questions.length,
+    }),
+    [questions, viewerId, mentorSide]
+  );
   const challengeChips = useMemo(() => {
     const seen = new Map<string, { label: string; n: number }>();
     for (const q of questions) {
@@ -32,40 +46,27 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
     }
     return [...seen].map(([key, v]) => ({ key, ...v }));
   }, [questions]);
-  const pin = (id: string) => setPinned((cur) => (cur.includes(id) ? cur : [...cur, id]));
+  const topicChips = useMemo(() => ARENA_TOPICS.map((t) => ({ ...t, n: questions.filter((q) => q.topic === t.key).length })).filter((t) => t.n > 0), [questions]);
 
-  const counts = useMemo(
-    () => ({
-      open: questions.filter((q) => q.status === "open").length,
-      mine: mentorSide
-        ? questions.filter((q) => q.status === "open" && q.targetMentorId === viewerId).length
-        : questions.filter((q) => q.authorId === viewerId).length,
-      ai: questions.filter((q) => q.aiOnly && q.status === "open").length,
-      answered: questions.filter((q) => q.status === "answered").length,
-      all: questions.length,
-    }),
-    [questions, viewerId, mentorSide]
-  );
   const shown = useMemo(
     () =>
       questions.filter((q) => {
         if (pinned.includes(q.id)) return true;
         if (challenge && q.challengeKey !== challenge) return false;
+        if (topic && q.topic !== topic) return false;
         if (filter === "all") return true;
         if (filter === "open") return q.status === "open";
-        if (filter === "answered") return q.status === "answered";
+        if (filter === "answered") return q.status !== "open";
         if (filter === "ai") return q.aiOnly && q.status === "open";
         return mentorSide ? q.status === "open" && q.targetMentorId === viewerId : q.authorId === viewerId;
       }),
-    [questions, filter, viewerId, mentorSide, pinned, challenge]
+    [questions, filter, viewerId, mentorSide, pinned, challenge, topic]
   );
+  const worthReading = useMemo(() => questions.filter((q) => q.pinnedAt && (!challenge || q.challengeKey === challenge)).slice(0, 6), [questions, challenge]);
 
   useEffect(() => {
     if (!focusId) return;
-    const t = setTimeout(() => {
-      const el = document.getElementById(`q-${focusId}`);
-      if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 300);
+    const t = setTimeout(() => document.getElementById(`q-${focusId}`)?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
     return () => clearTimeout(t);
   }, [focusId]);
 
@@ -83,47 +84,59 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
         { key: "answered", label: `נענו (${counts.answered})` },
         { key: "all", label: `הכל (${counts.all})` },
       ];
+  const chip = (on: boolean) => cn("rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors", on ? "bg-brand-purple text-white border-brand-purple" : "bg-white border-ink-300 text-ink-700 hover:border-brand-purple");
+  const smallChip = (on: boolean) => cn("rounded-full border px-2.5 py-0.5 text-[12px] font-semibold", on ? "bg-ink-900 text-white border-ink-900" : "bg-white border-ink-300 text-ink-700 hover:border-ink-900");
 
   return (
     <section className="flex flex-col gap-3">
+      {worthReading.length > 0 && (
+        <div className="rounded-[16px] border border-[#F0B429]/50 bg-tint-warm/40 px-4 py-3">
+          <div className="text-[12.5px] font-bold text-[#8C5E0E] flex items-center gap-1.5">
+            <Star size={13} /> שווה לקרוא - תשובות שהמנטוריות הצמידו
+          </div>
+          <ul className="mt-1 flex flex-col gap-0.5">
+            {worthReading.map((q) => (
+              <li key={q.id} className="text-[13px]">
+                <a href={`#q-${q.id}`} className="text-ink-900 hover:text-brand-purple hover:underline" onClick={() => setPinned((cur) => (cur.includes(q.id) ? cur : [...cur, q.id]))}>
+                  {q.challengeEmoji} {q.title}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="flex items-center gap-1.5 flex-wrap">
         {chips.map((c) => (
-          <button
-            key={c.key}
-            type="button"
-            onClick={() => setFilter(c.key)}
-            aria-pressed={filter === c.key}
-            className={cn(
-              "rounded-full border px-3 py-1 text-[12.5px] font-semibold transition-colors",
-              filter === c.key ? "bg-brand-purple text-white border-brand-purple" : "bg-white border-ink-300 text-ink-700 hover:border-brand-purple"
-            )}
-          >
+          <button key={c.key} type="button" onClick={() => setFilter(c.key)} aria-pressed={filter === c.key} className={chip(filter === c.key)}>
             {c.label}
           </button>
         ))}
       </div>
-      {challengeChips.length > 1 && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[12px] font-semibold text-ink-600">לפי אתגר:</span>
-          <button
-            type="button"
-            onClick={() => setChallenge("")}
-            aria-pressed={challenge === ""}
-            className={cn("rounded-full border px-2.5 py-0.5 text-[12px] font-semibold", challenge === "" ? "bg-ink-900 text-white border-ink-900" : "bg-white border-ink-300 text-ink-700 hover:border-ink-900")}
-          >
-            כל האתגרים
-          </button>
-          {challengeChips.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              onClick={() => setChallenge(challenge === c.key ? "" : c.key)}
-              aria-pressed={challenge === c.key}
-              className={cn("rounded-full border px-2.5 py-0.5 text-[12px] font-semibold", challenge === c.key ? "bg-ink-900 text-white border-ink-900" : "bg-white border-ink-300 text-ink-700 hover:border-ink-900")}
-            >
-              {c.label} ({c.n})
-            </button>
-          ))}
+      {(challengeChips.length > 1 || topicChips.length > 0) && (
+        <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap">
+          {challengeChips.length > 1 && (
+            <span className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[12px] font-semibold text-ink-600">לפי אתגר:</span>
+              <button type="button" onClick={() => setChallenge("")} aria-pressed={challenge === ""} className={smallChip(challenge === "")}>
+                כל האתגרים
+              </button>
+              {challengeChips.map((c) => (
+                <button key={c.key} type="button" onClick={() => setChallenge(challenge === c.key ? "" : c.key)} aria-pressed={challenge === c.key} className={smallChip(challenge === c.key)}>
+                  {c.label} ({c.n})
+                </button>
+              ))}
+            </span>
+          )}
+          {topicChips.length > 0 && (
+            <span className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[12px] font-semibold text-ink-600">לפי נושא:</span>
+              {topicChips.map((t) => (
+                <button key={t.key} type="button" onClick={() => setTopic(topic === t.key ? "" : t.key)} aria-pressed={topic === t.key} className={smallChip(topic === t.key)}>
+                  {t.emoji} {t.label} ({t.n})
+                </button>
+              ))}
+            </span>
+          )}
         </div>
       )}
       {shown.length === 0 && (
@@ -142,20 +155,37 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
   const mentorSide = role !== "participant";
   const mine = q.authorId === viewerId;
   const forMe = q.targetMentorId === viewerId;
-  const alreadyAnswered = q.answers.some((a) => a.mentorId === viewerId);
+  const alreadyAnswered = q.answers.some((a) => a.authorId === viewerId && a.authorRole === "mentor");
+  const helped = q.answers.some((a) => a.helpfulAt);
   const [state, action, pending] = useActionState<ArenaFormState, FormData>(async (prev, fd) => {
     const r = await answerArenaQuestion(q.id, prev, fd);
     if (r.ok) onAnswered(q.id);
     return r;
   }, {});
+  const [fuState, fuAction, fuPending] = useActionState<ArenaFormState, FormData>(async (prev, fd) => {
+    const r = await replyFollowUp(q.id, prev, fd);
+    if (r.ok) onAnswered(q.id);
+    return r;
+  }, {});
   const [busy, start] = useTransition();
+  const [note, setNote] = useState<ArenaFormState | null>(null);
   const [open, setOpen] = useState(false);
+  const [fuOpen, setFuOpen] = useState(false);
+  const topic = topicOf(q.topic);
+  const run = (fn: () => Promise<ArenaFormState>) => {
+    setNote(null);
+    start(async () => {
+      const r = await fn();
+      if (r.error || r.info) setNote(r);
+      if (r.ok) onAnswered(q.id);
+    });
+  };
   return (
     <article
       id={`q-${q.id}`}
       className={cn(
         "bg-white border rounded-[18px] p-4 md:p-5 shadow-sm flex flex-col gap-3",
-        focused ? "border-brand-purple ring-2 ring-brand-purple/20" : forMe && q.status === "open" ? "border-brand-pink-deep/40" : "border-ink-200"
+        focused ? "border-brand-purple ring-2 ring-brand-purple/20" : q.pinnedAt ? "border-[#F0B429]/60" : forMe && q.status === "open" ? "border-brand-pink-deep/40" : "border-ink-200"
       )}
     >
       <div className="flex items-start gap-3">
@@ -182,48 +212,85 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
                 </span>
               </>
             )}
+            {topic && (
+              <>
+                <span className="text-ink-300">·</span>
+                <span className="inline-flex items-center gap-1 rounded-full bg-ink-100 text-ink-700 px-2 py-px font-semibold">
+                  {topic.emoji} {topic.label}
+                </span>
+              </>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+          {q.pinnedAt && (
+            <Badge variant="warm">
+              <Star size={12} /> שווה לקרוא
+            </Badge>
+          )}
+          {q.isPrivate && (
+            <Badge variant="gray">
+              <Lock size={12} /> פרטית
+            </Badge>
+          )}
           {q.aiOnly && (
             <Badge variant="indigo">
               <Bot size={12} /> AI
             </Badge>
           )}
-          {q.status === "open" && <Badge variant="pink">פתוחה</Badge>}
+          {q.status === "open" && (q.stale && mentorSide ? <Badge variant="pink">פתוחה מעל {NUDGE_AFTER_HOURS} שעות</Badge> : <Badge variant="pink">פתוחה</Badge>)}
           {q.status === "answered" && (
             <Badge variant="mint">
               <CheckCircle2 size={12} /> נענתה
             </Badge>
           )}
-          {q.status === "closed" && (
-            <Badge variant="gray">
-              <Lock size={12} /> נסגרה
-            </Badge>
-          )}
+          {q.status === "closed" && <Badge variant="gray">{helped ? "עזר לה ✓" : "נסגרה"}</Badge>}
           {forMe && q.status === "open" && <Badge variant="grad">ממתינה לך</Badge>}
         </div>
       </div>
-      <p className="text-[14px] text-ink-800 leading-relaxed whitespace-pre-wrap">{q.body}</p>
+      <div className={RICH} dangerouslySetInnerHTML={{ __html: q.body }} />
 
       {q.answers.length > 0 && (
         <div className="flex flex-col gap-2 border-t border-ink-100 pt-3">
-          {q.answers.map((a) => (
-            <div key={a.id} className="flex items-start gap-2.5">
-              <Avatar size="xs" tone="gold" crown initials={a.mentorInitials} />
-              <div className="flex-1 min-w-0 rounded-[12px] bg-tint-warm/50 px-3 py-2">
-                <div className="text-[11.5px] text-ink-600 flex items-center gap-1.5">
-                  <b className="text-ink-900">{a.mentorName}</b>
-                  <span className="text-ink-300">·</span>
-                  <span dir="ltr">{WHEN.format(new Date(a.createdAt))}</span>
+          {q.answers.map((a) =>
+            a.authorRole === "asker" ? (
+              <div key={a.id} className="flex items-start gap-2.5">
+                <Avatar size="xs" initials={a.authorInitials} />
+                <div className="flex-1 min-w-0 rounded-[12px] bg-tint-purple/30 px-3 py-2">
+                  <div className="text-[11.5px] text-ink-600 flex items-center gap-1.5">
+                    <b className="text-ink-900">{a.authorName}</b>
+                    <span className="text-ink-300">·</span>
+                    <span>שאלת המשך</span>
+                    <span className="text-ink-300">·</span>
+                    <span dir="ltr">{WHEN.format(new Date(a.createdAt))}</span>
+                  </div>
+                  <div className={cn(RICH, "mt-0.5")} dangerouslySetInnerHTML={{ __html: a.body }} />
                 </div>
-                <p className="text-[13.5px] text-ink-900 leading-relaxed whitespace-pre-wrap mt-0.5">{a.body}</p>
               </div>
-            </div>
-          ))}
+            ) : (
+              <div key={a.id} className="flex items-start gap-2.5">
+                <Avatar size="xs" tone="gold" crown initials={a.authorInitials} />
+                <div className={cn("flex-1 min-w-0 rounded-[12px] px-3 py-2", a.helpfulAt ? "bg-tint-mint/60 border border-success/30" : "bg-tint-warm/50")}>
+                  <div className="text-[11.5px] text-ink-600 flex items-center gap-1.5 flex-wrap">
+                    <b className="text-ink-900">{a.authorName}</b>
+                    <span className="text-ink-300">·</span>
+                    <span dir="ltr">{WHEN.format(new Date(a.createdAt))}</span>
+                    {a.helpfulAt && <span className="ms-auto text-success font-bold">עזר לי ✓ (+{ARENA_HELPFUL_POINTS})</span>}
+                    {mine && !a.helpfulAt && !helped && (
+                      <button type="button" disabled={busy} onClick={() => run(() => markHelpful(a.id))} className="ms-auto rounded-full bg-white border border-success/50 text-success text-[11.5px] font-bold px-2.5 py-0.5 hover:bg-tint-mint">
+                        עזר לי ✓
+                      </button>
+                    )}
+                  </div>
+                  <div className={cn(RICH, "mt-0.5")} dangerouslySetInnerHTML={{ __html: a.body }} />
+                </div>
+              </div>
+            )
+          )}
         </div>
       )}
 
+      {/* the mentor's answer */}
       {mentorSide && q.status !== "closed" && !mine && (
         <div className="border-t border-ink-100 pt-3">
           {!open && !state.ok ? (
@@ -237,15 +304,7 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
             <Alert variant="success">{state.info}</Alert>
           ) : (
             <form action={action} className="flex flex-col gap-2">
-              <textarea
-                name="body"
-                required
-                rows={4}
-                maxLength={6000}
-                autoFocus
-                placeholder="התשובה שלך - היא תגיע לשואלת גם למייל."
-                className="w-full rounded-[10px] border border-ink-200 bg-white px-3 py-2 text-[13.5px] leading-relaxed focus:border-brand-purple outline-none"
-              />
+              <RichTextEditor id={`answer-${q.id}`} name="body" tools={[...EDITOR_TOOLS]} compact placeholder="התשובה שלך - היא תגיע לשואלת גם למייל. אפשר קוד וצילום מסך." />
               {state.error && <Alert variant="danger">{state.error}</Alert>}
               <div className="flex items-center gap-2">
                 <Button type="submit" size="sm" disabled={pending}>
@@ -260,27 +319,64 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
         </div>
       )}
 
-      {(mine || role === "admin") && (
-        <div className="flex items-center gap-3 text-[12px]">
-          {mine && q.status !== "closed" && (
-            <button type="button" disabled={busy} onClick={() => start(() => closeArenaQuestion(q.id).then(() => undefined))} className="text-ink-500 hover:text-ink-800 hover:underline">
-              סגירת השאלה (קיבלתי מה שצריך)
-            </button>
-          )}
-          {role === "admin" && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => {
-                if (confirm("למחוק את השאלה ואת התשובות שלה?")) start(() => deleteArenaQuestion(q.id).then(() => undefined));
-              }}
-              className="inline-flex items-center gap-1 text-[#B42318] hover:underline"
-            >
-              <Trash2 size={12} /> מחיקה (צוות)
-            </button>
+      {/* the asker's follow-up */}
+      {mine && q.status !== "closed" && q.answers.some((a) => a.authorRole === "mentor") && (
+        <div className="border-t border-ink-100 pt-3">
+          {!fuOpen && !fuState.ok ? (
+            <Button type="button" size="sm" variant="secondary" onClick={() => setFuOpen(true)}>
+              שאלת המשך באותו שרשור
+            </Button>
+          ) : fuState.ok ? (
+            <Alert variant="success">{fuState.info}</Alert>
+          ) : (
+            <form action={fuAction} className="flex flex-col gap-2">
+              <RichTextEditor id={`followup-${q.id}`} name="body" tools={[...EDITOR_TOOLS]} compact placeholder="מה עדיין לא ברור, או מה קרה כשניסית." />
+              {fuState.error && <Alert variant="danger">{fuState.error}</Alert>}
+              <div className="flex items-center gap-2">
+                <Button type="submit" size="sm" disabled={fuPending}>
+                  {fuPending ? "שולחת…" : "פרסום שאלת ההמשך"}
+                </Button>
+                <Button type="button" size="sm" variant="secondary" onClick={() => setFuOpen(false)}>
+                  ביטול
+                </Button>
+              </div>
+            </form>
           )}
         </div>
       )}
+
+      {note?.error && <Alert variant="danger">{note.error}</Alert>}
+      {note?.ok && note.info && <Alert variant="success">{note.info}</Alert>}
+
+      <div className="flex items-center gap-3 text-[12px] flex-wrap">
+        {mine && q.status === "open" && q.stale && (
+          <button type="button" disabled={busy} onClick={() => run(() => nudgeQuestion(q.id))} className="inline-flex items-center gap-1 font-bold text-brand-pink-deep hover:underline">
+            <Megaphone size={12} /> לדחוף לכל המנטוריות
+          </button>
+        )}
+        {mine && q.status !== "closed" && (
+          <button type="button" disabled={busy} onClick={() => run(() => closeArenaQuestion(q.id))} className="text-ink-500 hover:text-ink-800 hover:underline">
+            סגירת השאלה (קיבלתי מה שצריך)
+          </button>
+        )}
+        {mentorSide && q.answers.some((a) => a.authorRole === "mentor") && (
+          <button type="button" disabled={busy} onClick={() => run(() => togglePin(q.id))} className="inline-flex items-center gap-1 text-[#8C5E0E] hover:underline">
+            <Pin size={12} /> {q.pinnedAt ? "להסיר מ״שווה לקרוא״" : "להצמיד כ״שווה לקרוא״"}
+          </button>
+        )}
+        {role === "admin" && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              if (confirm("למחוק את השאלה ואת התשובות שלה?")) run(() => deleteArenaQuestion(q.id));
+            }}
+            className="inline-flex items-center gap-1 text-[#B42318] hover:underline"
+          >
+            <Trash2 size={12} /> מחיקה (צוות)
+          </button>
+        )}
+      </div>
     </article>
   );
 }

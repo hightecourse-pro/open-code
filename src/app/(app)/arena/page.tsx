@@ -5,21 +5,22 @@ import { CalendarDays, Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { requireCommunityAccess } from "@/lib/auth";
 import { arenaLeaderboard, arenaRoleFor, loadArenaMentors, loadArenaQuestions, mentorArenaStats } from "@/lib/arena";
-import { ARENA_ANSWER_POINTS } from "@/lib/arena-shared";
+import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS } from "@/lib/arena-shared";
 import { loadMyRegistration, registrableChallenges } from "@/lib/hackathon";
 import { CHALLENGES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
 import { AskForm } from "./ask-form";
 import { ArenaBoard } from "./arena-board";
+import { PresenceToggle } from "./presence-toggle";
 
 export const metadata: Metadata = { title: "זירת המנטוריות" };
 export const dynamic = "force-dynamic";
 
 /**
- * זירת המנטוריות (the owner, 15/10): hackathon registrants ask - a random
- * mentor, a random mentor who knows AI, or a chosen one; every mentor sees
- * every question, answers, and sees plainly that answers earn points. Dressed
- * in the hackathon's own elements: the AI squiggle, the challenge logos, the
- * finals date, the asker's challenge on every question.
+ * זירת המנטוריות (the owner, 15/10 + 16/10): hackathon registrants ask - a
+ * random mentor (present ones first), a random mentor who knows AI, or a
+ * chosen one; every mentor sees every question, answers, earns points - and
+ * a bonus when the asker marks "עזר לי". Dressed in the hackathon's own
+ * elements.
  */
 export default async function ArenaPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const profile = await requireCommunityAccess();
@@ -47,14 +48,16 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
 
   const isMentorSide = role !== "participant";
   const [questions, mentors, registration] = await Promise.all([
-    loadArenaQuestions(),
+    loadArenaQuestions({ id: profile.id, role }),
     loadArenaMentors(),
     isMentorSide ? Promise.resolve(null) : loadMyRegistration(profile.id),
   ]);
   const [stats, leaders] = isMentorSide ? await Promise.all([mentorArenaStats(profile.id), arenaLeaderboard(5)]) : [null, []];
   const open = questions.filter((q) => q.status === "open").length;
   const forMe = questions.filter((q) => q.status === "open" && q.targetMentorId === profile.id).length;
-  const myChallenge = registration ? CHALLENGES.find((c) => c.key === registration.challengeKey) ?? null : null;
+  const myChallenge = registration ? (CHALLENGES.find((c) => c.key === registration.challengeKey) ?? null) : null;
+  const me = mentors.find((m) => m.id === profile.id) ?? null;
+  const presentNow = mentors.filter((m) => m.present && m.available).length;
 
   return (
     <div className="flex flex-col gap-5 max-w-4xl">
@@ -62,12 +65,12 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
       <Header
         subtitle={
           isMentorSide
-            ? "כל השאלות של כל הצוותים בהאקתון, במקום אחד. תשובה ראשונה לשאלה = נקודות."
+            ? "כל השאלות של כל הצוותים בהאקתון, במקום אחד. תשובה ראשונה לשאלה = נקודות, ועוד בונוס כשהיא עזרה."
             : "שאלה למנטורית אקראית, למנטורית שמבינה ב-AI, או למי שתבחרי. התשובה מגיעה גם למייל."
         }
       />
 
-      {/* ── the hackathon strip: challenges, finals ── */}
+      {/* ── the hackathon strip ── */}
       <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-3 shadow-sm flex items-center gap-x-5 gap-y-2 flex-wrap">
         <span className="font-display font-bold text-[13.5px] text-ink-1000 inline-flex items-center gap-1.5">
           <Trophy size={15} className="text-brand-pink-deep" /> האתגרים בזירה
@@ -98,14 +101,15 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
             <div className="flex-1 min-w-[220px]">
               <div className="font-mono text-[11.5px] text-white/80">&lt;הנקודות שלך/&gt;</div>
               <div className="font-display text-[26px] md:text-[30px] font-black leading-tight mt-1">
-                כל תשובה ראשונה לשאלה = +{ARENA_ANSWER_POINTS}{" "}נק׳ 🏆
+                תשובה ראשונה = +{ARENA_ANSWER_POINTS}{" "}נק׳ · ״עזר לי״ = +{ARENA_HELPFUL_POINTS} 🏆
               </div>
               <p className="text-[13.5px] text-white/90 mt-1.5">
-                נספרת פעם אחת לכל שאלה, ונכנסת לניקוד המנטוריות שלך שגלוי לכל הקהילה.
+                נספרת פעם אחת לכל שאלה, ונכנסת לניקוד המנטוריות שלך שגלוי לכל הקהילה. הבונוס מגיע כשהשואלת מסמנת שהתשובה עזרה.
               </p>
             </div>
-            <dl className="grid grid-cols-3 gap-3 text-center">
-              <Stat label="תשובות בזירה" value={stats.arenaAnswers} />
+            <dl className="grid grid-cols-4 gap-2.5 text-center">
+              <Stat label="תשובות" value={stats.arenaAnswers} />
+              <Stat label="עזרו ✓" value={stats.helpful} />
               <Stat label="נק׳ מהזירה" value={stats.arenaPoints} />
               <Stat label="נק׳ סה״כ" value={stats.totalScore} />
             </dl>
@@ -113,6 +117,7 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
           <div className="relative mt-4 flex flex-wrap items-center gap-2 text-[13px]">
             <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">{open} שאלות פתוחות</span>
             {forMe > 0 && <span className="rounded-full bg-white text-brand-purple px-3 py-1 font-bold">{forMe} ממתינות לך אישית</span>}
+            {role === "mentor" && <PresenceToggle present={!!me?.present} until={me?.presentUntil ?? null} />}
             {leaders.length > 0 && (
               <span className="ms-auto flex items-center gap-2 flex-wrap">
                 <Trophy size={14} className="text-white/90" />
@@ -124,7 +129,9 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
                       {i === 0 ? "🥇 " : i === 1 ? "🥈 " : i === 2 ? "🥉 " : ""}
                       {l.name}
                     </span>
-                    <span className="text-white/80">· {l.points} נק׳</span>
+                    <span className="text-white/80">
+                      · {l.points} נק׳{l.helpful ? ` · ${l.helpful} עזרו` : ""}
+                    </span>
                   </span>
                 ))}
               </span>
@@ -141,14 +148,14 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
           <div className="relative font-display font-black text-[19px] leading-snug">
             {myChallenge ? (
               <>
-                את באתגר <span className="underline decoration-white/60 underline-offset-4">{myChallenge.short}</span> {myChallenge.emoji} ·
-                המנטוריות כאן בשבילך
+                את באתגר <span className="underline decoration-white/60 underline-offset-4">{myChallenge.short}</span> {myChallenge.emoji} · המנטוריות כאן בשבילך
               </>
             ) : (
               <>האקתון AI קוד פתוח 2026 · המנטוריות כאן בשבילך 🏆</>
             )}
           </div>
           <div className="relative flex items-center gap-2 flex-wrap ms-auto text-[13px]">
+            {presentNow > 0 && <span className="bg-white text-success px-3 py-1 rounded-full font-bold">🟢 {presentNow} כאן עכשיו</span>}
             <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available).length} מנטוריות זמינות</span>
             <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available && m.ai).length} מבינות ב-AI 🤖</span>
             {myChallenge && (
@@ -193,7 +200,7 @@ function Header({ subtitle }: { subtitle: string }) {
 
 function Stat({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[14px] bg-white/15 px-3 py-2 min-w-[86px]">
+    <div className="rounded-[14px] bg-white/15 px-2.5 py-2 min-w-[72px]">
       <dt className="text-[11px] text-white/80">{label}</dt>
       <dd className="font-display text-[22px] font-black tabular-nums leading-tight">{value}</dd>
     </div>

@@ -203,7 +203,7 @@ export default async function AdminMentorsPage() {
       languages: (Array.isArray(ans.get("language_skills")) ? (ans.get("language_skills") as { lang?: unknown }[]) : [])
         .map((l) => (l && typeof l.lang === "string" ? l.lang.trim() : ""))
         .filter(Boolean),
-      score: scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0, arena: 0 },
+      score: scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0, arena: 0, helpful: 0 },
       history,
       bonuses: (bonusRows ?? [])
         .filter((b) => b.mentor_id === m.id)

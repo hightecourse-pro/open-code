@@ -82,6 +82,57 @@ export function sanitizeRichHtml(html: string): string {
   return textOnly ? result : "";
 }
 
+/**
+ * The ARENA sanitizer (the owner, 16/10, "צילומי מסך בבייס 64"): everything
+ * sanitizeRichHtml allows, plus code blocks and images embedded as data URIs
+ * (png/jpeg/webp/gif, up to ~600KB each) - nothing is fetched from a host a
+ * filtered connection could block. Member-authored, so no http(s) images.
+ */
+const ARENA_TAGS = new Set([...ALLOWED_TAGS, "pre", "code", "img"]);
+const DATA_IMAGE_MAX = 600 * 1024;
+
+function safeDataSrc(attrs: string): string | null {
+  const m = /src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(attrs);
+  const raw = (m?.[1] ?? m?.[2] ?? m?.[3] ?? "").trim();
+  if (!/^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i.test(raw)) return null;
+  if (raw.length > DATA_IMAGE_MAX) return null;
+  return raw;
+}
+
+export function sanitizeArenaHtml(html: string): string {
+  if (!html) return "";
+  const src = html.replace(/<!--[\s\S]*?-->/g, "").replace(DROP_WITH_CONTENT, "");
+  const tagRe = /<\/?([a-zA-Z][a-zA-Z0-9]*)((?:"[^"]*"|'[^']*'|[^>"'])*)\/?>/g;
+  let out = "";
+  let last = 0;
+  let images = 0;
+  let m: RegExpExecArray | null;
+  while ((m = tagRe.exec(src))) {
+    out += escapeText(src.slice(last, m.index));
+    last = m.index + m[0].length;
+    const name = m[1].toLowerCase();
+    if (!ARENA_TAGS.has(name)) continue;
+    if (m[0].startsWith("</")) {
+      if (name !== "br" && name !== "img") out += `</${name}>`;
+    } else if (name === "a") {
+      const href = safeHref(m[2]);
+      out += href ? `<a href="${href}">` : "<a>";
+    } else if (name === "img") {
+      const data = safeDataSrc(m[2]);
+      if (data && images < 6) {
+        images++;
+        out += `<img src="${data}" alt="">`;
+      }
+    } else {
+      out += `<${name}>`;
+    }
+  }
+  out += escapeText(src.slice(last));
+  const result = out.trim();
+  const textOnly = result.replace(/<img[^>]*>/gi, "IMG").replace(/<[^>]*>/g, "").replace(/&nbsp;/gi, " ").trim();
+  return textOnly ? result : "";
+}
+
 /** Extract a safe http(s) src from a raw attribute string, or null. */
 function safeSrc(attrs: string): string | null {
   const m = /src\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(attrs);

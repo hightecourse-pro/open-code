@@ -1998,14 +1998,20 @@ export interface Database {
         Relationships: [];
       };
       arena_questions: {
-        Row: { id: string; author_id: string; title: string; body: string; target_mentor_id: string | null; ai_only: boolean; status: string; created_at: string; updated_at: string; answered_at: string | null };
-        Insert: { id?: string; author_id: string; title: string; body: string; target_mentor_id?: string | null; ai_only?: boolean; status?: string; created_at?: string; updated_at?: string; answered_at?: string | null };
+        Row: { id: string; author_id: string; title: string; body: string; target_mentor_id: string | null; ai_only: boolean; is_private: boolean; topic: string | null; status: string; created_at: string; updated_at: string; answered_at: string | null; pinned_at: string | null; nudged_at: string | null; closed_at: string | null };
+        Insert: { id?: string; author_id: string; title: string; body: string; target_mentor_id?: string | null; ai_only?: boolean; is_private?: boolean; topic?: string | null; status?: string; created_at?: string; updated_at?: string; answered_at?: string | null; pinned_at?: string | null; nudged_at?: string | null; closed_at?: string | null };
         Update: Partial<Database["public"]["Tables"]["arena_questions"]["Insert"]>;
         Relationships: [];
       };
+      arena_presence: {
+        Row: { profile_id: string; until: string; updated_at: string };
+        Insert: { profile_id: string; until: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["arena_presence"]["Insert"]>;
+        Relationships: [];
+      };
       arena_answers: {
-        Row: { id: string; question_id: string; mentor_id: string; body: string; created_at: string };
-        Insert: { id?: string; question_id: string; mentor_id: string; body: string; created_at?: string };
+        Row: { id: string; question_id: string; mentor_id: string; author_role: string; body: string; helpful_at: string | null; created_at: string };
+        Insert: { id?: string; question_id: string; mentor_id: string; author_role?: string; body: string; helpful_at?: string | null; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["arena_answers"]["Insert"]>;
         Relationships: [];
       };
@@ -2243,7 +2249,7 @@ export interface Database {
       };
       mentor_arena_counts: {
         Args: { p_ids: string[] };
-        Returns: { mentor_id: string; answers: number }[];
+        Returns: { mentor_id: string; answers: number; helpful: number }[];
       };
       mentor_answer_counts: {
         Args: { p_ids: string[] };

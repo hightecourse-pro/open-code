@@ -11,7 +11,8 @@ import { loadAdminSubmissions } from "@/lib/hackathon-submission";
 import { JudgesPicker, type JudgeCandidate } from "./judges-picker";
 import { JudgingBoard } from "@/app/(app)/judge/judging-board";
 import { loadJudgingBoard } from "@/lib/judging";
-import { loadArenaMentors } from "@/lib/arena";
+import { arenaOverview, loadArenaMentors } from "@/lib/arena";
+import { ArenaOverview } from "./arena-overview";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "האקתון" };
@@ -25,7 +26,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminHackathonPage() {
   const me = await requireRole("admin");
   const admin = createAdminClient();
-  const [{ data: regs }, materials, submissions, board, arenaMentors] = await Promise.all([
+  const [{ data: regs }, materials, submissions, board, arenaMentors, arena] = await Promise.all([
     admin
       .from("hackathon_registrations")
       .select("profile_id, challenge_key, partner_profile_id, partner_confirmed_at, created_at, updated_at")
@@ -35,6 +36,7 @@ export default async function AdminHackathonPage() {
     loadAdminSubmissions(),
     loadJudgingBoard(me),
     loadArenaMentors(),
+    arenaOverview(),
   ]);
   const judgeIds = new Map(board.judges.map((j) => [j.id, j.scored]));
   const candidates: JudgeCandidate[] = arenaMentors.map((m) => ({ id: m.id, name: m.name, initials: m.initials, ai: m.ai, judge: judgeIds.has(m.id), scored: judgeIds.get(m.id) ?? 0 }));
@@ -71,6 +73,7 @@ export default async function AdminHackathonPage() {
       </div>
       <RegistrationsTable rows={rows} challenges={challenges} />
       <SubmissionsTable rows={submissions} />
+      <ArenaOverview data={arena} />
       {/* ── judging (the owner, 16/10): judges, the automated dashboard, every judge's scores, average, gap, rank ── */}
       <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
         <div>

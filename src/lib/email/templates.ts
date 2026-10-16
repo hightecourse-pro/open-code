@@ -12,7 +12,7 @@ const C = {
   pink: "#E0418D",
 };
 
-import { ARENA_ANSWER_POINTS } from "@/lib/arena-shared";
+import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS } from "@/lib/arena-shared";
 import { getSiteUrl } from "@/lib/site";
 import { toSiteAuthLink } from "./auth-links";
 
@@ -961,24 +961,76 @@ export function arenaAnsweredEmail(name: string | undefined, questionTitle: stri
   };
 }
 
-/** Once a day: open questions + her points, to the mentors who know AI. */
+/** The asker continued the thread - the mentors who answered hear (16/10). */
+export function arenaFollowUpEmail(name: string | undefined, questionTitle: string, askerName: string, url: string): BuiltEmail {
+  return {
+    subject: "שאלת המשך בזירה 🏟️",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} המשיכה את השרשור`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, "היא ענתה או שאלה עוד משהו מתחת לתשובה שלך. השאלה חזרה להיות פתוחה."],
+      ctaText: "להמשך השיחה",
+      ctaUrl: url,
+      footnote: "תודה שאת שם בשביל הצוותים 💜",
+    }),
+  };
+}
+
+/** "עזר לי ✓" - the bonus landed (16/10). */
+export function arenaHelpfulEmail(name: string | undefined, questionTitle: string, askerName: string, url: string): BuiltEmail {
+  return {
+    subject: `התשובה שלך עזרה - +${ARENA_HELPFUL_POINTS} נק' 🏆`,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} סימנה: עזר לי ✓`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, `קיבלת <b>+${ARENA_HELPFUL_POINTS} נקודות</b> בונוס על התשובה, מעבר לנקודות על התשובה עצמה. השאלה נסגרה.`],
+      ctaText: "לזירה",
+      ctaUrl: url,
+      footnote: "ככה נראית מנטורית טובה 💜",
+    }),
+  };
+}
+
+/** A question open for a day - the asker pushed it to every available mentor (16/10). */
+export function arenaNudgeEmail(name: string | undefined, questionTitle: string, url: string): BuiltEmail {
+  return {
+    subject: "שאלה בזירה מחכה כבר יום - מישהי? 🏟️",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}שאלה שעוד אף אחת לא ענתה עליה`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, `פתוחה כבר יותר מיממה. תשובה ראשונה = <b>+${ARENA_ANSWER_POINTS} נק'</b>, ואם היא תעזור - עוד ${ARENA_HELPFUL_POINTS}.`],
+      ctaText: "לענות בזירה",
+      ctaUrl: url,
+      footnote: "השואלת דחפה את זה לכל המנטוריות הזמינות - מי שעונה ראשונה, זוכה 💜",
+    }),
+  };
+}
+
+/** Once a day: open questions + her points, to the mentors who know AI; on the weekly day the leaders too, to everyone. */
 export function arenaDigestEmail(
   name: string | undefined,
-  d: { titles: string[]; open: number; arenaPoints: number; totalScore: number; url: string }
+  d: { titles: string[]; open: number; stale?: number; arenaPoints: number; totalScore: number; url: string; leaders?: { name: string; points: number; helpful: number }[] }
 ): BuiltEmail {
-  const list = `<ul style="margin:0;padding-inline-start:18px">${d.titles.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>`;
+  const list = d.titles.length ? `<ul style="margin:0;padding-inline-start:18px">${d.titles.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` : "";
   const more = d.open > d.titles.length ? `<i>ועוד ${d.open - d.titles.length}…</i>` : "";
+  const stale = d.stale ? `<b style="color:#B42318">${d.stale} מהן פתוחות כבר יותר מיממה.</b>` : "";
+  const leaders = d.leaders?.length
+    ? `<b>המובילות בזירה השבוע:</b><ol style="margin:4px 0 0;padding-inline-start:18px">${d.leaders.map((l) => `<li>${escapeHtml(l.name)} - ${l.points} נק'${l.helpful ? ` (${l.helpful} עזרו ✓)` : ""}</li>`).join("")}</ol>`
+    : "";
+  const weekly = !!d.leaders;
   return {
-    subject: d.open === 1 ? "שאלה פתוחה בזירת המנטוריות מחכה לך 🏟️" : `${d.open} שאלות פתוחות בזירת המנטוריות מחכות לך 🏟️`,
+    subject: weekly
+      ? "המובילות בזירת המנטוריות השבוע 🏆"
+      : d.open === 1
+        ? "שאלה פתוחה בזירת המנטוריות מחכה לך 🏟️"
+        : `${d.open} שאלות פתוחות בזירת המנטוריות מחכות לך 🏟️`,
     html: renderEmail({
-      heading: `${name ? `${escapeHtml(name)}, ` : ""}בזירה מחכות ${d.open === 1 ? "שאלה פתוחה" : `${d.open} שאלות פתוחות`}`,
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${d.open === 0 ? "הזירה השבוע" : `בזירה מחכות ${d.open === 1 ? "שאלה פתוחה" : `${d.open} שאלות פתוחות`}`}`,
       lines: [
-        list + more,
-        `<b>הניקוד שלך:</b> ${d.arenaPoints} נק' מהזירה · ${d.totalScore} נק' סה"כ. כל תשובה ראשונה לשאלה = <b>+${ARENA_ANSWER_POINTS} נק'</b>.`,
+        ...(list ? [list + more + (stale ? `<br/>${stale}` : "")] : []),
+        ...(leaders ? [leaders] : []),
+        `<b>הניקוד שלך:</b> ${d.arenaPoints} נק' מהזירה · ${d.totalScore} נק' סה"כ. תשובה ראשונה לשאלה = <b>+${ARENA_ANSWER_POINTS}</b>, "עזר לי" = <b>+${ARENA_HELPFUL_POINTS}</b>.`,
       ],
       ctaText: "לזירה",
       ctaUrl: d.url,
-      footnote: "המייל הזה נשלח פעם ביום, רק כשיש שאלות שלא נענו 💜",
+      footnote: weekly ? "המייל השבועי של הזירה - כל יום ראשון 💜" : "המייל הזה נשלח פעם ביום, רק כשיש שאלות שלא נענו 💜",
     }),
   };
 }

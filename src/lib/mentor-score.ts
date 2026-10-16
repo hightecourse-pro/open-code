@@ -3,8 +3,8 @@
 // answering in the forum earns points, being matched to a junior earns more.
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ARENA_ANSWER_POINTS } from "@/lib/arena-shared";
-export { ARENA_ANSWER_POINTS };
+import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS } from "@/lib/arena-shared";
+export { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS };
 
 export const ANSWER_POINTS = 5;
 export const ASSIGNMENT_POINTS = 25;
@@ -19,6 +19,8 @@ export interface MentorScore {
   bonus: number;
   /** Arena answers - one per question (the owner, 15/10). */
   arena: number;
+  /** Arena answers the asker marked "עזר לי" (16/10). */
+  helpful: number;
   score: number;
 }
 
@@ -29,7 +31,7 @@ export interface MentorScore {
 export async function mentorScores(ids: string[]): Promise<Map<string, MentorScore>> {
   const out = new Map<string, MentorScore>();
   if (ids.length === 0) return out;
-  for (const id of ids) out.set(id, { answers: 0, assignments: 0, bonus: 0, arena: 0, score: 0 });
+  for (const id of ids) out.set(id, { answers: 0, assignments: 0, bonus: 0, arena: 0, helpful: 0, score: 0 });
 
   const admin = createAdminClient();
   const [{ data: answerCounts }, { data: assignments }, { data: bonuses }, { data: arenaCounts }] = await Promise.all([
@@ -58,12 +60,15 @@ export async function mentorScores(ids: string[]): Promise<Map<string, MentorSco
     const s = out.get(b.mentor_id);
     if (s) s.bonus += b.points;
   }
-  for (const row of (arenaCounts ?? []) as { mentor_id: string; answers: number }[]) {
+  for (const row of (arenaCounts ?? []) as { mentor_id: string; answers: number; helpful?: number }[]) {
     const s = out.get(row.mentor_id);
-    if (s) s.arena = Number(row.answers);
+    if (s) {
+      s.arena = Number(row.answers);
+      s.helpful = Number(row.helpful ?? 0);
+    }
   }
   for (const s of out.values()) {
-    s.score = s.answers * ANSWER_POINTS + s.assignments * ASSIGNMENT_POINTS + s.arena * ARENA_ANSWER_POINTS + s.bonus;
+    s.score = s.answers * ANSWER_POINTS + s.assignments * ASSIGNMENT_POINTS + s.arena * ARENA_ANSWER_POINTS + s.helpful * ARENA_HELPFUL_POINTS + s.bonus;
   }
   return out;
 }
