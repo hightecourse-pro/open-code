@@ -27,7 +27,7 @@ export function AdminShell({
         <div className="hidden lg:block">
           <AdminSidebar alertsBadge={alertsBadge} requestsBadge={requestsBadge} whatsappBadge={whatsappBadge} />
         </div>
-        <main className="px-6 py-7 md:px-8">{children}</main>
+        <main className="px-6 py-7 md:px-8 min-w-0">{children}</main>
       </div>
     </div>
   );
