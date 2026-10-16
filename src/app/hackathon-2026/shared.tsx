@@ -2,6 +2,7 @@
 // partners page must stay IDENTICAL from the hero through the challenges
 // (the owner, 6/9) - so hero, ticker, challenges, doodles and the animation
 // styles live here and both routes render them from one source.
+import Image from "next/image";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
 
@@ -53,6 +54,33 @@ export function Scribble({ className }: { className?: string }) {
 }
 
 /** CURLY drawn arrow - loops once on its way down. */
+/**
+ * The hackathon logo (the owner, 16/10: "תשלב בהכל את הלוגו… אתה יכול להנפיש
+ * אותו קצת?"): pops in with a little settle, then floats gently, with three
+ * twinkling sparkles. `animate={false}` for small inline uses.
+ */
+export function HackathonLogo({ className = "", priority = false, animate = true }: { className?: string; priority?: boolean; animate?: boolean }) {
+  return (
+    <span className={`relative inline-block ${animate ? "h26-logo-in" : ""} ${className}`}>
+      <Image
+        src="/hackathon-2026/logo-hackathon.png"
+        alt="האקתון AI קוד פתוח 2026 - לפצח את קוד הכניסה"
+        width={1600}
+        height={934}
+        priority={priority}
+        className={`w-full h-auto ${animate ? "h26-float" : ""}`}
+      />
+      {animate && (
+        <>
+          <Sparkle className="absolute -top-2 right-[16%] w-5 h-5" color="#E0418D" />
+          <Sparkle className="absolute top-[34%] -left-3 w-4 h-4" delay="0.9s" />
+          <Sparkle className="absolute -bottom-1 right-[32%] w-3.5 h-3.5" color="#F0B429" delay="1.6s" />
+        </>
+      )}
+    </span>
+  );
+}
+
 export function CurlyArrow({ className, color = "#E0418D" }: { className?: string; color?: string }) {
   return (
     <svg viewBox="0 0 90 110" fill="none" aria-hidden className={className}>
@@ -218,6 +246,8 @@ export function H26Style() {
       @keyframes h26-spin { from{ rotate:0deg } to{ rotate:360deg } }
       @keyframes h26-marquee { from{ transform:translateX(-50%) } to{ transform:translateX(0) } }
       @keyframes h26-bounce { 0%,100%{ translate:0 0 } 50%{ translate:0 -5px } }
+      @keyframes h26-logo-in { from{ opacity:0; transform:scale(.86) rotate(-5deg) } 62%{ opacity:1; transform:scale(1.035) rotate(1.2deg) } to{ opacity:1; transform:scale(1) rotate(0) } }
+      .h26-logo-in { animation: h26-logo-in 1.05s cubic-bezier(.2,.8,.2,1) both; }
       .h26-twinkle { animation: h26-twinkle 2.6s ease-in-out infinite; }
       .h26-float { animation: h26-float 4.5s ease-in-out infinite; }
       .h26-blob { animation: h26-blob 9s ease-in-out infinite; }
@@ -229,6 +259,7 @@ export function H26Style() {
       .h26-bounce { animation: h26-bounce 2.2s ease-in-out infinite; }
       .h26-ticker-track { animation: h26-marquee 22s linear infinite; }
       @media (prefers-reduced-motion: reduce) {
+        .h26-logo-in { animation: none; opacity: 1; }
         .h26-twinkle,.h26-float,.h26-blob,.h26-wobble,.h26-wiggle,.h26-spin-slow,.h26-spin-rev,.h26-bounce,.h26-draw,.h26-ticker-track{ animation:none !important; }
         .h26-draw{ stroke-dashoffset:0 !important; }
       }
@@ -273,17 +304,9 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
           <Logo width={210} />
         </Link>
         <span className="font-mono text-xs text-brand-pink-deep rotate-1">&lt;hackathon/&gt;</span>
-        <h1 className="font-display text-[42px] sm:text-[56px] font-black leading-[1.02]">
-          האקתון{" "}
-          <span className="relative inline-block">
-            <span className="t-gradient">AI</span>
-            <Squiggle className="absolute -bottom-2 right-0 w-full" />
-          </span>{" "}
-          קוד פתוח
-          <span className="relative block w-fit mx-auto mt-3 text-[30px] sm:text-[36px] text-ink-700 font-black rotate-2">
-            <Scribble className="absolute -inset-x-8 -inset-y-3 w-[calc(100%+64px)] h-[calc(100%+24px)]" />
-            2026
-          </span>
+        <h1 className="w-full max-w-[600px] mx-auto">
+          <HackathonLogo priority className="block w-full" />
+          <span className="sr-only">האקתון AI קוד פתוח 2026 - לפצח את קוד הכניסה</span>
         </h1>
         {variant === "partners" ? (
           <p className="t-body-lg text-ink-700 max-w-lg">
@@ -380,24 +403,19 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
         </div>
 
         <div className="relative">
-          <div aria-hidden className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
-            <div className="h26-spin-slow absolute w-[380px] h-[380px] rounded-full border-2 border-dashed border-brand-pink/40" />
-            <div className="h26-spin-slow absolute w-[380px] h-[380px]">
+          {/* the hub (16/10): the hackathon logo inside the slow orbit rings, above the three challenges */}
+          <div className="relative mx-auto mb-10 w-[250px] h-[200px] flex items-center justify-center">
+            <div aria-hidden className="h26-spin-slow absolute w-[300px] h-[300px] rounded-full border-2 border-dashed border-brand-pink/40 hidden sm:block" />
+            <div aria-hidden className="h26-spin-slow absolute w-[300px] h-[300px] hidden sm:block">
               <span className="absolute -top-1.5 left-1/2 w-3 h-3 rounded-full bg-brand-pink-deep" />
               <span className="absolute top-1/2 -right-1.5 w-2.5 h-2.5 rounded-full bg-brand-purple" />
               <span className="absolute -bottom-1 left-1/4 w-2 h-2 rounded-full bg-[#F0B429]" />
             </div>
-            <div className="h26-spin-rev absolute w-[460px] h-[460px] rounded-full border border-dashed border-brand-purple/25" />
-            <div
-              className="h26-wobble w-28 h-28 bg-brand-gradient text-white flex flex-col items-center justify-center shadow-glow-pink font-display font-black"
-              style={{ borderRadius: "58% 42% 45% 55% / 48% 55% 45% 52%" }}
-            >
-              <span className="text-[22px] leading-none">AI</span>
-              <span className="text-[16px] mt-0.5">2026</span>
-            </div>
+            <div aria-hidden className="h26-spin-rev absolute w-[360px] h-[360px] rounded-full border border-dashed border-brand-purple/25 hidden sm:block" />
+            <HackathonLogo className="relative block w-[230px]" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-x-44 md:gap-y-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7 items-start">
             {CHALLENGES.map((c, i) => (
               <div key={i} className={`${c.tilt} transition-transform hover:rotate-0 hover:scale-[1.02]`}>
                 {c.challenge ? (
