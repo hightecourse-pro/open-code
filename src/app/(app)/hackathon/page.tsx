@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, FileDown, Lock, Trophy } from "lucide-react";
 import { requireCommunityAccess, isSubscriber } from "@/lib/auth";
-import { CHALLENGES, HACKATHON_UPDATES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
+import { CHALLENGES, HACKATHON_UPDATED, HACKATHON_UPDATES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
+import { WhatsNew } from "./whats-new";
 import { loadMaterials, loadMyRegistration, loadPairCandidates, loadPendingInvites, registrableChallenges } from "@/lib/hackathon";
 import { RegistrationForm } from "./registration-form";
 import { PairInvites } from "./pair-invites";
@@ -71,21 +72,8 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      {/* ── what's new ── */}
-      <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display font-bold text-[15px] text-ink-1000">מה חדש</h2>
-          <span className="rounded-full bg-brand-gradient text-white text-[10.5px] font-bold px-2 py-0.5">חדש</span>
-        </div>
-        <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
-          {HACKATHON_UPDATES.map((u) => (
-            <li key={u.text} className="flex items-start gap-2 text-[13.5px] text-ink-800">
-              <span className="font-mono text-[11.5px] text-ink-500 mt-0.5 shrink-0">{u.date}</span>
-              <span>{u.text}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* ── what's new - open by itself only when there is news she has not seen (the owner, 16/10) ── */}
+      <WhatsNew updates={HACKATHON_UPDATES} version={HACKATHON_UPDATED} />
 
       {/* ── the free toolbox (the owner, 12/10): open to every member ── */}
       <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-4 shadow-sm flex items-center gap-4 flex-wrap">
