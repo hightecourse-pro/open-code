@@ -273,7 +273,7 @@ export function H26Style() {
     are not what a partner cares about). */
 export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
-    <section className="relative px-6 pt-14 pb-16 text-center">
+    <section className="relative px-6 pt-8 pb-10 text-center">
       <div className="bg-brand-glow absolute inset-0 -z-10" />
       <div aria-hidden className="h26-blob absolute -top-16 -left-20 w-72 h-72 bg-tint-pink/60 -z-10" />
       <div aria-hidden className="h26-blob absolute top-40 -right-24 w-80 h-80 bg-tint-purple/50 -z-10" style={{ animationDelay: "2s" }} />
@@ -300,20 +300,20 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
         {"const win = you.build()"}
       </span>
 
-      <div className="max-w-2xl mx-auto flex flex-col items-center gap-5">
+      <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
         <Link href="/">
-          <Logo width={210} />
+          <Logo width={150} />
         </Link>
         <span className="font-mono text-xs text-brand-pink-deep rotate-1">&lt;hackathon/&gt;</span>
-        <h1 className="w-full max-w-[600px] mx-auto">
+        <h1 className="w-full max-w-[420px] mx-auto">
           <HackathonLogo priority className="block w-full" />
           <span className="sr-only">האקתון AI קוד פתוח 2026 - לפצח את קוד הכניסה</span>
         </h1>
         {variant === "partners" ? (
           <p className="t-body-lg text-ink-700 max-w-lg">
-            <span className="block font-bold text-ink-900">יש אצלכם תהליך ידני שמחכה לאוטומציה? בעיה מהשטח שאף ספרינט לא מגיע אליה?</span>
-            <span className="block mt-1">עשרות מפתחות AI מוכשרות בונות לכם פתרון עובד - מוכן להצגה.</span>
-            <span className="block mt-1 font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, מגייסים או כנותני אתגר</span>
+            <span className="block font-bold text-ink-900">שלושה אתגרים אמיתיים מהתעשייה כבר בדרך לבמה, ועשרות מפתחות AI עובדות עליהם.</span>
+            <span className="block mt-1">בואו להיות שותפים למהלך - בשת״פ, בחסות, בגיוס -</span>
+            <span className="block mt-1 font-bold text-ink-900">ולהגיע לראות את הפתרונות בערב הגמר 🏆</span>
           </p>
         ) : (
           <p className="t-body-lg text-ink-700 max-w-lg">
@@ -326,7 +326,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
           {variant === "partners" ? (
             <>
               <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
-                אתגר אמיתי מהשטח שלכם
+                שת״פ עם קהילת קוד פתוח
               </span>
               <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
                 עשרות מפתחות AI

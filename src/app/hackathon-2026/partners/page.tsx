@@ -18,8 +18,8 @@ import {
 } from "../shared";
 
 export const metadata: Metadata = {
-  title: "האקתון AI קוד פתוח 2026 - לשותפים ולספונסרים",
-  description: "אתגר אמיתי שלכם, עשרות מפתחות AI, ופתרונות עובדים - בואו להיות שותפים.",
+  title: "האקתון AI קוד פתוח 2026 - לשותפים, לספונסרים ולאורחים",
+  description: "שלושה אתגרים אמיתיים כבר בדרך לבמה. בואו להיות שותפים למהלך - ולהגיע לראות את הפתרונות בערב הגמר.",
 };
 
 // The value story, told as the same zigzag doodle path the main page uses
@@ -42,14 +42,14 @@ const VALUE_PATH = [
   },
   {
     title: "וכאן אתם נכנסים לתמונה",
-    body: "אתגר אמיתי מהשטח שלכם, חסות לאירוע או ליווי מקצועי - לכל ארגון יש דרך משלו להיות שותף למהלך.",
+    body: "שת״פ עם הקהילה, חסות לערב הגמר, גיוס מתוך המשתתפות או ליווי מקצועי של צוות - לכל ארגון יש דרך משלו להיות שותף למהלך.",
     side: "self-start",
     tilt: "rotate-1",
     look: "bg-tint-purple/40 border-ink-900/10 shadow-[5px_6px_0_0_#DDC9EC]",
   },
   {
-    title: "ערב הגמר: הפתרונות על הבמה",
-    body: "יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים. אתם רואים פתרונות עובדים ופוגשים את המפתחות שבנו אותם - ומי שגם מגייס, פוגש יכולות מוכחות במקום קורות חיים.",
+    title: "ערב הגמר: בואו לראות",
+    body: "יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים. הפתרונות עולים לבמה, ואתם פוגשים את המפתחות שבנו אותם - ומי שגם מגייס, פוגש יכולות מוכחות במקום קורות חיים.",
     side: "self-end",
     tilt: "-rotate-1",
     look: "bg-tint-mint/40 border-ink-900/10 shadow-[5px_6px_0_0_#CFE6D8]",
@@ -58,7 +58,7 @@ const VALUE_PATH = [
 
 const VALUE_CARDS = [
   { title: "שותפות עם משמעות", body: "השותפות שלכם היא תרומה אמיתית לפתרון משבר הג׳וניורים - שער כניסה להייטק לנשים מוכשרות, וסיפור השפעה שהשם שלכם חתום עליו.", tilt: "-rotate-2", look: "bg-tint-purple/40 shadow-[4px_5px_0_0_#DDC9EC]" },
-  { title: "עשרות זוויות על בעיה אחת", body: "אותו אתגר, פתרונות שונים - מגוון גישות הנדסיות שקשה להשיג בכל דרך אחרת.", tilt: "rotate-1", look: "bg-tint-warm/50 shadow-[4px_5px_0_0_#EBD9AE]" },
+  { title: "להיות בחדר כשזה קורה", body: "ערב הגמר הוא המקום לפגוש את הקהילה, את השותפים ואת הפתרונות - לפני שהם מגיעים לשוק.", tilt: "rotate-1", look: "bg-tint-warm/50 shadow-[4px_5px_0_0_#EBD9AE]" },
   { title: "פגישה עם הטאלנט הבא", body: "מי שמגייס פוגש את המפתחות החזקות לפני כולם - דרך פתרונות עובדים, לא קורות חיים.", tilt: "-rotate-1", look: "bg-tint-pink/40 shadow-[4px_5px_0_0_#F3C6DD]" },
 ];
 
@@ -124,7 +124,7 @@ export default function HackathonPartnersPage() {
             className="font-mono text-[15.5px] text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-4 py-2.5 mt-8 w-fit mx-auto rotate-1"
             style={{ borderRadius: "14px 18px 14px 20px" }}
           >
-            {"// bring(realChallenge) => meet(provenTalent)"}
+            {"// partner(community) => meet(provenTalent)"}
           </p>
 
           {/* the simple math - same plus-doodle as "מה בונים?" on the main page */}
@@ -143,8 +143,8 @@ export default function HackathonPartnersPage() {
                 className="flex-1 max-w-xs mx-auto sm:mx-0 bg-tint-purple/50 border-2 border-brand-purple/40 p-5 text-center -rotate-2 hover:rotate-0 transition-transform shadow-[6px_7px_0_0_#DDC9EC]"
                 style={{ borderRadius: "30px 22px 34px 24px" }}
               >
-                <h3 className="font-display font-black text-[17px] mt-2">אתגר אמיתי שלכם</h3>
-                <p className="t-body text-ink-700 mt-1">בעיה מהשטח - מסמכים, דאטה, תהליך שמחכה לאוטומציה.</p>
+                <h3 className="font-display font-black text-[17px] mt-2">שלושה אתגרים אמיתיים</h3>
+                <p className="t-body text-ink-700 mt-1">מהתעשייה, כבר על השולחן - עם ארגונים שבחרו להיכנס.</p>
               </div>
 
               <div className="flex items-center justify-center shrink-0">
@@ -166,7 +166,7 @@ export default function HackathonPartnersPage() {
             </div>
 
             <p className="text-center font-display font-bold text-[16.5px] text-brand-purple mt-5 rotate-1">
-              = פתרונות עובדים, והטאלנט הבא שלכם <Sparkle className="inline-block w-4 h-4 align-[-2px]" color="#F0B429" />
+              = פתרונות עובדים על הבמה, והטאלנט הבא שלכם <Sparkle className="inline-block w-4 h-4 align-[-2px]" color="#F0B429" />
             </p>
           </div>
         </div>
@@ -207,7 +207,7 @@ export default function HackathonPartnersPage() {
             <Sparkle className="absolute top-8 left-1/4 w-3 h-3" color="#FFFFFF" delay="0.5s" />
                         <div className="font-display font-black text-[22px] mt-1">רוצים להיות שותפים למהלך?</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              שותפות או חסות להאקתון הזה, או אתגר משלכם בהאקתון הבא? נשמח לתפור יחד את מה שנכון לכם
+              שת״פ, חסות לערב הגמר או גיוס - נשמח לתפור יחד את מה שנכון לכם. ואם רק בא לכם לבוא לראות - מקומכם שמור
             </div>
           </div>
 
@@ -221,6 +221,15 @@ export default function HackathonPartnersPage() {
               style={{ borderRadius: "999px" }}
             >
               דברו איתנו על שותפות
+            </a>
+            <a
+              href="https://wa.me/97225800296?text=%D7%A9%D7%9C%D7%95%D7%9D%2C%20%D7%A0%D7%A9%D7%9E%D7%97%20%D7%9C%D7%94%D7%92%D7%99%D7%A2%20%D7%9C%D7%A2%D7%A8%D7%91%20%D7%94%D7%92%D7%9E%D7%A8%20%D7%A9%D7%9C%20%D7%94%D7%90%D7%A7%D7%AA%D7%95%D7%9F%20AI%20%D7%A7%D7%95%D7%93%20%D7%A4%D7%AA%D7%95%D7%97%20%D7%91-28/10%20%D7%91%D7%94%D7%99%D7%9B%D7%9C%20%D7%94%D7%AA%D7%A8%D7%91%D7%95%D7%AA%20%D7%A8%D7%9E%D7%95%D7%AA"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white border-[1.5px] border-brand-purple text-brand-purple px-6 py-2.5 font-display font-bold text-[16px] rotate-1 hover:bg-tint-purple transition-colors"
+              style={{ borderRadius: "999px" }}
+            >
+              רוצים להגיע לערב הגמר? כתבו לנו 🎟️
             </a>
             <p className="font-mono text-[14px] text-ink-500 flex items-center justify-center gap-1.5" dir="ltr">
               <a href={WA_LINK} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 hover:text-brand-purple">
