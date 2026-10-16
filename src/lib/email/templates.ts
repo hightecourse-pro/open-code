@@ -1172,7 +1172,7 @@ export function hackathonPairInviteEmail(inviteeFirstName: string | undefined, i
       ],
       ctaText: "לאישור ההזמנה",
       ctaUrl: `${SITE}/hackathon`,
-      footnote: "ההאקתון למנויות הקהילה. ערב הגמר: יום רביעי 28/10.",
+      footnote: "ההאקתון למנויות הקהילה. ערב הגמר: יום רביעי 28/10, היכל התרבות רמות, ירושלים.",
     }),
   };
 }

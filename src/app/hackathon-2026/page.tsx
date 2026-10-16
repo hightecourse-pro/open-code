@@ -238,6 +238,7 @@ export default function Hackathon2026Page() {
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
               יום רביעי | 28/10 | י״ז חשוון
             </div>
+            <div className="font-display font-bold text-[16px] mt-0.5 opacity-95">📍 היכל התרבות רמות, ירושלים</div>
             <div className="font-display font-bold text-[15px] mt-0.5 opacity-90">
               הקהילה חוגגת, והזוכות עולות לבמה 🏆
             </div>

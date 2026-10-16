@@ -85,7 +85,7 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
           </span>
         ))}
         <span className="ms-auto inline-flex items-center gap-1.5 bg-tint-purple text-brand-purple px-3 py-1 rounded-full text-[12.5px] font-bold">
-          <CalendarDays size={13} /> גמר · יום רביעי 28/10 · י״ז חשוון
+          <CalendarDays size={13} /> גמר · יום רביעי 28/10 · י״ז חשוון · היכל התרבות רמות, ירושלים
         </span>
       </section>
 

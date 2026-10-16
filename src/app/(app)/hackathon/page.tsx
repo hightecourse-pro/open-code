@@ -50,7 +50,7 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
         <div className="font-display font-black text-[19px] leading-snug">את בוחרת אתגר. בונה מנוע AI וממשק. עולה על הבמה 🏆</div>
         <div className="flex items-center gap-2 flex-wrap ms-auto">
           <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
-            <CalendarDays size={14} /> גמר · יום רביעי 28/10 · י״ז חשוון
+            <CalendarDays size={14} /> גמר · יום רביעי 28/10 · י״ז חשוון · היכל התרבות רמות, ירושלים
           </span>
           <a
             href="/hackathon-2026"

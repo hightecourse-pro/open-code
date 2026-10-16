@@ -156,6 +156,7 @@ export type Challenge = {
 
 export { HACKATHON_UPDATED } from "./version";
 export const HACKATHON_UPDATES: { date: string; text: string }[] = [
+  { date: "16.10", text: "ערב הגמר יתקיים בהיכל התרבות רמות, ירושלים - יום רביעי 28/10, י״ז חשוון. שריינו!" },
   { date: "14.10", text: "שטראוס: קובץ הכללים (strauss-rules.json), האקסל וההנחיות עודכנו - חמישה כללי חישוב שהיו משתמעים כתובים עכשיו במפורש (זיכוי פנסיה, בסיס ההפרשות, השתתפות ברכב, מחיר המסלול המשפחתי, עיגול). המספרים לא השתנו - הורידו מחדש מדף האתגר." },
   { date: "12.10", text: "ארגז הכלים החינמי: מסמך PDF עם כל הכלים שנותנים מפתח API חינמי, תקופות ניסיון, מה מתאים לאיזה אתגר, המגבלות והמחירים." },
   { date: "9.10", text: "אתגר חדש: שטראוס - איג׳נט לבחירת רכב חברה ולהשוואת שכר, עם האפיון ומאגר שווי השימוש להורדה." },
@@ -331,7 +332,7 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
                 עשרות מפתחות AI
               </span>
               <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-                ערב גמר יום רביעי 28/10 | י״ז חשוון
+                ערב גמר יום רביעי 28/10 | י״ז חשוון · היכל התרבות רמות, ירושלים
               </span>
             </>
           ) : (
