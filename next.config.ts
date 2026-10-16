@@ -47,6 +47,17 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "12mb",
     },
+    // Instant re-visits (the owner, 16/10): a page she already opened is
+    // replayed from the client router cache for 5 minutes, and the route
+    // template refreshes it in the background with a ״מתעדכן״ pill. Dynamic
+    // routes are also prefetched on hover, so the first click is instant too.
+    staleTimes: { dynamic: 300, static: 300 },
+    dynamicOnHover: true,
+  },
+  env: {
+    // The route snapshots in localStorage are only reused within the build
+    // that wrote them (class names and markup can change between deploys).
+    NEXT_PUBLIC_BUILD_ID: process.env.VERCEL_GIT_COMMIT_SHA ?? `dev-${Date.now()}`,
   },
 };
 

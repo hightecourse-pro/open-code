@@ -1,3 +1,6 @@
+"use client";
+
+import { SnapshotLoading } from "@/components/patterns/stale-while-revalidate";
 /**
  * Instant feedback for every in-app navigation. Without a loading boundary a
  * click on the menu paints NOTHING until the server finishes rendering the
@@ -7,9 +10,13 @@
  */
 export default function Loading() {
   return (
-    <div className="flex flex-col items-center justify-center gap-3 py-28" role="status" aria-label="טוען">
-      <span className="w-9 h-9 rounded-full border-[3px] border-tint-purple border-t-brand-purple animate-spin" />
-      <span className="text-[13px] text-ink-400 font-semibold">רק רגע…</span>
-    </div>
+    <SnapshotLoading
+      fallback={
+        <div className="flex flex-col items-center justify-center gap-3 py-28" role="status" aria-label="טוען">
+          <span className="w-9 h-9 rounded-full border-[3px] border-tint-purple border-t-brand-purple animate-spin" />
+          <span className="text-[13px] text-ink-400 font-semibold">רק רגע…</span>
+        </div>
+      }
+    />
   );
 }
