@@ -6,6 +6,8 @@ import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { loadMaterials, registrableChallenges } from "@/lib/hackathon";
 import { RegistrationsTable, type RegistrationRow } from "./registrations-table";
 import { MaterialsManager } from "./materials-manager";
+import { SubmissionsTable } from "./submissions-table";
+import { loadAdminSubmissions } from "@/lib/hackathon-submission";
 
 export const metadata: Metadata = { title: "האקתון" };
 export const dynamic = "force-dynamic";
@@ -18,13 +20,14 @@ export const dynamic = "force-dynamic";
 export default async function AdminHackathonPage() {
   await requireRole("admin");
   const admin = createAdminClient();
-  const [{ data: regs }, materials] = await Promise.all([
+  const [{ data: regs }, materials, submissions] = await Promise.all([
     admin
       .from("hackathon_registrations")
       .select("profile_id, challenge_key, partner_profile_id, partner_confirmed_at, created_at, updated_at")
       .order("updated_at", { ascending: false })
       .limit(5000),
     loadMaterials(),
+    loadAdminSubmissions(),
   ]);
   const ids = [...new Set((regs ?? []).flatMap((r) => [r.profile_id, r.partner_profile_id].filter((x): x is string => !!x)))];
   const nameOf = new Map<string, { name: string; status: string }>();
@@ -58,6 +61,7 @@ export default async function AdminHackathonPage() {
         </p>
       </div>
       <RegistrationsTable rows={rows} challenges={challenges} />
+      <SubmissionsTable rows={submissions} />
       <MaterialsManager challenges={challenges} materials={materials} />
     </div>
   );

@@ -890,6 +890,25 @@ export function mentorsMailEmail(name: string | undefined, subject: string, body
   };
 }
 
+// ------------------------------------------------------- hackathon submission
+
+/** The whole team hears that the submission landed (the owner, 16/10). */
+export function hackathonSubmissionReceivedEmail(name: string | undefined, challengeShort: string, teamNames: string, url: string): BuiltEmail {
+  return {
+    subject: "ההגשה שלכן להאקתון נקלטה 🏆",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}ההגשה על הבמה`,
+      lines: [
+        `קיבלנו את התוצרים של <b>${escapeHtml(teamNames)}</b> לאתגר <b>${escapeHtml(challengeShort)}</b>: המוצר, הקוד, הסרטון והתשובות.`,
+        "אפשר לעדכן את ההגשה עד ערב הגמר - יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים. נתראה שם 💜",
+      ],
+      ctaText: "להגשה שלכן",
+      ctaUrl: url,
+      footnote: "האקתון AI קוד פתוח 2026",
+    }),
+  };
+}
+
 // ------------------------------------------------------------ mentors' arena
 
 /** The mentor a question was addressed to hears right away (the owner, 15/10). */

@@ -2009,6 +2009,18 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["arena_answers"]["Insert"]>;
         Relationships: [];
       };
+      hackathon_submissions: {
+        Row: { id: string; team_key: string; challenge_key: string; product_url: string | null; repo_url: string | null; architecture: string | null; video_url: string | null; video_path: string | null; video_size: number | null; ai_dev_tools: string | null; ai_models: string | null; created_by: string | null; submitted_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; team_key: string; challenge_key: string; product_url?: string | null; repo_url?: string | null; architecture?: string | null; video_url?: string | null; video_path?: string | null; video_size?: number | null; ai_dev_tools?: string | null; ai_models?: string | null; created_by?: string | null; submitted_at?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_submissions"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_reflections: {
+        Row: { profile_id: string; team_key: string; contributed: string | null; learned: string | null; enjoyed: string | null; created_at: string; updated_at: string };
+        Insert: { profile_id: string; team_key: string; contributed?: string | null; learned?: string | null; enjoyed?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_reflections"]["Insert"]>;
+        Relationships: [];
+      };
       hackathon_materials: {
         Row: { id: string; challenge_key: string; title: string; file_path: string; size_bytes: number | null; created_at: string };
         Insert: { id?: string; challenge_key: string; title: string; file_path: string; size_bytes?: number | null; created_at?: string };

@@ -116,9 +116,14 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
                 : ` - ביקשת להגיש כזוג עם ${registration.partner.name}, ממתינות לאישורה`
               : " (לבד)"}
           </span>
-          <Link href={`/hackathon/${myChallenge.key}`} className="ms-auto text-[13px] font-bold text-brand-purple hover:underline">
-            לדף האתגר והחומרים ←
-          </Link>
+          <span className="ms-auto flex items-center gap-4 flex-wrap">
+            <Link href={`/hackathon/${myChallenge.key}`} className="text-[13px] font-bold text-brand-purple hover:underline">
+              לדף האתגר והחומרים ←
+            </Link>
+            <Link href="/hackathon/submit" className="inline-flex items-center rounded-full bg-brand-gradient text-white text-[13px] font-bold px-3.5 py-1.5 hover:opacity-95">
+              להגשת התוצרים 🚀
+            </Link>
+          </span>
         </section>
       )}
 

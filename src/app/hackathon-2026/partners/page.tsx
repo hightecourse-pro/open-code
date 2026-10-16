@@ -19,7 +19,7 @@ import {
 
 export const metadata: Metadata = {
   title: "האקתון AI קוד פתוח 2026 - לשותפים, לספונסרים ולאורחים",
-  description: "שלושה אתגרים אמיתיים כבר בדרך לבמה. בואו להיות שותפים למהלך - ולהגיע לראות את הפתרונות בערב הגמר.",
+  description: "שלושה אתגרים אמיתיים כבר בדרך לבמה. בואו להיות שותפים למהלך - ולהגיע לראות את הדור הטכנולוגי הבא בערב הגמר.",
 };
 
 // The value story, told as the same zigzag doodle path the main page uses
@@ -42,14 +42,14 @@ const VALUE_PATH = [
   },
   {
     title: "וכאן אתם נכנסים לתמונה",
-    body: "שת״פ עם הקהילה, חסות לערב הגמר, גיוס מתוך המשתתפות או ליווי מקצועי של צוות - לכל ארגון יש דרך משלו להיות שותף למהלך.",
+    body: "שת״פ עם הקהילה, חסות לערב הגמר או ליווי מקצועי של צוות - לכל ארגון יש דרך משלו להיות שותף למהלך.",
     side: "self-start",
     tilt: "rotate-1",
     look: "bg-tint-purple/40 border-ink-900/10 shadow-[5px_6px_0_0_#DDC9EC]",
   },
   {
     title: "ערב הגמר: בואו לראות",
-    body: "יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים. הפתרונות עולים לבמה, ואתם פוגשים את המפתחות שבנו אותם - ומי שגם מגייס, פוגש יכולות מוכחות במקום קורות חיים.",
+    body: "יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים. הפתרונות עולים לבמה, ואתם פוגשים את הדור הטכנולוגי הבא - נשים שבונות עם AI, לא רק מדברות עליו.",
     side: "self-end",
     tilt: "-rotate-1",
     look: "bg-tint-mint/40 border-ink-900/10 shadow-[5px_6px_0_0_#CFE6D8]",
@@ -59,7 +59,7 @@ const VALUE_PATH = [
 const VALUE_CARDS = [
   { title: "שותפות עם משמעות", body: "השותפות שלכם היא תרומה אמיתית לפתרון משבר הג׳וניורים - שער כניסה להייטק לנשים מוכשרות, וסיפור השפעה שהשם שלכם חתום עליו.", tilt: "-rotate-2", look: "bg-tint-purple/40 shadow-[4px_5px_0_0_#DDC9EC]" },
   { title: "להיות בחדר כשזה קורה", body: "ערב הגמר הוא המקום לפגוש את הקהילה, את השותפים ואת הפתרונות - לפני שהם מגיעים לשוק.", tilt: "rotate-1", look: "bg-tint-warm/50 shadow-[4px_5px_0_0_#EBD9AE]" },
-  { title: "פגישה עם הטאלנט הבא", body: "מי שמגייס פוגש את המפתחות החזקות לפני כולם - דרך פתרונות עובדים, לא קורות חיים.", tilt: "-rotate-1", look: "bg-tint-pink/40 shadow-[4px_5px_0_0_#F3C6DD]" },
+  { title: "לראות את הדור הטכנולוגי הבא", body: "מפתחות שבונות מנועי AI לבעיות אמיתיות - בפעולה, על הבמה, לפני כולם.", tilt: "-rotate-1", look: "bg-tint-pink/40 shadow-[4px_5px_0_0_#F3C6DD]" },
 ];
 
 const WA_LINK =
@@ -124,7 +124,7 @@ export default function HackathonPartnersPage() {
             className="font-mono text-[15.5px] text-ink-500 bg-ink-50 border border-dashed border-ink-300 px-4 py-2.5 mt-8 w-fit mx-auto rotate-1"
             style={{ borderRadius: "14px 18px 14px 20px" }}
           >
-            {"// partner(community) => meet(provenTalent)"}
+            {"// partner(community) => meet(nextGen)"}
           </p>
 
           {/* the simple math - same plus-doodle as "מה בונים?" on the main page */}
@@ -166,7 +166,7 @@ export default function HackathonPartnersPage() {
             </div>
 
             <p className="text-center font-display font-bold text-[16.5px] text-brand-purple mt-5 rotate-1">
-              = פתרונות עובדים על הבמה, והטאלנט הבא שלכם <Sparkle className="inline-block w-4 h-4 align-[-2px]" color="#F0B429" />
+              = ערב אחד שבו רואים את הדור הטכנולוגי הבא בפעולה <Sparkle className="inline-block w-4 h-4 align-[-2px]" color="#F0B429" />
             </p>
           </div>
         </div>
@@ -207,7 +207,7 @@ export default function HackathonPartnersPage() {
             <Sparkle className="absolute top-8 left-1/4 w-3 h-3" color="#FFFFFF" delay="0.5s" />
                         <div className="font-display font-black text-[22px] mt-1">רוצים להיות שותפים למהלך?</div>
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
-              שת״פ, חסות לערב הגמר או גיוס - נשמח לתפור יחד את מה שנכון לכם. ואם רק בא לכם לבוא לראות - מקומכם שמור
+              שת״פ, חסות לערב הגמר או ליווי - נשמח לתפור יחד את מה שנכון לכם. ואם רק בא לכם לבוא לראות - מקומכם שמור
             </div>
           </div>
 

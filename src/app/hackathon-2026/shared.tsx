@@ -156,6 +156,7 @@ export type Challenge = {
 
 export { HACKATHON_UPDATED } from "./version";
 export const HACKATHON_UPDATES: { date: string; text: string }[] = [
+  { date: "16.10", text: "דף הגשת התוצרים נפתח: קישור למוצר, גיט ציבורי, ארכיטקטורה, סרטון של עד דקה, הכלים והמודלים, ושלוש שאלות אישיות - בכפתור ״להגשת התוצרים״ בכרטיס ההרשמה." },
   { date: "16.10", text: "ערב הגמר יתקיים בהיכל התרבות רמות, ירושלים - יום רביעי 28/10, י״ז חשוון. שריינו!" },
   { date: "14.10", text: "שטראוס: קובץ הכללים (strauss-rules.json), האקסל וההנחיות עודכנו - חמישה כללי חישוב שהיו משתמעים כתובים עכשיו במפורש (זיכוי פנסיה, בסיס ההפרשות, השתתפות ברכב, מחיר המסלול המשפחתי, עיגול). המספרים לא השתנו - הורידו מחדש מדף האתגר." },
   { date: "12.10", text: "ארגז הכלים החינמי: מסמך PDF עם כל הכלים שנותנים מפתח API חינמי, תקופות ניסיון, מה מתאים לאיזה אתגר, המגבלות והמחירים." },
@@ -312,8 +313,8 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
         {variant === "partners" ? (
           <p className="t-body-lg text-ink-700 max-w-lg">
             <span className="block font-bold text-ink-900">שלושה אתגרים אמיתיים מהתעשייה כבר בדרך לבמה, ועשרות מפתחות AI עובדות עליהם.</span>
-            <span className="block mt-1">בואו להיות שותפים למהלך - בשת״פ, בחסות, בגיוס -</span>
-            <span className="block mt-1 font-bold text-ink-900">ולהגיע לראות את הפתרונות בערב הגמר 🏆</span>
+            <span className="block mt-1">בואו להיות שותפים למהלך - בשת״פ, בחסות, בליווי -</span>
+            <span className="block mt-1 font-bold text-ink-900">ולהגיע לראות את הדור הטכנולוגי הבא על הבמה 🏆</span>
           </p>
         ) : (
           <p className="t-body-lg text-ink-700 max-w-lg">
