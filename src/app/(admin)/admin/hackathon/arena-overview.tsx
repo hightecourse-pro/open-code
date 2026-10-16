@@ -35,7 +35,7 @@ export function ArenaOverview({ data }: { data: ArenaOverviewData }) {
         <Stat label="נענו" value={data.answered} />
         <Stat label="נסגרו" value={data.closed} />
         <Stat label="״עזר לי״" value={data.helpfulTotal} tone="mint" />
-        <Stat label="זמן תגובה חציוני" value={data.medianResponseHours === null ? "-" : `${data.medianResponseHours} ש׳`} />
+        <Stat label="זמן תגובה חציוני" value={data.medianResponseHours === null ? "-" : data.medianResponseHours < 1 ? "פחות משעה" : `${data.medianResponseHours} ש׳`} />
         <Stat label="כאן עכשיו" value={`${data.presentNow} / ${data.mentorsTotal}`} tone={data.presentNow > 0 ? "mint" : "gray"} />
       </dl>
       <div className="text-[12.5px] text-ink-700">

@@ -101,7 +101,7 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
             <div className="flex-1 min-w-[220px]">
               <div className="font-mono text-[11.5px] text-white/80">&lt;הנקודות שלך/&gt;</div>
               <div className="font-display text-[26px] md:text-[30px] font-black leading-tight mt-1">
-                תשובה ראשונה = +{ARENA_ANSWER_POINTS}{" "}נק׳ · ״עזר לי״ = +{ARENA_HELPFUL_POINTS} 🏆
+                תשובה ראשונה = +{ARENA_ANSWER_POINTS}{" "}נק׳ · ״עזר לי״ = +{ARENA_HELPFUL_POINTS} 🏆
               </div>
               <p className="text-[13.5px] text-white/90 mt-1.5">
                 נספרת פעם אחת לכל שאלה, ונכנסת לניקוד המנטוריות שלך שגלוי לכל הקהילה. הבונוס מגיע כשהשואלת מסמנת שהתשובה עזרה.
