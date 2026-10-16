@@ -431,7 +431,7 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
                         <span className="font-display font-black text-[21px] leading-tight">{c.short}</span>
                         {c.org && <span className="text-[15px] text-ink-500 leading-snug">{c.org}</span>}
                       </span>
-                      <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white border-[1.5px] border-brand-pink/50 text-brand-pink-deep font-bold text-[14px] px-3.5 py-1 group-open:bg-brand-gradient group-open:text-white group-open:border-transparent transition-colors">
+                      <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white border-[1.5px] border-brand-pink/50 text-brand-pink-deep font-bold text-[14px] px-3.5 py-1 group-open:bg-brand-purple group-open:text-white group-open:border-brand-purple transition-colors">
                         <span className="group-open:hidden">לקריאת האתגר</span>
                         <span className="hidden group-open:inline">סגירה</span>
                         <span className="font-mono group-open:rotate-90 transition-transform">&gt;</span>
