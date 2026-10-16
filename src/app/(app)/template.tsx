@@ -1,15 +1,15 @@
-import { randomUUID } from "node:crypto";
 import { RevalidateStale, SnapshotCapture } from "@/components/patterns/stale-while-revalidate";
 
 /**
- * Re-rendered on every navigation (unlike the layout): mints the nonce that
- * tells the client whether this render is fresh or replayed from the router
- * cache, and wraps the route so its settled render can be snapshotted.
+ * Re-created on every navigation (unlike the layout), which is exactly what
+ * the stale-while-revalidate pieces need: a mount per navigation to check
+ * whether this render was replayed from the router cache, and a wrapper
+ * around the route whose settled render can be snapshotted.
  */
 export default function Template({ children }: { children: React.ReactNode }) {
   return (
     <SnapshotCapture>
-      <RevalidateStale nonce={randomUUID()} />
+      <RevalidateStale />
       {children}
     </SnapshotCapture>
   );
