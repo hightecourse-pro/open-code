@@ -7,6 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { requireRole } from "@/lib/auth";
 import { Avatar, Badge, Button } from "@/components/ui";
+import { PresenceAvatar, PresenceText } from "@/components/patterns/presence-dot";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { isRichHtml } from "@/lib/rich-text-lite";
@@ -486,14 +487,19 @@ export default async function AdminMemberProfilePage({
 
       {/* Header card */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex items-start gap-4 flex-wrap">
-        <Avatar
-          size="xl"
-          tone={profile.role === "mentor" ? "gold" : "pink"}
-          crown={profile.role === "mentor"}
-          initials={profile.avatar_initials || profile.full_name.slice(0, 1) || "ק"}
-        />
+        <PresenceAvatar lastSeen={profile.last_seen_at} size="xl">
+          <Avatar
+            size="xl"
+            tone={profile.role === "mentor" ? "gold" : "pink"}
+            crown={profile.role === "mentor"}
+            initials={profile.avatar_initials || profile.full_name.slice(0, 1) || "ק"}
+          />
+        </PresenceAvatar>
         <div className="flex-1 min-w-[200px]">
           <h1 className="font-display text-[24px] font-black text-ink-1000">{nameWithPrevSurname(profile.full_name, prevSurname)}</h1>
+          <div className="text-[12.5px] mt-0.5">
+            <PresenceText lastSeen={profile.last_seen_at} />
+          </div>
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <Link
               href={`/admin/members/${profile.id}/profile`} target="_blank" rel="noopener"

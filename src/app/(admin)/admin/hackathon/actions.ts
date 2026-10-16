@@ -4,6 +4,10 @@ import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { challengeByKey } from "@/lib/hackathon";
+import { sendResendEmail } from "@/lib/email/resend";
+import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
+import { getSiteUrl } from "@/lib/site";
+import { runArenaDigest } from "@/lib/arena-digest";
 
 const BUCKET = "hackathon";
 
@@ -72,4 +76,39 @@ export async function adminRemoveHackathonRegistration(profileId: string): Promi
   revalidatePath("/admin/hackathon");
   revalidatePath("/hackathon");
   return {};
+}
+
+/**
+ * Appoint a mentor as a hackathon judge, or remove her (the owner, 16/10:
+ * "מסך השופטות יופיע גם למשתתפות מנטוריות שאחליט לתת להן לעזור"). An
+ * appointment mails her the link; her scores stay when she is removed.
+ */
+export async function setHackathonJudge(profileId: string, on: boolean): Promise<{ error?: string }> {
+  const me = await requireRole("admin");
+  const admin = createAdminClient();
+  const { data: p } = await admin.from("profiles").select("id, role, status, first_name, full_name").eq("id", profileId).maybeSingle();
+  if (!p || p.role !== "mentor" || p.status !== "active") return { error: "רק מנטורית פעילה יכולה לשפוט." };
+  if (!on) {
+    await admin.from("hackathon_judges").delete().eq("profile_id", profileId);
+  } else {
+    const { error } = await admin.from("hackathon_judges").upsert({ profile_id: profileId, added_by: me.id }, { onConflict: "profile_id" });
+    if (error) return { error: "המינוי נכשל. נסי שוב." };
+    const { data: rows } = await admin.rpc("member_emails", { p_ids: [profileId] });
+    const email = ((rows ?? []) as { id: string; email: string | null }[])[0]?.email;
+    if (email) {
+      const mail = hackathonJudgeAppointedEmail(p.first_name ?? p.full_name?.split(" ")[0], `${getSiteUrl()}/judge`);
+      await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+    }
+  }
+  revalidatePath("/admin/hackathon");
+  revalidatePath("/judge");
+  return {};
+}
+
+/** The team pushes the open arena questions to every available mentor right now (16/10). */
+export async function pushArenaToMentors(): Promise<{ error?: string; info?: string }> {
+  await requireRole("admin");
+  const r = await runArenaDigest({ everyone: true });
+  if (r.open === 0) return { info: "אין שאלות פתוחות לדחוף." };
+  return { info: `נשלח ל-${r.sent} מנטוריות${r.skipped ? ` · ${r.skipped} נחסמו (מגן סטייג'ינג)` : ""}${r.failed ? ` · ${r.failed} נכשלו` : ""}` };
 }

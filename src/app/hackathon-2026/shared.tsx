@@ -2,6 +2,7 @@
 // partners page must stay IDENTICAL from the hero through the challenges
 // (the owner, 6/9) - so hero, ticker, challenges, doodles and the animation
 // styles live here and both routes render them from one source.
+import Image from "next/image";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
 
@@ -53,6 +54,33 @@ export function Scribble({ className }: { className?: string }) {
 }
 
 /** CURLY drawn arrow - loops once on its way down. */
+/**
+ * The hackathon logo (the owner, 16/10: "תשלב בהכל את הלוגו… אתה יכול להנפיש
+ * אותו קצת?"): pops in with a little settle, then floats gently, with three
+ * twinkling sparkles. `animate={false}` for small inline uses.
+ */
+export function HackathonLogo({ className = "", priority = false, animate = true }: { className?: string; priority?: boolean; animate?: boolean }) {
+  return (
+    <span className={`relative inline-block ${animate ? "h26-logo-in" : ""} ${className}`}>
+      <Image
+        src="/hackathon-2026/logo-hackathon.png"
+        alt="האקתון AI קוד פתוח 2026 - לפצח את קוד הכניסה"
+        width={1600}
+        height={934}
+        priority={priority}
+        className={`w-full h-auto ${animate ? "h26-float" : ""}`}
+      />
+      {animate && (
+        <>
+          <Sparkle className="absolute -top-2 right-[16%] w-5 h-5" color="#E0418D" />
+          <Sparkle className="absolute top-[34%] -left-3 w-4 h-4" delay="0.9s" />
+          <Sparkle className="absolute -bottom-1 right-[32%] w-3.5 h-3.5" color="#F0B429" delay="1.6s" />
+        </>
+      )}
+    </span>
+  );
+}
+
 export function CurlyArrow({ className, color = "#E0418D" }: { className?: string; color?: string }) {
   return (
     <svg viewBox="0 0 90 110" fill="none" aria-hidden className={className}>
@@ -128,6 +156,8 @@ export type Challenge = {
 
 export { HACKATHON_UPDATED } from "./version";
 export const HACKATHON_UPDATES: { date: string; text: string }[] = [
+  { date: "16.10", text: "דף הגשת התוצרים נפתח: קישור למוצר, גיט ציבורי, ארכיטקטורה, סרטון של עד דקה, הכלים והמודלים, ושלוש שאלות אישיות - בכפתור ״להגשת התוצרים״ בכרטיס ההרשמה." },
+  { date: "16.10", text: "ערב הגמר יתקיים בהיכל התרבות רמות, ירושלים - יום רביעי 28/10, י״ז חשוון. שריינו!" },
   { date: "14.10", text: "שטראוס: קובץ הכללים (strauss-rules.json), האקסל וההנחיות עודכנו - חמישה כללי חישוב שהיו משתמעים כתובים עכשיו במפורש (זיכוי פנסיה, בסיס ההפרשות, השתתפות ברכב, מחיר המסלול המשפחתי, עיגול). המספרים לא השתנו - הורידו מחדש מדף האתגר." },
   { date: "12.10", text: "ארגז הכלים החינמי: מסמך PDF עם כל הכלים שנותנים מפתח API חינמי, תקופות ניסיון, מה מתאים לאיזה אתגר, המגבלות והמחירים." },
   { date: "9.10", text: "אתגר חדש: שטראוס - איג׳נט לבחירת רכב חברה ולהשוואת שכר, עם האפיון ומאגר שווי השימוש להורדה." },
@@ -177,16 +207,6 @@ export const CHALLENGES: Challenge[] = [
     tint: "bg-tint-warm/50",
   },
   {
-    // The fourth slot is open again (the owner, 14/10: Aman is out; the
-    // partners page must show there is room, the community sees "פרטים יבואו").
-    short: "המקום הרביעי פתוח",
-    org: "",
-    emoji: "✨",
-    teaser: "פרטים יבואו - מקום לשותף נוסף",
-    tilt: "md:rotate-1",
-    tint: "bg-tint-purple/40",
-  },
-  {
     key: "strauss",
     short: "שטראוס",
     org: "קבוצת שטראוס",
@@ -228,6 +248,8 @@ export function H26Style() {
       @keyframes h26-spin { from{ rotate:0deg } to{ rotate:360deg } }
       @keyframes h26-marquee { from{ transform:translateX(-50%) } to{ transform:translateX(0) } }
       @keyframes h26-bounce { 0%,100%{ translate:0 0 } 50%{ translate:0 -5px } }
+      @keyframes h26-logo-in { from{ opacity:0; transform:scale(.86) rotate(-5deg) } 62%{ opacity:1; transform:scale(1.035) rotate(1.2deg) } to{ opacity:1; transform:scale(1) rotate(0) } }
+      .h26-logo-in { animation: h26-logo-in 1.05s cubic-bezier(.2,.8,.2,1) both; }
       .h26-twinkle { animation: h26-twinkle 2.6s ease-in-out infinite; }
       .h26-float { animation: h26-float 4.5s ease-in-out infinite; }
       .h26-blob { animation: h26-blob 9s ease-in-out infinite; }
@@ -239,6 +261,7 @@ export function H26Style() {
       .h26-bounce { animation: h26-bounce 2.2s ease-in-out infinite; }
       .h26-ticker-track { animation: h26-marquee 22s linear infinite; }
       @media (prefers-reduced-motion: reduce) {
+        .h26-logo-in { animation: none; opacity: 1; }
         .h26-twinkle,.h26-float,.h26-blob,.h26-wobble,.h26-wiggle,.h26-spin-slow,.h26-spin-rev,.h26-bounce,.h26-draw,.h26-ticker-track{ animation:none !important; }
         .h26-draw{ stroke-dashoffset:0 !important; }
       }
@@ -251,7 +274,7 @@ export function H26Style() {
     are not what a partner cares about). */
 export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
-    <section className="relative px-6 pt-14 pb-16 text-center">
+    <section className="relative px-6 pt-8 pb-10 text-center">
       <div className="bg-brand-glow absolute inset-0 -z-10" />
       <div aria-hidden className="h26-blob absolute -top-16 -left-20 w-72 h-72 bg-tint-pink/60 -z-10" />
       <div aria-hidden className="h26-blob absolute top-40 -right-24 w-80 h-80 bg-tint-purple/50 -z-10" style={{ animationDelay: "2s" }} />
@@ -278,28 +301,20 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
         {"const win = you.build()"}
       </span>
 
-      <div className="max-w-2xl mx-auto flex flex-col items-center gap-5">
+      <div className="max-w-2xl mx-auto flex flex-col items-center gap-3">
         <Link href="/">
-          <Logo width={210} />
+          <Logo width={150} />
         </Link>
         <span className="font-mono text-xs text-brand-pink-deep rotate-1">&lt;hackathon/&gt;</span>
-        <h1 className="font-display text-[42px] sm:text-[56px] font-black leading-[1.02]">
-          האקתון{" "}
-          <span className="relative inline-block">
-            <span className="t-gradient">AI</span>
-            <Squiggle className="absolute -bottom-2 right-0 w-full" />
-          </span>{" "}
-          קוד פתוח
-          <span className="relative block w-fit mx-auto mt-3 text-[30px] sm:text-[36px] text-ink-700 font-black rotate-2">
-            <Scribble className="absolute -inset-x-8 -inset-y-3 w-[calc(100%+64px)] h-[calc(100%+24px)]" />
-            2026
-          </span>
+        <h1 className="w-full max-w-[420px] mx-auto">
+          <HackathonLogo priority className="block w-full" />
+          <span className="sr-only">האקתון AI קוד פתוח 2026 - לפצח את קוד הכניסה</span>
         </h1>
         {variant === "partners" ? (
           <p className="t-body-lg text-ink-700 max-w-lg">
-            <span className="block font-bold text-ink-900">יש אצלכם תהליך ידני שמחכה לאוטומציה? בעיה מהשטח שאף ספרינט לא מגיע אליה?</span>
-            <span className="block mt-1">עשרות מפתחות AI מוכשרות בונות לכם פתרון עובד - מוכן להצגה.</span>
-            <span className="block mt-1 font-bold text-ink-900">בואו להיות חלק מזה - כשותפים, מגייסים או כנותני אתגר</span>
+            <span className="block font-bold text-ink-900">שלושה אתגרים אמיתיים מהתעשייה כבר בדרך לבמה, ועשרות מפתחות AI עובדות עליהם.</span>
+            <span className="block mt-1">בואו להיות שותפים למהלך - בשת״פ, בחסות, בליווי -</span>
+            <span className="block mt-1 font-bold text-ink-900">ולהגיע לראות את הדור הטכנולוגי הבא על הבמה 🏆</span>
           </p>
         ) : (
           <p className="t-body-lg text-ink-700 max-w-lg">
@@ -312,13 +327,13 @@ export function HeroSection({ variant = "juniors" }: { variant?: "juniors" | "pa
           {variant === "partners" ? (
             <>
               <span className="h26-bounce -rotate-2 bg-ink-1000 text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md">
-                אתגר אמיתי מהשטח שלכם
+                שת״פ עם קהילת קוד פתוח
               </span>
               <span className="h26-bounce rotate-1 bg-brand-gradient text-white px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.4s" }}>
                 עשרות מפתחות AI
               </span>
               <span className="h26-bounce -rotate-1 bg-white border-[1.5px] border-brand-purple text-brand-purple px-3.5 py-1.5 rounded-full text-[16px] font-bold shadow-md" style={{ animationDelay: "0.8s" }}>
-                ערב גמר יום רביעי 28/10 | י״ז חשוון
+                ערב גמר יום רביעי 28/10 | י״ז חשוון · היכל התרבות רמות, ירושלים
               </span>
             </>
           ) : (
@@ -358,30 +373,29 @@ export function TickerStrip() {
   );
 }
 
-/** The four challenges, orbiting the core - same design on both pages; the
+/** The challenges, orbiting the core - same design on both pages; the
     partners variant sells the scarcity: only 4 slots, 1 left (5/10). */
 export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors" | "partners" }) {
   return (
     <section className="px-6 pt-10 pb-20 bg-[#FBF7FF] relative">
       <Sparkle className="absolute top-16 left-[10%] w-5 h-5" color="#E0418D" delay="0.6s" />
       <Sparkle className="absolute bottom-24 right-[8%] w-6 h-6" delay="1.4s" />
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="text-center mb-14">
           <span className="font-mono text-xs text-brand-pink-deep">&lt;אתגרים/&gt;</span>
           {variant === "partners" ? (
             <>
               <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
-                רק 4 ארגונים נכנסים להאקתון הזה
+                שלושה ארגונים נכנסים להאקתון הזה
               </h2>
               <p className="t-body text-ink-700 mt-1">
-                <span className="font-bold text-brand-pink-deep">שלושה מקומות נתפסו</span> - שטראוס, הפניקס והמעבדה המרכזית לנגיפים.{" "}
-                <span className="font-bold text-brand-pink-deep">נשאר מקום אחד</span>
+                <span className="font-bold text-brand-pink-deep">שטראוס, הפניקס והמעבדה המרכזית לנגיפים</span> - כל אחד מביא בעיה אמיתית מהשטח.
               </p>
             </>
           ) : (
             <>
               <h2 className="font-display text-[30px] font-black mt-1 -rotate-1">
-                ארבעה מקומות. שלושה אתגרים כבר כאן.
+                שלושה אתגרים. שלוש בעיות אמיתיות מהשטח.
               </h2>
               <p className="t-body text-ink-700 mt-1">
                 כל ארגון מביא בעיה אמיתית מהשטח - לחצי על אתגר כדי לקרוא אותו <span className="h26-wiggle">👇</span>
@@ -391,50 +405,38 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
         </div>
 
         <div className="relative">
-          <div aria-hidden className="hidden md:flex absolute inset-0 items-center justify-center pointer-events-none">
-            <div className="h26-spin-slow absolute w-[380px] h-[380px] rounded-full border-2 border-dashed border-brand-pink/40" />
-            <div className="h26-spin-slow absolute w-[380px] h-[380px]">
-              <span className="absolute -top-1.5 left-1/2 w-3 h-3 rounded-full bg-brand-pink-deep" />
-              <span className="absolute top-1/2 -right-1.5 w-2.5 h-2.5 rounded-full bg-brand-purple" />
-              <span className="absolute -bottom-1 left-1/4 w-2 h-2 rounded-full bg-[#F0B429]" />
-            </div>
-            <div className="h26-spin-rev absolute w-[460px] h-[460px] rounded-full border border-dashed border-brand-purple/25" />
-            <div
-              className="h26-wobble w-28 h-28 bg-brand-gradient text-white flex flex-col items-center justify-center shadow-glow-pink font-display font-black"
-              style={{ borderRadius: "58% 42% 45% 55% / 48% 55% 45% 52%" }}
-            >
-              <span className="text-[22px] leading-none">AI</span>
-              <span className="text-[16px] mt-0.5">2026</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-x-44 md:gap-y-20">
+          {/* three equal "poster" cards in a row (the owner, 16/10: "מסודרים לא יפה") - badge on top, title, org, one button */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7 items-start">
             {CHALLENGES.map((c, i) => (
-              <div key={i} className={`${c.tilt} transition-transform hover:rotate-0 hover:scale-[1.02]`}>
+              <div key={i} className={`${c.tilt} transition-transform hover:rotate-0 hover:-translate-y-1`}>
                 {c.challenge ? (
                   <details
                     className={`group ${c.tint} border-2 border-ink-900/10 shadow-[4px_5px_0_0_#F3C6DD] open:shadow-[6px_7px_0_0_#E0418D] open:border-brand-pink transition-all`}
                     style={{ borderRadius: "22px 26px 20px 28px" }}
                   >
-                    <summary className="list-none cursor-pointer p-5 flex items-center gap-3.5 [&::-webkit-details-marker]:hidden">
+                    <summary className="list-none cursor-pointer px-5 pt-7 pb-6 min-h-[248px] flex flex-col items-center justify-center text-center gap-3 [&::-webkit-details-marker]:hidden">
                       {c.badgeLogo ? (
-                        <span className="w-14 h-14 shrink-0 -rotate-6 rounded-full overflow-hidden bg-white border-2 border-brand-pink/30 shadow-[3px_3px_0_0_#F3C6DD] flex items-center justify-center p-1">
+                        <span className="w-[84px] h-[84px] shrink-0 -rotate-6 group-open:rotate-0 transition-transform rounded-full overflow-hidden bg-white border-2 border-brand-pink/30 shadow-[3px_3px_0_0_#F3C6DD] flex items-center justify-center p-2">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={c.badgeLogo} alt={c.short} className="w-full h-full object-contain" />
                         </span>
                       ) : (
                         <span
-                          className="w-12 h-12 bg-brand-gradient text-white text-[22px] flex items-center justify-center shrink-0 -rotate-6"
+                          className="w-16 h-16 bg-brand-gradient text-white text-[26px] flex items-center justify-center shrink-0 -rotate-6"
                           style={{ borderRadius: "45% 55% 52% 48% / 50% 46% 54% 50%" }}
                         >
                           <span className="h26-wiggle">{c.emoji}</span>
                         </span>
                       )}
-                      <span className="flex-1 min-w-0">
-                        <span className="block font-display font-black text-[20px] leading-tight">{c.short}</span>
-                        {c.org && <span className="block text-[15.5px] text-ink-500 mt-0.5">{c.org}</span>}
+                      <span className="flex flex-col items-center gap-0.5">
+                        <span className="font-display font-black text-[21px] leading-tight">{c.short}</span>
+                        {c.org && <span className="text-[15px] text-ink-500 leading-snug">{c.org}</span>}
                       </span>
-                      <span className="font-mono text-brand-pink-deep text-sm group-open:rotate-90 transition-transform">&gt;</span>
+                      <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white border-[1.5px] border-brand-pink/50 text-brand-pink-deep font-bold text-[14px] px-3.5 py-1 group-open:bg-brand-purple group-open:text-white group-open:border-brand-purple transition-colors">
+                        <span className="group-open:hidden">לקריאת האתגר</span>
+                        <span className="hidden group-open:inline">סגירה</span>
+                        <span className="font-mono group-open:rotate-90 transition-transform">&gt;</span>
+                      </span>
                     </summary>
                     <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
                       <div className="font-mono text-[14.5px] text-brand-pink-deep">{"// האתגר"}</div>

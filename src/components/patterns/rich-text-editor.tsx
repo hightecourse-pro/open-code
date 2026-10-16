@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { Bold, Heading3, Image as ImageIcon, Italic, Link2, List, ListOrdered, Smile, Strikethrough, Video } from "lucide-react";
+import { Bold, Code, Heading3, Image as ImageIcon, Italic, Link2, List, ListOrdered, Smile, Strikethrough, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type ToolAction = "bold" | "italic" | "strike" | "ul" | "ol" | "h3" | "link" | "image" | "video";
+type ToolAction = "bold" | "italic" | "strike" | "ul" | "ol" | "h3" | "link" | "image" | "video" | "code";
 
 /** The quick palette - the emojis the community actually writes with. */
 const EMOJIS = [
@@ -162,7 +162,8 @@ export function RichTextEditor({
     ol: { title: "רשימה ממוספרת", icon: <ListOrdered size={14} /> },
     h3: { title: "כותרת", icon: <Heading3 size={14} /> },
     link: { title: "קישור", icon: <Link2 size={14} /> },
-    image: { title: "תמונה (קישור)", icon: <ImageIcon size={14} /> },
+    image: { title: "תמונה / צילום מסך", icon: <ImageIcon size={14} /> },
+    code: { title: "בלוק קוד", icon: <Code size={14} /> },
     video: { title: "סרטון YouTube", icon: <Video size={14} /> },
   };
 
@@ -179,9 +180,27 @@ export function RichTextEditor({
         window.alert("התמונה גדולה מדי - עד 5MB.");
         return;
       }
+      // Screenshots are embedded as data URIs (nothing to fetch from a host a
+      // filtered connection could block) - so keep them small: downscale to
+      // 1280px and JPEG unless the file is already tiny (the owner, 16/10).
       const reader = new FileReader();
       reader.onload = () => {
-        if (typeof reader.result === "string") exec("insertImage", reader.result);
+        if (typeof reader.result !== "string") return;
+        const raw = reader.result;
+        if (file.size <= 150 * 1024 || file.type === "image/gif") return exec("insertImage", raw);
+        const img = new window.Image();
+        img.onload = () => {
+          const scale = Math.min(1, 1280 / Math.max(img.width, img.height));
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext("2d");
+          if (!ctx) return exec("insertImage", raw);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          exec("insertImage", canvas.toDataURL("image/jpeg", 0.82));
+        };
+        img.onerror = () => exec("insertImage", raw);
+        img.src = raw;
       };
       reader.readAsDataURL(file);
     };
@@ -216,6 +235,7 @@ export function RichTextEditor({
     else if (action === "h3") toggleHeading();
     else if (action === "image") insertImage();
     else if (action === "video") insertVideo();
+    else if (action === "code") exec("formatBlock", "<pre>");
     else insertLink();
   }
 

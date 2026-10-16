@@ -25,6 +25,7 @@ import {
   teamPersonalEmail,
   jobChatNudgeEmail,
   jobCandidatesUpdateEmail,
+  mentorsMailEmail,
   teamRepliedEmail,
   mentorAssignmentInviteEmail,
 } from "@/lib/email/templates";
@@ -2928,6 +2929,79 @@ export async function sendJobCandidatesMail(jobId: string, input: JobCandidatesM
     }
   }
   revalidatePath(`/admin/jobs/${jobId}`);
+  return { total: profiles.length, sent, skipped, failed, names };
+}
+
+export interface MentorsMailInput {
+  /** The mentors the list showed after filtering - re-checked here: active mentors only. */
+  mentorIds: string[];
+  subject: string;
+  body: string;
+  /** A copy in each mentor's chat with the acting admin, so she can answer there. */
+  chatCopy: boolean;
+}
+export type MentorsMailResult = JobCandidatesMailResult;
+
+/**
+ * One email, in the admin's own words, to the mentors she filtered (the
+ * owner, 14/10: "לסנן לפי קריטריונים ולשלוח מייל שאני אנסח לכל המסוננות").
+ * Transactional, one copy per mentor with her first name; whatever ids the
+ * client sends, only active mentors are mailed.
+ */
+export async function sendMentorsMail(input: MentorsMailInput): Promise<MentorsMailResult> {
+  const me = await requireRole("admin");
+  const subject = (input.subject ?? "").trim().slice(0, 200);
+  const body = (input.body ?? "").trim().slice(0, 6000);
+  if (!subject) return { error: "כתבי נושא למייל." };
+  if (!body) return { error: "כתבי את תוכן המייל." };
+  const ids = [...new Set((input.mentorIds ?? []).filter((x) => typeof x === "string" && x))].slice(0, 500);
+  if (ids.length === 0) return { error: "אין מנטוריות ברשימה המסוננת." };
+  const admin = createAdminClient();
+  const { inChunks } = await import("@/lib/chunk");
+  const profiles = await withPrevSurnames(
+    await inChunks<{ id: string; first_name: string | null; full_name: string }>(ids, (chunk) =>
+      admin.from("profiles").select("id, first_name, full_name").in("id", chunk).eq("role", "mentor").eq("status", "active")
+    )
+  );
+  if (profiles.length === 0) return { error: "אף אחת מהרשימה אינה מנטורית פעילה." };
+  const { data: emailRows } = await admin.rpc("member_emails", { p_ids: profiles.map((p) => p.id) });
+  const emailOf = new Map(((emailRows ?? []) as { id: string; email: string | null }[]).map((r) => [r.id, r.email]));
+  const site = getSiteUrl();
+  const now = new Date().toISOString();
+
+  let sent = 0;
+  let skipped = 0;
+  let failed = 0;
+  const names: string[] = [];
+  for (const p of profiles) {
+    let chatUrl: string | null = null;
+    if (input.chatCopy) {
+      const convId = await ensureConversation(admin, me.id, p.id);
+      if (convId) {
+        // email_notified_at: this flow sends its OWN email - the grace cron skips it.
+        await admin.from("messages").insert({ conversation_id: convId, sender_id: me.id, body: `${subject}\n${body}`, email_notified_at: now });
+        await admin.from("conversations").update({ last_message_at: now }).eq("id", convId);
+        chatUrl = `${site}/chat?c=${convId}`;
+      }
+    }
+    const email = emailOf.get(p.id);
+    if (!email) {
+      failed++;
+      continue;
+    }
+    const mail = mentorsMailEmail(p.first_name ?? p.full_name.split(" ")[0], subject, body, chatUrl);
+    const r = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
+    if (r.ok) {
+      sent++;
+      names.push(p.full_name);
+    } else if (r.error === "blocked_by_allowlist") {
+      skipped++;
+    } else {
+      failed++;
+      console.error("[mentors] mail failed:", p.id, r.error);
+    }
+  }
+  revalidatePath("/admin/mentors");
   return { total: profiles.length, sent, skipped, failed, names };
 }
 

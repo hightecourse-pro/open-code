@@ -4,11 +4,13 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronDown, FileText, Gift, Mail, PauseCircle, PlayCircle, Search } from "lucide-react";
 import { Avatar, Badge, Button, Input } from "@/components/ui";
+import { PresenceAvatar } from "@/components/patterns/presence-dot";
 import { cn } from "@/lib/utils";
 import { cancelMentorRole, sendPersonalEmail, setMentorAvailability } from "@/app/(admin)/admin/actions";
 import { addMentorBonus } from "./actions";
 import { HACKATHON_POINTS } from "@/lib/mentor-score";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
+import { MentorsMail } from "./mentors-mail";
 
 export interface MentorHistoryRow {
   id: string;
@@ -34,13 +36,21 @@ export interface MentorRowData {
   id: string;
   full_name: string;
   avatar_initials: string | null;
+  last_seen_at?: string | null;
   specialization: string | null;
   city: string | null;
   created_at: string;
   mentor_available: boolean;
   activeLoad: number;
   cvUrl: string | null;
-  score: { score: number; answers: number; assignments: number; bonus: number };
+  /** "במה תרצי לתרום לקהילה?" - what she can help with (questionnaire, label-resolved). */
+  help: { value: string; label: string }[];
+  techs: { value: string; label: string }[];
+  aiExperience: { value: string; label: string } | null;
+  years: number | null;
+  region: { value: string; label: string } | null;
+  languages: string[];
+  score: { score: number; answers: number; assignments: number; bonus: number; arena: number; helpful: number };
   history: MentorHistoryRow[];
   bonuses: MentorBonusRow[];
   log: MentorLogRow[];
@@ -94,7 +104,9 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
   return (
     <div className="py-2.5 border-b border-ink-100 last:border-b-0">
       <div className="flex items-center gap-3 flex-wrap">
-        <Avatar size="sm" tone="gold" crown initials={m.avatar_initials || m.full_name.slice(0, 1)} />
+        <PresenceAvatar lastSeen={m.last_seen_at}>
+          <Avatar size="sm" tone="gold" crown initials={m.avatar_initials || m.full_name.slice(0, 1)} />
+        </PresenceAvatar>
         <div className="flex-1 min-w-0">
           <Link
             href={`/admin/members/${m.id}`} target="_blank" rel="noopener"
@@ -103,7 +115,7 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
             {m.full_name}
           </Link>
           <div className="text-[11.5px] text-ink-500">
-            ⭐ {m.score.score} נק&#39; - {m.score.answers} תשובות בפורום · {m.score.assignments} ליוויים
+            ⭐ {m.score.score} נק&#39; - {m.score.answers} תשובות בפורום · {m.score.arena} בזירה · {m.score.assignments} ליוויים
             {m.score.bonus !== 0 && <> · {m.score.bonus} בונוס</>}
             <span className="text-ink-300"> · </span>
             הצטרפה <span dir="ltr">{FULL_DATE.format(new Date(m.created_at))}</span>
@@ -114,6 +126,9 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
               </>
             )}
           </div>
+          {m.help.length > 0 && (
+            <div className="text-[11.5px] text-ink-600 mt-0.5">🤝 {m.help.map((h) => h.label).join(" · ")}</div>
+          )}
         </div>
         {m.specialization && <Badge variant="tech">{m.specialization}</Badge>}
         {!m.mentor_available ? (
@@ -363,23 +378,70 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
   );
 }
 
-/** The active-mentors list with search + field filter (the list will grow). */
-export function MentorsList({ mentors }: { mentors: MentorRowData[] }) {
+export interface MentorsCatalogue {
+  help: { value: string; label: string }[];
+  techs: { value: string; label: string }[];
+  ai: { value: string; label: string }[];
+  regions: { value: string; label: string }[];
+  languages: string[];
+}
+
+const YEARS_OPTIONS = [
+  { value: "", label: "כל ותק" },
+  { value: "1", label: "שנה ומעלה" },
+  { value: "3", label: "3 שנים ומעלה" },
+  { value: "5", label: "5 שנים ומעלה" },
+  { value: "10", label: "10 שנים ומעלה" },
+];
+
+const SELECT = "text-[12.5px] border border-ink-300 rounded-md px-2.5 py-1.5 bg-white text-ink-700";
+
+/**
+ * The active-mentors list: search plus criteria that each narrow the list
+ * (the owner, 14/10): what she can help with, techs, AI experience, years,
+ * region, language, availability and load - and one email, in the admin's
+ * words, to everyone still shown.
+ */
+export function MentorsList({ mentors, catalogue }: { mentors: MentorRowData[]; catalogue: MentorsCatalogue }) {
   const [q, setQ] = useState("");
   const [field, setField] = useState("");
+  const [help, setHelp] = useState<string[]>([]);
+  const [techs, setTechs] = useState<string[]>([]);
+  const [ai, setAi] = useState("");
+  const [minYears, setMinYears] = useState("");
+  const [region, setRegion] = useState("");
+  const [language, setLanguage] = useState("");
+  const [onlyAvailable, setOnlyAvailable] = useState(false);
+  const [onlyFree, setOnlyFree] = useState(false);
 
   const fields = useMemo(
     () => [...new Set(mentors.map((m) => m.specialization).filter((s): s is string => !!s))].sort(),
     [mentors]
   );
+  const techLabelOf = useMemo(() => new Map(catalogue.techs.map((t) => [t.value, t.label])), [catalogue.techs]);
   const shown = useMemo(() => {
     const needle = q.trim();
+    const min = minYears ? Number(minYears) : 0;
     return mentors.filter((m) => {
       if (field && m.specialization !== field) return false;
-      if (needle && !`${m.full_name} ${m.specialization ?? ""}`.includes(needle)) return false;
+      if (needle && !`${m.full_name} ${m.specialization ?? ""} ${m.techs.map((t) => t.label).join(" ")}`.includes(needle)) return false;
+      if (help.length && !help.every((h) => m.help.some((x) => x.value === h))) return false;
+      if (techs.length && !techs.every((t) => m.techs.some((x) => x.value === t))) return false;
+      if (ai && m.aiExperience?.value !== ai) return false;
+      if (min && (m.years === null || m.years < min)) return false;
+      if (region && m.region?.value !== region) return false;
+      if (language && !m.languages.includes(language)) return false;
+      if (onlyAvailable && !m.mentor_available) return false;
+      if (onlyFree && m.activeLoad > 0) return false;
       return true;
     });
-  }, [mentors, q, field]);
+  }, [mentors, q, field, help, techs, ai, minYears, region, language, onlyAvailable, onlyFree]);
+  const activeCount =
+    help.length + techs.length + (field ? 1 : 0) + (ai ? 1 : 0) + (minYears ? 1 : 0) + (region ? 1 : 0) + (language ? 1 : 0) + (onlyAvailable ? 1 : 0) + (onlyFree ? 1 : 0);
+  const reset = () => {
+    setField(""); setHelp([]); setTechs([]); setAi(""); setMinYears(""); setRegion(""); setLanguage(""); setOnlyAvailable(false); setOnlyFree(false);
+  };
+  const toggleHelp = (v: string) => setHelp((cur) => (cur.includes(v) ? cur.filter((x) => x !== v) : [...cur, v]));
 
   return (
     <div className="flex flex-col gap-3">
@@ -393,11 +455,7 @@ export function MentorsList({ mentors }: { mentors: MentorRowData[] }) {
             className="w-48 text-[12.5px] border border-ink-300 rounded-md ps-3 pe-8 py-1.5 outline-none focus:border-brand-purple"
           />
         </label>
-        <select
-          value={field}
-          onChange={(e) => setField(e.target.value)}
-          className="text-[12.5px] border border-ink-300 rounded-md px-2.5 py-1.5 bg-white text-ink-700"
-        >
+        <select value={field} onChange={(e) => setField(e.target.value)} className={SELECT} aria-label="תחום">
           <option value="">כל תחום</option>
           {fields.map((f) => (
             <option key={f} value={f}>
@@ -405,10 +463,105 @@ export function MentorsList({ mentors }: { mentors: MentorRowData[] }) {
             </option>
           ))}
         </select>
+        <label className="flex items-center gap-1.5 text-[12.5px] text-ink-700">
+          <input type="checkbox" checked={onlyAvailable} onChange={(e) => setOnlyAvailable(e.target.checked)} /> רק זמינות
+        </label>
+        <label className="flex items-center gap-1.5 text-[12.5px] text-ink-700">
+          <input type="checkbox" checked={onlyFree} onChange={(e) => setOnlyFree(e.target.checked)} /> רק בלי ליווי פעיל
+        </label>
         <span className="text-[12px] text-ink-500 ms-auto">
           {shown.length} מתוך {mentors.length}
+          {activeCount > 0 && (
+            <button type="button" onClick={reset} className="ms-2 text-brand-purple font-semibold hover:underline">
+              ניקוי הסינון
+            </button>
+          )}
         </span>
       </div>
+      <div className="flex items-center gap-1.5 flex-wrap text-[12px]">
+        <span className="font-semibold text-ink-700">יכולה לעזור ב:</span>
+        {catalogue.help.map((h) => {
+          const on = help.includes(h.value);
+          return (
+            <button
+              key={h.value}
+              type="button"
+              onClick={() => toggleHelp(h.value)}
+              aria-pressed={on}
+              className={cn(
+                "rounded-full border px-2.5 py-1 transition-colors",
+                on ? "bg-brand-purple text-white border-brand-purple" : "bg-white border-ink-300 text-ink-700 hover:border-brand-purple"
+              )}
+            >
+              {h.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="flex items-center gap-2 flex-wrap">
+        <select
+          value=""
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v && !techs.includes(v)) setTechs([...techs, v]);
+          }}
+          className={SELECT}
+          aria-label="הוספת טכנולוגיה לסינון"
+        >
+          <option value="">+ טכנולוגיה</option>
+          {catalogue.techs
+            .filter((t) => !techs.includes(t.value))
+            .map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+        </select>
+        {techs.map((t) => (
+          <button
+            key={t}
+            type="button"
+            onClick={() => setTechs(techs.filter((x) => x !== t))}
+            className="rounded-full bg-tint-purple text-brand-purple px-2.5 py-1 text-[12px] font-semibold"
+            aria-label={`הסרת ${techLabelOf.get(t) ?? t} מהסינון`}
+          >
+            {techLabelOf.get(t) ?? t} ✕
+          </button>
+        ))}
+        <select value={ai} onChange={(e) => setAi(e.target.value)} className={SELECT} aria-label="ניסיון AI">
+          <option value="">כל ניסיון AI</option>
+          {catalogue.ai.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select value={minYears} onChange={(e) => setMinYears(e.target.value)} className={SELECT} aria-label="ותק">
+          {YEARS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select value={region} onChange={(e) => setRegion(e.target.value)} className={SELECT} aria-label="אזור">
+          <option value="">כל אזור</option>
+          {catalogue.regions.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <select value={language} onChange={(e) => setLanguage(e.target.value)} className={SELECT} aria-label="שפה">
+          <option value="">כל שפה</option>
+          {catalogue.languages.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
+      </div>
+      <p className="text-[11.5px] text-ink-500">כל קריטריון מצמצם את הרשימה. המייל נשלח למי שנשארה אחרי הסינון.</p>
+      <MentorsMail recipients={shown.map((m) => ({ id: m.id, name: m.full_name }))} />
       <div className="flex flex-col">
         {shown.map((m) => (
           <MentorAdminRow key={m.id} m={m} />

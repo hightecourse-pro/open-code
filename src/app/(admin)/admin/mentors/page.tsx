@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/ui";
-import { ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
+import { ANSWER_POINTS, ARENA_ANSWER_POINTS, ASSIGNMENT_POINTS, mentorScores } from "@/lib/mentor-score";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { inChunks } from "@/lib/chunk";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { mentorReasonLabel } from "@/lib/mentor-requests";
 import { MentorsList, type MentorRowData } from "./mentor-admin-row";
@@ -29,7 +30,7 @@ export default async function AdminMentorsPage() {
   const [{ data: mentorsRaw }, { data: candidates }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, avatar_initials, specialization, created_at, mentor_available")
+      .select("id, full_name, avatar_initials, specialization, created_at, mentor_available, last_seen_at")
       .eq("role", "mentor")
       .eq("status", "active")
       .order("full_name"),
@@ -131,7 +132,47 @@ export default async function AdminMentorsPage() {
     }
   }
 
+  // Criteria for the list filters (the owner, 14/10): what she can help with,
+  // techs, AI experience, years, region, languages - from her questionnaire.
+  const FILTER_KEYS = ["mentor_contribution", "mentor_tech", "mentor_ai_experience", "mentor_years", "region", "language_skills"];
+  const [{ data: filterQs }, { data: techTax }] = await Promise.all([
+    admin.from("config_questions").select("id, key, options").in("key", FILTER_KEYS),
+    admin.from("config_taxonomies").select("value, label_he").eq("kind", "tech").order("label_he"),
+  ]);
+  type Opt = { value: string; label: string };
+  const optLabel = (key: string) =>
+    new Map(
+      ((filterQs ?? []).find((q) => q.key === key)?.options as unknown as Opt[] | null ?? []).map((o) => [o.value, o.label])
+    );
+  const helpLabel = optLabel("mentor_contribution");
+  const aiLabel = optLabel("mentor_ai_experience");
+  const regionLabel = optLabel("region");
+  const techLabel = new Map((techTax ?? []).map((t) => [t.value, t.label_he]));
+  const keyOfQ = new Map((filterQs ?? []).map((q) => [q.id, q.key]));
+  const answersOf = new Map<string, Map<string, unknown>>();
+  if ((mentors ?? []).length && keyOfQ.size) {
+    const rowsA = await inChunks<{ profile_id: string; question_id: string; value: unknown }>(
+      (mentors ?? []).map((m) => m.id),
+      (part) =>
+        admin.from("profile_answers").select("profile_id, question_id, value").in("question_id", [...keyOfQ.keys()]).in("profile_id", part)
+    );
+    for (const a of rowsA) {
+      const k = keyOfQ.get(a.question_id);
+      if (!k) continue;
+      const mine = answersOf.get(a.profile_id) ?? new Map<string, unknown>();
+      mine.set(k, a.value);
+      answersOf.set(a.profile_id, mine);
+    }
+  }
+  const strList = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" && v ? [v] : [];
+  const oneOpt = (v: unknown, labels: Map<string, string>): Opt | null =>
+    typeof v === "string" && v ? { value: v, label: labels.get(v) ?? v } : null;
+
   const rows: MentorRowData[] = (mentors ?? []).map((m) => {
+    const ans = answersOf.get(m.id) ?? new Map<string, unknown>();
+    const yearsRaw = ans.get("mentor_years");
+    const yearsNum = typeof yearsRaw === "number" ? yearsRaw : typeof yearsRaw === "string" ? Number(yearsRaw) : NaN;
     const history = (historyRows ?? [])
       .filter((h) => h.assigned_mentor_id === m.id)
       .map((h) => ({
@@ -148,13 +189,22 @@ export default async function AdminMentorsPage() {
       id: m.id,
       full_name: m.full_name,
       avatar_initials: m.avatar_initials,
+      last_seen_at: m.last_seen_at,
       specialization: m.specialization,
       city: cityOf.get(m.id) ?? null,
       created_at: m.created_at,
       mentor_available: m.mentor_available !== false,
       activeLoad,
       cvUrl: cvUrlOf(m.id),
-      score: scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0 },
+      help: strList(ans.get("mentor_contribution")).map((v) => ({ value: v, label: helpLabel.get(v) ?? v })),
+      techs: strList(ans.get("mentor_tech")).map((v) => ({ value: v, label: techLabel.get(v) ?? v })),
+      aiExperience: oneOpt(ans.get("mentor_ai_experience"), aiLabel),
+      years: Number.isFinite(yearsNum) && yearsNum >= 0 ? yearsNum : null,
+      region: oneOpt(ans.get("region"), regionLabel),
+      languages: (Array.isArray(ans.get("language_skills")) ? (ans.get("language_skills") as { lang?: unknown }[]) : [])
+        .map((l) => (l && typeof l.lang === "string" ? l.lang.trim() : ""))
+        .filter(Boolean),
+      score: scores.get(m.id) ?? { score: 0, answers: 0, assignments: 0, bonus: 0, arena: 0, helpful: 0 },
       history,
       bonuses: (bonusRows ?? [])
         .filter((b) => b.mentor_id === m.id)
@@ -164,6 +214,16 @@ export default async function AdminMentorsPage() {
         .map((l) => ({ action: l.action, reason: l.reason, at: l.created_at })),
     };
   });
+
+  const catalogue = {
+    help: [...helpLabel].map(([value, label]) => ({ value, label })),
+    ai: [...aiLabel].map(([value, label]) => ({ value, label })),
+    regions: [...regionLabel].map(([value, label]) => ({ value, label })),
+    techs: [...new Set(rows.flatMap((r) => r.techs.map((t) => t.value)))]
+      .map((v) => ({ value: v, label: techLabel.get(v) ?? v }))
+      .sort((a, b) => a.label.localeCompare(b.label, "he")),
+    languages: [...new Set(rows.flatMap((r) => r.languages))].sort((a, b) => a.localeCompare(b, "he")),
+  };
 
   // Pending-applications count for the tab label (the section itself loads
   // its own data; the count keeps the menu honest).
@@ -203,11 +263,11 @@ export default async function AdminMentorsPage() {
             <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
               <h3 className="font-display text-base font-bold mb-1">מנטוריות פעילות ({mentors?.length ?? 0})</h3>
               <p className="text-[12.5px] text-ink-500 mb-3">
-                הניקוד גלוי לכל הקהילה: {ANSWER_POINTS} נק&#39; על תשובה בפורום · {ASSIGNMENT_POINTS} נק&#39; על
+                הניקוד גלוי לכל הקהילה: {ANSWER_POINTS} נק&#39; על תשובה בפורום · {ARENA_ANSWER_POINTS} נק&#39; על תשובה בזירת המנטוריות · {ASSIGNMENT_POINTS} נק&#39; על
                 ליווי שאושר · ובונוסים ידניים על תרומה (סשנים, האקתונים…).
               </p>
               {rows.length > 0 ? (
-                <MentorsList mentors={rows} />
+                <MentorsList mentors={rows} catalogue={catalogue} />
               ) : (
                 <p className="text-ink-500 text-sm">עדיין אין מנטוריות. מנים בלשונית &quot;מינוי מנטורית&quot;.</p>
               )}

@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 };
 
 const STEPS = [
-  { emoji: "🎯", title: "בוחרת אתגר", body: "עוברת על ארבעת האתגרים ובוחרת את זה שמדליק אותך.", tilt: "-rotate-2" },
+  { emoji: "🎯", title: "בוחרת אתגר", body: "עוברת על האתגרים ובוחרת את זה שמדליק אותך.", tilt: "-rotate-2" },
   { emoji: "📝", title: "ממלאה טופס בחירה", body: "רישום קצר - הטופס ייפתח בקהילה ברגע שההרשמה תעלה.", tilt: "rotate-1" },
   { emoji: "📦", title: "מקבלת את החומרים", body: "לאתגר שבחרת יישלחו אלייך תכנים ודוגמאות רלוונטיות.", tilt: "-rotate-1" },
   { emoji: "🛠️", title: "מפתחת ויוצרת", body: "בונה את המנוע ואת הממשק - עם כלי ה-AI שאת בוחרת.", tilt: "rotate-2" },
@@ -238,6 +238,7 @@ export default function Hackathon2026Page() {
             <div className="font-display font-bold text-[16.5px] mt-1 opacity-95">
               יום רביעי | 28/10 | י״ז חשוון
             </div>
+            <div className="font-display font-bold text-[16px] mt-0.5 opacity-95">📍 היכל התרבות רמות, ירושלים</div>
             <div className="font-display font-bold text-[15px] mt-0.5 opacity-90">
               הקהילה חוגגת, והזוכות עולות לבמה 🏆
             </div>

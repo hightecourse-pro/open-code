@@ -13,6 +13,7 @@ import { NewChatButton } from "@/components/patterns/new-chat-button";
 import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
+import { PresenceAvatar, PresenceText } from "@/components/patterns/presence-dot";
 import { editMessage, sendMessage, startConversation, toggleReaction } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
@@ -82,7 +83,7 @@ export default async function ChatPage({
     otherIds.length
       ? supabase
           .from("profiles")
-          .select("id, full_name, avatar_initials, role, status, specialization, member_tier")
+          .select("id, full_name, avatar_initials, role, status, specialization, member_tier, last_seen_at")
           .in("id", otherIds)
       : Promise.resolve({ data: [] }),
     // Which of these women is the mentor an admin actually matched her with -
@@ -298,12 +299,14 @@ export default async function ChatPage({
                       : "border-transparent hover:bg-ink-100"
                   )}
                 >
-                  <Avatar
-                    size="sm"
-                    tone={other?.role === "mentor" ? "gold" : "pink"}
-                    crown={other?.role === "mentor"}
-                    initials={other?.avatar_initials || other?.full_name?.slice(0, 1) || "ק"}
-                  />
+                  <PresenceAvatar lastSeen={other?.last_seen_at}>
+                    <Avatar
+                      size="sm"
+                      tone={other?.role === "mentor" ? "gold" : "pink"}
+                      crown={other?.role === "mentor"}
+                      initials={other?.avatar_initials || other?.full_name?.slice(0, 1) || "ק"}
+                    />
+                  </PresenceAvatar>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1">
                       <span className="font-medium text-sm text-ink-900 truncate">
@@ -363,12 +366,14 @@ export default async function ChatPage({
           {active && activeOther ? (
             <>
               <div className="flex items-center gap-2.5 p-3.5 border-b border-ink-100">
-                <Avatar
-                  size="sm"
-                  tone={activeOther.role === "mentor" ? "gold" : "pink"}
-                  crown={activeOther.role === "mentor"}
-                  initials={activeOther.avatar_initials || activeOther.full_name.slice(0, 1)}
-                />
+                <PresenceAvatar lastSeen={activeOther.last_seen_at}>
+                  <Avatar
+                    size="sm"
+                    tone={activeOther.role === "mentor" ? "gold" : "pink"}
+                    crown={activeOther.role === "mentor"}
+                    initials={activeOther.avatar_initials || activeOther.full_name.slice(0, 1)}
+                  />
+                </PresenceAvatar>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
@@ -389,7 +394,9 @@ export default async function ChatPage({
                       </span>
                     )}
                   </div>
-                  <div className="text-[12.5px] text-ink-500 truncate">{activeSubtitle}</div>
+                  <div className="text-[12.5px] text-ink-500 truncate">
+                    {activeSubtitle} <span className="text-ink-300">·</span> <PresenceText lastSeen={activeOther.last_seen_at} />
+                  </div>
                 </div>
               </div>
 

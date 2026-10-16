@@ -12,6 +12,7 @@ const C = {
   pink: "#E0418D",
 };
 
+import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS } from "@/lib/arena-shared";
 import { getSiteUrl } from "@/lib/site";
 import { toSiteAuthLink } from "./auth-links";
 
@@ -871,6 +872,170 @@ export function jobCandidatesUpdateEmail(
 }
 
 /**
+ * The team's own words to the mentors the admin filtered (the owner, 14/10):
+ * subject and body verbatim, her first name in the heading, a chat copy when
+ * the admin asked for one.
+ */
+export function mentorsMailEmail(name: string | undefined, subject: string, bodyText: string, chatUrl: string | null): BuiltEmail {
+  const body = escapeHtml(bodyText).replace(/\r?\n/g, "<br/>");
+  return {
+    subject,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(subject)}`,
+      lines: [body, ...(chatUrl ? ["ההודעה מחכה לך גם בצ'אט בקהילה - אם יש שאלה, הכי נוח לענות לנו שם."] : [])],
+      ctaText: chatUrl ? "לתשובה בצ'אט" : undefined,
+      ctaUrl: chatUrl ?? undefined,
+      footnote: "צוות קוד פתוח 💜",
+    }),
+  };
+}
+
+// --------------------------------------------------------- hackathon judging
+
+/** A mentor was appointed as a judge (the owner, 16/10). */
+export function hackathonJudgeAppointedEmail(name: string | undefined, url: string): BuiltEmail {
+  return {
+    subject: "מונית לשופטת בהאקתון AI 🏆",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}תודה שאת שופטת איתנו`,
+      lines: [
+        "הצוות מינה אותך לשופטת בהאקתון AI קוד פתוח 2026. בלוח השיפוט תמצאי כל הגשה שהוגשה: המוצר החי, הקוד, הסרטון, דשבורד הבדיקה האוטומטית - והרובריקה שלך (100 נקודות, שישה קריטריונים).",
+        "את רואה רק את הציונים שלך. אפשר לשמור ולחזור, ולעדכן ציון עד ערב הגמר.",
+      ],
+      ctaText: "ללוח השיפוט",
+      ctaUrl: url,
+      footnote: "ערב הגמר: יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים 💜",
+    }),
+  };
+}
+
+// ------------------------------------------------------- hackathon submission
+
+/** The whole team hears that the submission landed (the owner, 16/10). */
+export function hackathonSubmissionReceivedEmail(name: string | undefined, challengeShort: string, teamNames: string, url: string): BuiltEmail {
+  return {
+    subject: "ההגשה שלכן להאקתון נקלטה 🏆",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}ההגשה על הבמה`,
+      lines: [
+        `קיבלנו את התוצרים של <b>${escapeHtml(teamNames)}</b> לאתגר <b>${escapeHtml(challengeShort)}</b>: המוצר, הקוד, הסרטון והתשובות.`,
+        "אפשר לעדכן את ההגשה עד ערב הגמר - יום רביעי 28/10, י״ז חשוון, היכל התרבות רמות, ירושלים. נתראה שם 💜",
+      ],
+      ctaText: "להגשה שלכן",
+      ctaUrl: url,
+      footnote: "האקתון AI קוד פתוח 2026",
+    }),
+  };
+}
+
+// ------------------------------------------------------------ mentors' arena
+
+/** The mentor a question was addressed to hears right away (the owner, 15/10). */
+export function arenaQuestionEmail(name: string | undefined, questionTitle: string, askerName: string, url: string): BuiltEmail {
+  return {
+    subject: "שאלה בזירת המנטוריות מחכה לך 🏟️",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} שאלה אותך בזירה`,
+      lines: [
+        `<b>«${escapeHtml(questionTitle)}»</b>`,
+        `התשובה הראשונה שלך לשאלה = <b>+${ARENA_ANSWER_POINTS} נקודות</b> לניקוד המנטוריות שלך. כל המנטוריות רואות את השאלה - מי שעונה ראשונה, זוכה.`,
+      ],
+      ctaText: "לזירה ולתשובה",
+      ctaUrl: url,
+      footnote: "תודה שאת שם בשביל הצוותים 💜",
+    }),
+  };
+}
+
+/** The asker hears that a mentor answered. */
+export function arenaAnsweredEmail(name: string | undefined, questionTitle: string, mentorName: string, url: string): BuiltEmail {
+  return {
+    subject: "יש תשובה לשאלה שלך בזירה 💜",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(mentorName)} ענתה לך`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, "התשובה מחכה לך בזירה. יש המשך? אפשר לשאול שוב, אותה או מנטורית אחרת."],
+      ctaText: "לתשובה בזירה",
+      ctaUrl: url,
+      footnote: "בהצלחה בהאקתון 🏆",
+    }),
+  };
+}
+
+/** The asker continued the thread - the mentors who answered hear (16/10). */
+export function arenaFollowUpEmail(name: string | undefined, questionTitle: string, askerName: string, url: string): BuiltEmail {
+  return {
+    subject: "שאלת המשך בזירה 🏟️",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} המשיכה את השרשור`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, "היא ענתה או שאלה עוד משהו מתחת לתשובה שלך. השאלה חזרה להיות פתוחה."],
+      ctaText: "להמשך השיחה",
+      ctaUrl: url,
+      footnote: "תודה שאת שם בשביל הצוותים 💜",
+    }),
+  };
+}
+
+/** "עזר לי ✓" - the bonus landed (16/10). */
+export function arenaHelpfulEmail(name: string | undefined, questionTitle: string, askerName: string, url: string): BuiltEmail {
+  return {
+    subject: `התשובה שלך עזרה - +${ARENA_HELPFUL_POINTS} נק' 🏆`,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} סימנה: עזר לי ✓`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, `קיבלת <b>+${ARENA_HELPFUL_POINTS} נקודות</b> בונוס על התשובה, מעבר לנקודות על התשובה עצמה. השאלה נסגרה.`],
+      ctaText: "לזירה",
+      ctaUrl: url,
+      footnote: "ככה נראית מנטורית טובה 💜",
+    }),
+  };
+}
+
+/** A question open for a day - the asker pushed it to every available mentor (16/10). */
+export function arenaNudgeEmail(name: string | undefined, questionTitle: string, url: string): BuiltEmail {
+  return {
+    subject: "שאלה בזירה מחכה כבר יום - מישהי? 🏟️",
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}שאלה שעוד אף אחת לא ענתה עליה`,
+      lines: [`<b>«${escapeHtml(questionTitle)}»</b>`, `פתוחה כבר יותר מיממה. תשובה ראשונה = <b>+${ARENA_ANSWER_POINTS} נק'</b>, ואם היא תעזור - עוד ${ARENA_HELPFUL_POINTS}.`],
+      ctaText: "לענות בזירה",
+      ctaUrl: url,
+      footnote: "השואלת דחפה את זה לכל המנטוריות הזמינות - מי שעונה ראשונה, זוכה 💜",
+    }),
+  };
+}
+
+/** Once a day: open questions + her points, to the mentors who know AI; on the weekly day the leaders too, to everyone. */
+export function arenaDigestEmail(
+  name: string | undefined,
+  d: { titles: string[]; open: number; stale?: number; arenaPoints: number; totalScore: number; url: string; leaders?: { name: string; points: number; helpful: number }[] }
+): BuiltEmail {
+  const list = d.titles.length ? `<ul style="margin:0;padding-inline-start:18px">${d.titles.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ul>` : "";
+  const more = d.open > d.titles.length ? `<i>ועוד ${d.open - d.titles.length}…</i>` : "";
+  const stale = d.stale ? `<b style="color:#B42318">${d.stale} מהן פתוחות כבר יותר מיממה.</b>` : "";
+  const leaders = d.leaders?.length
+    ? `<b>המובילות בזירה השבוע:</b><ol style="margin:4px 0 0;padding-inline-start:18px">${d.leaders.map((l) => `<li>${escapeHtml(l.name)} - ${l.points} נק'${l.helpful ? ` (${l.helpful} עזרו ✓)` : ""}</li>`).join("")}</ol>`
+    : "";
+  const weekly = !!d.leaders;
+  return {
+    subject: weekly
+      ? "המובילות בזירת המנטוריות השבוע 🏆"
+      : d.open === 1
+        ? "שאלה פתוחה בזירת המנטוריות מחכה לך 🏟️"
+        : `${d.open} שאלות פתוחות בזירת המנטוריות מחכות לך 🏟️`,
+    html: renderEmail({
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${d.open === 0 ? "הזירה השבוע" : `בזירה מחכות ${d.open === 1 ? "שאלה פתוחה" : `${d.open} שאלות פתוחות`}`}`,
+      lines: [
+        ...(list ? [list + more + (stale ? `<br/>${stale}` : "")] : []),
+        ...(leaders ? [leaders] : []),
+        `<b>הניקוד שלך:</b> ${d.arenaPoints} נק' מהזירה · ${d.totalScore} נק' סה"כ. תשובה ראשונה לשאלה = <b>+${ARENA_ANSWER_POINTS}</b>, "עזר לי" = <b>+${ARENA_HELPFUL_POINTS}</b>.`,
+      ],
+      ctaText: "לזירה",
+      ctaUrl: d.url,
+      footnote: weekly ? "המייל השבועי של הזירה - כל יום ראשון 💜" : "המייל הזה נשלח פעם ביום, רק כשיש שאלות שלא נענו 💜",
+    }),
+  };
+}
+
+/**
  * A mentor application was declined - with the admin's PERSONAL explanation
  * (the owner, 1/9). She stays a regular member and is invited to the paid
  * track; the personal note is the heart of the email.
@@ -1097,7 +1262,7 @@ export function hackathonPairInviteEmail(inviteeFirstName: string | undefined, i
       ],
       ctaText: "לאישור ההזמנה",
       ctaUrl: `${SITE}/hackathon`,
-      footnote: "ההאקתון למנויות הקהילה. ערב הגמר: יום רביעי 28/10.",
+      footnote: "ההאקתון למנויות הקהילה. ערב הגמר: יום רביעי 28/10, היכל התרבות רמות, ירושלים.",
     }),
   };
 }

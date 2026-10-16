@@ -216,7 +216,10 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
             )}
             {score && (
               <div className="text-[12px] text-ink-500">
-                ⭐ {score.answers} תשובות בפורום · {score.assignments} ליוויים אישיים
+                ⭐ {score.answers} תשובות בפורום · {score.arena} בזירה{score.helpful ? ` (${score.helpful} עזרו ✓)` : ""} · {score.assignments} ליוויים אישיים
+                {score.arena > 0 && (
+                  <span className="ms-2 inline-flex items-center rounded-full bg-tint-pink text-brand-pink-deep px-2 py-px text-[11px] font-bold">🏟️ מנטורית הזירה</span>
+                )}
               </div>
             )}
           </div>

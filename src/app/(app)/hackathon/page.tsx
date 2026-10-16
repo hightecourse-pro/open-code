@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, FileDown, Lock, Trophy } from "lucide-react";
 import { requireCommunityAccess, isSubscriber } from "@/lib/auth";
-import { CHALLENGES, HACKATHON_UPDATES, H26Style, Squiggle } from "@/app/hackathon-2026/shared";
+import { CHALLENGES, HACKATHON_UPDATED, HACKATHON_UPDATES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
+import { WhatsNew } from "./whats-new";
 import { loadMaterials, loadMyRegistration, loadPairCandidates, loadPendingInvites, registrableChallenges } from "@/lib/hackathon";
 import { RegistrationForm } from "./registration-form";
 import { PairInvites } from "./pair-invites";
@@ -36,17 +37,21 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
     <div className="flex flex-col gap-6 max-w-4xl">
       <H26Style />
       {/* ── header - the community motif: gradient AI with the squiggle ── */}
-      <div>
-        <span className="font-mono text-xs text-brand-pink-deep">&lt;האקתון/&gt;</span>
-        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">
-          האקתון{" "}
-          <span className="relative inline-block">
-            <span className="t-gradient">AI</span>
-            <Squiggle className="absolute -bottom-0.5 right-0 w-full" />
-          </span>{" "}
-          קוד פתוח 2026
-        </h1>
-        <p className="t-body-sm text-ink-700">אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.</p>
+      {/* The community concept stays (the owner, 16/10: "לא להוריד את הכותרות עם הקו המתפתל") - the logo joins it, beside. */}
+      <div className="flex items-end justify-between gap-5 flex-wrap">
+        <div>
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;האקתון/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">
+            האקתון{" "}
+            <span className="relative inline-block">
+              <span className="t-gradient">AI</span>
+              <Squiggle className="absolute -bottom-0.5 right-0 w-full" />
+            </span>{" "}
+            קוד פתוח 2026
+          </h1>
+          <p className="t-body-sm text-ink-700">אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.</p>
+        </div>
+        <HackathonLogo priority className="block w-[210px] shrink-0" />
       </div>
 
       {/* ── banner ── */}
@@ -54,7 +59,7 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
         <div className="font-display font-black text-[19px] leading-snug">את בוחרת אתגר. בונה מנוע AI וממשק. עולה על הבמה 🏆</div>
         <div className="flex items-center gap-2 flex-wrap ms-auto">
           <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/30 px-3 py-1 rounded-full text-[13px] font-bold">
-            <CalendarDays size={14} /> גמר · יום רביעי 28/10 · י״ז חשוון
+            <CalendarDays size={14} /> גמר · יום רביעי 28/10 · י״ז חשוון · היכל התרבות רמות, ירושלים
           </span>
           <a
             href="/hackathon-2026"
@@ -67,21 +72,8 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
         </div>
       </section>
 
-      {/* ── what's new ── */}
-      <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-4 shadow-sm">
-        <div className="flex items-center gap-2">
-          <h2 className="font-display font-bold text-[15px] text-ink-1000">מה חדש</h2>
-          <span className="rounded-full bg-brand-gradient text-white text-[10.5px] font-bold px-2 py-0.5">חדש</span>
-        </div>
-        <ul className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
-          {HACKATHON_UPDATES.map((u) => (
-            <li key={u.text} className="flex items-start gap-2 text-[13.5px] text-ink-800">
-              <span className="font-mono text-[11.5px] text-ink-500 mt-0.5 shrink-0">{u.date}</span>
-              <span>{u.text}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      {/* ── what's new - open by itself only when there is news she has not seen (the owner, 16/10) ── */}
+      <WhatsNew updates={HACKATHON_UPDATES} version={HACKATHON_UPDATED} />
 
       {/* ── the free toolbox (the owner, 12/10): open to every member ── */}
       <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-4 shadow-sm flex items-center gap-4 flex-wrap">
@@ -124,10 +116,29 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
                 : ` - ביקשת להגיש כזוג עם ${registration.partner.name}, ממתינות לאישורה`
               : " (לבד)"}
           </span>
-          <Link href={`/hackathon/${myChallenge.key}`} className="ms-auto text-[13px] font-bold text-brand-purple hover:underline">
-            לדף האתגר והחומרים ←
-          </Link>
+          <span className="ms-auto flex items-center gap-4 flex-wrap">
+            <Link href={`/hackathon/${myChallenge.key}`} className="text-[13px] font-bold text-brand-purple hover:underline">
+              לדף האתגר והחומרים ←
+            </Link>
+            <Link href="/hackathon/submit" className="inline-flex items-center rounded-full bg-brand-gradient text-white text-[13px] font-bold px-3.5 py-1.5 hover:opacity-95">
+              להגשת התוצרים 🚀
+            </Link>
+          </span>
         </section>
+      )}
+
+      {/* ── the mentors' arena (the owner, 15/10) - open to every registrant ── */}
+      {subscriber && registration && (
+        <Link
+          href="/arena"
+          className="border border-[#DDC9EC] bg-brand-gradient-soft rounded-[18px] px-5 py-3.5 flex items-center gap-3 flex-wrap hover:border-brand-purple transition-colors"
+        >
+          <span className="text-[22px]">🏟️</span>
+          <span className="flex-1 text-[14px] text-ink-900">
+            <b>זירת המנטוריות</b> פתוחה לך: שאלה למנטורית אקראית, למנטורית שמבינה ב-AI, או למי שתבחרי - והתשובה מגיעה גם למייל.
+          </span>
+          <span className="font-display font-bold text-brand-purple whitespace-nowrap">לזירה ←</span>
+        </Link>
       )}
 
       {/* ── the challenges ── */}

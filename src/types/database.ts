@@ -98,6 +98,8 @@ export interface Database {
           mentor_declined_at: string | null;
           found_job: boolean;
           hired_via_us: boolean;
+          /** Presence heartbeat (16/10): when she was last active; null = never signed in since the column exists. */
+          last_seen_at: string | null;
           hired_at: string | null;
           /** Mentors only: temporarily unavailable for new accompaniments. */
           mentor_available: boolean;
@@ -127,6 +129,7 @@ export interface Database {
           mentor_declined_at?: string | null;
           found_job?: boolean;
           hired_via_us?: boolean;
+          last_seen_at?: string | null;
           hired_at?: string | null;
           mentor_available?: boolean;
           digest_last_sent_at?: string | null;
@@ -1997,6 +2000,54 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hackathon_registrations"]["Insert"]>;
         Relationships: [];
       };
+      arena_questions: {
+        Row: { id: string; author_id: string; title: string; body: string; target_mentor_id: string | null; ai_only: boolean; is_private: boolean; topic: string | null; status: string; created_at: string; updated_at: string; answered_at: string | null; pinned_at: string | null; nudged_at: string | null; closed_at: string | null };
+        Insert: { id?: string; author_id: string; title: string; body: string; target_mentor_id?: string | null; ai_only?: boolean; is_private?: boolean; topic?: string | null; status?: string; created_at?: string; updated_at?: string; answered_at?: string | null; pinned_at?: string | null; nudged_at?: string | null; closed_at?: string | null };
+        Update: Partial<Database["public"]["Tables"]["arena_questions"]["Insert"]>;
+        Relationships: [];
+      };
+      arena_presence: {
+        Row: { profile_id: string; until: string; updated_at: string };
+        Insert: { profile_id: string; until: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["arena_presence"]["Insert"]>;
+        Relationships: [];
+      };
+      arena_answers: {
+        Row: { id: string; question_id: string; mentor_id: string; author_role: string; body: string; helpful_at: string | null; created_at: string };
+        Insert: { id?: string; question_id: string; mentor_id: string; author_role?: string; body: string; helpful_at?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["arena_answers"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_submissions: {
+        Row: { id: string; team_key: string; challenge_key: string; product_url: string | null; repo_url: string | null; architecture: string | null; challenges_solved: string | null; video_url: string | null; video_path: string | null; video_size: number | null; ai_dev_tools: string | null; ai_models: string | null; created_by: string | null; submitted_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; team_key: string; challenge_key: string; product_url?: string | null; repo_url?: string | null; architecture?: string | null; challenges_solved?: string | null; video_url?: string | null; video_path?: string | null; video_size?: number | null; ai_dev_tools?: string | null; ai_models?: string | null; created_by?: string | null; submitted_at?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_submissions"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_reflections: {
+        Row: { profile_id: string; team_key: string; contributed: string | null; learned: string | null; enjoyed: string | null; created_at: string; updated_at: string };
+        Insert: { profile_id: string; team_key: string; contributed?: string | null; learned?: string | null; enjoyed?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_reflections"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_judges: {
+        Row: { profile_id: string; added_by: string | null; created_at: string };
+        Insert: { profile_id: string; added_by?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_judges"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_scores: {
+        Row: { id: string; team_key: string; judge_id: string; works: number; correctness: number; problem: number; architecture: number; ux: number; presentation: number; notes: Json; created_at: string; updated_at: string };
+        Insert: { id?: string; team_key: string; judge_id: string; works?: number; correctness?: number; problem?: number; architecture?: number; ux?: number; presentation?: number; notes?: Json; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_scores"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_auto_reports: {
+        Row: { team_key: string; report: Json; updated_at: string };
+        Insert: { team_key: string; report?: Json; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_auto_reports"]["Insert"]>;
+        Relationships: [];
+      };
       hackathon_materials: {
         Row: { id: string; challenge_key: string; title: string; file_path: string; size_bytes: number | null; created_at: string };
         Insert: { id?: string; challenge_key: string; title: string; file_path: string; size_bytes?: number | null; created_at?: string };
@@ -2198,6 +2249,10 @@ export interface Database {
       job_app_counts: {
         Args: Record<string, never>;
         Returns: { job_id: string; total: number; new_count: number }[];
+      };
+      mentor_arena_counts: {
+        Args: { p_ids: string[] };
+        Returns: { mentor_id: string; answers: number; helpful: number }[];
       };
       mentor_answer_counts: {
         Args: { p_ids: string[] };
