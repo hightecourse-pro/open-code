@@ -222,7 +222,7 @@ export function SnapshotCapture({ children }: { children: ReactNode }) {
     <>
       {active &&
         (active.html ? (
-          <div data-nav-preview={active.path} aria-busy="true" className="relative">
+          <div data-nav-preview={active.path} aria-busy="true" className="relative min-w-0 max-w-full overflow-hidden">
             <div data-snapshot-html className="pointer-events-none select-none opacity-75" dangerouslySetInnerHTML={{ __html: active.html }} />
             <UpdatingPill label="מציגה את מה שראית לאחרונה · מתעדכן…" />
           </div>
@@ -253,7 +253,7 @@ export function SnapshotLoading({ fallback }: { fallback: ReactNode }) {
   );
   if (!html) return <div data-snapshot-loading>{fallback}</div>;
   return (
-    <div data-snapshot-loading aria-busy="true" className="relative">
+    <div data-snapshot-loading aria-busy="true" className="relative min-w-0 max-w-full overflow-hidden">
       <div data-snapshot-html className="pointer-events-none select-none opacity-75" dangerouslySetInnerHTML={{ __html: html }} />
       <UpdatingPill label="מציגה את מה שראית לאחרונה · מתעדכן…" />
     </div>
