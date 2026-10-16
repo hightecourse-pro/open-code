@@ -30,7 +30,7 @@ export default async function AdminMentorsPage() {
   const [{ data: mentorsRaw }, { data: candidates }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("id, full_name, avatar_initials, specialization, created_at, mentor_available")
+      .select("id, full_name, avatar_initials, specialization, created_at, mentor_available, last_seen_at")
       .eq("role", "mentor")
       .eq("status", "active")
       .order("full_name"),
@@ -189,6 +189,7 @@ export default async function AdminMentorsPage() {
       id: m.id,
       full_name: m.full_name,
       avatar_initials: m.avatar_initials,
+      last_seen_at: m.last_seen_at,
       specialization: m.specialization,
       city: cityOf.get(m.id) ?? null,
       created_at: m.created_at,

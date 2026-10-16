@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronDown, FileText, Gift, Mail, PauseCircle, PlayCircle, Search } from "lucide-react";
 import { Avatar, Badge, Button, Input } from "@/components/ui";
+import { PresenceAvatar } from "@/components/patterns/presence-dot";
 import { cn } from "@/lib/utils";
 import { cancelMentorRole, sendPersonalEmail, setMentorAvailability } from "@/app/(admin)/admin/actions";
 import { addMentorBonus } from "./actions";
@@ -35,6 +36,7 @@ export interface MentorRowData {
   id: string;
   full_name: string;
   avatar_initials: string | null;
+  last_seen_at?: string | null;
   specialization: string | null;
   city: string | null;
   created_at: string;
@@ -102,7 +104,9 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
   return (
     <div className="py-2.5 border-b border-ink-100 last:border-b-0">
       <div className="flex items-center gap-3 flex-wrap">
-        <Avatar size="sm" tone="gold" crown initials={m.avatar_initials || m.full_name.slice(0, 1)} />
+        <PresenceAvatar lastSeen={m.last_seen_at}>
+          <Avatar size="sm" tone="gold" crown initials={m.avatar_initials || m.full_name.slice(0, 1)} />
+        </PresenceAvatar>
         <div className="flex-1 min-w-0">
           <Link
             href={`/admin/members/${m.id}`} target="_blank" rel="noopener"

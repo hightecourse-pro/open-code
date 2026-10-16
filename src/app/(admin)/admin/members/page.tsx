@@ -37,7 +37,7 @@ async function fetchAllProfiles(): Promise<ProfileRow[]> {
     const { data } = await supabase
       .from("profiles")
       .select(
-        "id, full_name, avatar_initials, role, status, specialization, region, is_experienced, is_vip, internal_notes, created_at, profile_completed"
+        "id, full_name, avatar_initials, role, status, specialization, region, is_experienced, is_vip, internal_notes, created_at, profile_completed, last_seen_at"
       )
       .order("created_at", { ascending: false })
       .range(from, from + PAGE - 1);
@@ -237,6 +237,7 @@ export default async function AdminMembersPage({
       id: m.id,
       full_name: m.full_name,
       avatar_initials: m.avatar_initials,
+      last_seen_at: m.last_seen_at,
       role: m.role,
       is_experienced: m.is_experienced === true,
       status: m.status,

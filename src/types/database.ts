@@ -98,6 +98,8 @@ export interface Database {
           mentor_declined_at: string | null;
           found_job: boolean;
           hired_via_us: boolean;
+          /** Presence heartbeat (16/10): when she was last active; null = never signed in since the column exists. */
+          last_seen_at: string | null;
           hired_at: string | null;
           /** Mentors only: temporarily unavailable for new accompaniments. */
           mentor_available: boolean;
@@ -127,6 +129,7 @@ export interface Database {
           mentor_declined_at?: string | null;
           found_job?: boolean;
           hired_via_us?: boolean;
+          last_seen_at?: string | null;
           hired_at?: string | null;
           mentor_available?: boolean;
           digest_last_sent_at?: string | null;

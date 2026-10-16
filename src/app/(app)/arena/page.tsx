@@ -82,9 +82,7 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
             ) : (
               <span className="text-[18px]">{c.emoji}</span>
             )}
-            <span>
-              {c.emoji} {c.short}
-            </span>
+            <span>{c.short}</span>
           </span>
         ))}
         <span className="ms-auto inline-flex items-center gap-1.5 bg-tint-purple text-brand-purple px-3 py-1 rounded-full text-[12.5px] font-bold">

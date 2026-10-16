@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Search, X, StickyNote, UserRound, Target, Star, Eye } from "lucide-react";
 import { Avatar } from "@/components/ui";
+import { PresenceAvatar } from "@/components/patterns/presence-dot";
 import { cn } from "@/lib/utils";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { MemberCrm } from "@/components/patterns/member-crm";
@@ -34,6 +35,8 @@ export interface MemberRow {
   payment?: string;
   /** Questionnaire reminder emails sent to her (ISO, newest first). */
   reminders?: string[];
+  /** Presence (16/10): the heartbeat's last stamp - green dot when within 5 minutes. */
+  last_seen_at?: string | null;
 }
 
 /** The member's TYPE in words - the export's status column. */
@@ -490,7 +493,9 @@ export function MembersTable({
               <tr key={m.id} className={cn(finding && m.is_vip && "bg-tint-warm/30")}>
                 <td className="p-2 border-b border-ink-100">
                   <div className="flex items-center gap-2">
-                    <Avatar size="xs" tone={m.role === "mentor" ? "gold" : "pink"} initials={m.avatar_initials || m.full_name.slice(0, 1) || "ק"} />
+                    <PresenceAvatar lastSeen={m.last_seen_at} size="xs">
+                      <Avatar size="xs" tone={m.role === "mentor" ? "gold" : "pink"} initials={m.avatar_initials || m.full_name.slice(0, 1) || "ק"} />
+                    </PresenceAvatar>
                     <a
                       href={`/admin/members/${m.id}`} target="_blank" rel="noopener"
                       title="לפרופיל המלא"
