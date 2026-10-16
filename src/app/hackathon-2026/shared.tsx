@@ -404,45 +404,38 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
         </div>
 
         <div className="relative">
-          {/* the hub (16/10): the hackathon logo inside the slow orbit rings, above the three challenges */}
-          <div className="relative mx-auto mb-10 w-[250px] h-[200px] flex items-center justify-center">
-            <div aria-hidden className="h26-spin-slow absolute w-[300px] h-[300px] rounded-full border-2 border-dashed border-brand-pink/40 hidden sm:block" />
-            <div aria-hidden className="h26-spin-slow absolute w-[300px] h-[300px] hidden sm:block">
-              <span className="absolute -top-1.5 left-1/2 w-3 h-3 rounded-full bg-brand-pink-deep" />
-              <span className="absolute top-1/2 -right-1.5 w-2.5 h-2.5 rounded-full bg-brand-purple" />
-              <span className="absolute -bottom-1 left-1/4 w-2 h-2 rounded-full bg-[#F0B429]" />
-            </div>
-            <div aria-hidden className="h26-spin-rev absolute w-[360px] h-[360px] rounded-full border border-dashed border-brand-purple/25 hidden sm:block" />
-            <HackathonLogo className="relative block w-[230px]" />
-          </div>
-
+          {/* three equal "poster" cards in a row (the owner, 16/10: "מסודרים לא יפה") - badge on top, title, org, one button */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-7 items-start">
             {CHALLENGES.map((c, i) => (
-              <div key={i} className={`${c.tilt} transition-transform hover:rotate-0 hover:scale-[1.02]`}>
+              <div key={i} className={`${c.tilt} transition-transform hover:rotate-0 hover:-translate-y-1`}>
                 {c.challenge ? (
                   <details
                     className={`group ${c.tint} border-2 border-ink-900/10 shadow-[4px_5px_0_0_#F3C6DD] open:shadow-[6px_7px_0_0_#E0418D] open:border-brand-pink transition-all`}
                     style={{ borderRadius: "22px 26px 20px 28px" }}
                   >
-                    <summary className="list-none cursor-pointer p-5 flex items-center gap-3.5 [&::-webkit-details-marker]:hidden">
+                    <summary className="list-none cursor-pointer px-5 pt-7 pb-6 min-h-[248px] flex flex-col items-center justify-center text-center gap-3 [&::-webkit-details-marker]:hidden">
                       {c.badgeLogo ? (
-                        <span className="w-14 h-14 shrink-0 -rotate-6 rounded-full overflow-hidden bg-white border-2 border-brand-pink/30 shadow-[3px_3px_0_0_#F3C6DD] flex items-center justify-center p-1">
+                        <span className="w-[84px] h-[84px] shrink-0 -rotate-6 group-open:rotate-0 transition-transform rounded-full overflow-hidden bg-white border-2 border-brand-pink/30 shadow-[3px_3px_0_0_#F3C6DD] flex items-center justify-center p-2">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={c.badgeLogo} alt={c.short} className="w-full h-full object-contain" />
                         </span>
                       ) : (
                         <span
-                          className="w-12 h-12 bg-brand-gradient text-white text-[22px] flex items-center justify-center shrink-0 -rotate-6"
+                          className="w-16 h-16 bg-brand-gradient text-white text-[26px] flex items-center justify-center shrink-0 -rotate-6"
                           style={{ borderRadius: "45% 55% 52% 48% / 50% 46% 54% 50%" }}
                         >
                           <span className="h26-wiggle">{c.emoji}</span>
                         </span>
                       )}
-                      <span className="flex-1 min-w-0">
-                        <span className="block font-display font-black text-[20px] leading-tight">{c.short}</span>
-                        {c.org && <span className="block text-[15.5px] text-ink-500 mt-0.5">{c.org}</span>}
+                      <span className="flex flex-col items-center gap-0.5">
+                        <span className="font-display font-black text-[21px] leading-tight">{c.short}</span>
+                        {c.org && <span className="text-[15px] text-ink-500 leading-snug">{c.org}</span>}
                       </span>
-                      <span className="font-mono text-brand-pink-deep text-sm group-open:rotate-90 transition-transform">&gt;</span>
+                      <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white border-[1.5px] border-brand-pink/50 text-brand-pink-deep font-bold text-[14px] px-3.5 py-1 group-open:bg-brand-gradient group-open:text-white group-open:border-transparent transition-colors">
+                        <span className="group-open:hidden">לקריאת האתגר</span>
+                        <span className="hidden group-open:inline">סגירה</span>
+                        <span className="font-mono group-open:rotate-90 transition-transform">&gt;</span>
+                      </span>
                     </summary>
                     <div className="px-5 pb-5 pt-0 flex flex-col gap-3">
                       <div className="font-mono text-[14.5px] text-brand-pink-deep">{"// האתגר"}</div>
