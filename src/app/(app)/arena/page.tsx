@@ -7,7 +7,7 @@ import { requireCommunityAccess } from "@/lib/auth";
 import { arenaLeaderboard, arenaRoleFor, loadArenaMentors, loadArenaQuestions, mentorArenaStats } from "@/lib/arena";
 import { ARENA_ANSWER_POINTS } from "@/lib/arena-shared";
 import { loadMyRegistration, registrableChallenges } from "@/lib/hackathon";
-import { CHALLENGES, H26Style, HackathonLogo } from "@/app/hackathon-2026/shared";
+import { CHALLENGES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
 import { AskForm } from "./ask-form";
 import { ArenaBoard } from "./arena-board";
 
@@ -169,13 +169,24 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
 
 function Header({ subtitle }: { subtitle: string }) {
   return (
-    <div>
-      <span className="font-mono text-xs text-brand-pink-deep">&lt;זירת המנטוריות/&gt;</span>
-      <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1 flex items-center gap-4 flex-wrap">
-        <span>זירת המנטוריות 🏟️</span>
-        <HackathonLogo animate={false} className="block w-[160px]" />
-      </h1>
-      <p className="t-body-sm text-ink-700 mt-1">{subtitle}</p>
+    <div className="flex items-end justify-between gap-5 flex-wrap">
+      <div>
+        <span className="font-mono text-xs text-brand-pink-deep">&lt;זירת המנטוריות/&gt;</span>
+        <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">
+          זירת המנטוריות 🏟️{" "}
+          <span className="text-ink-400 font-bold text-[20px]">·</span>{" "}
+          <span className="text-[20px]">
+            האקתון{" "}
+            <span className="relative inline-block">
+              <span className="t-gradient">AI</span>
+              <Squiggle className="absolute -bottom-0.5 right-0 w-full" />
+            </span>{" "}
+            2026
+          </span>
+        </h1>
+        <p className="t-body-sm text-ink-700 mt-1">{subtitle}</p>
+      </div>
+      <HackathonLogo animate={false} className="block w-[170px] shrink-0" />
     </div>
   );
 }

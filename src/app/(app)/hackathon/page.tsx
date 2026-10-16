@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, CalendarDays, FileDown, Lock, Trophy } from "lucide-react";
 import { requireCommunityAccess, isSubscriber } from "@/lib/auth";
-import { CHALLENGES, HACKATHON_UPDATES, H26Style, HackathonLogo } from "@/app/hackathon-2026/shared";
+import { CHALLENGES, HACKATHON_UPDATES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
 import { loadMaterials, loadMyRegistration, loadPairCandidates, loadPendingInvites, registrableChallenges } from "@/lib/hackathon";
 import { RegistrationForm } from "./registration-form";
 import { PairInvites } from "./pair-invites";
@@ -36,13 +36,21 @@ export default async function HackathonPage({ searchParams }: { searchParams: Pr
     <div className="flex flex-col gap-6 max-w-4xl">
       <H26Style />
       {/* ── header - the community motif: gradient AI with the squiggle ── */}
-      <div>
-        <span className="font-mono text-xs text-brand-pink-deep">&lt;האקתון/&gt;</span>
-        <h1 className="mt-2 w-full max-w-[400px]">
-          <HackathonLogo priority className="block w-full" />
-          <span className="sr-only">האקתון AI קוד פתוח 2026 - לפצח את קוד הכניסה</span>
-        </h1>
-        <p className="t-body-sm text-ink-700">אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.</p>
+      {/* The community concept stays (the owner, 16/10: "לא להוריד את הכותרות עם הקו המתפתל") - the logo joins it, beside. */}
+      <div className="flex items-end justify-between gap-5 flex-wrap">
+        <div>
+          <span className="font-mono text-xs text-brand-pink-deep">&lt;האקתון/&gt;</span>
+          <h1 className="font-display text-[28px] font-black text-ink-1000 mt-1">
+            האקתון{" "}
+            <span className="relative inline-block">
+              <span className="t-gradient">AI</span>
+              <Squiggle className="absolute -bottom-0.5 right-0 w-full" />
+            </span>{" "}
+            קוד פתוח 2026
+          </h1>
+          <p className="t-body-sm text-ink-700">אתגרים אמיתיים מהתעשייה - ובמה להוכיח מה את באמת יודעת.</p>
+        </div>
+        <HackathonLogo priority className="block w-[210px] shrink-0" />
       </div>
 
       {/* ── banner ── */}
