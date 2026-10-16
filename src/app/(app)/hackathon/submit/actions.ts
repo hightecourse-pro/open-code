@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResendEmail } from "@/lib/email/resend";
 import { hackathonSubmissionReceivedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
+import { sanitizeRichHtml } from "@/lib/rich-text";
 import { checklistOf, loadReflections, loadSubmission, loadTeam, VIDEO_EXTENSIONS, VIDEO_MAX_BYTES } from "@/lib/hackathon-submission";
 
 export interface SubmitState {
@@ -29,8 +30,9 @@ function cleanUrl(raw: FormDataEntryValue | null): string | null {
   }
 }
 
-function text(raw: FormDataEntryValue | null, max: number): string | null {
-  const v = String(raw ?? "").trim().slice(0, max);
+/** A rich-text field: the editor's HTML, sanitized to the brand allowlist; empty → null. */
+function rich(raw: FormDataEntryValue | null, max: number): string | null {
+  const v = sanitizeRichHtml(String(raw ?? "").slice(0, max));
   return v || null;
 }
 
@@ -58,10 +60,11 @@ export async function saveSubmission(_prev: SubmitState, formData: FormData): Pr
       challenge_key: team.challengeKey,
       product_url: productUrl,
       repo_url: repoUrl,
-      architecture: text(formData.get("architecture"), 6000),
+      architecture: rich(formData.get("architecture"), 30000),
+      challenges_solved: rich(formData.get("challenges_solved"), 30000),
       video_url: videoUrl,
-      ai_dev_tools: text(formData.get("ai_dev_tools"), 2000),
-      ai_models: text(formData.get("ai_models"), 2000),
+      ai_dev_tools: rich(formData.get("ai_dev_tools"), 12000),
+      ai_models: rich(formData.get("ai_models"), 12000),
       created_by: me.id,
     },
     { onConflict: "team_key" }
@@ -96,9 +99,9 @@ export async function saveReflection(_prev: SubmitState, formData: FormData): Pr
     {
       profile_id: me.id,
       team_key: team.teamKey,
-      contributed: text(formData.get("contributed"), 3000),
-      learned: text(formData.get("learned"), 3000),
-      enjoyed: text(formData.get("enjoyed"), 3000),
+      contributed: rich(formData.get("contributed"), 12000),
+      learned: rich(formData.get("learned"), 12000),
+      enjoyed: rich(formData.get("enjoyed"), 12000),
     },
     { onConflict: "profile_id" }
   );
@@ -161,6 +164,7 @@ export async function submitFinal(): Promise<SubmitState> {
   if (!c.product) missing.push("קישור למוצר עובד");
   if (!c.repo) missing.push("ספריית גיט ציבורית");
   if (!c.architecture) missing.push("הסבר על הארכיטקטורה");
+  if (!c.challenges) missing.push("בעיות משמעותיות ואיך פתרת אותן");
   if (!c.video) missing.push("סרטון (קובץ או קישור)");
   if (!c.tools) missing.push("כלי ה-AI לפיתוח");
   if (!c.models) missing.push("מודלי ה-AI של האיג׳נט");

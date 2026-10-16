@@ -3,6 +3,8 @@ import { Badge } from "@/components/ui";
 import type { AdminSubmissionRow } from "@/lib/hackathon-submission";
 import { formatBytes } from "@/lib/hackathon-shared";
 
+const RICH = "text-[13px] leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
+
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 
 /** הגשות התוצרים (16/10): one row per team - links, video, tools, who answered the personal questions. */
@@ -61,15 +63,19 @@ export function SubmissionsTable({ rows }: { rows: AdminSubmissionRow[] }) {
               <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3 text-[13px] text-ink-800">
                 <div className="md:col-span-3">
                   <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// הארכיטקטורה"}</div>
-                  <p className="whitespace-pre-wrap leading-relaxed">{r.architecture ?? "-"}</p>
+                  <Rich html={r.architecture} />
+                </div>
+                <div className="md:col-span-3">
+                  <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// בעיות משמעותיות ואיך נפתרו"}</div>
+                  <Rich html={r.challengesSolved} />
                 </div>
                 <div>
                   <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// כלי AI לפיתוח"}</div>
-                  <p className="whitespace-pre-wrap">{r.aiDevTools ?? "-"}</p>
+                  <Rich html={r.aiDevTools} />
                 </div>
                 <div>
                   <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// מודלי האיג׳נט"}</div>
-                  <p className="whitespace-pre-wrap">{r.aiModels ?? "-"}</p>
+                  <Rich html={r.aiModels} />
                 </div>
                 {r.members.map((m) => (
                   <div key={m.id} className="md:col-span-3 rounded-[12px] bg-tint-warm/40 px-3 py-2">
@@ -78,15 +84,15 @@ export function SubmissionsTable({ rows }: { rows: AdminSubmissionRow[] }) {
                       <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1 mt-1">
                         <div>
                           <dt className="font-semibold text-ink-900">מה תרם לך הפרויקט?</dt>
-                          <dd className="whitespace-pre-wrap">{m.reflection.contributed ?? "-"}</dd>
+                          <dd><Rich html={m.reflection.contributed} /></dd>
                         </div>
                         <div>
                           <dt className="font-semibold text-ink-900">מה למדת על עצמך?</dt>
-                          <dd className="whitespace-pre-wrap">{m.reflection.learned ?? "-"}</dd>
+                          <dd><Rich html={m.reflection.learned} /></dd>
                         </div>
                         <div>
                           <dt className="font-semibold text-ink-900">ממה הכי נהנית?</dt>
-                          <dd className="whitespace-pre-wrap">{m.reflection.enjoyed ?? "-"}</dd>
+                          <dd><Rich html={m.reflection.enjoyed} /></dd>
                         </div>
                       </dl>
                     ) : (
@@ -101,4 +107,10 @@ export function SubmissionsTable({ rows }: { rows: AdminSubmissionRow[] }) {
       )}
     </section>
   );
+}
+
+/** Editor HTML - sanitized to the brand allowlist when it was saved. */
+function Rich({ html }: { html: string | null }) {
+  if (!html) return <p className="text-ink-500">-</p>;
+  return <div className={RICH} dangerouslySetInnerHTML={{ __html: html }} />;
 }

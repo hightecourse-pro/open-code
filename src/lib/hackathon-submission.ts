@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CHALLENGES, type Challenge } from "@/app/hackathon-2026/shared";
 import { withPrevSurnames } from "@/lib/prev-surname";
+import { htmlToPlainText } from "@/lib/rich-text";
 
 /**
  * הגשת התוצרים (the owner, 16/10): "בזוג - רק אחת מעלה הכל, אבל השאלות
@@ -81,6 +82,7 @@ export interface Submission {
   productUrl: string | null;
   repoUrl: string | null;
   architecture: string | null;
+  challengesSolved: string | null;
   videoUrl: string | null;
   videoPath: string | null;
   videoSize: number | null;
@@ -98,6 +100,7 @@ function toSubmission(r: {
   product_url: string | null;
   repo_url: string | null;
   architecture: string | null;
+  challenges_solved: string | null;
   video_url: string | null;
   video_path: string | null;
   video_size: number | null;
@@ -114,6 +117,7 @@ function toSubmission(r: {
     productUrl: r.product_url,
     repoUrl: r.repo_url,
     architecture: r.architecture,
+    challengesSolved: r.challenges_solved,
     videoUrl: r.video_url,
     videoPath: r.video_path,
     videoSize: r.video_size,
@@ -152,6 +156,7 @@ export interface SubmissionChecklist {
   product: boolean;
   repo: boolean;
   architecture: boolean;
+  challenges: boolean;
   video: boolean;
   tools: boolean;
   models: boolean;
@@ -161,7 +166,8 @@ export interface SubmissionChecklist {
   total: number;
 }
 
-const has = (v: string | null | undefined) => !!v && v.trim().length > 0;
+/** Rich HTML counts only when there is real text inside it. */
+const has = (v: string | null | undefined) => !!v && htmlToPlainText(v).trim().length > 0;
 
 /** What is ready, what is missing - the progress ring and the final gate share it. */
 export function checklistOf(sub: Submission | null, mine: Reflection | null): SubmissionChecklist {
@@ -169,6 +175,7 @@ export function checklistOf(sub: Submission | null, mine: Reflection | null): Su
     product: has(sub?.productUrl),
     repo: has(sub?.repoUrl),
     architecture: has(sub?.architecture),
+    challenges: has(sub?.challengesSolved),
     video: has(sub?.videoUrl) || has(sub?.videoPath),
     tools: has(sub?.aiDevTools),
     models: has(sub?.aiModels),
@@ -186,6 +193,7 @@ export interface AdminSubmissionRow {
   productUrl: string | null;
   repoUrl: string | null;
   architecture: string | null;
+  challengesSolved: string | null;
   videoUrl: string | null;
   videoDownloadUrl: string | null;
   videoSize: number | null;
@@ -218,6 +226,7 @@ export async function loadAdminSubmissions(): Promise<AdminSubmissionRow[]> {
     productUrl: s.product_url,
     repoUrl: s.repo_url,
     architecture: s.architecture,
+    challengesSolved: s.challenges_solved,
     videoUrl: s.video_url,
     videoDownloadUrl: s.video_path ? (urlOf.get(s.video_path) ?? null) : null,
     videoSize: s.video_size,

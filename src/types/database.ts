@@ -2010,8 +2010,8 @@ export interface Database {
         Relationships: [];
       };
       hackathon_submissions: {
-        Row: { id: string; team_key: string; challenge_key: string; product_url: string | null; repo_url: string | null; architecture: string | null; video_url: string | null; video_path: string | null; video_size: number | null; ai_dev_tools: string | null; ai_models: string | null; created_by: string | null; submitted_at: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; team_key: string; challenge_key: string; product_url?: string | null; repo_url?: string | null; architecture?: string | null; video_url?: string | null; video_path?: string | null; video_size?: number | null; ai_dev_tools?: string | null; ai_models?: string | null; created_by?: string | null; submitted_at?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; team_key: string; challenge_key: string; product_url: string | null; repo_url: string | null; architecture: string | null; challenges_solved: string | null; video_url: string | null; video_path: string | null; video_size: number | null; ai_dev_tools: string | null; ai_models: string | null; created_by: string | null; submitted_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; team_key: string; challenge_key: string; product_url?: string | null; repo_url?: string | null; architecture?: string | null; challenges_solved?: string | null; video_url?: string | null; video_path?: string | null; video_size?: number | null; ai_dev_tools?: string | null; ai_models?: string | null; created_by?: string | null; submitted_at?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_submissions"]["Insert"]>;
         Relationships: [];
       };

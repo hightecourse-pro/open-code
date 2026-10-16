@@ -2,10 +2,9 @@
 
 import { useActionState } from "react";
 import { Alert, Button } from "@/components/ui";
+import { RichTextEditor } from "@/components/patterns/rich-text-editor";
 import type { Reflection } from "@/lib/hackathon-submission";
 import { saveReflection, type SubmitState } from "./actions";
-
-const TA = "w-full rounded-[10px] border border-ink-200 bg-white px-3 py-2 text-[13.5px] leading-relaxed focus:border-brand-purple outline-none";
 
 /** The three personal questions - hers alone; a partner answers her own on her own page. */
 export function ReflectionForm({ mine, isPair, partnerName, partnerReflected }: { mine: Reflection | null; isPair: boolean; partnerName: string | null; partnerReflected: boolean }) {
@@ -26,18 +25,18 @@ export function ReflectionForm({ mine, isPair, partnerName, partnerReflected }: 
           )}
         </p>
       </div>
-      <label className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1">
         <span className="text-[13px] font-semibold text-ink-800">מה תרם לך הפרויקט?</span>
-        <textarea name="contributed" rows={3} maxLength={3000} className={TA} defaultValue={mine?.contributed ?? ""} />
-      </label>
-      <label className="flex flex-col gap-1">
+        <RichTextEditor id="contributed" name="contributed" defaultValue={mine?.contributed} compact />
+      </div>
+      <div className="flex flex-col gap-1">
         <span className="text-[13px] font-semibold text-ink-800">מה למדת על עצמך במהלך בניית הפרויקט?</span>
-        <textarea name="learned" rows={3} maxLength={3000} className={TA} defaultValue={mine?.learned ?? ""} />
-      </label>
-      <label className="flex flex-col gap-1">
+        <RichTextEditor id="learned" name="learned" defaultValue={mine?.learned} compact />
+      </div>
+      <div className="flex flex-col gap-1">
         <span className="text-[13px] font-semibold text-ink-800">ממה הכי נהנית?</span>
-        <textarea name="enjoyed" rows={3} maxLength={3000} className={TA} defaultValue={mine?.enjoyed ?? ""} />
-      </label>
+        <RichTextEditor id="enjoyed" name="enjoyed" defaultValue={mine?.enjoyed} compact />
+      </div>
       <div className="flex items-center gap-3 flex-wrap">
         <Button type="submit" disabled={pending}>
           {pending ? "שומרת…" : "שמירה"}
