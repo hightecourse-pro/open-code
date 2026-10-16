@@ -9,10 +9,10 @@ import { clearSnapshots, readSnapshot, setViewer, writeSnapshot } from "@/lib/sn
  *
  *  1. A page she already visited comes straight from the router cache
  *     (next.config staleTimes). <RevalidateStale> - rendered by each route
- *     group's template.tsx, so it mounts on every navigation - checks when
- *     this path was last actually fetched from the server; a cached replay
- *     has no recent fetch, so it refreshes in the background and shows the
- *     ״מתעדכן…״ pill until the fresh render swaps in.
+ *     group's template.tsx, so it mounts on every navigation - watches the
+ *     router's own page fetches; a cached replay has none in flight or
+ *     recent, so it refreshes in the background and shows the ״מתעדכן…״
+ *     pill until the fresh render swaps in.
  *  2. While a route still loads, she sees the last snapshot of it: on a
  *     click, <SnapshotCapture> swaps the current page for the destination's
  *     snapshot (dimmed, inert, with the pill) until the navigation commits -
@@ -22,37 +22,62 @@ import { clearSnapshots, readSnapshot, setViewer, writeSnapshot } from "@/lib/sn
  *     render is stored for next time.
  */
 
-/* ---------- when was each path last fetched from the server ---------- */
+/* ---------- which paths are being fetched from the server right now ---------- */
 
-const fetchedAt = new Map<string, number>();
-let observing = false;
-function noteEntry(e: PerformanceEntry) {
-  if (!e.name.includes("_rsc=")) return;
-  try {
-    const u = new URL(e.name);
-    const end = performance.timeOrigin + (e as PerformanceResourceTiming).responseEnd;
-    if ((fetchedAt.get(u.pathname) ?? 0) < end) fetchedAt.set(u.pathname, end);
-  } catch {}
+const inFlight = new Map<string, number>();
+const endedAt = new Map<string, number>();
+let patched = false;
+/**
+ * The router fetches a page with `RSC: 1` (prefetches add `Next-Router-Prefetch`).
+ * Knowing when such a fetch started and ended is the only reliable way to tell
+ * "this page just came from the server" from "this page was replayed from the
+ * cache" - the performance timeline only lists a fetch once its stream closed,
+ * which is after React already committed the page.
+ */
+function watchNavigationFetches() {
+  if (patched || typeof window === "undefined") return;
+  patched = true;
+  const native = window.fetch.bind(window);
+  window.fetch = (input, init) => {
+    let path: string | null = null;
+    try {
+      const headers = new Headers(init?.headers ?? (input instanceof Request ? input.headers : undefined));
+      if (headers.get("RSC") === "1" && !headers.get("Next-Router-Prefetch")) {
+        path = new URL(input instanceof Request ? input.url : String(input), location.href).pathname;
+      }
+    } catch {}
+    if (!path) return native(input, init);
+    const p = path;
+    inFlight.set(p, (inFlight.get(p) ?? 0) + 1);
+    const done = () => {
+      const n = (inFlight.get(p) ?? 1) - 1;
+      if (n <= 0) inFlight.delete(p);
+      else inFlight.set(p, n);
+      endedAt.set(p, Date.now());
+    };
+    return native(input, init).then(
+      (res) => {
+        // the body streams on after the headers - count it as in flight until it closes
+        if (res.body) {
+          const [a, b] = res.body.tee();
+          new Response(b).arrayBuffer().then(done, done);
+          return new Response(a, { status: res.status, statusText: res.statusText, headers: res.headers });
+        }
+        done();
+        return res;
+      },
+      (err) => {
+        done();
+        throw err;
+      }
+    );
+  };
 }
-function startObserving() {
-  if (observing || typeof PerformanceObserver === "undefined") return;
-  observing = true;
-  try {
-    performance.setResourceTimingBufferSize(1500);
-    performance.addEventListener("resourcetimingbufferfull", () => performance.clearResourceTimings());
-    const po = new PerformanceObserver((list) => list.getEntries().forEach(noteEntry));
-    po.observe({ type: "resource", buffered: true });
-  } catch {}
-}
-/** The observer delivers asynchronously; the sync buffer has what just finished. */
-function lastFetch(path: string): number {
-  try {
-    performance.getEntriesByType("resource").forEach(noteEntry);
-  } catch {}
-  return fetchedAt.get(path) ?? 0;
-}
-/** A fetch younger than this is the navigation that just brought the page - nothing to refresh. */
+/** A fetch that is still streaming, or closed within this window, is the navigation that just brought the page. */
 const FRESH_MS = 2500;
+function justFetched(path: string): boolean {
+  return inFlight.has(path) || Date.now() - (endedAt.get(path) ?? 0) < FRESH_MS;
+}
 let firstMount = true;
 
 /** The shells tell the store who is signed in; a different member wipes the previous one's snapshots. */
@@ -81,20 +106,23 @@ export function UpdatingPill({ label = "מתעדכן…" }: { label?: string }) 
 
 /**
  * Mounts on every navigation (template.tsx). The document itself is fresh
- * on the first mount; afterwards, a path with no server fetch in the last
- * 2.5s was replayed from the router cache - refresh it in the background.
+ * on the first mount; afterwards, a path whose page is neither being fetched
+ * nor was fetched in the last 2.5s was replayed from the router cache -
+ * refresh it in the background.
  */
 export function RevalidateStale() {
   const router = useRouter();
   const pathname = usePathname();
   const [pending, start] = useTransition();
   useEffect(() => {
-    startObserving();
+    watchNavigationFetches();
     if (firstMount) {
       firstMount = false;
       return;
     }
-    if (Date.now() - lastFetch(pathname) < FRESH_MS) return;
+    if (justFetched(pathname)) return;
+    // the route's loading boundary is up = its page is on the way right now
+    if (document.querySelector("[data-snapshot-root] [data-snapshot-loading]")) return;
     start(() => router.refresh());
   }, [pathname, router]);
   return pending ? <UpdatingPill /> : null;
