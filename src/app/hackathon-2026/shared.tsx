@@ -378,7 +378,7 @@ export function ChallengesSection({ variant = "juniors" }: { variant?: "juniors"
     <section className="px-6 pt-10 pb-20 bg-[#FBF7FF] relative">
       <Sparkle className="absolute top-16 left-[10%] w-5 h-5" color="#E0418D" delay="0.6s" />
       <Sparkle className="absolute bottom-24 right-[8%] w-6 h-6" delay="1.4s" />
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-5xl mx-auto">
         <div className="text-center mb-14">
           <span className="font-mono text-xs text-brand-pink-deep">&lt;אתגרים/&gt;</span>
           {variant === "partners" ? (
