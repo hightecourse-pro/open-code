@@ -89,16 +89,6 @@ export async function loadArenaMentors(): Promise<ArenaMentor[]> {
   }));
 }
 
-/** A random mentor: present ones first, then available ones; with aiOnly, among those who know AI (falls back to any AI mentor, then null). */
-export function pickRandomMentor(mentors: ArenaMentor[], aiOnly: boolean): ArenaMentor | null {
-  const fits = (m: ArenaMentor) => !aiOnly || m.ai;
-  const present = mentors.filter((m) => m.present && m.available && fits(m));
-  const available = mentors.filter((m) => m.available && fits(m));
-  const pool = present.length > 0 ? present : available.length > 0 ? available : aiOnly ? mentors.filter((m) => m.ai) : mentors;
-  if (pool.length === 0) return null;
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
 export interface ArenaAnswer {
   id: string;
   authorId: string;

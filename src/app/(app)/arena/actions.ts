@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireCommunityAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { arenaRoleFor, loadArenaMentors, pickRandomMentor } from "@/lib/arena";
+import { arenaRoleFor, loadArenaMentors } from "@/lib/arena";
 import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS, ARENA_TOPICS, NUDGE_AFTER_HOURS, PRESENCE_HOURS } from "@/lib/arena-shared";
 import { sendResendEmail } from "@/lib/email/resend";
 import { arenaAnsweredEmail, arenaFollowUpEmail, arenaHelpfulEmail, arenaNudgeEmail, arenaQuestionEmail } from "@/lib/email/templates";
@@ -42,10 +42,11 @@ async function contacts(ids: string[]): Promise<Map<string, { first: string | un
 const questionUrl = (id: string) => `${getSiteUrl()}/arena?q=${id}`;
 
 /**
- * A question into the arena: to a random mentor (present ones first), to a
- * random mentor who knows AI, or to a chosen one; with a topic, optionally
- * private (mentors, the team and she alone see it). Rich body - code and
- * screenshots embedded as data URIs, so nothing depends on a blocked host.
+ * A question into the arena (the owner, 18/10: not addressed to anyone - every
+ * mentor sees it and whoever can, answers); with a topic, optionally private
+ * (mentors, the team and she alone see it). Mentors who marked "אני כאן
+ * עכשיו" get a mail at once; the rest meet it in the daily digest. Rich body -
+ * code and screenshots embedded as data URIs, so nothing depends on a blocked host.
  */
 export async function askArenaQuestion(_prev: ArenaFormState, formData: FormData): Promise<ArenaFormState> {
   const me = await requireCommunityAccess();
@@ -53,50 +54,32 @@ export async function askArenaQuestion(_prev: ArenaFormState, formData: FormData
   if (!role) return { error: "הזירה פתוחה לרשומות להאקתון ולמנטוריות." };
   const title = String(formData.get("title") ?? "").trim().slice(0, 160);
   const body = sanitizeArenaHtml(String(formData.get("body") ?? "").slice(0, 400000));
-  const target = String(formData.get("target") ?? "random");
-  const chosenId = String(formData.get("mentor_id") ?? "").trim();
   const topic = String(formData.get("topic") ?? "").trim();
   const isPrivate = formData.get("is_private") === "on";
   if (title.length < 3) return { error: "כתבי כותרת קצרה לשאלה." };
   if (!body) return { error: "כתבי את השאלה עצמה." };
   if (topic && !ARENA_TOPICS.some((t) => t.key === topic)) return { error: "בחרי נושא מהרשימה." };
 
-  const mentors = (await loadArenaMentors()).filter((m) => m.id !== me.id);
-  let chosen = null as ReturnType<typeof pickRandomMentor>;
-  let aiOnly = false;
-  if (target === "random_ai") {
-    aiOnly = true;
-    chosen = pickRandomMentor(mentors, true);
-  } else if (target === "pick") {
-    chosen = mentors.find((m) => m.id === chosenId) ?? null;
-    if (!chosen) return { error: "בחרי מנטורית מהרשימה." };
-    aiOnly = chosen.ai;
-  } else {
-    chosen = pickRandomMentor(mentors, false);
-  }
-
   const admin = createAdminClient();
   const { data: q, error } = await admin
     .from("arena_questions")
-    .insert({ author_id: me.id, title, body, target_mentor_id: chosen?.id ?? null, ai_only: aiOnly, is_private: isPrivate, topic: topic || null })
+    .insert({ author_id: me.id, title, body, target_mentor_id: null, ai_only: false, is_private: isPrivate, topic: topic || null })
     .select("id")
     .single();
   if (error || !q) return { error: "השאלה לא נשמרה. נסי שוב." };
 
-  if (chosen) {
-    const { first, email } = await contact(chosen.id);
-    if (email) {
-      const mail = arenaQuestionEmail(first, title, me.full_name, questionUrl(q.id));
-      await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
-    }
+  // the mentors who said "אני כאן עכשיו" asked to hear at once
+  const present = (await loadArenaMentors()).filter((m) => m.available && m.present && m.id !== me.id);
+  const cs = await contacts(present.map((m) => m.id));
+  for (const [, c] of cs) {
+    if (!c.email) continue;
+    const mail = arenaQuestionEmail(c.first, title, me.full_name, questionUrl(q.id));
+    await sendResendEmail({ to: c.email, subject: mail.subject, html: mail.html });
   }
   revalidatePath("/arena");
-  const who = chosen ? `${chosen.name}${chosen.present ? " (כאן עכשיו 🟢)" : aiOnly ? " (מבינה ב-AI)" : ""}` : null;
   return {
     ok: true,
-    info: who
-      ? `השאלה פורסמה בזירה ונשלחה ל${who}. ${isPrivate ? "רק המנטוריות רואות אותה." : "כל המנטוריות רואות אותה,"} והתשובה תגיע גם למייל שלך.`
-      : `השאלה פורסמה בזירה${isPrivate ? " (פרטית - רק למנטוריות)" : ""}. התשובה תגיע גם למייל שלך.`,
+    info: `השאלה פורסמה בזירה - ${isPrivate ? "המנטוריות והצוות רואות אותה" : "כל המנטוריות רואות אותה"}, ומי שיכולה תענה.${present.length ? ` ${present.length} מנטוריות שכאן עכשיו 🟢 קיבלו הודעה.` : ""} התשובה תגיע גם למייל שלך.`,
   };
 }
 

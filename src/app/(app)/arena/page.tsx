@@ -35,8 +35,8 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
         <Header subtitle="שאלות למנטוריות - לרשומות להאקתון." />
         <section className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14px] text-ink-800 leading-relaxed">
           <p>
-            <b>הזירה פתוחה לרשומות להאקתון ולמנטוריות.</b> ברגע שנרשמת לאתגר (לבד או כזוג מאושר), הזירה נפתחת לך: שאלה למנטורית
-            אקראית, למנטורית שמבינה ב-AI, או למנטורית שתבחרי - והתשובה מגיעה גם למייל.
+            <b>הזירה פתוחה לרשומות להאקתון ולמנטוריות.</b> ברגע שנרשמת לאתגר (לבד או כזוג מאושר), הזירה נפתחת לך: שאלה
+            שמגיעה לכל המנטוריות, ומי שיכולה עונה - והתשובה מגיעה גם למייל.
           </p>
           <Link href="/hackathon" className="inline-flex mt-3 font-display font-bold text-brand-purple hover:underline">
             להרשמה להאקתון ←
@@ -54,7 +54,6 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
   ]);
   const [stats, leaders] = isMentorSide ? await Promise.all([mentorArenaStats(profile.id), arenaLeaderboard(5)]) : [null, []];
   const open = questions.filter((q) => q.status === "open").length;
-  const forMe = questions.filter((q) => q.status === "open" && q.targetMentorId === profile.id).length;
   const myChallenge = registration ? (CHALLENGES.find((c) => c.key === registration.challengeKey) ?? null) : null;
   const me = mentors.find((m) => m.id === profile.id) ?? null;
   const presentNow = mentors.filter((m) => m.present && m.available).length;
@@ -65,8 +64,8 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
       <Header
         subtitle={
           isMentorSide
-            ? "כל השאלות של כל הצוותים בהאקתון, במקום אחד. תשובה ראשונה לשאלה = נקודות, ועוד בונוס כשהיא עזרה."
-            : "שאלה למנטורית אקראית, למנטורית שמבינה ב-AI, או למי שתבחרי. התשובה מגיעה גם למייל."
+            ? "כל השאלות של כל הצוותים בהאקתון, במקום אחד. אף שאלה לא ממוענת - מי שיכולה, עונה. תשובה ראשונה = נקודות, ועוד בונוס כשהיא עזרה."
+            : "השאלה מגיעה לכל המנטוריות בזירה, ומי שיכולה עונה. התשובה מגיעה גם למייל."
         }
       />
 
@@ -114,7 +113,6 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
           </div>
           <div className="relative mt-4 flex flex-wrap items-center gap-2 text-[13px]">
             <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">{open} שאלות פתוחות</span>
-            {forMe > 0 && <span className="rounded-full bg-white text-brand-purple px-3 py-1 font-bold">{forMe} ממתינות לך אישית</span>}
             {role === "mentor" && <PresenceToggle present={!!me?.present} until={me?.presentUntil ?? null} />}
             {leaders.length > 0 && (
               <span className="ms-auto flex items-center gap-2 flex-wrap">
