@@ -5,6 +5,7 @@ import { EmailInput } from "../email-input";
 import Link from "next/link";
 import { signIn, type AuthState } from "../actions";
 import { Alert, Button, Field, PasswordInput } from "@/components/ui";
+import { ClearSnapshots } from "@/components/patterns/stale-while-revalidate";
 
 // A spent link means something different depending on which mail it came from,
 // and "פג תוקף" on a confirmation she already completed reads like a bug.
@@ -38,40 +39,43 @@ export default function LoginPage({
         : null;
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="t-h2">טוב לראות אותך שוב</h1>
-        <p className="t-body-sm text-ink-500 mt-1">היכנסי כדי להמשיך לקהילה.</p>
-      </div>
-
-      {linkError && !state.error && <Alert variant="warn">{linkMessage}</Alert>}
-      {emailChanged && !state.error && <Alert variant="success">הכתובת החדשה אושרה ✓ מעכשיו נכנסים איתה.</Alert>}
-      {emailChangeError && !state.error && <Alert variant="warn">{emailChangeError}</Alert>}
-      {state.error && <Alert variant="danger">{state.error}</Alert>}
-
-      <form action={action} className="flex flex-col gap-4">
-        <Field label="אימייל" htmlFor="email">
-          <EmailInput id="email" name="email"  required dir="ltr" autoComplete="email" />
-        </Field>
-        <Field label="סיסמה" htmlFor="password">
-          <PasswordInput id="password" name="password" required autoComplete="current-password" />
-        </Field>
-        <div className="-mt-1 text-left">
-          <Link href="/forgot-password" className="t-body-sm text-brand-purple font-semibold">
-            שכחת סיסמה?
-          </Link>
+    <>
+      <ClearSnapshots />
+      <div className="flex flex-col gap-5">
+        <div>
+          <h1 className="t-h2">טוב לראות אותך שוב</h1>
+          <p className="t-body-sm text-ink-500 mt-1">היכנסי כדי להמשיך לקהילה.</p>
         </div>
-        <Button type="submit" disabled={pending} className="w-full">
-          {pending ? "רגע אחד…" : "כניסה"}
-        </Button>
-      </form>
 
-      <p className="t-body-sm text-ink-500 text-center">
-        עוד לא נרשמת?{" "}
-        <Link href="/signup" className="font-semibold">
-          להצטרפות לקהילה
-        </Link>
-      </p>
-    </div>
+        {linkError && !state.error && <Alert variant="warn">{linkMessage}</Alert>}
+        {emailChanged && !state.error && <Alert variant="success">הכתובת החדשה אושרה ✓ מעכשיו נכנסים איתה.</Alert>}
+        {emailChangeError && !state.error && <Alert variant="warn">{emailChangeError}</Alert>}
+        {state.error && <Alert variant="danger">{state.error}</Alert>}
+
+        <form action={action} className="flex flex-col gap-4">
+          <Field label="אימייל" htmlFor="email">
+            <EmailInput id="email" name="email"  required dir="ltr" autoComplete="email" />
+          </Field>
+          <Field label="סיסמה" htmlFor="password">
+            <PasswordInput id="password" name="password" required autoComplete="current-password" />
+          </Field>
+          <div className="-mt-1 text-left">
+            <Link href="/forgot-password" className="t-body-sm text-brand-purple font-semibold">
+              שכחת סיסמה?
+            </Link>
+          </div>
+          <Button type="submit" disabled={pending} className="w-full">
+            {pending ? "רגע אחד…" : "כניסה"}
+          </Button>
+        </form>
+
+        <p className="t-body-sm text-ink-500 text-center">
+          עוד לא נרשמת?{" "}
+          <Link href="/signup" className="font-semibold">
+            להצטרפות לקהילה
+          </Link>
+        </p>
+      </div>
+    </>
   );
 }

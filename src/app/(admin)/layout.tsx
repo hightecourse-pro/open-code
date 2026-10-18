@@ -3,6 +3,7 @@ import { requireRole } from "@/lib/auth";
 import { openRequestCount, unreadAlertCount } from "@/lib/alerts";
 import { waUnreadContactsCount } from "@/lib/whatsapp-inbox";
 import { PresenceHeartbeat } from "@/components/patterns/presence-heartbeat";
+import { ViewerMarker } from "@/components/patterns/stale-while-revalidate";
 
 export default async function AdminRouteLayout({
   children,
@@ -18,6 +19,7 @@ export default async function AdminRouteLayout({
   const [alertsBadge, requestsBadge, whatsappBadge] = await Promise.all([unreadAlertCount(), openRequestCount(), waUnreadContactsCount(viewer.id)]);
   return (
     <AdminShell alertsBadge={alertsBadge} requestsBadge={requestsBadge} whatsappBadge={whatsappBadge}>
+      <ViewerMarker id={viewer.id} />
       <PresenceHeartbeat />
       {children}
     </AdminShell>

@@ -8,6 +8,7 @@ import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
 import { CoursePromoStrip } from "@/components/patterns/course-promo-popup";
 import { PresenceHeartbeat } from "@/components/patterns/presence-heartbeat";
+import { ViewerMarker } from "@/components/patterns/stale-while-revalidate";
 import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
 import { isJudge } from "@/lib/judging";
 import { COURSE_KEY } from "@/lib/course-registration";
@@ -300,6 +301,7 @@ export default async function AuthenticatedLayout({
         </Link>
       )}
       {/* The course strip (the owner, 15/10) - in the flow, hides nothing. */}
+      <ViewerMarker id={profile.id} />
       <PresenceHeartbeat />
       <CoursePromoStrip show={showCoursePromo} />
       {gradesCount === 0 && <GradesNudge />}

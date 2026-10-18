@@ -493,7 +493,7 @@ export function MembersTable({
               <tr key={m.id} className={cn(finding && m.is_vip && "bg-tint-warm/30")}>
                 <td className="p-2 border-b border-ink-100">
                   <div className="flex items-center gap-2">
-                    <PresenceAvatar lastSeen={m.last_seen_at} size="xs">
+                    <PresenceAvatar lastSeen={m.last_seen_at} size="xs" role={m.role}>
                       <Avatar size="xs" tone={m.role === "mentor" ? "gold" : "pink"} initials={m.avatar_initials || m.full_name.slice(0, 1) || "ק"} />
                     </PresenceAvatar>
                     <a
