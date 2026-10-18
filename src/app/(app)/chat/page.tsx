@@ -299,7 +299,7 @@ export default async function ChatPage({
                       : "border-transparent hover:bg-ink-100"
                   )}
                 >
-                  <PresenceAvatar lastSeen={other?.last_seen_at}>
+                  <PresenceAvatar lastSeen={other?.last_seen_at} role={other?.role}>
                     <Avatar
                       size="sm"
                       tone={other?.role === "mentor" ? "gold" : "pink"}
@@ -366,7 +366,7 @@ export default async function ChatPage({
           {active && activeOther ? (
             <>
               <div className="flex items-center gap-2.5 p-3.5 border-b border-ink-100">
-                <PresenceAvatar lastSeen={activeOther.last_seen_at}>
+                <PresenceAvatar lastSeen={activeOther.last_seen_at} role={activeOther.role}>
                   <Avatar
                     size="sm"
                     tone={activeOther.role === "mentor" ? "gold" : "pink"}
@@ -395,7 +395,13 @@ export default async function ChatPage({
                     )}
                   </div>
                   <div className="text-[12.5px] text-ink-500 truncate">
-                    {activeSubtitle} <span className="text-ink-300">·</span> <PresenceText lastSeen={activeOther.last_seen_at} />
+                    {activeSubtitle}
+                    {activeOther.role !== "admin" && (
+                      <>
+                        {" "}
+                        <span className="text-ink-300">·</span> <PresenceText lastSeen={activeOther.last_seen_at} role={activeOther.role} />
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

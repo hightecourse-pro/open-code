@@ -487,7 +487,7 @@ export default async function AdminMemberProfilePage({
 
       {/* Header card */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex items-start gap-4 flex-wrap">
-        <PresenceAvatar lastSeen={profile.last_seen_at} size="xl">
+        <PresenceAvatar lastSeen={profile.last_seen_at} size="xl" role={profile.role}>
           <Avatar
             size="xl"
             tone={profile.role === "mentor" ? "gold" : "pink"}
@@ -497,9 +497,11 @@ export default async function AdminMemberProfilePage({
         </PresenceAvatar>
         <div className="flex-1 min-w-[200px]">
           <h1 className="font-display text-[24px] font-black text-ink-1000">{nameWithPrevSurname(profile.full_name, prevSurname)}</h1>
-          <div className="text-[12.5px] mt-0.5">
-            <PresenceText lastSeen={profile.last_seen_at} />
-          </div>
+          {profile.role !== "admin" && (
+            <div className="text-[12.5px] mt-0.5">
+              <PresenceText lastSeen={profile.last_seen_at} role={profile.role} />
+            </div>
+          )}
           <div className="flex items-center gap-2 mt-1.5 flex-wrap">
             <Link
               href={`/admin/members/${profile.id}/profile`} target="_blank" rel="noopener"
