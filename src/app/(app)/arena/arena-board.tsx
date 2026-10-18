@@ -29,12 +29,12 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
   const counts = useMemo(
     () => ({
       open: questions.filter((q) => q.status === "open").length,
-      mine: mentorSide ? questions.filter((q) => q.status === "open" && q.targetMentorId === viewerId).length : questions.filter((q) => q.authorId === viewerId).length,
-      ai: questions.filter((q) => q.aiOnly && q.status === "open").length,
+      mine: questions.filter((q) => q.authorId === viewerId).length,
+      ai: questions.filter((q) => (q.aiOnly || q.topic === "ai") && q.status === "open").length,
       answered: questions.filter((q) => q.status !== "open").length,
       all: questions.length,
     }),
-    [questions, viewerId, mentorSide]
+    [questions, viewerId]
   );
   const challengeChips = useMemo(() => {
     const seen = new Map<string, { label: string; n: number }>();
@@ -57,10 +57,10 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
         if (filter === "all") return true;
         if (filter === "open") return q.status === "open";
         if (filter === "answered") return q.status !== "open";
-        if (filter === "ai") return q.aiOnly && q.status === "open";
-        return mentorSide ? q.status === "open" && q.targetMentorId === viewerId : q.authorId === viewerId;
+        if (filter === "ai") return (q.aiOnly || q.topic === "ai") && q.status === "open";
+        return q.authorId === viewerId;
       }),
-    [questions, filter, viewerId, mentorSide, pinned, challenge, topic]
+    [questions, filter, viewerId, pinned, challenge, topic]
   );
   const worthReading = useMemo(() => questions.filter((q) => q.pinnedAt && (!challenge || q.challengeKey === challenge)).slice(0, 6), [questions, challenge]);
 
@@ -73,7 +73,6 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
   const chips: { key: Filter; label: string }[] = mentorSide
     ? [
         { key: "open", label: `פתוחות (${counts.open})` },
-        { key: "mine", label: `ממתינות לי (${counts.mine})` },
         { key: "ai", label: `AI (${counts.ai})` },
         { key: "answered", label: `נענו (${counts.answered})` },
         { key: "all", label: `הכל (${counts.all})` },
@@ -154,7 +153,6 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
 function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQuestion; viewerId: string; role: ArenaRole; focused: boolean; onAnswered: (id: string) => void }) {
   const mentorSide = role !== "participant";
   const mine = q.authorId === viewerId;
-  const forMe = q.targetMentorId === viewerId;
   const alreadyAnswered = q.answers.some((a) => a.authorId === viewerId && a.authorRole === "mentor");
   const helped = q.answers.some((a) => a.helpfulAt);
   const [state, action, pending] = useActionState<ArenaFormState, FormData>(async (prev, fd) => {
@@ -185,7 +183,7 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
       id={`q-${q.id}`}
       className={cn(
         "bg-white border rounded-[18px] p-4 md:p-5 shadow-sm flex flex-col gap-3",
-        focused ? "border-brand-purple ring-2 ring-brand-purple/20" : q.pinnedAt ? "border-[#F0B429]/60" : forMe && q.status === "open" ? "border-brand-pink-deep/40" : "border-ink-200"
+        focused ? "border-brand-purple ring-2 ring-brand-purple/20" : q.pinnedAt ? "border-[#F0B429]/60" : "border-ink-200"
       )}
     >
       <div className="flex items-start gap-3">
@@ -196,14 +194,6 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
             <span>{q.authorName}</span>
             <span className="text-ink-300">·</span>
             <span dir="ltr">{WHEN.format(new Date(q.createdAt))}</span>
-            {q.targetMentorName && (
-              <>
-                <span className="text-ink-300">·</span>
-                <span>
-                  נשלחה ל<b className="text-ink-700">{q.targetMentorName}</b>
-                </span>
-              </>
-            )}
             {q.challengeShort && (
               <>
                 <span className="text-ink-300">·</span>
@@ -245,7 +235,6 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
             </Badge>
           )}
           {q.status === "closed" && <Badge variant="gray">{helped ? "עזר לה ✓" : "נסגרה"}</Badge>}
-          {forMe && q.status === "open" && <Badge variant="grad">ממתינה לך</Badge>}
         </div>
       </div>
       <div className={RICH} dangerouslySetInnerHTML={{ __html: q.body }} />

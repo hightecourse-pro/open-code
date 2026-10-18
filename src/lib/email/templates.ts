@@ -933,9 +933,9 @@ export function hackathonSubmissionReceivedEmail(name: string | undefined, chall
 /** The mentor a question was addressed to hears right away (the owner, 15/10). */
 export function arenaQuestionEmail(name: string | undefined, questionTitle: string, askerName: string, url: string): BuiltEmail {
   return {
-    subject: "שאלה בזירת המנטוריות מחכה לך 🏟️",
+    subject: "שאלה חדשה בזירת המנטוריות 🏟️",
     html: renderEmail({
-      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} שאלה אותך בזירה`,
+      heading: `${name ? `${escapeHtml(name)}, ` : ""}${escapeHtml(askerName)} שאלה בזירה - מי שיכולה, עונה`,
       lines: [
         `<b>«${escapeHtml(questionTitle)}»</b>`,
         `התשובה הראשונה שלך לשאלה = <b>+${ARENA_ANSWER_POINTS} נקודות</b> לניקוד המנטוריות שלך. כל המנטוריות רואות את השאלה - מי שעונה ראשונה, זוכה.`,
