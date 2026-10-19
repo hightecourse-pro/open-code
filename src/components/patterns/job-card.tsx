@@ -65,7 +65,10 @@ export interface JobCardProps {
    * In "מתאימות לי" the non-matching jobs stay visible but can't be applied
    * to - the PM wants the difference between the views to be felt.
    */
+  /** Dimmed as "not her stack" on the fit view - still appliable. */
   ineligible?: boolean;
+  /** Opened within the last week (computed by the page). */
+  isNew?: boolean;
   /** She hid this job from her board (member feedback, 14/9) - the card
       offers the way back instead of the hide button. */
   hidden?: boolean;
@@ -93,6 +96,7 @@ export function JobCard({
   matchedTags = [],
   subscriber = true,
   ineligible = false,
+  isNew = false,
   hidden = false,
 }: JobCardProps) {
   const router = useRouter();
@@ -111,6 +115,10 @@ export function JobCard({
     job.status === "open" &&
     job.pipeline_status !== "published" &&
     job.pipeline_status !== "draft";
+  // "חדש" for a week from the opening (the server decides the week), and only
+  // while the job still takes applications - once it moved to the next stage
+  // the pill goes (the owner, 19/10).
+  const showNew = isNew && !advanced && job.status === "open";
 
   function onSave() {
     const next = !isSaved;
@@ -141,6 +149,8 @@ export function JobCard({
 
   return (
     <article
+      data-opened={publishedAt}
+      data-new={showNew ? "1" : undefined}
       className={cn(
         "bg-white border border-ink-200 rounded-[16px] p-4 flex flex-col h-full transition-[transform,box-shadow] duration-[220ms]",
         ineligible
@@ -165,6 +175,11 @@ export function JobCard({
             </div>
           )}
           <div className="font-display text-[16px] font-bold text-ink-1000 leading-snug truncate">
+            {showNew && (
+              <span data-new-pill className="inline-flex items-center align-middle rounded-full bg-brand-gradient text-white text-[10.5px] font-bold px-2 py-px me-1.5 shadow-glow-pink">
+                חדש
+              </span>
+            )}
             {job.title}
           </div>
         </div>
@@ -274,6 +289,15 @@ export function JobCard({
         </div>
       )}
 
+      {ineligible && !hasApplied && (
+        // Dimmed on "מתאימות לי" because the stack differs from her profile -
+        // information, not a closed door: the same job is open on "כל המשרות",
+        // so it stays open here too (a member caught the contradiction, 19/10).
+        <p className="text-[11.5px] text-ink-500 mt-2" data-fit-note>
+          לא תואמת את הטכנולוגיות שסימנת בפרופיל - אפשר להגיש בכל זאת.
+        </p>
+      )}
+
       <div className="flex items-center gap-2 pt-2.5 border-t border-ink-100 mt-auto">
         {!subscriber && job.source === "ours" && !hasApplied && (
           <span className="inline-flex items-center gap-1 text-[11px] text-[#8C5E0E]">
@@ -298,11 +322,6 @@ export function JobCard({
         ) : advanced ? (
           <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1.5">
             🎯 המשרה התקדמה לשלב הבא - ההגשות הועברו למעסיק, אין מה להגיש כרגע
-          </span>
-        ) : ineligible ? (
-          // The apply door is closed here on purpose - say why, plainly.
-          <span className="text-[12px] text-ink-500 leading-snug">
-            לא ניתן להגיש - הפרופיל שלך לא תואם את הקריטריונים שהמשרה מבקשת
           </span>
         ) : job.source === "ours" ? (
           // Our jobs go through the application wizard (questions + CV choice).

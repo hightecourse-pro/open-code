@@ -99,7 +99,8 @@ export function FormDraft({
               input.value = html;
             }
           }
-          setRestoredAt(draft.t);
+          const at = draft.t;
+          setTimeout(() => setRestoredAt(at), 0);
         }
       }
     } catch {
@@ -129,11 +130,56 @@ export function FormDraft({
       if (timer) clearTimeout(timer);
       timer = setTimeout(snapshot, 800);
     };
+    // React 19 resets an uncontrolled form after EVERY server action - a
+    // failed one too. A member filled the whole application, the server said
+    // "no CV attached", and the page wiped her answers (מרגלית חזני, 15/10).
+    // The programmatic reset (not a trusted "reset" button click) is refused
+    // while she has content on the form; a successful submit redirects or
+    // clears the draft on its own.
+    // (form.reset() fires a TRUSTED event, so the button click is what tells
+    // a deliberate reset apart from React's automatic one.)
+    let resetButtonClicked = false;
+    const onClick = (e: Event) => {
+      const el = e.target instanceof Element ? e.target.closest("button, input") : null;
+      resetButtonClicked = !!el && (el as HTMLButtonElement | HTMLInputElement).type === "reset";
+    };
+    const readFields = () => {
+      const fields: { el: HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement; value: string; checked: boolean }[] = [];
+      for (const el of form.elements) {
+        if (!isSafeField(el)) continue;
+        fields.push({ el, value: el.value, checked: el instanceof HTMLInputElement ? el.checked : false });
+      }
+      return fields;
+    };
+    const onReset = (e: Event) => {
+      if (resetButtonClicked) {
+        resetButtonClicked = false;
+        return;
+      }
+      const before = readFields();
+      const hasContent = before.some((f) => !(f.el instanceof HTMLInputElement && (f.el.type === "checkbox" || f.el.type === "radio")) && f.value.trim() !== "");
+      if (!hasContent) return;
+      e.preventDefault();
+      // belt and braces: if the reset went through anyway, put her text back
+      setTimeout(() => {
+        for (const f of before) {
+          if (f.el instanceof HTMLInputElement && (f.el.type === "checkbox" || f.el.type === "radio")) {
+            if (f.el.checked !== f.checked) f.el.checked = f.checked;
+          } else if (f.el.value !== f.value && !(f.el instanceof HTMLInputElement && f.el.type === "file")) {
+            f.el.value = f.value;
+          }
+        }
+      }, 0);
+    };
     form.addEventListener("input", onInput);
     form.addEventListener("change", onInput);
+    form.addEventListener("click", onClick, true);
+    form.addEventListener("reset", onReset);
     return () => {
       form.removeEventListener("input", onInput);
       form.removeEventListener("change", onInput);
+      form.removeEventListener("click", onClick, true);
+      form.removeEventListener("reset", onReset);
       if (timer) clearTimeout(timer);
     };
   }, [storageKey, clear, staleAfter]);
