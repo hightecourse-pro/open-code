@@ -311,13 +311,12 @@ export default async function JobsPage({
       : view === "hidden"
         ? hiddenBoardJobs
         : boardJobs;
-  const sortedJobs = viewJobs
-    .slice()
-    .sort((a, b) => {
-      const diff = matchedTags(b).length - matchedTags(a).length;
-      if (diff !== 0) return diff;
-      return a.created_at < b.created_at ? 1 : -1;
-    });
+  // Newest opening first on every view (the owner, 19/10) - the fit view
+  // keeps its dimming for the non-matching ones, not a different order.
+  const openedAt = (j: Job) => j.published_at ?? j.created_at;
+  const NEW_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+  const nowMs = Date.now();
+  const sortedJobs = viewJobs.slice().sort((a, b) => (openedAt(a) < openedAt(b) ? 1 : openedAt(a) > openedAt(b) ? -1 : 0));
   const fitCount = boardJobs.filter((j) => matchedTags(j).length > 0).length;
   const savedCount = boardJobs.filter((j) => savedIds.has(j.id)).length;
 
@@ -362,6 +361,7 @@ export default async function JobsPage({
     // already applied to is never dimmed - she's in its process.
     ineligible: view === "fit" && matchedTags(job).length === 0 && !appStatusByJob.has(job.id),
     hidden: hiddenIds.has(job.id),
+    isNew: nowMs - new Date(openedAt(job)).getTime() < NEW_FOR_MS,
   });
 
   const VIEWS: { id: BoardView; label: string }[] = [
@@ -420,8 +420,8 @@ export default async function JobsPage({
 
       {view === "fit" && (
         <p className="text-[12.5px] text-ink-500 -mt-1.5">
-          המשרות שמתאימות לפרופיל שלך מודגשות למעלה; השאר מוצגות מעומעמות כי הן מבקשות טכנולוגיות
-          אחרות - אבל אפשר להגיש גם אליהן, בדיוק כמו ב״כל המשרות״.
+          המשרות שמתאימות לפרופיל שלך מודגשות; משרות שמבקשות טכנולוגיות אחרות מעומעמות - אבל אפשר
+          להגיש גם אליהן, בדיוק כמו ב״כל המשרות״. הסדר: החדשות למעלה.
         </p>
       )}
       {view === "hidden" && (

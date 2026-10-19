@@ -67,6 +67,8 @@ export interface JobCardProps {
    */
   /** Dimmed as "not her stack" on the fit view - still appliable. */
   ineligible?: boolean;
+  /** Opened within the last week (computed by the page). */
+  isNew?: boolean;
   /** She hid this job from her board (member feedback, 14/9) - the card
       offers the way back instead of the hide button. */
   hidden?: boolean;
@@ -94,6 +96,7 @@ export function JobCard({
   matchedTags = [],
   subscriber = true,
   ineligible = false,
+  isNew = false,
   hidden = false,
 }: JobCardProps) {
   const router = useRouter();
@@ -112,6 +115,10 @@ export function JobCard({
     job.status === "open" &&
     job.pipeline_status !== "published" &&
     job.pipeline_status !== "draft";
+  // "חדש" for a week from the opening (the server decides the week), and only
+  // while the job still takes applications - once it moved to the next stage
+  // the pill goes (the owner, 19/10).
+  const showNew = isNew && !advanced && job.status === "open";
 
   function onSave() {
     const next = !isSaved;
@@ -142,6 +149,8 @@ export function JobCard({
 
   return (
     <article
+      data-opened={publishedAt}
+      data-new={showNew ? "1" : undefined}
       className={cn(
         "bg-white border border-ink-200 rounded-[16px] p-4 flex flex-col h-full transition-[transform,box-shadow] duration-[220ms]",
         ineligible
@@ -166,6 +175,11 @@ export function JobCard({
             </div>
           )}
           <div className="font-display text-[16px] font-bold text-ink-1000 leading-snug truncate">
+            {showNew && (
+              <span data-new-pill className="inline-flex items-center align-middle rounded-full bg-brand-gradient text-white text-[10.5px] font-bold px-2 py-px me-1.5 shadow-glow-pink">
+                חדש
+              </span>
+            )}
             {job.title}
           </div>
         </div>
