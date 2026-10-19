@@ -6,6 +6,7 @@ const STATUS: Record<ProfileStatus, { label: string; cls: string }> = {
   active: { label: "פעילה", cls: "bg-tint-mint text-success" },
   paused: { label: "מושהית", cls: "bg-ink-100 text-ink-500" },
   rejected: { label: "נדחתה", cls: "bg-danger-bg text-danger" },
+  left: { label: "עזבה", cls: "bg-ink-100 text-ink-600" },
 };
 
 export function StatusPill({ status }: { status: ProfileStatus }) {

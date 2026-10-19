@@ -55,6 +55,7 @@ export function isSubscriber(profile: Pick<Profile, "status" | "role">): boolean
  */
 export async function requireCommunityAccess(): Promise<Profile> {
   const profile = await requireProfile();
+  if (profile.status === "left") redirect("/left");
   if (profile.status === "rejected") {
     redirect(`/join?status=${profile.status}`);
   }

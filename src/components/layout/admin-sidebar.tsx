@@ -32,6 +32,7 @@ import {
   type LucideIcon,
   ListTodo,
   PartyPopper,
+  UserMinus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -48,6 +49,7 @@ const SECTIONS: AdminNavSection[] = [
       { href: "/admin/members", label: "חברות", icon: Users },
       { href: "/admin/requests", label: "פניות לצוות", icon: Inbox },
       { href: "/admin/tasks", label: "משימות", icon: ListTodo },
+      { href: "/admin/departures", label: "הסרות ועזיבות", icon: UserMinus },
     ],
   },
   {

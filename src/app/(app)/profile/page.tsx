@@ -5,6 +5,7 @@ import { Avatar, Badge } from "@/components/ui";
 import { ProfileForm } from "@/components/patterns/profile-form";
 import { EmploymentCard } from "@/components/patterns/employment-card";
 import { DigestPreferences } from "@/components/patterns/digest-preferences";
+import { LeaveCommunity } from "./leave-community";
 import { DriveEmailForm } from "@/components/patterns/drive-email-form";
 import { PortalVisibility } from "@/components/patterns/portal-visibility";
 import { requestMentorRole } from "./actions";
@@ -274,6 +275,8 @@ export default async function ProfilePage({
       />
 
       <DigestPreferences current={profile.digest_frequency ?? "daily"} />
+
+      {profile.role !== "admin" && <LeaveCommunity hasSubscription={profile.status === "active" && profile.role !== "mentor"} />}
     </div>
   );
 }

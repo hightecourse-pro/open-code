@@ -2,6 +2,7 @@
 // scripts/google-apps-script/). The script does the actual sending through the
 // Workspace account. Server-only.
 import { emailGate } from "@/lib/email/resend";
+import { normalizeEmail, optedOutEmails, withUnsubscribe } from "@/lib/unsubscribe";
 
 
 export interface Recipient {
@@ -10,6 +11,8 @@ export interface Recipient {
 }
 
 export interface SendEmailArgs {
+  /** Account mail goes out even to an address that opted out of our mails. */
+  essential?: boolean;
   subject: string;
   /** HTML body. For group sends, `{{name}}` is replaced per recipient. */
   html: string;
@@ -44,6 +47,18 @@ export async function sendEmail(args: SendEmailArgs): Promise<SendResult> {
       ? { ...args, recipients: allowed }
       : { ...args, to: allowed[0].email, name: allowed[0].name };
   }
+  // whoever asked us to stop is left out (unless this is account mail she needs)
+  if (!args.essential) {
+    const current = args.recipients ?? (args.to ? [{ email: args.to, name: args.name }] : []);
+    const stopped = await optedOutEmails(current.map((r) => r.email));
+    const keep = current.filter((r) => !stopped.has(normalizeEmail(r.email)));
+    if (keep.length === 0) return { ok: false, error: "opted_out" };
+    if (keep.length < current.length) {
+      args = args.recipients ? { ...args, recipients: keep } : { ...args, to: keep[0].email, name: keep[0].name };
+    }
+  }
+  // the footer's "הסרה" link: signed for one recipient, the bare page for a merge
+  args = { ...args, html: withUnsubscribe(args.html, args.recipients ? null : args.to) };
   const firstGate = gates.find((g) => g.gate.ok)?.gate;
   if (firstGate && firstGate.ok && firstGate.subjectPrefix) {
     args = { ...args, subject: firstGate.subjectPrefix + args.subject };

@@ -2,6 +2,7 @@
 // Auth emails go through Supabase Custom SMTP; this is for our own sends.
 // Needs RESEND_API_KEY (+ optional EMAIL_FROM) in the environment. Server-only.
 import { isProductionEnv } from "@/lib/env";
+import { emailBlockedByOptOut, withUnsubscribe } from "@/lib/unsubscribe";
 
 
 const FROM = process.env.EMAIL_FROM || "קוד פתוח <noreply@opencode.org.il>";
@@ -34,12 +35,15 @@ export async function sendResendEmail(args: {
   to: string;
   subject: string;
   html: string;
+  /** Account mail (a confirmation she asked for, her subscription) goes out even to an address that opted out of our mails. */
+  essential?: boolean;
 }): Promise<{ ok: boolean; error?: string }> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: "resend_not_configured" };
   const gate = emailGate(args.to);
   if (!gate.ok) return { ok: false, error: gate.error };
-  args = { ...args, subject: gate.subjectPrefix + args.subject };
+  if (!args.essential && (await emailBlockedByOptOut(args.to))) return { ok: false, error: "opted_out" };
+  args = { ...args, subject: gate.subjectPrefix + args.subject, html: withUnsubscribe(args.html, args.to) };
   try {
     const post = () =>
       fetch("https://api.resend.com/emails", {

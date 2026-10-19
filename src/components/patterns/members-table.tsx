@@ -46,6 +46,7 @@ function typeLabel(m: MemberRow): string {
   if (m.status === "active") return "מנויה";
   if (m.status === "pending") return m.profile_completed ? "משתתפת ללא מנוי" : "באמצע השאלון";
   if (m.status === "paused") return "מושהית";
+  if (m.status === "left") return "עזבה";
   return "חסומה";
 }
 
@@ -82,7 +83,7 @@ export interface FilterDef {
 
 type ActiveFilter = { defId: string; values: string[]; text: string };
 
-const STATUS_ORDER: Record<ProfileStatus, number> = { pending: 0, active: 1, paused: 2, rejected: 3 };
+const STATUS_ORDER: Record<ProfileStatus, number> = { pending: 0, active: 1, paused: 2, rejected: 3, left: 4 };
 
 /** One-click member TYPES (the owner, 1/9) - each chip carries its count. */
 const TYPE_DEFS: { id: string; label: string; test: (m: MemberRow) => boolean; onlyWhenAny?: boolean }[] = [
@@ -94,6 +95,7 @@ const TYPE_DEFS: { id: string; label: string; test: (m: MemberRow) => boolean; o
   { id: "team", label: "צוות", test: (m) => m.role === "admin" },
   { id: "paused", label: "מושהות", test: (m) => m.status === "paused", onlyWhenAny: true },
   { id: "rejected", label: "חסומות", test: (m) => m.status === "rejected", onlyWhenAny: true },
+  { id: "left", label: "עזבו", test: (m) => m.status === "left", onlyWhenAny: true },
 ];
 /** Old ?status= deep links (the dashboard cubes) keep filtering raw status. */
 const RAW_STATUS: Record<string, (m: MemberRow) => boolean> = {
@@ -101,6 +103,7 @@ const RAW_STATUS: Record<string, (m: MemberRow) => boolean> = {
   pending: (m) => m.status === "pending",
   paused: (m) => m.status === "paused",
   rejected: (m) => m.status === "rejected",
+  left: (m) => m.status === "left",
 };
 
 /** Sortable/filterable columns - filter is a contains-match on the shown text. */
