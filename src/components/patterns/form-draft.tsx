@@ -99,7 +99,8 @@ export function FormDraft({
               input.value = html;
             }
           }
-          setRestoredAt(draft.t);
+          const at = draft.t;
+          setTimeout(() => setRestoredAt(at), 0);
         }
       }
     } catch {
@@ -129,11 +130,26 @@ export function FormDraft({
       if (timer) clearTimeout(timer);
       timer = setTimeout(snapshot, 800);
     };
+    // React 19 resets an uncontrolled form after EVERY server action - a
+    // failed one too. A member filled the whole application, the server said
+    // "no CV attached", and the page wiped her answers (מרגלית חזני, 15/10).
+    // The programmatic reset (not a trusted "reset" button click) is refused
+    // while she has content on the form; a successful submit redirects or
+    // clears the draft on its own.
+    const onReset = (e: Event) => {
+      if (e.isTrusted) return;
+      const hasContent = [...form.elements].some(
+        (el) => isSafeField(el) && !(el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio")) && el.value.trim() !== ""
+      );
+      if (hasContent) e.preventDefault();
+    };
     form.addEventListener("input", onInput);
     form.addEventListener("change", onInput);
+    form.addEventListener("reset", onReset);
     return () => {
       form.removeEventListener("input", onInput);
       form.removeEventListener("change", onInput);
+      form.removeEventListener("reset", onReset);
       if (timer) clearTimeout(timer);
     };
   }, [storageKey, clear, staleAfter]);
