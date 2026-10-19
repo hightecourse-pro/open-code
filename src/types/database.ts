@@ -13,7 +13,7 @@ export type Json =
 // ---------- enums ----------
 export type UserRole = "junior" | "mentor" | "admin";
 export type MemberTier = "paid" | "free";
-export type ProfileStatus = "pending" | "active" | "paused" | "rejected";
+export type ProfileStatus = "pending" | "active" | "paused" | "rejected" | "left";
 export type SubscriptionPlan = "monthly" | "annual";
 export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled";
 export type PaymentStatus = "succeeded" | "failed" | "refunded";
@@ -100,6 +100,10 @@ export interface Database {
           hired_via_us: boolean;
           /** Presence heartbeat (16/10): when she was last active; null = never signed in since the column exists. */
           last_seen_at: string | null;
+          /** She left the community (18/10): when, why, and the status to restore her to. */
+          left_at: string | null;
+          left_reason: string | null;
+          left_from_status: string | null;
           hired_at: string | null;
           /** Mentors only: temporarily unavailable for new accompaniments. */
           mentor_available: boolean;
@@ -130,6 +134,9 @@ export interface Database {
           found_job?: boolean;
           hired_via_us?: boolean;
           last_seen_at?: string | null;
+          left_at?: string | null;
+          left_reason?: string | null;
+          left_from_status?: string | null;
           hired_at?: string | null;
           mentor_available?: boolean;
           digest_last_sent_at?: string | null;
@@ -2004,6 +2011,30 @@ export interface Database {
         Row: { id: string; author_id: string; title: string; body: string; target_mentor_id: string | null; ai_only: boolean; is_private: boolean; topic: string | null; status: string; created_at: string; updated_at: string; answered_at: string | null; pinned_at: string | null; nudged_at: string | null; closed_at: string | null };
         Insert: { id?: string; author_id: string; title: string; body: string; target_mentor_id?: string | null; ai_only?: boolean; is_private?: boolean; topic?: string | null; status?: string; created_at?: string; updated_at?: string; answered_at?: string | null; pinned_at?: string | null; nudged_at?: string | null; closed_at?: string | null };
         Update: Partial<Database["public"]["Tables"]["arena_questions"]["Insert"]>;
+        Relationships: [];
+      };
+      email_opt_outs: {
+        Row: {
+          email: string;
+          kind: string;
+          reason: string | null;
+          profile_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          email: string;
+          kind?: string;
+          reason?: string | null;
+          profile_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          email?: string;
+          kind?: string;
+          reason?: string | null;
+          profile_id?: string | null;
+          created_at?: string;
+        };
         Relationships: [];
       };
       arena_presence: {

@@ -21,6 +21,9 @@ import {
   type ExperienceEntry,
 } from "@/lib/experience-entries";
 import { repointSharesToNewEmail } from "@/lib/drive-shares";
+import { leaveCommunityFor } from "@/lib/departures";
+import { requireProfile as requireProfileForLeave } from "@/lib/auth";
+import { createAdminClient as adminForLeave } from "@/lib/supabase/admin";
 import { MENTOR_REQUEST_SUBJECT } from "@/lib/mentor-request";
 import type { Database, Json, QuestionScope } from "@/types/database";
 
@@ -697,4 +700,22 @@ export async function requestMentorRole(): Promise<void> {
     dedupeKey: `mentor-request:${user.id}`,
   });
   revalidatePath("/profile");
+}
+
+/**
+ * "יציאה סופית מהקהילה" (the owner, 18/10): the profile's own door out. The
+ * consequences were on screen and she wrote why; the account closes, she is
+ * signed out and lands on /left.
+ */
+export async function leaveCommunity(reason: string): Promise<{ error?: string } | void> {
+  const profile = await requireProfileForLeave();
+  if (profile.role === "admin") return { error: "חברת צוות לא יוצאת מכאן - דברי עם שרה." };
+  const r = reason.trim().slice(0, 1000);
+  if (r.length < 2) return { error: "ספרי לנו במילה או שתיים למה." };
+  const { data: rows } = await adminForLeave().rpc("member_emails", { p_ids: [profile.id] });
+  const email = ((rows ?? []) as { id: string; email: string | null }[])[0]?.email ?? null;
+  await leaveCommunityFor(r, { email, profileId: profile.id });
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect("/left?bye=1");
 }

@@ -66,6 +66,7 @@ export function renderEmail(c: EmailContent): string {
   </div>
   <div style="text-align:center; color:${C.muted}; font-size:12px; margin-top:18px;">
     ${BRAND} · ${TAGLINE} 💜
+    <div style="margin-top:10px;">אם את לא מעוניינת לקבל מאיתנו מיילים - את יכולה להסיר כאן: <a href="{{UNSUB_URL}}" style="color:${C.muted}; text-decoration:underline;">הסרה</a></div>
   </div>
 </div>`;
 }
@@ -1383,6 +1384,24 @@ export function coursePaymentReportedEmail(r: { fullName: string; email: string;
       ],
       ctaText: "לרשימת הנרשמות לקורס",
       ctaUrl: `${SITE}/admin/course-registrations`,
+    }),
+  };
+}
+
+/** Typed her address on the unsubscribe page and chose to leave: only the inbox owner may confirm. */
+export function leaveConfirmEmail(confirmUrl: string, reason: string): BuiltEmail {
+  return {
+    subject: "אישור היציאה מקהילת קוד פתוח",
+    html: renderEmail({
+      heading: "לאשר את היציאה מהקהילה?",
+      lines: [
+        "מישהי ביקשה לסגור את החשבון שלך בקוד פתוח. אם זו את - לחצי על הכפתור ונסגור הכל בעדינות.",
+        reason ? `הסיבה שנכתבה: «${escapeHtml(reason)}»` : "",
+        "אם לא את ביקשת, פשוט התעלמי מהמייל הזה - שום דבר לא ישתנה.",
+      ].filter(Boolean),
+      ctaText: "כן, לצאת מהקהילה",
+      ctaUrl: confirmUrl,
+      footnote: "הקישור מוביל לדף שבו מאשרים את היציאה - אפשר גם לבחור שם רק להפסיק מיילים ולהישאר.",
     }),
   };
 }
