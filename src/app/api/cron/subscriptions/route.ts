@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { raiseAlert } from "@/lib/alerts";
 import { appEnv, isProductionEnv } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { deactivateSubscription } from "@/lib/payments/subscription";
+import { cancelEndedSubscriptions, deactivateSubscription } from "@/lib/payments/subscription";
 import { sendResendEmail } from "@/lib/email/resend";
 import { subscriptionEndedEmail, subscriptionEndingSoonEmail, subscriptionLapsedAfterFailedChargeEmail } from "@/lib/email/templates";
 import { backToEligible, hebDateLine, isEmailDay, shiftDay, ymdIL } from "@/lib/il-calendar";
@@ -74,7 +74,33 @@ export async function GET(request: Request) {
   const toExpire = (endedRows ?? []).filter(
     (s) => ymdIL(new Date(s.current_period_end as string)) < todayIL
   );
-  const ids = [...new Set(toExpire.map((s) => s.profile_id))];
+  const endedIds = [...new Set(toExpire.map((s) => s.profile_id))];
+
+  // A member whose ended row sits beside a live one that still runs (a
+  // leftover 3-day keva grace next to the real month she paid for - אילה
+  // שמואלביץ, 19/10) is NOT expiring: the ended row is closed, she is left
+  // alone. Only a member with nothing live left is paused.
+  const { data: coverRows } = endedIds.length
+    ? await admin
+        .from("subscriptions")
+        .select("profile_id")
+        .in("profile_id", endedIds)
+        .in("status", ["active", "trialing", "past_due"])
+        .not("current_period_end", "is", null)
+        .gte("current_period_end", now.toISOString())
+    : { data: [] as { profile_id: string }[] };
+  const stillCovered = new Set((coverRows ?? []).map((s) => s.profile_id));
+  let leftoverRowsClosed = 0;
+  if (!dryRun) {
+    for (const profileId of stillCovered) {
+      try {
+        leftoverRowsClosed += await cancelEndedSubscriptions(profileId, now);
+      } catch (e) {
+        console.error("[subscriptions] leftover close failed:", profileId, e);
+      }
+    }
+  }
+  const ids = endedIds.filter((id) => !stillCovered.has(id));
 
   // -------------------------------------------- reminders (2 days ahead)
   // Only subscriptions that are actually ENDING get one: renewal turned off
@@ -133,6 +159,7 @@ export async function GET(request: Request) {
       todayIL,
       emailDay,
       expiring: ids.length,
+      stillCovered: [...stillCovered],
       remindersDue: reminderDue.length,
       endedEmailsDue: (endedUnmailed ?? []).length,
       lapsedAfterFailedCharge: [...failedRecently],
@@ -337,6 +364,7 @@ export async function GET(request: Request) {
     todayIL,
     emailDay,
     expired: expiredCount,
+    leftoverRowsClosed,
     remindersSent,
     endedEmailsSent,
     lapsedEmailsSent,

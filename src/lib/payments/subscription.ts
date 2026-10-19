@@ -34,12 +34,19 @@ export async function activateSubscription(input: ActivateInput) {
   const plan = buildPlans(pricing)[input.plan];
   const admin = createAdminClient();
 
-  // Upsert the subscription for this member (one active sub per member).
-  const { data: existing } = await admin
+  // Upsert the subscription for this member (one live sub per member). The
+  // NEWEST row wins: Nedarim sends two callbacks for one keva setup a few ms
+  // apart, which raced into two rows, and maybeSingle() then errored on the
+  // pair - so the real charge created a THIRD row instead of updating, and
+  // the daily expiry later paused her over the leftover grace rows (אילה
+  // שמואלביץ, 19/10). Every other live row is closed below.
+  const { data: existingRows } = await admin
     .from("subscriptions")
     .select("id, current_period_end")
     .eq("profile_id", input.profileId)
-    .maybeSingle();
+    .order("current_period_end", { ascending: false, nullsFirst: false })
+    .limit(1);
+  const existing = existingRows?.[0] ?? null;
 
   const periodEnd = new Date();
   if (input.setupOnly) {
@@ -80,6 +87,18 @@ export async function activateSubscription(input: ActivateInput) {
       .select("id")
       .single();
     subscriptionId = created?.id ?? null;
+  }
+
+  // One live subscription per member: any other live row (a stale keva grace,
+  // a duplicate from a double callback) is closed now, so the daily expiry
+  // never pauses a paying member over a leftover row.
+  if (subscriptionId) {
+    await admin
+      .from("subscriptions")
+      .update({ status: "canceled", canceled_at: new Date().toISOString() })
+      .eq("profile_id", input.profileId)
+      .neq("id", subscriptionId)
+      .in("status", ["active", "trialing", "past_due"]);
   }
 
   // Card replacement (the owner, 1/9): a NEW standing order for a member who
@@ -193,6 +212,24 @@ export async function activateSubscription(input: ActivateInput) {
   // keeps this webhook free of Google round-trips - a timed-out webhook gets
   // retried by the provider, which would duplicate the payment.
   return { subscriptionId };
+}
+
+/**
+ * Closes only the rows whose period already ended, for a member who still
+ * holds a live subscription that runs on (a leftover keva grace beside the
+ * real month). Her access is untouched.
+ */
+export async function cancelEndedSubscriptions(profileId: string, before: Date): Promise<number> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("subscriptions")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("profile_id", profileId)
+    .in("status", ["active", "trialing", "past_due"])
+    .not("current_period_end", "is", null)
+    .lt("current_period_end", before.toISOString())
+    .select("id");
+  return data?.length ?? 0;
 }
 
 /** Marks a subscription canceled/expired and pauses the member's access. */
