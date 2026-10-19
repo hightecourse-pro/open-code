@@ -304,7 +304,7 @@ export default async function JobsPage({
   const targetedVisible = targetedJobs.filter((j) => !hiddenIds.has(j.id));
   // "מתאימות לי" no longer hides the rest of the board - the PM's point was
   // that the two views looked identical. The non-matching jobs stay, dimmed
-  // and un-appliable, so the difference between the views is visible.
+  // (and still appliable), so the difference between the views is visible.
   const viewJobs =
     view === "saved"
       ? boardJobs.filter((j) => savedIds.has(j.id))
@@ -356,9 +356,10 @@ export default async function JobsPage({
     myTech: [...myTech],
     matchedTags: matchedTags(job),
     subscriber,
-    // Only the fit view closes the apply door on non-matching jobs; the full
-    // board keeps every job open. A job she already applied to is never
-    // dimmed - she's in its process, disabled styling would read as a rejection.
+    // The fit view DIMS non-matching jobs (so the two views differ) but never
+    // closes the apply door - the same job is open on the full board, and a
+    // member rightly called the old block a contradiction (19/10). A job she
+    // already applied to is never dimmed - she's in its process.
     ineligible: view === "fit" && matchedTags(job).length === 0 && !appStatusByJob.has(job.id),
     hidden: hiddenIds.has(job.id),
   });
@@ -419,8 +420,8 @@ export default async function JobsPage({
 
       {view === "fit" && (
         <p className="text-[12.5px] text-ink-500 -mt-1.5">
-          המשרות שמתאימות לפרופיל שלך מודגשות למעלה; השאר מוצגות מעומעמות - בלי אפשרות הגשה, כי הן
-          מבקשות קריטריונים אחרים.
+          המשרות שמתאימות לפרופיל שלך מודגשות למעלה; השאר מוצגות מעומעמות כי הן מבקשות טכנולוגיות
+          אחרות - אבל אפשר להגיש גם אליהן, בדיוק כמו ב״כל המשרות״.
         </p>
       )}
       {view === "hidden" && (

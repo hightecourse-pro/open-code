@@ -65,6 +65,7 @@ export interface JobCardProps {
    * In "מתאימות לי" the non-matching jobs stay visible but can't be applied
    * to - the PM wants the difference between the views to be felt.
    */
+  /** Dimmed as "not her stack" on the fit view - still appliable. */
   ineligible?: boolean;
   /** She hid this job from her board (member feedback, 14/9) - the card
       offers the way back instead of the hide button. */
@@ -274,6 +275,15 @@ export function JobCard({
         </div>
       )}
 
+      {ineligible && !hasApplied && (
+        // Dimmed on "מתאימות לי" because the stack differs from her profile -
+        // information, not a closed door: the same job is open on "כל המשרות",
+        // so it stays open here too (a member caught the contradiction, 19/10).
+        <p className="text-[11.5px] text-ink-500 mt-2" data-fit-note>
+          לא תואמת את הטכנולוגיות שסימנת בפרופיל - אפשר להגיש בכל זאת.
+        </p>
+      )}
+
       <div className="flex items-center gap-2 pt-2.5 border-t border-ink-100 mt-auto">
         {!subscriber && job.source === "ours" && !hasApplied && (
           <span className="inline-flex items-center gap-1 text-[11px] text-[#8C5E0E]">
@@ -298,11 +308,6 @@ export function JobCard({
         ) : advanced ? (
           <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1.5">
             🎯 המשרה התקדמה לשלב הבא - ההגשות הועברו למעסיק, אין מה להגיש כרגע
-          </span>
-        ) : ineligible ? (
-          // The apply door is closed here on purpose - say why, plainly.
-          <span className="text-[12px] text-ink-500 leading-snug">
-            לא ניתן להגיש - הפרופיל שלך לא תואם את הקריטריונים שהמשרה מבקשת
           </span>
         ) : job.source === "ours" ? (
           // Our jobs go through the application wizard (questions + CV choice).
