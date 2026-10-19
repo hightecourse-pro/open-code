@@ -28,6 +28,12 @@ const TABS: { id: JobSource; label: string; desc: string }[] = [
   { id: "open", label: "משרות פתוחות", desc: "מהשוק, לפי סדר ההתאמה שלך" },
 ];
 
+/** "חדש" on the card for a week from the opening (the owner, 19/10). */
+const NEW_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+function openedRecently(iso: string): boolean {
+  return Date.now() - new Date(iso).getTime() < NEW_FOR_MS;
+}
+
 /** The PM's four clear views. `fit=1` from old links maps to "fit". */
 type BoardView = "all" | "fit" | "saved" | "mine" | "hidden";
 
@@ -314,8 +320,6 @@ export default async function JobsPage({
   // Newest opening first on every view (the owner, 19/10) - the fit view
   // keeps its dimming for the non-matching ones, not a different order.
   const openedAt = (j: Job) => j.published_at ?? j.created_at;
-  const NEW_FOR_MS = 7 * 24 * 60 * 60 * 1000;
-  const nowMs = Date.now();
   const sortedJobs = viewJobs.slice().sort((a, b) => (openedAt(a) < openedAt(b) ? 1 : openedAt(a) > openedAt(b) ? -1 : 0));
   const fitCount = boardJobs.filter((j) => matchedTags(j).length > 0).length;
   const savedCount = boardJobs.filter((j) => savedIds.has(j.id)).length;
@@ -361,7 +365,7 @@ export default async function JobsPage({
     // already applied to is never dimmed - she's in its process.
     ineligible: view === "fit" && matchedTags(job).length === 0 && !appStatusByJob.has(job.id),
     hidden: hiddenIds.has(job.id),
-    isNew: nowMs - new Date(openedAt(job)).getTime() < NEW_FOR_MS,
+    isNew: openedRecently(openedAt(job)),
   });
 
   const VIEWS: { id: BoardView; label: string }[] = [
