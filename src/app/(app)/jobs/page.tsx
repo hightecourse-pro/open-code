@@ -385,7 +385,7 @@ export default async function JobsPage({
       {/* Compact top (the PM's ask): one row of identity, one quiet info line. */}
       <div className="flex items-baseline gap-2.5 flex-wrap">
         <h1 className="font-display text-[24px] font-black text-ink-1000">משרות</h1>
-        <span className="text-[13px] text-ink-500">מסודרות לפי ההתאמה שלך - הכי מתאימות למעלה</span>
+        <span className="text-[13px] text-ink-500">מסודרות לפי תאריך הפתיחה - החדשות למעלה</span>
       </div>
 
       {applied === "1" && (
