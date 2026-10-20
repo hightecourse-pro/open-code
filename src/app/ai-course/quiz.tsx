@@ -478,9 +478,13 @@ export function Quiz() {
               ))}
             </ul>
             {track.prerequisites && (
-              <p className="text-[13.5px]" style={{ color: H.muted }} data-testid="prerequisites">
-                <span className="font-bold">דרישות קדם: </span>
-                <span dir="ltr">{track.prerequisites.join(" · ")}</span>
+              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px]" style={{ color: H.muted }} data-testid="prerequisites">
+                <span className="font-bold">דרישות קדם:</span>
+                {track.prerequisites.map((x) => (
+                  <span key={x} dir="ltr" className="whitespace-nowrap px-2 py-0.5 text-[12.5px] font-semibold" style={{ border: `1px solid ${H.line}`, borderRadius: 999, color: H.navy }}>
+                    {x}
+                  </span>
+                ))}
               </p>
             )}
           </div>

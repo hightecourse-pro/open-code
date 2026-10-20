@@ -337,11 +337,11 @@ export function Dashboard({ rows }: { rows: QuizRow[] }) {
 
       {/* Wider screens: the table */}
       <div className="hidden overflow-x-auto bg-white sm:block" style={{ border: `1px solid ${H.line}`, borderRadius: 12 }} data-testid="table">
-        <table className="w-full min-w-[880px] text-[14px]">
+        <table className="w-full min-w-[720px] text-[13.5px]" style={{ tableLayout: "auto" }}>
           <thead>
             <tr style={{ background: H.navy }}>
               {["שם", "מייל", "סטטוס הרשמה", "התקדמות", "המלצה", "שיבוץ", "סילבוס", "התחילה ב", ""].map((h, i) => (
-                <th key={i} className="px-4 py-3 text-start font-bold text-white">
+                <th key={i} className="px-3 py-3 text-start font-bold text-white">
                   {h}
                 </th>
               ))}
@@ -370,31 +370,31 @@ function RowGroup({ r, idx, isOpen, toggle, del }: { r: QuizRow; idx: number; is
   return (
     <>
       <tr style={{ background: bg }} data-testid="row">
-        <td className="px-4 py-3 font-bold" style={{ color: H.navy }}>
+        <td className="px-3 py-3 font-bold" style={{ color: H.navy }}>
           {r.first_name} {r.last_name}
         </td>
-        <td className="px-4 py-3" style={{ color: H.ink }} dir="ltr">
+        <td className="max-w-[220px] break-all px-3 py-3 text-[13px]" style={{ color: H.ink }} dir="ltr">
           {r.email}
         </td>
-        <td className="px-4 py-3" style={{ color: H.ink }}>
+        <td className="px-3 py-3" style={{ color: H.ink }}>
           {statusLabel(r)}
         </td>
-        <td className="px-4 py-3">
+        <td className="px-3 py-3">
           <ProgressPill r={r} />
         </td>
-        <td className="px-4 py-3">
+        <td className="px-3 py-3">
           <RecPill rec={r.recommendation} score={r.score} />
         </td>
-        <td className="px-4 py-3">
+        <td className="px-3 py-3">
           <Placement v={r.wants_placement} />
         </td>
-        <td className="px-4 py-3" style={{ color: H.ink }}>
+        <td className="px-3 py-3" style={{ color: H.ink }}>
           {r.downloaded_syllabus ? "כן" : <span style={{ color: H.line }}>-</span>}
         </td>
-        <td className="whitespace-nowrap px-4 py-3" style={{ color: H.muted }} dir="ltr">
+        <td className="whitespace-nowrap px-3 py-3 text-[13px]" style={{ color: H.muted }} dir="ltr">
           {fmt.format(new Date(r.created_at))}
         </td>
-        <td className="whitespace-nowrap px-4 py-3">
+        <td className="whitespace-nowrap px-3 py-3">
           <span className="flex gap-3">
             {toggle}
             {del}
