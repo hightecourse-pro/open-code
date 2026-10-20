@@ -19,8 +19,6 @@ export const H = {
 export const LOGO = { src: "/ai-course/hightecourse.png", alt: "הייטקורס - לחשוב בגדול", width: 2856, height: 833 };
 /** The syllabus footer line, word for word. */
 export const TAGLINE = "הייטקורס. להתמקצע מהטובים ביותר";
-/** "בשיתוף John Bryce" under the logo on every syllabus page. */
-export const PARTNER = "John Bryce";
 
 // Contact is the office mail only - the phone on the syllabus is the owner's
 // own and she asked to keep it off the page (20/10).
