@@ -2137,6 +2137,43 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["course_registrations"]["Insert"]>;
         Relationships: [];
       };
+      /** The public Hightecourse AI-course quiz (/ai-course): one row per email, updated as she answers (20/10). */
+      ai_course_quiz_submissions: {
+        Row: {
+          id: string;
+          email: string;
+          first_name: string;
+          last_name: string;
+          signup_status: string;
+          answers: Json;
+          questions_done: number;
+          score: number | null;
+          recommendation: string | null;
+          wants_placement: boolean | null;
+          downloaded_syllabus: boolean;
+          completed_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          first_name: string;
+          last_name: string;
+          signup_status: string;
+          answers?: Json;
+          questions_done?: number;
+          score?: number | null;
+          recommendation?: string | null;
+          wants_placement?: boolean | null;
+          downloaded_syllabus?: boolean;
+          completed_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ai_course_quiz_submissions"]["Insert"]>;
+        Relationships: [];
+      };
       /** One row per Nedarim transaction reported by Shufra's CallBack that looks like a course payment (9/10). */
       course_payments: {
         Row: {
