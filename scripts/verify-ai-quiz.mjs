@@ -73,6 +73,16 @@ await page.click("text=עוד מתלבטת");
 // Pass 3: walks away after two questions - the admin should see that.
 await runQuiz(page, { email: QA.abandoned, first: "קיו-איי", last: "נוטשת", optionIndex: 1, stopAfter: 2 });
 
+// The reported bug (the owner, 20/10: "אחרי השאלה השניה הוא קופץ לי להתחלה"):
+// a mid-quiz reload must land her back on the same question, not the intro.
+await page.reload({ waitUntil: "networkidle" });
+const resumed = await page
+  .waitForSelector("text=שאלה 3 מתוך 5", { timeout: 15000 })
+  .then(() => true)
+  .catch(() => false);
+ok(resumed, "reload mid-quiz resumes at question 3 (not the intro)");
+await page.screenshot({ path: `${SHOTS}/aiquiz-3b-resume.png` });
+
 // DB truth behind the three runs.
 const { data: rows } = await admin
   .from("ai_course_quiz_submissions")

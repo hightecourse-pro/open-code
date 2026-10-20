@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { finishQuiz, markSyllabusDownload, saveAnswer, setPlacement, startQuiz, type SignupStatus } from "./actions";
 import { QUESTIONS, TRACKS, type Recommendation } from "./questions";
 import { H, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF, contactMailto } from "./theme";
@@ -11,6 +11,43 @@ import { H, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF, contactMailto } fr
   course list, the rotated yellow circle badge on the result - and no emojis.
 */
 type Step = "intro" | "details" | "questions" | "result" | "done";
+
+/*
+  Progress survives a page reload (a redeploy mid-session, a phone that
+  evicted the tab, an accidental refresh): every step is mirrored into
+  sessionStorage and restored on mount, so she lands back on the same
+  question instead of the intro.
+*/
+const STORAGE_KEY = "hightecourse-ai-quiz-v1";
+
+interface Saved {
+  step: Step;
+  firstName: string;
+  lastName: string;
+  email: string;
+  signupStatus: SignupStatus | null;
+  subId: string | null;
+  qIndex: number;
+  answers: Record<number, number>;
+  rec: Recommendation | null;
+}
+
+function readSaved(): Saved | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Saved;
+    if (!s || typeof s !== "object") return null;
+    if (!["details", "questions", "result"].includes(s.step)) return null;
+    if ((s.step === "questions" || s.step === "result") && !s.subId) return null;
+    if (s.step === "result" && s.rec !== "advanced" && s.rec !== "foundations") return null;
+    if (typeof s.qIndex !== "number" || s.qIndex < 0 || s.qIndex >= QUESTIONS.length) s.qIndex = 0;
+    if (!s.answers || typeof s.answers !== "object") s.answers = {};
+    return s;
+  } catch {
+    return null;
+  }
+}
 
 /** The syllabus' rotated yellow circle badge ("מתקדם מאוד" / "מהבסיס - כולל תרגול"). */
 function CircleBadge({ text }: { text: string }) {
@@ -45,6 +82,7 @@ function Panel({ children }: { children: React.ReactNode }) {
 function NavyButton({ children, onClick, disabled }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       className="w-full px-6 py-3.5 text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -59,6 +97,7 @@ function NavyButton({ children, onClick, disabled }: { children: React.ReactNode
 function OptionRow({ selected, onClick, children, disabled, testId }: { selected: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean; testId?: string }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       data-testid={testId}
@@ -99,6 +138,39 @@ export function Quiz() {
   const [placement, setPlacementState] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+
+  // Restore once on mount (effect, not initializer - the server render must
+  // match the first client render), then mirror every change back.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    const s = readSaved();
+    if (!s) return;
+    setFirstName(s.firstName ?? "");
+    setLastName(s.lastName ?? "");
+    setEmail(s.email ?? "");
+    setSignupStatus(s.signupStatus ?? null);
+    setSubId(s.subId ?? null);
+    setQIndex(s.qIndex);
+    setAnswers(s.answers);
+    setRec(s.rec ?? null);
+    setStep(s.step);
+  }, []);
+
+  useEffect(() => {
+    if (!restored.current || step === "intro") return;
+    try {
+      if (step === "done") {
+        sessionStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      const s: Saved = { step, firstName, lastName, email, signupStatus, subId, qIndex, answers, rec };
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(s));
+    } catch {
+      /* storage blocked - the quiz still works, just without resume */
+    }
+  }, [step, firstName, lastName, email, signupStatus, subId, qIndex, answers, rec]);
 
   const errorBox = error && (
     <p role="alert" className="px-4 py-3 text-[14.5px] font-medium" style={{ background: "#FBEAE8", color: H.red, borderRadius: 10 }}>
@@ -223,9 +295,11 @@ export function Quiz() {
     const pick = (optIdx: number) => {
       const score = q.options[optIdx].score;
       setAnswers((a) => ({ ...a, [qIndex]: optIdx }));
-      if (subId) void saveAnswer(subId, qIndex, score);
+      // Fire-and-forget save; a rejection must never bubble out of the page.
+      if (subId) saveAnswer(subId, qIndex, score).catch(() => {});
       if (qIndex < QUESTIONS.length - 1) {
-        setTimeout(() => setQIndex((i) => i + 1), 180);
+        const next = qIndex + 1; // fixed target: a double-tap can't skip ahead
+        setTimeout(() => setQIndex(next), 180);
       } else {
         setError(null);
         start(async () => {
@@ -245,7 +319,7 @@ export function Quiz() {
               שאלה {qIndex + 1} מתוך {QUESTIONS.length}
             </span>
             {qIndex > 0 && (
-              <button className="text-[13.5px] font-medium underline" style={{ color: H.muted }} onClick={() => setQIndex((i) => i - 1)}>
+              <button type="button" className="text-[13.5px] font-medium underline" style={{ color: H.muted }} onClick={() => setQIndex((i) => i - 1)}>
                 לשאלה הקודמת
               </button>
             )}
@@ -287,7 +361,7 @@ export function Quiz() {
     const track = TRACKS[rec];
     const choose = (wants: boolean) => {
       setPlacementState(wants);
-      if (subId) void setPlacement(subId, wants);
+      if (subId) setPlacement(subId, wants).catch(() => {});
       setStep("done");
     };
     return (
@@ -309,7 +383,7 @@ export function Quiz() {
           <a
             href={track.syllabus}
             download={track.file}
-            onClick={() => subId && void markSyllabusDownload(subId)}
+            onClick={() => subId && markSyllabusDownload(subId).catch(() => {})}
             className="block w-full px-6 py-3.5 text-center text-[16px] font-black transition-opacity hover:opacity-90"
             style={{ background: H.yellow, color: H.navyDeep, borderRadius: 10 }}
           >
@@ -321,6 +395,7 @@ export function Quiz() {
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
               <button
+                type="button"
                 onClick={() => choose(true)}
                 className="px-4 py-3 text-[15.5px] font-bold text-white transition-opacity hover:opacity-90"
                 style={{ background: H.navy, borderRadius: 10 }}
@@ -328,6 +403,7 @@ export function Quiz() {
                 כן, שבצו אותי
               </button>
               <button
+                type="button"
                 onClick={() => choose(false)}
                 className="px-4 py-3 text-[15.5px] font-bold transition-colors"
                 style={{ border: `2px solid ${H.navy}`, color: H.navy, background: H.white, borderRadius: 10 }}
@@ -359,7 +435,7 @@ export function Quiz() {
           <a
             href={track.syllabus}
             download={track.file}
-            onClick={() => subId && void markSyllabusDownload(subId)}
+            onClick={() => subId && markSyllabusDownload(subId).catch(() => {})}
             className="inline-block text-[14.5px] font-bold underline"
             style={{ color: H.navy }}
           >
