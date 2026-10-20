@@ -62,6 +62,7 @@ export async function saveSubmission(_prev: SubmitState, formData: FormData): Pr
       repo_url: repoUrl,
       architecture: rich(formData.get("architecture"), 30000),
       challenges_solved: rich(formData.get("challenges_solved"), 30000),
+      original_feature: rich(formData.get("original_feature"), 12000),
       video_url: videoUrl,
       ai_dev_tools: rich(formData.get("ai_dev_tools"), 12000),
       ai_models: rich(formData.get("ai_models"), 12000),

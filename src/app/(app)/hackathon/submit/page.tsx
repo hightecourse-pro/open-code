@@ -4,6 +4,7 @@ import { CalendarDays } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { requireCommunityAccess } from "@/lib/auth";
 import { checklistOf, loadReflections, loadSubmission, loadTeam } from "@/lib/hackathon-submission";
+import { CAPPED_TOTAL, CORRECTNESS_FLOOR, CRITERIA } from "@/lib/judging-shared";
 import { H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
 import { SubmissionForm } from "./submission-form";
 import { VideoUploader } from "./video-uploader";
@@ -99,6 +100,25 @@ export default async function HackathonSubmitPage() {
           </span>
           <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-semibold">אפשר לשמור ולחזור. אפשר לעדכן גם אחרי ההגשה.</span>
         </div>
+      </section>
+
+      {/* how the finalists are picked - the same rubric the judges see (the owner, 20/10) */}
+      <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm" data-testid="rubric">
+        <div className="font-mono text-[12.5px] text-brand-pink-deep">{"// השיפוט"}</div>
+        <h2 className="font-display text-[18px] font-black text-ink-1000">איך בוחרים את העולות לגמר - 100 נקודות</h2>
+        <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[13.5px]">
+          {CRITERIA.map((c) => (
+            <li key={c.key} className={`flex items-baseline gap-2 ${c.key === "original" ? "text-brand-pink-deep font-bold" : "text-ink-900"}`}>
+              <span className="font-display font-black text-[15px] w-7 text-end shrink-0">{c.max}</span>
+              <span>
+                {c.label} <span className="text-ink-500 font-normal">- {c.hint}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[12.5px] text-ink-600">
+          נכונות מתחת ל-{CORRECTNESS_FLOOR} מגבילה את הציון ל-{CAPPED_TOTAL} - מערכת שממציאה לא עולה לגמר. כל הגשה נבדקת על ידי שתי שופטות לפחות; פער גדול ביניהן - שופטת שלישית.
+        </p>
       </section>
 
       <SubmissionForm submission={submission} />

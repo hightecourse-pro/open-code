@@ -83,6 +83,8 @@ export interface Submission {
   repoUrl: string | null;
   architecture: string | null;
   challengesSolved: string | null;
+  /** The ninth part (20/10): what they built that the organisation did not ask for. */
+  originalFeature: string | null;
   videoUrl: string | null;
   videoPath: string | null;
   videoSize: number | null;
@@ -101,6 +103,7 @@ function toSubmission(r: {
   repo_url: string | null;
   architecture: string | null;
   challenges_solved: string | null;
+  original_feature?: string | null;
   video_url: string | null;
   video_path: string | null;
   video_size: number | null;
@@ -118,6 +121,7 @@ function toSubmission(r: {
     repoUrl: r.repo_url,
     architecture: r.architecture,
     challengesSolved: r.challenges_solved,
+    originalFeature: r.original_feature ?? null,
     videoUrl: r.video_url,
     videoPath: r.video_path,
     videoSize: r.video_size,
@@ -157,6 +161,7 @@ export interface SubmissionChecklist {
   repo: boolean;
   architecture: boolean;
   challenges: boolean;
+  original: boolean;
   video: boolean;
   tools: boolean;
   models: boolean;
@@ -176,6 +181,7 @@ export function checklistOf(sub: Submission | null, mine: Reflection | null): Su
     repo: has(sub?.repoUrl),
     architecture: has(sub?.architecture),
     challenges: has(sub?.challengesSolved),
+    original: has(sub?.originalFeature),
     video: has(sub?.videoUrl) || has(sub?.videoPath),
     tools: has(sub?.aiDevTools),
     models: has(sub?.aiModels),
@@ -194,6 +200,7 @@ export interface AdminSubmissionRow {
   repoUrl: string | null;
   architecture: string | null;
   challengesSolved: string | null;
+  originalFeature: string | null;
   videoUrl: string | null;
   videoDownloadUrl: string | null;
   videoSize: number | null;
@@ -227,6 +234,7 @@ export async function loadAdminSubmissions(): Promise<AdminSubmissionRow[]> {
     repoUrl: s.repo_url,
     architecture: s.architecture,
     challengesSolved: s.challenges_solved,
+    originalFeature: s.original_feature ?? null,
     videoUrl: s.video_url,
     videoDownloadUrl: s.video_path ? (urlOf.get(s.video_path) ?? null) : null,
     videoSize: s.video_size,

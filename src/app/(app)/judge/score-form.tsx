@@ -2,13 +2,13 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { Alert, Button } from "@/components/ui";
-import { CAPPED_TOTAL, CORRECTNESS_FLOOR, CRITERIA, totalOf, type CriterionKey, type Scores } from "@/lib/judging-shared";
+import { CAPPED_TOTAL, CORRECTNESS_FLOOR, CRITERIA, ZERO_SCORES, totalOf, type CriterionKey, type Scores } from "@/lib/judging-shared";
 import { saveScore, type ScoreState } from "./actions";
 
-/** The rubric as a form: six sliders-as-numbers with a live total, a line per criterion. */
+/** The rubric as a form: seven sliders-as-numbers with a live total, a line per criterion. */
 export function ScoreForm({ teamKey, initial, notes, savedAt }: { teamKey: string; initial: Scores | null; notes: Partial<Record<CriterionKey, string>>; savedAt: string | null }) {
   const [state, action, pending] = useActionState<ScoreState, FormData>(saveScore.bind(null, teamKey), {});
-  const [values, setValues] = useState<Scores>(initial ?? { works: 0, correctness: 0, problem: 0, architecture: 0, ux: 0, presentation: 0 });
+  const [values, setValues] = useState<Scores>(initial ?? { ...ZERO_SCORES });
   const t = useMemo(() => totalOf(values), [values]);
   return (
     <form action={action} className="flex flex-col gap-3">
