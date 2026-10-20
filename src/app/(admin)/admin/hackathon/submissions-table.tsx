@@ -66,21 +66,28 @@ export function SubmissionsTable({ rows }: { rows: AdminSubmissionRow[] }) {
                   <Rich html={r.architecture} />
                 </div>
                 <div className="md:col-span-3">
-                  <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// בעיות משמעותיות ואיך נפתרו"}</div>
-                  <Rich html={r.challengesSolved} />
-                </div>
-                <div>
-                  <div className="text-[12px] font-semibold text-brand-pink-deep">הפיצ׳ר המקורי</div>
+                  <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// הפיצ׳ר המקורי"}</div>
                   {r.originalFeature ? <Rich html={r.originalFeature} /> : <span className="text-[12.5px] text-ink-500">עוד לא נכתב</span>}
                 </div>
-                <div>
-                  <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// כלי AI לפיתוח"}</div>
-                  <Rich html={r.aiDevTools} />
-                </div>
-                <div>
-                  <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// מודלי האיג׳נט"}</div>
-                  <Rich html={r.aiModels} />
-                </div>
+                {/* fields of the first form version (until 20/10), shown only when filled */}
+                {r.challengesSolved && (
+                  <div className="md:col-span-3">
+                    <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// בעיות משמעותיות ואיך נפתרו (טופס קודם)"}</div>
+                    <Rich html={r.challengesSolved} />
+                  </div>
+                )}
+                {r.aiDevTools && (
+                  <div>
+                    <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// כלי AI לפיתוח (טופס קודם)"}</div>
+                    <Rich html={r.aiDevTools} />
+                  </div>
+                )}
+                {r.aiModels && (
+                  <div>
+                    <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// מודלי האיג׳נט (טופס קודם)"}</div>
+                    <Rich html={r.aiModels} />
+                  </div>
+                )}
                 {r.members.map((m) => (
                   <div key={m.id} className="md:col-span-3 rounded-[12px] bg-tint-warm/40 px-3 py-2">
                     <div className="font-mono text-[11.5px] text-brand-pink-deep">{`// ${m.name} - השאלות האישיות`}</div>

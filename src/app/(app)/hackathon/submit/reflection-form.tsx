@@ -13,11 +13,11 @@ export function ReflectionForm({ mine, isPair, partnerName, partnerReflected }: 
     <form action={action} className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
       <div>
         <div className="font-mono text-[12.5px] text-brand-pink-deep">{"// את"}</div>
-        <h2 className="font-display text-[18px] font-black text-ink-1000">מה זה עשה לך</h2>
+        <h2 className="font-display text-[18px] font-black text-ink-1000">6. מענה לשאלות על התהליך שלך</h2>
         <p className="text-[12.5px] text-ink-500 mt-0.5">
           {isPair ? (
             <>
-              השאלות האלה אישיות - כל אחת עונה בעצמה, בדף שלה.{" "}
+              הגשתן בזוג - שתיכן ממלאות את התשובות על התהליך, כל אחת בדף שלה; הפרויקט עצמו מוגש פעם אחת.{" "}
               {partnerName && (partnerReflected ? <b className="text-success">{partnerName} כבר ענתה ✓</b> : <>{partnerName} עדיין לא ענתה.</>)}
             </>
           ) : (

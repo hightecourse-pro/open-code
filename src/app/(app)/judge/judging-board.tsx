@@ -124,30 +124,39 @@ function Entry({ e, viewerId, manage }: { e: JudgingEntry; viewerId: string; man
         {/* what they wrote */}
         <div className="lg:col-span-3 flex flex-col gap-3">
           <details className="group">
-            <summary className="list-none cursor-pointer font-mono text-[12px] text-brand-pink-deep [&::-webkit-details-marker]:hidden">{"// הארכיטקטורה, הבעיות, הפיצ׳ר המקורי, הכלים"} <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span></summary>
+            <summary className="list-none cursor-pointer font-mono text-[12px] text-brand-pink-deep [&::-webkit-details-marker]:hidden">{"// הארכיטקטורה, הפיצ׳ר המקורי, ומה שנכתב בגרסה הקודמת של הטופס"} <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span></summary>
             <div className="mt-2 flex flex-col gap-3">
               <div>
                 <div className="text-[12px] font-semibold text-ink-500">הארכיטקטורה</div>
                 <Rich html={s.architecture} />
               </div>
-              <div>
-                <div className="text-[12px] font-semibold text-ink-500">בעיות משמעותיות ואיך נפתרו</div>
-                <Rich html={s.challengesSolved} />
-              </div>
               <div className="rounded-[12px] bg-tint-pink/30 border border-brand-pink/30 px-3 py-2">
-                <div className="text-[12px] font-bold text-brand-pink-deep">הפיצ׳ר המקורי (קריטריון ״פיצ׳ר מקורי״, 10 נק׳)</div>
+                <div className="text-[12px] font-bold text-brand-pink-deep">הפיצ׳ר המקורי (קריטריון ״פיצ׳ר מקורי שלא חשבו עליו״, 15 נק׳)</div>
                 {s.originalFeature ? <Rich html={s.originalFeature} /> : <span className="text-[12.5px] text-ink-500">הצוות עוד לא כתב.</span>}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* fields of the first version of the form (until 20/10) - shown only when a team filled them */}
+              {s.challengesSolved && (
                 <div>
-                  <div className="text-[12px] font-semibold text-ink-500">כלי AI לפיתוח</div>
-                  <Rich html={s.aiDevTools} />
+                  <div className="text-[12px] font-semibold text-ink-500">בעיות משמעותיות ואיך נפתרו</div>
+                  <Rich html={s.challengesSolved} />
                 </div>
-                <div>
-                  <div className="text-[12px] font-semibold text-ink-500">מודלי האיג׳נט</div>
-                  <Rich html={s.aiModels} />
+              )}
+              {(s.aiDevTools || s.aiModels) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {s.aiDevTools && (
+                    <div>
+                      <div className="text-[12px] font-semibold text-ink-500">כלי AI לפיתוח</div>
+                      <Rich html={s.aiDevTools} />
+                    </div>
+                  )}
+                  {s.aiModels && (
+                    <div>
+                      <div className="text-[12px] font-semibold text-ink-500">מודלי האיג׳נט</div>
+                      <Rich html={s.aiModels} />
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
             </div>
           </details>
 

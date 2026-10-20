@@ -86,7 +86,7 @@ export async function loadJudgingBoard(viewer: { id: string; role: string }): Pr
   const reportOf = new Map((reports ?? []).map((r) => [r.team_key, r]));
   const scoresOf = new Map<string, ScoreRow[]>();
   for (const s of scoreRows ?? []) {
-    const scores: Scores = { works: s.works, correctness: s.correctness, problem: s.problem, original: s.original ?? 0, architecture: s.architecture, ux: s.ux, presentation: s.presentation };
+    const scores: Scores = { works: s.works, correctness: s.correctness, problem: s.problem, architecture: s.architecture, ux: s.ux, original: s.original ?? 0 };
     const t = totalOf(scores);
     const row: ScoreRow = {
       judgeId: s.judge_id,

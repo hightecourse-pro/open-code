@@ -63,23 +63,25 @@ export function LockedView({ team, submission, reflections, viewerId }: { team: 
           <div className="font-mono text-[12.5px] text-brand-pink-deep">{"// המוצר"}</div>
           <h2 className="font-display text-[18px] font-black text-ink-1000">מה בניתן</h2>
         </div>
-        <Field label="קישור למוצר עובד">
+        <Field label="1. לינק למערכת בענן">
           <Url href={s?.productUrl ?? null} />
         </Field>
-        <Field label="ספריית גיט ציבורית">
+        <Field label="2. לינק לספריית גיט ציבורית">
           <Url href={s?.repoUrl ?? null} />
         </Field>
-        <Field label="הארכיטקטורה של הפרויקט">
+        <Field label="3. תיאור קצר של הארכיטקטורה">
           <Rich html={s?.architecture ?? null} />
         </Field>
-        <Field label="בעיות משמעותיות ואיך פתרתן אותן">
-          <Rich html={s?.challengesSolved ?? null} />
-        </Field>
         <div className="rounded-[14px] bg-tint-pink/30 border border-brand-pink/30 p-3.5">
-          <Field label="הפיצ׳ר המקורי שלכן">
+          <Field label="5. הפיצ׳ר המקורי שלכן">
             <Rich html={s?.originalFeature ?? null} />
           </Field>
         </div>
+        {s?.challengesSolved && (
+          <Field label="בעיות משמעותיות ואיך פתרתן אותן (מהגרסה הקודמת של הטופס)">
+            <Rich html={s.challengesSolved} />
+          </Field>
+        )}
       </section>
 
       <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
@@ -87,7 +89,7 @@ export function LockedView({ team, submission, reflections, viewerId }: { team: 
           <div className="font-mono text-[12.5px] text-brand-pink-deep">{"// הסרטון והכלים"}</div>
           <h2 className="font-display text-[18px] font-black text-ink-1000">איך בניתן</h2>
         </div>
-        <Field label="הסרטון">
+        <Field label="4. הסרטון">
           {fileName ? (
             <span className="text-[13.5px] text-ink-900" dir="ltr">
               🎬 {fileName}
@@ -96,12 +98,16 @@ export function LockedView({ team, submission, reflections, viewerId }: { team: 
             <Url href={s?.videoUrl ?? null} />
           )}
         </Field>
-        <Field label="כלי ה-AI לפיתוח">
-          <Rich html={s?.aiDevTools ?? null} />
-        </Field>
-        <Field label="מודלי ה-AI של האיג׳נט">
-          <Rich html={s?.aiModels ?? null} />
-        </Field>
+        {s?.aiDevTools && (
+          <Field label="כלי ה-AI לפיתוח (מהגרסה הקודמת של הטופס)">
+            <Rich html={s.aiDevTools} />
+          </Field>
+        )}
+        {s?.aiModels && (
+          <Field label="מודלי ה-AI של האיג׳נט (מהגרסה הקודמת של הטופס)">
+            <Rich html={s.aiModels} />
+          </Field>
+        )}
       </section>
 
       {team.members.map((m) => {
@@ -112,7 +118,7 @@ export function LockedView({ team, submission, reflections, viewerId }: { team: 
           <section key={m.id} className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
             <div>
               <div className="font-mono text-[12.5px] text-brand-pink-deep">{mine ? "// את" : `// ${m.name}`}</div>
-              <h2 className="font-display text-[18px] font-black text-ink-1000">{mine ? "מה זה עשה לך" : `מה זה עשה ל${m.name}`}</h2>
+              <h2 className="font-display text-[18px] font-black text-ink-1000">{mine ? "6. השאלות על התהליך שלך" : `6. השאלות על התהליך של ${m.name}`}</h2>
             </div>
             <Field label="מה תרם לך הפרויקט?">
               <Rich html={r?.contributed ?? null} />
