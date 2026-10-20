@@ -32,6 +32,45 @@ interface Saved {
   rec: Recommendation | null;
 }
 
+/*
+  A failed action call must never escape a transition: React 19 hands such an
+  error to the nearest error boundary, which replaces the whole page with
+  "This page couldn't load" (what the owner hit at the end of the quiz, 20/10).
+  A call that fails because the site was redeployed under her ("Server Action
+  not found") gets ONE automatic reload - progress is in sessionStorage, so she
+  lands back on the same step with fresh code. Anything else becomes an inline
+  "try again".
+*/
+const RELOADED_FLAG = `${STORAGE_KEY}:reloaded`;
+
+function isStaleDeploymentError(err: unknown): boolean {
+  const text = err instanceof Error ? `${err.name} ${err.message}` : String(err);
+  return /UnrecognizedActionError|was not found on the server|Failed to find Server Action/i.test(text);
+}
+
+function messageForActionError(err: unknown): string {
+  if (isStaleDeploymentError(err)) {
+    try {
+      if (!sessionStorage.getItem(RELOADED_FLAG)) {
+        sessionStorage.setItem(RELOADED_FLAG, "1");
+        window.location.reload();
+        return "העמוד התעדכן - טוענות אותו מחדש...";
+      }
+    } catch {
+      /* no storage - fall through to the plain message */
+    }
+  }
+  return "החיבור נקטע לרגע - נסי שוב.";
+}
+
+function clearReloadedFlag() {
+  try {
+    sessionStorage.removeItem(RELOADED_FLAG);
+  } catch {
+    /* ignore */
+  }
+}
+
 function readSaved(): Saved | null {
   try {
     const raw = sessionStorage.getItem(STORAGE_KEY);
@@ -228,10 +267,15 @@ export function Quiz() {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim())) return setError("הכתובת לא נראית תקינה - בדקי אותה שוב.");
       if (!signupStatus) return setError("ספרי לנו - כבר נרשמת לקורס, או מתכננת להירשם?");
       start(async () => {
-        const r = await startQuiz({ email, firstName, lastName, signupStatus, website });
-        if (!r.ok) return setError(r.error);
-        setSubId(r.id);
-        setStep("questions");
+        try {
+          const r = await startQuiz({ email, firstName, lastName, signupStatus, website });
+          if (!r.ok) return setError(r.error);
+          clearReloadedFlag();
+          setSubId(r.id);
+          setStep("questions");
+        } catch (err) {
+          setError(messageForActionError(err));
+        }
       });
     };
     return (
@@ -304,10 +348,17 @@ export function Quiz() {
         setError(null);
         start(async () => {
           if (!subId) return setError("משהו השתבש - נסי להתחיל מחדש.");
-          const r = await finishQuiz(subId);
-          if (!r.ok) return setError(r.error);
-          setRec(r.recommendation);
-          setStep("result");
+          try {
+            const r = await finishQuiz(subId);
+            if (!r.ok) return setError(r.error);
+            clearReloadedFlag();
+            setRec(r.recommendation);
+            setStep("result");
+          } catch (err) {
+            // She stays on the last question with her answer marked; one more
+            // tap on it retries.
+            setError(messageForActionError(err));
+          }
         });
       }
     };
