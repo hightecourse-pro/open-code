@@ -7,7 +7,7 @@ import { sendResendEmail } from "@/lib/email/resend";
 import { hackathonSubmissionReceivedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { sanitizeRichHtml } from "@/lib/rich-text";
-import { checklistOf, loadReflections, loadSubmission, loadTeam, VIDEO_EXTENSIONS, VIDEO_MAX_BYTES } from "@/lib/hackathon-submission";
+import { checklistOf, getSubmissionsClosure, loadReflections, loadSubmission, loadTeam, VIDEO_EXTENSIONS, VIDEO_MAX_BYTES } from "@/lib/hackathon-submission";
 
 export interface SubmitState {
   ok?: boolean;
@@ -36,10 +36,15 @@ function rich(raw: FormDataEntryValue | null, max: number): string | null {
   return v || null;
 }
 
+// (a "use server" module may export only async functions)
+const CLOSED_ERROR = "ההגשות נסגרו - אי אפשר לערוך יותר. רעננו את הדף.";
+
 async function myTeamOrError() {
   const me = await requireCommunityAccess();
-  const team = await loadTeam(me.id);
+  const [team, closure] = await Promise.all([loadTeam(me.id), getSubmissionsClosure()]);
   if (!team) return { me, team: null, error: "ההגשה פתוחה לרשומות להאקתון." as string };
+  // The lock (the owner, 20/10): once the team closed the submissions, nothing is written.
+  if (closure.closedAt) return { me, team: null, error: CLOSED_ERROR as string };
   return { me, team, error: null };
 }
 
@@ -62,6 +67,7 @@ export async function saveSubmission(_prev: SubmitState, formData: FormData): Pr
       repo_url: repoUrl,
       architecture: rich(formData.get("architecture"), 30000),
       challenges_solved: rich(formData.get("challenges_solved"), 30000),
+      original_feature: rich(formData.get("original_feature"), 12000),
       video_url: videoUrl,
       ai_dev_tools: rich(formData.get("ai_dev_tools"), 12000),
       ai_models: rich(formData.get("ai_models"), 12000),

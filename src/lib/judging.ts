@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { withPrevSurnames } from "@/lib/prev-surname";
 import { loadAdminSubmissions, type AdminSubmissionRow } from "@/lib/hackathon-submission";
-import { CRITERIA, GAP_THRESHOLD, totalOf, type AutoReport, type CriterionKey, type Scores } from "@/lib/judging-shared";
+import { CRITERIA, GAP_THRESHOLD, ZERO_SCORES, totalOf, type AutoReport, type CriterionKey, type Scores } from "@/lib/judging-shared";
 
 /** Admins always judge; a mentor judges once the team appointed her. */
 export async function isJudge(profile: { id: string; role: string; status: string }): Promise<boolean> {
@@ -56,7 +56,7 @@ export interface JudgingEntry {
   rank: number | null;
 }
 
-const emptyScores = (): Scores => ({ works: 0, correctness: 0, problem: 0, architecture: 0, ux: 0, presentation: 0 });
+const emptyScores = (): Scores => ({ ...ZERO_SCORES });
 
 /**
  * The board: every submission with its automated report and scores. A judge
@@ -86,7 +86,7 @@ export async function loadJudgingBoard(viewer: { id: string; role: string }): Pr
   const reportOf = new Map((reports ?? []).map((r) => [r.team_key, r]));
   const scoresOf = new Map<string, ScoreRow[]>();
   for (const s of scoreRows ?? []) {
-    const scores: Scores = { works: s.works, correctness: s.correctness, problem: s.problem, architecture: s.architecture, ux: s.ux, presentation: s.presentation };
+    const scores: Scores = { works: s.works, correctness: s.correctness, problem: s.problem, original: s.original ?? 0, architecture: s.architecture, ux: s.ux, presentation: s.presentation };
     const t = totalOf(scores);
     const row: ScoreRow = {
       judgeId: s.judge_id,

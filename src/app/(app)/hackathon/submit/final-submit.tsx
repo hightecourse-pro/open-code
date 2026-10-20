@@ -12,6 +12,7 @@ const ITEMS: { key: keyof Omit<SubmissionChecklist, "done" | "total">; label: st
   { key: "repo", label: "ספריית גיט ציבורית" },
   { key: "architecture", label: "הסבר על הארכיטקטורה" },
   { key: "challenges", label: "בעיות משמעותיות ואיך פתרת אותן" },
+  { key: "original", label: "הפיצ׳ר המקורי שלכן" },
   { key: "video", label: "סרטון (קובץ או קישור)" },
   { key: "tools", label: "כלי ה-AI לפיתוח" },
   { key: "models", label: "מודלי ה-AI של האיג׳נט" },
@@ -67,7 +68,7 @@ export function FinalSubmit({ checklist, submittedAt }: { checklist: SubmissionC
           >
             {pending ? "מגישות…" : submittedAt ? "עדכון ההגשה" : "הגשה סופית 🏆"}
           </Button>
-          {!ready && <span className="text-[12px] text-ink-500">הכפתור ייפתח כשכל שמונת החלקים מוכנים.</span>}
+          {!ready && <span className="text-[12px] text-ink-500">הכפתור ייפתח כשכל תשעת החלקים מוכנים.</span>}
           {state?.error && <Alert variant="danger">{state.error}</Alert>}
           {state?.ok && (
             <Alert variant="success">

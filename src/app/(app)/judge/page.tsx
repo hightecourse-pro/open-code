@@ -45,7 +45,7 @@ export default async function JudgePage() {
         </span>
         <div className="relative flex-1 min-w-[240px]">
           <div className="font-mono text-[11.5px] text-white/80">&lt;הרובריקה/&gt;</div>
-          <div className="font-display font-black text-[20px] leading-snug mt-1">100 נקודות, שישה קריטריונים</div>
+          <div className="font-display font-black text-[20px] leading-snug mt-1">100 נקודות, שבעה קריטריונים</div>
           <div className="text-[12.5px] text-white/90 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
             {CRITERIA.map((c) => (
               <span key={c.key}>

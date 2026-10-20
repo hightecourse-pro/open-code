@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CHALLENGES, type Challenge } from "@/app/hackathon-2026/shared";
 import { withPrevSurnames } from "@/lib/prev-surname";
 import { htmlToPlainText } from "@/lib/rich-text";
+import type { Json } from "@/types/database";
 
 /**
  * הגשת התוצרים (the owner, 16/10): "בזוג - רק אחת מעלה הכל, אבל השאלות
@@ -83,6 +84,8 @@ export interface Submission {
   repoUrl: string | null;
   architecture: string | null;
   challengesSolved: string | null;
+  /** The ninth part (20/10): what they built that the organisation did not ask for. */
+  originalFeature: string | null;
   videoUrl: string | null;
   videoPath: string | null;
   videoSize: number | null;
@@ -101,6 +104,7 @@ function toSubmission(r: {
   repo_url: string | null;
   architecture: string | null;
   challenges_solved: string | null;
+  original_feature?: string | null;
   video_url: string | null;
   video_path: string | null;
   video_size: number | null;
@@ -118,6 +122,7 @@ function toSubmission(r: {
     repoUrl: r.repo_url,
     architecture: r.architecture,
     challengesSolved: r.challenges_solved,
+    originalFeature: r.original_feature ?? null,
     videoUrl: r.video_url,
     videoPath: r.video_path,
     videoSize: r.video_size,
@@ -152,11 +157,42 @@ export async function loadReflections(profileIds: string[]): Promise<Map<string,
   return out;
 }
 
+/*
+  סגירת ההגשות (the owner, 20/10): the teams may edit as long as the team has
+  not pressed "סגירת ההגשות" in the admin. One app_settings row; the server
+  actions refuse writes while closed and the submit page turns read-only.
+*/
+const CLOSURE_KEY = "hackathon_submissions";
+
+export interface SubmissionsClosure {
+  closedAt: string | null;
+  closedBy: string | null;
+}
+
+export async function getSubmissionsClosure(): Promise<SubmissionsClosure> {
+  try {
+    const { data } = await createAdminClient().from("app_settings").select("value").eq("key", CLOSURE_KEY).maybeSingle();
+    const v = (data?.value ?? {}) as { closed_at?: unknown; closed_by?: unknown };
+    return { closedAt: typeof v.closed_at === "string" && v.closed_at ? v.closed_at : null, closedBy: typeof v.closed_by === "string" ? v.closed_by : null };
+  } catch {
+    return { closedAt: null, closedBy: null };
+  }
+}
+
+export async function setSubmissionsClosure(closed: boolean, byId: string): Promise<void> {
+  const value = closed ? { closed_at: new Date().toISOString(), closed_by: byId } : { closed_at: null, closed_by: byId };
+  const { error } = await createAdminClient()
+    .from("app_settings")
+    .upsert({ key: CLOSURE_KEY, value: value as unknown as Json }, { onConflict: "key" });
+  if (error) throw error;
+}
+
 export interface SubmissionChecklist {
   product: boolean;
   repo: boolean;
   architecture: boolean;
   challenges: boolean;
+  original: boolean;
   video: boolean;
   tools: boolean;
   models: boolean;
@@ -176,6 +212,7 @@ export function checklistOf(sub: Submission | null, mine: Reflection | null): Su
     repo: has(sub?.repoUrl),
     architecture: has(sub?.architecture),
     challenges: has(sub?.challengesSolved),
+    original: has(sub?.originalFeature),
     video: has(sub?.videoUrl) || has(sub?.videoPath),
     tools: has(sub?.aiDevTools),
     models: has(sub?.aiModels),
@@ -194,6 +231,7 @@ export interface AdminSubmissionRow {
   repoUrl: string | null;
   architecture: string | null;
   challengesSolved: string | null;
+  originalFeature: string | null;
   videoUrl: string | null;
   videoDownloadUrl: string | null;
   videoSize: number | null;
@@ -227,6 +265,7 @@ export async function loadAdminSubmissions(): Promise<AdminSubmissionRow[]> {
     repoUrl: s.repo_url,
     architecture: s.architecture,
     challengesSolved: s.challenges_solved,
+    originalFeature: s.original_feature ?? null,
     videoUrl: s.video_url,
     videoDownloadUrl: s.video_path ? (urlOf.get(s.video_path) ?? null) : null,
     videoSize: s.video_size,

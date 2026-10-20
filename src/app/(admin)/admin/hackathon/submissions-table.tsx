@@ -70,6 +70,10 @@ export function SubmissionsTable({ rows }: { rows: AdminSubmissionRow[] }) {
                   <Rich html={r.challengesSolved} />
                 </div>
                 <div>
+                  <div className="text-[12px] font-semibold text-brand-pink-deep">הפיצ׳ר המקורי</div>
+                  {r.originalFeature ? <Rich html={r.originalFeature} /> : <span className="text-[12.5px] text-ink-500">עוד לא נכתב</span>}
+                </div>
+                <div>
                   <div className="font-mono text-[11.5px] text-brand-pink-deep">{"// כלי AI לפיתוח"}</div>
                   <Rich html={r.aiDevTools} />
                 </div>

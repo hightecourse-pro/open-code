@@ -36,6 +36,13 @@ export function SubmissionForm({ submission }: { submission: Submission | null }
           <span className="text-[12px] text-ink-500">הבעיה, מה ניסית, מה עבד בסוף - ומה היית עושה אחרת.</span>
           <RichTextEditor id="challenges_solved" name="challenges_solved" defaultValue={submission?.challengesSolved} placeholder="למשל: המודל ניחש שווי שימוש - פתרנו עם כלי שליפה מהמאגר ופרומפט שאוסר ניחוש…" />
         </div>
+        <div className="flex flex-col gap-1 rounded-[14px] bg-tint-pink/30 border border-brand-pink/30 p-3.5">
+          <span className="text-[13px] font-semibold text-ink-800">הפיצ׳ר המקורי שלכן</span>
+          <span className="text-[12px] text-ink-600">
+            משהו שהארגון לא ביקש - ואם היה רואה, היה רוצה. מה הוא, למה הוא חשוב לארגון, ואיך מנסים אותו במוצר החי. שלוש שורות מספיקות. זה קריטריון בניקוד: ״פיצ׳ר מקורי״, 10 נקודות.
+          </span>
+          <RichTextEditor id="original_feature" name="original_feature" defaultValue={submission?.originalFeature} placeholder="למשל: התראה אוטומטית למזכירה כשטופס התחייבות מגיע בלי מספר מרכזי - כדי שלא יחכה שבוע. מנסים: מעלים את הטופס הזה…" />
+        </div>
       </section>
 
       <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">

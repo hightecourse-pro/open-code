@@ -3,12 +3,14 @@ import Link from "next/link";
 import { CalendarDays } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { requireCommunityAccess } from "@/lib/auth";
-import { checklistOf, loadReflections, loadSubmission, loadTeam } from "@/lib/hackathon-submission";
+import { checklistOf, getSubmissionsClosure, loadReflections, loadSubmission, loadTeam } from "@/lib/hackathon-submission";
+import { CAPPED_TOTAL, CORRECTNESS_FLOOR, CRITERIA } from "@/lib/judging-shared";
 import { H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
 import { SubmissionForm } from "./submission-form";
 import { VideoUploader } from "./video-uploader";
 import { ReflectionForm } from "./reflection-form";
 import { FinalSubmit } from "./final-submit";
+import { LockedBanner, LockedView } from "./locked-view";
 
 export const metadata: Metadata = { title: "הגשת התוצרים - האקתון" };
 export const dynamic = "force-dynamic";
@@ -42,7 +44,8 @@ export default async function HackathonSubmitPage() {
     );
   }
 
-  const [submission, reflections] = await Promise.all([loadSubmission(team.teamKey), loadReflections(team.members.map((m) => m.id))]);
+  const [submission, reflections, closure] = await Promise.all([loadSubmission(team.teamKey), loadReflections(team.members.map((m) => m.id)), getSubmissionsClosure()]);
+  const locked = closure.closedAt;
   const mine = reflections.get(profile.id) ?? null;
   const partner = team.members.find((m) => m.id !== profile.id) ?? null;
   const partnerReflected = partner ? !!reflections.get(partner.id)?.contributed : false;
@@ -97,17 +100,46 @@ export default async function HackathonSubmitPage() {
           <span className="inline-flex items-center gap-1.5 bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">
             <CalendarDays size={13} /> ערב הגמר · יום רביעי 28/10 · י״ז חשוון · היכל התרבות רמות, ירושלים
           </span>
-          <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-semibold">אפשר לשמור ולחזור. אפשר לעדכן גם אחרי ההגשה.</span>
+          <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-semibold">
+            {locked ? "ההגשות נסגרו - לקריאה בלבד" : "אפשר לשמור ולחזור, ולעדכן גם אחרי ההגשה - עד שהצוות סוגר את ההגשות."}
+          </span>
         </div>
       </section>
 
-      <SubmissionForm submission={submission} />
+      {locked && <LockedBanner closedAt={locked} />}
 
-      <VideoUploader videoPath={submission?.videoPath ?? null} videoSize={submission?.videoSize ?? null} videoUrl={submission?.videoUrl ?? null} />
+      {/* how the finalists are picked - the same rubric the judges see (the owner, 20/10) */}
+      <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm" data-testid="rubric">
+        <div className="font-mono text-[12.5px] text-brand-pink-deep">{"// השיפוט"}</div>
+        <h2 className="font-display text-[18px] font-black text-ink-1000">איך בוחרים את העולות לגמר - 100 נקודות</h2>
+        <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[13.5px]">
+          {CRITERIA.map((c) => (
+            <li key={c.key} className={`flex items-baseline gap-2 ${c.key === "original" ? "text-brand-pink-deep font-bold" : "text-ink-900"}`}>
+              <span className="font-display font-black text-[15px] w-7 text-end shrink-0">{c.max}</span>
+              <span>
+                {c.label} <span className="text-ink-500 font-normal">- {c.hint}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="mt-3 text-[12.5px] text-ink-600">
+          נכונות מתחת ל-{CORRECTNESS_FLOOR} מגבילה את הציון ל-{CAPPED_TOTAL} - מערכת שממציאה לא עולה לגמר. כל הגשה נבדקת על ידי שתי שופטות לפחות; פער גדול ביניהן - שופטת שלישית.
+        </p>
+      </section>
 
-      <ReflectionForm mine={mine} isPair={team.isPair} partnerName={partner?.name ?? null} partnerReflected={partnerReflected} />
+      {locked ? (
+        <LockedView team={team} submission={submission} reflections={reflections} viewerId={profile.id} />
+      ) : (
+        <>
+          <SubmissionForm submission={submission} />
 
-      <FinalSubmit checklist={checklist} submittedAt={submission?.submittedAt ?? null} />
+          <VideoUploader videoPath={submission?.videoPath ?? null} videoSize={submission?.videoSize ?? null} videoUrl={submission?.videoUrl ?? null} />
+
+          <ReflectionForm mine={mine} isPair={team.isPair} partnerName={partner?.name ?? null} partnerReflected={partnerReflected} />
+
+          <FinalSubmit checklist={checklist} submittedAt={submission?.submittedAt ?? null} />
+        </>
+      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireCommunityAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isJudge } from "@/lib/judging";
-import { CRITERIA, type CriterionKey } from "@/lib/judging-shared";
+import { CRITERIA, ZERO_SCORES, type CriterionKey } from "@/lib/judging-shared";
 
 export interface ScoreState {
   ok?: boolean;
@@ -12,14 +12,14 @@ export interface ScoreState {
   info?: string;
 }
 
-/** One judge's scores for one team - six numbers within the rubric and a line per criterion. */
+/** One judge's scores for one team - seven numbers within the rubric and a line per criterion. */
 export async function saveScore(teamKey: string, _prev: ScoreState, formData: FormData): Promise<ScoreState> {
   const me = await requireCommunityAccess();
   if (!(await isJudge(me))) return { error: "השיפוט פתוח לשופטות שהצוות מינה." };
   const admin = createAdminClient();
   const { data: sub } = await admin.from("hackathon_submissions").select("team_key, submitted_at").eq("team_key", teamKey).maybeSingle();
   if (!sub?.submitted_at) return { error: "ההגשה הזו עוד לא הוגשה." };
-  const values: Record<CriterionKey, number> = { works: 0, correctness: 0, problem: 0, architecture: 0, ux: 0, presentation: 0 };
+  const values: Record<CriterionKey, number> = { ...ZERO_SCORES };
   const notes: Partial<Record<CriterionKey, string>> = {};
   for (const c of CRITERIA) {
     const n = Number(formData.get(c.key));

@@ -8,6 +8,7 @@ import { sendResendEmail } from "@/lib/email/resend";
 import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { runArenaDigest } from "@/lib/arena-digest";
+import { setSubmissionsClosure } from "@/lib/hackathon-submission";
 
 const BUCKET = "hackathon";
 
@@ -106,6 +107,20 @@ export async function setHackathonJudge(profileId: string, on: boolean): Promise
 }
 
 /** The team pushes the open arena questions to every available mentor right now (16/10). */
+/** סגירת ההגשות / פתיחה מחדש (the owner, 20/10). */
+export async function setSubmissionsClosed(closed: boolean): Promise<{ error?: string }> {
+  const me = await requireRole("admin");
+  try {
+    await setSubmissionsClosure(closed, me.id);
+  } catch {
+    return { error: "השמירה נכשלה. נסי שוב." };
+  }
+  revalidatePath("/admin/hackathon");
+  revalidatePath("/hackathon/submit");
+  revalidatePath("/hackathon");
+  return {};
+}
+
 export async function pushArenaToMentors(): Promise<{ error?: string; info?: string }> {
   await requireRole("admin");
   const r = await runArenaDigest({ everyone: true });
