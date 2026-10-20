@@ -7,7 +7,8 @@ import { loadMaterials, registrableChallenges } from "@/lib/hackathon";
 import { RegistrationsTable, type RegistrationRow } from "./registrations-table";
 import { MaterialsManager } from "./materials-manager";
 import { SubmissionsTable } from "./submissions-table";
-import { loadAdminSubmissions } from "@/lib/hackathon-submission";
+import { getSubmissionsClosure, loadAdminSubmissions } from "@/lib/hackathon-submission";
+import { SubmissionsClosure } from "./submissions-closure";
 import { JudgesPicker, type JudgeCandidate } from "./judges-picker";
 import { JudgingBoard } from "@/app/(app)/judge/judging-board";
 import { loadJudgingBoard } from "@/lib/judging";
@@ -26,7 +27,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminHackathonPage() {
   const me = await requireRole("admin");
   const admin = createAdminClient();
-  const [{ data: regs }, materials, submissions, board, arenaMentors, arena] = await Promise.all([
+  const [{ data: regs }, materials, submissions, board, arenaMentors, arena, closure] = await Promise.all([
     admin
       .from("hackathon_registrations")
       .select("profile_id, challenge_key, partner_profile_id, partner_confirmed_at, created_at, updated_at")
@@ -37,6 +38,7 @@ export default async function AdminHackathonPage() {
     loadJudgingBoard(me),
     loadArenaMentors(),
     arenaOverview(),
+    getSubmissionsClosure(),
   ]);
   const judgeIds = new Map(board.judges.map((j) => [j.id, j.scored]));
   const candidates: JudgeCandidate[] = arenaMentors.map((m) => ({ id: m.id, name: m.name, initials: m.initials, ai: m.ai, judge: judgeIds.has(m.id), scored: judgeIds.get(m.id) ?? 0 }));
@@ -72,6 +74,7 @@ export default async function AdminHackathonPage() {
         </p>
       </div>
       <RegistrationsTable rows={rows} challenges={challenges} />
+      <SubmissionsClosure closedAt={closure.closedAt} />
       <SubmissionsTable rows={submissions} />
       <ArenaOverview data={arena} />
       {/* ── judging (the owner, 16/10): judges, the automated dashboard, every judge's scores, average, gap, rank ── */}

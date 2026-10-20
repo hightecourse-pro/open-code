@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CHALLENGES, type Challenge } from "@/app/hackathon-2026/shared";
 import { withPrevSurnames } from "@/lib/prev-surname";
 import { htmlToPlainText } from "@/lib/rich-text";
+import type { Json } from "@/types/database";
 
 /**
  * הגשת התוצרים (the owner, 16/10): "בזוג - רק אחת מעלה הכל, אבל השאלות
@@ -154,6 +155,36 @@ export async function loadReflections(profileIds: string[]): Promise<Map<string,
     .in("profile_id", profileIds);
   for (const r of data ?? []) out.set(r.profile_id, { contributed: r.contributed, learned: r.learned, enjoyed: r.enjoyed, updatedAt: r.updated_at });
   return out;
+}
+
+/*
+  סגירת ההגשות (the owner, 20/10): the teams may edit as long as the team has
+  not pressed "סגירת ההגשות" in the admin. One app_settings row; the server
+  actions refuse writes while closed and the submit page turns read-only.
+*/
+const CLOSURE_KEY = "hackathon_submissions";
+
+export interface SubmissionsClosure {
+  closedAt: string | null;
+  closedBy: string | null;
+}
+
+export async function getSubmissionsClosure(): Promise<SubmissionsClosure> {
+  try {
+    const { data } = await createAdminClient().from("app_settings").select("value").eq("key", CLOSURE_KEY).maybeSingle();
+    const v = (data?.value ?? {}) as { closed_at?: unknown; closed_by?: unknown };
+    return { closedAt: typeof v.closed_at === "string" && v.closed_at ? v.closed_at : null, closedBy: typeof v.closed_by === "string" ? v.closed_by : null };
+  } catch {
+    return { closedAt: null, closedBy: null };
+  }
+}
+
+export async function setSubmissionsClosure(closed: boolean, byId: string): Promise<void> {
+  const value = closed ? { closed_at: new Date().toISOString(), closed_by: byId } : { closed_at: null, closed_by: byId };
+  const { error } = await createAdminClient()
+    .from("app_settings")
+    .upsert({ key: CLOSURE_KEY, value: value as unknown as Json }, { onConflict: "key" });
+  if (error) throw error;
 }
 
 export interface SubmissionChecklist {
