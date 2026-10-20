@@ -59,6 +59,9 @@ export async function saveSubmission(_prev: SubmitState, formData: FormData): Pr
   if (repoUrl === "invalid") return { error: "הקישור לספריית הגיט לא נראה כמו כתובת אינטרנט." };
   if (videoUrl === "invalid") return { error: "הקישור לסרטון לא נראה כמו כתובת אינטרנט." };
   const admin = createAdminClient();
+  // Fields of the first form version (until 20/10) are kept as they are unless the form sends them.
+  const legacy: Record<string, string | null> = {};
+  for (const key of ["challenges_solved", "ai_dev_tools", "ai_models"]) if (formData.has(key)) legacy[key] = rich(formData.get(key), 12000);
   const { error: dbErr } = await admin.from("hackathon_submissions").upsert(
     {
       team_key: team.teamKey,
@@ -66,12 +69,10 @@ export async function saveSubmission(_prev: SubmitState, formData: FormData): Pr
       product_url: productUrl,
       repo_url: repoUrl,
       architecture: rich(formData.get("architecture"), 30000),
-      challenges_solved: rich(formData.get("challenges_solved"), 30000),
       original_feature: rich(formData.get("original_feature"), 12000),
       video_url: videoUrl,
-      ai_dev_tools: rich(formData.get("ai_dev_tools"), 12000),
-      ai_models: rich(formData.get("ai_models"), 12000),
       created_by: me.id,
+      ...legacy,
     },
     { onConflict: "team_key" }
   );
@@ -167,14 +168,12 @@ export async function submitFinal(): Promise<SubmitState> {
   const [sub, reflections] = await Promise.all([loadSubmission(team.teamKey), loadReflections([me.id])]);
   const c = checklistOf(sub, reflections.get(me.id) ?? null);
   const missing: string[] = [];
-  if (!c.product) missing.push("קישור למוצר עובד");
-  if (!c.repo) missing.push("ספריית גיט ציבורית");
-  if (!c.architecture) missing.push("הסבר על הארכיטקטורה");
-  if (!c.challenges) missing.push("בעיות משמעותיות ואיך פתרת אותן");
-  if (!c.video) missing.push("סרטון (קובץ או קישור)");
-  if (!c.tools) missing.push("כלי ה-AI לפיתוח");
-  if (!c.models) missing.push("מודלי ה-AI של האיג׳נט");
-  if (!c.reflection) missing.push("שלוש השאלות האישיות שלך");
+  if (!c.product) missing.push("לינק למערכת בענן");
+  if (!c.repo) missing.push("לינק לספריית גיט ציבורית");
+  if (!c.architecture) missing.push("תיאור קצר של הארכיטקטורה");
+  if (!c.video) missing.push("סרטון של עד דקה");
+  if (!c.original) missing.push("הפיצ׳ר המקורי שלך");
+  if (!c.reflection) missing.push("השאלות על התהליך שלך");
   if (missing.length) return { error: `עוד חסר: ${missing.join(" · ")}` };
   const admin = createAdminClient();
   const first = !sub!.submittedAt;

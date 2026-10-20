@@ -187,15 +187,13 @@ export async function setSubmissionsClosure(closed: boolean, byId: string): Prom
   if (error) throw error;
 }
 
+/** The six parts of the owner's published list (20/10): link, repo, architecture, video, original feature, the personal questions. */
 export interface SubmissionChecklist {
   product: boolean;
   repo: boolean;
   architecture: boolean;
-  challenges: boolean;
-  original: boolean;
   video: boolean;
-  tools: boolean;
-  models: boolean;
+  original: boolean;
   /** Her own reflections - all three answered. */
   reflection: boolean;
   done: number;
@@ -211,11 +209,8 @@ export function checklistOf(sub: Submission | null, mine: Reflection | null): Su
     product: has(sub?.productUrl),
     repo: has(sub?.repoUrl),
     architecture: has(sub?.architecture),
-    challenges: has(sub?.challengesSolved),
-    original: has(sub?.originalFeature),
     video: has(sub?.videoUrl) || has(sub?.videoPath),
-    tools: has(sub?.aiDevTools),
-    models: has(sub?.aiModels),
+    original: has(sub?.originalFeature),
     reflection: has(mine?.contributed) && has(mine?.learned) && has(mine?.enjoyed),
   };
   const values = Object.values(c);

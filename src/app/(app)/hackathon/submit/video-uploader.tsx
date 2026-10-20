@@ -52,11 +52,11 @@ export function VideoUploader({ videoPath, videoSize, videoUrl }: { videoPath: s
       <div>
         <div className="font-mono text-[12.5px] text-brand-pink-deep">{"// הסרטון"}</div>
         <h2 className="font-display text-[18px] font-black text-ink-1000 flex items-center gap-2">
-          <Clapperboard size={18} className="text-brand-pink-deep" /> סרטון של עד דקה שמציג את המערכת
+          <Clapperboard size={18} className="text-brand-pink-deep" /> 4. סרטון קצר של עד דקה איך המערכת עובדת
         </h2>
         <p className="text-[13px] text-ink-700 mt-1 leading-relaxed">
-          <b>חשוב:</b> ייתכן שזה הסרטון שיוצג באירוע, ודרכו גם תתבצע הבדיקה - אז כדאי שיראו בו את המערכת עובדת מקצה לקצה: הבעיה, הפתרון,
-          והתוצאה. בלי מצגות ארוכות, עם מסך אמיתי.
+          <b>לא יותר מדקה!</b> שיובן התהליך מקצה לקצה: הבעיה, הפתרון והתוצאה. ייתכן שזה הסרטון שיוצג באירוע ודרכו גם תתבצע הבדיקה - אז
+          מסך אמיתי, בלי מצגות.
         </p>
       </div>
 

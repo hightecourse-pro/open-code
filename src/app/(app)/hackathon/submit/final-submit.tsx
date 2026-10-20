@@ -8,15 +8,12 @@ import type { SubmissionChecklist } from "@/lib/hackathon-submission";
 import { submitFinal, type SubmitState } from "./actions";
 
 const ITEMS: { key: keyof Omit<SubmissionChecklist, "done" | "total">; label: string }[] = [
-  { key: "product", label: "קישור למוצר עובד" },
-  { key: "repo", label: "ספריית גיט ציבורית" },
-  { key: "architecture", label: "הסבר על הארכיטקטורה" },
-  { key: "challenges", label: "בעיות משמעותיות ואיך פתרת אותן" },
-  { key: "original", label: "הפיצ׳ר המקורי שלכן" },
-  { key: "video", label: "סרטון (קובץ או קישור)" },
-  { key: "tools", label: "כלי ה-AI לפיתוח" },
-  { key: "models", label: "מודלי ה-AI של האיג׳נט" },
-  { key: "reflection", label: "שלוש השאלות האישיות שלך" },
+  { key: "product", label: "1. לינק למערכת בענן" },
+  { key: "repo", label: "2. לינק לספריית גיט ציבורית" },
+  { key: "architecture", label: "3. תיאור קצר של הארכיטקטורה" },
+  { key: "video", label: "4. סרטון של עד דקה" },
+  { key: "original", label: "5. הפיצ׳ר המקורי שלך" },
+  { key: "reflection", label: "6. השאלות על התהליך שלך" },
 ];
 
 /** The last card: the checklist, and the big button once everything is there. */
@@ -68,7 +65,7 @@ export function FinalSubmit({ checklist, submittedAt }: { checklist: SubmissionC
           >
             {pending ? "מגישות…" : submittedAt ? "עדכון ההגשה" : "הגשה סופית 🏆"}
           </Button>
-          {!ready && <span className="text-[12px] text-ink-500">הכפתור ייפתח כשכל תשעת החלקים מוכנים.</span>}
+          {!ready && <span className="text-[12px] text-ink-500">הכפתור ייפתח כשכל ששת החלקים מוכנים.</span>}
           {state?.error && <Alert variant="danger">{state.error}</Alert>}
           {state?.ok && (
             <Alert variant="success">

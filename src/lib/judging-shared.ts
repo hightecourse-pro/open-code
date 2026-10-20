@@ -1,7 +1,8 @@
-// Client-safe constants of שיפוט ההאקתון (the owner, 16/10; the original
-// feature added 20/10: "חשוב להוסיף בהגשה דגש על פיצ׳ר מקורי ולהכניס לניקוד").
+// Client-safe constants of שיפוט ההאקתון (the owner, 16/10; rewritten 20/10
+// to her published text: six criteria for the finals - "בארוע עצמו יהיו
+// קריטריונים אחרים כמובן").
 
-export type CriterionKey = "works" | "correctness" | "problem" | "original" | "architecture" | "ux" | "presentation";
+export type CriterionKey = "works" | "correctness" | "problem" | "architecture" | "ux" | "original";
 
 export interface Criterion {
   key: CriterionKey;
@@ -10,16 +11,18 @@ export interface Criterion {
   hint: string;
 }
 
-/** The rubric - 100 points, seven criteria. */
+/** The rubric for the finals - 100 points, six criteria, the owner's own words. */
 export const CRITERIA: Criterion[] = [
-  { key: "works", label: "עובד מקצה לקצה", max: 25, hint: "התסריט המלא רץ במוצר החי, בלי נפילות" },
-  { key: "correctness", label: "נכונות ואמינות", max: 25, hint: "מספרים נכונים, ״לא יודע״ במקום ניחוש, ציטוט מקור" },
-  { key: "problem", label: "פתרון לבעיה האמיתית", max: 15, hint: "עונה למה שהארגון ביקש, לא לגרסה נוחה שלה" },
-  { key: "original", label: "פיצ׳ר מקורי", max: 10, hint: "משהו שהארגון לא ביקש ובאמת היה רוצה - מוסבר בהגשה ועובד במוצר החי" },
-  { key: "architecture", label: "ארכיטקטורה ושימוש ב-AI", max: 10, hint: "המודל במקום הנכון, כלים ולא פרומפט ענק, הסבר ברור של הבעיות והפתרונות" },
-  { key: "ux", label: "חוויית המשתמש", max: 10, hint: "עברית טובה, ברור מה קורה, התאוששות משגיאה" },
-  { key: "presentation", label: "הצגה", max: 5, hint: "סרטון של דקה שמראה את המערכת, לא מצגת" },
+  { key: "works", label: "עובד מקצה לקצה", max: 25, hint: "התסריט המלא רץ בלינק ששלחת בענן, בלי נפילות" },
+  { key: "correctness", label: "נכונות ואמינות", max: 25, hint: "עונה שלא יודע אם אין מידע נכון, ולא ממציא" },
+  { key: "problem", label: "פתרון לבעיה האמיתית", max: 15, hint: "האם המוצר עונה למה שהלקוח ביקש? זה פותר את הבעיה?" },
+  { key: "architecture", label: "ארכיטקטורה של פיתוח AI", max: 10, hint: "איך בנית את המערכת? האם את יודעת להסביר את זה?" },
+  { key: "ux", label: "חוויית משתמש", max: 10, hint: "עד כמה נעים ונוח להשתמש במערכת? איך העיצוב?" },
+  { key: "original", label: "פיצ׳ר מקורי שלא חשבו עליו", max: 15, hint: "פה המקום שלך להוכיח חדשנות וחשיבה יצירתית - מוזמנת להפתיע" },
 ];
+
+/** What the participants read under the rubric. */
+export const RUBRIC_NOTE = "אלה הקריטריונים לעלייה לגמר. בערב הגמר עצמו יהיו קריטריונים אחרים, כמובן.";
 
 /** Below this on correctness the total is capped - a system that invents cannot win. */
 export const CORRECTNESS_FLOOR = 10;
@@ -29,7 +32,7 @@ export const GAP_THRESHOLD = 15;
 
 export type Scores = Record<CriterionKey, number>;
 
-export const ZERO_SCORES: Scores = { works: 0, correctness: 0, problem: 0, original: 0, architecture: 0, ux: 0, presentation: 0 };
+export const ZERO_SCORES: Scores = { works: 0, correctness: 0, problem: 0, architecture: 0, ux: 0, original: 0 };
 
 export function totalOf(s: Scores): { raw: number; total: number; capped: boolean } {
   const raw = CRITERIA.reduce((sum, c) => sum + (s[c.key] ?? 0), 0);
