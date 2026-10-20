@@ -1,7 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { QUESTIONS, type Recommendation } from "./questions";
+import { QUESTIONS, recommendFor, type Recommendation } from "./questions";
 
 /*
   Server side of the public AI-course quiz (/ai-course). Mirrors the
@@ -16,6 +16,7 @@ export type SignupStatus = "registered" | "planning";
 
 const normalizeEmail = (raw: string) => (raw ?? "").trim().toLowerCase();
 const emailOk = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email);
+const GENERIC = "משהו השתבש אצלנו - נסי שוב בעוד רגע.";
 
 export type StartQuizResult = { ok: true; id: string } | { ok: false; error: string };
 
@@ -47,7 +48,9 @@ export async function startQuiz(input: StartQuizInput): Promise<StartQuizResult>
     .maybeSingle();
 
   if (existing) {
-    // A fresh take replaces the old answers - her latest word counts.
+    // A fresh take starts the answers over, but her last completed result
+    // stands until the new one completes - so a second visit never turns a
+    // finished quiz into "נעצרה אחרי הפרטים" on the admin screen.
     const { error } = await admin
       .from("ai_course_quiz_submissions")
       .update({
@@ -56,14 +59,10 @@ export async function startQuiz(input: StartQuizInput): Promise<StartQuizResult>
         signup_status: signupStatus,
         answers: {},
         questions_done: 0,
-        score: null,
-        recommendation: null,
-        wants_placement: null,
-        completed_at: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", existing.id);
-    if (error) return { ok: false, error: "משהו השתבש אצלנו - נסי שוב בעוד רגע." };
+    if (error) return { ok: false, error: GENERIC };
     return { ok: true, id: existing.id };
   }
 
@@ -72,7 +71,7 @@ export async function startQuiz(input: StartQuizInput): Promise<StartQuizResult>
     .insert({ email, first_name: firstName, last_name: lastName, signup_status: signupStatus })
     .select("id")
     .single();
-  if (error || !data) return { ok: false, error: "משהו השתבש אצלנו - נסי שוב בעוד רגע." };
+  if (error || !data) return { ok: false, error: GENERIC };
   return { ok: true, id: data.id };
 }
 
@@ -98,7 +97,7 @@ export async function saveAnswer(id: string, questionIndex: number, score: numbe
     .eq("id", id);
 }
 
-export type FinishQuizResult = { ok: true; recommendation: Recommendation } | { ok: false; error: string };
+export type FinishQuizResult = { ok: true; recommendation: Recommendation; score: number } | { ok: false; error: string };
 
 /** All answered: the server adds up and decides the track. */
 export async function finishQuiz(id: string): Promise<FinishQuizResult> {
@@ -115,25 +114,22 @@ export async function finishQuiz(id: string): Promise<FinishQuizResult> {
   const missing = QUESTIONS.filter((q) => typeof answers[q.id] !== "number");
   if (missing.length > 0) return { ok: false, error: "נשארו עוד כמה שאלות קטנות לפני ההמלצה." };
 
-  const score = QUESTIONS.reduce((sum, q) => sum + (answers[q.id] ?? 0), 0);
-  // 0-10: a clear high is the fast track, a clear low is foundations, and the
-  // middle goes by what she said she wants from the course (the pace question).
-  const recommendation: Recommendation =
-    score >= 7 ? "advanced" : score <= 4 ? "foundations" : (answers["pace"] ?? 0) === 2 ? "advanced" : "foundations";
-
-  await admin
+  const { score, recommendation } = recommendFor(answers);
+  const { error } = await admin
     .from("ai_course_quiz_submissions")
     .update({
       score,
       recommendation,
+      wants_placement: null,
       completed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
-  return { ok: true, recommendation };
+  if (error) return { ok: false, error: GENERIC };
+  return { ok: true, recommendation, score };
 }
 
-/** "האם את באמת מעוניינת שנשבץ אותך בקורס זה?" */
+/** "רוצה שנשבץ אותך למסלול הזה?" */
 export async function setPlacement(id: string, wants: boolean): Promise<void> {
   if (!id) return;
   const admin = createAdminClient();

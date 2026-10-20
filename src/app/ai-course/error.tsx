@@ -5,12 +5,12 @@ import { H, CONTACT_PHONE, CONTACT_PHONE_HREF } from "./theme";
 /*
   Last-resort error boundary for /ai-course, in Hightecourse style and Hebrew,
   instead of Next's English "This page couldn't load" (the owner, 20/10).
-  The quiz keeps its progress in sessionStorage, so "לנסות שוב" or a reload
+  The quiz keeps its progress in sessionStorage, so "להמשיך" or a reload
   brings her back to the step she was on.
 */
 export default function AiCourseError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
-    <div dir="rtl" className="flex min-h-screen flex-col items-center justify-center px-4 py-10" style={{ background: "#F6F8FA" }}>
+    <div dir="rtl" className="flex min-h-screen flex-col items-center justify-center px-4 py-10" style={{ background: H.bg }}>
       <div className="w-full max-w-md bg-white p-7 text-center sm:p-9" style={{ border: `1px solid ${H.line}`, borderRadius: 12 }}>
         <h1 className="text-[22px] font-black" style={{ color: H.navy }}>
           משהו השתבש לרגע
@@ -19,12 +19,7 @@ export default function AiCourseError({ reset }: { error: Error & { digest?: str
         <p className="mt-4 text-[15px] leading-relaxed" style={{ color: H.ink }}>
           ההתקדמות שלך בשאלון נשמרה. לחצי כדי להמשיך מאותו מקום.
         </p>
-        <button
-          type="button"
-          onClick={() => reset()}
-          className="mt-6 w-full px-6 py-3.5 text-[16px] font-bold text-white transition-opacity hover:opacity-90"
-          style={{ background: H.navy, borderRadius: 10 }}
-        >
+        <button type="button" onClick={() => reset()} className="mt-6 w-full px-6 py-3.5 text-[16px] font-bold text-white transition-opacity hover:opacity-90" style={{ background: H.navy, borderRadius: 10 }}>
           להמשיך בשאלון
         </button>
         <button
@@ -36,7 +31,7 @@ export default function AiCourseError({ reset }: { error: Error & { digest?: str
           לטעון את העמוד מחדש
         </button>
         <p className="mt-5 text-[13.5px]" style={{ color: H.muted }}>
-          עדיין תקוע? דברי איתנו:{" "}
+          עדיין לא עובד? דברי איתנו:{" "}
           <a href={CONTACT_PHONE_HREF} className="font-bold underline" dir="ltr" style={{ color: H.navy }}>
             {CONTACT_PHONE}
           </a>
