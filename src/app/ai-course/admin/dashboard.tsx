@@ -31,6 +31,18 @@ export interface QuizRow {
   updated_at: string;
 }
 
+/** A client-side failure the quiz page reported (window error, unhandled rejection, the error boundary). */
+export interface QuizEvent {
+  id: string;
+  kind: "client_error" | "boundary" | "api_error";
+  submission_id: string | null;
+  step: string | null;
+  message: string | null;
+  digest: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
 type Filter = "all" | "completed" | "abandoned" | "placement" | "advanced" | "foundations";
 
 const TOTAL = QUESTIONS.length;
@@ -161,7 +173,64 @@ const FILTERS: { v: Filter; label: string }[] = [
   { v: "foundations", label: "מהבסיס" },
 ];
 
-export function Dashboard({ rows }: { rows: QuizRow[] }) {
+const KIND_LABEL: Record<QuizEvent["kind"], string> = { boundary: "הדף נפל (error boundary)", client_error: "שגיאה בדפדפן", api_error: "קריאה לשרת נכשלה" };
+
+/** Browser + OS in a few words out of the user agent. */
+function browserOf(ua: string | null): string {
+  if (!ua) return "";
+  const os = /iPhone|iPad/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Windows/.test(ua) ? "Windows" : /Mac OS/.test(ua) ? "Mac" : "";
+  const b = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /SamsungBrowser/.test(ua) ? "Samsung" : /Firefox\//.test(ua) ? "Firefox" : /Chrome\//.test(ua) ? "Chrome" : /Safari\//.test(ua) ? "Safari" : "";
+  return [b, os].filter(Boolean).join(" · ");
+}
+
+function EventsBox({ events, byId }: { events: QuizEvent[]; byId: Map<string, QuizRow> }) {
+  const [open, setOpen] = useState(false);
+  if (events.length === 0) return null;
+  return (
+    <div className="bg-white" style={{ border: `1px solid ${H.red}`, borderRadius: 12 }} data-testid="events">
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full items-center justify-between px-4 py-3 text-start" aria-expanded={open} data-testid="events-toggle">
+        <span className="text-[14.5px] font-black" style={{ color: H.red }}>
+          שגיאות שהדף דיווח בשבועיים האחרונים: {events.length}
+        </span>
+        <span className="text-[13px] font-medium underline" style={{ color: H.navy }}>
+          {open ? "לסגור" : "לפרטים"}
+        </span>
+      </button>
+      {open && (
+        <ol className="space-y-3 px-4 pb-4 text-[13px]" style={{ borderTop: `1px solid ${H.line}` }}>
+          {events.map((e) => {
+            const who = e.submission_id ? byId.get(e.submission_id) : undefined;
+            return (
+              <li key={e.id} className="pt-3" data-testid="event">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="font-black" style={{ color: H.navy }}>
+                    {KIND_LABEL[e.kind] ?? e.kind}
+                  </span>
+                  <span dir="ltr" style={{ color: H.muted }}>
+                    {fmt.format(new Date(e.created_at))}
+                  </span>
+                  {e.step && <span style={{ color: H.muted }}>שלב: {e.step}</span>}
+                  {who && (
+                    <span style={{ color: H.ink }}>
+                      {who.first_name} {who.last_name}
+                    </span>
+                  )}
+                  {e.user_agent && <span style={{ color: H.muted }}>{browserOf(e.user_agent)}</span>}
+                </div>
+                <div className="mt-1 break-all" dir="ltr" style={{ color: H.ink, textAlign: "right" }}>
+                  {e.message}
+                  {e.digest ? ` (${e.digest})` : ""}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      )}
+    </div>
+  );
+}
+
+export function Dashboard({ rows, events }: { rows: QuizRow[]; events: QuizEvent[] }) {
   const router = useRouter();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
@@ -182,6 +251,7 @@ export function Dashboard({ rows }: { rows: QuizRow[] }) {
     });
   }, [rows, q, filter]);
 
+  const byId = useMemo(() => new Map(rows.map((r) => [r.id, r])), [rows]);
   const completed = rows.filter((r) => r.completed_at).length;
   const abandoned = rows.length - completed;
   const advanced = rows.filter((r) => r.recommendation === "advanced").length;
@@ -255,6 +325,8 @@ export function Dashboard({ rows }: { rows: QuizRow[] }) {
           </button>
         </div>
       </div>
+
+      <EventsBox events={events} byId={byId} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <Stat label="נכנסו לשאלון" value={rows.length} testId="stat-total" />

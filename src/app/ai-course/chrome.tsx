@@ -1,10 +1,10 @@
 import Image from "next/image";
 import Link from "next/link";
-import { CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF, H, LOGO, PARTNER, TAGLINE, contactMailto } from "./theme";
+import { CONTACT_EMAIL, H, LOGO, PARTNER, TAGLINE, contactMailto } from "./theme";
 
 /*
   The page chrome shared by the quiz and its admin: the syllabus' header
-  (logo with "בשיתוף John Bryce" under it) and its navy footer bar
+  (logo with "בשיתוף John Bryce" beside it) and its navy footer bar
   (yellow tagline, white contact). Every link gets its colour explicitly -
   the community's global stylesheet paints anchors purple otherwise.
 */
@@ -39,12 +39,6 @@ export function PageFooter({ wide }: { wide?: boolean }) {
         <span className="font-bold" style={{ color: H.yellow }}>
           {TAGLINE}
         </span>
-        <span aria-hidden style={{ color: H.yellow }}>
-          |
-        </span>
-        <a href={CONTACT_PHONE_HREF} className="hover:underline" dir="ltr" style={{ color: H.white }} data-testid="footer-phone">
-          {CONTACT_PHONE}
-        </a>
         <span aria-hidden style={{ color: H.yellow }}>
           |
         </span>

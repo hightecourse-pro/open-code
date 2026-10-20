@@ -22,8 +22,8 @@ export const TAGLINE = "הייטקורס. להתמקצע מהטובים ביות
 /** "בשיתוף John Bryce" under the logo on every syllabus page. */
 export const PARTNER = "John Bryce";
 
-export const CONTACT_PHONE = "050-4122899";
-export const CONTACT_PHONE_HREF = "tel:+972504122899";
+// Contact is the office mail only - the phone on the syllabus is the owner's
+// own and she asked to keep it off the page (20/10).
 export const CONTACT_EMAIL = "office@hightecourse.com";
 export const MAIL_SUBJECT = "שאלה על קורסי פיתוח ה-AI";
 export const contactMailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(MAIL_SUBJECT)}`;

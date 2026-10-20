@@ -18,11 +18,13 @@ const DESCRIPTION =
   "שאלון קצר שעוזר לבחור בין שני המסלולים של קורס Advanced GenAI & Agentic AI for Developers - המסלול המתקדם מאוד או המסלול מהבסיס עם תרגול.";
 
 // Its own title and share card - the root layout's template and OG image
-// belong to the community, and this page is Hightecourse's.
+// belong to the community, and this page is Hightecourse's. "notranslate":
+// a browser that auto-translates rewrites the DOM under React (20/10).
 export const metadata: Metadata = {
   title: { absolute: TITLE },
   description: DESCRIPTION,
   icons: { icon: "/ai-course/icon.png", apple: "/ai-course/icon.png" },
+  other: { google: "notranslate" },
   openGraph: {
     type: "website",
     siteName: "הייטקורס",
@@ -36,7 +38,7 @@ export const metadata: Metadata = {
 
 export default function AiCoursePage() {
   return (
-    <div dir="rtl" className={`${rubik.className} flex min-h-screen flex-col`} style={{ background: H.bg, color: H.ink }}>
+    <div dir="rtl" translate="no" className={`${rubik.className} notranslate flex min-h-screen flex-col`} style={{ background: H.bg, color: H.ink }}>
       <Brand />
 
       {/* Navy hero band, like the catalog cover */}

@@ -1,21 +1,29 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
-import { finishQuiz, markSyllabusDownload, saveAnswer, setPlacement, startQuiz, type SignupStatus } from "./actions";
+import { useEffect, useRef, useState } from "react";
 import { COURSE_TITLE, QUESTIONS, TRACKS, reasonFor, scoresOf, type Recommendation } from "./questions";
-import { H, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF, contactMailto } from "./theme";
+import { H, CONTACT_EMAIL, contactMailto } from "./theme";
 
 /*
   The quiz itself, in the Hightecourse syllabus' print language: navy
   headlines, a yellow underline, light-gray option rows, the rotated yellow
   circle badge on the result - and no emojis.
 
-  Progress survives a page reload (a redeploy mid-session, a phone that
-  evicted the tab, an accidental refresh): the whole state is mirrored into
-  sessionStorage and restored on mount, so she lands back on the same
-  question instead of the intro.
+  Robustness rules (the owner hit "משהו השתבש" after the second question on
+  her own browser while the automated run passed, 20/10):
+  - Every server call is a plain fetch to /api/ai-course/* inside try/catch.
+    No server actions: those run through the app router and a filtered or
+    stale response can take the whole page down.
+  - Each step is its own keyed panel, so moving on unmounts the previous one
+    whole; React never edits a text node that a browser extension or an
+    auto-translate may have rewrapped (the classic "removeChild" crash).
+  - The whole state is mirrored into sessionStorage and restored on mount, so
+    a reload (a redeploy, a phone that evicted the tab) lands her back on the
+    same question. The page is marked notranslate as well.
+  - Window errors and unhandled rejections are reported to the admin screen.
 */
 type Step = "intro" | "details" | "questions" | "result" | "done";
+type SignupStatus = "registered" | "planning";
 
 interface QuizState {
   step: Step;
@@ -45,40 +53,29 @@ const INITIAL: QuizState = {
 };
 
 const STORAGE_KEY = "hightecourse-ai-quiz-v2";
-const RELOADED_FLAG = `${STORAGE_KEY}:reloaded`;
+const RETRY = "החיבור נקטע לרגע - נסי שוב.";
 
-/*
-  A failed action call must never escape a transition: React 19 hands such an
-  error to the nearest error boundary, which replaces the whole page with
-  "This page couldn't load" (what the owner hit at the end of the quiz, 20/10).
-  A call that fails because the site was redeployed under her ("Server Action
-  not found") gets ONE automatic reload - progress is in sessionStorage, so she
-  lands back on the same step with fresh code. Anything else becomes an inline
-  "try again".
-*/
-function isStaleDeploymentError(err: unknown): boolean {
-  const text = err instanceof Error ? `${err.name} ${err.message}` : String(err);
-  return /UnrecognizedActionError|was not found on the server|Failed to find Server Action/i.test(text);
+/** A JSON call to the quiz API. Anything that is not a JSON answer (a filter
+ *  page, a 404 from an old deployment, a dropped connection) throws - into
+ *  the caller's try/catch, never further. */
+async function api<T extends { ok: boolean }>(action: string, body: Record<string, unknown>): Promise<T> {
+  const r = await fetch(`/api/ai-course/${action}`, {
+    method: "POST",
+    headers: { "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify(body),
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  const type = r.headers.get("content-type") ?? "";
+  if (!type.includes("application/json")) throw new Error(`api ${action}: ${r.status} ${type.slice(0, 40) || "no content-type"}`);
+  return (await r.json()) as T;
 }
 
-function messageForActionError(err: unknown): string {
-  if (isStaleDeploymentError(err)) {
-    try {
-      if (!sessionStorage.getItem(RELOADED_FLAG)) {
-        sessionStorage.setItem(RELOADED_FLAG, "1");
-        window.location.reload();
-        return "העמוד התעדכן - טוענות אותו מחדש...";
-      }
-    } catch {
-      /* no storage - fall through to the plain message */
-    }
-  }
-  return "החיבור נקטע לרגע - נסי שוב.";
-}
-
-function clearReloadedFlag() {
+/** Fire-and-forget report of a client-side failure; must never throw. */
+function report(kind: "client_error" | "api_error", fields: Record<string, unknown>) {
   try {
-    sessionStorage.removeItem(RELOADED_FLAG);
+    const body = JSON.stringify({ kind, href: location.href, ...fields });
+    fetch("/api/ai-course/report", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true }).catch(() => {});
   } catch {
     /* ignore */
   }
@@ -107,17 +104,7 @@ function CircleBadge({ lines }: { lines: string[] }) {
     <div
       data-testid="track-badge"
       className="mx-auto flex flex-col items-center justify-center text-center font-black leading-tight"
-      style={{
-        width: 124,
-        height: 124,
-        borderRadius: "50%",
-        background: H.yellow,
-        color: H.navy,
-        transform: "rotate(-10deg)",
-        fontSize: 17,
-        padding: 12,
-        boxShadow: "0 6px 18px rgba(0,72,120,0.12)",
-      }}
+      style={{ width: 124, height: 124, borderRadius: "50%", background: H.yellow, color: H.navy, transform: "rotate(-10deg)", fontSize: 17, padding: 12, boxShadow: "0 6px 18px rgba(0,72,120,0.12)" }}
     >
       {lines.map((l) => (
         <span key={l}>{l}</span>
@@ -145,12 +132,13 @@ function Heading({ children, size = 22, center }: { children: React.ReactNode; s
   );
 }
 
-function NavyButton({ children, onClick, disabled, type = "button" }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; type?: "button" | "submit" }) {
+function NavyButton({ children, onClick, disabled, type = "button", testId }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; type?: "button" | "submit"; testId?: string }) {
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
+      data-testid={testId}
       className="w-full px-6 py-3.5 text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
       style={{ background: H.navy, borderRadius: 10 }}
     >
@@ -170,18 +158,24 @@ function OptionRow({ selected, onClick, children, disabled, testId }: { selected
       disabled={disabled}
       data-testid={testId}
       className="relative w-full px-5 py-3.5 text-start text-[15.5px] font-medium transition-colors disabled:opacity-60"
-      style={{
-        background: selected ? H.white : H.row,
-        border: selected ? `2px solid ${H.navy}` : "2px solid transparent",
-        borderRadius: 10,
-        color: H.navy,
-      }}
+      style={{ background: selected ? H.white : H.row, border: selected ? `2px solid ${H.navy}` : "2px solid transparent", borderRadius: 10, color: H.navy }}
     >
-      {selected && (
-        <span aria-hidden className="absolute top-1/2 -translate-y-1/2" style={{ insetInlineStart: 0, width: 5, height: "60%", background: H.yellow, borderRadius: 3 }} />
-      )}
-      {children}
+      {selected && <span aria-hidden className="absolute top-1/2 -translate-y-1/2" style={{ insetInlineStart: 0, width: 5, height: "60%", background: H.yellow, borderRadius: 3 }} />}
+      <span>{children}</span>
     </button>
+  );
+}
+
+function ErrorBox({ text, onRetry, retryLabel }: { text: string; onRetry?: () => void; retryLabel?: string }) {
+  return (
+    <div role="alert" className="space-y-2 px-4 py-3 text-[14.5px] font-medium" style={{ background: "#FBEAE8", color: H.red, borderRadius: 10 }} data-testid="inline-error">
+      <p>{text}</p>
+      {onRetry && (
+        <button type="button" onClick={onRetry} className="px-4 py-2 text-[14px] font-bold text-white" style={{ background: H.navy, borderRadius: 8 }} data-testid="retry">
+          {retryLabel ?? "לנסות שוב"}
+        </button>
+      )}
+    </div>
   );
 }
 
@@ -193,7 +187,7 @@ const labelCls = "block text-[13.5px] font-bold";
 function SyllabusLink({ rec, subId, big }: { rec: Recommendation; subId: string | null; big?: boolean }) {
   const track = TRACKS[rec];
   const onClick = () => {
-    if (subId) markSyllabusDownload(subId).catch(() => {});
+    if (subId) api("download", { id: subId }).catch(() => {});
   };
   if (big) {
     return (
@@ -220,8 +214,12 @@ export function Quiz() {
   const [st, setSt] = useState<QuizState>(INITIAL);
   const [website, setWebsite] = useState(""); // honeypot
   const [error, setError] = useState<string | null>(null);
-  const [pending, start] = useTransition();
+  const [pending, setPending] = useState(false);
   const hydrated = useRef(false);
+  const stRef = useRef(st);
+  useEffect(() => {
+    stRef.current = st;
+  }, [st]);
   const patch = (p: Partial<QuizState>) => setSt((s) => ({ ...s, ...p }));
 
   // Restore once on mount (deferred a tick: the server render must match the
@@ -245,16 +243,26 @@ export function Quiz() {
     }
   }, [st]);
 
-  const errorBox = error && (
-    <p role="alert" className="px-4 py-3 text-[14.5px] font-medium" style={{ background: "#FBEAE8", color: H.red, borderRadius: 10 }}>
-      {error}
-    </p>
-  );
+  // Whatever breaks in the browser is reported with the step she was on.
+  useEffect(() => {
+    const where = () => `${stRef.current.step}#${stRef.current.qIndex + 1}`;
+    const onError = (e: ErrorEvent) => report("client_error", { step: where(), subId: stRef.current.subId, message: `${e.message ?? "error"} @ ${e.filename ?? "?"}:${e.lineno ?? 0}`, stack: e.error?.stack ?? null });
+    const onRejection = (e: PromiseRejectionEvent) => {
+      const r = e.reason;
+      report("client_error", { step: where(), subId: stRef.current.subId, message: `unhandledrejection: ${r instanceof Error ? `${r.name}: ${r.message}` : String(r).slice(0, 200)}`, stack: r instanceof Error ? r.stack ?? null : null });
+    };
+    window.addEventListener("error", onError);
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.removeEventListener("error", onError);
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
 
   /* ── intro ─────────────────────────────────────────── */
   if (st.step === "intro") {
     return (
-      <Panel>
+      <Panel key="intro">
         <div className="space-y-6">
           <Heading size={25}>אותו קורס, שני מסלולים - וקצב אחר לגמרי.</Heading>
           <div className="space-y-3">
@@ -278,7 +286,9 @@ export function Quiz() {
           <p className="text-[15px]" style={{ color: H.ink }}>
             חמש שאלות קצרות יעזרו לך לדעת איזה מסלול ירגיש לך בדיוק במידה.
           </p>
-          <NavyButton onClick={() => patch({ step: "details" })}>בואי נתחיל</NavyButton>
+          <NavyButton onClick={() => patch({ step: "details" })} testId="start">
+            בואי נתחיל
+          </NavyButton>
           <p className="text-center text-[13px]" style={{ color: H.muted }}>
             פחות מדקה, בלי שום התחייבות
           </p>
@@ -289,27 +299,28 @@ export function Quiz() {
 
   /* ── details ───────────────────────────────────────── */
   if (st.step === "details") {
-    const submit = (e: React.FormEvent) => {
-      e.preventDefault();
+    const submit = async (e?: React.FormEvent) => {
+      e?.preventDefault();
+      if (pending) return;
       setError(null);
       if (st.firstName.trim().length < 2) return setError("איך קוראים לך? שם פרטי בבקשה.");
       if (st.lastName.trim().length < 2) return setError("ושם המשפחה?");
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(st.email.trim())) return setError("הכתובת לא נראית תקינה - בדקי אותה שוב.");
       if (!st.signupStatus) return setError("ספרי לנו - כבר נרשמת לקורס, או מתכננת להירשם?");
-      const input = { email: st.email, firstName: st.firstName, lastName: st.lastName, signupStatus: st.signupStatus, website };
-      start(async () => {
-        try {
-          const r = await startQuiz(input);
-          if (!r.ok) return setError(r.error);
-          clearReloadedFlag();
-          patch({ subId: r.id, step: "questions", qIndex: 0, answers: {}, rec: null, placement: null });
-        } catch (err) {
-          setError(messageForActionError(err));
-        }
-      });
+      setPending(true);
+      try {
+        const r = await api<{ ok: true; id: string } | { ok: false; error: string }>("start", { email: st.email, firstName: st.firstName, lastName: st.lastName, signupStatus: st.signupStatus, website });
+        if (!r.ok) return setError(r.error);
+        patch({ subId: r.id, step: "questions", qIndex: 0, answers: {}, rec: null, placement: null });
+      } catch (err) {
+        report("api_error", { step: "details", message: err instanceof Error ? err.message : String(err) });
+        setError(RETRY);
+      } finally {
+        setPending(false);
+      }
     };
     return (
-      <Panel>
+      <Panel key="details">
         <form onSubmit={submit} className="space-y-5" noValidate>
           <Heading>נעים להכיר</Heading>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -349,8 +360,8 @@ export function Quiz() {
               </OptionRow>
             ))}
           </div>
-          {errorBox}
-          <NavyButton type="submit" disabled={pending}>
+          {error && <ErrorBox key={error} text={error} />}
+          <NavyButton type="submit" disabled={pending} testId="to-questions">
             {pending ? "רגע..." : "לשאלות"}
           </NavyButton>
         </form>
@@ -363,47 +374,50 @@ export function Quiz() {
     const qIndex = st.qIndex;
     const q = QUESTIONS[qIndex];
     const subId = st.subId;
+    const finish = async (answers: Record<number, number>) => {
+      if (!subId) return setError("משהו השתבש - נסי להתחיל מחדש.");
+      setError(null);
+      setPending(true);
+      try {
+        const r = await api<{ ok: true; recommendation: Recommendation } | { ok: false; error: string }>("finish", { id: subId, scores: scoresOf(answers) });
+        if (!r.ok) return setError(r.error);
+        patch({ rec: r.recommendation, step: "result", placement: null });
+      } catch (err) {
+        report("api_error", { step: `questions#${qIndex + 1}`, subId, message: err instanceof Error ? err.message : String(err) });
+        setError(RETRY);
+      } finally {
+        setPending(false);
+      }
+    };
     const pick = (optIdx: number) => {
       if (pending) return;
       const score = q.options[optIdx].score;
-      patch({ answers: { ...st.answers, [qIndex]: optIdx } });
-      // Fire-and-forget save; a rejection must never bubble out of the page.
-      if (subId) saveAnswer(subId, qIndex, score).catch(() => {});
+      const answers = { ...st.answers, [qIndex]: optIdx };
+      patch({ answers });
+      // Best effort: the finish call carries every score again.
+      if (subId) api("answer", { id: subId, questionIndex: qIndex, score }).catch(() => {});
       if (qIndex < QUESTIONS.length - 1) {
         const next = qIndex + 1; // fixed target: a double-tap can't skip ahead
         setTimeout(() => patch({ qIndex: next }), 180);
         return;
       }
-      setError(null);
-      start(async () => {
-        if (!subId) return setError("משהו השתבש - נסי להתחיל מחדש.");
-        try {
-          const r = await finishQuiz(subId);
-          if (!r.ok) return setError(r.error);
-          clearReloadedFlag();
-          patch({ rec: r.recommendation, step: "result", placement: null });
-        } catch (err) {
-          // She stays on the last question with her answer marked; one more
-          // tap on it retries.
-          setError(messageForActionError(err));
-        }
-      });
+      void finish(answers);
     };
     return (
-      <Panel>
+      <Panel key={`q-${qIndex}`}>
         <div className="space-y-5">
           <div className="flex items-center justify-between">
             <span className="text-[13.5px] font-black" style={{ color: H.navy }} data-testid="question-counter">
-              שאלה {qIndex + 1} מתוך {QUESTIONS.length}
+              {`שאלה ${qIndex + 1} מתוך ${QUESTIONS.length}`}
             </span>
             {qIndex > 0 && (
-              <button type="button" className="text-[13.5px] font-medium underline" style={{ color: H.muted }} onClick={() => patch({ qIndex: qIndex - 1 })} disabled={pending}>
+              <button type="button" className="text-[13.5px] font-medium underline" style={{ color: H.muted }} onClick={() => patch({ qIndex: qIndex - 1 })} disabled={pending} data-testid="prev-question">
                 לשאלה הקודמת
               </button>
             )}
           </div>
           <div className="h-[5px] w-full overflow-hidden" style={{ background: "#E3E9EF", borderRadius: 3 }}>
-            <div className="h-full transition-all duration-300" style={{ width: `${((qIndex + 1) / QUESTIONS.length) * 100}%`, background: H.yellow, borderRadius: 3 }} />
+            <div className="h-full" style={{ width: `${((qIndex + 1) / QUESTIONS.length) * 100}%`, background: H.yellow, borderRadius: 3 }} />
           </div>
           <h2 className="text-[20px] font-black leading-snug" style={{ color: H.navy }}>
             {q.title}
@@ -420,9 +434,9 @@ export function Quiz() {
               </OptionRow>
             ))}
           </div>
-          {errorBox}
+          {error && <ErrorBox key={error} text={error} onRetry={qIndex === QUESTIONS.length - 1 && typeof st.answers[qIndex] === "number" ? () => void finish(st.answers) : undefined} retryLabel="לחשב את ההמלצה שוב" />}
           {pending && (
-            <p className="text-center text-[14.5px] font-medium" style={{ color: H.muted }}>
+            <p key="pending" className="text-center text-[14.5px] font-medium" style={{ color: H.muted }}>
               מכינות את ההמלצה שלך...
             </p>
           )}
@@ -439,10 +453,10 @@ export function Quiz() {
     const reason = reasonFor(rec, scoresOf(st.answers));
     const choose = (wants: boolean) => {
       patch({ placement: wants, step: "done" });
-      if (subId) setPlacement(subId, wants).catch(() => {});
+      if (subId) api("placement", { id: subId, wants }).catch(() => {});
     };
     return (
-      <Panel>
+      <Panel key="result">
         <div className="space-y-6">
           <CircleBadge lines={track.badgeLines} />
           <div className="space-y-2 text-center">
@@ -464,7 +478,7 @@ export function Quiz() {
             <span className="font-black" style={{ color: H.navy }}>
               למה דווקא המסלול הזה?{" "}
             </span>
-            {reason}
+            <span>{reason}</span>
           </div>
           <div className="space-y-2.5">
             <p className="text-[13.5px] font-black" style={{ color: H.navy }}>
@@ -510,7 +524,7 @@ export function Quiz() {
   /* ── done ──────────────────────────────────────────── */
   const rec = st.rec;
   return (
-    <Panel>
+    <Panel key="done">
       <div className="space-y-5 text-center">
         <Heading size={23} center>
           {st.placement ? "קיבלנו. שומרות לך מקום" : "תודה, הפרטים אצלנו"}
@@ -523,12 +537,9 @@ export function Quiz() {
         {rec && <SyllabusLink rec={rec} subId={st.subId} />}
         <div className="px-4 py-4 text-[14.5px]" style={{ background: H.row, borderRadius: 10, color: H.ink }}>
           <p className="font-black" style={{ color: H.navy }}>
-            מדברות איתנו
+            כותבות לנו
           </p>
-          <p className="mt-1 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-            <a href={CONTACT_PHONE_HREF} className="font-bold underline" dir="ltr" style={{ color: H.navy }}>
-              {CONTACT_PHONE}
-            </a>
+          <p className="mt-1">
             <a href={contactMailto} className="font-bold underline" dir="ltr" style={{ color: H.navy }}>
               {CONTACT_EMAIL}
             </a>

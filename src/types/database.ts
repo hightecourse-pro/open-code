@@ -2174,6 +2174,35 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["ai_course_quiz_submissions"]["Insert"]>;
         Relationships: [];
       };
+      /** Client-side failures reported by the AI-course quiz (window errors, the error boundary), for the Hightecourse admin (20/10). */
+      ai_course_quiz_events: {
+        Row: {
+          id: string;
+          kind: string;
+          submission_id: string | null;
+          step: string | null;
+          message: string | null;
+          digest: string | null;
+          stack: string | null;
+          user_agent: string | null;
+          href: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          kind: string;
+          submission_id?: string | null;
+          step?: string | null;
+          message?: string | null;
+          digest?: string | null;
+          stack?: string | null;
+          user_agent?: string | null;
+          href?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ai_course_quiz_events"]["Insert"]>;
+        Relationships: [];
+      };
       /** One row per Nedarim transaction reported by Shufra's CallBack that looks like a course payment (9/10). */
       course_payments: {
         Row: {
