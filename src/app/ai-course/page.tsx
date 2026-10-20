@@ -6,10 +6,10 @@ import { H, CONTACT_EMAIL, CONTACT_PHONE, CONTACT_PHONE_HREF, contactMailto } fr
 
 /*
   /ai-course - a PUBLIC Hightecourse-branded page (outside the community, no
-  login): a short friendly quiz that matches a developer to one of the two
+  login): a short quiz that matches a developer to one of the two
   "Advanced GenAI & Agentic AI for Developers" tracks and hands her the right
-  syllabus. Follows the masters-course public-page pattern; Hightecourse
-  colors (navy #004878 / yellow #F8C800 from the logo), NOT Open Code's.
+  syllabus. Styled after the printed syllabus: white sheet, navy headlines,
+  yellow accents, navy footer bar. Hightecourse colors, NOT Open Code's.
 */
 
 // Same self-hosted Rubik as the masters-course pages (no build-time font fetch).
@@ -18,41 +18,60 @@ const rubik = localFont({ src: "./fonts/Rubik-Variable.ttf", weight: "300 900", 
 export const metadata: Metadata = {
   title: "איזה מסלול AI מתאים לך? | הייטקורס",
   description:
-    "שאלון קצר וידידותי שעוזר לבחור בין שני המסלולים של קורס Advanced GenAI & Agentic AI for Developers - המסלול המתקדם מאוד או המסלול מהבסיס עם תרגול.",
+    "שאלון קצר שעוזר לבחור בין שני המסלולים של קורס Advanced GenAI & Agentic AI for Developers - המסלול המתקדם מאוד או המסלול מהבסיס עם תרגול.",
 };
 
 export default function AiCoursePage() {
   return (
-    <div dir="rtl" className={`${rubik.className} min-h-screen`} style={{ background: H.bg }}>
-      {/* Top brand bar */}
-      <header className="w-full" style={{ background: H.white, borderBottom: `3px solid ${H.yellow}` }}>
+    <div dir="rtl" className={`${rubik.className} flex min-h-screen flex-col`} style={{ background: "#F6F8FA" }}>
+      {/* Logo strip */}
+      <header className="w-full bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-center px-4 py-4">
           <Image
             src="/ai-course/hightecourse.png"
             alt="הייטקורס - לחשוב בגדול"
-            width={260}
-            height={76}
+            width={230}
+            height={67}
             priority
-            style={{ height: "auto", width: "min(240px, 60vw)" }}
+            style={{ height: "auto", width: "min(210px, 55vw)" }}
           />
         </div>
       </header>
 
-      <main className="mx-auto flex max-w-3xl flex-col items-center px-4 py-8 sm:py-12">
+      {/* Navy hero band, like the catalog cover */}
+      <section className="w-full" style={{ background: H.navy }}>
+        <div className="mx-auto max-w-3xl px-4 py-8 text-center sm:py-10">
+          <p className="text-[13px] font-bold tracking-wide sm:text-[14px]" style={{ color: H.yellow }} dir="ltr">
+            Advanced GenAI &amp; Agentic AI for Developers
+          </p>
+          <h1 className="mt-2 text-[30px] font-black leading-tight text-white sm:text-[36px]">
+            איזה מסלול מתאים לך?
+          </h1>
+          <p className="mt-2 text-[15.5px]" style={{ color: "#C9D9E6" }}>
+            שאלון קצר שיעזור לך לבחור נכון בין שני מסלולי קורס פיתוח ה-AI
+          </p>
+        </div>
+      </section>
+
+      <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col items-center px-4 py-8 sm:py-10">
         <Quiz />
       </main>
 
-      <footer className="pb-10 text-center text-[14px]" style={{ color: H.muted }}>
-        <p>
-          הייטקורס · להתמקצע מהטובים ביותר ·{" "}
-          <a href={CONTACT_PHONE_HREF} className="underline" dir="ltr">
+      {/* Navy footer bar, exactly in the syllabus' spirit */}
+      <footer className="w-full" style={{ background: H.navy }}>
+        <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-x-3 gap-y-1 px-4 py-4 text-[13.5px] text-white">
+          <span className="font-bold" style={{ color: H.yellow }}>
+            הייטקורס. להתמקצע מהטובים ביותר
+          </span>
+          <span aria-hidden>|</span>
+          <a href={CONTACT_PHONE_HREF} className="hover:underline" dir="ltr">
             {CONTACT_PHONE}
-          </a>{" "}
-          ·{" "}
-          <a href={contactMailto} className="underline" dir="ltr">
+          </a>
+          <span aria-hidden>|</span>
+          <a href={contactMailto} className="hover:underline" dir="ltr">
             {CONTACT_EMAIL}
           </a>
-        </p>
+        </div>
       </footer>
     </div>
   );

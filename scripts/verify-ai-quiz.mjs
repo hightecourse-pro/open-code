@@ -1,5 +1,6 @@
 // /ai-course end-to-end: both tracks get recommended right, an abandoned run
-// shows as such, and the admin screen tells the whole story. Creates its own
+// shows as such, and the standalone Hightecourse admin (/ai-course/admin,
+// same login as the community) tells the whole story. Creates its own
 // throwaway admin + quiz rows on STAGING and removes every one of them.
 // Run: node scripts/verify-ai-quiz.mjs   (SHOTS_DIR=… for the screenshots)
 import { chromium } from "@playwright/test";
@@ -28,32 +29,29 @@ const ADMIN_PASSWORD = "Qa!" + Math.random().toString(36).slice(2, 12);
 
 const ok = (cond, label) => console.log((cond ? "✅ " : "❌ ") + label);
 
-async function runQuiz(page, { email, first, last, optionIndex, stopAfter = null, placement = null }) {
+async function runQuiz(page, { email, first, last, optionIndex, stopAfter = null }) {
   await page.goto(`${BASE}/ai-course`);
-  await page.click('text=מתחילות');
-  await page.fill('input[placeholder="שם פרטי"]', first);
-  await page.fill('input[placeholder="שם משפחה"]', last);
-  await page.fill('input[placeholder="מייל"]', email);
-  await page.click("text=מתכוונת להירשם בהקדם");
+  await page.click("text=בואי נתחיל");
+  await page.fill('input[autocomplete="given-name"]', first);
+  await page.fill('input[autocomplete="family-name"]', last);
+  await page.fill('input[autocomplete="email"]', email);
+  await page.click('[data-testid="status-planning"]');
   await page.click("text=לשאלות");
   for (let i = 0; i < (stopAfter ?? 5); i++) {
     await page.waitForSelector(`text=שאלה ${i + 1} מתוך 5`);
-    const options = page.locator("button.w-full.rounded-\\[14px\\].border-2");
-    await options.nth(optionIndex).click();
+    await page.click(`[data-testid="opt-${optionIndex}"]`);
     await page.waitForTimeout(350);
   }
   if (stopAfter != null) return; // walk away mid-form
   await page.waitForSelector("text=המסלול שמתאים לך", { timeout: 20000 });
-  if (placement === true) await page.click("text=כן, שבצו אותי");
-  if (placement === false) await page.click("text=עוד מתלבטת");
 }
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 760, height: 1050 } });
+const page = await browser.newPage({ viewport: { width: 760, height: 1100 } });
 
 // Intro renders with the Hightecourse look.
 await page.goto(`${BASE}/ai-course`);
-await page.waitForSelector("text=איזה מסלול AI מתאים לך?");
+await page.waitForSelector("text=איזה מסלול מתאים לך?");
 await page.screenshot({ path: `${SHOTS}/aiquiz-1-intro.png` });
 
 // Pass 1: confident answers all the way -> the very-advanced track.
@@ -62,11 +60,10 @@ const advBadge = await page.locator("text=מתקדם מאוד").first().isVisibl
 ok(advBadge, "confident answers -> 'מתקדם מאוד'");
 await page.screenshot({ path: `${SHOTS}/aiquiz-2-result-advanced.png` });
 await page.click("text=כן, שבצו אותי");
-await page.waitForSelector("text=מעולה! את משובצת אצלנו");
+await page.waitForSelector("text=קיבלנו. שומרות לך מקום");
 await page.screenshot({ path: `${SHOTS}/aiquiz-3-done.png` });
 
-// Pass 2: beginner answers -> the foundations track, and "עוד מתלבטת".
-// (Check the badge BEFORE the placement click moves her to the done screen.)
+// Pass 2: beginner answers -> the foundations track, then "עוד מתלבטת".
 await runQuiz(page, { email: QA.foundations, first: "קיו-איי", last: "מתחילה", optionIndex: 2 });
 const baseBadge = await page.locator("text=מהבסיס — כולל תרגול").first().isVisible().catch(() => false);
 ok(baseBadge, "beginner answers -> 'מהבסיס — כולל תרגול'");
@@ -86,7 +83,8 @@ ok(by[QA.advanced]?.recommendation === "advanced" && by[QA.advanced]?.wants_plac
 ok(by[QA.foundations]?.recommendation === "foundations" && by[QA.foundations]?.wants_placement === false, "DB: foundations + placement=hesitant");
 ok(!by[QA.abandoned]?.completed_at && by[QA.abandoned]?.questions_done === 2, "DB: abandoned after 2/5");
 
-// Throwaway admin sees it all on /admin/ai-course-quiz.
+// Throwaway admin signs into the STANDALONE Hightecourse admin with the same
+// kind of credentials the owner uses, straight on /ai-course/admin.
 const { data: created, error: cErr } = await admin.auth.admin.createUser({
   email: QA.admin,
   password: ADMIN_PASSWORD,
@@ -95,21 +93,20 @@ const { data: created, error: cErr } = await admin.auth.admin.createUser({
 if (cErr) console.log("❌ temp admin create:", cErr.message);
 await admin.from("profiles").upsert({ id: created.user.id, full_name: "QA אדמינית", role: "admin", status: "active" });
 
-await page.goto(`${BASE}/login`);
+await page.goto(`${BASE}/ai-course/admin`);
+await page.waitForSelector("text=כניסת מנהלת");
+await page.screenshot({ path: `${SHOTS}/aiquiz-4-admin-login.png` });
 await page.fill('input[name="email"]', QA.admin);
 await page.fill('input[name="password"]', ADMIN_PASSWORD);
-await page.click('button[type="submit"]');
-await page.waitForURL((u) => !u.pathname.startsWith("/login"), { timeout: 20000 });
+await page.click("text=כניסה");
+await page.waitForSelector("text=שאלון בחירת המסלול", { timeout: 20000 });
 await page.setViewportSize({ width: 1360, height: 950 });
-await page.goto(`${BASE}/admin/ai-course-quiz`);
-await page.waitForSelector("text=שאלון קורס AI");
-const sawAbandon = await page.locator("text=נטשה אחרי 2/5 שאלות").first().isVisible().catch(() => false);
+const sawAbandon = await page.locator("text=נעצרה אחרי 2/5 שאלות").first().isVisible().catch(() => false);
 const sawAdv = await page.locator("text=מתקדם מאוד").first().isVisible().catch(() => false);
-const sawWants = await page.locator("text=כן ✓").first().isVisible().catch(() => false);
+const sawBase = await page.locator("text=מהבסיס + תרגול").first().isVisible().catch(() => false);
 ok(sawAbandon, "admin: abandonment visible");
-ok(sawAdv, "admin: recommendation visible");
-ok(sawWants, "admin: placement wish visible");
-await page.screenshot({ path: `${SHOTS}/aiquiz-4-admin.png`, fullPage: true });
+ok(sawAdv && sawBase, "admin: both recommendations visible");
+await page.screenshot({ path: `${SHOTS}/aiquiz-5-admin.png`, fullPage: true });
 
 // Leave staging exactly as we found it.
 await admin.from("ai_course_quiz_submissions").delete().in("email", Object.values(QA));

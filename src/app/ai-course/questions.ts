@@ -35,7 +35,7 @@ export const QUESTIONS: QuizQuestion[] = [
     options: [
       { label: "עובדת איתם או מכירה אותם היטב", score: 2 },
       { label: "קראתי ושמעתי, אבל לא התנסיתי לעומק", score: 1 },
-      { label: "חדשים לי לגמרי (וזה בסדר גמור 😊)", score: 0 },
+      { label: "חדשים לי לגמרי — ובדיוק בשביל זה באתי ללמוד", score: 0 },
     ],
   },
   {
