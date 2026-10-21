@@ -98,7 +98,27 @@ function OpenRequestCard({
         onClick={onToggle}
         className="w-full text-start px-4 py-3 flex items-center gap-2.5 flex-wrap cursor-pointer hover:bg-tint-purple/30"
       >
-        <span className="font-semibold text-ink-900">{r.memberName}</span>
+        <span
+          role="link"
+          tabIndex={0}
+          title="לתיק החברה (טאב חדש)"
+          data-testid="request-member-link"
+          data-href={`/admin/members/${r.profile_id}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            window.open(`/admin/members/${r.profile_id}`, "_blank", "noopener");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              window.open(`/admin/members/${r.profile_id}`, "_blank", "noopener");
+            }
+          }}
+          className="font-semibold text-ink-900 hover:text-brand-purple hover:underline"
+        >
+          {r.memberName}
+        </span>
         {r.isSubscriber && (
           <span className="text-[10.5px] font-bold bg-tint-pink text-brand-pink-deep px-2 py-0.5 rounded-full">
             מנויה

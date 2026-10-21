@@ -14,6 +14,7 @@ import { MentorsMail } from "./mentors-mail";
 
 export interface MentorHistoryRow {
   id: string;
+  profileId: string;
   memberName: string;
   purpose: string;
   assignedAt: string;
@@ -293,7 +294,9 @@ export function MentorAdminRow({ m }: { m: MentorRowData }) {
           {m.history.length > 0 ? (
             m.history.map((h) => (
               <div key={h.id} className="flex items-center gap-2.5 text-[12.5px] flex-wrap">
-                <span className="font-medium text-ink-900">{h.memberName}</span>
+                <Link href={`/admin/members/${h.profileId}`} target="_blank" rel="noopener" title="לתיק החברה (טאב חדש)" className="font-medium text-ink-900 hover:text-brand-purple hover:underline">
+                  {h.memberName}
+                </Link>
                 <Badge variant="purple">{h.purpose}</Badge>
                 <span className="text-ink-500 tabular-nums">
                   שובץ {DATE_HE.format(new Date(h.assignedAt))}

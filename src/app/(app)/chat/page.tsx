@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SquareArrowOutUpRight } from "lucide-react";
 import { attachmentsFor } from "@/lib/attachments";
 import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText } from "@/lib/rich-text";
@@ -289,8 +290,22 @@ export default async function ChatPage({
               const preview = lastMessage.get(c.id);
               const unread = unreadCount.get(c.id) ?? 0;
               return (
+                <div key={c.id} className="relative">
+                {/* admins: her file, one click away - a sibling of the row link, never nested in it */}
+                {me.role === "admin" && other && (
+                  <Link
+                    href={`/admin/members/${other.id}`}
+                    target="_blank"
+                    rel="noopener"
+                    title="לתיק החברה (טאב חדש)"
+                    aria-label={`לתיק של ${other.full_name}`}
+                    className="absolute bottom-2 end-2 z-10 text-ink-400 hover:text-brand-purple"
+                    data-testid="chat-list-member-link"
+                  >
+                    <SquareArrowOutUpRight size={13} />
+                  </Link>
+                )}
                 <Link
-                  key={c.id}
                   href={`/chat?c=${c.id}`}
                   className={cn(
                     "flex items-center gap-2.5 p-2.5 rounded-md transition-colors border",
@@ -344,6 +359,7 @@ export default async function ChatPage({
                     </div>
                   </div>
                 </Link>
+                </div>
               );
             })
           ) : (
@@ -376,7 +392,20 @@ export default async function ChatPage({
                 </PresenceAvatar>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
+                    {me.role === "admin" ? (
+                      <Link
+                        href={`/admin/members/${activeOther.id}`}
+                        target="_blank"
+                        rel="noopener"
+                        title="לתיק החברה (טאב חדש)"
+                        className="font-display font-bold text-ink-1000 hover:text-brand-purple hover:underline"
+                        data-testid="chat-member-link"
+                      >
+                        {activeOther.full_name}
+                      </Link>
+                    ) : (
+                      <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
+                    )}
                     {activeIsMyMentor ? (
                       <span className="text-[10.5px] font-bold bg-tint-warm text-[#8C5E0E] px-2 py-0.5 rounded-full">
                         👑 המנטורית שלך
