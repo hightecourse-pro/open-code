@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireCommunityAccess } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { currentSubscription } from "@/lib/payments/subscription";
 import { getPricing } from "@/lib/payments/pricing";
 import { SubscriptionCard } from "@/components/patterns/subscription-card";
 
@@ -33,15 +33,10 @@ export default async function SubscriptionPage() {
     );
   }
 
-  const supabase = await createClient();
-  const [{ data: subscription }, pricing] = await Promise.all([
-    supabase
-      .from("subscriptions")
-      .select("status, current_period_end, canceled_at, provider_sub_id")
-      .eq("profile_id", profile.id)
-      .maybeSingle(),
-    getPricing(),
-  ]);
+  // Her current row (live first) - never maybeSingle(): a member with the
+  // duplicate keva-grace rows beside her paid month has three rows, and the
+  // page used to tell her "אין לך מנוי" (חנה הופמן, 21/10).
+  const [subscription, pricing] = await Promise.all([currentSubscription(profile.id), getPricing()]);
 
   // Renewal-off that came from a LIMITED KEVA (charge-limited in Nedarim) is
   // not something SHE did - the card must not say "ביטלת" (the owner, 16/9,

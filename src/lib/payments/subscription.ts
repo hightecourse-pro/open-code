@@ -219,6 +219,44 @@ export async function activateSubscription(input: ActivateInput) {
  * holds a live subscription that runs on (a leftover keva grace beside the
  * real month). Her access is untouched.
  */
+/**
+ * THE row that represents her membership right now. A member can hold several
+ * rows (the duplicate keva-grace pair beside the paid month, a replaced
+ * card, an old canceled run): a live one with the furthest end wins; with
+ * nothing live, the most recent row of any status (so an ended member sees
+ * her ended card, not "אין לך מנוי"). Every single-row read must go through
+ * here - `maybeSingle()` on three rows returns NOTHING, which is exactly what
+ * חנה הופמן saw on /subscription on 21/10 while fully paid.
+ */
+export interface CurrentSubscription {
+  id: string;
+  status: string;
+  plan: string;
+  current_period_end: string | null;
+  canceled_at: string | null;
+  provider_sub_id: string | null;
+  created_at: string;
+}
+const SUB_COLUMNS = "id, status, plan, current_period_end, canceled_at, provider_sub_id, created_at";
+export async function currentSubscription(profileId: string): Promise<CurrentSubscription | null> {
+  const admin = createAdminClient();
+  const { data: live } = await admin
+    .from("subscriptions")
+    .select(SUB_COLUMNS)
+    .eq("profile_id", profileId)
+    .in("status", ["active", "trialing", "past_due"])
+    .order("current_period_end", { ascending: false, nullsFirst: false })
+    .limit(1);
+  if (live?.[0]) return live[0];
+  const { data: latest } = await admin
+    .from("subscriptions")
+    .select(SUB_COLUMNS)
+    .eq("profile_id", profileId)
+    .order("current_period_end", { ascending: false, nullsFirst: false })
+    .limit(1);
+  return latest?.[0] ?? null;
+}
+
 export async function cancelEndedSubscriptions(profileId: string, before: Date): Promise<number> {
   const admin = createAdminClient();
   // Technical leftovers (the duplicate keva-grace rows) are closed AND marked
