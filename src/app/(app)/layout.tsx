@@ -231,12 +231,8 @@ export default async function AuthenticatedLayout({
   let cancelNotice: string | null = null;
   let cancelNoticeLimitedKeva = false;
   if (subscriber && profile.role === "junior") {
-    const supabase = await createClient();
-    const { data: sub } = await supabase
-      .from("subscriptions")
-      .select("status, canceled_at, current_period_end, provider_sub_id")
-      .eq("profile_id", profile.id)
-      .maybeSingle();
+    const { currentSubscription } = await import("@/lib/payments/subscription");
+    const sub = await currentSubscription(profile.id);
     if (sub?.status === "active" && sub.canceled_at && sub.current_period_end) {
       cancelNotice = new Intl.DateTimeFormat("he-IL", {
         day: "numeric",

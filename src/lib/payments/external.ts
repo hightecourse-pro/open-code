@@ -297,11 +297,8 @@ export async function reconcileSubscriberStatus(
   // the checkout this reconcile used to bounce away (אסתי, 5/9).
   if (p.status === "active") return p.member_tier === "paid";
   if (p.status !== "pending") return false;
-  const { data: sub } = await admin
-    .from("subscriptions")
-    .select("status, current_period_end")
-    .eq("profile_id", profileId)
-    .maybeSingle();
+  const { currentSubscription } = await import("./subscription");
+  const sub = await currentSubscription(profileId);
   const live =
     !!sub &&
     (sub.status === "active" || sub.status === "trialing") &&

@@ -6,6 +6,7 @@ import { nedarimKevaAction } from "@/lib/payments/nedarim";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { currentSubscription } from "@/lib/payments/subscription";
 import { raiseAlert } from "@/lib/alerts";
 import { sendResendEmail } from "@/lib/email/resend";
 import { subscriptionCanceledEmail } from "@/lib/email/templates";
@@ -35,11 +36,7 @@ export async function cancelRenewal(): Promise<{ error?: string }> {
   if (!user) redirect("/login");
 
   const admin = createAdminClient();
-  const { data: sub } = await admin
-    .from("subscriptions")
-    .select("id, status, current_period_end, canceled_at")
-    .eq("profile_id", user.id)
-    .maybeSingle();
+  const sub = await currentSubscription(user.id);
   if (!sub || sub.status !== "active") return { error: "לא מצאנו מנוי פעיל לביטול." };
   if (sub.canceled_at) return {};
 
@@ -98,11 +95,7 @@ export async function resumeRenewal(): Promise<{ error?: string }> {
   if (!user) redirect("/login");
 
   const admin = createAdminClient();
-  const { data: sub } = await admin
-    .from("subscriptions")
-    .select("id, status, canceled_at")
-    .eq("profile_id", user.id)
-    .maybeSingle();
+  const sub = await currentSubscription(user.id);
   if (!sub || sub.status !== "active" || !sub.canceled_at) return {};
 
   await admin.from("subscriptions").update({ canceled_at: null }).eq("id", sub.id);

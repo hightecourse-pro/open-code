@@ -662,14 +662,8 @@ export default async function AdminMemberProfilePage({
           <RenewalDateForm
             profileId={profile.id}
             currentPeriodEnd={await (async () => {
-              const { data: sub } = await createAdminClient()
-                .from("subscriptions")
-                .select("current_period_end")
-                .eq("profile_id", profile.id)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              return sub?.current_period_end ?? null;
+              const { currentSubscription } = await import("@/lib/payments/subscription");
+              return (await currentSubscription(profile.id))?.current_period_end ?? null;
             })()}
           />
         </div>
@@ -684,14 +678,8 @@ export default async function AdminMemberProfilePage({
           profileId={profile.id}
           memberTier={profile.member_tier ?? null}
           subStatus={await (async () => {
-            const { data: sub } = await createAdminClient()
-              .from("subscriptions")
-              .select("status")
-              .eq("profile_id", profile.id)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            return sub?.status ?? null;
+            const { currentSubscription } = await import("@/lib/payments/subscription");
+            return (await currentSubscription(profile.id))?.status ?? null;
           })()}
           kevaIds={await kevaIdsFor(profile.id)}
         />
