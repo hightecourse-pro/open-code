@@ -51,7 +51,7 @@ export function decodeEmail(e: string | null | undefined): string | null {
 
 /** Signed when we know the address; the bare page otherwise (she types it). */
 export function unsubscribeUrl(email?: string | null, opts?: { leave?: boolean }): string {
-  const base = `${SITE}/unsubscribe`;
+  const base = `${SITE.replace(/\/+$/, "")}/unsubscribe`;
   if (!email) return base;
   const t = unsubscribeToken(email);
   if (!t) return base;

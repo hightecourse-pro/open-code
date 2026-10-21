@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { arenaDigestEmail } from "@/lib/email/templates";
 import { emailBlockedByOptOut, withUnsubscribe } from "@/lib/unsubscribe";
+import { batchItemHtml } from "@/lib/email/resend";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +9,8 @@ export const dynamic = "force-dynamic";
  * A look at a rendered mail exactly as it goes out, footer and all (the team,
  * and the checks): /api/email-preview?secret=<CRON_SECRET>&to=<address>.
  * With &gate=1 it answers instead whether a non-essential mail to that
- * address would be stopped by her opt-out.
+ * address would be stopped by her opt-out; with &batch=1 the html is the
+ * batch sender's rendering (reminders, bulk mails from the admin).
  */
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -19,5 +21,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ to, blocked: to ? await emailBlockedByOptOut(to) : false });
   }
   const mail = arenaDigestEmail("דוגמא", { titles: ["שאלה לדוגמה"], open: 1, stale: 0, arenaPoints: 10, totalScore: 25, url: `${url.origin}/arena` });
-  return new NextResponse(withUnsubscribe(mail.html, to || null), { headers: { "content-type": "text/html; charset=utf-8" } });
+  const html = url.searchParams.get("batch") === "1" && to ? batchItemHtml({ to, html: mail.html }) : withUnsubscribe(mail.html, to || null);
+  return new NextResponse(html, { headers: { "content-type": "text/html; charset=utf-8" } });
 }
