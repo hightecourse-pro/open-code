@@ -221,9 +221,14 @@ export async function activateSubscription(input: ActivateInput) {
  */
 export async function cancelEndedSubscriptions(profileId: string, before: Date): Promise<number> {
   const admin = createAdminClient();
+  // Technical leftovers (the duplicate keva-grace rows) are closed AND marked
+  // as "ended mail already handled": she still has a live month, so the
+  // "המנוי הסתיים" mail must never go out for them (חנה הופמן, Efrat Azani,
+  // 21/10 - both got it while fully paid up).
+  const stamp = new Date().toISOString();
   const { data } = await admin
     .from("subscriptions")
-    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .update({ status: "canceled", canceled_at: stamp, ended_email_sent_at: stamp })
     .eq("profile_id", profileId)
     .in("status", ["active", "trialing", "past_due"])
     .not("current_period_end", "is", null)
