@@ -83,6 +83,14 @@ export type BatchOutcome = { ok: true } | { ok: false; error: string };
  * outcome; a refused request marks every item in it. Outside production the
  * allowlist gate applies per item, exactly like the single sender.
  */
+/** The html of one batch item as it goes out: the footer's "הסרה" signed for
+ *  that recipient. Exported so the preview route can show exactly this - the
+ *  batch path used to send the raw {{UNSUB_URL}} placeholder, and Gmail
+ *  rendered "הסרה" as dead text (the owner, 21/10). */
+export function batchItemHtml(item: Pick<BatchItem, "to" | "html">): string {
+  return withUnsubscribe(item.html, item.to);
+}
+
 export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[]> {
   const key = process.env.RESEND_API_KEY;
   const outcomes: BatchOutcome[] = items.map(() => ({ ok: false, error: "resend_not_configured" }));
@@ -94,7 +102,7 @@ export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[
       outcomes[idx] = { ok: false, error: gate.error };
       return;
     }
-    allowed.push({ idx, item: { ...item, subject: gate.subjectPrefix + item.subject } });
+    allowed.push({ idx, item: { ...item, subject: gate.subjectPrefix + item.subject, html: batchItemHtml(item) } });
   });
   for (let i = 0; i < allowed.length; i += 100) {
     const chunk = allowed.slice(i, i + 100);
