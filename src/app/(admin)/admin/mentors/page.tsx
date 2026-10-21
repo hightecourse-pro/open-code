@@ -177,6 +177,7 @@ export default async function AdminMentorsPage() {
       .filter((h) => h.assigned_mentor_id === m.id)
       .map((h) => ({
         id: h.id,
+        profileId: h.profile_id,
         memberName: memberNameOf.get(h.profile_id) ?? "חברת קהילה",
         purpose: h.kind === "employment" ? "ליווי בחודשי עבודה ראשונים" : mentorReasonLabel(h.reason),
         assignedAt: h.created_at,

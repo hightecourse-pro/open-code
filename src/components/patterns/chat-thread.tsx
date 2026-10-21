@@ -24,6 +24,10 @@ export interface ThreadMessage {
 
 /** How long a sent message stays editable - mirrors the server's window. */
 const EDIT_WINDOW_MS = 15 * 60 * 1000;
+/** Still inside the edit window? (a helper - the purity lint rule forbids Date.now() inside render) */
+function canStillEdit(createdAt: string): boolean {
+  return Date.now() - new Date(createdAt).getTime() < EDIT_WINDOW_MS;
+}
 
 /** The reaction palette - must match the server action's allowlist. */
 const REACTION_EMOJIS = ["💜", "👍", "😂", "🎉", "🙏", "😮"];
@@ -196,6 +200,31 @@ export function ChatThread({
     const el = listRef.current;
     if (el && atBottomRef.current) el.scrollTop = el.scrollHeight;
   }, [bubbleCount]);
+  // On open, ALWAYS land on the newest message (the owner, 21/10): a thread
+  // is mounted per conversation (key), so this runs once per conversation -
+  // and keeps following the bottom while late content (images, fonts, rich
+  // blocks) changes the height, until she scrolls up herself.
+  useEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    atBottomRef.current = true;
+    const toBottom = () => {
+      if (atBottomRef.current) el.scrollTop = el.scrollHeight;
+    };
+    toBottom();
+    const raf = requestAnimationFrame(toBottom);
+    const timers = [120, 400, 1000].map((ms) => setTimeout(toBottom, ms));
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(toBottom) : null;
+    for (const child of Array.from(el.children)) ro?.observe(child);
+    const imgs = Array.from(el.querySelectorAll("img"));
+    imgs.forEach((img) => img.addEventListener("load", toBottom));
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach(clearTimeout);
+      ro?.disconnect();
+      imgs.forEach((img) => img.removeEventListener("load", toBottom));
+    };
+  }, []);
 
   const last = bubbles[bubbles.length - 1];
   const iWrote = bubbles.some((b) => b.sender_id === meId);
@@ -227,6 +256,7 @@ export function ChatThread({
           if (el) atBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40;
         }}
         className="flex-1 min-h-0 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40"
+        data-testid="chat-messages"
       >
         {bubbles.map((m, i) => {
           const mine = m.sender_id === meId;
@@ -312,7 +342,7 @@ export function ChatThread({
                         🙂
                       </button>
                     )}
-                    {editAction && mine && Date.now() - new Date(m.created_at).getTime() < EDIT_WINDOW_MS && (
+                    {editAction && mine && canStillEdit(m.created_at) && (
                       <button
                         type="button"
                         aria-label="עריכת ההודעה"

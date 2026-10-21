@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { SquareArrowOutUpRight } from "lucide-react";
 import { attachmentsFor } from "@/lib/attachments";
 import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
 import { htmlToPlainText } from "@/lib/rich-text";
@@ -211,6 +212,11 @@ export default async function ChatPage({
       new Date(c.last_message_at).getTime() - new Date(c.created_at).getTime() > 1500
     );
   });
+  // Waiting for ME: the last word in the thread is hers, not mine (the owner, 21/10).
+  const unansweredCount = listedConversations.filter((c) => {
+    const last = lastMessage.get(c.id);
+    return !!last && !last.mine;
+  }).length;
 
   const activeIsMyMentor = !!activeOther && myMentorIds.has(activeOther.id);
   const activeSubtitle = activeOther
@@ -275,6 +281,22 @@ export default async function ChatPage({
       >
         {/* conversation list */}
         <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm min-h-0 max-h-[35dvh] md:max-h-none overflow-y-auto">
+          {/* how many people, how many still wait for my reply (the owner, 21/10) */}
+          {listedConversations.length > 0 && (
+            <div className="px-2.5 pt-1 pb-2 text-[12px] text-ink-500 flex items-center gap-1.5 flex-wrap" data-testid="chat-counts">
+              <span>
+                <b className="text-ink-900">{listedConversations.length}</b> {listedConversations.length === 1 ? "שיחה" : "שיחות"}
+              </span>
+              <span className="text-ink-300">·</span>
+              {unansweredCount > 0 ? (
+                <span className="font-bold text-brand-pink-deep" data-testid="chat-unanswered">
+                  {unansweredCount} {unansweredCount === 1 ? "ממתינה למענה שלך" : "ממתינות למענה שלך"}
+                </span>
+              ) : (
+                <span data-testid="chat-unanswered">הכול נענה 💜</span>
+              )}
+            </div>
+          )}
           {listedConversations.length > 3 && (
             <ChatSearch
               items={listedConversations.map((c) => ({
@@ -289,8 +311,22 @@ export default async function ChatPage({
               const preview = lastMessage.get(c.id);
               const unread = unreadCount.get(c.id) ?? 0;
               return (
+                <div key={c.id} className="relative">
+                {/* admins: her file, one click away - a sibling of the row link, never nested in it */}
+                {me.role === "admin" && other && (
+                  <Link
+                    href={`/admin/members/${other.id}`}
+                    target="_blank"
+                    rel="noopener"
+                    title="לתיק החברה (טאב חדש)"
+                    aria-label={`לתיק של ${other.full_name}`}
+                    className="absolute bottom-2 end-2 z-10 text-ink-400 hover:text-brand-purple"
+                    data-testid="chat-list-member-link"
+                  >
+                    <SquareArrowOutUpRight size={13} />
+                  </Link>
+                )}
                 <Link
-                  key={c.id}
                   href={`/chat?c=${c.id}`}
                   className={cn(
                     "flex items-center gap-2.5 p-2.5 rounded-md transition-colors border",
@@ -344,6 +380,7 @@ export default async function ChatPage({
                     </div>
                   </div>
                 </Link>
+                </div>
               );
             })
           ) : (
@@ -376,7 +413,20 @@ export default async function ChatPage({
                 </PresenceAvatar>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
+                    {me.role === "admin" ? (
+                      <Link
+                        href={`/admin/members/${activeOther.id}`}
+                        target="_blank"
+                        rel="noopener"
+                        title="לתיק החברה (טאב חדש)"
+                        className="font-display font-bold text-ink-1000 hover:text-brand-purple hover:underline"
+                        data-testid="chat-member-link"
+                      >
+                        {activeOther.full_name}
+                      </Link>
+                    ) : (
+                      <span className="font-display font-bold text-ink-1000">{activeOther.full_name}</span>
+                    )}
                     {activeIsMyMentor ? (
                       <span className="text-[10.5px] font-bold bg-tint-warm text-[#8C5E0E] px-2 py-0.5 rounded-full">
                         👑 המנטורית שלך
@@ -407,6 +457,7 @@ export default async function ChatPage({
               </div>
 
               <ChatThread
+                key={active.id}
                 messages={messagesWithFiles}
                 reactAction={canSend ? toggleReaction : undefined}
                 editAction={canSend ? editMessage : undefined}
