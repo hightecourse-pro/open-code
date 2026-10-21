@@ -150,13 +150,8 @@ export default async function AdminSharesPage({
     `/admin/shares?view=${v}${needle ? `&q=${encodeURIComponent(q ?? "")}` : ""}`;
 
   // Pickers for the manual-share form.
-  const [{ data: members }, { data: allCourses }, { data: allSessions }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name")
-      .in("status", ["active", "pending"])
-      .order("full_name", { ascending: true })
-      .limit(300),
+  // (the member picker searches on its own - see member-picker.tsx)
+  const [{ data: allCourses }, { data: allSessions }] = await Promise.all([
     supabase.from("courses").select("id, title").eq("is_published", true).order("title"),
     supabase.from("sessions").select("id, title").order("scheduled_at", { ascending: false }).limit(60),
   ]);
@@ -227,7 +222,6 @@ export default async function AdminSharesPage({
           </p>
         </div>
         <ManualShareForm
-          members={(await withPrevSurnames(members)).map((m) => ({ id: m.id, label: m.full_name }))}
           courses={(allCourses ?? []).map((c) => ({ id: c.id, label: c.title }))}
           sessions={(allSessions ?? []).map((s) => ({ id: s.id, label: s.title }))}
         />

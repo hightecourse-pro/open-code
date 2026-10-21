@@ -8,6 +8,58 @@ import type { ContentOwner } from "@/types/database";
 
 export type ShareFormState = { ok?: string; error?: string };
 
+export interface MemberHit {
+  id: string;
+  full_name: string;
+  email: string | null;
+  status: string;
+}
+
+/**
+ * Members for the manual-share picker, as the admin types (the owner, 21/10:
+ * the old <select> held the first 300 names of ~1,200). Name or email, any
+ * status except rejected/left - she decides whom to share with; the status
+ * tag tells her what she is looking at. Email search goes through the
+ * member_emails RPC (auth.users is not readable from the client).
+ */
+export async function searchMembersForShare(q: string): Promise<MemberHit[]> {
+  await requireRole("admin");
+  const needle = q.trim().slice(0, 60);
+  if (needle.length < 2) return [];
+  const admin = createAdminClient();
+  const byName = await admin
+    .from("profiles")
+    .select("id, full_name, status")
+    .not("status", "in", "(rejected,left)")
+    .ilike("full_name", `%${needle.replace(/[%_]/g, "")}%`)
+    .order("full_name")
+    .limit(20);
+  const rows = new Map<string, { id: string; full_name: string; status: string }>();
+  for (const r of byName.data ?? []) rows.set(r.id, r);
+  if (needle.includes("@") || /^[a-z0-9._-]+$/i.test(needle)) {
+    // looks like (part of) an address: the RPC gives emails for ids, so we
+    // search the address list of every live member once, server-side.
+    const { data: ids } = await admin.from("profiles").select("id, full_name, status").not("status", "in", "(rejected,left)").limit(5000);
+    const all = ids ?? [];
+    for (let i = 0; i < all.length && rows.size < 20; i += 500) {
+      const chunk = all.slice(i, i + 500);
+      const { data: emails } = await admin.rpc("member_emails", { p_ids: chunk.map((p) => p.id) });
+      for (const e of (emails ?? []) as { id: string; email: string | null }[]) {
+        if (e.email && e.email.toLowerCase().includes(needle.toLowerCase())) {
+          const p = chunk.find((x) => x.id === e.id);
+          if (p && !rows.has(p.id)) rows.set(p.id, p);
+          if (rows.size >= 20) break;
+        }
+      }
+    }
+  }
+  const list = [...rows.values()].slice(0, 20);
+  if (list.length === 0) return [];
+  const { data: emails } = await admin.rpc("member_emails", { p_ids: list.map((p) => p.id) });
+  const emailOf = new Map(((emails ?? []) as { id: string; email: string | null }[]).map((e) => [e.id, e.email]));
+  return list.map((p) => ({ id: p.id, full_name: p.full_name, email: emailOf.get(p.id) ?? null, status: p.status }));
+}
+
 /**
  * Hand a member an extra course/session on purpose - outside the
  * one-course-at-a-time model. The row is flagged granted_manually, which

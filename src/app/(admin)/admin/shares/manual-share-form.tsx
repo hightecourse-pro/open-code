@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Alert, Button } from "@/components/ui";
 import { grantShareManually, type ShareFormState } from "./actions";
+import { MemberPicker } from "./member-picker";
 
 interface Option {
   id: string;
@@ -13,15 +14,7 @@ interface Option {
  * The grant used to fail in silence - the admin clicked, nothing moved, and
  * she had no way to tell whether it worked. useActionState gives her an answer.
  */
-export function ManualShareForm({
-  members,
-  courses,
-  sessions,
-}: {
-  members: Option[];
-  courses: Option[];
-  sessions: Option[];
-}) {
+export function ManualShareForm({ courses, sessions }: { courses: Option[]; sessions: Option[] }) {
   const [state, action, pending] = useActionState<ShareFormState, FormData>(grantShareManually, {});
 
   return (
@@ -29,21 +22,7 @@ export function ManualShareForm({
       {state.error && <Alert variant="danger">{state.error}</Alert>}
       {state.ok && <Alert variant="success">{state.ok}</Alert>}
       <div className="flex flex-wrap items-center gap-2">
-        <select
-          name="profile_id"
-          required
-          defaultValue=""
-          className="text-[13px] border border-ink-300 rounded-md px-2.5 py-2 min-w-[170px]"
-        >
-          <option value="" disabled>
-            בחרי משתתפת…
-          </option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
+        <MemberPicker name="profile_id" />
         <select
           name="content"
           required
