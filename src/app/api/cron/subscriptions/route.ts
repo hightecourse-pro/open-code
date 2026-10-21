@@ -123,7 +123,7 @@ export async function GET(request: Request) {
   });
 
   // ---------------------------- ended emails (first eligible day after)
-  const { data: endedUnmailed } = await admin
+  const { data: endedUnmailedRaw } = await admin
     .from("subscriptions")
     .select("id, profile_id, canceled_at")
     .eq("status", "canceled")
@@ -131,6 +131,33 @@ export async function GET(request: Request) {
     .not("canceled_at", "is", null)
     .gt("canceled_at", new Date(now.getTime() - 30 * 24 * 3600 * 1000).toISOString())
     .limit(50);
+  // A canceled row of a member who STILL has a live subscription (a leftover
+  // keva-grace row, a replaced row) is not an ended membership - no mail. The
+  // row is stamped so it never comes up again (21/10: חנה הופמן and Efrat
+  // Azani got "המנוי הסתיים" the morning after their grace rows closed,
+  // while their paid month was running).
+  const unmailedIds = [...new Set((endedUnmailedRaw ?? []).map((s) => s.profile_id))];
+  const { data: unmailedCover } = unmailedIds.length
+    ? await admin
+        .from("subscriptions")
+        .select("profile_id")
+        .in("profile_id", unmailedIds)
+        .in("status", ["active", "trialing", "past_due"])
+        .not("current_period_end", "is", null)
+        .gte("current_period_end", now.toISOString())
+    : { data: [] as { profile_id: string }[] };
+  const coveredNow = new Set((unmailedCover ?? []).map((s) => s.profile_id));
+  const suppressedRows = (endedUnmailedRaw ?? []).filter((s) => coveredNow.has(s.profile_id));
+  const endedUnmailed = (endedUnmailedRaw ?? []).filter((s) => !coveredNow.has(s.profile_id));
+  let endedMailsSuppressed = 0;
+  if (!dryRun && suppressedRows.length) {
+    const { data: stamped } = await admin
+      .from("subscriptions")
+      .update({ ended_email_sent_at: now.toISOString() })
+      .in("id", suppressedRows.map((s) => s.id))
+      .select("id");
+    endedMailsSuppressed = stamped?.length ?? 0;
+  }
 
   // Which of the ended ones lapsed because the KEVA CHARGE WAS REFUSED (the
   // owner, 12/10, after זהבה הררי): refused charges in the last two weeks.
@@ -162,6 +189,7 @@ export async function GET(request: Request) {
       stillCovered: [...stillCovered],
       remindersDue: reminderDue.length,
       endedEmailsDue: (endedUnmailed ?? []).length,
+      endedEmailsSuppressed: suppressedRows.length,
       lapsedAfterFailedCharge: [...failedRecently],
       ...(preview ? { lapsedPreview: subscriptionLapsedAfterFailedChargeEmail("דוגמה") } : {}),
     });
@@ -365,6 +393,7 @@ export async function GET(request: Request) {
     emailDay,
     expired: expiredCount,
     leftoverRowsClosed,
+    endedMailsSuppressed,
     remindersSent,
     endedEmailsSent,
     lapsedEmailsSent,
