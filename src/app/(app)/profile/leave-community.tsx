@@ -20,7 +20,7 @@ export function LeaveCommunity({ hasSubscription }: { hasSubscription: boolean }
       {!open ? (
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex-1 min-w-[220px] text-[13px] text-ink-600">
-            <b className="text-ink-800">רוצה לעזוב את הקהילה?</b> נעצוב, אבל זו זכותך. אפשר גם רק להפסיק מיילים - למעלה, בהעדפות המייל.
+            <b className="text-ink-800">רוצה לעזוב את הקהילה?</b> עצוב, אבל זו זכותך. אפשר גם רק להפסיק מיילים - למעלה, בהעדפות המייל.
           </div>
           <button
             type="button"
