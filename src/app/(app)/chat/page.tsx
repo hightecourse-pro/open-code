@@ -64,15 +64,9 @@ export default async function ChatPage({
   // Everything that only needs the conversation list runs as ONE parallel
   // wave - this used to be 5 sequential round trips before first paint.
   //
-  // The mark-read UPDATE rides in the same wave instead of blocking it:
-  // opening the thread reads it, via the service role because RLS doesn't let
-  // a recipient update a sender's rows - safe here since `active` came from
-  // the member's own conversation list. read_at drives both the mentor
-  // "first new message" email and the digest's unread count, so without it
-  // both fire forever. Because the unread query below runs concurrently with
-  // it, the thread she just opened may keep its unread dot for this one
-  // render - the next refresh clears it, a fair trade for not serializing a
-  // write before every paint.
+  // The mark-read UPDATE used to ride in this wave; it now runs right after
+  // it (one short write), so the unread query below is a reliable "was it
+  // unread when she opened it" signal.
   const [
     { data: others },
     { data: assignments },
@@ -109,14 +103,8 @@ export default async function ChatPage({
           .order("created_at", { ascending: false })
           .limit(200)
       : Promise.resolve({ data: [] }),
-    active
-      ? createAdminClient()
-          .from("messages")
-          .update({ read_at: new Date().toISOString() })
-          .eq("conversation_id", active.id)
-          .neq("sender_id", me.id)
-          .is("read_at", null)
-      : Promise.resolve(null),
+    // (the mark-read write runs right AFTER this wave - see below)
+    Promise.resolve(null),
     // The list needs to say what happened, not just when: the TRUE last
     // message of every thread (one row per conversation, DISTINCT ON in the
     // database) - a preview per row and an exact "waiting for me" (22/10: a
@@ -134,6 +122,22 @@ export default async function ChatPage({
           .is("read_at", null)
       : Promise.resolve({ data: [] }),
   ]);
+
+  // Mark the opened thread read AFTER the reads above, not inside the wave:
+  // the reads then still see it unread, which is exactly what tells the page
+  // to refresh once so the sidebar badge drops (the owner, 22/10: "ברגע שאני
+  // פותחת צ'אט הסימון שלא נקראה צריך לרדת"). Service role, because RLS does not
+  // let a recipient update a sender's rows - safe here since `active` came
+  // from the member's own conversation list. read_at also drives the mentor
+  // "first new message" email and the digest's unread count.
+  if (active) {
+    await createAdminClient()
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", active.id)
+      .neq("sender_id", me.id)
+      .is("read_at", null);
+  }
 
   const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
   // An unapproved mentor carries no mentor indication (the owner, 1/9) - she
@@ -194,6 +198,11 @@ export default async function ChatPage({
   for (const m of unreadRows ?? []) {
     unreadCount.set(m.conversation_id, (unreadCount.get(m.conversation_id) ?? 0) + 1);
   }
+  // The thread she just opened was marked read in this same wave (the update
+  // above runs concurrently with the unread query) - it must not keep its dot
+  // for one render (the owner, 22/10: "ברגע שאני פותחת צ'אט הסימון צריך לרדת").
+  const openedUnread = active ? (unreadCount.get(active.id) ?? 0) : 0;
+  if (active) unreadCount.delete(active.id);
 
   // A conversation nobody wrote in yet is clutter, not a chat (the owner,
   // 31/8: "למה יש צ'אטים שהם ריקים?") - the row is created the moment a
@@ -292,28 +301,37 @@ export default async function ChatPage({
           {/* how many people, how many still wait for my reply (the owner, 21/10); sticky, and a filter (22/10) */}
           {allCount > 0 && (
             <div className="sticky top-0 z-10 -mx-2 -mt-2 px-4 pt-2.5 pb-2 bg-white border-b border-ink-100 text-[12px] text-ink-500 flex items-center gap-1.5 flex-wrap" data-testid="chat-counts">
-              {onlyUnanswered ? (
-                <Link href={activeId ? `/chat?c=${activeId}` : "/chat"} className="hover:underline" data-testid="chat-filter-all">
-                  <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"} · לכל השיחות
-                </Link>
-              ) : (
-                <span>
-                  <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"}
-                </span>
-              )}
+              <span>
+                <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"}
+              </span>
               <span className="text-ink-300">·</span>
               {unansweredCount > 0 ? (
-                <Link
-                  href={`/chat?filter=unanswered${activeId ? `&c=${activeId}` : ""}`}
-                  className={cn("font-bold text-brand-pink-deep hover:underline", onlyUnanswered && "underline")}
-                  title="להציג רק את השיחות שממתינות למענה שלך"
-                  data-testid="chat-unanswered"
-                >
+                <span className="font-bold text-brand-pink-deep" data-testid="chat-unanswered">
                   {unansweredCount} {unansweredCount === 1 ? "ממתינה למענה שלך" : "ממתינות למענה שלך"}
-                </Link>
+                </span>
               ) : (
                 <span data-testid="chat-unanswered">הכול נענה 💜</span>
               )}
+              {/* the filter is a visible button, not a link hiding in the text (the owner, 22/10) */}
+              {(unansweredCount > 0 || onlyUnanswered) &&
+                (onlyUnanswered ? (
+                  <Link
+                    href={activeId ? `/chat?c=${activeId}` : "/chat"}
+                    className="ms-auto text-[11px] font-bold border border-ink-200 text-ink-600 hover:border-brand-purple hover:text-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
+                    data-testid="chat-filter-all"
+                  >
+                    לכל השיחות
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/chat?filter=unanswered${activeId ? `&c=${activeId}` : ""}`}
+                    className="ms-auto text-[11px] font-bold bg-brand-pink-deep text-white hover:bg-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
+                    title="להציג רק את השיחות שממתינות למענה שלך"
+                    data-testid="chat-filter-unanswered"
+                  >
+                    רק הממתינות
+                  </Link>
+                ))}
             </div>
           )}
           {shownConversations.length > 3 && (
@@ -390,6 +408,12 @@ export default async function ChatPage({
                             would be a lie about a full thread. */}
                         {preview ? previewText(preview.body, preview.mine) : " "}
                       </span>
+                      {/* marked in the list, not only counted (the owner, 22/10) */}
+                      {isUnanswered(c.id) && (
+                        <span className="text-[9.5px] font-bold bg-tint-pink text-brand-pink-deep px-1.5 py-px rounded-full shrink-0" data-testid="chat-row-waiting">
+                          ממתינה למענה
+                        </span>
+                      )}
                       {unread > 0 && (
                         <span
                           aria-label={unread === 1 ? "הודעה אחת שלא נקראה" : `${unread} הודעות שלא נקראו`}
@@ -501,6 +525,7 @@ export default async function ChatPage({
 
               <ChatThread
                 key={active.id}
+                refreshOnMount={openedUnread > 0}
                 messages={messagesWithFiles}
                 reactAction={canSend ? toggleReaction : undefined}
                 editAction={canSend ? editMessage : undefined}

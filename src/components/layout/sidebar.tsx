@@ -227,9 +227,14 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
                         }
                         title={waiting > 0 ? (waiting === 1 ? "שיחה אחת ממתינה למענה שלך" : `${waiting} שיחות ממתינות למענה שלך`) : undefined}
                         data-testid={item.href === "/chat" ? "chat-badge" : undefined}
+                        data-badge={unread > 0 ? "unread" : waiting > 0 ? "waiting" : undefined}
                         className={cn(
                           "px-2 py-px rounded-full text-[11px] font-bold",
-                          active ? "bg-white/25 text-white" : "bg-tint-pink text-brand-pink-deep"
+                          active
+                            ? "bg-white/25 text-white"
+                            : waiting > 0 && unread === 0
+                              ? "bg-transparent text-brand-pink-deep border border-brand-pink-deep/40"
+                              : "bg-tint-pink text-brand-pink-deep"
                         )}
                       >
                         {badge}

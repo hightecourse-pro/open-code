@@ -5,6 +5,9 @@ export function isValidIsraeliId(raw: string): boolean {
   const id = String(raw).trim();
   if (!/^\d{5,9}$/.test(id)) return false;
   const padded = id.padStart(9, "0");
+  // 000000000 (and 00000) satisfy the check-digit arithmetic - a sum of zero
+  // divides by ten. A real ID is never one digit repeated (the owner, 22/10).
+  if (/^(\d)\1{8}$/.test(padded)) return false;
   let sum = 0;
   for (let i = 0; i < 9; i++) {
     let inc = Number(padded[i]) * ((i % 2) + 1);
