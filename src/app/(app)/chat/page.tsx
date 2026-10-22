@@ -15,7 +15,7 @@ import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { PresenceAvatar, PresenceText } from "@/components/patterns/presence-dot";
-import { editMessage, sendMessage, startConversation, toggleReaction } from "./actions";
+import { editMessage, sendMessage, setReplyDismissed, startConversation, toggleReaction } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
 
@@ -182,11 +182,12 @@ export default async function ChatPage({
   // Chronological again for display (fetched newest-first for the LIMIT).
   const messages = [...(newestMessages ?? [])].reverse();
 
-  const lastMessage = new Map<string, { body: string; mine: boolean }>();
+  // One row per conversation from the rpc; `closer` = a short "תודה"-like last
+  // word that needs no answer, `dismissed` = she marked "אין צורך במענה" after it.
+  const lastMessage = new Map<string, { body: string; mine: boolean; closer: boolean; dismissed: boolean }>();
   for (const m of recentMessages ?? []) {
-    // Newest first - the first row we meet for a conversation is its last word.
     if (!lastMessage.has(m.conversation_id)) {
-      lastMessage.set(m.conversation_id, { body: m.body, mine: m.sender_id === me.id });
+      lastMessage.set(m.conversation_id, { body: m.body, mine: m.sender_id === me.id, closer: !!m.closer, dismissed: !!m.dismissed });
     }
   }
   const unreadCount = new Map<string, number>();
@@ -210,15 +211,20 @@ export default async function ChatPage({
     );
   });
   // Waiting for ME: the last word in the thread is hers, not mine (the owner, 21/10).
+  // Not when her last word is a closer ("תודה 💜") and not after "אין צורך במענה" (22/10).
   const isUnanswered = (id: string) => {
     const last = lastMessage.get(id);
-    return !!last && !last.mine;
+    return !!last && !last.mine && !last.closer && !last.dismissed;
   };
   const unansweredCount = listedConversations.filter((c) => isUnanswered(c.id)).length;
   const allCount = listedConversations.length;
   // "?filter=unanswered": only the threads that wait for her (the owner, 22/10:
   // "8 ממתינות ואני לא מוצאת אותן"). The open one stays visible.
   const shownConversations = onlyUnanswered ? listedConversations.filter((c) => c.id === activeId || isUnanswered(c.id)) : listedConversations;
+
+  const activeLast = activeId ? lastMessage.get(activeId) : undefined;
+  const dismissActive = setReplyDismissed.bind(null, activeId ?? "", true);
+  const undismissActive = setReplyDismissed.bind(null, activeId ?? "", false);
 
   const activeIsMyMentor = !!activeOther && myMentorIds.has(activeOther.id);
   const activeSubtitle = activeOther
@@ -467,6 +473,30 @@ export default async function ChatPage({
                     )}
                   </div>
                 </div>
+                {/* "אין צורך במענה" (the owner, 22/10): out of "waiting for me" until she writes again */}
+                {activeLast && !activeLast.mine && !activeLast.closer && (
+                  <form action={activeLast.dismissed ? undismissActive : dismissActive} className="ms-auto shrink-0">
+                    {activeLast.dismissed ? (
+                      <button
+                        type="submit"
+                        className="text-[11.5px] text-ink-500 hover:text-brand-purple hover:underline whitespace-nowrap"
+                        title="להחזיר את השיחה ל״ממתינות למענה שלך״"
+                        data-testid="chat-undismiss"
+                      >
+                        ✓ אין צורך במענה · לבטל
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        className="text-[11.5px] font-bold text-ink-500 hover:text-brand-purple hover:border-brand-purple border border-ink-200 rounded-full px-2.5 py-1 whitespace-nowrap"
+                        title="לא ממתינה למענה - מורידה את השיחה מהספירה עד שהיא תכתוב שוב"
+                        data-testid="chat-dismiss"
+                      >
+                        אין צורך במענה
+                      </button>
+                    )}
+                  </form>
+                )}
               </div>
 
               <ChatThread
