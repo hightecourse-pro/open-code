@@ -2332,6 +2332,16 @@ export interface Database {
       in_conversation: { Args: { conv: string }; Returns: boolean };
       owns_interview: { Args: { sess: string }; Returns: boolean };
       /** Scale foundations (2026-08-29) - service-role only. */
+      /** The true last message of each of these threads - one row per conversation (22/10). */
+      conversation_last_messages: {
+        Args: { p_ids: string[] };
+        Returns: { conversation_id: string; sender_id: string; body: string; created_at: string }[];
+      };
+      /** How many of her threads end with the other side's word (22/10). */
+      unanswered_conversation_count: {
+        Args: { p_profile: string };
+        Returns: number;
+      };
       member_emails: {
         Args: { p_ids: string[] };
         Returns: { id: string; email: string | null }[];

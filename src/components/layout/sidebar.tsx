@@ -97,6 +97,8 @@ export interface SidebarUser {
   isSubscriber?: boolean;
   /** Chat messages waiting for her - shown as a badge on "צ'אטים". */
   unreadCount?: number;
+  /** Threads whose last word is the other side's - shown when nothing is unread (22/10). */
+  unansweredCount?: number;
   /** May enter זירת המנטוריות (hackathon registrant, mentor, team). */
   arena?: boolean;
   /** Open arena questions - the badge mentors see. */
@@ -169,9 +171,12 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
             // The chat count comes from the server on every render; a static
             // `badge` on the item would be a number nobody updates.
             const unread = item.href === "/chat" ? (user.unreadCount ?? 0) : item.href === "/arena" ? (user.arenaOpen ?? 0) : 0;
+            // Nothing unread but threads still waiting for her reply: the chat
+            // item says so (the owner, 22/10: "אין אינדיקציה בתפריט").
+            const waiting = item.href === "/chat" && unread === 0 ? (user.unansweredCount ?? 0) : 0;
             const label =
               item.href === "/mentor" && user.isMentor ? "הליוויים שלי" : item.label;
-            const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : item.badge?.toString();
+            const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : waiting > 0 ? (waiting > 9 ? "9+" : String(waiting)) : item.badge?.toString();
             // `false` only once the browser has answered - no pill flashes
             // before hydration.
             const isNew = seen[item.href] === false;
@@ -214,8 +219,14 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
                             ? unread === 1
                               ? "הודעה אחת שלא נקראה"
                               : `${unread} הודעות שלא נקראו`
-                            : undefined
+                            : waiting > 0
+                              ? waiting === 1
+                                ? "שיחה אחת ממתינה למענה שלך"
+                                : `${waiting} שיחות ממתינות למענה שלך`
+                              : undefined
                         }
+                        title={waiting > 0 ? (waiting === 1 ? "שיחה אחת ממתינה למענה שלך" : `${waiting} שיחות ממתינות למענה שלך`) : undefined}
+                        data-testid={item.href === "/chat" ? "chat-badge" : undefined}
                         className={cn(
                           "px-2 py-px rounded-full text-[11px] font-bold",
                           active ? "bg-white/25 text-white" : "bg-tint-pink text-brand-pink-deep"

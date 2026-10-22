@@ -38,10 +38,11 @@ function previewText(body: string, mine: boolean): string {
 export default async function ChatPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; with?: string }>;
+  searchParams: Promise<{ c?: string; with?: string; filter?: string }>;
 }) {
   const me = await requireProfile();
-  const { c: activeId, with: withId } = await searchParams;
+  const { c: activeId, with: withId, filter } = await searchParams;
+  const onlyUnanswered = filter === "unanswered";
   // ?with={profileId}: a deep link that opens (or starts) the 1:1 with that
   // member - lets other screens link INTO a conversation with a plain <a>
   // (e.g. "שאלה על המשרה?" on the apply page, opened in a new tab so her
@@ -116,17 +117,13 @@ export default async function ChatPage({
           .neq("sender_id", me.id)
           .is("read_at", null)
       : Promise.resolve(null),
-    // The list needs to say what happened, not just when: a preview per
-    // thread and which ones are still waiting for her. One window over the
-    // newest messages instead of a query per row - an older thread simply
-    // shows no preview.
+    // The list needs to say what happened, not just when: the TRUE last
+    // message of every thread (one row per conversation, DISTINCT ON in the
+    // database) - a preview per row and an exact "waiting for me" (22/10: a
+    // window of the newest 150 messages missed most of a team member's ~190
+    // threads and made the count unfindable).
     conversationIds.length
-      ? supabase
-          .from("messages")
-          .select("conversation_id, sender_id, body, created_at")
-          .in("conversation_id", conversationIds)
-          .order("created_at", { ascending: false })
-          .limit(150)
+      ? supabase.rpc("conversation_last_messages", { p_ids: conversationIds })
       : Promise.resolve({ data: [] }),
     conversationIds.length
       ? supabase
@@ -213,10 +210,15 @@ export default async function ChatPage({
     );
   });
   // Waiting for ME: the last word in the thread is hers, not mine (the owner, 21/10).
-  const unansweredCount = listedConversations.filter((c) => {
-    const last = lastMessage.get(c.id);
+  const isUnanswered = (id: string) => {
+    const last = lastMessage.get(id);
     return !!last && !last.mine;
-  }).length;
+  };
+  const unansweredCount = listedConversations.filter((c) => isUnanswered(c.id)).length;
+  const allCount = listedConversations.length;
+  // "?filter=unanswered": only the threads that wait for her (the owner, 22/10:
+  // "8 ממתינות ואני לא מוצאת אותן"). The open one stays visible.
+  const shownConversations = onlyUnanswered ? listedConversations.filter((c) => c.id === activeId || isUnanswered(c.id)) : listedConversations;
 
   const activeIsMyMentor = !!activeOther && myMentorIds.has(activeOther.id);
   const activeSubtitle = activeOther
@@ -281,32 +283,43 @@ export default async function ChatPage({
       >
         {/* conversation list */}
         <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm min-h-0 max-h-[35dvh] md:max-h-none overflow-y-auto">
-          {/* how many people, how many still wait for my reply (the owner, 21/10) */}
-          {listedConversations.length > 0 && (
-            <div className="px-2.5 pt-1 pb-2 text-[12px] text-ink-500 flex items-center gap-1.5 flex-wrap" data-testid="chat-counts">
-              <span>
-                <b className="text-ink-900">{listedConversations.length}</b> {listedConversations.length === 1 ? "שיחה" : "שיחות"}
-              </span>
+          {/* how many people, how many still wait for my reply (the owner, 21/10); sticky, and a filter (22/10) */}
+          {allCount > 0 && (
+            <div className="sticky top-0 z-10 -mx-2 -mt-2 px-4 pt-2.5 pb-2 bg-white border-b border-ink-100 text-[12px] text-ink-500 flex items-center gap-1.5 flex-wrap" data-testid="chat-counts">
+              {onlyUnanswered ? (
+                <Link href={activeId ? `/chat?c=${activeId}` : "/chat"} className="hover:underline" data-testid="chat-filter-all">
+                  <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"} · לכל השיחות
+                </Link>
+              ) : (
+                <span>
+                  <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"}
+                </span>
+              )}
               <span className="text-ink-300">·</span>
               {unansweredCount > 0 ? (
-                <span className="font-bold text-brand-pink-deep" data-testid="chat-unanswered">
+                <Link
+                  href={`/chat?filter=unanswered${activeId ? `&c=${activeId}` : ""}`}
+                  className={cn("font-bold text-brand-pink-deep hover:underline", onlyUnanswered && "underline")}
+                  title="להציג רק את השיחות שממתינות למענה שלך"
+                  data-testid="chat-unanswered"
+                >
                   {unansweredCount} {unansweredCount === 1 ? "ממתינה למענה שלך" : "ממתינות למענה שלך"}
-                </span>
+                </Link>
               ) : (
                 <span data-testid="chat-unanswered">הכול נענה 💜</span>
               )}
             </div>
           )}
-          {listedConversations.length > 3 && (
+          {shownConversations.length > 3 && (
             <ChatSearch
-              items={listedConversations.map((c) => ({
+              items={shownConversations.map((c) => ({
                 id: c.id,
                 name: otherMap.get(c.a_id === me.id ? c.b_id : c.a_id)?.full_name ?? "חברה",
               }))}
             />
           )}
-          {listedConversations.length > 0 ? (
-            listedConversations.map((c) => {
+          {shownConversations.length > 0 ? (
+            shownConversations.map((c) => {
               const other = otherMap.get(c.a_id === me.id ? c.b_id : c.a_id);
               const preview = lastMessage.get(c.id);
               const unread = unreadCount.get(c.id) ?? 0;
