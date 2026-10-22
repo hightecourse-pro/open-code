@@ -64,15 +64,9 @@ export default async function ChatPage({
   // Everything that only needs the conversation list runs as ONE parallel
   // wave - this used to be 5 sequential round trips before first paint.
   //
-  // The mark-read UPDATE rides in the same wave instead of blocking it:
-  // opening the thread reads it, via the service role because RLS doesn't let
-  // a recipient update a sender's rows - safe here since `active` came from
-  // the member's own conversation list. read_at drives both the mentor
-  // "first new message" email and the digest's unread count, so without it
-  // both fire forever. Because the unread query below runs concurrently with
-  // it, the thread she just opened may keep its unread dot for this one
-  // render - the next refresh clears it, a fair trade for not serializing a
-  // write before every paint.
+  // The mark-read UPDATE used to ride in this wave; it now runs right after
+  // it (one short write), so the unread query below is a reliable "was it
+  // unread when she opened it" signal.
   const [
     { data: others },
     { data: assignments },
@@ -109,14 +103,8 @@ export default async function ChatPage({
           .order("created_at", { ascending: false })
           .limit(200)
       : Promise.resolve({ data: [] }),
-    active
-      ? createAdminClient()
-          .from("messages")
-          .update({ read_at: new Date().toISOString() })
-          .eq("conversation_id", active.id)
-          .neq("sender_id", me.id)
-          .is("read_at", null)
-      : Promise.resolve(null),
+    // (the mark-read write runs right AFTER this wave - see below)
+    Promise.resolve(null),
     // The list needs to say what happened, not just when: the TRUE last
     // message of every thread (one row per conversation, DISTINCT ON in the
     // database) - a preview per row and an exact "waiting for me" (22/10: a
@@ -134,6 +122,22 @@ export default async function ChatPage({
           .is("read_at", null)
       : Promise.resolve({ data: [] }),
   ]);
+
+  // Mark the opened thread read AFTER the reads above, not inside the wave:
+  // the reads then still see it unread, which is exactly what tells the page
+  // to refresh once so the sidebar badge drops (the owner, 22/10: "ברגע שאני
+  // פותחת צ'אט הסימון שלא נקראה צריך לרדת"). Service role, because RLS does not
+  // let a recipient update a sender's rows - safe here since `active` came
+  // from the member's own conversation list. read_at also drives the mentor
+  // "first new message" email and the digest's unread count.
+  if (active) {
+    await createAdminClient()
+      .from("messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("conversation_id", active.id)
+      .neq("sender_id", me.id)
+      .is("read_at", null);
+  }
 
   const otherMap = new Map((others ?? []).map((o) => [o.id, o]));
   // An unapproved mentor carries no mentor indication (the owner, 1/9) - she

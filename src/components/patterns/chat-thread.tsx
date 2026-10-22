@@ -237,7 +237,27 @@ export function ChatThread({
   // re-render on a soft navigation, so refresh once after mount.
   const router = useRouter();
   useEffect(() => {
-    if (refreshOnMount) router.refresh();
+    if (!refreshOnMount) return;
+    router.refresh();
+    // The refreshed rows re-render, and a reset scroll position would also
+    // flip atBottomRef through onScroll - so for a short window after the
+    // refresh the view is pinned to the bottom explicitly.
+    const pin = () => {
+      const el = listRef.current;
+      if (!el) return;
+      atBottomRef.current = true;
+      el.scrollTop = el.scrollHeight;
+    };
+    const timers = [300, 800, 1500, 2500].map((ms) => setTimeout(pin, ms));
+    const el = listRef.current;
+    const mo = el && typeof MutationObserver !== "undefined" ? new MutationObserver(pin) : null;
+    if (el) mo?.observe(el, { childList: true, subtree: true });
+    const stop = setTimeout(() => mo?.disconnect(), 4000);
+    return () => {
+      timers.forEach(clearTimeout);
+      clearTimeout(stop);
+      mo?.disconnect();
+    };
   }, [refreshOnMount, router]);
 
   const last = bubbles[bubbles.length - 1];
