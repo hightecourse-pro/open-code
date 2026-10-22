@@ -25,11 +25,10 @@ export function ChatComposer({
   const formRef = useRef<HTMLFormElement>(null);
   const [attachEpoch, setAttachEpoch] = useState(0);
 
-  // Straight back to typing after every send (tester feedback): the epoch
-  // bump REMOUNTS the picker+editor to reset the attachment chips, and that
-  // remount lands at the END of the send transition - after any focus() made
-  // inside the action. Only an effect keyed on the epoch runs after the new
-  // editor exists.
+  // Straight back to typing after every send (tester feedback). The editor is
+  // NEVER remounted: the chips reset through the picker's resetEpoch, so
+  // whatever she types while the send is still in flight stays put (the old
+  // key-remount wiped her first letters a second later - 22/10).
   useEffect(() => {
     if (attachEpoch > 0) ref.current?.focus();
   }, [attachEpoch, ref]);
@@ -50,7 +49,7 @@ export function ChatComposer({
       }}
       className="flex flex-col gap-1.5 p-3 border-t border-ink-100"
     >
-      <AttachmentPicker key={attachEpoch}>
+      <AttachmentPicker resetEpoch={attachEpoch}>
         <div className="flex gap-2 items-end">
           <RichTextEditor
             name="body"
