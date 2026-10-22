@@ -10,9 +10,19 @@ import { uploadAttachment, removeUnlinkedAttachment, type UploadedAttachment } f
  * uploaded file becomes a chip with a remove ×, and a hidden attach_ids input
  * the send action reads to link the files to the new post/comment/message.
  */
-export function AttachmentPicker({ children }: { children: ReactNode }) {
+export function AttachmentPicker({ children, resetEpoch = 0 }: { children: ReactNode; resetEpoch?: number }) {
   const [items, setItems] = useState<UploadedAttachment[]>([]);
   const [error, setError] = useState<string | null>(null);
+  // A new epoch (a message was sent) empties the chips WITHOUT remounting the
+  // children: remounting replaced the chat editor a second or two after the
+  // send - exactly when she had started typing the next message, and her
+  // first letters vanished (תמר וינר + the owner, 22/10).
+  const [seenEpoch, setSeenEpoch] = useState(resetEpoch);
+  if (seenEpoch !== resetEpoch) {
+    setSeenEpoch(resetEpoch);
+    setItems([]);
+    setError(null);
+  }
   const [uploading, startUpload] = useTransition();
   const fileRef = useRef<HTMLInputElement>(null);
 
