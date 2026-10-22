@@ -194,6 +194,11 @@ export default async function ChatPage({
   for (const m of unreadRows ?? []) {
     unreadCount.set(m.conversation_id, (unreadCount.get(m.conversation_id) ?? 0) + 1);
   }
+  // The thread she just opened was marked read in this same wave (the update
+  // above runs concurrently with the unread query) - it must not keep its dot
+  // for one render (the owner, 22/10: "ברגע שאני פותחת צ'אט הסימון צריך לרדת").
+  const openedUnread = active ? (unreadCount.get(active.id) ?? 0) : 0;
+  if (active) unreadCount.delete(active.id);
 
   // A conversation nobody wrote in yet is clutter, not a chat (the owner,
   // 31/8: "למה יש צ'אטים שהם ריקים?") - the row is created the moment a
@@ -516,6 +521,7 @@ export default async function ChatPage({
 
               <ChatThread
                 key={active.id}
+                refreshOnMount={openedUnread > 0}
                 messages={messagesWithFiles}
                 reactAction={canSend ? toggleReaction : undefined}
                 editAction={canSend ? editMessage : undefined}

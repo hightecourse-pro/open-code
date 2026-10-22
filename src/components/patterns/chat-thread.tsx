@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useOptimistic, useRef, useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { AttachmentList } from "@/components/patterns/attachment-list";
 import type { AttachmentView } from "@/lib/attachments";
@@ -73,6 +74,7 @@ const DELIVERY_GRACE_MS = 6000;
  * into the box with an honest failure line.
  */
 export function ChatThread({
+  refreshOnMount = false,
   messages,
   meId,
   otherName,
@@ -82,6 +84,10 @@ export function ChatThread({
   reactAction,
   editAction,
 }: {
+  /** The thread had unread messages when it was opened: the server marked
+   *  them read in the same render that computed the sidebar badge, so one
+   *  refresh right after mount makes the badge drop at once (the owner, 22/10). */
+  refreshOnMount?: boolean;
   messages: ThreadMessage[];
   meId: string;
   /** Her display name - feeds the avatar chip beside her bubbles. */
@@ -225,6 +231,14 @@ export function ChatThread({
       imgs.forEach((img) => img.removeEventListener("load", toBottom));
     };
   }, []);
+
+  // Opening a thread with unread messages: the marks must drop the moment she
+  // opens it, whether or not she replies - the layout (sidebar badge) does not
+  // re-render on a soft navigation, so refresh once after mount.
+  const router = useRouter();
+  useEffect(() => {
+    if (refreshOnMount) router.refresh();
+  }, [refreshOnMount, router]);
 
   const last = bubbles[bubbles.length - 1];
   const iWrote = bubbles.some((b) => b.sender_id === meId);
