@@ -9,6 +9,8 @@ export interface AttachmentView {
   mime: string;
   sizeBytes: number;
   url: string;
+  /** The same object with a "save as" disposition (the viewer's download button). */
+  downloadUrl: string;
   isImage: boolean;
 }
 
@@ -62,6 +64,7 @@ export async function attachmentsFor(
       mime: r.mime,
       sizeBytes: r.size_bytes,
       url: netfreeSafeUrl(url),
+      downloadUrl: netfreeSafeUrl(url, { download: r.file_name }),
       isImage: IMAGE_MIMES.includes(r.mime),
     });
     out.set(r.context_id, list);
