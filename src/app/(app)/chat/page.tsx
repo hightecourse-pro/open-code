@@ -292,28 +292,37 @@ export default async function ChatPage({
           {/* how many people, how many still wait for my reply (the owner, 21/10); sticky, and a filter (22/10) */}
           {allCount > 0 && (
             <div className="sticky top-0 z-10 -mx-2 -mt-2 px-4 pt-2.5 pb-2 bg-white border-b border-ink-100 text-[12px] text-ink-500 flex items-center gap-1.5 flex-wrap" data-testid="chat-counts">
-              {onlyUnanswered ? (
-                <Link href={activeId ? `/chat?c=${activeId}` : "/chat"} className="hover:underline" data-testid="chat-filter-all">
-                  <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"} · לכל השיחות
-                </Link>
-              ) : (
-                <span>
-                  <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"}
-                </span>
-              )}
+              <span>
+                <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"}
+              </span>
               <span className="text-ink-300">·</span>
               {unansweredCount > 0 ? (
-                <Link
-                  href={`/chat?filter=unanswered${activeId ? `&c=${activeId}` : ""}`}
-                  className={cn("font-bold text-brand-pink-deep hover:underline", onlyUnanswered && "underline")}
-                  title="להציג רק את השיחות שממתינות למענה שלך"
-                  data-testid="chat-unanswered"
-                >
+                <span className="font-bold text-brand-pink-deep" data-testid="chat-unanswered">
                   {unansweredCount} {unansweredCount === 1 ? "ממתינה למענה שלך" : "ממתינות למענה שלך"}
-                </Link>
+                </span>
               ) : (
                 <span data-testid="chat-unanswered">הכול נענה 💜</span>
               )}
+              {/* the filter is a visible button, not a link hiding in the text (the owner, 22/10) */}
+              {(unansweredCount > 0 || onlyUnanswered) &&
+                (onlyUnanswered ? (
+                  <Link
+                    href={activeId ? `/chat?c=${activeId}` : "/chat"}
+                    className="ms-auto text-[11px] font-bold border border-ink-200 text-ink-600 hover:border-brand-purple hover:text-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
+                    data-testid="chat-filter-all"
+                  >
+                    לכל השיחות
+                  </Link>
+                ) : (
+                  <Link
+                    href={`/chat?filter=unanswered${activeId ? `&c=${activeId}` : ""}`}
+                    className="ms-auto text-[11px] font-bold bg-brand-pink-deep text-white hover:bg-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
+                    title="להציג רק את השיחות שממתינות למענה שלך"
+                    data-testid="chat-filter-unanswered"
+                  >
+                    רק הממתינות
+                  </Link>
+                ))}
             </div>
           )}
           {shownConversations.length > 3 && (
@@ -390,6 +399,12 @@ export default async function ChatPage({
                             would be a lie about a full thread. */}
                         {preview ? previewText(preview.body, preview.mine) : " "}
                       </span>
+                      {/* marked in the list, not only counted (the owner, 22/10) */}
+                      {isUnanswered(c.id) && (
+                        <span className="text-[9.5px] font-bold bg-tint-pink text-brand-pink-deep px-1.5 py-px rounded-full shrink-0" data-testid="chat-row-waiting">
+                          ממתינה למענה
+                        </span>
+                      )}
                       {unread > 0 && (
                         <span
                           aria-label={unread === 1 ? "הודעה אחת שלא נקראה" : `${unread} הודעות שלא נקראו`}
