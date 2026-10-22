@@ -2335,7 +2335,12 @@ export interface Database {
       /** The true last message of each of these threads - one row per conversation (22/10). */
       conversation_last_messages: {
         Args: { p_ids: string[] };
-        Returns: { conversation_id: string; sender_id: string; body: string; created_at: string }[];
+        Returns: { conversation_id: string; sender_id: string; body: string; created_at: string; closer: boolean; dismissed: boolean }[];
+      };
+      /** "אין צורך במענה" on a thread (or undo) - by a participant (22/10). */
+      set_reply_dismissed: {
+        Args: { p_conversation: string; p_dismissed: boolean };
+        Returns: undefined;
       };
       /** How many of her threads end with the other side's word (22/10). */
       unanswered_conversation_count: {
