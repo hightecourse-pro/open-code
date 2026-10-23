@@ -32,6 +32,8 @@ export interface FeedPost {
   likerNames?: string[];
   saved?: boolean;
   comments?: PostComment[];
+  /** Her read stamp from BEFORE this visit - replies after it are new (topic page only). */
+  unreadSince?: string | null;
 }
 
 export const INTENT_LABEL: Record<PostIntent, string> = {
@@ -105,6 +107,7 @@ export function PostCard({
         likerNames={post.likerNames}
         saved={post.saved ?? false}
         comments={post.comments ?? []}
+        unreadSince={post.unreadSince ?? null}
         canWrite={canWrite}
         defaultOpenComments={defaultOpenComments}
       />
