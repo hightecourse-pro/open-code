@@ -255,6 +255,30 @@ export async function uploadToFolder(folderId: string, name: string, mimeType: s
   return json.id;
 }
 
+/** A folder inside a shared drive (or any folder the identity can write to); returns the existing one when the name is already there. */
+export async function ensureFolder(parentId: string, name: string, as?: string): Promise<string> {
+  const q = encodeURIComponent(`'${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and name='${name.replace(/'/g, "\\'")}' and trashed = false`);
+  const found = await driveFetch(`/files?q=${q}&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives&pageSize=5`, {}, as);
+  if (found.ok) {
+    const json = (await found.json()) as { files?: { id: string }[] };
+    if (json.files?.[0]?.id) return json.files[0].id;
+  }
+  if (!driveAutomationAllowed()) throw new Error("drive_write_blocked_outside_production");
+  const res = await driveFetch(`/files?supportsAllDrives=true&fields=id`, { method: "POST", body: JSON.stringify({ name, parents: [parentId], mimeType: "application/vnd.google-apps.folder" }) }, as);
+  if (!res.ok) throw new Error(`drive_folder_failed: ${(await res.text()).slice(0, 200)}`);
+  const json = (await res.json()) as { id?: string };
+  if (!json.id) throw new Error("drive_folder_no_id");
+  return json.id;
+}
+
+/** The bytes of a file the identity can read (a mirrored video) - the caller streams the response. */
+export async function downloadDriveFile(fileId: string, as?: string): Promise<Response> {
+  const token = await getAccessToken(as);
+  const res = await fetch(`${DRIVE}/files/${encodeURIComponent(fileId)}?alt=media&supportsAllDrives=true`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(110_000) });
+  if (!res.ok) throw new Error(`drive_download_failed: ${(await res.text()).slice(0, 200)}`);
+  return res;
+}
+
 /** Trash a file the service account owns (a test clean-up, a wrong mirror). */
 export async function trashDriveFile(fileId: string, as?: string): Promise<void> {
   if (!driveAutomationAllowed()) throw new Error("drive_write_blocked_outside_production");
