@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Heart, MessageCircle, Bookmark, Flag, Send, Lock } from "lucide-react";
+import { Heart, MessageCircle, Bookmark, Flag, Send, Lock, ArrowDown } from "lucide-react";
 import { cn, timeAgo } from "@/lib/utils";
 import { Avatar } from "@/components/ui";
 import { CommentBody } from "@/components/patterns/comment-body";
@@ -39,6 +39,9 @@ export interface PostInteractionsProps {
   canWrite?: boolean;
   /** The topic page opens the replies; the list keeps them behind a click. */
   defaultOpenComments?: boolean;
+  /** Her read stamp from before this visit (topic page): replies after it are
+   *  new, and a pulsing button under the post jumps to the first of them. */
+  unreadSince?: string | null;
 }
 
 export function PostInteractions({
@@ -50,7 +53,20 @@ export function PostInteractions({
   comments,
   canWrite = true,
   defaultOpenComments = false,
+  unreadSince = null,
 }: PostInteractionsProps) {
+  // Anchored to the FIRST render: the page re-stamps read_at on every auto
+  // refresh, so a live prop would erase the "new" marks while she reads.
+  const [since] = useState(unreadSince);
+  const [jumped, setJumped] = useState(false);
+  const unreadIds = new Set(since ? comments.filter((c) => c.created_at > since).map((c) => c.id) : []);
+  const firstUnreadId = since ? (comments.find((c) => c.created_at > since)?.id ?? null) : null;
+  function jumpToUnread() {
+    setJumped(true);
+    if (firstUnreadId) {
+      document.getElementById(`comment-${firstUnreadId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }
   const [like, setLike] = useState({ on: liked, count: likeCount });
   const [isSaved, setIsSaved] = useState(saved);
   const [openComments, setOpenComments] = useState(defaultOpenComments);
@@ -147,11 +163,30 @@ export function PostInteractions({
 
       {openComments && (
         <div className="mt-3 flex flex-col gap-3">
+          {/* straight to what she has not read yet (the owner, 23/10) */}
+          {firstUnreadId && (
+            <button
+              type="button"
+              onClick={jumpToUnread}
+              className={cn(
+                "self-center inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-bold text-white bg-brand-pink-deep shadow-glow-pink hover:bg-brand-purple transition-colors",
+                !jumped && "animate-pulse"
+              )}
+              data-testid="forum-jump-unread"
+              data-target={firstUnreadId}
+            >
+              <ArrowDown size={14} />
+              {unreadIds.size === 1 ? "תגובה אחת חדשה - לקפוץ אליה" : `${unreadIds.size} תגובות חדשות - לקפוץ אליהן`}
+            </button>
+          )}
           {comments.map((c) => (
-            <div key={c.id} className="flex gap-2.5">
+            <div key={c.id} id={`comment-${c.id}`} className="flex gap-2.5 scroll-mt-24" data-unread={unreadIds.has(c.id) ? "1" : undefined}>
               <Avatar size="xs" tone="pink" initials={c.author_initials || c.author_name.slice(0, 1) || "ק"} />
-              <div className="flex-1 min-w-0 bg-ink-50 rounded-lg px-3 py-2">
+              <div className={cn("flex-1 min-w-0 rounded-lg px-3 py-2", unreadIds.has(c.id) ? "bg-tint-pink border border-brand-pink/40" : "bg-ink-50")}>
                 <div className="text-[12.5px] font-semibold text-ink-900">
+                  {unreadIds.has(c.id) && (
+                    <span className="me-1.5 text-[9.5px] font-bold bg-brand-pink-deep text-white px-1.5 py-px rounded-full align-middle">חדש</span>
+                  )}
                   {c.author_name} <ForumRank role={c.author_role} size="xs" />{" "}
                   <span className="text-ink-400 font-normal">
                     · {timeAgo(c.created_at)}

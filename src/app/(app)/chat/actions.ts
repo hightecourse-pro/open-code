@@ -241,19 +241,6 @@ export interface ChatMemberHit {
  * The new-chat picker's search - a bounded server lookup instead of shipping
  * the whole community directory into the client (it grows with every member).
  */
-/**
- * "אין צורך במענה" (the owner, 22/10): takes a thread out of "waiting for my
- * reply" until the other side writes again. A participant only - the rpc checks.
- */
-export async function setReplyDismissed(conversationId: string, dismissed: boolean): Promise<void> {
-  const profile = await getProfile();
-  if (!profile || !conversationId) return;
-  const supabase = await createClient();
-  await supabase.rpc("set_reply_dismissed", { p_conversation: conversationId, p_dismissed: dismissed });
-  revalidatePath("/chat");
-  revalidatePath("/", "layout");
-}
-
 export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
   const supabase = await createClient();
   const {

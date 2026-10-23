@@ -57,8 +57,18 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
   if (!post) notFound();
 
   // Opening the topic is reading it - stamp her read state so the list can
-  // stop marking it "חדש" (Rachel Weinberger, 6/9). Own-rows RLS.
+  // stop marking it "חדש" (Rachel Weinberger, 6/9). Own-rows RLS. Her PREVIOUS
+  // stamp is kept first: replies after it are "new" and the jump button under
+  // the post takes her straight to the first of them (the owner, 23/10).
+  let unreadSince: string | null = null;
   if (user) {
+    const { data: prevRead } = await supabase
+      .from("post_reads")
+      .select("read_at")
+      .eq("profile_id", user.id)
+      .eq("post_id", post.id)
+      .maybeSingle();
+    unreadSince = prevRead?.read_at ?? null;
     await supabase
       .from("post_reads")
       .upsert(
@@ -158,6 +168,7 @@ export default async function ForumTopicPage({ params }: { params: Promise<{ id:
     saved: mine.has("save"),
     comments: topicComments,
     attachments: postAtt.get(post.id),
+    unreadSince,
   };
 
   const rail = (railRows ?? []).map((t) => ({

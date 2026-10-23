@@ -15,7 +15,7 @@ import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { PresenceAvatar, PresenceText } from "@/components/patterns/presence-dot";
-import { editMessage, sendMessage, setReplyDismissed, startConversation, toggleReaction } from "./actions";
+import { editMessage, sendMessage, startConversation, toggleReaction } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
 
@@ -42,7 +42,7 @@ export default async function ChatPage({
 }) {
   const me = await requireProfile();
   const { c: activeId, with: withId, filter } = await searchParams;
-  const onlyUnanswered = filter === "unanswered";
+  const onlyUnread = filter === "unread";
   // ?with={profileId}: a deep link that opens (or starts) the 1:1 with that
   // member - lets other screens link INTO a conversation with a plain <a>
   // (e.g. "שאלה על המשרה?" on the apply page, opened in a new tab so her
@@ -186,12 +186,11 @@ export default async function ChatPage({
   // Chronological again for display (fetched newest-first for the LIMIT).
   const messages = [...(newestMessages ?? [])].reverse();
 
-  // One row per conversation from the rpc; `closer` = a short "תודה"-like last
-  // word that needs no answer, `dismissed` = she marked "אין צורך במענה" after it.
-  const lastMessage = new Map<string, { body: string; mine: boolean; closer: boolean; dismissed: boolean }>();
+  // One row per conversation from the rpc - the preview under each name.
+  const lastMessage = new Map<string, { body: string; mine: boolean }>();
   for (const m of recentMessages ?? []) {
     if (!lastMessage.has(m.conversation_id)) {
-      lastMessage.set(m.conversation_id, { body: m.body, mine: m.sender_id === me.id, closer: !!m.closer, dismissed: !!m.dismissed });
+      lastMessage.set(m.conversation_id, { body: m.body, mine: m.sender_id === me.id });
     }
   }
   const unreadCount = new Map<string, number>();
@@ -219,21 +218,14 @@ export default async function ChatPage({
       new Date(c.last_message_at).getTime() - new Date(c.created_at).getTime() > 1500
     );
   });
-  // Waiting for ME: the last word in the thread is hers, not mine (the owner, 21/10).
-  // Not when her last word is a closer ("תודה 💜") and not after "אין צורך במענה" (22/10).
-  const isUnanswered = (id: string) => {
-    const last = lastMessage.get(id);
-    return !!last && !last.mine && !last.closer && !last.dismissed;
-  };
-  const unansweredCount = listedConversations.filter((c) => isUnanswered(c.id)).length;
+  // "Not answered" = not opened yet, like any chat (the owner, 23/10: "כמו
+  // בכל צ'אט רגיל כשנכנסים זה הופך לנקרא ולא נשאר ממתין למענה"). A thread with
+  // unread messages counts; opening it clears it, reply or not.
+  const isUnread = (id: string) => (unreadCount.get(id) ?? 0) > 0;
+  const unreadConvCount = listedConversations.filter((c) => isUnread(c.id)).length;
   const allCount = listedConversations.length;
-  // "?filter=unanswered": only the threads that wait for her (the owner, 22/10:
-  // "8 ממתינות ואני לא מוצאת אותן"). The open one stays visible.
-  const shownConversations = onlyUnanswered ? listedConversations.filter((c) => c.id === activeId || isUnanswered(c.id)) : listedConversations;
-
-  const activeLast = activeId ? lastMessage.get(activeId) : undefined;
-  const dismissActive = setReplyDismissed.bind(null, activeId ?? "", true);
-  const undismissActive = setReplyDismissed.bind(null, activeId ?? "", false);
+  // "?filter=unread": only the threads she has not opened yet. The open one stays visible.
+  const shownConversations = onlyUnread ? listedConversations.filter((c) => c.id === activeId || isUnread(c.id)) : listedConversations;
 
   const activeIsMyMentor = !!activeOther && myMentorIds.has(activeOther.id);
   const activeSubtitle = activeOther
@@ -298,23 +290,23 @@ export default async function ChatPage({
       >
         {/* conversation list */}
         <div className="bg-white border border-ink-200 rounded-[18px] p-2 shadow-sm min-h-0 max-h-[35dvh] md:max-h-none overflow-y-auto">
-          {/* how many people, how many still wait for my reply (the owner, 21/10); sticky, and a filter (22/10) */}
+          {/* how many people, how many not opened yet (the owner, 21/10 + 23/10); sticky, and a filter (22/10) */}
           {allCount > 0 && (
             <div className="sticky top-0 z-10 -mx-2 -mt-2 px-4 pt-2.5 pb-2 bg-white border-b border-ink-100 text-[12px] text-ink-500 flex items-center gap-1.5 flex-wrap" data-testid="chat-counts">
               <span>
                 <b className="text-ink-900">{allCount}</b> {allCount === 1 ? "שיחה" : "שיחות"}
               </span>
               <span className="text-ink-300">·</span>
-              {unansweredCount > 0 ? (
-                <span className="font-bold text-brand-pink-deep" data-testid="chat-unanswered">
-                  {unansweredCount} {unansweredCount === 1 ? "ממתינה למענה שלך" : "ממתינות למענה שלך"}
+              {unreadConvCount > 0 ? (
+                <span className="font-bold text-brand-pink-deep" data-testid="chat-unread-count">
+                  {unreadConvCount} {unreadConvCount === 1 ? "שלא נקראה" : "שלא נקראו"}
                 </span>
               ) : (
-                <span data-testid="chat-unanswered">הכול נענה 💜</span>
+                <span data-testid="chat-unread-count">הכול נקרא 💜</span>
               )}
               {/* the filter is a visible button, not a link hiding in the text (the owner, 22/10) */}
-              {(unansweredCount > 0 || onlyUnanswered) &&
-                (onlyUnanswered ? (
+              {(unreadConvCount > 0 || onlyUnread) &&
+                (onlyUnread ? (
                   <Link
                     href={activeId ? `/chat?c=${activeId}` : "/chat"}
                     className="ms-auto text-[11px] font-bold border border-ink-200 text-ink-600 hover:border-brand-purple hover:text-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
@@ -324,12 +316,12 @@ export default async function ChatPage({
                   </Link>
                 ) : (
                   <Link
-                    href={`/chat?filter=unanswered${activeId ? `&c=${activeId}` : ""}`}
+                    href={`/chat?filter=unread${activeId ? `&c=${activeId}` : ""}`}
                     className="ms-auto text-[11px] font-bold bg-brand-pink-deep text-white hover:bg-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
-                    title="להציג רק את השיחות שממתינות למענה שלך"
-                    data-testid="chat-filter-unanswered"
+                    title="להציג רק את השיחות שעוד לא פתחת"
+                    data-testid="chat-filter-unread"
                   >
-                    רק הממתינות
+                    רק שלא נקראו
                   </Link>
                 ))}
             </div>
@@ -408,12 +400,6 @@ export default async function ChatPage({
                             would be a lie about a full thread. */}
                         {preview ? previewText(preview.body, preview.mine) : " "}
                       </span>
-                      {/* marked in the list, not only counted (the owner, 22/10) */}
-                      {isUnanswered(c.id) && (
-                        <span className="text-[9.5px] font-bold bg-tint-pink text-brand-pink-deep px-1.5 py-px rounded-full shrink-0" data-testid="chat-row-waiting">
-                          ממתינה למענה
-                        </span>
-                      )}
                       {unread > 0 && (
                         <span
                           aria-label={unread === 1 ? "הודעה אחת שלא נקראה" : `${unread} הודעות שלא נקראו`}
@@ -497,30 +483,6 @@ export default async function ChatPage({
                     )}
                   </div>
                 </div>
-                {/* "אין צורך במענה" (the owner, 22/10): out of "waiting for me" until she writes again */}
-                {activeLast && !activeLast.mine && !activeLast.closer && (
-                  <form action={activeLast.dismissed ? undismissActive : dismissActive} className="ms-auto shrink-0">
-                    {activeLast.dismissed ? (
-                      <button
-                        type="submit"
-                        className="text-[11.5px] text-ink-500 hover:text-brand-purple hover:underline whitespace-nowrap"
-                        title="להחזיר את השיחה ל״ממתינות למענה שלך״"
-                        data-testid="chat-undismiss"
-                      >
-                        ✓ אין צורך במענה · לבטל
-                      </button>
-                    ) : (
-                      <button
-                        type="submit"
-                        className="text-[11.5px] font-bold text-ink-500 hover:text-brand-purple hover:border-brand-purple border border-ink-200 rounded-full px-2.5 py-1 whitespace-nowrap"
-                        title="לא ממתינה למענה - מורידה את השיחה מהספירה עד שהיא תכתוב שוב"
-                        data-testid="chat-dismiss"
-                      >
-                        אין צורך במענה
-                      </button>
-                    )}
-                  </form>
-                )}
               </div>
 
               <ChatThread
