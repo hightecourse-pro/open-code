@@ -10,7 +10,7 @@ import { CoursePromoStrip } from "@/components/patterns/course-promo-popup";
 import { PresenceHeartbeat } from "@/components/patterns/presence-heartbeat";
 import { ViewerMarker } from "@/components/patterns/stale-while-revalidate";
 import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
-import { isJudge } from "@/lib/judging";
+import { judgeAccessFor } from "@/lib/judging";
 import { COURSE_KEY } from "@/lib/course-registration";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
 import { claimExternalApplications } from "@/lib/claim-external";
@@ -114,8 +114,8 @@ export default async function AuthenticatedLayout({
   // enter; mentors and the team see how many questions are open.
   const arenaRole = await arenaRoleFor(profile);
   const arenaOpen = arenaRole && arenaRole !== "participant" ? await countOpenArenaQuestions() : 0;
-  // שיפוט ההאקתון (16/10): the team, and the mentors it appointed.
-  const judge = profile.role === "admin" || (profile.role === "mentor" && (await isJudge(profile)));
+  // שיפוט ההאקתון (16/10, 23/10): the team, and the judges it appointed per challenge.
+  const judge = (await judgeAccessFor(profile)).judge;
   // The floating course card (15/10): job-seeking members who have not
   // registered - and the team, so the owner sees what members see.
   let showCoursePromo = profile.role === "admin";

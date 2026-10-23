@@ -9,6 +9,7 @@ import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { runArenaDigest } from "@/lib/arena-digest";
 import { setSubmissionsClosure } from "@/lib/hackathon-submission";
+import { listDriveTargets, setDriveFolder, shareVideosWithJudges } from "@/lib/hackathon-drive";
 
 const BUCKET = "hackathon";
 
@@ -84,15 +85,18 @@ export async function adminRemoveHackathonRegistration(profileId: string): Promi
  * "מסך השופטות יופיע גם למשתתפות מנטוריות שאחליט לתת להן לעזור"). An
  * appointment mails her the link; her scores stay when she is removed.
  */
-export async function setHackathonJudge(profileId: string, on: boolean): Promise<{ error?: string }> {
+export async function setHackathonJudge(profileId: string, on: boolean, challengeKeys: string[] = []): Promise<{ error?: string }> {
   const me = await requireRole("admin");
   const admin = createAdminClient();
   const { data: p } = await admin.from("profiles").select("id, role, status, first_name, full_name").eq("id", profileId).maybeSingle();
-  if (!p || p.role !== "mentor" || p.status !== "active") return { error: "רק מנטורית פעילה יכולה לשפוט." };
+  if (!p || p.status !== "active" || (p.role !== "mentor" && p.role !== "admin")) return { error: "רק מנטורית פעילה או חברת צוות יכולה לשפוט." };
+  // The owner appointing herself would hide every other score from her.
+  if (profileId === me.id) return { error: "לא מכאן - מינוי עצמי היה מסתיר ממך את הציונים של כולן." };
+  const keys = challengeKeys.filter((k) => !!challengeByKey(k));
   if (!on) {
     await admin.from("hackathon_judges").delete().eq("profile_id", profileId);
   } else {
-    const { error } = await admin.from("hackathon_judges").upsert({ profile_id: profileId, added_by: me.id }, { onConflict: "profile_id" });
+    const { error } = await admin.from("hackathon_judges").upsert({ profile_id: profileId, added_by: me.id, challenge_keys: keys }, { onConflict: "profile_id" });
     if (error) return { error: "המינוי נכשל. נסי שוב." };
     const { data: rows } = await admin.rpc("member_emails", { p_ids: [profileId] });
     const email = ((rows ?? []) as { id: string; email: string | null }[])[0]?.email;
@@ -103,6 +107,45 @@ export async function setHackathonJudge(profileId: string, on: boolean): Promise
   }
   revalidatePath("/admin/hackathon");
   revalidatePath("/judge");
+  return {};
+}
+
+/** Which challenges a judge scores (23/10) - empty = all. */
+export async function setJudgeChallenges(profileId: string, challengeKeys: string[]): Promise<{ error?: string }> {
+  await requireRole("admin");
+  const keys = [...new Set(challengeKeys.filter((k) => !!challengeByKey(k)))];
+  const { error } = await createAdminClient().from("hackathon_judges").update({ challenge_keys: keys }).eq("profile_id", profileId);
+  if (error) return { error: "השמירה נכשלה. נסי שוב." };
+  // Her new challenges' videos in Drive are shared with her right away (best effort; the sync button catches the rest).
+  try {
+    await shareVideosWithJudges(15_000);
+  } catch {
+    /* the sync button reports */
+  }
+  revalidatePath("/admin/hackathon");
+  revalidatePath("/judge");
+  return {};
+}
+
+/** The Drive folders the owner shared with the service account (23/10). */
+export async function listDriveFolders(): Promise<{ folders?: { id: string; name: string; owner: string | null; sharedDrive: boolean }[]; error?: string }> {
+  await requireRole("admin");
+  try {
+    return { folders: await listDriveTargets() };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "לא הצלחנו לקרוא מהדרייב." };
+  }
+}
+
+export async function chooseDriveFolder(id: string, name: string): Promise<{ error?: string }> {
+  await requireRole("admin");
+  if (!/^[\w-]{10,}$/.test(id)) return { error: "תיקייה לא תקינה." };
+  try {
+    await setDriveFolder({ id, name: name.slice(0, 120) });
+  } catch {
+    return { error: "השמירה נכשלה. נסי שוב." };
+  }
+  revalidatePath("/admin/hackathon");
   return {};
 }
 

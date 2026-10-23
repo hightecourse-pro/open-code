@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui";
+import { cn } from "@/lib/utils";
 import type { JudgingEntry } from "@/lib/judging";
 import { CRITERIA, type AutoCheck } from "@/lib/judging-shared";
 import { formatBytes } from "@/lib/hackathon-shared";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { ScoreForm } from "./score-form";
+import { LazyVideo } from "@/components/patterns/lazy-video";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 const RICH = "text-[13px] leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
@@ -36,7 +38,7 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
               <span className="text-[13px] font-semibold text-ink-500">· {group.length} הגשות</span>
             </h2>
             {group.map((e) => (
-              <Entry key={e.submission.teamKey} e={e} viewerId={viewerId} manage={manage} />
+              <JudgingEntryCard key={e.submission.teamKey} e={e} viewerId={viewerId} manage={manage} lazyVideo />
             ))}
           </section>
         );
@@ -45,7 +47,8 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
   );
 }
 
-function Entry({ e, viewerId, manage }: { e: JudgingEntry; viewerId: string; manage: boolean }) {
+/** One project: header + links, the video in the page, the automated report (owner only), what the team wrote, the score form. */
+export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e: JudgingEntry; viewerId: string; manage: boolean; lazyVideo?: boolean }) {
   const s = e.submission;
   const report = e.report;
   const checks = report?.checks ?? [];
@@ -86,8 +89,16 @@ function Entry({ e, viewerId, manage }: { e: JudgingEntry; viewerId: string; man
         </span>
       </div>
 
-      <div className="px-5 py-4 grid grid-cols-1 lg:grid-cols-5 gap-5">
-        {/* the automated report */}
+      {/* the video, in the page (the owner, 23/10: "הדפדוף בין הסרטונים חייב להיות נח") */}
+      {(s.videoEmbedUrl || s.videoInlineUrl) && (
+        <div className="px-5 pt-4" data-testid="judge-video">
+          <LazyVideo embedUrl={s.videoEmbedUrl} inlineUrl={s.videoInlineUrl} lazy={lazyVideo} />
+        </div>
+      )}
+
+      <div className={cn("px-5 py-4 grid grid-cols-1 gap-5", manage && "lg:grid-cols-5")}>
+        {/* the automated report - the owner's view only (23/10) */}
+        {manage && (
         <div className="lg:col-span-2 flex flex-col gap-2">
           <div className="font-mono text-[12px] text-brand-pink-deep">{"// דשבורד הבדיקה האוטומטית"}</div>
           {report ? (
@@ -120,9 +131,10 @@ function Entry({ e, viewerId, manage }: { e: JudgingEntry; viewerId: string; man
             <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>
           )}
         </div>
+        )}
 
         {/* what they wrote */}
-        <div className="lg:col-span-3 flex flex-col gap-3">
+        <div className={cn("flex flex-col gap-3", manage && "lg:col-span-3")}>
           <details className="group">
             <summary className="list-none cursor-pointer font-mono text-[12px] text-brand-pink-deep [&::-webkit-details-marker]:hidden">{"// הארכיטקטורה, הפיצ׳ר המקורי, ומה שנכתב בגרסה הקודמת של הטופס"} <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span></summary>
             <div className="mt-2 flex flex-col gap-3">
@@ -170,6 +182,7 @@ function Entry({ e, viewerId, manage }: { e: JudgingEntry; viewerId: string; man
                   <div key={x.judgeId} className="flex items-center gap-2 flex-wrap">
                     <b>{x.judgeName}</b>: {x.total}
                     <span className="text-ink-500">({CRITERIA.map((c) => x.scores[c.key]).join(" / ")})</span>
+                    {x.comment && <span className="text-ink-700 basis-full">״{x.comment}״</span>}
                   </div>
                 ))}
             </div>
@@ -177,7 +190,7 @@ function Entry({ e, viewerId, manage }: { e: JudgingEntry; viewerId: string; man
 
           <div>
             <div className="font-mono text-[12px] text-brand-pink-deep mb-1.5">{"// הציון שלך"}</div>
-            <ScoreForm teamKey={s.teamKey} initial={e.mine?.scores ?? null} notes={e.mine?.notes ?? {}} savedAt={e.mine?.updatedAt ?? null} />
+            <ScoreForm teamKey={s.teamKey} initial={e.mine?.scores ?? null} notes={e.mine?.notes ?? {}} comment={e.mine?.comment ?? null} savedAt={e.mine?.updatedAt ?? null} />
           </div>
           {manage && (
             <div className="text-[12px] text-ink-500">

@@ -1,0 +1,179 @@
+import "server-only";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { NotAGoogleAccountError, grantReadAccess, listSharedFolders, trashDriveFile, uploadToFolder } from "@/lib/drive-api";
+import { driveFileId } from "@/lib/drive";
+import { withPrevSurnames } from "@/lib/prev-surname";
+import { CHALLENGES } from "@/app/hackathon-2026/shared";
+import type { Json } from "@/types/database";
+
+/**
+ * The hackathon videos in the owner's Drive folder, shared PERSONALLY with
+ * each judge of the challenge (the owner, 23/10: "הסרטונים צריכים להיות
+ * מאוחסנים בדרייב עם שיתוף אישי כדי לעקוף חסימה של נטפרי"). The folder is one
+ * she shared with the service account; the mirror copies every uploaded
+ * video and every public Drive link a team pasted; YouTube links stay
+ * embedded as they are.
+ */
+const FOLDER_KEY = "hackathon_drive_folder";
+/** A Workspace user to act as (domain-wide delegation) - lets a My-Drive folder receive the uploads. Empty = the service account itself (shared drives only). */
+const AS = () => process.env.GOOGLE_DRIVE_UPLOAD_AS?.trim() || undefined;
+
+export interface DriveFolder {
+  id: string;
+  name: string;
+}
+
+export async function getDriveFolder(): Promise<DriveFolder | null> {
+  try {
+    const { data } = await createAdminClient().from("app_settings").select("value").eq("key", FOLDER_KEY).maybeSingle();
+    const v = (data?.value ?? {}) as { id?: unknown; name?: unknown };
+    return typeof v.id === "string" && v.id ? { id: v.id, name: typeof v.name === "string" ? v.name : v.id } : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setDriveFolder(folder: DriveFolder | null): Promise<void> {
+  const { error } = await createAdminClient()
+    .from("app_settings")
+    .upsert({ key: FOLDER_KEY, value: (folder ?? {}) as unknown as Json }, { onConflict: "key" });
+  if (error) throw error;
+}
+
+export async function listDriveTargets() {
+  return listSharedFolders(AS());
+}
+
+export interface DriveSyncResult {
+  /** Submitted projects with a video that can be mirrored (an uploaded file or a Drive link). */
+  total: number;
+  /** Mirrored so far (after this pass). */
+  done: number;
+  mirrored: number;
+  shared: number;
+  remaining: number;
+  errors: string[];
+}
+
+async function teamNames(teamKeys: string[]): Promise<Map<string, string>> {
+  const ids = [...new Set(teamKeys.flatMap((k) => k.split("+")))];
+  if (!ids.length) return new Map();
+  const { data } = await createAdminClient().from("profiles").select("id, full_name").in("id", ids);
+  const nameOf = new Map((await withPrevSurnames(data ?? [])).map((p) => [p.id, p.full_name]));
+  return new Map(teamKeys.map((k) => [k, k.split("+").map((id) => nameOf.get(id) ?? "צוות").join(" + ")]));
+}
+
+/** Safe for a Drive file name. */
+const fileSafe = (s: string) => s.replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 90);
+
+/**
+ * One pass, within a time budget: mirror the videos that are not in Drive
+ * yet, then share every mirrored video with the judges of its challenge.
+ * The admin button calls it again until `remaining` is 0.
+ */
+export async function syncVideosToDrive(budgetMs = 240_000): Promise<DriveSyncResult> {
+  const started = Date.now();
+  const folder = await getDriveFolder();
+  const admin = createAdminClient();
+  const { data: subs } = await admin
+    .from("hackathon_submissions")
+    .select("team_key, challenge_key, video_path, video_url, drive_file_id")
+    .not("submitted_at", "is", null);
+  const mirrorable = (subs ?? []).filter((s) => s.video_path || (s.video_url && driveFileId(s.video_url)));
+  const pending = mirrorable.filter((s) => !s.drive_file_id);
+  const errors: string[] = [];
+  if (!folder) return { total: mirrorable.length, done: mirrorable.length - pending.length, mirrored: 0, shared: 0, remaining: pending.length, errors: ["לא נבחרה תיקייה בדרייב."] };
+  const names = await teamNames(pending.map((s) => s.team_key));
+  let mirrored = 0;
+  for (const s of pending) {
+    if (Date.now() - started > budgetMs) break;
+    const team = names.get(s.team_key) ?? s.team_key.slice(0, 8);
+    try {
+      let bytes: Buffer;
+      let mime = "video/mp4";
+      let ext = "mp4";
+      if (s.video_path) {
+        const { data, error } = await admin.storage.from("hackathon").download(s.video_path);
+        if (error || !data) throw new Error("הקובץ לא נמצא באחסון");
+        bytes = Buffer.from(await data.arrayBuffer());
+        mime = data.type && data.type !== "application/octet-stream" ? data.type : mime;
+        ext = s.video_path.split(".").pop()?.toLowerCase() ?? ext;
+      } else {
+        const id = driveFileId(s.video_url ?? "");
+        if (!id) throw new Error("קישור דרייב לא מזוהה");
+        const r = await fetch(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}&confirm=t`, { redirect: "follow", signal: AbortSignal.timeout(150_000) });
+        const ct = r.headers.get("content-type") ?? "";
+        if (!r.ok || ct.includes("text/html")) throw new Error("הקישור לדרייב לא פתוח לכולם - הצוות צריך לפתוח ״לכל מי שיש את הקישור״");
+        bytes = Buffer.from(await r.arrayBuffer());
+        mime = ct || mime;
+        ext = mime.includes("webm") ? "webm" : mime.includes("quicktime") ? "mov" : "mp4";
+      }
+      if (bytes.length === 0) throw new Error("קובץ ריק");
+      const challenge = CHALLENGES.find((c) => c.key === s.challenge_key)?.short ?? s.challenge_key;
+      const fileId = await uploadToFolder(folder.id, `${fileSafe(challenge)} - ${fileSafe(team)}.${ext}`, mime, bytes, AS());
+      await admin.from("hackathon_submissions").update({ drive_file_id: fileId }).eq("team_key", s.team_key);
+      mirrored++;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "שגיאה";
+      errors.push(`${team}: ${/storage quota/i.test(msg) ? "לחשבון השירות אין מקום אחסון - התיקייה צריכה להיות בכונן שיתופי (Shared Drive), או להגדיר GOOGLE_DRIVE_UPLOAD_AS" : msg}`);
+    }
+  }
+  const share = await shareVideosWithJudges(Math.max(10_000, budgetMs - (Date.now() - started)));
+  errors.push(...share.errors);
+  const remaining = pending.length - mirrored - errors.filter((x) => !share.errors.includes(x)).length;
+  return { total: mirrorable.length, done: mirrorable.length - pending.length + mirrored, mirrored, shared: share.shared, remaining: Math.max(0, remaining), errors };
+}
+
+/**
+ * Every judge gets read access to the mirrored videos of the challenges she
+ * was assigned to - never to the others. Idempotent through
+ * hackathon_drive_shares; an unassigned judge gets nothing yet.
+ */
+export async function shareVideosWithJudges(budgetMs = 60_000): Promise<{ shared: number; errors: string[] }> {
+  const started = Date.now();
+  const admin = createAdminClient();
+  const [{ data: judges }, { data: subs }, { data: done }] = await Promise.all([
+    admin.from("hackathon_judges").select("profile_id, challenge_keys"),
+    admin.from("hackathon_submissions").select("team_key, challenge_key, drive_file_id").not("drive_file_id", "is", null),
+    admin.from("hackathon_drive_shares").select("drive_file_id, profile_id"),
+  ]);
+  if (!judges?.length || !subs?.length) return { shared: 0, errors: [] };
+  const { data: mails } = await admin.rpc("member_emails", { p_ids: judges.map((j) => j.profile_id) });
+  const emailOf = new Map(((mails ?? []) as { id: string; email: string | null }[]).map((m) => [m.id, m.email]));
+  const had = new Set((done ?? []).map((d) => `${d.drive_file_id}|${d.profile_id}`));
+  const errors: string[] = [];
+  let shared = 0;
+  for (const j of judges) {
+    const email = emailOf.get(j.profile_id);
+    const keys = j.challenge_keys ?? [];
+    if (!email || keys.length === 0) continue;
+    for (const s of subs) {
+      if (!s.drive_file_id || !keys.includes(s.challenge_key) || had.has(`${s.drive_file_id}|${j.profile_id}`)) continue;
+      if (Date.now() - started > budgetMs) return { shared, errors };
+      try {
+        await grantReadAccess(s.drive_file_id, email, AS());
+        await admin.from("hackathon_drive_shares").insert({ drive_file_id: s.drive_file_id, profile_id: j.profile_id });
+        had.add(`${s.drive_file_id}|${j.profile_id}`);
+        shared++;
+      } catch (e) {
+        if (e instanceof NotAGoogleAccountError) {
+          errors.push(`${email}: לא חשבון גוגל - אי אפשר לשתף אישית (היא תראה את הנגן הישיר)`);
+          break;
+        }
+        errors.push(`${email}: ${e instanceof Error ? e.message.slice(0, 120) : "שגיאה"}`);
+        break;
+      }
+    }
+  }
+  return { shared, errors };
+}
+
+/** Undo one mirror (a test, a wrong file): trash the Drive copy and forget it. */
+export async function unmirrorVideo(teamKey: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data: s } = await admin.from("hackathon_submissions").select("drive_file_id").eq("team_key", teamKey).maybeSingle();
+  if (!s?.drive_file_id) return;
+  await trashDriveFile(s.drive_file_id, AS());
+  await admin.from("hackathon_drive_shares").delete().eq("drive_file_id", s.drive_file_id);
+  await admin.from("hackathon_submissions").update({ drive_file_id: null }).eq("team_key", teamKey);
+}

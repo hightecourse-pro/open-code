@@ -3,6 +3,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { CHALLENGES, type Challenge } from "@/app/hackathon-2026/shared";
 import { withPrevSurnames } from "@/lib/prev-surname";
 import { htmlToPlainText } from "@/lib/rich-text";
+import { netfreeSafeUrl } from "@/lib/netfree";
+import { driveEmbedUrl } from "@/lib/drive";
 import type { Json } from "@/types/database";
 
 /**
@@ -228,12 +230,27 @@ export interface AdminSubmissionRow {
   challengesSolved: string | null;
   originalFeature: string | null;
   videoUrl: string | null;
+  /** The uploaded file, streamed through our domain (Netfree) - as a download and inline for the <video> tag. */
   videoDownloadUrl: string | null;
+  videoInlineUrl: string | null;
+  /** An embeddable player: the Drive mirror, a Drive link the team pasted, or YouTube. */
+  videoEmbedUrl: string | null;
+  driveFileId: string | null;
   videoSize: number | null;
   aiDevTools: string | null;
   aiModels: string | null;
   submittedAt: string | null;
   updatedAt: string;
+}
+
+/** A player URL for the judging desk: the Drive mirror first, then a pasted Drive or YouTube link. */
+function embedUrlOf(driveFileId: string | null, url: string | null): string | null {
+  if (driveFileId) return `https://drive.google.com/file/d/${encodeURIComponent(driveFileId)}/preview`;
+  if (!url) return null;
+  const drive = driveEmbedUrl(url);
+  if (drive) return drive;
+  const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/))([A-Za-z0-9_-]{6,})/);
+  return yt ? `https://www.youtube.com/embed/${yt[1]}` : null;
 }
 
 /** Every team's submission for the admin, with a one-hour download link for uploaded videos. */
@@ -262,7 +279,10 @@ export async function loadAdminSubmissions(): Promise<AdminSubmissionRow[]> {
     challengesSolved: s.challenges_solved,
     originalFeature: s.original_feature ?? null,
     videoUrl: s.video_url,
-    videoDownloadUrl: s.video_path ? (urlOf.get(s.video_path) ?? null) : null,
+    videoDownloadUrl: s.video_path ? netfreeSafeUrl(urlOf.get(s.video_path) ?? null, { download: s.video_path.split("/").pop() ?? "video.mp4" }) : null,
+    videoInlineUrl: s.video_path ? netfreeSafeUrl(urlOf.get(s.video_path) ?? null) : null,
+    videoEmbedUrl: embedUrlOf(s.drive_file_id ?? null, s.video_url),
+    driveFileId: s.drive_file_id ?? null,
     videoSize: s.video_size,
     aiDevTools: s.ai_dev_tools,
     aiModels: s.ai_models,
