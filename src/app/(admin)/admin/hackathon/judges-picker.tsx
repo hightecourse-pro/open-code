@@ -28,7 +28,7 @@ export function JudgesPicker({ candidates, challenges }: { candidates: JudgeCand
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const judges = rows.filter((m) => m.judge);
-  const perChallenge = (key: string) => judges.filter((j) => j.challengeKeys.length === 0 || j.challengeKeys.includes(key)).length;
+  const perChallenge = (key: string) => judges.filter((j) => j.challengeKeys.includes(key)).length;
 
   const appoint = (m: JudgeCandidate, on: boolean) => {
     setError(null);
@@ -84,7 +84,7 @@ export function JudgesPicker({ candidates, challenges }: { candidates: JudgeCand
                 </button>
               );
             })}
-            {j.challengeKeys.length === 0 && <span className="text-[11.5px] text-ink-400">(לא נבחר אתגר = כל האתגרים)</span>}
+            {j.challengeKeys.length === 0 && <span className="text-[11.5px] font-semibold text-[#8C5E0E]">עוד לא שובצה - לא רואה הגשות</span>}
             <button type="button" disabled={pending} onClick={() => appoint(j, false)} className="ms-auto text-ink-400 hover:text-[#B42318] text-[12.5px]" aria-label={`הסרת ${j.name} מהשופטות`}>
               ✕ הסרה
             </button>
@@ -119,7 +119,7 @@ export function JudgesPicker({ candidates, challenges }: { candidates: JudgeCand
             {shown.filter((m) => m.role === "admin").length === 0 && <span className="text-[12.5px] text-ink-500">אין חברות צוות נוספות למינוי.</span>}
           </div>
           <p className="text-[12px] text-ink-500">
-            אחרי המינוי בוחרים לה אתגר (או יותר). שופטת רואה רק את ההגשות של האתגרים שלה ורק את הציונים שלה - לא של שופטות אחרות ולא את הבדיקה האוטומטית. חברת צוות שמונתה
+            אחרי המינוי בוחרים לה אתגר (או יותר); בלי שיבוץ היא לא רואה הגשות. שופטת רואה רק את ההגשות של האתגרים שלה ורק את הציונים שלה - לא של שופטות אחרות ולא את הבדיקה האוטומטית. חברת צוות שמונתה
             לשופטת לא רואה ציונים של אחרות גם כאן בניהול, עד שתוסר מהרשימה. מנטורית שמונתה מקבלת מייל עם הקישור לשיפוט.
           </p>
         </div>

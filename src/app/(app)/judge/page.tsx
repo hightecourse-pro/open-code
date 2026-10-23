@@ -37,7 +37,18 @@ export default async function JudgePage() {
   }
   const { entries } = await loadJudgingBoard(profile);
   const mineDone = entries.filter((e) => e.mine).length;
-  const myChallenges = access.challengeKeys.length ? access.challengeKeys.map((k) => CHALLENGES.find((c) => c.key === k)?.short ?? k).join(" · ") : "כל האתגרים";
+  const myChallenges = access.challengeKeys.length ? access.challengeKeys.map((k) => CHALLENGES.find((c) => c.key === k)?.short ?? k).join(" · ") : null;
+  if (access.restricted && !myChallenges) {
+    return (
+      <div className="flex flex-col gap-5 max-w-5xl">
+        <H26Style />
+        <Header subtitle="מונית לשופטת - הצוות עוד לא שיבץ אותך לאתגר." />
+        <section className="bg-white border border-ink-200 rounded-[18px] p-6 shadow-sm text-[14px] text-ink-800 leading-relaxed" data-testid="judge-unassigned">
+          <b>עוד לא שובצת לאתגר.</b> ברגע שהצוות ישבץ אותך, ההגשות של האתגר יופיעו כאן.
+        </section>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-5 max-w-6xl">
       <H26Style />

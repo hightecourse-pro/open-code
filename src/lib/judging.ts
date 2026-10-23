@@ -134,7 +134,8 @@ export async function loadJudgingBoard(viewer: { id: string; role: string; statu
     };
     scoresOf.set(s.team_key, [...(scoresOf.get(s.team_key) ?? []), row]);
   }
-  const scoped = access.restricted && access.challengeKeys.length > 0 ? submissions.filter((s) => access.challengeKeys.includes(s.challengeKey)) : submissions;
+  // An appointed judge sees her challenges only; not assigned yet = nothing (the owner, 23/10).
+  const scoped = access.restricted ? (access.challengeKeys.length > 0 ? submissions.filter((s) => access.challengeKeys.includes(s.challengeKey)) : []) : submissions;
   const entries: JudgingEntry[] = scoped
     .filter((s) => s.submittedAt)
     .sort((a, b) => a.challengeKey.localeCompare(b.challengeKey) || (a.submittedAt ?? "").localeCompare(b.submittedAt ?? ""))

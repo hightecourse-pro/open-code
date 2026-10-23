@@ -9,6 +9,7 @@ import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { runArenaDigest } from "@/lib/arena-digest";
 import { setSubmissionsClosure } from "@/lib/hackathon-submission";
+import { listSharedFolders, setDriveFolder, shareVideosWithJudges } from "@/lib/hackathon-drive";
 
 const BUCKET = "hackathon";
 
@@ -115,8 +116,36 @@ export async function setJudgeChallenges(profileId: string, challengeKeys: strin
   const keys = [...new Set(challengeKeys.filter((k) => !!challengeByKey(k)))];
   const { error } = await createAdminClient().from("hackathon_judges").update({ challenge_keys: keys }).eq("profile_id", profileId);
   if (error) return { error: "השמירה נכשלה. נסי שוב." };
+  // Her new challenges' videos in Drive are shared with her right away (best effort; the sync button catches the rest).
+  try {
+    await shareVideosWithJudges(15_000);
+  } catch {
+    /* the sync button reports */
+  }
   revalidatePath("/admin/hackathon");
   revalidatePath("/judge");
+  return {};
+}
+
+/** The Drive folders the owner shared with the service account (23/10). */
+export async function listDriveFolders(): Promise<{ folders?: { id: string; name: string; owner: string | null }[]; error?: string }> {
+  await requireRole("admin");
+  try {
+    return { folders: await listSharedFolders() };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "לא הצלחנו לקרוא מהדרייב." };
+  }
+}
+
+export async function chooseDriveFolder(id: string, name: string): Promise<{ error?: string }> {
+  await requireRole("admin");
+  if (!/^[\w-]{10,}$/.test(id)) return { error: "תיקייה לא תקינה." };
+  try {
+    await setDriveFolder({ id, name: name.slice(0, 120) });
+  } catch {
+    return { error: "השמירה נכשלה. נסי שוב." };
+  }
+  revalidatePath("/admin/hackathon");
   return {};
 }
 

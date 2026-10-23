@@ -16,6 +16,9 @@ import { judgeAccessFor, loadJudgingBoard } from "@/lib/judging";
 import { ZERO_SCORES, totalOf } from "@/lib/judging-shared";
 import { arenaOverview, loadArenaMentors } from "@/lib/arena";
 import { ArenaOverview } from "./arena-overview";
+import { DriveSync } from "./drive-sync";
+import { getDriveFolder } from "@/lib/hackathon-drive";
+import { driveFileId } from "@/lib/drive";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "האקתון" };
@@ -131,6 +134,11 @@ export default async function AdminHackathonPage() {
               </p>
             </div>
             <JudgesPicker candidates={candidates} challenges={challengeList} />
+            <DriveSync
+              folder={await getDriveFolder()}
+              total={submissions.filter((s) => s.submittedAt && (s.videoDownloadUrl || (s.videoUrl && driveFileId(s.videoUrl)))).length}
+              done={submissions.filter((s) => s.submittedAt && s.driveFileId).length}
+            />
           </section>
           <JudgingSummary rows={summary} challenges={challengeList} />
           <details className="bg-white border border-ink-200 rounded-[18px] shadow-sm">

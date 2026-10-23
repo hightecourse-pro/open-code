@@ -20,7 +20,7 @@ export async function saveScore(teamKey: string, _prev: ScoreState, formData: Fo
   const admin = createAdminClient();
   const { data: sub } = await admin.from("hackathon_submissions").select("team_key, submitted_at, challenge_key").eq("team_key", teamKey).maybeSingle();
   if (!sub?.submitted_at) return { error: "ההגשה הזו עוד לא הוגשה." };
-  if (access.restricted && access.challengeKeys.length > 0 && !access.challengeKeys.includes(sub.challenge_key)) return { error: "ההגשה הזו לא באתגר שמונית אליו." };
+  if (access.restricted && !access.challengeKeys.includes(sub.challenge_key)) return { error: "ההגשה הזו לא באתגר ששובצת אליו." };
   const values: Record<CriterionKey, number> = { ...ZERO_SCORES };
   const notes: Partial<Record<CriterionKey, string>> = {};
   for (const c of CRITERIA) {

@@ -10,6 +10,9 @@ import { Play } from "lucide-react";
  */
 export function LazyVideo({ embedUrl, inlineUrl, lazy = false }: { embedUrl: string | null; inlineUrl: string | null; lazy?: boolean }) {
   const [open, setOpen] = useState(!lazy);
+  // A Drive embed needs the judge's Google account to have access; the direct
+  // player through our domain is always there as a fallback.
+  const [direct, setDirect] = useState(false);
   if (!embedUrl && !inlineUrl) return null;
   if (!open) {
     return (
@@ -23,9 +26,17 @@ export function LazyVideo({ embedUrl, inlineUrl, lazy = false }: { embedUrl: str
       </button>
     );
   }
-  return embedUrl ? (
-    <iframe src={embedUrl} title="הסרטון של הצוות" allow="autoplay; fullscreen" allowFullScreen className="w-full aspect-video max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />
-  ) : (
-    <video src={inlineUrl ?? undefined} controls preload="metadata" className="w-full max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />
-  );
+  if (embedUrl && !(direct && inlineUrl)) {
+    return (
+      <div className="flex flex-col gap-1">
+        <iframe src={embedUrl} title="הסרטון של הצוות" allow="autoplay; fullscreen" allowFullScreen className="w-full aspect-video max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />
+        {inlineUrl && (
+          <button type="button" onClick={() => setDirect(true)} className="self-start text-[11.5px] text-ink-500 hover:text-brand-purple hover:underline" data-testid="video-direct">
+            הסרטון לא נטען? לנגן הישיר
+          </button>
+        )}
+      </div>
+    );
+  }
+  return <video src={inlineUrl ?? undefined} controls preload="metadata" className="w-full max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />;
 }

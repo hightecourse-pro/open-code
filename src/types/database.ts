@@ -2061,6 +2061,12 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hackathon_reflections"]["Insert"]>;
         Relationships: [];
       };
+      hackathon_drive_shares: {
+        Row: { drive_file_id: string; profile_id: string; created_at: string };
+        Insert: { drive_file_id: string; profile_id: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_drive_shares"]["Insert"]>;
+        Relationships: [];
+      };
       hackathon_judges: {
         Row: { profile_id: string; added_by: string | null; challenge_keys: string[]; created_at: string };
         Insert: { profile_id: string; added_by?: string | null; challenge_keys?: string[]; created_at?: string };
