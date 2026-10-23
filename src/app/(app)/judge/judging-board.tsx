@@ -118,6 +118,11 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
                 ))}
               </ul>
               {report.summary && <p className="text-[13px] text-ink-800 leading-relaxed bg-tint-purple/30 rounded-[12px] px-3 py-2 whitespace-pre-wrap">{report.summary}</p>}
+              {/* the reviewer's screenshot of the live product (a small data URI - the owner's eyes on what ran) */}
+              {report.screenshots?.[0]?.startsWith("data:image/") && (
+                // eslint-disable-next-line @next/next/no-img-element -- an inline data URI from the automated report
+                <img src={report.screenshots[0]} alt="צילום מסך מהבדיקה האוטומטית" className="w-full max-w-[420px] rounded-[10px] border border-ink-200" data-testid="auto-report-shot" />
+              )}
               {report.suggested && (
                 <div className="text-[12px] text-ink-600">
                   ציון מוצע מהבדיקה:{" "}
