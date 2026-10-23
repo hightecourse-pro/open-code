@@ -6,7 +6,7 @@ import { CAPPED_TOTAL, CORRECTNESS_FLOOR, CRITERIA, ZERO_SCORES, totalOf, type C
 import { saveScore, type ScoreState } from "./actions";
 
 /** The rubric as a form: seven sliders-as-numbers with a live total, a line per criterion. */
-export function ScoreForm({ teamKey, initial, notes, savedAt }: { teamKey: string; initial: Scores | null; notes: Partial<Record<CriterionKey, string>>; savedAt: string | null }) {
+export function ScoreForm({ teamKey, initial, notes, comment, savedAt }: { teamKey: string; initial: Scores | null; notes: Partial<Record<CriterionKey, string>>; comment: string | null; savedAt: string | null }) {
   const [state, action, pending] = useActionState<ScoreState, FormData>(saveScore.bind(null, teamKey), {});
   const [values, setValues] = useState<Scores>(initial ?? { ...ZERO_SCORES });
   const t = useMemo(() => totalOf(values), [values]);
@@ -52,6 +52,15 @@ export function ScoreForm({ teamKey, initial, notes, savedAt }: { teamKey: strin
           </div>
         ))}
       </div>
+      <textarea
+        name="comment"
+        defaultValue={comment ?? ""}
+        maxLength={2000}
+        rows={2}
+        placeholder="הערה כללית על הפרויקט (אופציונלי) - מה בלט, מה חסר, למה הציון"
+        className="text-[12.5px] border border-ink-200 rounded-md px-2.5 py-1.5 focus:border-brand-purple outline-none resize-y"
+        data-testid="score-comment"
+      />
       <div className="flex items-center gap-3 flex-wrap rounded-[14px] bg-tint-purple/40 px-4 py-2.5">
         <span className="font-display font-black text-[20px] text-ink-1000">
           {t.total} <span className="text-[13px] font-bold text-ink-500">/ 100</span>

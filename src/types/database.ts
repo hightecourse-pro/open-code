@@ -2050,8 +2050,8 @@ export interface Database {
         Relationships: [];
       };
       hackathon_submissions: {
-        Row: { id: string; team_key: string; challenge_key: string; product_url: string | null; repo_url: string | null; architecture: string | null; challenges_solved: string | null; original_feature: string | null; video_url: string | null; video_path: string | null; video_size: number | null; ai_dev_tools: string | null; ai_models: string | null; created_by: string | null; submitted_at: string | null; created_at: string; updated_at: string };
-        Insert: { id?: string; team_key: string; challenge_key: string; product_url?: string | null; repo_url?: string | null; architecture?: string | null; challenges_solved?: string | null; original_feature?: string | null; video_url?: string | null; video_path?: string | null; video_size?: number | null; ai_dev_tools?: string | null; ai_models?: string | null; created_by?: string | null; submitted_at?: string | null; created_at?: string; updated_at?: string };
+        Row: { id: string; team_key: string; challenge_key: string; product_url: string | null; repo_url: string | null; architecture: string | null; challenges_solved: string | null; original_feature: string | null; video_url: string | null; video_path: string | null; video_size: number | null; drive_file_id: string | null; ai_dev_tools: string | null; ai_models: string | null; created_by: string | null; submitted_at: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; team_key: string; challenge_key: string; product_url?: string | null; repo_url?: string | null; architecture?: string | null; challenges_solved?: string | null; original_feature?: string | null; video_url?: string | null; video_path?: string | null; video_size?: number | null; drive_file_id?: string | null; ai_dev_tools?: string | null; ai_models?: string | null; created_by?: string | null; submitted_at?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_submissions"]["Insert"]>;
         Relationships: [];
       };
@@ -2062,14 +2062,14 @@ export interface Database {
         Relationships: [];
       };
       hackathon_judges: {
-        Row: { profile_id: string; added_by: string | null; created_at: string };
-        Insert: { profile_id: string; added_by?: string | null; created_at?: string };
+        Row: { profile_id: string; added_by: string | null; challenge_keys: string[]; created_at: string };
+        Insert: { profile_id: string; added_by?: string | null; challenge_keys?: string[]; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_judges"]["Insert"]>;
         Relationships: [];
       };
       hackathon_scores: {
-        Row: { id: string; team_key: string; judge_id: string; works: number; correctness: number; problem: number; original: number; architecture: number; ux: number; presentation: number; notes: Json; created_at: string; updated_at: string };
-        Insert: { id?: string; team_key: string; judge_id: string; works?: number; correctness?: number; problem?: number; original?: number; architecture?: number; ux?: number; presentation?: number; notes?: Json; created_at?: string; updated_at?: string };
+        Row: { id: string; team_key: string; judge_id: string; works: number; correctness: number; problem: number; original: number; architecture: number; ux: number; presentation: number; notes: Json; comment: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; team_key: string; judge_id: string; works?: number; correctness?: number; problem?: number; original?: number; architecture?: number; ux?: number; presentation?: number; notes?: Json; comment?: string | null; created_at?: string; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_scores"]["Insert"]>;
         Relationships: [];
       };

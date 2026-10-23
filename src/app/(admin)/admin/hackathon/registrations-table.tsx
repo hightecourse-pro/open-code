@@ -10,21 +10,28 @@ import { adminRemoveHackathonRegistration } from "./actions";
 export interface RegistrationRow {
   profileId: string;
   name: string;
+  email: string | null;
   status: string;
   challengeKey: string;
   challenge: string;
   partnerId: string | null;
   partnerName: string | null;
   partnerConfirmed: boolean;
+  /** Her team's submission (23/10): final, a draft, or nothing. */
+  submission: "submitted" | "draft" | "none";
+  submittedAt: string | null;
+  productUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 const fmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+const SUBMISSION_LABEL: Record<RegistrationRow["submission"], string> = { submitted: "הוגש", draft: "טיוטה", none: "לא הגישה" };
 
 export function RegistrationsTable({ rows: initial, challenges }: { rows: RegistrationRow[]; challenges: { key: string; short: string }[] }) {
   const [rows, setRows] = useState(initial);
   const [filter, setFilter] = useState<string>("all");
+  const [sub, setSub] = useState<"all" | "submitted" | "none">("all");
   const [q, setQ] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -36,7 +43,13 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
   }, [rows]);
   const pairs = rows.filter((r) => r.partnerId && r.partnerConfirmed).length / 2;
   const awaiting = rows.filter((r) => r.partnerId && !r.partnerConfirmed).length;
-  const shown = rows.filter((r) => (filter === "all" || r.challengeKey === filter) && (!q.trim() || r.name.includes(q.trim()) || (r.partnerName ?? "").includes(q.trim())));
+  const submittedN = rows.filter((r) => r.submission === "submitted").length;
+  const shown = rows.filter(
+    (r) =>
+      (filter === "all" || r.challengeKey === filter) &&
+      (sub === "all" || (sub === "submitted" ? r.submission === "submitted" : r.submission !== "submitted")) &&
+      (!q.trim() || r.name.includes(q.trim()) || (r.partnerName ?? "").includes(q.trim()) || (r.email ?? "").includes(q.trim()))
+  );
 
   function remove(r: RegistrationRow) {
     if (!confirm(`להסיר את ההרשמה של ${r.name}?`)) return;
@@ -50,8 +63,23 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
 
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const head = ["שם", "אתגר", "זוג עם", "סטטוס זוג", "נרשמה", "עודכן"];
-    const lines = shown.map((r) => [r.name, r.challenge, r.partnerName ?? "", r.partnerId ? (r.partnerConfirmed ? "אושר" : "ממתין לאישור") : "", fmt.format(new Date(r.createdAt)), fmt.format(new Date(r.updatedAt))].map(esc).join(","));
+    const head = ["שם", "מייל", "אתגר", "זוג עם", "סטטוס זוג", "הגשה", "הוגש ב", "קישור למוצר", "נרשמה", "עודכן"];
+    const lines = shown.map((r) =>
+      [
+        r.name,
+        r.email ?? "",
+        r.challenge,
+        r.partnerName ?? "",
+        r.partnerId ? (r.partnerConfirmed ? "אושר" : "ממתין לאישור") : "",
+        SUBMISSION_LABEL[r.submission],
+        r.submittedAt ? fmt.format(new Date(r.submittedAt)) : "",
+        r.productUrl ?? "",
+        fmt.format(new Date(r.createdAt)),
+        fmt.format(new Date(r.updatedAt)),
+      ]
+        .map(esc)
+        .join(",")
+    );
     const blob = new Blob(["﻿" + [head.map(esc).join(","), ...lines].join("\r\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -62,16 +90,16 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
   }
 
   return (
-    <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3">
+    <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-3" data-testid="registrations">
       <div className="flex items-center gap-2 flex-wrap">
         <h2 className="font-display text-base font-bold">
-          🏁 רשומות ({rows.length}{pairs > 0 ? ` · ${Math.floor(pairs)} זוגות` : ""}{awaiting > 0 ? ` · ${awaiting} ממתינות לאישור זוג` : ""})
+          🏁 רשומות ({rows.length}{pairs > 0 ? ` · ${Math.floor(pairs)} זוגות` : ""}{awaiting > 0 ? ` · ${awaiting} ממתינות לאישור זוג` : ""} · {submittedN} הגישו)
         </h2>
         <div className="relative ms-auto min-w-[200px]">
           <Search className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-ink-400" aria-hidden />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש שם" className="pe-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש שם או מייל" className="pe-9" />
         </div>
-        <Button type="button" size="sm" variant="secondary" onClick={exportCsv} disabled={shown.length === 0}>
+        <Button type="button" size="sm" variant="secondary" onClick={exportCsv} disabled={shown.length === 0} data-testid="registrations-export">
           ייצוא CSV ({shown.length})
         </Button>
       </div>
@@ -93,10 +121,28 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
             {c.short} ({counts[c.key] ?? 0})
           </button>
         ))}
+        <span className="text-ink-300">·</span>
+        {(
+          [
+            ["all", "כולן"],
+            ["submitted", `הגישו (${submittedN})`],
+            ["none", `לא הגישו (${rows.length - submittedN})`],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            onClick={() => setSub(key)}
+            data-testid={`registrations-sub-${key}`}
+            className={cn("rounded-full px-3 py-1 text-[12.5px] font-semibold border", sub === key ? "bg-brand-pink-deep text-white border-brand-pink-deep" : "bg-white text-ink-700 border-ink-200")}
+          >
+            {label}
+          </button>
+        ))}
       </div>
       {error && <Alert variant="danger">{error}</Alert>}
       {shown.length === 0 ? (
-        <div className="rounded-[14px] border border-dashed border-ink-200 px-4 py-6 text-center text-[13px] text-ink-500">עדיין אין רשומות.</div>
+        <div className="rounded-[14px] border border-dashed border-ink-200 px-4 py-6 text-center text-[13px] text-ink-500">אין רשומות שמתאימות לסינון.</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
@@ -105,18 +151,24 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
                 <th className="text-start px-3 py-2 font-semibold">חברה</th>
                 <th className="text-start px-3 py-2 font-semibold">אתגר</th>
                 <th className="text-start px-3 py-2 font-semibold">זוג עם</th>
+                <th className="text-start px-3 py-2 font-semibold">הגשה</th>
                 <th className="text-start px-3 py-2 font-semibold">נרשמה</th>
                 <th className="px-2 py-2" />
               </tr>
             </thead>
             <tbody>
               {shown.map((r) => (
-                <tr key={r.profileId} className="border-t border-ink-100">
+                <tr key={r.profileId} className="border-t border-ink-100" data-testid="registration-row" data-submission={r.submission}>
                   <td className="px-3 py-2 font-semibold whitespace-nowrap">
                     <Link href={`/admin/members/${r.profileId}`} target="_blank" rel="noopener" className="text-brand-purple hover:underline">
                       {r.name}
                     </Link>
                     {r.status !== "active" && <Badge className="ms-2 bg-amber-100 text-amber-800">{r.status}</Badge>}
+                    {r.email && (
+                      <div className="text-[11.5px] text-ink-400 font-normal" dir="ltr">
+                        {r.email}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2">{r.challenge}</td>
                   <td className="px-3 py-2 text-ink-700">
@@ -133,6 +185,22 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
                       </span>
                     ) : (
                       <span className="text-ink-400">לבד</span>
+                    )}
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {r.submission === "submitted" ? (
+                      <span className="inline-flex items-center gap-1.5">
+                        <Badge variant="mint">הוגש{r.submittedAt ? ` ${fmt.format(new Date(r.submittedAt))}` : ""}</Badge>
+                        {r.productUrl && (
+                          <a href={r.productUrl} target="_blank" rel="noopener noreferrer" className="text-[12px] text-brand-purple hover:underline">
+                            מוצר ↗
+                          </a>
+                        )}
+                      </span>
+                    ) : r.submission === "draft" ? (
+                      <Badge variant="warm">טיוטה</Badge>
+                    ) : (
+                      <Badge variant="gray">לא הגישה</Badge>
                     )}
                   </td>
                   <td className="px-3 py-2 text-ink-500 whitespace-nowrap">{fmt.format(new Date(r.createdAt))}</td>
