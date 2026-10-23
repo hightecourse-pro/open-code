@@ -6,6 +6,7 @@ import { CRITERIA, type AutoCheck } from "@/lib/judging-shared";
 import { formatBytes } from "@/lib/hackathon-shared";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { ScoreForm } from "./score-form";
+import { LazyVideo } from "@/components/patterns/lazy-video";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 const RICH = "text-[13px] leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
@@ -37,7 +38,7 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
               <span className="text-[13px] font-semibold text-ink-500">· {group.length} הגשות</span>
             </h2>
             {group.map((e) => (
-              <JudgingEntryCard key={e.submission.teamKey} e={e} viewerId={viewerId} manage={manage} />
+              <JudgingEntryCard key={e.submission.teamKey} e={e} viewerId={viewerId} manage={manage} lazyVideo />
             ))}
           </section>
         );
@@ -47,7 +48,7 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
 }
 
 /** One project: header + links, the video in the page, the automated report (owner only), what the team wrote, the score form. */
-export function JudgingEntryCard({ e, viewerId, manage }: { e: JudgingEntry; viewerId: string; manage: boolean }) {
+export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e: JudgingEntry; viewerId: string; manage: boolean; lazyVideo?: boolean }) {
   const s = e.submission;
   const report = e.report;
   const checks = report?.checks ?? [];
@@ -91,11 +92,7 @@ export function JudgingEntryCard({ e, viewerId, manage }: { e: JudgingEntry; vie
       {/* the video, in the page (the owner, 23/10: "הדפדוף בין הסרטונים חייב להיות נח") */}
       {(s.videoEmbedUrl || s.videoInlineUrl) && (
         <div className="px-5 pt-4" data-testid="judge-video">
-          {s.videoEmbedUrl ? (
-            <iframe src={s.videoEmbedUrl} title="הסרטון של הצוות" allow="autoplay; fullscreen" allowFullScreen className="w-full aspect-video max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />
-          ) : (
-            <video src={s.videoInlineUrl ?? undefined} controls preload="metadata" className="w-full max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />
-          )}
+          <LazyVideo embedUrl={s.videoEmbedUrl} inlineUrl={s.videoInlineUrl} lazy={lazyVideo} />
         </div>
       )}
 
