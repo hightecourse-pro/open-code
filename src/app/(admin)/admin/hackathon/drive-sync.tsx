@@ -8,6 +8,7 @@ interface Folder {
   id: string;
   name: string;
   owner?: string | null;
+  sharedDrive?: boolean;
 }
 interface SyncResult {
   total: number;
@@ -96,13 +97,16 @@ export function DriveSync({ folder, total, done }: { folder: Folder | null; tota
       </div>
       {folders && (
         <div className="flex flex-wrap gap-1.5">
-          {folders.length === 0 && <span className="text-[12.5px] text-ink-500">לא נמצאו תיקיות ששותפו עם חשבון השירות. שתפי תיקייה כ״עורך״ עם הכתובת שקיבלת, ונסי שוב.</span>}
+          {folders.length === 0 && <span className="text-[12.5px] text-ink-500">לא נמצאו כוננים שיתופיים או תיקיות ששותפו עם חשבון השירות.</span>}
           {folders.map((f) => (
-            <Button key={f.id} type="button" size="sm" variant="secondary" disabled={pending} onClick={() => pick(f)} data-testid="drive-folder">
-              📁 {f.name}
+            <Button key={f.id} type="button" size="sm" variant="secondary" disabled={pending} onClick={() => pick(f)} data-testid="drive-folder" data-shared-drive={f.sharedDrive ? "1" : undefined}>
+              {f.sharedDrive ? "🗂️" : "📁"} {f.name}
               {f.owner ? <span className="text-ink-400 font-normal"> · {f.owner}</span> : null}
             </Button>
           ))}
+          <p className="basis-full text-[12px] text-ink-500">
+            לחשבון שירות אין מקום אחסון משלו, אז ההעתקה עובדת רק לכונן שיתופי (Shared Drive) שחשבון השירות נוסף אליו כ״מנהל תוכן״, או לתיקייה רגילה כשמוגדרת הרשאת פעולה בשם משתמש (GOOGLE_DRIVE_UPLOAD_AS).
+          </p>
         </div>
       )}
       <p className="text-[12px] text-ink-500">

@@ -9,7 +9,7 @@ import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { runArenaDigest } from "@/lib/arena-digest";
 import { setSubmissionsClosure } from "@/lib/hackathon-submission";
-import { listSharedFolders, setDriveFolder, shareVideosWithJudges } from "@/lib/hackathon-drive";
+import { listDriveTargets, setDriveFolder, shareVideosWithJudges } from "@/lib/hackathon-drive";
 
 const BUCKET = "hackathon";
 
@@ -128,10 +128,10 @@ export async function setJudgeChallenges(profileId: string, challengeKeys: strin
 }
 
 /** The Drive folders the owner shared with the service account (23/10). */
-export async function listDriveFolders(): Promise<{ folders?: { id: string; name: string; owner: string | null }[]; error?: string }> {
+export async function listDriveFolders(): Promise<{ folders?: { id: string; name: string; owner: string | null; sharedDrive: boolean }[]; error?: string }> {
   await requireRole("admin");
   try {
-    return { folders: await listSharedFolders() };
+    return { folders: await listDriveTargets() };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "לא הצלחנו לקרוא מהדרייב." };
   }

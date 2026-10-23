@@ -42,14 +42,23 @@ function base64url(input: string | Buffer): string {
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
-/** A service-account access token, cached until shortly before it expires. */
-async function getAccessToken(): Promise<string> {
+/** Tokens per identity: the service account itself, or a Workspace user it impersonates (domain-wide delegation). */
+const tokenCache = new Map<string, { token: string; expiresAt: number }>();
+
+/**
+ * A service-account access token, cached until shortly before it expires.
+ * `as` = a Workspace user to act as (domain-wide delegation) - the hackathon
+ * mirror uses it because a service account owns no storage of its own.
+ */
+async function getAccessToken(as?: string): Promise<string> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const key = privateKey();
   if (!email || !key) throw new Error("drive_not_configured");
 
   const now = Math.floor(Date.now() / 1000);
-  if (cachedToken && cachedToken.expiresAt > now + 60) return cachedToken.token;
+  const cacheKey = as ?? "";
+  const cached = cacheKey ? tokenCache.get(cacheKey) : cachedToken;
+  if (cached && cached.expiresAt > now + 60) return cached.token;
 
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const claims = base64url(
@@ -59,6 +68,7 @@ async function getAccessToken(): Promise<string> {
       aud: TOKEN_URL,
       iat: now,
       exp: now + 3600,
+      ...(as ? { sub: as } : {}),
     })
   );
   const signature = base64url(
@@ -79,12 +89,14 @@ async function getAccessToken(): Promise<string> {
     throw new Error(`drive_auth_failed: ${(await res.text()).slice(0, 200)}`);
   }
   const data = (await res.json()) as { access_token: string; expires_in: number };
-  cachedToken = { token: data.access_token, expiresAt: now + data.expires_in };
+  const entry = { token: data.access_token, expiresAt: now + data.expires_in };
+  if (cacheKey) tokenCache.set(cacheKey, entry);
+  else cachedToken = entry;
   return data.access_token;
 }
 
-async function driveFetch(path: string, init: RequestInit = {}): Promise<Response> {
-  const token = await getAccessToken();
+async function driveFetch(path: string, init: RequestInit = {}, as?: string): Promise<Response> {
+  const token = await getAccessToken(as);
   return fetch(`${DRIVE}${path}`, {
     ...init,
     // Never let a hanging Google call stall the request that triggered it.
@@ -101,7 +113,7 @@ async function driveFetch(path: string, init: RequestInit = {}): Promise<Respons
  * Give an email read access to a Drive file/folder. Idempotent - an existing
  * permission is left as-is.
  */
-export async function grantReadAccess(fileId: string, email: string): Promise<void> {
+export async function grantReadAccess(fileId: string, email: string, as?: string): Promise<void> {
   // driveAutomationAllowed, not isProductionEnv: the owner's staging flag
   // (ALLOW_DRIVE_OUTSIDE_PRODUCTION) must open WRITES too - with only the
   // read path open, staging shares sat pending forever ("הקורסים לא נפתחים").
@@ -114,7 +126,7 @@ export async function grantReadAccess(fileId: string, email: string): Promise<vo
   let res = await driveFetch(`/files/${encodeURIComponent(fileId)}/permissions?${qs}`, {
     method: "POST",
     body,
-  });
+  }, as);
 
   if (!res.ok) {
     const text = await res.text();
@@ -123,7 +135,8 @@ export async function grantReadAccess(fileId: string, email: string): Promise<vo
     if (/sendNotificationEmail|not.*Google account|invalidSharingRequest/i.test(text)) {
       res = await driveFetch(
         `/files/${encodeURIComponent(fileId)}/permissions?supportsAllDrives=true&sendNotificationEmail=true`,
-        { method: "POST", body }
+        { method: "POST", body },
+        as
       );
       if (res.ok) return;
       const retryText = await res.text();
@@ -185,22 +198,42 @@ export async function revokeAccess(fileId: string, email: string): Promise<void>
   } while (pageToken);
 }
 
-/** Folders shared with the service account - the owner shares the hackathon videos folder (23/10). */
-export async function listSharedFolders(): Promise<{ id: string; name: string; owner: string | null }[]> {
+/**
+ * Where the hackathon videos can go (23/10): the SHARED DRIVES the service
+ * account was added to (a service account owns no storage, so a My-Drive
+ * folder only works when impersonating a Workspace user), plus the folders
+ * shared with the identity in use.
+ */
+export async function listSharedFolders(as?: string): Promise<{ id: string; name: string; owner: string | null; sharedDrive: boolean }[]> {
+  const out: { id: string; name: string; owner: string | null; sharedDrive: boolean }[] = [];
+  const drives = await driveFetch(`/drives?pageSize=50&fields=drives(id,name)`, {}, as);
+  if (drives.ok) {
+    const json = (await drives.json()) as { drives?: { id: string; name: string }[] };
+    for (const d of json.drives ?? []) out.push({ id: d.id, name: d.name, owner: "כונן שיתופי", sharedDrive: true });
+  }
   const q = encodeURIComponent("mimeType='application/vnd.google-apps.folder' and sharedWithMe = true and trashed = false");
-  const res = await driveFetch(`/files?q=${q}&fields=files(id,name,owners(emailAddress))&supportsAllDrives=true&includeItemsFromAllDrives=true&pageSize=50`);
+  const res = await driveFetch(`/files?q=${q}&fields=files(id,name,owners(emailAddress))&supportsAllDrives=true&includeItemsFromAllDrives=true&pageSize=50`, {}, as);
   if (!res.ok) throw new Error(`drive_list_failed: ${(await res.text()).slice(0, 200)}`);
   const json = (await res.json()) as { files?: { id: string; name: string; owners?: { emailAddress?: string }[] }[] };
-  return (json.files ?? []).map((f) => ({ id: f.id, name: f.name, owner: f.owners?.[0]?.emailAddress ?? null }));
+  for (const f of json.files ?? []) out.push({ id: f.id, name: f.name, owner: f.owners?.[0]?.emailAddress ?? null, sharedDrive: false });
+  if (as) {
+    // Acting as a user: her own folders are candidates too.
+    const own = await driveFetch(`/files?q=${encodeURIComponent("mimeType='application/vnd.google-apps.folder' and 'me' in owners and trashed = false")}&fields=files(id,name)&pageSize=50&orderBy=modifiedTime desc`, {}, as);
+    if (own.ok) {
+      const j = (await own.json()) as { files?: { id: string; name: string }[] };
+      for (const f of j.files ?? []) if (!out.some((o) => o.id === f.id)) out.push({ id: f.id, name: f.name, owner: as, sharedDrive: false });
+    }
+  }
+  return out;
 }
 
 /**
  * Upload one file into a folder the service account can write to (resumable:
  * an initiate call, then the bytes in one PUT). Returns the new file's id.
  */
-export async function uploadToFolder(folderId: string, name: string, mimeType: string, body: Buffer): Promise<string> {
+export async function uploadToFolder(folderId: string, name: string, mimeType: string, body: Buffer, as?: string): Promise<string> {
   if (!driveAutomationAllowed()) throw new Error("drive_write_blocked_outside_production");
-  const token = await getAccessToken();
+  const token = await getAccessToken(as);
   const init = await fetch(`https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true&fields=id`, {
     method: "POST",
     headers: {
@@ -223,9 +256,9 @@ export async function uploadToFolder(folderId: string, name: string, mimeType: s
 }
 
 /** Trash a file the service account owns (a test clean-up, a wrong mirror). */
-export async function trashDriveFile(fileId: string): Promise<void> {
+export async function trashDriveFile(fileId: string, as?: string): Promise<void> {
   if (!driveAutomationAllowed()) throw new Error("drive_write_blocked_outside_production");
-  const res = await driveFetch(`/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`, { method: "PATCH", body: JSON.stringify({ trashed: true }) });
+  const res = await driveFetch(`/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`, { method: "PATCH", body: JSON.stringify({ trashed: true }) }, as);
   if (!res.ok && res.status !== 404) throw new Error(`drive_trash_failed: ${(await res.text()).slice(0, 200)}`);
 }
 

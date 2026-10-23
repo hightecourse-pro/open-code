@@ -15,6 +15,8 @@ import type { Json } from "@/types/database";
  * embedded as they are.
  */
 const FOLDER_KEY = "hackathon_drive_folder";
+/** A Workspace user to act as (domain-wide delegation) - lets a My-Drive folder receive the uploads. Empty = the service account itself (shared drives only). */
+const AS = () => process.env.GOOGLE_DRIVE_UPLOAD_AS?.trim() || undefined;
 
 export interface DriveFolder {
   id: string;
@@ -38,7 +40,9 @@ export async function setDriveFolder(folder: DriveFolder | null): Promise<void> 
   if (error) throw error;
 }
 
-export { listSharedFolders };
+export async function listDriveTargets() {
+  return listSharedFolders(AS());
+}
 
 export interface DriveSyncResult {
   /** Submitted projects with a video that can be mirrored (an uploaded file or a Drive link). */
@@ -106,11 +110,12 @@ export async function syncVideosToDrive(budgetMs = 240_000): Promise<DriveSyncRe
       }
       if (bytes.length === 0) throw new Error("קובץ ריק");
       const challenge = CHALLENGES.find((c) => c.key === s.challenge_key)?.short ?? s.challenge_key;
-      const fileId = await uploadToFolder(folder.id, `${fileSafe(challenge)} - ${fileSafe(team)}.${ext}`, mime, bytes);
+      const fileId = await uploadToFolder(folder.id, `${fileSafe(challenge)} - ${fileSafe(team)}.${ext}`, mime, bytes, AS());
       await admin.from("hackathon_submissions").update({ drive_file_id: fileId }).eq("team_key", s.team_key);
       mirrored++;
     } catch (e) {
-      errors.push(`${team}: ${e instanceof Error ? e.message : "שגיאה"}`);
+      const msg = e instanceof Error ? e.message : "שגיאה";
+      errors.push(`${team}: ${/storage quota/i.test(msg) ? "לחשבון השירות אין מקום אחסון - התיקייה צריכה להיות בכונן שיתופי (Shared Drive), או להגדיר GOOGLE_DRIVE_UPLOAD_AS" : msg}`);
     }
   }
   const share = await shareVideosWithJudges(Math.max(10_000, budgetMs - (Date.now() - started)));
@@ -146,7 +151,7 @@ export async function shareVideosWithJudges(budgetMs = 60_000): Promise<{ shared
       if (!s.drive_file_id || !keys.includes(s.challenge_key) || had.has(`${s.drive_file_id}|${j.profile_id}`)) continue;
       if (Date.now() - started > budgetMs) return { shared, errors };
       try {
-        await grantReadAccess(s.drive_file_id, email);
+        await grantReadAccess(s.drive_file_id, email, AS());
         await admin.from("hackathon_drive_shares").insert({ drive_file_id: s.drive_file_id, profile_id: j.profile_id });
         had.add(`${s.drive_file_id}|${j.profile_id}`);
         shared++;
@@ -168,7 +173,7 @@ export async function unmirrorVideo(teamKey: string): Promise<void> {
   const admin = createAdminClient();
   const { data: s } = await admin.from("hackathon_submissions").select("drive_file_id").eq("team_key", teamKey).maybeSingle();
   if (!s?.drive_file_id) return;
-  await trashDriveFile(s.drive_file_id);
+  await trashDriveFile(s.drive_file_id, AS());
   await admin.from("hackathon_drive_shares").delete().eq("drive_file_id", s.drive_file_id);
   await admin.from("hackathon_submissions").update({ drive_file_id: null }).eq("team_key", teamKey);
 }
