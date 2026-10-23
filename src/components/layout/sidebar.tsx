@@ -95,10 +95,8 @@ export interface SidebarUser {
   isMentor?: boolean;
   /** Free members see paid destinations marked with a lock. */
   isSubscriber?: boolean;
-  /** Chat messages waiting for her - shown as a badge on "צ'אטים". */
+  /** Chats with unread messages - the badge on "צ'אטים" (a count of WHO, the owner, 23/10). */
   unreadCount?: number;
-  /** Threads whose last word is the other side's - shown when nothing is unread (22/10). */
-  unansweredCount?: number;
   /** May enter זירת המנטוריות (hackathon registrant, mentor, team). */
   arena?: boolean;
   /** Open arena questions - the badge mentors see. */
@@ -171,12 +169,17 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
             // The chat count comes from the server on every render; a static
             // `badge` on the item would be a number nobody updates.
             const unread = item.href === "/chat" ? (user.unreadCount ?? 0) : item.href === "/arena" ? (user.arenaOpen ?? 0) : 0;
-            // Nothing unread but threads still waiting for her reply: the chat
-            // item says so (the owner, 22/10: "אין אינדיקציה בתפריט").
-            const waiting = item.href === "/chat" && unread === 0 ? (user.unansweredCount ?? 0) : 0;
             const label =
               item.href === "/mentor" && user.isMentor ? "הליוויים שלי" : item.label;
-            const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : waiting > 0 ? (waiting > 9 ? "9+" : String(waiting)) : item.badge?.toString();
+            const badge = unread > 0 ? (unread > 9 ? "9+" : String(unread)) : item.badge?.toString();
+            const unreadLabel =
+              item.href === "/arena"
+                ? unread === 1
+                  ? "שאלה פתוחה אחת"
+                  : `${unread} שאלות פתוחות`
+                : unread === 1
+                  ? "שיחה אחת שלא נקראה"
+                  : `${unread} שיחות שלא נקראו`;
             // `false` only once the browser has answered - no pill flashes
             // before hydration.
             const isNew = seen[item.href] === false;
@@ -214,27 +217,13 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
                     )}
                     {badge && (
                       <span
-                        aria-label={
-                          unread > 0
-                            ? unread === 1
-                              ? "הודעה אחת שלא נקראה"
-                              : `${unread} הודעות שלא נקראו`
-                            : waiting > 0
-                              ? waiting === 1
-                                ? "שיחה אחת ממתינה למענה שלך"
-                                : `${waiting} שיחות ממתינות למענה שלך`
-                              : undefined
-                        }
-                        title={waiting > 0 ? (waiting === 1 ? "שיחה אחת ממתינה למענה שלך" : `${waiting} שיחות ממתינות למענה שלך`) : undefined}
+                        aria-label={unread > 0 ? unreadLabel : undefined}
+                        title={unread > 0 ? unreadLabel : undefined}
                         data-testid={item.href === "/chat" ? "chat-badge" : undefined}
-                        data-badge={unread > 0 ? "unread" : waiting > 0 ? "waiting" : undefined}
+                        data-badge={unread > 0 ? "unread" : undefined}
                         className={cn(
                           "px-2 py-px rounded-full text-[11px] font-bold",
-                          active
-                            ? "bg-white/25 text-white"
-                            : waiting > 0 && unread === 0
-                              ? "bg-transparent text-brand-pink-deep border border-brand-pink-deep/40"
-                              : "bg-tint-pink text-brand-pink-deep"
+                          active ? "bg-white/25 text-white" : "bg-tint-pink text-brand-pink-deep"
                         )}
                       >
                         {badge}

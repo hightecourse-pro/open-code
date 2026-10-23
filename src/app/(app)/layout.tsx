@@ -78,24 +78,16 @@ const recentlyHired = unstable_cache(
  * inside them) counted exactly the same set one round trip later. Verified
  * against the live DB: both formulas agree for every profile (2026-08-19).
  */
-/** Threads that end with the other side's word (the owner, 22/10) - the sidebar's second-tier badge. */
-async function unansweredConversationCount(profileId: string): Promise<number> {
-  try {
-    const { data } = await createAdminClient().rpc("unanswered_conversation_count", { p_profile: profileId });
-    return typeof data === "number" ? data : 0;
-  } catch {
-    return 0;
-  }
-}
-
-async function unreadMessageCount(profileId: string): Promise<number> {
+/** Chats with at least one unread message - the sidebar badge counts WHO, not messages (the owner, 23/10). */
+async function unreadConversationCount(profileId: string): Promise<number> {
   const supabase = await createClient();
-  const { count } = await supabase
+  const { data } = await supabase
     .from("messages")
-    .select("id", { count: "exact", head: true })
+    .select("conversation_id")
     .neq("sender_id", profileId)
-    .is("read_at", null);
-  return count ?? 0;
+    .is("read_at", null)
+    .limit(2000);
+  return new Set((data ?? []).map((m) => m.conversation_id)).size;
 }
 
 export default async function AuthenticatedLayout({
@@ -116,8 +108,7 @@ export default async function AuthenticatedLayout({
   const meta = [profile.specialization, profile.region].filter(Boolean).join(" · ");
   const subscriber = isSubscriber(profile);
   // A free member reads the history she already has, so the count is hers too.
-  const unreadCount = await unreadMessageCount(profile.id);
-  const unansweredCount = unreadCount === 0 ? await unansweredConversationCount(profile.id) : 0;
+  const unreadCount = await unreadConversationCount(profile.id);
 
   // זירת המנטוריות (the owner, 15/10): the item shows only to those who may
   // enter; mentors and the team see how many questions are open.
@@ -265,7 +256,6 @@ export default async function AuthenticatedLayout({
         isMentor: profile.role === "mentor",
         isSubscriber: subscriber,
         unreadCount,
-        unansweredCount,
         arena: !!arenaRole,
         arenaOpen,
         judge,
