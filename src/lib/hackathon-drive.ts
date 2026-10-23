@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { NotAGoogleAccountError, grantReadAccess, listSharedFolders, trashDriveFile, uploadToFolder } from "@/lib/drive-api";
+import { NotAGoogleAccountError, ensureFolder, grantReadAccess, listSharedFolders, trashDriveFile, uploadToFolder } from "@/lib/drive-api";
 import { driveFileId } from "@/lib/drive";
 import { withPrevSurnames } from "@/lib/prev-surname";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
@@ -166,6 +166,29 @@ export async function shareVideosWithJudges(budgetMs = 60_000): Promise<{ shared
     }
   }
   return { shared, errors };
+}
+
+/**
+ * The catalogue pictures folder (the owner, 23/10): "קטלוג הפרויקטים - תמונות"
+ * inside the hackathon shared drive (the configured target, or an explicit
+ * parent). Remembered in app_settings so later uploads land in the same place.
+ */
+const CATALOG_KEY = "hackathon_catalog_folder";
+export async function ensureCatalogFolder(parentId: string | null): Promise<DriveFolder> {
+  const admin = createAdminClient();
+  const { data } = await admin.from("app_settings").select("value").eq("key", CATALOG_KEY).maybeSingle();
+  const v = (data?.value ?? {}) as { id?: unknown; name?: unknown; parent?: unknown };
+  if (typeof v.id === "string" && v.id && (!parentId || v.parent === parentId)) return { id: v.id, name: typeof v.name === "string" ? v.name : "קטלוג הפרויקטים - תמונות" };
+  const parent = parentId ?? (await getDriveFolder())?.id;
+  if (!parent) throw new Error("לא נבחר יעד בדרייב.");
+  const name = "קטלוג הפרויקטים - תמונות";
+  const id = await ensureFolder(parent, name, AS());
+  await admin.from("app_settings").upsert({ key: CATALOG_KEY, value: { id, name, parent } as unknown as Json }, { onConflict: "key" });
+  return { id, name };
+}
+
+export async function uploadCatalogImage(folderId: string, name: string, mime: string, bytes: Buffer): Promise<string> {
+  return uploadToFolder(folderId, name, mime, bytes, AS());
 }
 
 /** Undo one mirror (a test, a wrong file): trash the Drive copy and forget it. */
