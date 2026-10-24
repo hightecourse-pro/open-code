@@ -271,6 +271,36 @@ export async function ensureFolder(parentId: string, name: string, as?: string):
   return json.id;
 }
 
+/** Metadata of a Drive file the identity can read (a link-shared file counts); null when it cannot. */
+export async function driveFileMeta(fileId: string, as?: string): Promise<{ id: string; name: string; mimeType: string; size: number } | null> {
+  const res = await driveFetch(`/files/${encodeURIComponent(fileId)}?fields=id,name,mimeType,size&supportsAllDrives=true`, {}, as);
+  if (!res.ok) return null;
+  const j = (await res.json()) as { id: string; name: string; mimeType: string; size?: string };
+  return { id: j.id, name: j.name, mimeType: j.mimeType, size: Number(j.size ?? 0) };
+}
+
+/** The videos directly inside a Drive folder the identity can read, largest first. */
+export async function listFolderVideos(folderId: string, as?: string): Promise<{ id: string; name: string; mimeType: string; size: number }[]> {
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed = false`);
+  const res = await driveFetch(`/files?q=${q}&fields=files(id,name,mimeType,size)&supportsAllDrives=true&includeItemsFromAllDrives=true&pageSize=100`, {}, as);
+  if (!res.ok) return [];
+  const j = (await res.json()) as { files?: { id: string; name: string; mimeType: string; size?: string }[] };
+  return (j.files ?? [])
+    .filter((f) => f.mimeType.startsWith("video/") || /\.(mp4|mov|webm|m4v|mkv)$/i.test(f.name))
+    .map((f) => ({ id: f.id, name: f.name, mimeType: f.mimeType, size: Number(f.size ?? 0) }))
+    .sort((a, b) => b.size - a.size);
+}
+
+/** Copy a Drive file into a folder/shared drive, inside Drive (no download) - the copy belongs to the destination. */
+export async function copyDriveFile(fileId: string, parentId: string, name: string, as?: string): Promise<string> {
+  if (!driveAutomationAllowed()) throw new Error("drive_write_blocked_outside_production");
+  const res = await driveFetch(`/files/${encodeURIComponent(fileId)}/copy?supportsAllDrives=true&fields=id`, { method: "POST", body: JSON.stringify({ name, parents: [parentId] }) }, as);
+  if (!res.ok) throw new Error(`drive_copy_failed: ${(await res.text()).slice(0, 200)}`);
+  const j = (await res.json()) as { id?: string };
+  if (!j.id) throw new Error("drive_copy_no_id");
+  return j.id;
+}
+
 /** The bytes of a file the identity can read (a mirrored video) - the caller streams the response. */
 export async function downloadDriveFile(fileId: string, as?: string): Promise<Response> {
   const token = await getAccessToken(as);
