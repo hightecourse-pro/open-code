@@ -10,6 +10,8 @@ import { LazyVideo } from "@/components/patterns/lazy-video";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 const RICH = "text-[13px] leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
+// A report is data written by the review tooling - a status the map does not know renders as "skip" rather than
+// crashing the admin page (24/10: "unknown" took /admin/hackathon down for the owner).
 const STATUS: Record<AutoCheck["status"], { icon: string; cls: string }> = {
   pass: { icon: "✓", cls: "bg-tint-mint text-success" },
   fail: { icon: "✕", cls: "bg-[#FDE8E8] text-[#B42318]" },
@@ -109,7 +111,7 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
               <ul className="flex flex-col gap-1">
                 {checks.map((c) => (
                   <li key={c.key} className="flex items-start gap-2 text-[13px]">
-                    <span className={`shrink-0 mt-0.5 h-[18px] w-[18px] rounded-full inline-flex items-center justify-center text-[11px] font-black ${STATUS[c.status].cls}`}>{STATUS[c.status].icon}</span>
+                    <span className={`shrink-0 mt-0.5 h-[18px] w-[18px] rounded-full inline-flex items-center justify-center text-[11px] font-black ${(STATUS[c.status] ?? STATUS.skip).cls}`}>{(STATUS[c.status] ?? STATUS.skip).icon}</span>
                     <span>
                       <b className="text-ink-900">{c.label}</b>
                       {c.detail && <span className="text-ink-600"> · {c.detail}</span>}
