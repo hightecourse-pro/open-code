@@ -8,6 +8,7 @@ import { hackathonSubmissionReceivedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { sanitizeRichHtml } from "@/lib/rich-text";
 import { checklistOf, getSubmissionsClosure, loadReflections, loadSubmission, loadTeam, VIDEO_EXTENSIONS, VIDEO_MAX_BYTES } from "@/lib/hackathon-submission";
+import { KIND_LABEL, loadReviewRequest, saveReviewResponse, type ReviewResponse } from "@/lib/hackathon-review-requests";
 
 export interface SubmitState {
   ok?: boolean;
@@ -196,4 +197,39 @@ export async function submitFinal(): Promise<SubmitState> {
   revalidatePath("/hackathon/submit");
   revalidatePath("/admin/hackathon");
   return { ok: true, info: first ? "ההגשה נקלטה 🎉" : "ההגשה עודכנה ✓" };
+}
+
+/**
+ * The team's answer to a בקשת השלמה (the owner, 24/10): only the fields that
+ * were asked for, at least one of them (or a note). Allowed after the
+ * submissions closed - the team asked for exactly this.
+ */
+export async function respondToReviewRequest(_prev: SubmitState, formData: FormData): Promise<SubmitState> {
+  const me = await requireCommunityAccess();
+  const team = await loadTeam(me.id);
+  if (!team) return { error: "ההגשה פתוחה לרשומות להאקתון." };
+  const req = await loadReviewRequest(team.teamKey);
+  if (!req) return { error: "אין בקשה פתוחה לצוות שלך." };
+  const kinds = new Set(req.items.map((i) => i.kind));
+  const response: ReviewResponse = {};
+  const login = String(formData.get("login") ?? "").trim().slice(0, 2000);
+  if (kinds.has("login") && login) response.login = login;
+  for (const [kind, field] of [
+    ["product", "product_url"],
+    ["video", "video_url"],
+    ["repo", "repo_url"],
+  ] as const) {
+    if (!kinds.has(kind)) continue;
+    const v = cleanUrl(formData.get(field));
+    if (v === "invalid") return { error: `הקישור ב״${KIND_LABEL[kind]}״ לא נראה כמו כתובת אינטרנט.` };
+    if (v) response[field] = v;
+  }
+  const note = String(formData.get("note") ?? "").trim().slice(0, 2000);
+  if (note) response.note = note;
+  if (!Object.keys(response).length) return { error: "כתבי לפחות פרט אחד ממה שהתבקש, או הערה." };
+  const r = await saveReviewResponse(team.teamKey, me.id, response);
+  if (r.error) return { error: r.error };
+  revalidatePath("/hackathon/submit");
+  revalidatePath("/admin/hackathon");
+  return { ok: true, info: "תודה! העדכון נשמר ונבדוק שוב בהקדם 💜" };
 }

@@ -929,6 +929,48 @@ export function hackathonSubmissionReceivedEmail(name: string | undefined, chall
   };
 }
 
+/**
+ * בקשת השלמה (the owner, 24/10): the team's project could not be reviewed -
+ * a login wall, a product that is down, a video nobody can open, a private
+ * repo. Warm, personal (her first name), and it starts with the excitement of
+ * having received her project. One paragraph per kind explains why it matters.
+ */
+export function hackathonReviewRequestEmail(args: {
+  firstName: string;
+  isPair: boolean;
+  challengeShort: string;
+  items: { kind: "login" | "product" | "video" | "repo"; label: string; detail: string }[];
+  dueText: string;
+  url: string;
+}): BuiltEmail {
+  const WHY: Record<"login" | "product" | "video" | "repo", string> = {
+    login:
+      "בלי פרטי כניסה אנחנו לא יכולות להריץ את המערכת, ובלי להריץ אי אפשר לנקד ״עובד מקצה לקצה״ ו״נכונות ואמינות״ - והסרטון לבדו לא מספיק לזה. מתאים לנו משתמש הדגמה עם סיסמה קבועה, או קוד גישה קבוע, לכל סוג משתמשת שיש במערכת (עובדת, נציג, מנהלת).",
+    product:
+      "בלי מערכת שרצה בענן אי אפשר לנקד ״עובד מקצה לקצה״ ו״נכונות ואמינות״ - הסרטון לבדו לא מספיק. כשהמערכת עולה, כדאי לוודא שהיא זמינה בכל שעה (לא רק בשעות מסוימות), ואם היא דורשת כניסה - לצרף גם פרטי משתמש להדגמה.",
+    video:
+      "הסרטון הוא הדבר הראשון שהשופטות רואות. כדאי לוודא שהקישור בדרייב פתוח ל״כל מי שיש את הקישור״, שהוא מצביע לקובץ הסרטון עצמו (לא לתיקייה), ושרואים בו את המערכת עובדת מקצה לקצה - עד דקה.",
+    repo: "בלי הקוד אי אפשר לנקד ״ארכיטקטורה של פיתוח AI״ לפי מה שבנוי בפועל. אפשר לפתוח את הריפו לציבורי, או לשלוח לנו קישור מתוקן.",
+  };
+  const kinds = [...new Set(args.items.map((i) => i.kind))];
+  const list = args.items.map((i) => `• <b>${escapeHtml(i.label)}</b> - ${escapeHtml(i.detail)}`).join("<br />");
+  return {
+    subject: "התרגשנו לקבל את הפרויקט שלך להאקתון 💜 - חסר לנו פרט קטן",
+    html: renderEmail({
+      heading: `היי ${escapeHtml(args.firstName)}, התרגשנו לקבל את הפרויקט ${args.isPair ? "שלכן" : "שלך"} להאקתון! 🎉`,
+      lines: [
+        `הפרויקט ${args.isPair ? "שלכן" : "שלך"} לאתגר <b>${escapeHtml(args.challengeShort)}</b> כבר אצלנו, ואנחנו באמצע הבדיקה המעמיקה של כל ההגשות. כדי שנוכל לבדוק אותו כמו שצריך ולנקד אותו הוגן, חסר לנו משהו קטן:`,
+        list,
+        ...kinds.map((k) => WHY[k]),
+        `נשמח שתעדכני עד <b>${escapeHtml(args.dueText)}</b>. בעמוד ההגשה שלך פתחנו מקום בדיוק בשביל זה - לחיצה אחת ואת שם:`,
+      ],
+      ctaText: "לעדכון הפרטים החסרים",
+      ctaUrl: args.url,
+      footnote: `יש שאלה או שמשהו לא מסתדר? כתבי לנו ל-<b dir="ltr">office@opencode.org.il</b>. מחכות לראות את הפרויקט ${args.isPair ? "שלכן" : "שלך"} רץ 💜`,
+    }),
+  };
+}
+
 // ------------------------------------------------------------ mentors' arena
 
 /** The mentor a question was addressed to hears right away (the owner, 15/10). */

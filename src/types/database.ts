@@ -2067,6 +2067,12 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hackathon_drive_shares"]["Insert"]>;
         Relationships: [];
       };
+      hackathon_review_requests: {
+        Row: { id: string; team_key: string; items: Json; due_at: string; email_subject: string | null; email_html: string | null; sent_at: string | null; sent_to: string[] | null; send_error: string | null; responded_at: string | null; responded_by: string | null; response: Json | null; created_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; team_key: string; items?: Json; due_at: string; email_subject?: string | null; email_html?: string | null; sent_at?: string | null; sent_to?: string[] | null; send_error?: string | null; responded_at?: string | null; responded_by?: string | null; response?: Json | null; created_by?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_review_requests"]["Insert"]>;
+        Relationships: [];
+      };
       hackathon_judges: {
         Row: { profile_id: string; added_by: string | null; challenge_keys: string[]; created_at: string };
         Insert: { profile_id: string; added_by?: string | null; challenge_keys?: string[]; created_at?: string };
