@@ -6,6 +6,8 @@ import { emailBlockedByOptOut, withUnsubscribe } from "@/lib/unsubscribe";
 
 
 const FROM = process.env.EMAIL_FROM || "קוד פתוח <noreply@opencode.org.il>";
+// Replies to app mail land in the team's inbox, not in the noreply box (the owner, 25/10: ״האם כל התשובות מגיעות ל-office?״).
+const REPLY_TO = process.env.EMAIL_REPLY_TO || "office@opencode.org.il";
 
 export function isResendConfigured(): boolean {
   return !!process.env.RESEND_API_KEY;
@@ -49,7 +51,7 @@ export async function sendResendEmail(args: {
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify({ from: FROM, to: [args.to], subject: args.subject, html: args.html }),
+        body: JSON.stringify({ from: FROM, to: [args.to], reply_to: REPLY_TO, subject: args.subject, html: args.html }),
       });
     let res = await post();
     // Resend allows 2 requests/second - a 429 is a pace problem, not a bad
@@ -110,7 +112,7 @@ export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[
       fetch("https://api.resend.com/emails/batch", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify(chunk.map(({ item }) => ({ from: FROM, to: [item.to], subject: item.subject, html: item.html }))),
+        body: JSON.stringify(chunk.map(({ item }) => ({ from: FROM, to: [item.to], reply_to: REPLY_TO, subject: item.subject, html: item.html }))),
       });
     try {
       let res = await post();
