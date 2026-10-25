@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Trash2 } from "lucide-react";
 import { Alert, Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -21,9 +22,15 @@ export interface RegistrationRow {
   submission: "submitted" | "draft" | "none";
   submittedAt: string | null;
   productUrl: string | null;
+  /** Her seminar and graduation year (profile answers; the owner, 25/10) - filters here and the dashboard above. */
+  seminar: string | null;
+  graduationYear: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+type SortKey = "newest" | "name" | "seminar" | "year" | "submission";
+const SORT_LABEL: Record<SortKey, string> = { newest: "עדכון אחרון", name: "שם", seminar: "סמינר", year: "שנת סיום", submission: "הגשה" };
 
 const fmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 const SUBMISSION_LABEL: Record<RegistrationRow["submission"], string> = { submitted: "הוגש", draft: "טיוטה", none: "לא הגישה" };
@@ -33,8 +40,22 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
   const [filter, setFilter] = useState<string>("all");
   const [sub, setSub] = useState<"all" | "submitted" | "none">("all");
   const [q, setQ] = useState("");
+  const [sort, setSort] = useState<SortKey>("newest");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  // seminar / year live in the URL so the dashboard above and this list always agree
+  const router = useRouter();
+  const sp = useSearchParams();
+  const seminar = sp.get("seminar") ?? "";
+  const year = sp.get("year") ?? "";
+  function setParam(key: "seminar" | "year", value: string) {
+    const p = new URLSearchParams(sp.toString());
+    if (value) p.set(key, value);
+    else p.delete(key);
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }
+  const seminars = useMemo(() => [...new Set(rows.map((r) => r.seminar?.trim() || "לא צוין"))].sort((a, b) => a.localeCompare(b, "he")), [rows]);
+  const years = useMemo(() => [...new Set(rows.map((r) => r.graduationYear?.trim() || "לא צוין"))].sort((a, b) => a.localeCompare(b, "he")), [rows]);
 
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -44,12 +65,30 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
   const pairs = rows.filter((r) => r.partnerId && r.partnerConfirmed).length / 2;
   const awaiting = rows.filter((r) => r.partnerId && !r.partnerConfirmed).length;
   const submittedN = rows.filter((r) => r.submission === "submitted").length;
-  const shown = rows.filter(
-    (r) =>
-      (filter === "all" || r.challengeKey === filter) &&
-      (sub === "all" || (sub === "submitted" ? r.submission === "submitted" : r.submission !== "submitted")) &&
-      (!q.trim() || r.name.includes(q.trim()) || (r.partnerName ?? "").includes(q.trim()) || (r.email ?? "").includes(q.trim()))
-  );
+  const SUB_ORDER: Record<RegistrationRow["submission"], number> = { submitted: 0, draft: 1, none: 2 };
+  const shown = rows
+    .filter(
+      (r) =>
+        (filter === "all" || r.challengeKey === filter) &&
+        (sub === "all" || (sub === "submitted" ? r.submission === "submitted" : r.submission !== "submitted")) &&
+        (!seminar || (r.seminar?.trim() || "לא צוין") === seminar) &&
+        (!year || (r.graduationYear?.trim() || "לא צוין") === year) &&
+        (!q.trim() || r.name.includes(q.trim()) || (r.partnerName ?? "").includes(q.trim()) || (r.email ?? "").includes(q.trim()) || (r.seminar ?? "").includes(q.trim()))
+    )
+    .sort((a, b) => {
+      switch (sort) {
+        case "name":
+          return a.name.localeCompare(b.name, "he");
+        case "seminar":
+          return (a.seminar ?? "").localeCompare(b.seminar ?? "", "he") || a.name.localeCompare(b.name, "he");
+        case "year":
+          return (a.graduationYear ?? "").localeCompare(b.graduationYear ?? "", "he") || a.name.localeCompare(b.name, "he");
+        case "submission":
+          return SUB_ORDER[a.submission] - SUB_ORDER[b.submission] || (b.submittedAt ?? "").localeCompare(a.submittedAt ?? "");
+        default:
+          return b.updatedAt.localeCompare(a.updatedAt);
+      }
+    });
 
   function remove(r: RegistrationRow) {
     if (!confirm(`להסיר את ההרשמה של ${r.name}?`)) return;
@@ -63,11 +102,13 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
 
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const head = ["שם", "מייל", "אתגר", "זוג עם", "סטטוס זוג", "הגשה", "הוגש ב", "קישור למוצר", "נרשמה", "עודכן"];
+    const head = ["שם", "מייל", "סמינר", "שנת סיום", "אתגר", "זוג עם", "סטטוס זוג", "הגשה", "הוגש ב", "קישור למוצר", "נרשמה", "עודכן"];
     const lines = shown.map((r) =>
       [
         r.name,
         r.email ?? "",
+        r.seminar ?? "",
+        r.graduationYear ?? "",
         r.challenge,
         r.partnerName ?? "",
         r.partnerId ? (r.partnerConfirmed ? "אושר" : "ממתין לאישור") : "",
@@ -140,6 +181,35 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
           </button>
         ))}
       </div>
+      <div className="flex items-center gap-2 flex-wrap text-[12.5px]" data-testid="registrations-filters">
+        <label className="text-ink-500">סמינר</label>
+        <select value={seminar} onChange={(e) => setParam("seminar", e.target.value)} className="border border-ink-200 rounded-md px-2 py-1 bg-white max-w-[260px]" data-testid="registrations-seminar">
+          <option value="">כל הסמינרים</option>
+          {seminars.map((s) => (
+            <option key={s} value={s}>
+              {s}
+            </option>
+          ))}
+        </select>
+        <label className="text-ink-500">שנת סיום</label>
+        <select value={year} onChange={(e) => setParam("year", e.target.value)} className="border border-ink-200 rounded-md px-2 py-1 bg-white" data-testid="registrations-year">
+          <option value="">כל השנים</option>
+          {years.map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+        <label className="text-ink-500 ms-auto">מיון</label>
+        <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="border border-ink-200 rounded-md px-2 py-1 bg-white" data-testid="registrations-sort">
+          {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+            <option key={k} value={k}>
+              {SORT_LABEL[k]}
+            </option>
+          ))}
+        </select>
+        <span className="text-ink-500">מוצגות {shown.length}</span>
+      </div>
       {error && <Alert variant="danger">{error}</Alert>}
       {shown.length === 0 ? (
         <div className="rounded-[14px] border border-dashed border-ink-200 px-4 py-6 text-center text-[13px] text-ink-500">אין רשומות שמתאימות לסינון.</div>
@@ -149,6 +219,7 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
             <thead className="bg-ink-50 text-ink-600 text-[12px]">
               <tr>
                 <th className="text-start px-3 py-2 font-semibold">חברה</th>
+                <th className="text-start px-3 py-2 font-semibold">סמינר · שנה</th>
                 <th className="text-start px-3 py-2 font-semibold">אתגר</th>
                 <th className="text-start px-3 py-2 font-semibold">זוג עם</th>
                 <th className="text-start px-3 py-2 font-semibold">הגשה</th>
@@ -169,6 +240,10 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
                         {r.email}
                       </div>
                     )}
+                  </td>
+                  <td className="px-3 py-2 text-ink-700 text-[12.5px]" data-testid="registration-seminar">
+                    {r.seminar ?? <span className="text-ink-400">-</span>}
+                    {r.graduationYear && <span className="text-ink-500"> · {r.graduationYear}</span>}
                   </td>
                   <td className="px-3 py-2">{r.challenge}</td>
                   <td className="px-3 py-2 text-ink-700">

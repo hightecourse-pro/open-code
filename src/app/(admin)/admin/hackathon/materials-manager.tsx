@@ -19,6 +19,7 @@ export function MaterialsManager({ challenges, materials: initial }: { challenge
   const [file, setFile] = useState<File | null>(null);
   const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
   const [pending, start] = useTransition();
 
   async function upload() {
@@ -61,9 +62,13 @@ export function MaterialsManager({ challenges, materials: initial }: { challenge
 
   return (
     <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
-      <h2 className="font-display text-base font-bold">📄 חומרי האתגרים (להורדה למנויות)</h2>
+      <div className="flex items-center gap-2 flex-wrap">
+        <h2 className="font-display text-base font-bold">📄 חומרי האתגרים (להורדה למנויות)</h2>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש קובץ…" className="ms-auto w-56 text-[12.5px] border border-ink-300 rounded-md px-3 py-1.5 outline-none focus:border-brand-purple" data-testid="materials-search" />
+      </div>
       {challenges.map((c) => {
-        const list = materials.filter((m) => m.challenge_key === c.key);
+        const list = materials.filter((m) => m.challenge_key === c.key && (!q.trim() || m.title.includes(q.trim())));
+        if (q.trim() && list.length === 0) return null;
         return (
           <div key={c.key} className="border-t border-ink-100 pt-3">
             <div className="font-display font-bold text-[14px] text-ink-1000">{c.short}</div>

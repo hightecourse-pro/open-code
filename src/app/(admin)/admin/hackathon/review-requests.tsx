@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Trash2 } from "lucide-react";
-import { Badge, Button, Select, Textarea } from "@/components/ui";
+import { Badge, Button, Input, Select, Textarea } from "@/components/ui";
+import { Search } from "lucide-react";
 import { KIND_LABEL, REQUEST_KINDS, type RequestKind, type ReviewRequest } from "@/lib/hackathon-review-shared";
 import { createReviewRequest, removeReviewRequest } from "./actions";
 
@@ -41,6 +42,12 @@ export function ReviewRequests({ rows, teams, myEmail }: { rows: ReviewRequestRo
   const sent = rows.filter((r) => r.sentAt).length;
   const responded = rows.filter((r) => r.respondedAt).length;
   const unsent = rows.filter((r) => !r.sentAt).length;
+  const [q, setQ] = useState("");
+  const [status, setStatus] = useState<"all" | "unsent" | "sent" | "responded" | "overdue">("all");
+  const [kindFilter, setKindFilter] = useState<RequestKind | "all">("all");
+  const statusOf = (r: ReviewRequestRow) => (r.respondedAt ? "responded" : !r.respondedAt && new Date(r.dueAt).getTime() < now ? "overdue" : r.sentAt ? "sent" : "unsent");
+  const shown = rows.filter((r) => (status === "all" || statusOf(r) === status) && (kindFilter === "all" || r.items.some((i) => i.kind === kindFilter)) && (!q.trim() || r.team.includes(q.trim()) || r.challenge.includes(q.trim())));
+  const chipCls = (on: boolean) => `rounded-full px-3 py-1 text-[12.5px] font-semibold border ${on ? "bg-brand-purple text-white border-brand-purple" : "bg-white text-ink-700 border-ink-200"}`;
 
   async function post(body: Record<string, unknown>) {
     const res = await fetch("/api/admin/hackathon/review-requests", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -119,8 +126,40 @@ export function ReviewRequests({ rows, teams, myEmail }: { rows: ReviewRequestRo
         </div>
       </div>
 
+      {rows.length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap text-[12.5px]" data-testid="rr-filters">
+          {(
+            [
+              ["all", `הכל (${rows.length})`],
+              ["unsent", `לא נשלחו (${unsent})`],
+              ["sent", `נשלחו וממתינות (${rows.filter((r) => statusOf(r) === "sent").length})`],
+              ["responded", `עודכנו (${responded})`],
+              ["overdue", `עבר המועד (${rows.filter((r) => statusOf(r) === "overdue").length})`],
+            ] as const
+          ).map(([k, label]) => (
+            <button key={k} type="button" onClick={() => setStatus(k)} className={chipCls(status === k)}>
+              {label}
+            </button>
+          ))}
+          <span className="text-ink-300">·</span>
+          <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as RequestKind | "all")} className="border border-ink-200 rounded-md px-2 py-1 bg-white">
+            <option value="all">כל סוגי הבקשות</option>
+            {REQUEST_KINDS.map((k) => (
+              <option key={k} value={k}>
+                {KIND_LABEL[k]}
+              </option>
+            ))}
+          </select>
+          <div className="relative ms-auto min-w-[180px]">
+            <Search className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-ink-400" aria-hidden />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש צוות" className="pe-9" data-testid="rr-search" />
+          </div>
+        </div>
+      )}
       {rows.length === 0 ? (
         <p className="text-[13px] text-ink-500">אין בקשות עדיין.</p>
+      ) : shown.length === 0 ? (
+        <p className="text-[13px] text-ink-500">אין בקשות שמתאימות לסינון.</p>
       ) : (
         <div className="overflow-x-auto -mx-1">
           <table className="w-full text-[13px] min-w-[860px]">
@@ -134,11 +173,11 @@ export function ReviewRequests({ rows, teams, myEmail }: { rows: ReviewRequestRo
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {shown.map((r) => {
                 const overdue = !r.respondedAt && new Date(r.dueAt).getTime() < now;
-                const status = r.respondedAt ? "responded" : overdue ? "overdue" : r.sentAt ? "sent" : "unsent";
+                const rowStatus = statusOf(r);
                 return (
-                  <tr key={r.id} className="border-b border-ink-100 align-top" data-testid="rr-row" data-team={r.teamKey} data-status={status}>
+                  <tr key={r.id} className="border-b border-ink-100 align-top" data-testid="rr-row" data-team={r.teamKey} data-status={rowStatus}>
                     <td className="py-2.5 px-1.5">
                       <div className="font-semibold text-ink-900">{r.team}</div>
                       <div className="text-[12px] text-ink-500">

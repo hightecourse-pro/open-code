@@ -1,6 +1,8 @@
 "use client";
 
-import { Badge, Button } from "@/components/ui";
+import { useState } from "react";
+import { Search } from "lucide-react";
+import { Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 export interface SummaryJudgeScore {
@@ -28,6 +30,22 @@ const RECOMMEND = 3;
  * and the rank - the top three per challenge marked as recommended finalists.
  */
 export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; challenges: { key: string; short: string; emoji: string }[] }) {
+  const [q, setQ] = useState("");
+  const [only, setOnly] = useState("all");
+  const [sort, setSort] = useState<"rank" | "average" | "auto" | "team">("rank");
+  const visible = rows.filter((r) => (only === "all" || r.challengeKey === only) && (!q.trim() || r.team.includes(q.trim())));
+  const order = (a: SummaryRow, b: SummaryRow) => {
+    switch (sort) {
+      case "average":
+        return (b.average ?? -1) - (a.average ?? -1) || a.team.localeCompare(b.team, "he");
+      case "auto":
+        return (b.auto ?? -1) - (a.auto ?? -1) || a.team.localeCompare(b.team, "he");
+      case "team":
+        return a.team.localeCompare(b.team, "he");
+      default:
+        return (a.rank ?? 999) - (b.rank ?? 999) || (b.average ?? -1) - (a.average ?? -1);
+    }
+  };
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const judgeNames = [...new Set(rows.flatMap((r) => r.judges.map((j) => j.name)))];
@@ -65,8 +83,28 @@ export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; chall
           ייצוא ציונים CSV
         </Button>
       </div>
+      <div className="flex items-center gap-2 flex-wrap text-[12.5px]">
+        <button type="button" onClick={() => setOnly("all")} className={cn("rounded-full px-3 py-1 font-semibold border", only === "all" ? "bg-brand-purple text-white border-brand-purple" : "bg-white text-ink-700 border-ink-200")}>
+          כל האתגרים
+        </button>
+        {challenges.map((c) => (
+          <button key={c.key} type="button" onClick={() => setOnly(c.key)} className={cn("rounded-full px-3 py-1 font-semibold border", only === c.key ? "bg-brand-purple text-white border-brand-purple" : "bg-white text-ink-700 border-ink-200")}>
+            {c.emoji} {c.short}
+          </button>
+        ))}
+        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="border border-ink-200 rounded-md px-2 py-1 bg-white" data-testid="summary-sort">
+          <option value="rank">לפי דירוג</option>
+          <option value="average">לפי ממוצע השופטות</option>
+          <option value="auto">לפי הבדיקה האוטומטית</option>
+          <option value="team">לפי שם</option>
+        </select>
+        <div className="relative ms-auto min-w-[200px]">
+          <Search className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-ink-400" aria-hidden />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש צוות" className="pe-9" data-testid="summary-search" />
+        </div>
+      </div>
       {challenges.map((c) => {
-        const group = rows.filter((r) => r.challengeKey === c.key).sort((a, b) => (a.rank ?? 999) - (b.rank ?? 999) || (b.average ?? -1) - (a.average ?? -1));
+        const group = visible.filter((r) => r.challengeKey === c.key).sort(order);
         if (group.length === 0) return null;
         const judgeCols = [...new Map(group.flatMap((r) => r.judges.map((j) => [j.id, j.name] as const))).entries()];
         return (
