@@ -64,9 +64,12 @@ export async function uploadAttachment(
   const path = `${profile.id}/${crypto.randomUUID()}${ext}`;
 
   const supabase = await createClient();
+  // storage-js sends a Blob as multipart and takes the part's type from the Blob itself, ignoring `contentType` -
+  // a script arriving as application/octet-stream must be re-wrapped as text/plain or the bucket refuses it.
+  const body = mime === file.type ? file : new Blob([await file.arrayBuffer()], { type: mime });
   const { error: upErr } = await supabase.storage
     .from("attachments")
-    .upload(path, file, { contentType: mime });
+    .upload(path, body, { contentType: mime });
   if (upErr) {
     console.error("[attachments] upload failed:", upErr.message);
     return { ok: false, error: "ההעלאה נכשלה. נסי שוב." };
