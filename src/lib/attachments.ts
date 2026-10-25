@@ -20,7 +20,11 @@ export const FILE_MIMES = [
   "application/pdf",
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
 ];
+/** Script files the forum takes by EXTENSION (the browser sends no useful MIME for them); stored as text/plain. */
+export const TEXT_EXTENSIONS = [".ahk"];
+export const TEXT_MIME = "text/plain";
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
 

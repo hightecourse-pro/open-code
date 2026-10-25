@@ -130,28 +130,65 @@ export async function syncVideosToDrive(budgetMs = 240_000): Promise<DriveSyncRe
 }
 
 /**
- * Every judge gets read access to the mirrored videos of the challenges she
- * was assigned to - never to the others. Idempotent through
- * hackathon_drive_shares; an unassigned judge gets nothing yet.
+ * Who sees the videos in Drive (the owner, 25/10): the WHOLE videos folder is
+ * shared (read) with every assigned judge and with every active admin - the
+ * team browses freely; and each mirrored video is still shared personally
+ * with the judges of its challenge (a judge who is not a Google account sees
+ * the direct player through the site). Idempotent through
+ * hackathon_drive_shares (the folder's id counts as a "file" there).
  */
 export async function shareVideosWithJudges(budgetMs = 60_000): Promise<{ shared: number; errors: string[] }> {
   const started = Date.now();
   const admin = createAdminClient();
-  const [{ data: judges }, { data: subs }, { data: done }] = await Promise.all([
+  const [{ data: judges }, { data: subs }, { data: done }, { data: admins }, folder] = await Promise.all([
     admin.from("hackathon_judges").select("profile_id, challenge_keys"),
     admin.from("hackathon_submissions").select("team_key, challenge_key, drive_file_id").not("drive_file_id", "is", null),
     admin.from("hackathon_drive_shares").select("drive_file_id, profile_id"),
+    admin.from("profiles").select("id").eq("role", "admin").eq("status", "active"),
+    getDriveFolder(),
   ]);
-  if (!judges?.length || !subs?.length) return { shared: 0, errors: [] };
-  const { data: mails } = await admin.rpc("member_emails", { p_ids: judges.map((j) => j.profile_id) });
+  const people = [...new Set([...(judges ?? []).filter((j) => (j.challenge_keys ?? []).length > 0).map((j) => j.profile_id), ...(admins ?? []).map((a) => a.id)])];
+  if (!people.length) return { shared: 0, errors: [] };
+  const { data: mails } = await admin.rpc("member_emails", { p_ids: people });
   const emailOf = new Map(((mails ?? []) as { id: string; email: string | null }[]).map((m) => [m.id, m.email]));
   const had = new Set((done ?? []).map((d) => `${d.drive_file_id}|${d.profile_id}`));
   const errors: string[] = [];
+  const notGoogle = new Set<string>();
   let shared = 0;
+  // 1. the folder itself - judges with an assignment + the whole admin team
+  if (folder) {
+    for (const id of people) {
+      const email = emailOf.get(id);
+      if (!email || had.has(`${folder.id}|${id}`)) continue;
+      if (Date.now() - started > budgetMs) return { shared, errors };
+      try {
+        await grantReadAccess(folder.id, email, AS());
+        await admin.from("hackathon_drive_shares").insert({ drive_file_id: folder.id, profile_id: id });
+        had.add(`${folder.id}|${id}`);
+        shared++;
+      } catch (e) {
+        if (e instanceof NotAGoogleAccountError) {
+          notGoogle.add(id);
+          errors.push(`${email}: לא חשבון גוגל - אי אפשר לשתף את התיקייה (היא תראה את הנגן הישיר באתר)`);
+        } else if (e instanceof Error && /already|exists|duplicate/i.test(e.message)) {
+          // a member of the shared drive already (the owner, a manager) - nothing to grant, remember it
+          await admin.from("hackathon_drive_shares").insert({ drive_file_id: folder.id, profile_id: id });
+          had.add(`${folder.id}|${id}`);
+          shared++;
+        } else if (e instanceof Error && /sufficient permissions/i.test(e.message)) {
+          // Adding MEMBERS to a shared drive needs the Manager role; a content manager can only share files.
+          errors.push("שיתוף התיקייה כולה נכשל: חשבון השירות הוא ״מנהל תוכן״ בכונן השיתופי, ולהוספת חברות לכונן צריך ״מנהל״. בניהול הכונן בדרייב: חברים ← חשבון השירות ← ״מנהל״, ואז סנכרון שוב. בינתיים כל סרטון משותף אישית.");
+          break;
+        } else errors.push(`${email}: ${e instanceof Error ? e.message.slice(0, 120) : "שגיאה"}`);
+      }
+    }
+  }
+  // 2. each video, personally, with the judges of its challenge
+  if (!judges?.length || !subs?.length) return { shared, errors };
   for (const j of judges) {
     const email = emailOf.get(j.profile_id);
     const keys = j.challenge_keys ?? [];
-    if (!email || keys.length === 0) continue;
+    if (!email || keys.length === 0 || notGoogle.has(j.profile_id)) continue;
     for (const s of subs) {
       if (!s.drive_file_id || !keys.includes(s.challenge_key) || had.has(`${s.drive_file_id}|${j.profile_id}`)) continue;
       if (Date.now() - started > budgetMs) return { shared, errors };
