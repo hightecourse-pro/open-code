@@ -10,6 +10,8 @@ import { getSiteUrl } from "@/lib/site";
 import { runArenaDigest } from "@/lib/arena-digest";
 import { setSubmissionsClosure } from "@/lib/hackathon-submission";
 import { listDriveTargets, setDriveFolder, shareVideosWithJudges } from "@/lib/hackathon-drive";
+import { judgeAccessFor } from "@/lib/judging";
+import { REQUEST_KINDS, deleteReviewRequest, tomorrowEndOfDayIsrael, upsertReviewRequest, type RequestKind } from "@/lib/hackathon-review-requests";
 
 const BUCKET = "hackathon";
 
@@ -169,4 +171,37 @@ export async function pushArenaToMentors(): Promise<{ error?: string; info?: str
   const r = await runArenaDigest({ everyone: true });
   if (r.open === 0) return { info: "אין שאלות פתוחות לדחוף." };
   return { info: `נשלח ל-${r.sent} מנטוריות${r.skipped ? ` · ${r.skipped} נחסמו (מגן סטייג'ינג)` : ""}${r.failed ? ` · ${r.failed} נכשלו` : ""}` };
+}
+
+/** The owner alone - an admin who was appointed a judge does not see the requests (they hold teams' demo credentials). */
+async function ownerOrError(): Promise<{ id: string; error?: string }> {
+  const me = await requireRole("admin");
+  if ((await judgeAccessFor(me)).restricted) return { id: me.id, error: "בקשות ההשלמה פתוחות רק לצוות שלא שופט." };
+  return { id: me.id };
+}
+
+/** בקשת השלמה חדשה (the owner, 24/10): a team, what is missing, in her words. The deadline is tomorrow 23:59. */
+export async function createReviewRequest(teamKey: string, kind: string, detail: string): Promise<{ error?: string }> {
+  const me = await ownerOrError();
+  if (me.error) return { error: me.error };
+  if (!(REQUEST_KINDS as string[]).includes(kind)) return { error: "סוג הבקשה לא מוכר." };
+  const text = detail.trim().slice(0, 600);
+  if (!text) return { error: "כתבי מה חסר." };
+  const { data: sub } = await createAdminClient().from("hackathon_submissions").select("team_key").eq("team_key", teamKey).maybeSingle();
+  if (!sub) return { error: "לא נמצאה הגשה לצוות הזה." };
+  const r = await upsertReviewRequest(teamKey, [{ kind: kind as RequestKind, detail: text }], tomorrowEndOfDayIsrael(), me.id);
+  if (r.error) return r;
+  revalidatePath("/admin/hackathon");
+  revalidatePath("/hackathon/submit");
+  return {};
+}
+
+export async function removeReviewRequest(id: string): Promise<{ error?: string }> {
+  const me = await ownerOrError();
+  if (me.error) return { error: me.error };
+  const r = await deleteReviewRequest(id);
+  if (r.error) return r;
+  revalidatePath("/admin/hackathon");
+  revalidatePath("/hackathon/submit");
+  return {};
 }

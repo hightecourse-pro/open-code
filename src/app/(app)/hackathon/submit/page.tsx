@@ -11,6 +11,8 @@ import { VideoUploader } from "./video-uploader";
 import { ReflectionForm } from "./reflection-form";
 import { FinalSubmit } from "./final-submit";
 import { LockedBanner, LockedView } from "./locked-view";
+import { loadReviewRequest } from "@/lib/hackathon-review-requests";
+import { ReviewRequestCard } from "./review-request-card";
 
 export const metadata: Metadata = { title: "הגשת התוצרים - האקתון" };
 export const dynamic = "force-dynamic";
@@ -44,7 +46,7 @@ export default async function HackathonSubmitPage() {
     );
   }
 
-  const [submission, reflections, closure] = await Promise.all([loadSubmission(team.teamKey), loadReflections(team.members.map((m) => m.id)), getSubmissionsClosure()]);
+  const [submission, reflections, closure, request] = await Promise.all([loadSubmission(team.teamKey), loadReflections(team.members.map((m) => m.id)), getSubmissionsClosure(), loadReviewRequest(team.teamKey)]);
   const locked = closure.closedAt;
   const mine = reflections.get(profile.id) ?? null;
   const partner = team.members.find((m) => m.id !== profile.id) ?? null;
@@ -105,6 +107,9 @@ export default async function HackathonSubmitPage() {
           </span>
         </div>
       </section>
+
+      {/* בקשת השלמה מצוות ההאקתון (24/10) - above everything, open even after the lock */}
+      {request && <ReviewRequestCard request={request} />}
 
       {locked && <LockedBanner closedAt={locked} />}
 

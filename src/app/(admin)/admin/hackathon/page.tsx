@@ -19,6 +19,8 @@ import { ArenaOverview } from "./arena-overview";
 import { DriveSync } from "./drive-sync";
 import { getDriveFolder } from "@/lib/hackathon-drive";
 import { driveFileId } from "@/lib/drive";
+import { loadReviewRequests } from "@/lib/hackathon-review-requests";
+import { ReviewRequests, type RequestTeam, type ReviewRequestRow } from "./review-requests";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "האקתון" };
@@ -65,6 +67,19 @@ export default async function AdminHackathonPage() {
     for (const m of (mails ?? []) as { id: string; email: string | null }[]) emailOf.set(m.id, m.email);
   }
   const submissionOf = new Map(submissions.map((s) => [s.teamKey, s]));
+
+  // בקשות השלמה (24/10) - the owner's view only; the rows hold teams' demo credentials
+  const requests = full ? await loadReviewRequests() : [];
+  const requestRows: ReviewRequestRow[] = requests.map((r) => {
+    const sub = submissionOf.get(r.teamKey);
+    return {
+      ...r,
+      team: (sub?.members.map((m) => m.name) ?? r.teamKey.split("+").map((id) => nameOf.get(id)?.name ?? id.slice(0, 8))).join(" + "),
+      challenge: sub?.challengeShort ?? "",
+    };
+  });
+  const requestTeams: RequestTeam[] = submissions.filter((s) => s.submittedAt).map((s) => ({ teamKey: s.teamKey, team: s.members.map((m) => m.name).join(" + "), challenge: s.challengeShort }));
+  const myEmail = full ? (((await admin.rpc("member_emails", { p_ids: [me.id] })).data as { email: string | null }[] | null)?.[0]?.email ?? null) : null;
   const rows: RegistrationRow[] = (regs ?? []).map((r) => {
     const sub = submissionOf.get(teamKeyOf(r.profile_id, r.partner_profile_id, !!r.partner_confirmed_at)) ?? submissionOf.get(r.profile_id) ?? null;
     return {
@@ -141,6 +156,7 @@ export default async function AdminHackathonPage() {
             />
           </section>
           <JudgingSummary rows={summary} challenges={challengeList} />
+          <ReviewRequests rows={requestRows} teams={requestTeams} myEmail={myEmail} />
           <details className="bg-white border border-ink-200 rounded-[18px] shadow-sm">
             <summary className="list-none cursor-pointer px-5 py-4 font-display text-base font-bold [&::-webkit-details-marker]:hidden">
               כל ההגשות בפירוט - הסרטון, מה שנכתב, הבדיקה האוטומטית, הציונים וההערות של כל שופטת <span className="text-ink-400 text-[13px] font-normal">(לחיצה לפתיחה)</span>

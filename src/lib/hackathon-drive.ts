@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { NotAGoogleAccountError, ensureFolder, grantReadAccess, listSharedFolders, trashDriveFile, uploadToFolder } from "@/lib/drive-api";
-import { driveFileId } from "@/lib/drive";
+import { NotAGoogleAccountError, copyDriveFile, driveFileMeta, ensureFolder, grantReadAccess, listFolderVideos, listSharedFolders, trashDriveFile, uploadToFolder } from "@/lib/drive-api";
+import { driveFileId, isDriveFolder } from "@/lib/drive";
 import { withPrevSurnames } from "@/lib/prev-surname";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import type { Json } from "@/types/database";
@@ -80,6 +80,7 @@ export async function syncVideosToDrive(budgetMs = 240_000): Promise<DriveSyncRe
     .select("team_key, challenge_key, video_path, video_url, drive_file_id")
     .not("submitted_at", "is", null);
   const mirrorable = (subs ?? []).filter((s) => s.video_path || (s.video_url && driveFileId(s.video_url)));
+  const fileSafeName = (challengeKey: string, team: string, ext: string) => `${fileSafe(CHALLENGES.find((c) => c.key === challengeKey)?.short ?? challengeKey)} - ${fileSafe(team)}.${ext}`;
   const pending = mirrorable.filter((s) => !s.drive_file_id);
   const errors: string[] = [];
   if (!folder) return { total: mirrorable.length, done: mirrorable.length - pending.length, mirrored: 0, shared: 0, remaining: pending.length, errors: ["לא נבחרה תיקייה בדרייב."] };
@@ -89,28 +90,32 @@ export async function syncVideosToDrive(budgetMs = 240_000): Promise<DriveSyncRe
     if (Date.now() - started > budgetMs) break;
     const team = names.get(s.team_key) ?? s.team_key.slice(0, 8);
     try {
-      let bytes: Buffer;
+      if (!s.video_path) {
+        // A Drive link (a file, or a folder holding the video): copy INSIDE Drive - the service account reads what is
+        // shared by link, and the copy belongs to the shared drive. No download, no size limit.
+        const id = driveFileId(s.video_url ?? "");
+        if (!id) throw new Error("קישור דרייב לא מזוהה");
+        let src = isDriveFolder(s.video_url ?? "") ? (await listFolderVideos(id, AS()))[0] ?? null : await driveFileMeta(id, AS());
+        if (src && !src.mimeType.startsWith("video/") && !/\.(mp4|mov|webm|m4v|mkv)$/i.test(src.name)) src = isDriveFolder(s.video_url ?? "") ? null : src;
+        if (!src) throw new Error(isDriveFolder(s.video_url ?? "") ? "בתיקייה שבקישור אין סרטון, או שהיא לא פתוחה ״לכל מי שיש את הקישור״" : "הקישור לדרייב לא פתוח ״לכל מי שיש את הקישור״ - הצוות צריך לפתוח אותו");
+        const ext = (src.name.match(/\.(mp4|mov|webm|m4v|mkv)$/i)?.[1] ?? (src.mimeType.includes("webm") ? "webm" : src.mimeType.includes("quicktime") ? "mov" : "mp4")).toLowerCase();
+        const fileId = await copyDriveFile(src.id, folder.id, fileSafeName(s.challenge_key, team, ext), AS());
+        await admin.from("hackathon_submissions").update({ drive_file_id: fileId }).eq("team_key", s.team_key);
+        mirrored++;
+        continue;
+      }
       let mime = "video/mp4";
       let ext = "mp4";
-      if (s.video_path) {
+      let bytes: Buffer;
+      {
         const { data, error } = await admin.storage.from("hackathon").download(s.video_path);
         if (error || !data) throw new Error("הקובץ לא נמצא באחסון");
         bytes = Buffer.from(await data.arrayBuffer());
         mime = data.type && data.type !== "application/octet-stream" ? data.type : mime;
         ext = s.video_path.split(".").pop()?.toLowerCase() ?? ext;
-      } else {
-        const id = driveFileId(s.video_url ?? "");
-        if (!id) throw new Error("קישור דרייב לא מזוהה");
-        const r = await fetch(`https://drive.google.com/uc?export=download&id=${encodeURIComponent(id)}&confirm=t`, { redirect: "follow", signal: AbortSignal.timeout(150_000) });
-        const ct = r.headers.get("content-type") ?? "";
-        if (!r.ok || ct.includes("text/html")) throw new Error("הקישור לדרייב לא פתוח לכולם - הצוות צריך לפתוח ״לכל מי שיש את הקישור״");
-        bytes = Buffer.from(await r.arrayBuffer());
-        mime = ct || mime;
-        ext = mime.includes("webm") ? "webm" : mime.includes("quicktime") ? "mov" : "mp4";
       }
       if (bytes.length === 0) throw new Error("קובץ ריק");
-      const challenge = CHALLENGES.find((c) => c.key === s.challenge_key)?.short ?? s.challenge_key;
-      const fileId = await uploadToFolder(folder.id, `${fileSafe(challenge)} - ${fileSafe(team)}.${ext}`, mime, bytes, AS());
+      const fileId = await uploadToFolder(folder.id, fileSafeName(s.challenge_key, team, ext), mime, bytes, AS());
       await admin.from("hackathon_submissions").update({ drive_file_id: fileId }).eq("team_key", s.team_key);
       mirrored++;
     } catch (e) {
@@ -189,6 +194,25 @@ export async function ensureCatalogFolder(parentId: string | null): Promise<Driv
 
 export async function uploadCatalogImage(folderId: string, name: string, mime: string, bytes: Buffer): Promise<string> {
   return uploadToFolder(folderId, name, mime, bytes, AS());
+}
+
+/**
+ * The team replaced or removed her video (25/10): the Drive copy judges were
+ * pointed at is stale. Forget it so the next sync copies the new one; trash
+ * the old copy when Drive writes are allowed here (never fatal - a failed
+ * trash leaves a spare file, a kept id would leave judges on the wrong video).
+ */
+export async function dropStaleMirror(teamKey: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data: s } = await admin.from("hackathon_submissions").select("drive_file_id").eq("team_key", teamKey).maybeSingle();
+  if (!s?.drive_file_id) return;
+  try {
+    await trashDriveFile(s.drive_file_id, AS());
+  } catch (e) {
+    console.log(`[hackathon-drive] stale mirror ${s.drive_file_id} not trashed: ${e instanceof Error ? e.message : e}`);
+  }
+  await admin.from("hackathon_drive_shares").delete().eq("drive_file_id", s.drive_file_id);
+  await admin.from("hackathon_submissions").update({ drive_file_id: null }).eq("team_key", teamKey);
 }
 
 /** Undo one mirror (a test, a wrong file): trash the Drive copy and forget it. */
