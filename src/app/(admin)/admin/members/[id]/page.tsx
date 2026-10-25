@@ -45,6 +45,8 @@ import { groupBySection } from "@/lib/profile-sections";
 import { releasedByTeam, swapEligibleAt } from "@/lib/course-library";
 import type { ConfigQuestion, QuestionScope } from "@/types/database";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
+import { loadMemberApplications, loadMemberCoordinatorReviews, loadMemberHackathon } from "@/lib/member-overview";
+import { MemberApplications, MemberCoordinatorOpinion, MemberHackathonCard } from "./member-trail";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
 
@@ -172,6 +174,8 @@ export default async function AdminMemberProfilePage({
   const isVip = crm?.is_vip ?? profile.is_vip ?? false;
   const vipReason = crm?.vip_reason ?? null;
   const internalNotes = crm?.internal_notes ?? profile.internal_notes ?? null;
+  // Her trail for the team (the owner, 25/10): applications + answers + sent-to-employer, the coordinator's opinion, the hackathon links.
+  const [memberApplications, coordinatorReviews, memberHackathon] = await Promise.all([loadMemberApplications(id), loadMemberCoordinatorReviews(id), loadMemberHackathon(id)]);
 
   // Contact email lives in auth, not in profiles.
   const adminClient = createAdminClient();
@@ -716,13 +720,18 @@ export default async function AdminMemberProfilePage({
         </div>
       </div>
 
-      {/* Internal notes / CRM */}
+      {/* Internal notes / CRM - the one note that follows her into every application (the owner, 25/10) */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
-        <h3 className="font-display text-base font-bold mb-3 flex items-center gap-1.5">
-          <StickyNote size={16} className="text-brand-purple" /> הערות פנימיות
+        <h3 className="font-display text-base font-bold mb-1 flex items-center gap-1.5">
+          <StickyNote size={16} className="text-brand-purple" /> הערה פנימית על החברה
         </h3>
+        <p className="text-[12.5px] text-ink-500 mb-3">מה שכתוב כאן מוצג לצוות בכל ההגשות שלה - במרכז הבדיקה של כל משרה וברשימת ההגשות. לא למעסיקים ולא לה.</p>
         <MemberCrm id={profile.id} isVip={isVip} vipReason={vipReason} notes={internalNotes} />
       </div>
+
+      <MemberCoordinatorOpinion reviews={coordinatorReviews} />
+      <MemberApplications rows={memberApplications} note={internalNotes} />
+      <MemberHackathonCard h={memberHackathon} />
 
       {/* CV files */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
