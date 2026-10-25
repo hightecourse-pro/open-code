@@ -113,7 +113,7 @@ export function AttachmentPicker({ children, resetEpoch = 0 }: { children: React
         ref={fileRef}
         type="file"
         multiple
-        accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx"
+        accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx,.ahk"
         className="hidden"
         onChange={(e) => {
           if (e.target.files?.length) uploadFiles(e.target.files);

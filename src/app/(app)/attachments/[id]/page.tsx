@@ -7,6 +7,7 @@ import { requireProfile } from "@/lib/auth";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { IMAGE_MIMES } from "@/lib/attachments";
 import { DocxViewer } from "@/components/patterns/docx-viewer";
+import { TextAttachmentViewer } from "@/components/patterns/text-attachment-viewer";
 
 export const metadata: Metadata = { title: "צפייה בקובץ" };
 export const dynamic = "force-dynamic";
@@ -47,7 +48,9 @@ export default async function AttachmentViewPage({ params }: { params: Promise<{
       ? "pdf"
       : a.mime === DOCX_MIME
         ? "docx"
-        : "other";
+        : a.mime === "text/plain"
+          ? "text"
+          : "other";
 
   return (
     <div className="max-w-5xl mx-auto flex flex-col gap-3">
@@ -94,6 +97,7 @@ export default async function AttachmentViewPage({ params }: { params: Promise<{
         />
       )}
       {kind === "docx" && <DocxViewer url={viewUrl} />}
+      {kind === "text" && <TextAttachmentViewer url={viewUrl} fileName={a.file_name} />}
       {kind === "other" && (
         <div className="bg-white border border-ink-200 rounded-[18px] p-6 text-[14px] text-ink-700">
           לקובץ מסוג זה אין תצוגה בדפדפן - אפשר להוריד אותו בכפתור למעלה.

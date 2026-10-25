@@ -9,6 +9,8 @@ import {
   IMAGE_MIMES,
   MAX_FILE_BYTES,
   MAX_IMAGE_BYTES,
+  TEXT_EXTENSIONS,
+  TEXT_MIME,
 } from "@/lib/attachments";
 
 export interface UploadedAttachment {
@@ -39,10 +41,14 @@ export async function uploadAttachment(
   if (!(file instanceof File) || file.size === 0) {
     return { ok: false, error: "לא הגיע קובץ." };
   }
-  if (!FILE_MIMES.includes(file.type)) {
-    return { ok: false, error: "אפשר לצרף תמונות (PNG/JPG/WebP/GIF), PDF או Word." };
+  // An AutoHotkey script (.ahk, the owner 25/10) arrives with an empty or generic type - it is plain text.
+  const extOf = /\.[A-Za-z0-9]{1,8}$/.exec(file.name)?.[0].toLowerCase() ?? "";
+  const isTextScript = TEXT_EXTENSIONS.includes(extOf) && (!file.type || /^(text\/plain|application\/octet-stream|application\/x-autohotkey)$/i.test(file.type));
+  const mime = isTextScript ? TEXT_MIME : file.type;
+  if (!FILE_MIMES.includes(mime)) {
+    return { ok: false, error: "אפשר לצרף תמונות (PNG/JPG/WebP/GIF), PDF, Word או סקריפט AHK." };
   }
-  const isImage = IMAGE_MIMES.includes(file.type);
+  const isImage = IMAGE_MIMES.includes(mime);
   const cap = isImage ? MAX_IMAGE_BYTES : MAX_FILE_BYTES;
   if (file.size > cap) {
     return { ok: false, error: `הקובץ גדול מדי - עד ${isImage ? "5MB לתמונה" : "10MB לקובץ"}.` };
@@ -60,7 +66,7 @@ export async function uploadAttachment(
   const supabase = await createClient();
   const { error: upErr } = await supabase.storage
     .from("attachments")
-    .upload(path, file, { contentType: file.type });
+    .upload(path, file, { contentType: mime });
   if (upErr) {
     console.error("[attachments] upload failed:", upErr.message);
     return { ok: false, error: "ההעלאה נכשלה. נסי שוב." };
@@ -72,7 +78,7 @@ export async function uploadAttachment(
       profile_id: profile.id,
       file_path: path,
       file_name: safeName,
-      mime: file.type,
+      mime,
       size_bytes: file.size,
     })
     .select("id")
@@ -91,7 +97,7 @@ export async function uploadAttachment(
     attachment: {
       id: row.id,
       fileName: safeName,
-      mime: file.type,
+      mime,
       sizeBytes: file.size,
       isImage,
       previewUrl: netfreeSafeUrl(signed?.signedUrl ?? null),
