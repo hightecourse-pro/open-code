@@ -175,6 +175,10 @@ export async function shareVideosWithJudges(budgetMs = 60_000): Promise<{ shared
           await admin.from("hackathon_drive_shares").insert({ drive_file_id: folder.id, profile_id: id });
           had.add(`${folder.id}|${id}`);
           shared++;
+        } else if (e instanceof Error && /sufficient permissions/i.test(e.message)) {
+          // Adding MEMBERS to a shared drive needs the Manager role; a content manager can only share files.
+          errors.push("שיתוף התיקייה כולה נכשל: חשבון השירות הוא ״מנהל תוכן״ בכונן השיתופי, ולהוספת חברות לכונן צריך ״מנהל״. בניהול הכונן בדרייב: חברים ← חשבון השירות ← ״מנהל״, ואז סנכרון שוב. בינתיים כל סרטון משותף אישית.");
+          break;
         } else errors.push(`${email}: ${e instanceof Error ? e.message.slice(0, 120) : "שגיאה"}`);
       }
     }
