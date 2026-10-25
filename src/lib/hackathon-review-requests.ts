@@ -216,6 +216,17 @@ export async function sendSampleReviewRequest(kind: RequestKind, to: string, fir
   return { ok: r.ok, error: r.error, subject: mail.subject };
 }
 
+/**
+ * A preview of one real request, to the owner's own address (25/10: ״שלח לי את
+ * מיילי הבקשה לעדכון״) - the caller supplies the team's words, nothing is
+ * stored, nothing reaches the team.
+ */
+export async function sendPreviewReviewRequest(args: { to: string; firstName: string; isPair: boolean; challengeKey: string; items: RequestItem[]; label: string; dueAt: string }): Promise<{ ok: boolean; error?: string; subject: string }> {
+  const mail = buildReviewRequestMail({ items: args.items, dueAt: args.dueAt }, { firstName: args.firstName }, args.challengeKey, args.isPair);
+  const r = await sendResendEmail({ to: args.to, subject: `[תצוגה מקדימה - ${args.label}] ${mail.subject}`, html: mail.html, essential: true });
+  return { ok: r.ok, error: r.error, subject: mail.subject };
+}
+
 /** The team's answer: stored on the request, and the corrected links applied to the submission itself. */
 export async function saveReviewResponse(teamKey: string, byId: string, response: ReviewResponse): Promise<{ error?: string }> {
   const admin = createAdminClient();
