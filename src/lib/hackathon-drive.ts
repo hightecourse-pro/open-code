@@ -196,6 +196,25 @@ export async function uploadCatalogImage(folderId: string, name: string, mime: s
   return uploadToFolder(folderId, name, mime, bytes, AS());
 }
 
+/**
+ * The team replaced or removed her video (25/10): the Drive copy judges were
+ * pointed at is stale. Forget it so the next sync copies the new one; trash
+ * the old copy when Drive writes are allowed here (never fatal - a failed
+ * trash leaves a spare file, a kept id would leave judges on the wrong video).
+ */
+export async function dropStaleMirror(teamKey: string): Promise<void> {
+  const admin = createAdminClient();
+  const { data: s } = await admin.from("hackathon_submissions").select("drive_file_id").eq("team_key", teamKey).maybeSingle();
+  if (!s?.drive_file_id) return;
+  try {
+    await trashDriveFile(s.drive_file_id, AS());
+  } catch (e) {
+    console.log(`[hackathon-drive] stale mirror ${s.drive_file_id} not trashed: ${e instanceof Error ? e.message : e}`);
+  }
+  await admin.from("hackathon_drive_shares").delete().eq("drive_file_id", s.drive_file_id);
+  await admin.from("hackathon_submissions").update({ drive_file_id: null }).eq("team_key", teamKey);
+}
+
 /** Undo one mirror (a test, a wrong file): trash the Drive copy and forget it. */
 export async function unmirrorVideo(teamKey: string): Promise<void> {
   const admin = createAdminClient();

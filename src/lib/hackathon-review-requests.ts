@@ -7,6 +7,7 @@ import type { Json } from "@/types/database";
 import { sendResendEmail } from "@/lib/email/resend";
 import { hackathonReviewRequestEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
+import { dropStaleMirror } from "@/lib/hackathon-drive";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 
 export type { RequestItem, RequestKind, ReviewRequest, ReviewResponse } from "@/lib/hackathon-review-shared";
@@ -222,12 +223,12 @@ export async function saveReviewResponse(teamKey: string, byId: string, response
   if (!req) return { error: "אין בקשה פתוחה לצוות שלך." };
   const { error } = await admin.from("hackathon_review_requests").update({ response: response as unknown as Json, responded_at: new Date().toISOString(), responded_by: byId }).eq("id", req.id);
   if (error) return { error: error.message };
-  const patch: { product_url?: string; repo_url?: string; video_url?: string; drive_file_id?: null } = {};
+  const patch: { product_url?: string; repo_url?: string; video_url?: string } = {};
   if (response.product_url) patch.product_url = response.product_url;
   if (response.repo_url) patch.repo_url = response.repo_url;
   if (response.video_url) {
     patch.video_url = response.video_url;
-    patch.drive_file_id = null; // the old mirror (if any) no longer matches - the sync copies the new link
+    await dropStaleMirror(teamKey); // the old copy no longer matches - the sync copies the new link
   }
   if (Object.keys(patch).length) {
     const { error: e2 } = await admin.from("hackathon_submissions").update(patch).eq("team_key", teamKey);
