@@ -9,7 +9,7 @@ import { ScoreForm } from "./score-form";
 import { LazyVideo } from "@/components/patterns/lazy-video";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
-const RICH = "text-[13px] leading-relaxed [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
+const RICH = "text-[13px] leading-relaxed break-words [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
 // A report is data written by the review tooling - a status the map does not know renders as "skip" rather than
 // crashing the admin page (24/10: "unknown" took /admin/hackathon down for the owner).
 const STATUS: Record<AutoCheck["status"], { icon: string; cls: string }> = {
@@ -49,12 +49,18 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
   );
 }
 
-/** One project: header + links, the video in the page, the automated report (owner only), what the team wrote, the score form. */
-export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e: JudgingEntry; viewerId: string; manage: boolean; lazyVideo?: boolean }) {
+/**
+ * One project: header + links, the video in the page, the automated report (owner only), what the team wrote, the score form.
+ * `sideBySideFrom`: the breakpoint from which the report sits beside the team's text. The desk - a rail on the side -
+ * leaves a narrow card on a laptop, so there the two columns start at xl; below that the report stacks above (26/10:
+ * on the owner's laptop the report's rows overflowed their column and were drawn over the team's text).
+ */
+export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false, sideBySideFrom = "lg" }: { e: JudgingEntry; viewerId: string; manage: boolean; lazyVideo?: boolean; sideBySideFrom?: "lg" | "xl" }) {
   const s = e.submission;
   const report = e.report;
   const checks = report?.checks ?? [];
   const passed = checks.filter((c) => c.status === "pass").length;
+  const cols = sideBySideFrom === "xl" ? { grid: "xl:grid-cols-5", report: "xl:col-span-2", team: "xl:col-span-3" } : { grid: "lg:grid-cols-5", report: "lg:col-span-2", team: "lg:col-span-3" };
   return (
     <article className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden">
       {/* header */}
@@ -98,17 +104,17 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
         </div>
       )}
 
-      <div className={cn("px-5 py-4 grid grid-cols-1 gap-5", manage && "lg:grid-cols-5")}>
+      <div className={cn("px-5 py-4 grid grid-cols-1 gap-5", manage && cols.grid)}>
         {/* the automated report - the owner's view only (23/10); readable (26/10): the score first, a note per criterion, the bottom line */}
         {manage && (
-          <div className="lg:col-span-2 flex flex-col gap-2">
+          <div className={cn("min-w-0 flex flex-col gap-2", cols.report)}>
             <div className="font-mono text-[12px] text-brand-pink-deep">{"// הבדיקה האוטומטית"}</div>
             {report ? <AutoReportPanel report={report} ranAt={e.reportUpdatedAt} passed={passed} checks={checks} /> : <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>}
           </div>
         )}
 
         {/* what they wrote - all of it, open (the owner, 26/10: the judges must see everything the participant answered) */}
-        <div className={cn("flex flex-col gap-3", manage && "lg:col-span-3")}>
+        <div className={cn("min-w-0 flex flex-col gap-3", manage && cols.team)}>
           <details className="group" open data-testid="team-wrote">
             <summary className="list-none cursor-pointer font-mono text-[12px] text-brand-pink-deep [&::-webkit-details-marker]:hidden">{"// מה שהצוות כתב: הארכיטקטורה, הפיצ׳ר המקורי, והשאלות האישיות"} <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span></summary>
             <div className="mt-2 flex flex-col gap-3">
@@ -243,25 +249,26 @@ function AutoReportPanel({ report, ranAt, passed, checks }: { report: AutoReport
         </div>
       )}
       {report.suggested && (
-        <table className="w-full text-[13px]" data-testid="auto-report-criteria">
-          <tbody>
-            {CRITERIA.filter((c) => report.suggested?.[c.key] !== undefined).map((c) => {
-              const v = report.suggested?.[c.key] ?? 0;
-              const ratio = v / c.max;
-              return (
-                <tr key={c.key} className="border-t border-ink-100 align-top">
-                  <td className="py-1.5 pe-2 whitespace-nowrap font-semibold text-ink-900 w-[1%]">{c.label}</td>
-                  <td className="py-1.5 pe-2 whitespace-nowrap tabular-nums w-[1%]">
-                    <span className={cn("inline-block rounded-md px-1.5 py-0.5 font-bold", ratio >= 0.8 ? "bg-tint-mint text-success" : ratio >= 0.5 ? "bg-tint-warm text-[#8C5E0E]" : "bg-[#FDE8E8] text-[#B42318]")}>
-                      {v}/{c.max}
-                    </span>
-                  </td>
-                  <td className="py-1.5 text-ink-700 leading-relaxed">{read.notes[c.key] ?? <span className="text-ink-400">-</span>}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        // Block rows, not a table: a table with no-wrap cells cannot shrink below its content, and in the desk's
+        // narrow column it overflowed into the team's text (the owner's laptop, 26/10). Label + points on one line,
+        // the reasoned note wrapping below - readable at any width.
+        <div className="text-[13px] flex flex-col" data-testid="auto-report-criteria">
+          {CRITERIA.filter((c) => report.suggested?.[c.key] !== undefined).map((c) => {
+            const v = report.suggested?.[c.key] ?? 0;
+            const ratio = v / c.max;
+            return (
+              <div key={c.key} className="border-t border-ink-100 py-1.5 min-w-0" data-testid="auto-report-criterion" data-key={c.key}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-semibold text-ink-900">{c.label}</span>
+                  <span className={cn("inline-block rounded-md px-1.5 py-0.5 font-bold tabular-nums", ratio >= 0.8 ? "bg-tint-mint text-success" : ratio >= 0.5 ? "bg-tint-warm text-[#8C5E0E]" : "bg-[#FDE8E8] text-[#B42318]")}>
+                    {v}/{c.max}
+                  </span>
+                </div>
+                <div className="text-ink-700 leading-relaxed break-words">{read.notes[c.key] ?? <span className="text-ink-400">-</span>}</div>
+              </div>
+            );
+          })}
+        </div>
       )}
       {read.videoNote && (
         <div className="text-[12.5px] text-ink-700 leading-relaxed">

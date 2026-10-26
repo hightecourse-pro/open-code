@@ -123,7 +123,7 @@ export function JudgingDesk({ entries, viewerId, manage }: { entries: JudgingEnt
       </aside>
       <div className="min-w-0 flex flex-col gap-3">
         {nav}
-        <JudgingEntryCard key={current.submission.teamKey} e={current} viewerId={viewerId} manage={manage} />
+        <JudgingEntryCard key={current.submission.teamKey} e={current} viewerId={viewerId} manage={manage} sideBySideFrom="xl" />
         {nav}
         <p className="text-[11.5px] text-ink-400 text-center">מקשי החצים במקלדת מדפדפים בין הפרויקטים.</p>
       </div>
