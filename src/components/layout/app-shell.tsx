@@ -32,7 +32,7 @@ export function AppShell({ children, rail, user }: AppShellProps) {
           <Sidebar user={user} />
         </div>
 
-        <main className="px-6 py-7 md:px-8 w-full max-w-[780px] mx-auto">{children}</main>
+        <main data-shell-main className="px-6 py-7 md:px-8 w-full max-w-[780px] mx-auto">{children}</main>
 
         {rail && (
           <aside className="hidden xl:flex flex-col gap-[18px] px-[22px] py-7 sticky top-0 self-start">
