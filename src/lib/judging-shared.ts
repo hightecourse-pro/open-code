@@ -50,7 +50,39 @@ export interface AutoCheck {
 export interface AutoReport {
   ranAt?: string;
   checks?: AutoCheck[];
+  /** The reviewer's text: one line per criterion, a video line, a bottom line - kept for older reports. */
   summary?: string;
   suggested?: Partial<Scores>;
   screenshots?: string[];
+  /** Structured since 26/10: the reasoned note per criterion, the bottom line, what blocked the run, the video note. */
+  notes?: Partial<Record<CriterionKey, string>>;
+  bottomLine?: string;
+  blocked?: string | null;
+  videoNote?: string;
+}
+
+/**
+ * What the owner reads about a project (26/10): the note per criterion, the
+ * video, the bottom line and the blocker - from the structured fields when the
+ * report has them, otherwise parsed out of the summary text the review tool
+ * writes (״<label> <n>/<max> - <note>״ lines, then ״סרטון:״, ״סיכום:״, ״חסימה:״).
+ */
+export function readAutoReport(report: AutoReport): { notes: Partial<Record<CriterionKey, string>>; videoNote: string | null; bottomLine: string | null; blocked: string | null } {
+  const notes: Partial<Record<CriterionKey, string>> = { ...(report.notes ?? {}) };
+  let videoNote = report.videoNote ?? null;
+  let bottomLine = report.bottomLine ?? null;
+  let blocked = report.blocked ?? null;
+  const lines = (report.summary ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const m = line.match(/^(.+?) (\d+)\/(\d+) - (.*)$/);
+    if (m) {
+      const c = CRITERIA.find((x) => x.label === m[1]);
+      if (c && !notes[c.key]) notes[c.key] = m[4];
+      continue;
+    }
+    if (line.startsWith("סרטון:") && !videoNote) videoNote = line.slice(6).trim();
+    else if (line.startsWith("סיכום:") && !bottomLine) bottomLine = line.slice(6).trim();
+    else if (line.startsWith("חסימה:") && !blocked) blocked = line.slice(6).trim();
+  }
+  return { notes, videoNote, bottomLine, blocked };
 }
