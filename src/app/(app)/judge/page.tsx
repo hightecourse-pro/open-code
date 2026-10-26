@@ -12,15 +12,16 @@ import { JudgingDesk } from "./judging-desk";
 export const metadata: Metadata = { title: "שיפוט ההאקתון" };
 export const dynamic = "force-dynamic";
 
-/** `?as=judge`: the owner sees the page exactly as an appointed judge does (26/10). */
-const PREVIEW = "judge";
+/** The owner's desk opens as a judge's (26/10 night: "תסתיר גם ממני"); `?as=owner` is the full view - the automated report, every score, the rank. */
+const FULL = "owner";
 
 /**
  * שיפוט ההאקתון (the owner, 16/10; the desk 23/10): an appointed judge - a
  * mentor or a team member - scores the projects of her challenges, one at a
  * time, and sees only her own scores. The owner (an admin who is not an
- * appointed judge) sees every project and every score - and, with ?as=judge,
- * the page as a judge sees it (26/10: "תציג גם לי כאילו אני שופטת").
+ * appointed judge) opens the desk as a judge sees it (26/10 night: "תסתיר גם
+ * ממני שם כדי שאוכל לראות מה הן רואות"); ?as=owner is her full view - every
+ * project, the automated report, every score.
  */
 export default async function JudgePage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
   return guarded("/judge", () => judgePageBody(searchParams));
@@ -45,7 +46,7 @@ async function judgePageBody(searchParams: Promise<{ as?: string }>) {
       </div>
     );
   }
-  const preview = !access.restricted && (await searchParams).as === PREVIEW;
+  const preview = !access.restricted && (await searchParams).as !== FULL;
   const restricted = access.restricted || preview;
   const { entries: loaded } = await loadJudgingBoard(profile);
   // The preview strips what a judge never gets: the automated report, the other judges, the ranking.
@@ -82,15 +83,16 @@ async function judgePageBody(searchParams: Promise<{ as?: string }>) {
       {preview && (
         <div className="rounded-[14px] border border-brand-purple/30 bg-tint-purple/40 px-4 py-2.5 text-[13px] text-ink-900 flex items-center gap-3 flex-wrap" data-testid="judge-preview">
           <b>את רואה את הדף כמו שופטת:</b> בלי הבדיקה האוטומטית, בלי ציונים של אחרות. ציון שתשמרי כאן נשמר על שמך.
-          <Link href="/judge" className="ms-auto font-bold text-brand-purple hover:underline" data-testid="judge-preview-off">
-            חזרה לתצוגה שלך ←
+          <Link href="/judge?as=owner" className="ms-auto font-bold text-brand-purple hover:underline" data-testid="judge-preview-off">
+            לתצוגה המלאה: הבדיקה האוטומטית וכל הציונים ←
           </Link>
         </div>
       )}
       {!restricted && (
-        <div className="text-[12.5px] text-ink-600 -mt-2">
-          <Link href="/judge?as=judge" className="font-semibold text-brand-purple hover:underline" data-testid="judge-preview-on">
-            להציג את הדף כמו שופטת ←
+        <div className="rounded-[14px] border border-ink-200 bg-white px-4 py-2.5 text-[13px] text-ink-900 flex items-center gap-3 flex-wrap" data-testid="judge-full">
+          <b>התצוגה המלאה:</b> הבדיקה האוטומטית, הציונים של כל השופטות והדירוג - מה שהשופטות לא רואות.
+          <Link href="/judge" className="ms-auto font-bold text-brand-purple hover:underline" data-testid="judge-preview-on">
+            חזרה לתצוגת השופטת ←
           </Link>
         </div>
       )}
