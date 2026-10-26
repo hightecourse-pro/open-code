@@ -52,6 +52,9 @@ export default async function JudgePage() {
   return (
     <div className="flex flex-col gap-5 max-w-6xl">
       <H26Style />
+      {/* The desk needs room: a rail beside the card, the report beside the team's text. The member shell centres every page
+          in 780px; this page alone widens it (an unlayered rule beats the utility class). */}
+      <style>{`[data-shell-main]{max-width:1240px}`}</style>
       <Header
         subtitle={
           access.restricted
