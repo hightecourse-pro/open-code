@@ -242,6 +242,11 @@ export async function updateLiveSettings(patch: Record<string, unknown>): Promis
   if (typeof patch.yemotToken === "string" && patch.yemotToken.trim()) next.yemot_token = patch.yemotToken.trim();
   if (patch.clearToken) next.yemot_token = "";
   if (patch.yemotExtension !== undefined) next.yemot_extension = String(patch.yemotExtension ?? "").trim().replace(/^\/+|\/+$/g, "").slice(0, 20);
+  if (patch.judgeCode !== undefined) {
+    const code = String(patch.judgeCode ?? "").trim();
+    if (!/^[0-9A-Za-zא-ת]{3,12}$/.test(code)) fail("קוד השופטות: 3 עד 12 אותיות או ספרות, בלי רווחים");
+    next.judge_code = code;
+  }
   if (patch.audienceMode !== undefined) {
     const mode = String(patch.audienceMode);
     if (mode !== "leader" && mode !== "share") fail("שיטת ציון הקהל לא מוכרת");
@@ -670,6 +675,28 @@ export async function finalsControl(op: string, key: string | null, body: { fina
 
 /* ───────────────────────── judges ───────────────────────── */
 
+/**
+ * The judges' entrance: a name and a challenge, guarded by the judges' code.
+ * The same name on the same challenge (spaces and case aside) gets her existing
+ * row back, so a refresh or a second phone continues the same scores.
+ */
+export async function registerJudge({ name, challengeKey, code }: { name: string; challengeKey: string; code: string }): Promise<{ token: string; name: string }> {
+  const admin = createAdminClient();
+  const clean = name.replace(/\s+/g, " ").trim().slice(0, 60);
+  if (clean.length < 2) fail("כתבי את שמך המלא");
+  const s = await loadSettings();
+  const want = s.judge_code.trim();
+  const given = code.trim();
+  if (!want || given.length !== want.length || !given.split("").every((ch, i) => ch === want[i])) fail("קוד השופטות שגוי - בקשי אותו מהמארגנת");
+  const ch = await challengeRow(challengeKey);
+  const { data: existing } = await admin.from("hackathon_live_judges").select("*").eq("challenge_key", ch.key);
+  const same = (existing ?? []).find((j) => j.name.replace(/\s+/g, " ").trim().toLowerCase() === clean.toLowerCase());
+  if (same) return { token: same.token, name: same.name };
+  const { data, error } = await admin.from("hackathon_live_judges").insert({ name: clean, challenge_key: ch.key, sort: (existing ?? []).length }).select("token, name").single();
+  if (error || !data) fail(error?.message ?? "הרישום נכשל");
+  return { token: data!.token, name: data!.name };
+}
+
 async function judgeByToken(token: string): Promise<JudgeRow | null> {
   const t = String(token || "").trim();
   if (!/^[a-f0-9]{16,64}$/i.test(t)) return null;
@@ -886,6 +913,7 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
       phoneDisplay: ctx.settings.phone_display,
       hasToken: !!ctx.settings.yemot_token.trim(),
       yemotExtension: ctx.settings.yemot_extension,
+      judgeCode: ctx.settings.judge_code,
       weights: weightsOf(ctx.criteria),
       audienceMode: (ctx.settings.audience_mode === "share" ? "share" : "leader") as LiveAudienceMode,
       reveal: asReveal(ctx.settings.reveal),
@@ -895,7 +923,14 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
     },
     questions,
     challenges,
-    judges: ctx.judges.map((j) => ({ id: j.id, name: j.name, challengeKey: j.challenge_key, token: j.token })),
+    judges: ctx.judges.map((j) => ({
+      id: j.id,
+      name: j.name,
+      challengeKey: j.challenge_key,
+      token: j.token,
+      scored: ctx.scores.filter((sc) => sc.judge_id === j.id && judgeTotal((sc.scores ?? {}) as Record<string, number>, ctx.criteria).complete).length,
+      createdAt: j.created_at,
+    })),
   };
 }
 

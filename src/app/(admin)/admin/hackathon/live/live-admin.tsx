@@ -243,8 +243,8 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
     }
   };
   const saveFinalists = async () => {
-    const finalists = parseFinalistLines(lines).map((f) => ({ ...f, teamKey: submitted.find((t) => t.team === f.team)?.teamKey ?? null }));
-    const r = await run({ action: "challenge-save", key: ch.key, name, finalists }, `נשמרו ${finalists.length} סופיות`);
+    const finalists = parseFinalistLines(lines).map((f) => ({ name: f.team ? `${f.name} | ${f.team}` : f.name, team: "", teamKey: submitted.find((t) => t.team === f.name)?.teamKey ?? null }));
+    const r = await run({ action: "challenge-save", key: ch.key, name, finalists }, `נשמרו ${finalists.length} מתמודדות`);
     if (r) {
       const fresh = (r.view as LiveAdminView).challenges.find((c) => c.key === ch.key);
       if (fresh) setLines(fresh.finalistsRaw.map((f) => (f.team ? `${f.name} | ${f.team}` : f.name)).join("\n"));
@@ -256,12 +256,12 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
         <input className={`${input} font-bold min-w-[260px]`} value={name} onChange={(e) => setName(e.target.value)} aria-label="שם האתגר" />
         <span className={pillCls(ch.status === "judging" ? "open" : ch.status === "closed" ? "closed" : "")}>{ch.status === "judging" ? "השיפוט פתוח" : ch.status === "closed" ? "השיפוט סגור" : "לא נפתח"}</span>
         {view.finals.active === ch.key ? <span className="text-[12px] rounded-full bg-tint-purple text-brand-purple px-2 py-0.5 font-semibold">📺 על המסך</span> : null}
-        <span className="text-[13px] text-ink-500">{judges.length ? `${judges.length} שופטות` : "אין שופטות משובצות"}</span>
+        <span className="text-[13px] text-ink-500">{judges.length ? `${judges.length} שופטות נכנסו` : "עוד לא נכנסה שופטת"}</span>
       </div>
       <div className="grid md:grid-cols-[1fr_auto] gap-3 items-end">
         <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
-          הסופיות - שורה לכל פרויקט: שם הפרויקט | שמות הצוות (מספר השורה = המקש בטלפון)
-          <textarea className={`${input} min-h-[96px] font-normal`} value={lines} onChange={(e) => setLines(e.target.value)} placeholder="המערכת של רחל | רחל כהן + שרה לוי" />
+          המתמודדות - שורה לכל צוות: שמות המגישות (מספר השורה = המקש בטלפון; שלוש בכל אתגר)
+          <textarea className={`${input} min-h-[96px] font-normal`} value={lines} onChange={(e) => setLines(e.target.value)} placeholder="רחל כהן + שרה לוי" />
         </label>
         <div className="flex flex-col gap-2">
           <select
@@ -269,12 +269,12 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
             value={pick}
             onChange={(e) => {
               const t = submitted.find((x) => x.teamKey === e.target.value);
-              if (t) setLines((l) => (l.trim() ? l.trimEnd() + "\n" : "") + `${t.team} | ${t.team}`);
+              if (t) setLines((l) => (l.trim() ? l.trimEnd() + "\n" : "") + t.team);
               setPick("");
             }}
             aria-label="הוספת צוות מההגשות"
           >
-            <option value="">+ צוות מההגשות…</option>
+            <option value="">+ מתמודדות מההגשות…</option>
             {submitted.map((t) => (
               <option key={t.teamKey} value={t.teamKey}>
                 {t.team}
@@ -282,7 +282,7 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
             ))}
           </select>
           <button className={btn} disabled={busy} onClick={saveFinalists}>
-            שמרי סופיות
+            שמרי מתמודדות
           </button>
         </div>
       </div>
@@ -335,7 +335,7 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
             <thead>
               <tr className="text-[12px] text-ink-500 text-right">
                 <th className="px-2 py-1">#</th>
-                <th className="px-2 py-1">פרויקט</th>
+                <th className="px-2 py-1">מתמודדות</th>
                 {judges.map((j) => (
                   <th key={j.id} className="px-2 py-1">
                     {j.name}
@@ -383,102 +383,105 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
           </table>
         </div>
       ) : (
-        <div className="text-[13px] text-ink-500">עוד אין סופיות - הוסיפי למעלה ולחצי ״שמרי סופיות״</div>
+        <div className="text-[13px] text-ink-500">עוד אין מתמודדות - הוסיפי למעלה ולחצי ״שמרי מתמודדות״</div>
       )}
     </div>
   );
 }
 
 function JudgesCard({ view, api, busy }: { view: LiveAdminView; api: Api; busy: boolean }) {
-  const [rows, setRows] = useState(view.judges.map((j) => ({ id: j.id, name: j.name, challengeKey: j.challengeKey ?? "", token: j.token })));
+  const [code, setCode] = useState(view.settings.judgeCode);
   const [msg, setMsg] = useState<Msg>(null);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const save = async () => {
+  const url = `${origin}/live/judge`;
+  const chName = (k: string | null) => view.challenges.find((c) => c.key === k)?.name ?? "—";
+  const contestants = (k: string | null) => view.challenges.find((c) => c.key === k)?.finalists.length ?? 0;
+  const saveCode = async () => {
     try {
-      const r = await api({ action: "judges-save", judges: rows.map((x) => ({ id: x.id || undefined, name: x.name, challengeKey: x.challengeKey })) });
-      const fresh = (r.view as LiveAdminView).judges;
-      setRows(fresh.map((j) => ({ id: j.id, name: j.name, challengeKey: j.challengeKey ?? "", token: j.token })));
-      setMsg({ kind: "ok", text: "השופטות נשמרו - הקישורים האישיים מוכנים להעתקה" });
+      await api({ action: "settings", judgeCode: code });
+      setMsg({ kind: "ok", text: "קוד השופטות נשמר" });
+    } catch (e) {
+      setMsg({ kind: "err", text: (e as Error).message });
+    }
+  };
+  const remove = async (id: string) => {
+    if (!confirm("להסיר את השופטת? הציונים שלה יימחקו.")) return;
+    try {
+      await api({ action: "judges-save", judges: view.judges.filter((j) => j.id !== id).map((j) => ({ id: j.id, name: j.name, challengeKey: j.challengeKey ?? "" })) });
+      setMsg(null);
     } catch (e) {
       setMsg({ kind: "err", text: (e as Error).message });
     }
   };
   return (
     <div className={card}>
-      <h2 className="font-display font-bold text-ink-1000">שופטות <span className="text-[12px] font-mono text-brand-pink-deep">&lt;קישור אישי לכל אחת/&gt;</span></h2>
-      <p className="text-[13px] text-ink-500">כל שופטת מקבלת קישור אישי לטלפון שלה - בלי כניסה למערכת. הקישור הוא הזהות, לכן שולחים אותו רק לה.</p>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-[12px] text-ink-500 text-right">
-            <th className="px-2 py-1">שם</th>
-            <th className="px-2 py-1">אתגר</th>
-            <th className="px-2 py-1">הקישור האישי</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => {
-            const url = r.token ? `${origin}/live/judge/${r.token}` : "";
-            return (
-              <tr key={r.id || `new-${i}`} className="border-t border-ink-200">
-                <td className="px-2 py-1.5">
-                  <input className={input} value={r.name} onChange={(e) => setRows((rs) => rs.map((x, k) => (k === i ? { ...x, name: e.target.value } : x)))} placeholder="שם השופטת" />
+      <h2 className="font-display font-bold text-ink-1000">שופטות <span className="text-[12px] font-mono text-brand-pink-deep">&lt;דף אחד לכולן/&gt;</span></h2>
+      <div className="flex gap-3 flex-wrap items-end">
+        <div className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
+          הכתובת לשופטות
+          <span className="inline-flex items-center gap-2">
+            <code className="text-[13px] text-ink-1000 bg-ink-50 border border-ink-200 rounded-md px-2 py-1.5" dir="ltr">
+              {url}
+            </code>
+            <button
+              className={quiet}
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(url);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                } catch {
+                  prompt("העתיקי את הכתובת:", url);
+                }
+              }}
+            >
+              {copied ? "הועתק ✓" : "העתיקי"}
+            </button>
+          </span>
+        </div>
+        <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
+          קוד השופטות
+          <input className={`${input} w-32 tracking-widest`} dir="ltr" value={code} onChange={(e) => setCode(e.target.value)} />
+        </label>
+        <button className={btn} disabled={busy || code === view.settings.judgeCode} onClick={saveCode}>
+          שמרי קוד
+        </button>
+      </div>
+      <p className="text-[13px] text-ink-500">השופטת פותחת את הכתובת בטלפון, כותבת את שמה, בוחרת את האתגר ומקלידה את הקוד - ורואה את המתמודדות של האתגר עם הקריטריונים שלה. אותו שם באותו אתגר ממשיך את אותם ציונים.</p>
+      <Note m={msg} />
+      {view.judges.length ? (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-[12px] text-ink-500 text-right">
+              <th className="px-2 py-1">שם</th>
+              <th className="px-2 py-1">אתגר</th>
+              <th className="px-2 py-1">דירגה</th>
+              <th className="px-2 py-1">נכנסה</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {view.judges.map((j) => (
+              <tr key={j.id} className="border-t border-ink-200">
+                <td className="px-2 py-1.5 font-semibold">{j.name}</td>
+                <td className="px-2 py-1.5">{chName(j.challengeKey)}</td>
+                <td className="px-2 py-1.5 tabular-nums">
+                  {j.scored} מתוך {contestants(j.challengeKey)}
                 </td>
+                <td className="px-2 py-1.5 text-ink-500">{new Date(j.createdAt).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" })}</td>
                 <td className="px-2 py-1.5">
-                  <select className={input} value={r.challengeKey} onChange={(e) => setRows((rs) => rs.map((x, k) => (k === i ? { ...x, challengeKey: e.target.value } : x)))}>
-                    <option value="">— לא שובצה —</option>
-                    {view.challenges.map((c) => (
-                      <option key={c.key} value={c.key}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td className="px-2 py-1.5">
-                  {url ? (
-                    <span className="inline-flex items-center gap-2">
-                      <code className="text-[12px] text-ink-700 max-w-[320px] truncate inline-block" dir="ltr">
-                        {url}
-                      </code>
-                      <button
-                        className={quiet}
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(url);
-                            setCopied(r.id);
-                            setTimeout(() => setCopied(null), 1500);
-                          } catch {
-                            prompt("העתיקי את הקישור:", url);
-                          }
-                        }}
-                      >
-                        {copied === r.id ? "הועתק ✓" : "העתיקי"}
-                      </button>
-                    </span>
-                  ) : (
-                    <span className="text-[12px] text-ink-500">נוצר בשמירה</span>
-                  )}
-                </td>
-                <td className="px-2 py-1.5">
-                  <button className={quiet} onClick={() => setRows((rs) => rs.filter((_, k) => k !== i))} title="הסרה">
+                  <button className={quiet} disabled={busy} onClick={() => remove(j.id)} title="הסרה">
                     ✕
                   </button>
                 </td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="flex gap-2">
-        <button className={quiet} onClick={() => setRows((rs) => [...rs, { id: "", name: "", challengeKey: "", token: "" }])}>
-          + שופטת
-        </button>
-        <button className={btn} disabled={busy} onClick={save}>
-          שמרי שופטות
-        </button>
-      </div>
-      <Note m={msg} />
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="text-[13px] text-ink-500">עוד לא נכנסה שופטת.</div>
+      )}
     </div>
   );
 }

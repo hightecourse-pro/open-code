@@ -150,6 +150,7 @@ export interface LiveAdminView extends LiveDisplayView {
     phoneDisplay: string;
     hasToken: boolean;
     yemotExtension: string;
+    judgeCode: string;
     weights: { judges: number; audience: number };
     audienceMode: LiveAudienceMode;
     reveal: LiveReveal;
@@ -159,7 +160,7 @@ export interface LiveAdminView extends LiveDisplayView {
   };
   questions: LiveAdminQuestion[];
   challenges: LiveAdminChallenge[];
-  judges: { id: string; name: string; challengeKey: string | null; token: string }[];
+  judges: { id: string; name: string; challengeKey: string | null; token: string; scored: number; createdAt: string }[];
 }
 
 export interface LiveJudgeFinalist {
