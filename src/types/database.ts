@@ -2093,8 +2093,8 @@ export interface Database {
       };
       /** גמר ההאקתון בשידור חי - see 20261026160000 (26/10). */
       hackathon_live_settings: {
-        Row: { id: number; event_name: string; phone_display: string; yemot_token: string; yemot_extension: string; judge_code: string; audience_mode: string; reveal: string; criteria: Json; active_challenge: string | null; theme: string; poll_claimed_at: string | null; last_poll_at: string | null; poll_error: string | null; calls_claimed_at: string | null; connected: number | null; updated_at: string };
-        Insert: { id?: number; event_name?: string; phone_display?: string; yemot_token?: string; yemot_extension?: string; judge_code?: string; audience_mode?: string; reveal?: string; criteria?: Json; active_challenge?: string | null; theme?: string; poll_claimed_at?: string | null; last_poll_at?: string | null; poll_error?: string | null; calls_claimed_at?: string | null; connected?: number | null; updated_at?: string };
+        Row: { id: number; event_name: string; phone_display: string; yemot_token: string; yemot_extension: string; judge_code: string; vote_seconds: number; audience_mode: string; reveal: string; criteria: Json; active_challenge: string | null; theme: string; poll_claimed_at: string | null; last_poll_at: string | null; poll_error: string | null; calls_claimed_at: string | null; connected: number | null; updated_at: string };
+        Insert: { id?: number; event_name?: string; phone_display?: string; yemot_token?: string; yemot_extension?: string; judge_code?: string; vote_seconds?: number; audience_mode?: string; reveal?: string; criteria?: Json; active_challenge?: string | null; theme?: string; poll_claimed_at?: string | null; last_poll_at?: string | null; poll_error?: string | null; calls_claimed_at?: string | null; connected?: number | null; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_live_settings"]["Insert"]>;
         Relationships: [];
       };

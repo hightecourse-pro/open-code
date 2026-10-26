@@ -726,11 +726,12 @@ function SettingsCard({ view, api, busy }: { view: LiveAdminView; api: Api; busy
   const [token, setToken] = useState("");
   const [ext, setExt] = useState(s.yemotExtension);
   const [theme, setTheme] = useState(s.theme);
+  const [voteSeconds, setVoteSeconds] = useState(String(s.voteSeconds));
   const [msg, setMsg] = useState<Msg>(null);
   const [test, setTest] = useState<Msg>(null);
   const save = async () => {
     try {
-      await api({ action: "settings", eventName, phoneDisplay: phone, yemotToken: token || undefined, yemotExtension: ext, theme });
+      await api({ action: "settings", eventName, phoneDisplay: phone, yemotToken: token || undefined, yemotExtension: ext, theme, voteSeconds });
       setToken("");
       setMsg({ kind: "ok", text: "נשמר" });
     } catch (e) {
@@ -766,6 +767,10 @@ function SettingsCard({ view, api, busy }: { view: LiveAdminView; api: Api; busy
         <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
           שלוחת ההצבעה
           <input className={`${input} w-28`} dir="ltr" value={ext} onChange={(e) => setExt(e.target.value)} placeholder="777" />
+        </label>
+        <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
+          שניות לכל קטגוריה (0 = מעבר ידני)
+          <input className={`${input} w-28`} type="number" min={0} max={600} value={voteSeconds} onChange={(e) => setVoteSeconds(e.target.value)} />
         </label>
         <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
           ערכת המסך

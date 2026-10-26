@@ -88,8 +88,18 @@ export interface LiveCategoryView {
   winner: string | null;
 }
 
+export interface LiveStep {
+  key: string;
+  label: string;
+  status: "done" | "open" | "next";
+  questionId: string | null;
+  openedAt: string | null;
+}
+
 export interface LiveFinalsView {
   active: string | null;
+  /** The ballot's walk through the audience criteria, in order. */
+  steps?: LiveStep[];
   name?: string;
   org?: string;
   logos?: string[];
@@ -105,7 +115,7 @@ export interface LiveFinalsView {
 }
 
 export interface LiveDisplayView {
-  event: { name: string; phone: string; theme: "light" | "dark" };
+  event: { name: string; phone: string; theme: "light" | "dark"; voteSeconds: number };
   question: LiveQuestionView | null;
   resultsVisible: boolean;
   voted: number;
@@ -151,6 +161,7 @@ export interface LiveAdminView extends LiveDisplayView {
     hasToken: boolean;
     yemotExtension: string;
     judgeCode: string;
+    voteSeconds: number;
     weights: { judges: number; audience: number };
     audienceMode: LiveAudienceMode;
     reveal: LiveReveal;

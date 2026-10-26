@@ -242,6 +242,11 @@ export async function updateLiveSettings(patch: Record<string, unknown>): Promis
   if (typeof patch.yemotToken === "string" && patch.yemotToken.trim()) next.yemot_token = patch.yemotToken.trim();
   if (patch.clearToken) next.yemot_token = "";
   if (patch.yemotExtension !== undefined) next.yemot_extension = String(patch.yemotExtension ?? "").trim().replace(/^\/+|\/+$/g, "").slice(0, 20);
+  if (patch.voteSeconds !== undefined) {
+    const n = Number(patch.voteSeconds);
+    if (!Number.isFinite(n) || n < 0 || n > 600) fail("שניות לקטגוריה: בין 0 (ידני) ל-600");
+    next.vote_seconds = Math.round(n);
+  }
   if (patch.judgeCode !== undefined) {
     const code = String(patch.judgeCode ?? "").trim();
     if (!/^[0-9A-Za-zא-ת]{3,12}$/.test(code)) fail("קוד השופטות: 3 עד 12 אותיות או ספרות, בלי רווחים");
@@ -832,8 +837,14 @@ async function finalsView(ctx: BoardCtx, admin: boolean): Promise<LiveFinalsView
   if (!ch) return { active: null };
   const b = await boardOf(ch, ctx);
   const hidden = !admin && ctx.settings.reveal === "end" && !ch.revealed;
+  const mine = audienceQuestionsOf(ctx.questions, key);
+  const steps = audienceCriteria(ctx.criteria).map((c) => {
+    const q = mine.find((x) => x.criterion_key === c.key) ?? null;
+    return { key: c.key, label: c.label, status: (q?.status === "open" ? "open" : q?.status === "closed" ? "done" : "next") as "done" | "open" | "next", questionId: q?.id ?? null, openedAt: q?.opened_at ?? null };
+  });
   return {
     active: key,
+    steps,
     name: ch.name,
     org: ch.org,
     logos: strArr(ch.logos),
@@ -858,15 +869,35 @@ function categoryOf(q: QuestionRow | null, ctx: BoardCtx): LiveQuestionView["cat
   return { key: q.criterion_key, label: c?.label ?? q.criterion_key, challenge: ch?.name ?? "" };
 }
 
+/**
+ * The ballot's clock: a category whose countdown ran out closes itself and the
+ * next category of the same challenge opens. Runs on whichever screen asks
+ * first; a second caller finds the next one already open and does nothing.
+ */
+export async function autoAdvance(): Promise<void> {
+  const s = await loadSettings();
+  if (!s.vote_seconds) return;
+  const open = await openQuestionRow();
+  if (!open?.criterion_key || !open.opened_at || !open.challenge_key) return;
+  // two seconds of grace: the keypress of the last second still arrives
+  if (Date.now() < Date.parse(open.opened_at) + s.vote_seconds * 1000 + 2000) return;
+  await closeQuestion().catch(() => {});
+  const next = audienceQuestionsOf(await questionRows(), open.challenge_key).find((q) => q.status === "idle");
+  if (next) await openQuestion(next.id);
+}
+
 /** What the hall sees. `poll` pulls the phone file first (one caller per 1.5s actually does). */
 export async function displayView({ poll = true, admin = false }: { poll?: boolean; admin?: boolean } = {}): Promise<LiveDisplayView> {
-  if (poll) await pollAudience().catch(() => {});
+  if (poll) {
+    await pollAudience().catch(() => {});
+    await autoAdvance().catch(() => {});
+  }
   const ctx = await boardCtx();
   const cur = currentOf(ctx.questions);
   const tally = cur ? await tallyOf(cur) : null;
   const visible = !cur || admin || asReveal(cur.reveal) === "live" || cur.status !== "open";
   return {
-    event: { name: ctx.settings.event_name, phone: ctx.settings.phone_display, theme: ctx.settings.theme === "dark" ? "dark" : "light" },
+    event: { name: ctx.settings.event_name, phone: ctx.settings.phone_display, theme: ctx.settings.theme === "dark" ? "dark" : "light", voteSeconds: ctx.settings.vote_seconds },
     question: cur && tally ? questionView(cur, tally, visible, categoryOf(cur, ctx)) : null,
     resultsVisible: visible,
     voted: tally?.voted ?? 0,
@@ -914,6 +945,7 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
       hasToken: !!ctx.settings.yemot_token.trim(),
       yemotExtension: ctx.settings.yemot_extension,
       judgeCode: ctx.settings.judge_code,
+      voteSeconds: ctx.settings.vote_seconds,
       weights: weightsOf(ctx.criteria),
       audienceMode: (ctx.settings.audience_mode === "share" ? "share" : "leader") as LiveAudienceMode,
       reveal: asReveal(ctx.settings.reveal),
