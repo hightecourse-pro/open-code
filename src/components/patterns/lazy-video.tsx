@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Play } from "lucide-react";
+import { MediaIsland, iframeHtml, videoHtml } from "@/components/patterns/media-island";
 
 /**
  * A team's demo video. On the judge's desk it plays at once; in a long list
@@ -29,7 +30,8 @@ export function LazyVideo({ embedUrl, inlineUrl, lazy = false }: { embedUrl: str
   if (embedUrl && !(direct && inlineUrl)) {
     return (
       <div className="flex flex-col gap-1">
-        <iframe src={embedUrl} title="הסרטון של הצוות" allow="autoplay; fullscreen" allowFullScreen className="w-full aspect-video max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />
+        {/* an island: NetFree injects its bar around the player; React must not reconcile in there (26/10) */}
+        <MediaIsland html={iframeHtml(embedUrl, "הסרטון של הצוות", "w-full aspect-video max-h-[60vh] rounded-[14px] border border-ink-200 bg-black")} />
         {inlineUrl && (
           <button type="button" onClick={() => setDirect(true)} className="self-start text-[11.5px] text-ink-500 hover:text-brand-purple hover:underline" data-testid="video-direct">
             הסרטון לא נטען? לנגן הישיר
@@ -38,5 +40,5 @@ export function LazyVideo({ embedUrl, inlineUrl, lazy = false }: { embedUrl: str
       </div>
     );
   }
-  return <video src={inlineUrl ?? undefined} controls preload="metadata" className="w-full max-h-[60vh] rounded-[14px] border border-ink-200 bg-black" />;
+  return <MediaIsland html={videoHtml(inlineUrl ?? "", "w-full max-h-[60vh] rounded-[14px] border border-ink-200 bg-black")} />;
 }

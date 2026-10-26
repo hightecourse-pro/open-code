@@ -8,7 +8,9 @@ import { Button } from "@/components/ui";
  * built-in screen: plain LTR English, no brand, no way forward - the worst
  * possible moment to stop speaking Hebrew to her.
  */
-const STALE_CLIENT = /enqueueModel|Could not find the module|ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|Failed to find Server Action|Server Action .* was not found/i;
+// A stale client after a deploy, or a DOM that something else (NetFree, an extension) rewrote under React: a retry of
+// the same client into the same DOM cannot help - a reload brings the current build and a clean document.
+const RELOAD = /enqueueModel|Could not find the module|ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|Failed to find Server Action|Server Action .* was not found|removeChild|insertBefore|appendChild|not a child of this node|NotFoundError|HierarchyRequestError/i;
 
 export default function AppError({
   error,
@@ -41,7 +43,7 @@ export default function AppError({
     // A tab that outlived a deploy (26/10): the old client cannot read the new server's payload - the crash looks like
     // "enqueueModel is not a function", "Could not find the module", a chunk that will not load. A retry of the same
     // client cannot help; a reload brings the current build. Once per 30s, then the sad screen with a reload button.
-    if (STALE_CLIENT.test(error.message ?? "")) {
+    if (RELOAD.test(error.message ?? "")) {
       let lastReload = 0;
       try {
         lastReload = Number(sessionStorage.getItem("oc-error-reload") ?? 0);
