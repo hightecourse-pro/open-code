@@ -152,6 +152,11 @@ export default async function AdminHackathonPage() {
         <p className="text-[13.5px] text-ink-600 mt-1">
           מי רשומה לאיזה אתגר (לבד או כזוג), מי הגישה, חומרי האתגרים להורדה למנויות, והשיפוט. ההרשמה והחומרים נמצאים בקהילה תחת ״האקתון״.
         </p>
+        <p className="text-[13.5px] mt-2">
+          <Link href="/admin/hackathon/live" className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 bg-brand-gradient text-white font-semibold">
+            🎤 ערב הגמר בשידור חי - לוח הבקרה, מסך האולם והשופטות
+          </Link>
+        </p>
       </div>
       <HackathonDashboard people={dashboardPeople} challenges={challengeList} />
       <Collapsible id="registrations" title="רשומות" summary={`${rows.length} רשומות · ${rows.filter((r) => r.submission === "submitted").length} הגישו`}>
