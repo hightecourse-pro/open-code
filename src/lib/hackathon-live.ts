@@ -636,8 +636,9 @@ export async function finalsControl(op: string, key: string | null, body: { fina
       await admin.from("hackathon_live_challenges").update({ status: "judging" }).eq("key", ch.key);
       await admin.from("hackathon_live_settings").update({ active_challenge: ch.key }).eq("id", 1);
       const mine = await syncAudienceQuestions(ch.key);
-      // the first audience vote of the challenge opens on the phone; "הבאה" moves to the next category
-      if (!mine.some((q) => q.status === "open") && mine[0]) await openQuestion(mine[0].id);
+      // the first category not voted on yet opens on the phone; "הבאה" (or the clock) moves to the next
+      const next = mine.find((q) => q.status === "idle");
+      if (!mine.some((q) => q.status === "open") && next) await openQuestion(next.id);
       return;
     }
     case "close": {

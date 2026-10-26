@@ -101,14 +101,11 @@ export function JudgeScreen({ token, initial, onLeave }: { token: string; initia
     setSave({ kind: "busy", text: "שומרת…" });
     try {
       const r = await fetch(`/api/hackathon/live/judge/${encodeURIComponent(token)}`, { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ finalistId: id, scores }) });
-      const j = (await r.json().catch(() => null)) as { ok?: boolean; error?: string } | null;
+      const j = (await r.json().catch(() => null)) as { ok?: boolean; error?: string; scores?: Scores } | null;
       if (!r.ok || !j?.ok) throw new Error(j?.error ?? "השמירה נכשלה");
-      if (!pending.current.has(id))
-        setLocal((m) => {
-          const next = new Map(m);
-          next.delete(id);
-          return next;
-        });
+      // what the server holds now stays the base for the next tap - a tap that lands while the
+      // page is still reloading must build on it, not on a stale snapshot (fast taps lost scores)
+      if (!pending.current.has(id)) setLocal((m) => new Map(m).set(id, j.scores ?? scores));
       setSave({ kind: "ok", text: "נשמר ✓ " + new Date().toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }) });
     } catch (err) {
       pending.current.set(id, scores);
