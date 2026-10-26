@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { JudgingEntry } from "@/lib/judging";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
@@ -9,9 +9,11 @@ import { JudgingEntryCard } from "./judging-board";
 
 /**
  * The judge's desk (the owner, 23/10: "ממשק הבדיקה צריך להיות נח ומאפשר לדפדף
- * בנוחות בין הפרויקטים"): one project at a time - its video in the page, the
- * links, what the team wrote and the score form - with a rail of every project
- * (scored ones ticked), previous/next buttons and the arrow keys.
+ * בנוחות בין הפרויקטים"; 26/10 evening: "צריך למלא את רוחב המסך עם דפדוף נח
+ * למעלה"): one project at a time, the whole width. A sticky bar at the top
+ * carries the paging - previous / next, a picker of every project grouped by
+ * challenge (scored ones ticked), the position and the progress - and the
+ * arrow keys page too.
  */
 export function JudgingDesk({ entries, viewerId, manage }: { entries: JudgingEntry[]; viewerId: string; manage: boolean }) {
   // Start on the first project she has not scored yet.
@@ -31,7 +33,7 @@ export function JudgingDesk({ entries, viewerId, manage }: { entries: JudgingEnt
   useEffect(() => {
     function onKey(ev: KeyboardEvent) {
       const t = ev.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
       // RTL: the "next" arrow points left.
       if (ev.key === "ArrowLeft") setIndex((i) => Math.min(i + 1, entries.length - 1));
       if (ev.key === "ArrowRight") setIndex((i) => Math.max(i - 1, 0));
@@ -40,92 +42,77 @@ export function JudgingDesk({ entries, viewerId, manage }: { entries: JudgingEnt
     return () => window.removeEventListener("keydown", onKey);
   }, [entries.length]);
 
+  // A new project opens at the top of the page, under the bar.
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.scrollY > 240) window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [safeIndex]);
+
   if (entries.length === 0 || !current) {
     return <p className="bg-white border border-ink-200 rounded-[18px] p-5 text-ink-500 text-sm shadow-sm">עדיין אין הגשות לשיפוט באתגרים שלך. הלוח יתמלא ברגע שצוות ילחץ ״הגשה סופית״.</p>;
   }
   const teamName = (e: JudgingEntry) => e.submission.members.map((m) => m.name).join(" + ");
-  const nav = (
-    <div className="flex items-center gap-2 bg-white border border-ink-200 rounded-full px-2 py-1.5 shadow-sm">
-      <button
-        type="button"
-        onClick={() => setIndex(Math.max(safeIndex - 1, 0))}
-        disabled={safeIndex === 0}
-        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12.5px] font-bold text-ink-700 hover:bg-ink-100 disabled:opacity-40"
-        data-testid="judge-prev"
-      >
-        <ChevronRight size={15} /> הקודמת
-      </button>
-      <span className="mx-auto text-[12.5px] text-ink-600 truncate" data-testid="judge-position">
-        {safeIndex + 1} / {entries.length} · <b className="text-ink-900">{teamName(current)}</b>
-      </span>
-      <button
-        type="button"
-        onClick={() => setIndex(Math.min(safeIndex + 1, entries.length - 1))}
-        disabled={safeIndex === entries.length - 1}
-        className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[12.5px] font-bold text-ink-700 hover:bg-ink-100 disabled:opacity-40"
-        data-testid="judge-next"
-      >
-        הבאה <ChevronLeft size={15} />
-      </button>
-    </div>
+  const btn = "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[13px] font-bold text-ink-800 bg-white border border-ink-200 hover:border-brand-purple/60 hover:text-brand-purple disabled:opacity-40 disabled:hover:border-ink-200 disabled:hover:text-ink-800";
+  const prev = (
+    <button type="button" onClick={() => setIndex(Math.max(safeIndex - 1, 0))} disabled={safeIndex === 0} className={btn} data-testid="judge-prev">
+      <ChevronRight size={16} /> הקודמת
+    </button>
+  );
+  const next = (
+    <button type="button" onClick={() => setIndex(Math.min(safeIndex + 1, entries.length - 1))} disabled={safeIndex === entries.length - 1} className={btn} data-testid="judge-next">
+      הבאה <ChevronLeft size={16} />
+    </button>
   );
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-4 items-start">
-      <aside className="lg:sticky lg:top-4 bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden flex flex-col max-h-[78vh]" data-testid="judge-rail">
-        <div className="px-3.5 py-2.5 border-b border-ink-100">
-          <div className="flex items-center justify-between text-[12px] text-ink-600">
-            <span>נשפטו</span>
-            <b className="text-ink-900">
-              {scored} / {entries.length}
-            </b>
-          </div>
-          <div className="mt-1.5 h-1.5 rounded-full bg-ink-100 overflow-hidden">
-            <div className="h-full bg-brand-gradient" style={{ width: `${entries.length ? Math.round((scored / entries.length) * 100) : 0}%` }} />
-          </div>
+    <div className="flex flex-col gap-3">
+      {/* the paging bar - sticky, so it is there however far she scrolled in a long project */}
+      <div className="sticky top-0 z-30 -mx-2 px-2 py-2 bg-ink-50/95 backdrop-blur supports-[backdrop-filter]:bg-ink-50/80" data-testid="judge-bar">
+        <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm px-3 py-2 flex items-center gap-2 flex-wrap">
+          {prev}
+          <label className="flex-1 min-w-[220px] flex items-center gap-2">
+            <span className="sr-only">בחירת פרויקט</span>
+            <select
+              value={current.submission.teamKey}
+              onChange={(ev) => {
+                const i = entries.findIndex((e) => e.submission.teamKey === ev.target.value);
+                if (i >= 0) setIndex(i);
+              }}
+              className="w-full text-[13.5px] font-semibold text-ink-900 bg-ink-50 border border-ink-200 rounded-[12px] px-3 py-1.5 focus:border-brand-purple outline-none"
+              data-testid="judge-picker"
+            >
+              {groups.map(([key, items]) => {
+                const c = CHALLENGES.find((x) => x.key === key);
+                return (
+                  <optgroup key={key} label={`${c?.emoji ?? ""} ${c?.short ?? key} · ${items.length}`}>
+                    {items.map((e) => (
+                      <option key={e.submission.teamKey} value={e.submission.teamKey} data-testid="judge-rail-item" data-team={e.submission.teamKey} data-scored={e.mine ? "1" : undefined}>
+                        {e.mine ? `✓ ${teamName(e)} · ${e.mine.total}` : teamName(e)}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
+          </label>
+          {next}
+          <span className="text-[12.5px] text-ink-600 whitespace-nowrap" data-testid="judge-position">
+            {safeIndex + 1} / {entries.length} · <b className="text-ink-900">{teamName(current)}</b>
+          </span>
+          <span className="ms-auto flex items-center gap-2 text-[12px] text-ink-600 whitespace-nowrap" data-testid="judge-rail">
+            נשפטו <b className="text-ink-900">{scored} / {entries.length}</b>
+            <span className="h-1.5 w-24 rounded-full bg-ink-100 overflow-hidden inline-block">
+              <span className="block h-full bg-brand-gradient" style={{ width: `${entries.length ? Math.round((scored / entries.length) * 100) : 0}%` }} />
+            </span>
+          </span>
         </div>
-        <div className="overflow-y-auto">
-          {groups.map(([key, items]) => {
-            const c = CHALLENGES.find((x) => x.key === key);
-            return (
-              <div key={key}>
-                <div className="px-3.5 py-1.5 text-[11.5px] font-bold text-ink-500 bg-ink-50/70 border-y border-ink-100">
-                  {c?.emoji} {c?.short ?? key} · {items.length}
-                </div>
-                {items.map((e) => {
-                  const i = entries.indexOf(e);
-                  const active = i === safeIndex;
-                  return (
-                    <button
-                      key={e.submission.teamKey}
-                      type="button"
-                      onClick={() => setIndex(i)}
-                      aria-current={active ? "true" : undefined}
-                      data-testid="judge-rail-item"
-                      data-team={e.submission.teamKey}
-                      data-scored={e.mine ? "1" : undefined}
-                      className={cn(
-                        "w-full text-start flex items-center gap-2 px-3.5 py-2 text-[12.5px] border-b border-ink-100 last:border-b-0 transition-colors",
-                        active ? "bg-tint-purple text-brand-purple font-bold" : "text-ink-800 hover:bg-ink-50"
-                      )}
-                    >
-                      <span className={cn("shrink-0 h-4 w-4 rounded-full inline-flex items-center justify-center text-[10px]", e.mine ? "bg-tint-mint text-success" : "bg-ink-100 text-ink-400")} aria-label={e.mine ? "נשפטה" : "עוד לא"}>
-                        {e.mine ? <Check size={11} /> : ""}
-                      </span>
-                      <span className="truncate">{teamName(e)}</span>
-                      {e.mine && <span className="ms-auto text-[11px] text-ink-500 shrink-0">{e.mine.total}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            );
-          })}
+      </div>
+
+      <div className={cn("min-w-0 flex flex-col gap-3")}>
+        <JudgingEntryCard key={current.submission.teamKey} e={current} viewerId={viewerId} manage={manage} />
+        <div className="flex items-center justify-between gap-2">
+          {prev}
+          <span className="text-[11.5px] text-ink-400 text-center">מקשי החצים במקלדת מדפדפים בין הפרויקטים.</span>
+          {next}
         </div>
-      </aside>
-      <div className="min-w-0 flex flex-col gap-3">
-        {nav}
-        <JudgingEntryCard key={current.submission.teamKey} e={current} viewerId={viewerId} manage={manage} sideBySideFrom="xl" />
-        {nav}
-        <p className="text-[11.5px] text-ink-400 text-center">מקשי החצים במקלדת מדפדפים בין הפרויקטים.</p>
       </div>
     </div>
   );

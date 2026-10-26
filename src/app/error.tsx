@@ -8,6 +8,8 @@ import { Button } from "@/components/ui";
  * built-in screen: plain LTR English, no brand, no way forward - the worst
  * possible moment to stop speaking Hebrew to her.
  */
+const STALE_CLIENT = /enqueueModel|Could not find the module|ChunkLoadError|Loading chunk|Failed to fetch dynamically imported module|Importing a module script failed|Failed to find Server Action|Server Action .* was not found/i;
+
 export default function AppError({
   error,
   reset,
@@ -36,6 +38,26 @@ export default function AppError({
       /* private mode */
     }
     const now = Date.now();
+    // A tab that outlived a deploy (26/10): the old client cannot read the new server's payload - the crash looks like
+    // "enqueueModel is not a function", "Could not find the module", a chunk that will not load. A retry of the same
+    // client cannot help; a reload brings the current build. Once per 30s, then the sad screen with a reload button.
+    if (STALE_CLIENT.test(error.message ?? "")) {
+      let lastReload = 0;
+      try {
+        lastReload = Number(sessionStorage.getItem("oc-error-reload") ?? 0);
+      } catch {
+        /* private mode */
+      }
+      if (now - lastReload > 30_000) {
+        try {
+          sessionStorage.setItem("oc-error-reload", String(now));
+        } catch {
+          /* private mode */
+        }
+        location.reload();
+        return;
+      }
+    }
     if (now - last > 15_000) {
       try {
         sessionStorage.setItem("oc-error-heal", String(now));
@@ -61,9 +83,14 @@ export default function AppError({
         <p className="t-body-sm text-ink-500 mt-2 mb-6">
           לא את - אנחנו. אפשר לנסות שוב, ואם זה חוזר על עצמו נשמח שתכתבי לנו.
         </p>
-        <Button onClick={reset} bracketed>
-          לנסות שוב
-        </Button>
+        <div className="flex items-center justify-center gap-3 flex-wrap">
+          <Button onClick={reset} bracketed>
+            לנסות שוב
+          </Button>
+          <Button variant="secondary" onClick={() => location.reload()}>
+            לרענן את הדף
+          </Button>
+        </div>
         {error.digest && (
           <p className="text-[11px] text-ink-400 mt-4 font-mono" dir="ltr">
             {error.digest}

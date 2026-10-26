@@ -6,6 +6,7 @@ import { judgeAccessFor, loadJudgingBoard, type JudgingEntry } from "@/lib/judgi
 import { CRITERIA } from "@/lib/judging-shared";
 import { guarded } from "@/lib/error-log";
 import { CHALLENGES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
+import { Collapsible } from "@/components/patterns/fold-section";
 import { JudgingDesk } from "./judging-desk";
 
 export const metadata: Metadata = { title: "שיפוט ההאקתון" };
@@ -66,11 +67,11 @@ async function judgePageBody(searchParams: Promise<{ as?: string }>) {
   }
   const challengesLine = myChallenges ?? "כל האתגרים";
   return (
-    <div className="flex flex-col gap-5 max-w-6xl">
+    <div className="flex flex-col gap-4 max-w-none">
       <H26Style />
-      {/* The desk needs room: a rail beside the card, the report beside the team's text. The member shell centres every page
-          in 780px; this page alone widens it (an unlayered rule beats the utility class). */}
-      <style>{`[data-shell-main]{max-width:1240px}`}</style>
+      {/* The desk takes the whole width (the owner, 26/10: "צריך למלא את רוחב המסך"). The member shell centres every page
+          in 780px; this page alone lifts that (an unlayered rule beats the utility class). */}
+      <style>{`[data-shell-main]{max-width:none}`}</style>
       <Header
         subtitle={
           restricted
@@ -93,31 +94,38 @@ async function judgePageBody(searchParams: Promise<{ as?: string }>) {
           </Link>
         </div>
       )}
-      <section className="relative overflow-hidden rounded-[22px] bg-brand-gradient text-white px-6 py-5 shadow-glow-pink flex items-center gap-5 flex-wrap">
-        <span className="absolute -top-6 -start-4 text-[120px] opacity-10 select-none" aria-hidden>
-          ⚖️
-        </span>
-        <div className="relative flex-1 min-w-[240px]">
-          <div className="font-mono text-[11.5px] text-white/80">&lt;הרובריקה/&gt;</div>
-          <div className="font-display font-black text-[20px] leading-snug mt-1">100 נקודות, שישה קריטריונים</div>
-          <div className="text-[12.5px] text-white/90 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-            {CRITERIA.map((c) => (
-              <span key={c.key}>
-                {c.label} <b>{c.max}</b>
-              </span>
-            ))}
+      {/* the rubric and the how-to fold (26/10: "אפשרות להרחיב ולכווץ כל מקטע") - the desk itself starts right under them */}
+      <Collapsible scope="judging" id="rubric" title="הרובריקה" compact defaultOpen={false} summary={`100 נקודות, שישה קריטריונים · שפטת ${mineDone} / ${entries.length}`}>
+        <section className="relative overflow-hidden rounded-[22px] bg-brand-gradient text-white px-6 py-5 shadow-glow-pink flex items-center gap-5 flex-wrap" data-testid="judge-rubric">
+          <span className="absolute -top-6 -start-4 text-[120px] opacity-10 select-none" aria-hidden>
+            ⚖️
+          </span>
+          <div className="relative flex-1 min-w-[240px]">
+            <div className="font-mono text-[11.5px] text-white/80">&lt;הרובריקה/&gt;</div>
+            <div className="font-display font-black text-[20px] leading-snug mt-1">100 נקודות, שישה קריטריונים</div>
+            <div className="text-[12.5px] text-white/90 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+              {CRITERIA.map((c) => (
+                <span key={c.key}>
+                  {c.label} <b>{c.max}</b>
+                </span>
+              ))}
+            </div>
+            <div className="text-[12px] text-white/80 mt-1">נכונות מתחת ל-10 מגבילה את הציון ל-60. מערכת שממציאה לא יכולה לזכות. על כל קריטריון אפשר לכתוב הערה.</div>
           </div>
-          <div className="text-[12px] text-white/80 mt-1">נכונות מתחת ל-10 מגבילה את הציון ל-60. מערכת שממציאה לא יכולה לזכות. על כל קריטריון אפשר לכתוב הערה.</div>
-        </div>
-        <div className="relative text-center">
-          <div className="font-display font-black text-[30px] leading-none">
-            {mineDone}
-            <span className="text-[16px] text-white/80"> / {entries.length}</span>
+          <div className="relative text-center">
+            <div className="font-display font-black text-[30px] leading-none">
+              {mineDone}
+              <span className="text-[16px] text-white/80"> / {entries.length}</span>
+            </div>
+            <div className="text-[12px] text-white/85 mt-1">הגשות ששפטת</div>
           </div>
-          <div className="text-[12px] text-white/85 mt-1">הגשות ששפטת</div>
-        </div>
-      </section>
-      {restricted && <JudgeGuide />}
+        </section>
+      </Collapsible>
+      {restricted && (
+        <Collapsible scope="judging" id="guide" title="איך שופטים" compact summary="בוחרים · מתרשמים · מנקדים · שומרים וממשיכים">
+          <JudgeGuide />
+        </Collapsible>
+      )}
       <JudgingDesk entries={entries} viewerId={profile.id} manage={!restricted} />
     </div>
   );

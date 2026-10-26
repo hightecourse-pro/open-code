@@ -5,11 +5,14 @@ import type { JudgingEntry } from "@/lib/judging";
 import { CRITERIA, CAPPED_TOTAL, CORRECTNESS_FLOOR, ZERO_SCORES, readAutoReport, totalOf, type AutoCheck, type AutoReport } from "@/lib/judging-shared";
 import { formatBytes } from "@/lib/hackathon-shared";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
+import { Collapsible } from "@/components/patterns/fold-section";
 import { ScoreForm } from "./score-form";
 import { LazyVideo } from "@/components/patterns/lazy-video";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 const RICH = "text-[13px] leading-relaxed break-words [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
+/** The folding sections of a project card remember their state per browser under this scope (shared by the desk and the admin's board). */
+const SCOPE = "judging";
 // A report is data written by the review tooling - a status the map does not know renders as "skip" rather than
 // crashing the admin page (24/10: "unknown" took /admin/hackathon down for the owner).
 const STATUS: Record<AutoCheck["status"], { icon: string; cls: string }> = {
@@ -50,22 +53,27 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
 }
 
 /**
- * One project: header + links, the video in the page, the automated report (owner only), what the team wrote, the score form.
- * `sideBySideFrom`: the breakpoint from which the report sits beside the team's text. The desk - a rail on the side -
- * leaves a narrow card on a laptop, so there the two columns start at xl; below that the report stacks above (26/10:
- * on the owner's laptop the report's rows overflowed their column and were drawn over the team's text).
+ * One project, the whole width (the owner, 26/10 evening: "צריך למלא את רוחב
+ * המסך", "אפשרות להרחיב ולכווץ כל מקטע"): header + links; then the video beside
+ * the automated report (owner only); what the team wrote in two columns with
+ * the personal answers under it; the other judges (owner only); the score
+ * form. Every block folds, and the fold is remembered per browser.
  */
-export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false, sideBySideFrom = "lg" }: { e: JudgingEntry; viewerId: string; manage: boolean; lazyVideo?: boolean; sideBySideFrom?: "lg" | "xl" }) {
+export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e: JudgingEntry; viewerId: string; manage: boolean; lazyVideo?: boolean }) {
   const s = e.submission;
   const report = e.report;
   const checks = report?.checks ?? [];
   const passed = checks.filter((c) => c.status === "pass").length;
-  const cols = sideBySideFrom === "xl" ? { grid: "xl:grid-cols-5", report: "xl:col-span-2", team: "xl:col-span-3" } : { grid: "lg:grid-cols-5", report: "lg:col-span-2", team: "lg:col-span-3" };
+  const suggested = report?.suggested ? totalOf({ ...ZERO_SCORES, ...report.suggested }) : null;
+  const hasVideo = !!(s.videoEmbedUrl || s.videoInlineUrl);
+  const others = manage ? e.scores.filter((x) => x.judgeId !== viewerId) : [];
+  const answered = s.members.filter((m) => m.reflected).length;
   return (
-    <article className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden">
+    <article className="bg-white border border-ink-200 rounded-[18px] shadow-sm overflow-hidden" data-testid="judge-card" data-team={s.teamKey}>
       {/* header */}
       <div className="px-5 py-3.5 flex items-center gap-3 flex-wrap border-b border-ink-100">
-        <div className="font-display font-black text-[16px] text-ink-1000">{s.members.map((m) => m.name).join(" + ")}</div>
+        <div className="font-display font-black text-[17px] text-ink-1000">{s.members.map((m) => m.name).join(" + ")}</div>
+        <span className="text-[12.5px] text-ink-500">{s.challengeShort}</span>
         {e.mine ? <Badge variant="mint">הציון שלך: {e.mine.total}</Badge> : <Badge variant="pink">עוד לא שפטת</Badge>}
         {manage && e.average !== null && (
           <Badge variant="purple">
@@ -97,64 +105,68 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false, sideB
         </span>
       </div>
 
-      {/* the video, in the page (the owner, 23/10: "הדפדוף בין הסרטונים חייב להיות נח") */}
-      {(s.videoEmbedUrl || s.videoInlineUrl) && (
-        <div className="px-5 pt-4" data-testid="judge-video">
-          <LazyVideo embedUrl={s.videoEmbedUrl} inlineUrl={s.videoInlineUrl} lazy={lazyVideo} />
-        </div>
-      )}
-
-      <div className={cn("px-5 py-4 grid grid-cols-1 gap-5", manage && cols.grid)}>
-        {/* the automated report - the owner's view only (23/10); readable (26/10): the score first, a note per criterion, the bottom line */}
-        {manage && (
-          <div className={cn("min-w-0 flex flex-col gap-2", cols.report)}>
-            <div className="font-mono text-[12px] text-brand-pink-deep">{"// הבדיקה האוטומטית"}</div>
-            {report ? <AutoReportPanel report={report} ranAt={e.reportUpdatedAt} passed={passed} checks={checks} /> : <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>}
+      <div className="px-5 py-4 flex flex-col gap-4">
+        {/* the video beside the automated report (the owner); a judge gets the video alone */}
+        {(hasVideo || manage) && (
+          <div className={cn("grid grid-cols-1 gap-4 items-start", hasVideo && manage && "lg:grid-cols-2")}>
+            {hasVideo && (
+              <Collapsible scope={SCOPE} id="video" title="הסרטון" compact summary={s.videoSize ? formatBytes(s.videoSize) : s.videoUrl ? "קישור" : undefined}>
+                <div data-testid="judge-video">
+                  <LazyVideo embedUrl={s.videoEmbedUrl} inlineUrl={s.videoInlineUrl} lazy={lazyVideo} />
+                </div>
+              </Collapsible>
+            )}
+            {manage && (
+              <Collapsible scope={SCOPE} id="auto-report" title="הבדיקה האוטומטית" compact summary={suggested ? `${suggested.total} מתוך 100` : "עוד לא רצה"}>
+                {report ? <AutoReportPanel report={report} ranAt={e.reportUpdatedAt} passed={passed} checks={checks} /> : <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>}
+              </Collapsible>
+            )}
           </div>
         )}
 
-        {/* what they wrote - all of it, open (the owner, 26/10: the judges must see everything the participant answered) */}
-        <div className={cn("min-w-0 flex flex-col gap-3", manage && cols.team)}>
-          <details className="group" open data-testid="team-wrote">
-            <summary className="list-none cursor-pointer font-mono text-[12px] text-brand-pink-deep [&::-webkit-details-marker]:hidden">{"// מה שהצוות כתב: הארכיטקטורה, הפיצ׳ר המקורי, והשאלות האישיות"} <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span></summary>
-            <div className="mt-2 flex flex-col gap-3">
-              <div>
+        {/* what they wrote - all of it (the owner, 26/10: the judges must see everything the participant answered) */}
+        <Collapsible scope={SCOPE} id="team-wrote" title="מה שהצוות כתב" compact summary={`הארכיטקטורה, הפיצ׳ר המקורי, והשאלות האישיות (${answered}/${s.members.length} ענו)`}>
+          <div className="flex flex-col gap-3 min-w-0" data-testid="team-wrote">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="min-w-0">
                 <div className="text-[12px] font-semibold text-ink-500">הארכיטקטורה (קריטריון ״ארכיטקטורה של פיתוח AI״, 10 נק׳)</div>
                 <Rich html={s.architecture} />
               </div>
-              <div className="rounded-[12px] bg-tint-pink/30 border border-brand-pink/30 px-3 py-2">
+              <div className="min-w-0 rounded-[12px] bg-tint-pink/30 border border-brand-pink/30 px-3 py-2">
                 <div className="text-[12px] font-bold text-brand-pink-deep">הפיצ׳ר המקורי (קריטריון ״פיצ׳ר מקורי שלא חשבו עליו״, 15 נק׳)</div>
                 {s.originalFeature ? <Rich html={s.originalFeature} /> : <span className="text-[12.5px] text-ink-500">הצוות עוד לא כתב.</span>}
               </div>
-              {/* fields of the first version of the form (until 20/10) - shown only when a team filled them */}
-              {s.challengesSolved && (
-                <div>
-                  <div className="text-[12px] font-semibold text-ink-500">בעיות משמעותיות ואיך נפתרו</div>
-                  <Rich html={s.challengesSolved} />
-                </div>
-              )}
-              {(s.aiDevTools || s.aiModels) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {s.aiDevTools && (
-                    <div>
-                      <div className="text-[12px] font-semibold text-ink-500">כלי AI לפיתוח</div>
-                      <Rich html={s.aiDevTools} />
-                    </div>
-                  )}
-                  {s.aiModels && (
-                    <div>
-                      <div className="text-[12px] font-semibold text-ink-500">מודלי האיג׳נט</div>
-                      <Rich html={s.aiModels} />
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* the personal answers - one block per member (the owner, 26/10) */}
+            </div>
+            {/* fields of the first version of the form (until 20/10) - shown only when a team filled them */}
+            {(s.challengesSolved || s.aiDevTools || s.aiModels) && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {s.challengesSolved && (
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-semibold text-ink-500">בעיות משמעותיות ואיך נפתרו</div>
+                    <Rich html={s.challengesSolved} />
+                  </div>
+                )}
+                {s.aiDevTools && (
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-semibold text-ink-500">כלי AI לפיתוח</div>
+                    <Rich html={s.aiDevTools} />
+                  </div>
+                )}
+                {s.aiModels && (
+                  <div className="min-w-0">
+                    <div className="text-[12px] font-semibold text-ink-500">מודלי האיג׳נט</div>
+                    <Rich html={s.aiModels} />
+                  </div>
+                )}
+              </div>
+            )}
+            {/* the personal answers - one block per member (the owner, 26/10) */}
+            <div className={cn("grid grid-cols-1 gap-3", s.members.length > 1 && "lg:grid-cols-2")}>
               {s.members.map((m) => (
-                <div key={m.id} className="rounded-[12px] bg-tint-warm/40 border border-[#F0DCA8]/60 px-3 py-2" data-testid="member-reflection" data-answered={m.reflected ? "1" : "0"}>
+                <div key={m.id} className="min-w-0 rounded-[12px] bg-tint-warm/40 border border-[#F0DCA8]/60 px-3 py-2" data-testid="member-reflection" data-answered={m.reflected ? "1" : "0"}>
                   <div className="text-[12px] font-bold text-ink-900">{m.name} - השאלות האישיות</div>
                   {m.reflection ? (
-                    <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1.5 mt-1 text-[13px]">
+                    <dl className="flex flex-col gap-1.5 mt-1 text-[13px]">
                       <div>
                         <dt className="text-[12px] font-semibold text-ink-500">מה תרם לך הפרויקט?</dt>
                         <dd><Rich html={m.reflection.contributed} /></dd>
@@ -174,42 +186,44 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false, sideB
                 </div>
               ))}
             </div>
-          </details>
-
-          {/* other judges (team only) */}
-          {manage && e.scores.filter((x) => x.judgeId !== viewerId).length > 0 && (
-            <div className="rounded-[12px] border border-ink-200 px-3 py-2 text-[12.5px]">
-              <div className="font-semibold text-ink-700 mb-1">השופטות האחרות</div>
-              {e.scores
-                .filter((x) => x.judgeId !== viewerId)
-                .map((x) => (
-                  <div key={x.judgeId} className="flex items-center gap-2 flex-wrap">
-                    <b>{x.judgeName}</b>: {x.total}
-                    <span className="text-ink-500">({CRITERIA.map((c) => x.scores[c.key]).join(" / ")})</span>
-                    {x.comment && <span className="text-ink-700 basis-full">״{x.comment}״</span>}
-                  </div>
-                ))}
-            </div>
-          )}
-
-          <div>
-            <div className="font-mono text-[12px] text-brand-pink-deep mb-1.5">{"// הציון שלך"}</div>
-            <ScoreForm teamKey={s.teamKey} initial={e.mine?.scores ?? null} notes={e.mine?.notes ?? {}} comment={e.mine?.comment ?? null} savedAt={e.mine?.updatedAt ?? null} />
           </div>
-          {manage && (
-            <div className="text-[12px] text-ink-500">
-              תיק החברות:{" "}
-              {s.members.map((m, i) => (
-                <span key={m.id}>
-                  {i > 0 && " · "}
-                  <Link href={`/admin/members/${m.id}`} target="_blank" rel="noopener" className="text-brand-purple hover:underline">
-                    {m.name}
-                  </Link>
-                </span>
+        </Collapsible>
+
+        {/* other judges (team only) */}
+        {others.length > 0 && (
+          <Collapsible scope={SCOPE} id="other-judges" title="השופטות האחרות" compact summary={others.map((x) => `${x.judgeName} ${x.total}`).join(" · ")}>
+            <div className="rounded-[12px] border border-ink-200 px-3 py-2 text-[12.5px] flex flex-col gap-1">
+              {others.map((x) => (
+                <div key={x.judgeId} className="flex items-center gap-2 flex-wrap">
+                  <b>{x.judgeName}</b>: {x.total}
+                  <span className="text-ink-500">({CRITERIA.map((c) => x.scores[c.key]).join(" / ")})</span>
+                  {x.comment && <span className="text-ink-700 basis-full">״{x.comment}״</span>}
+                </div>
               ))}
             </div>
-          )}
-        </div>
+          </Collapsible>
+        )}
+
+        {/* the score */}
+        <Collapsible scope={SCOPE} id="score" title="הציון שלך" compact summary={e.mine ? `${e.mine.total} מתוך 100 · נשמר` : "עוד לא שפטת"}>
+          <div data-testid="score-section">
+            <ScoreForm teamKey={s.teamKey} initial={e.mine?.scores ?? null} notes={e.mine?.notes ?? {}} comment={e.mine?.comment ?? null} savedAt={e.mine?.updatedAt ?? null} />
+          </div>
+        </Collapsible>
+
+        {manage && (
+          <div className="text-[12px] text-ink-500">
+            תיק החברות:{" "}
+            {s.members.map((m, i) => (
+              <span key={m.id}>
+                {i > 0 && " · "}
+                <Link href={`/admin/members/${m.id}`} target="_blank" rel="noopener" className="text-brand-purple hover:underline">
+                  {m.name}
+                </Link>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </article>
   );
@@ -230,7 +244,7 @@ function AutoReportPanel({ report, ranAt, passed, checks }: { report: AutoReport
   const read = readAutoReport(report);
   const suggested = report.suggested ? totalOf({ ...ZERO_SCORES, ...report.suggested }) : null;
   return (
-    <div className="flex flex-col gap-2.5" data-testid="auto-report">
+    <div className="flex flex-col gap-2.5 min-w-0" data-testid="auto-report">
       {suggested && (
         <div className={cn("rounded-[14px] px-4 py-3 flex items-baseline gap-3 flex-wrap", read.blocked ? "bg-[#FDE8E8]" : "bg-tint-purple/40")} data-testid="auto-report-total">
           <span className="font-display text-[30px] font-black leading-none text-ink-1000 tabular-nums">{suggested.total}</span>
@@ -249,8 +263,8 @@ function AutoReportPanel({ report, ranAt, passed, checks }: { report: AutoReport
         </div>
       )}
       {report.suggested && (
-        // Block rows, not a table: a table with no-wrap cells cannot shrink below its content, and in the desk's
-        // narrow column it overflowed into the team's text (the owner's laptop, 26/10). Label + points on one line,
+        // Block rows, not a table: a table with no-wrap cells cannot shrink below its content, and in a narrow
+        // column it overflowed into the team's text (the owner's laptop, 26/10). Label + points on one line,
         // the reasoned note wrapping below - readable at any width.
         <div className="text-[13px] flex flex-col" data-testid="auto-report-criteria">
           {CRITERIA.filter((c) => report.suggested?.[c.key] !== undefined).map((c) => {

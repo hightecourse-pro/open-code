@@ -12,7 +12,7 @@ export function ScoreForm({ teamKey, initial, notes, comment, savedAt }: { teamK
   const t = useMemo(() => totalOf(values), [values]);
   return (
     <form action={action} className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-3">
         {CRITERIA.map((c) => (
           <div key={c.key} className="flex flex-col gap-1">
             <div className="flex items-center gap-2">
