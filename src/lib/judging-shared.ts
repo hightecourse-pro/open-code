@@ -54,6 +54,8 @@ export interface AutoReport {
   summary?: string;
   suggested?: Partial<Scores>;
   screenshots?: string[];
+  /** The board strips the data URIs (26/10 night: megabytes in every page) and keeps only whether there is one - served by /api/judge/shot. */
+  hasScreenshot?: boolean;
   /** Structured since 26/10: the reasoned note per criterion, the bottom line, what blocked the run, the video note. */
   notes?: Partial<Record<CriterionKey, string>>;
   bottomLine?: string;
