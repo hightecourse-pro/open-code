@@ -21,6 +21,8 @@ import { getDriveFolder } from "@/lib/hackathon-drive";
 import { driveFileId } from "@/lib/drive";
 import { loadReviewRequests } from "@/lib/hackathon-review-requests";
 import { ReviewRequests, type RequestTeam, type ReviewRequestRow } from "./review-requests";
+import { HackathonDashboard, type DashboardPerson } from "./dashboard";
+import { Collapsible } from "./collapsible";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "האקתון" };
@@ -57,14 +59,31 @@ export default async function AdminHackathonPage() {
   const ids = [...new Set((regs ?? []).flatMap((r) => [r.profile_id, r.partner_profile_id].filter((x): x is string => !!x)))];
   const nameOf = new Map<string, { name: string; status: string }>();
   const emailOf = new Map<string, string | null>();
+  // seminar + graduation year (the owner, 25/10): profile answers, the year resolved to its Hebrew label
+  const seminarOf = new Map<string, string>();
+  const yearOf = new Map<string, string>();
   if (ids.length) {
     const { inChunks } = await import("@/lib/chunk");
-    const [profs, { data: mails }] = await Promise.all([
+    const [profs, { data: mails }, { data: qs }] = await Promise.all([
       inChunks<{ id: string; full_name: string; status: string }>(ids, (chunk) => admin.from("profiles").select("id, full_name, status").in("id", chunk)),
       admin.rpc("member_emails", { p_ids: ids }),
+      admin.from("config_questions").select("id, key, options").in("key", ["study_place", "graduation_year"]),
     ]);
     for (const p of await withPrevSurnames(profs)) nameOf.set(p.id, { name: p.full_name, status: p.status });
     for (const m of (mails ?? []) as { id: string; email: string | null }[]) emailOf.set(m.id, m.email);
+    const studyQ = (qs ?? []).find((q) => q.key === "study_place");
+    const yearQ = (qs ?? []).find((q) => q.key === "graduation_year");
+    const qIds = [studyQ?.id, yearQ?.id].filter((x): x is string => !!x);
+    if (qIds.length) {
+      const yearLabel = new Map((Array.isArray(yearQ?.options) ? (yearQ!.options as { value: string; label: string }[]) : []).map((o) => [o.value, o.label]));
+      const answers = await inChunks<{ profile_id: string; question_id: string; value: unknown }>(ids, (chunk) => admin.from("profile_answers").select("profile_id, question_id, value").in("profile_id", chunk).in("question_id", qIds));
+      for (const a of answers) {
+        const v = typeof a.value === "string" ? a.value.trim() : "";
+        if (!v) continue;
+        if (a.question_id === studyQ?.id) seminarOf.set(a.profile_id, v);
+        else if (a.question_id === yearQ?.id) yearOf.set(a.profile_id, yearLabel.get(v) ?? v);
+      }
+    }
   }
   const submissionOf = new Map(submissions.map((s) => [s.teamKey, s]));
 
@@ -95,10 +114,13 @@ export default async function AdminHackathonPage() {
       submission: sub?.submittedAt ? "submitted" : sub ? "draft" : "none",
       submittedAt: sub?.submittedAt ?? null,
       productUrl: sub?.productUrl ?? null,
+      seminar: seminarOf.get(r.profile_id) ?? null,
+      graduationYear: yearOf.get(r.profile_id) ?? null,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     };
   });
+  const dashboardPeople: DashboardPerson[] = rows.map((r) => ({ id: r.profileId, challengeKey: r.challengeKey, seminar: r.seminar, year: r.graduationYear, submitted: r.submission === "submitted" }));
 
   // judges: mentors and team members, with their challenges (the owner's view)
   let candidates: JudgeCandidate[] = [];
@@ -131,13 +153,21 @@ export default async function AdminHackathonPage() {
           מי רשומה לאיזה אתגר (לבד או כזוג), מי הגישה, חומרי האתגרים להורדה למנויות, והשיפוט. ההרשמה והחומרים נמצאים בקהילה תחת ״האקתון״.
         </p>
       </div>
-      <RegistrationsTable rows={rows} challenges={challengeList} />
-      <SubmissionsClosure closedAt={closure.closedAt} />
-      <SubmissionsTable rows={submissions} />
-      <ArenaOverview data={arena} />
+      <HackathonDashboard people={dashboardPeople} challenges={challengeList} />
+      <Collapsible id="registrations" title="רשומות" summary={`${rows.length} רשומות · ${rows.filter((r) => r.submission === "submitted").length} הגישו`}>
+        <RegistrationsTable rows={rows} challenges={challengeList} />
+      </Collapsible>
+      <Collapsible id="submissions" title="הגשות התוצרים" summary={`${submissions.filter((s) => s.submittedAt).length} הוגשו · ${submissions.filter((s) => !s.submittedAt).length} טיוטות${closure.closedAt ? " · ההגשות סגורות" : ""}`}>
+        <SubmissionsClosure closedAt={closure.closedAt} />
+        <SubmissionsTable rows={submissions} challenges={challengeList} />
+      </Collapsible>
+      <Collapsible id="arena" title="זירת המנטוריות" summary={`${arena.open} פתוחות · ${arena.answered} נענו`} defaultOpen={false}>
+        <ArenaOverview data={arena} />
+      </Collapsible>
       {board ? (
         <>
           {/* ── judging (the owner, 16/10 + 23/10): two independent judges per challenge, the owner sees all ── */}
+          <Collapsible id="judging" title="שיפוט - שופטות וסרטונים" summary={`${board.judges.length} שופטות · ${board.entries.filter((e) => e.scores.length > 0).length} מתוך ${board.entries.length} עם ציון`}>
           <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
             <div>
               <h3 className="font-display text-base font-bold">שיפוט ({board.entries.filter((e) => e.scores.length > 0).length} מתוך {board.entries.length} הגשות עם ציון)</h3>
@@ -155,16 +185,18 @@ export default async function AdminHackathonPage() {
               done={submissions.filter((s) => s.submittedAt && s.driveFileId).length}
             />
           </section>
-          <JudgingSummary rows={summary} challenges={challengeList} />
-          <ReviewRequests rows={requestRows} teams={requestTeams} myEmail={myEmail} />
-          <details className="bg-white border border-ink-200 rounded-[18px] shadow-sm">
-            <summary className="list-none cursor-pointer px-5 py-4 font-display text-base font-bold [&::-webkit-details-marker]:hidden">
-              כל ההגשות בפירוט - הסרטון, מה שנכתב, הבדיקה האוטומטית, הציונים וההערות של כל שופטת <span className="text-ink-400 text-[13px] font-normal">(לחיצה לפתיחה)</span>
-            </summary>
-            <div className="px-5 pb-5">
+          </Collapsible>
+          <Collapsible id="summary" title="השוואת הציונים והמלצה" summary={`${summary.filter((r) => r.average !== null).length} עם ציון שופטות · ${summary.filter((r) => r.auto !== null).length} עם בדיקה אוטומטית`}>
+            <JudgingSummary rows={summary} challenges={challengeList} />
+          </Collapsible>
+          <Collapsible id="requests" title="בקשות השלמה מצוותים" summary={`${requestRows.length} בקשות · ${requestRows.filter((r) => r.respondedAt).length} עודכנו`}>
+            <ReviewRequests rows={requestRows} teams={requestTeams} myEmail={myEmail} />
+          </Collapsible>
+          <Collapsible id="board" title="כל ההגשות בפירוט" summary="הסרטון, מה שנכתב, הבדיקה האוטומטית, הציונים וההערות של כל שופטת" defaultOpen={false}>
+            <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm px-5 py-5">
               <JudgingBoard entries={board.entries} viewerId={me.id} manage />
             </div>
-          </details>
+          </Collapsible>
         </>
       ) : (
         <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm text-[13.5px] text-ink-700" data-testid="judging-restricted">
@@ -174,7 +206,9 @@ export default async function AdminHackathonPage() {
           </Link>
         </section>
       )}
-      <MaterialsManager challenges={challengeList} materials={materials} />
+      <Collapsible id="materials" title="חומרי האתגרים" summary={`${materials.length} קבצים`} defaultOpen={false}>
+        <MaterialsManager challenges={challengeList} materials={materials} />
+      </Collapsible>
     </div>
   );
 }
