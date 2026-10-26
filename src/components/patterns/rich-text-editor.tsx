@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Bold, Code, Heading3, Image as ImageIcon, Italic, Link2, List, ListOrdered, Smile, Strikethrough, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { sanitizeRichHtml } from "@/lib/rich-text";
 
 type ToolAction = "bold" | "italic" | "strike" | "ul" | "ol" | "h3" | "link" | "image" | "video" | "code";
 
@@ -312,6 +313,19 @@ export function RichTextEditor({
       suppressContentEditableWarning
       onInput={sync}
       onBlur={sync}
+      onPaste={(e) => {
+        // Pasted HTML (Gmail, Word, a web page) is cut down to the brand allowlist before it lands in the box -
+        // the owner (26/10) saw a <font …> wrapper from Gmail show up as text in a chat bubble. Files (a pasted
+        // screenshot) are left to the attachment picker, which listens higher up.
+        const html = e.clipboardData.getData("text/html");
+        const text = e.clipboardData.getData("text/plain");
+        if (!html && !text) return;
+        e.preventDefault();
+        const clean = html ? sanitizeRichHtml(html) : "";
+        if (clean) document.execCommand("insertHTML", false, clean);
+        else if (text) document.execCommand("insertText", false, text);
+        sync();
+      }}
       onKeyDown={
         submitOnEnter
           ? (e) => {

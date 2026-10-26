@@ -5,8 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, isSubscriber } from "@/lib/auth";
-import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
-import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { htmlToPlainText, settleComposerBody } from "@/lib/rich-text";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
 /** The reaction palette - WhatsApp-style, one emoji per person per message. */
@@ -97,8 +96,9 @@ export async function sendMessage(
   const raw = String(formData.get("body") ?? "").trim();
   // A TAGLESS editor body can still carry entities ("&nbsp;") - store it
   // decoded so the plain path never shows entity codes in a bubble.
-  const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : decodeHtmlEntities(raw);
-  const plain = isRichHtml(raw) ? htmlToPlainText(body) : body;
+  const settled = settleComposerBody(raw);
+  const body = settled.body;
+  const plain = settled.rich ? htmlToPlainText(body) : body;
   const attachIds = attachmentIdsFrom(formData);
   if ((!plain.trim() && attachIds.length === 0) || plain.length > 2000 || body.length > 10000)
     return { ok: false };
@@ -204,8 +204,9 @@ const EDIT_WINDOW_MS = 15 * 60 * 1000;
  */
 export async function editMessage(messageId: string, formData: FormData): Promise<void> {
   const raw = String(formData.get("body") ?? "").trim();
-  const body = isRichHtml(raw) ? sanitizeRichHtml(raw) : decodeHtmlEntities(raw);
-  const plain = isRichHtml(raw) ? htmlToPlainText(body) : body;
+  const settled = settleComposerBody(raw);
+  const body = settled.body;
+  const plain = settled.rich ? htmlToPlainText(body) : body;
   if (!plain.trim() || plain.length > 2000 || body.length > 10000) return;
 
   const supabase = await createClient();
