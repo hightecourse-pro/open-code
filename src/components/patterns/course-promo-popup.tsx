@@ -23,7 +23,8 @@ export function CoursePromoStrip({ show }: { show: boolean }) {
   const [min, setMin] = useState(false);
   useEffect(() => {
     const t = setTimeout(() => {
-      if (!show || pathname.startsWith("/annual-course")) return setVisible(false);
+      // Not on the judging desk (the owner, 26/10 night: "בדף הזה שלא יראו את פרסומת הקורס") - it is back on every other page.
+      if (!show || pathname.startsWith("/annual-course") || pathname.startsWith("/judge")) return setVisible(false);
       setVisible(true);
       try {
         setMin(localStorage.getItem(KEY) === VERSION);
