@@ -47,8 +47,13 @@ export function SubscriptionCard({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
+  const [now] = useState(() => Date.now());
   const endDate = periodEnd ? DATE_HE.format(new Date(periodEnd)) : null;
   const active = status === "active";
+  // "הסתיים ב-" only once the date has passed: a closed row whose period
+  // still runs (a technical leftover, 26/10) must not announce an ending in
+  // the future as if it already happened.
+  const endedDate = periodEnd && new Date(periodEnd).getTime() < now ? endDate : null;
 
   function doCancel() {
     start(async () => {
@@ -176,7 +181,7 @@ export function SubscriptionCard({
       {!active && (
         <>
           <p className="text-[14px] text-ink-700">
-            המנוי לא פעיל כרגע{endDate ? ` (הסתיים ב-${endDate})` : ""} - הקהילה מחכה לך חזרה 💜
+            המנוי לא פעיל כרגע{endedDate ? ` (הסתיים ב-${endedDate})` : ""} - הקהילה מחכה לך חזרה 💜
           </p>
           <Link
             href="/join"
