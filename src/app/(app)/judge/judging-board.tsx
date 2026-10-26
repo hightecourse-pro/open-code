@@ -8,6 +8,7 @@ import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { Collapsible } from "@/components/patterns/fold-section";
 import { ScoreForm } from "./score-form";
 import { LazyVideo } from "@/components/patterns/lazy-video";
+import { MediaIsland, imgHtml } from "@/components/patterns/media-island";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 const RICH = "text-[13px] leading-relaxed break-words [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
@@ -314,8 +315,8 @@ function AutoReportPanel({ report, teamKey, ranAt, passed, checks }: { report: A
         </details>
       )}
       {(report.hasScreenshot || report.screenshots?.[0]?.startsWith("data:image/")) && (
-        // eslint-disable-next-line @next/next/no-img-element -- the report's own JPEG, served on demand by /api/judge/shot (the page carries only a flag)
-        <img src={report.screenshots?.[0] ?? `/api/judge/shot?team=${encodeURIComponent(teamKey)}`} loading="lazy" alt="צילום מסך מהבדיקה האוטומטית" className="w-full max-w-[320px] rounded-[10px] border border-ink-200" data-testid="auto-report-shot" />
+        // the report's own JPEG, served on demand by /api/judge/shot (the page carries only a flag) - in an island, out of React's reach
+        <MediaIsland html={imgHtml(report.screenshots?.[0] ?? `/api/judge/shot?team=${encodeURIComponent(teamKey)}`, "צילום מסך מהבדיקה האוטומטית", "w-full max-w-[320px] rounded-[10px] border border-ink-200")} testId="auto-report-shot" />
       )}
     </div>
   );
