@@ -13,6 +13,7 @@ import { JudgesPicker, type JudgeCandidate } from "./judges-picker";
 import { JudgingSummary, type SummaryRow } from "./judging-summary";
 import { JudgingBoard } from "@/app/(app)/judge/judging-board";
 import { judgeAccessFor, loadJudgingBoard } from "@/lib/judging";
+import { guarded } from "@/lib/error-log";
 import { ZERO_SCORES, totalOf } from "@/lib/judging-shared";
 import { arenaOverview, loadArenaMentors } from "@/lib/arena";
 import { ArenaOverview } from "./arena-overview";
@@ -35,6 +36,10 @@ export const dynamic = "force-dynamic";
  * (23/10) sees none of the scores here either.
  */
 export default async function AdminHackathonPage() {
+  return guarded("/admin/hackathon", adminHackathonPageBody);
+}
+
+async function adminHackathonPageBody() {
   const me = await requireRole("admin");
   const admin = createAdminClient();
   const access = await judgeAccessFor(me);

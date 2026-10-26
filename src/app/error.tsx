@@ -22,6 +22,13 @@ export default function AppError({
   const [healing, setHealing] = useState(true);
   useEffect(() => {
     console.error("[app-error]", error.digest ?? "", error.message);
+    // Report it (26/10): the team reads these on /admin/errors - the sad screen alone says nothing about why.
+    fetch("/api/errors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: error.message, stack: error.stack ?? null, digest: error.digest ?? null, url: location.pathname + location.search }),
+      keepalive: true,
+    }).catch(() => {});
     let last = 0;
     try {
       last = Number(sessionStorage.getItem("oc-error-heal") ?? 0);
