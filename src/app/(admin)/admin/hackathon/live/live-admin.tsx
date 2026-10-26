@@ -100,8 +100,8 @@ export function LiveAdmin({ initial, submitted }: { initial: LiveAdminView; subm
         <a className={ghost} href="/live" target="_blank" rel="noreferrer">
           📺 פתחי את מסך האולם
         </a>
-        <a className={quiet} href="/live?theme=dark" target="_blank" rel="noreferrer">
-          מסך כהה למקרן
+        <a className={quiet} href="/live?theme=light" target="_blank" rel="noreferrer">
+          גרסה בהירה
         </a>
         <a className={quiet} href="/api/admin/hackathon/live?export=csv">
           ייצוא CSV

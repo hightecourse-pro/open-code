@@ -1,118 +1,120 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { LiveDisplayView, LiveFinalsView, LiveQuestionView } from "@/lib/hackathon-live-shared";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import type { LiveDisplayView, LiveFinalistRow, LiveFinalsView, LiveQuestionView, LiveStep } from "@/lib/hackathon-live-shared";
 
 const POLL_MS = 2000;
+const STAGE_W = 1920;
+const STAGE_H = 1080;
 
-/* Slides, not pages (the owner, 26/10): a title slide while nothing runs, the
-   ballot slide once after the three presentations - walking the audience
-   through the criteria one by one with a clock - and a results slide when the
-   organiser closes the challenge. No header, no footer, no status bar. */
+/* The approved design of the LED screen (phone-system/hackathon-voting, 26/10):
+   a 1920×1080 stage scaled to the screen, the brand tokens only, Heebo for text
+   and numbers, Karantina for the big titles, white logos on #15123A. Three
+   screens - the vote per category (bars rising with the audience's share, in
+   percentages only - never a vote count), the judges' scores before the reveal,
+   and the winner on a podium - plus a clean opening screen while nothing runs.
+   The operator's buttons live in the control panel, never on this screen. */
 const CSS = `
-.lv{position:fixed;inset:0;overflow:hidden;font-family:var(--font-noto-hebrew),"Noto Sans Hebrew",system-ui,sans-serif;-webkit-font-smoothing:antialiased;
-  --pink:#e0418d;--pink-deep:#ce2462;--purple:#6b3d99;--indigo:#464ca0;--grad:linear-gradient(95deg,#e0418d 0%,#913f80 50%,#464ca0 100%);
-  --page:#fbfafd;--surface:#ffffffd9;--line:#e7e5ef;--txt:#15132b;--txt2:#4a4868;--muted:#7a7892;--track:#ecebf5;--success:#1f9d6a;--danger:#d8345f;--blob:.6;
-  background:var(--page);color:var(--txt);cursor:none}
-.lv[data-theme="dark"]{--page:#0d0b24;--surface:#1b1938d9;--line:#34325a;--txt:#fff;--txt2:#d6d4e8;--muted:#9a98b8;--track:#262448;--blob:1}
+.lv{position:fixed;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);cursor:none;-webkit-font-smoothing:antialiased;
+  font-family:var(--font-heebo),Heebo,"Noto Sans Hebrew",sans-serif;
+  --bg:#15123A;--panel:#221D55;--panel-border:#3A3480;--ink:#FFFFFF;--muted:#C9C6F2;--p1:#F0306E;--p2:#C35BC0;--p3:#7B83F0;--line:#FFFFFF;--chip-idle:#4A4490;--dot:#FF4D7E;--dot-off:#8E8AC0;--live-bg:rgba(0,0,0,.2)}
+.lv[data-theme="light"]{--bg:#FFFFFF;--panel:#4A4EA2;--panel-border:#4A4EA2;--ink:#1F1A4A;--muted:#5B5687;--p1:#D81B5A;--p2:#8E3F86;--p3:#4A4EA2;--line:#1F1A4A;--chip-idle:#CFCBE6;--live-bg:rgba(0,0,0,.18)}
 .lv.cursor{cursor:default}
-.bg{position:absolute;inset:0;overflow:hidden;z-index:0;pointer-events:none}
-.bg i{position:absolute;border-radius:50%;filter:blur(100px);opacity:var(--blob);will-change:transform}
-.bg i:nth-child(1){width:60vw;height:60vw;left:-18vw;top:-28vw;background:#e0418d55;animation:drift1 26s ease-in-out infinite alternate}
-.bg i:nth-child(2){width:55vw;height:55vw;right:-20vw;top:8vh;background:#464ca055;animation:drift2 32s ease-in-out infinite alternate}
-.bg i:nth-child(3){width:45vw;height:45vw;left:25vw;bottom:-28vw;background:#913f8044;animation:drift3 38s ease-in-out infinite alternate}
-@keyframes drift1{to{transform:translate(18vw,14vh) scale(1.15)}}
-@keyframes drift2{to{transform:translate(-14vw,22vh) scale(.9)}}
-@keyframes drift3{to{transform:translate(-20vw,-12vh) scale(1.2)}}
-.corner{position:absolute;top:clamp(14px,2.4vh,28px);right:clamp(18px,2.4vw,40px);z-index:2;display:flex;align-items:center;gap:14px}
-.corner img{height:clamp(34px,6vh,70px);width:auto;display:block}
-.lv[data-theme="dark"] .corner img{background:#fff;border-radius:12px;padding:3px 8px}
-.corner .ev{font-size:clamp(13px,1.7vh,20px);font-weight:600;color:var(--txt2)}
-.slide{position:absolute;inset:0;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:clamp(40px,7vh,90px) clamp(40px,6vw,120px);animation:slideIn .8s cubic-bezier(.22,1,.36,1) both}
-@keyframes slideIn{from{opacity:0;transform:translateY(24px) scale(.98)}}
-.kick{font-size:clamp(14px,2vh,26px);font-weight:700;color:var(--pink-deep);letter-spacing:.06em;animation:fadeUp .6s .1s both}
-.lv[data-theme="dark"] .kick{color:#ff8ac0}
-.h{font-size:clamp(34px,5.6vw,92px);font-weight:900;line-height:1.08;letter-spacing:-.01em;margin:6px 0 0;text-align:center;animation:titleIn .8s cubic-bezier(.22,1,.36,1) .12s both}
-@keyframes titleIn{from{opacity:0;transform:translateY(16px)}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}}
-/* title slide */
-.title .logo{height:clamp(140px,30vh,360px);width:auto;animation:breathe 4s ease-in-out infinite}
-.lv[data-theme="dark"] .title .logo{background:#fff;border-radius:28px;padding:16px 28px}
-@keyframes breathe{50%{transform:scale(1.04)}}
-.title .ev{margin-top:clamp(16px,3vh,36px);font-size:clamp(22px,3vw,48px);font-weight:800;color:var(--txt2)}
-/* ballot */
-.ballot{justify-content:space-between;align-items:stretch}
-.ballot .top{text-align:center}
-.projects{display:flex;justify-content:center;gap:clamp(14px,2vw,34px);margin:clamp(12px,2.4vh,30px) 0}
-.pr{display:flex;align-items:center;gap:clamp(12px,1.4vw,22px);flex:1 1 0;max-width:34%;padding:clamp(12px,2vh,26px) clamp(16px,1.8vw,30px);border-radius:26px;background:var(--surface);border:1px solid var(--line);backdrop-filter:blur(8px);animation:tileIn .7s cubic-bezier(.34,1.4,.64,1) both}
-@keyframes tileIn{from{opacity:0;transform:translateY(26px) scale(.92)}}
-.pr .k{width:clamp(52px,8.4vh,108px);height:clamp(52px,8.4vh,108px);border-radius:24px;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:900;font-size:clamp(28px,5vh,64px);flex:none;box-shadow:0 10px 24px #913f8040}
-.pr .nm{font-size:clamp(17px,2.6vh,36px);font-weight:800;line-height:1.15}
-.steps{display:flex;flex-direction:column;gap:clamp(6px,1.2vh,14px);flex:1;justify-content:center;min-height:0}
-.st{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:clamp(12px,1.6vw,26px);padding:clamp(6px,1.1vh,14px) clamp(14px,1.6vw,26px);border-radius:22px;transition:all .5s;animation:fadeUp .6s both}
-.st .c{width:clamp(30px,4.2vh,54px);height:clamp(30px,4.2vh,54px);border-radius:999px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:clamp(14px,2.2vh,28px);color:var(--txt2);background:var(--surface)}
-.st .l{font-size:clamp(18px,2.8vh,38px);font-weight:700;color:var(--txt2)}
-.st.next{opacity:.45}
-.st.done .c{background:var(--success);border-color:transparent;color:#fff}
-.st.done .l{text-decoration:line-through;text-decoration-color:var(--muted);text-decoration-thickness:2px}
-.st.open{background:var(--surface);border:1px solid var(--line);box-shadow:0 14px 40px #2e2e6e22;transform:scale(1.02)}
-.st.open .c{background:var(--grad);border-color:transparent;color:#fff}
-.st.open .l{font-size:clamp(26px,4.4vh,60px);font-weight:900;color:var(--txt)}
-.st .hint{font-size:clamp(14px,2vh,26px);color:var(--txt2);font-weight:600;white-space:nowrap}
-.st.open .hint{color:var(--pink-deep)}
-.lv[data-theme="dark"] .st.open .hint{color:#ff8ac0}
-.ring{position:relative;width:clamp(56px,9vh,110px);height:clamp(56px,9vh,110px);display:grid;place-items:center}
-.ring svg{position:absolute;inset:0;width:100%;height:100%;transform:rotate(-90deg)}
-.ring circle{fill:none;stroke-width:6}
-.ring .bgc{stroke:var(--track)}
-.ring .fgc{stroke:url(#lvgrad);stroke-linecap:round;transition:stroke-dashoffset .9s linear}
-.ring b{font-size:clamp(18px,3vh,38px);font-weight:900;font-variant-numeric:tabular-nums}
-.ring.low b{color:var(--danger);animation:beat 1s infinite}
-.cta{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-wrap:wrap;animation:fadeUp .6s .3s both}
-.cta .ph{display:flex;align-items:baseline;gap:12px}
-.cta .ph .l{font-size:clamp(14px,1.8vh,24px);color:var(--txt2);font-weight:600}
-.cta .ph .n{font-size:clamp(28px,4vw,64px);font-weight:900;letter-spacing:.03em;direction:ltr;font-variant-numeric:tabular-nums;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.cta .cnt{font-size:clamp(16px,2.4vh,32px);color:var(--txt2);font-weight:600;display:flex;align-items:center;gap:10px}
-.cta .cnt b{color:var(--txt);font-variant-numeric:tabular-nums;font-size:1.5em;display:inline-block;min-width:2ch;animation:pop .45s cubic-bezier(.34,1.56,.64,1)}
-@keyframes pop{from{transform:scale(.4)}}
-.plus{display:inline-block;color:var(--pink-deep);font-weight:900;animation:floatUp 1.4s ease-out both}
-@keyframes floatUp{from{opacity:0;transform:translateY(10px)}30%{opacity:1}to{opacity:0;transform:translateY(-26px)}}
-.done-all{font-size:clamp(26px,4.4vh,60px);font-weight:900;text-align:center;animation:fadeUp .6s both}
-/* results */
-.winner{text-align:center;margin:clamp(8px,1.6vh,20px) 0 clamp(14px,2.6vh,34px);animation:winIn 1s cubic-bezier(.34,1.3,.64,1) .3s both}
-@keyframes winIn{from{opacity:0;transform:scale(.6)}}
-.winner .l{font-size:clamp(16px,2.4vh,30px);color:var(--pink-deep);font-weight:800;letter-spacing:.08em}
-.lv[data-theme="dark"] .winner .l{color:#ff8ac0}
-.winner .n{font-size:clamp(36px,6vw,104px);font-weight:900;line-height:1.05;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;animation:glow 2.4s ease-in-out infinite}
-@keyframes glow{50%{filter:drop-shadow(0 0 22px #e0418d66)}}
-.chart{display:flex;flex-direction:column;gap:clamp(10px,2vh,28px);width:100%;max-width:1500px}
-.r{display:grid;grid-template-columns:auto minmax(220px,.9fr) 2fr auto;align-items:center;gap:clamp(12px,1.8vw,30px);animation:rowIn .7s cubic-bezier(.22,1,.36,1) both}
-@keyframes rowIn{from{opacity:0;transform:translateX(40px)}}
-.r .k{width:clamp(34px,4.4vh,64px);height:clamp(34px,4.4vh,64px);border-radius:999px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:clamp(16px,2.4vh,32px);color:var(--txt2);background:var(--surface)}
-.r.first .k{background:var(--grad);color:#fff;border-color:transparent;animation:pop .6s cubic-bezier(.34,1.56,.64,1) both}
-.r .nm{font-size:clamp(18px,2.8vh,42px);font-weight:700;line-height:1.15}
-.r .tr{height:clamp(14px,2.6vh,36px);background:var(--track);border-radius:999px;overflow:hidden;position:relative}
-.r .fl{position:absolute;inset:0 0 0 auto;width:0;height:100%;background:var(--grad);border-radius:999px;transition:width 1s cubic-bezier(.22,1,.36,1);transform-origin:right center;animation:barIn 1.1s cubic-bezier(.22,1,.36,1) both}
-@keyframes barIn{from{transform:scaleX(0)}}
-.r .fl.nz{min-width:clamp(14px,2.6vh,36px)}
-.r.first .fl{box-shadow:0 0 24px #e0418d66}
-.r.first .fl::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,#ffffff55 50%,transparent 70%);background-size:220% 100%;animation:shimmer 2.4s linear infinite}
-@keyframes shimmer{from{background-position:120% 0}to{background-position:-120% 0}}
-.r .v{font-size:clamp(20px,3.4vh,52px);font-weight:900;min-width:4.5ch;text-align:left;direction:ltr;font-variant-numeric:tabular-nums;white-space:nowrap}
-.r .v small{font-size:.5em;font-weight:600;color:var(--muted);margin-inline-start:6px}
-.cats{display:flex;flex-wrap:wrap;gap:clamp(10px,1.4vw,24px) clamp(18px,2.6vw,44px);justify-content:center;font-size:clamp(14px,2vh,26px);color:var(--txt2);margin-top:clamp(14px,2.6vh,34px)}
-.cats span{animation:fadeUp .6s both}
-.cats b{color:var(--txt)}
-.soon{font-size:clamp(20px,3vh,40px);color:var(--txt2);font-weight:700;margin-top:clamp(14px,2.6vh,34px);animation:fadeUp .6s .4s both}
-@keyframes beat{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
-.net{position:absolute;bottom:6px;left:12px;z-index:2;font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;opacity:.7}
-.net i{width:8px;height:8px;border-radius:50%;background:var(--success)} .net.bad i{background:var(--danger)} .net.warn i{background:#c77800}
-.toast{position:absolute;top:14px;left:50%;transform:translateX(-50%);z-index:3;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:8px 16px;font-size:15px}
+.kr{font-family:var(--font-karantina),Karantina,var(--font-heebo),Heebo,sans-serif}
+.stage{width:1920px;height:1080px;position:relative;overflow:hidden;flex:none;background:var(--bg);display:flex;flex-direction:column;padding:40px 72px 32px;transform-origin:center}
+.bracket{position:absolute;top:330px;pointer-events:none}
+.scene{position:absolute;inset:0;display:flex;flex-direction:column;padding:40px 72px 32px;animation:sceneIn .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes sceneIn{from{opacity:0}}
+.hd{display:flex;align-items:center;justify-content:space-between;gap:40px;height:150px;flex-shrink:0}
+.hd img{display:block;width:auto}
+.tw{flex:1;display:flex;flex-direction:column;align-items:center;gap:12px;min-width:0}
+.kicker{font-weight:700;font-size:30px;line-height:1;color:var(--muted);white-space:nowrap}
+.ttl{font-weight:700;font-size:124px;line-height:.9;white-space:nowrap;text-align:center}
+.ttl.long{font-size:100px}
+.ttl.wrap{white-space:normal;font-size:84px;line-height:.95;max-width:1200px}
+.rule{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--p3),var(--p2),var(--p1));margin-top:8px;flex-shrink:0}
+.screen{flex:1;display:flex;flex-direction:column;min-height:0}
+.steps{display:flex;justify-content:center;gap:14px;margin-top:22px}
+.chip{font-weight:700;font-size:24px;line-height:1;padding:11px 24px;border-radius:999px;border:2px solid var(--chip-idle);color:var(--muted);transition:background .4s,border-color .4s,color .4s}
+.chip.done{border-color:var(--p3);color:var(--ink)}
+.chip.on{background:var(--p1);border-color:var(--p1);color:#fff}
+.chart{flex:1;display:flex;justify-content:center;gap:100px;padding:0 60px;min-height:0}
+.col{width:400px;display:flex;flex-direction:column;align-items:center;animation:colIn .7s cubic-bezier(.2,.8,.2,1) both}
+@keyframes colIn{from{opacity:0;transform:translateY(20px)}}
+.col-top{height:530px;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:14px}
+.lead{font-weight:800;font-size:22px;line-height:1;color:var(--bg);background:var(--ink);padding:9px 18px;border-radius:999px;visibility:hidden}
+.lead.show{visibility:visible;animation:leadIn .4s cubic-bezier(.2,.8,.2,1) both}
+@keyframes leadIn{from{opacity:0;transform:translateY(8px)}}
+.pct{font-weight:900;font-size:100px;line-height:1;font-variant-numeric:tabular-nums;direction:ltr}
+.pct small{font-size:48px;font-weight:800}
+.pct.hide{visibility:hidden}
+.bar{width:270px;min-height:6px;height:0;border-radius:18px 18px 4px 4px;transition:height .8s cubic-bezier(.2,.8,.2,1),box-shadow .3s}
+.base{width:360px;height:5px;background:var(--line);border-radius:3px}
+.label{display:flex;align-items:center;gap:18px;margin-top:22px;max-width:100%}
+.key{width:70px;height:70px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:44px;line-height:1;flex:none}
+.name{font-weight:800;font-size:36px;line-height:1.08}
+.name.sm{font-size:30px}
+.hint{font-weight:700;font-size:24px;line-height:1;color:var(--muted);margin-top:8px}
+.phone{display:flex;align-items:center;justify-content:space-between;gap:32px;margin-top:26px;padding:18px 30px;border-radius:22px;background:var(--panel);border:2px solid var(--panel-border);color:#fff;flex-shrink:0}
+.phone-l{display:flex;align-items:center;gap:22px;min-width:0}
+.phone-ic{width:66px;height:66px;border-radius:18px;background:var(--p1);display:flex;align-items:center;justify-content:center;flex:none}
+.phone-num{font-weight:900;font-size:50px;line-height:1;direction:ltr;letter-spacing:.03em;font-variant-numeric:tabular-nums}
+.phone-txt{font-weight:700;font-size:27px;line-height:1.3;max-width:560px;margin-inline-start:18px}
+.live{display:flex;align-items:center;gap:14px;padding:12px 24px;border-radius:999px;background:var(--live-bg);flex:none;font-weight:800;font-size:28px;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.dot{width:18px;height:18px;border-radius:50%;background:var(--dot);animation:pulse 1.4s infinite;flex:none}
+.dot.off{background:var(--dot-off);animation:none}
+@keyframes pulse{50%{opacity:.3}}
+.judges{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:44px}
+.jrow{display:flex;gap:48px;justify-content:center}
+.jcard{width:430px;padding:40px 36px;border-radius:28px;background:var(--panel);border:3px solid;display:flex;flex-direction:column;align-items:center;gap:22px;color:#fff;animation:colIn .7s cubic-bezier(.2,.8,.2,1) both}
+.jcard .name{text-align:center}
+.jscore{font-weight:900;font-size:156px;line-height:1;font-variant-numeric:tabular-nums;direction:ltr}
+.jof{font-weight:700;font-size:40px;opacity:.8}
+.foot{font-weight:700;font-size:27px;line-height:1.3;color:var(--muted);text-align:center}
+.results{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0}
+.winner{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:14px;animation:winIn 1s cubic-bezier(.2,.8,.2,1) both}
+.winner-name{font-weight:700;font-size:156px;line-height:.95;white-space:nowrap}
+.winner-name.long{font-size:120px}
+.winner-sub{font-weight:700;font-size:32px;color:var(--muted)}
+.winner-sub b{color:var(--ink)}
+@keyframes winIn{from{opacity:0;transform:translateY(40px) scale(.96)}}
+.podium{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:36px;width:100%;min-height:0}
+.pod{width:420px;display:flex;flex-direction:column}
+.pod-head{display:flex;flex-direction:column;align-items:center;gap:10px;padding-bottom:16px;animation:colIn .7s cubic-bezier(.2,.8,.2,1) both}
+.pod-stats{display:flex;gap:20px;font-weight:700;font-size:24px;color:var(--muted);white-space:nowrap}
+.pod-stats b{color:var(--ink)}
+.pod-block{border-radius:20px 20px 0 0;display:flex;flex-direction:column;align-items:center;padding-top:22px;gap:6px;color:#fff;transform-origin:bottom;animation:rise .9s cubic-bezier(.2,.8,.2,1) both}
+.pod-rank{font-weight:900;font-size:80px;line-height:1}
+.pod-total{font-weight:900;font-size:32px;font-variant-numeric:tabular-nums}
+@keyframes rise{from{transform:scaleY(0)}}
+.baseline{width:100%;height:5px;background:var(--line);flex-shrink:0}
+.opening{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:36px}
+.opening img{display:block;width:auto}
+.opening .ev{font-weight:700;font-size:120px;line-height:.95;text-align:center;animation:colIn .9s .2s both}
+.opening .rule{width:520px;margin:0}
+.net{position:absolute;bottom:8px;left:16px;font-size:14px;color:var(--muted);opacity:.6;display:flex;align-items:center;gap:6px}
+.net i{width:8px;height:8px;border-radius:50%;background:var(--p1)}
+.toast{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:var(--panel);color:#fff;border-radius:14px;padding:8px 16px;font-size:18px}
 .confetti{position:absolute;inset:0;pointer-events:none;z-index:4}
 @media (prefers-reduced-motion:reduce){.lv *{animation:none !important;transition:none !important}}
 `;
 
-const fmt = (n: number | null | undefined) => Number(n ?? 0).toLocaleString("he-IL");
+const COLORS = ["var(--p1)", "var(--p2)", "var(--p3)"];
+const colorOf = (i: number) => COLORS[i % COLORS.length];
+const fmt1 = (x: number) => (Math.round(x * 10) / 10).toFixed(1);
+
+/** "דבורה מייזליק + שרה אוחנה" - one line per submitter. */
+function Name({ name, className = "name" }: { name: string; className?: string }) {
+  const lines = name.split(/\s*\+\s*/).filter(Boolean);
+  const small = lines.some((l) => l.length > 15);
+  return (
+    <div className={`${className}${small ? " sm" : ""}`}>
+      {lines.map((l, i) => (
+        <div key={i}>{l}</div>
+      ))}
+    </div>
+  );
+}
 
 /** A number that runs to its new value instead of jumping. */
 function useCountUp(value: number, ms = 700): number {
@@ -137,64 +139,28 @@ function useCountUp(value: number, ms = 700): number {
   return shown;
 }
 
-function Num({ value, decimals = 0 }: { value: number; decimals?: number }) {
+function Pct({ value, hidden }: { value: number; hidden?: boolean }) {
   const v = useCountUp(value);
-  return <>{decimals ? v.toFixed(decimals) : fmt(Math.round(v))}</>;
-}
-
-/** The vote counter: pops on change and floats a "+N". */
-function Counter({ voted }: { voted: number }) {
-  const prev = useRef(voted);
-  const [bursts, setBursts] = useState<{ id: number; n: number }[]>([]);
-  useEffect(() => {
-    const d = voted - prev.current;
-    prev.current = voted;
-    if (d > 0) {
-      const id = Date.now();
-      setBursts((b) => [...b.slice(-3), { id, n: d }]);
-      const t = setTimeout(() => setBursts((b) => b.filter((x) => x.id !== id)), 1500);
-      return () => clearTimeout(t);
-    }
-  }, [voted]);
   return (
-    <span className="cnt">
-      הצביעו <b key={voted}>{fmt(voted)}</b>
-      {bursts.map((b) => (
-        <span key={b.id} className="plus">
-          +{b.n}
-        </span>
-      ))}
-    </span>
-  );
-}
-
-/** The countdown of the open category. */
-function Ring({ openedAt, seconds }: { openedAt: string; seconds: number }) {
-  const [left, setLeft] = useState(seconds);
-  useEffect(() => {
-    const end = Date.parse(openedAt) + seconds * 1000;
-    const tick = () => setLeft(Math.max(0, Math.ceil((end - Date.now()) / 1000)));
-    tick();
-    const t = setInterval(tick, 250);
-    return () => clearInterval(t);
-  }, [openedAt, seconds]);
-  const r = 46;
-  const c = 2 * Math.PI * r;
-  return (
-    <div className={`ring${left <= 10 ? " low" : ""}`}>
-      <svg viewBox="0 0 100 100">
-        <defs>
-          <linearGradient id="lvgrad" x1="0" x2="1">
-            <stop offset="0" stopColor="#e0418d" />
-            <stop offset="1" stopColor="#464ca0" />
-          </linearGradient>
-        </defs>
-        <circle className="bgc" cx="50" cy="50" r={r} />
-        <circle className="fgc" cx="50" cy="50" r={r} strokeDasharray={c} strokeDashoffset={c * (1 - left / Math.max(1, seconds))} />
-      </svg>
-      <b>{left}</b>
+    <div className={`pct${hidden ? " hide" : ""}`}>
+      {Math.round(v)}
+      <small>%</small>
     </div>
   );
+}
+
+/** Seconds left on the open category's clock. */
+function useLeft(openedAt: string | null, seconds: number): number | null {
+  const [left, setLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!openedAt || !seconds) return;
+    const end = Date.parse(openedAt) + seconds * 1000;
+    const tick = () => setLeft(Math.max(0, Math.ceil((end - Date.now()) / 1000)));
+    const t = setInterval(tick, 250);
+    tick();
+    return () => clearInterval(t);
+  }, [openedAt, seconds]);
+  return openedAt && seconds ? left : null;
 }
 
 /** A short confetti burst on a canvas - the winner's moment. */
@@ -206,15 +172,15 @@ function Confetti({ fire }: { fire: number }) {
     if (!c || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = c.getContext("2d");
     if (!ctx) return;
-    c.width = c.offsetWidth;
-    c.height = c.offsetHeight;
-    const colors = ["#e0418d", "#913f80", "#464ca0", "#ffd166", "#ffffff"];
-    const parts = Array.from({ length: 220 }, () => ({
+    c.width = STAGE_W;
+    c.height = STAGE_H;
+    const colors = ["#F0306E", "#C35BC0", "#7B83F0", "#ffffff"];
+    const parts = Array.from({ length: 240 }, () => ({
       x: c.width * (0.3 + Math.random() * 0.4),
-      y: c.height * 0.4,
-      vx: (Math.random() - 0.5) * 18,
-      vy: -Math.random() * 17 - 6,
-      s: 6 + Math.random() * 9,
+      y: c.height * 0.35,
+      vx: (Math.random() - 0.5) * 20,
+      vy: -Math.random() * 18 - 6,
+      s: 7 + Math.random() * 10,
       r: Math.random() * Math.PI,
       vr: (Math.random() - 0.5) * 0.3,
       col: colors[Math.floor(Math.random() * colors.length)],
@@ -233,12 +199,12 @@ function Confetti({ fire }: { fire: number }) {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.r);
-        ctx.globalAlpha = Math.max(0, 1 - t / 3.4);
+        ctx.globalAlpha = Math.max(0, 1 - t / 3.8);
         ctx.fillStyle = p.col;
         ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
         ctx.restore();
       }
-      if (t < 3.6) raf = requestAnimationFrame(draw);
+      if (t < 4) raf = requestAnimationFrame(draw);
       else ctx.clearRect(0, 0, c.width, c.height);
     };
     raf = requestAnimationFrame(draw);
@@ -247,183 +213,291 @@ function Confetti({ fire }: { fire: number }) {
   return <canvas ref={ref} className="confetti" />;
 }
 
-/** The ballot: the three contestants, the criteria one after another, the phone to call. */
-function BallotSlide({ f, voted, phone, voteSeconds }: { f: LiveFinalsView; voted: number; phone: string; voteSeconds: number }) {
+function PhoneIcon() {
+  return (
+    <svg aria-hidden="true" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z" />
+    </svg>
+  );
+}
+
+/** The frame every screen shares: the two logos, a kicker and a big title, the gradient rule. */
+function Frame({ kicker, title, titleClass = "", light, children }: { kicker: string; title: string; titleClass?: string; light: boolean; children: React.ReactNode }) {
+  return (
+    <div className="scene">
+      <div className="hd">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={light ? "/live/hackathon-color.png" : "/live/hackathon-white.png"} alt="האקתון AI 2026" style={{ height: 146 }} />
+        <div className="tw">
+          <div className="kicker">{kicker}</div>
+          <div className={`ttl kr ${titleClass}`}>{title}</div>
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={light ? "/live/opencode-color.png" : "/live/opencode-white.png"} alt="קוד פתוח" style={{ height: 118 }} />
+      </div>
+      <div className="rule" />
+      {children}
+    </div>
+  );
+}
+
+/** "1, 2 או 3" */
+const keysText = (ns: number[]) => ns.join(", ").replace(/, (\d)$/, " או $1");
+
+/** The phone panel under the chart: the number, what to press, the live dot. */
+function PhonePanel({ phone, keys, state, left }: { phone: string; keys: number[]; state: "open" | "paused" | "closed" | "done"; left: number | null }) {
+  const label = state === "open" ? "ההצבעה פתוחה" : state === "done" ? "ההצבעה הסתיימה" : state === "closed" ? "הקטגוריה נסגרה" : "ההצבעה מושהית";
+  return (
+    <div className="phone">
+      <div className="phone-l">
+        <div className="phone-ic">
+          <PhoneIcon />
+        </div>
+        <div>
+          <div style={{ fontWeight: 700, fontSize: 24, lineHeight: 1, opacity: 0.85 }}>חייגו מכל טלפון</div>
+          <div className="phone-num">{phone || "[מספר הקו]"}</div>
+        </div>
+        <div className="phone-txt">{state === "open" ? `והקישו את מספר הפרויקט - ${keysText(keys)}. קול אחד לכל טלפון בכל קטגוריה.` : state === "done" ? "תודה שהצבעתן! התוצאות בעוד רגע." : "ההצבעה תיפתח בעוד רגע."}</div>
+      </div>
+      <div className="live">
+        <div className={`dot${state === "open" ? "" : " off"}`} />
+        <div>
+          {label}
+          {state === "open" && left !== null ? ` · ${left} שנ׳` : ""}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The columns: one per contestant, the bar at her share of this category's votes. */
+function Columns({ items, hidePct, flash }: { items: { id: string; n: number; name: string; pct: number; leading: boolean }[]; hidePct: boolean; flash: Set<string> }) {
+  const max = Math.max(0, ...items.map((x) => x.pct));
+  const scale = Math.max(50, max + 12);
+  const unique = items.filter((x) => x.pct === max).length === 1;
+  const n = items.length;
+  const colW = n > 3 ? Math.floor(Math.min(400, (1776 - 40 * (n - 1)) / n)) : 400;
+  return (
+    <div className="chart" style={n > 3 ? { gap: 40, padding: 0 } : undefined}>
+      {items.map((x, i) => (
+        <div key={x.id} className="col" style={{ width: colW, animationDelay: `${i * 90}ms` }}>
+          <div className="col-top">
+            <div className={`lead${!hidePct && max > 0 && unique && x.pct === max ? " show" : ""}`}>מובילה כרגע</div>
+            <Pct value={hidePct ? 0 : x.pct} hidden={hidePct} />
+            <div className="bar" style={{ background: colorOf(i), width: Math.min(270, colW - 40), height: hidePct ? 0 : Math.round((x.pct / scale) * 380), boxShadow: flash.has(x.id) ? `0 0 70px ${colorOf(i)}` : "none" }} />
+          </div>
+          <div className="base" style={{ width: Math.min(360, colW) }} />
+          <div className="label">
+            <div className="key" style={{ background: colorOf(i) }}>{x.n}</div>
+            <div>
+              <Name name={x.name} />
+              <div className="hint">להצבעה הקישו {x.n}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** A column that just gained a vote glows for a moment. */
+function useFlash(items: { id: string; pct: number }[]): Set<string> {
+  const prev = useRef<Map<string, number>>(new Map());
+  const [flash, setFlash] = useState<Set<string>>(() => new Set());
+  useEffect(() => {
+    const rose = items.filter((x) => (prev.current.get(x.id) ?? 0) < x.pct).map((x) => x.id);
+    prev.current = new Map(items.map((x) => [x.id, x.pct]));
+    if (rose.length) {
+      setFlash(new Set(rose));
+      const t = setTimeout(() => setFlash(new Set()), 900);
+      return () => clearTimeout(t);
+    }
+  }, [items]);
+  return flash;
+}
+
+/** Screen 1 - the vote per category: the chips, the three columns, the phone. */
+function VoteScreen({ f, phone, voteSeconds, light }: { f: LiveFinalsView; phone: string; voteSeconds: number; light: boolean }) {
   const rows = f.finalists ?? [];
   const steps = f.steps ?? [];
-  const open = steps.find((s) => s.status === "open");
+  const open = steps.find((s) => s.status === "open") ?? null;
+  const lastDone = [...steps].reverse().find((s) => s.status === "done") ?? null;
+  const shown: LiveStep | null = open ?? lastDone ?? steps[0] ?? null;
+  const idx = shown ? steps.indexOf(shown) : 0;
   const allDone = steps.length > 0 && steps.every((s) => s.status === "done");
+  const items = rows.map((x) => {
+    const cell = shown ? x.audience[shown.key] : undefined;
+    return { id: x.id, n: x.n, name: x.name, pct: cell?.pct ?? 0, leading: cell?.leading ?? false };
+  });
+  const flash = useFlash(items);
+  const left = useLeft(open?.openedAt ?? null, voteSeconds);
+  const state = open ? "open" : allDone ? "done" : shown?.status === "done" ? "closed" : "paused";
+  const title = shown?.label ?? f.name ?? "";
   return (
-    <section className="slide ballot">
-      <div className="top">
-        <span className="kick">הצבעת הקהל</span>
-        <h1 className="h">{f.name}</h1>
-      </div>
-      <div className="projects">
-        {rows.map((x, i) => (
-          <div key={x.id} className="pr tile" style={{ animationDelay: `${150 + i * 120}ms` }}>
-            <span className="k">{x.n}</span>
-            <span className="nm">{x.name}</span>
-          </div>
-        ))}
-      </div>
-      {allDone ? (
-        <div className="done-all">ההצבעה הסתיימה - תודה! התוצאות בעוד רגע</div>
-      ) : (
+    <Frame kicker={`${f.name ? `${f.name} · ` : ""}קטגוריה ${idx + 1} מתוך ${steps.length} · מי הפרויקט הטוב ביותר ב־`} title={title} titleClass={title.length > 14 ? "long" : ""} light={light}>
+      <div className="screen">
         <div className="steps">
-          {steps.map((s, i) => (
-            <div key={s.key} className={`st ${s.status}`} style={{ animationDelay: `${300 + i * 100}ms` }}>
-              <span className="c">{s.status === "done" ? "✓" : i + 1}</span>
-              <span className="l">{s.label}</span>
-              {s.status === "open" ? (
-                <span style={{ display: "flex", alignItems: "center", gap: 18 }}>
-                  <span className="hint">הקישו {rows.map((x) => x.n).join(", ").replace(/, (\d)$/, " או $1")} בטלפון</span>
-                  {voteSeconds > 0 && s.openedAt ? <Ring openedAt={s.openedAt} seconds={voteSeconds} /> : null}
-                </span>
-              ) : (
-                <span className="hint">{s.status === "done" ? "נספר" : ""}</span>
-              )}
+          {steps.map((s) => (
+            <div key={s.key} className={`chip ${s.status === "open" ? "on" : s.status === "done" ? "done" : ""}`}>
+              {s.label}
             </div>
           ))}
         </div>
-      )}
-      <div className="cta">
-        {phone ? (
-          <span className="ph">
-            <span className="l">התקשרו</span>
-            <span className="n">{phone}</span>
-          </span>
-        ) : (
-          <span />
-        )}
-        {open ? <Counter voted={voted} /> : <span />}
+        <Columns items={items} hidePct={false} flash={flash} />
+        <PhonePanel phone={phone} keys={rows.map((x) => x.n)} state={state} left={left} />
       </div>
-    </section>
+    </Frame>
   );
 }
 
-/** The results: the winner, the three bars, the audience's picks. */
-function ResultsSlide({ f, fire }: { f: LiveFinalsView; fire: number }) {
+const judges10 = (x: LiveFinalistRow, judgesMax: number) => (x.judgesScore === null || !judgesMax ? null : (x.judgesScore / judgesMax) * 10);
+const audiencePct = (x: LiveFinalistRow, audienceMax: number) => {
+  const cells = Object.values(x.audience);
+  const scored = cells.filter((c) => c.score !== null);
+  if (!scored.length || !audienceMax) return null;
+  return (scored.reduce((s, c) => s + (c.score ?? 0), 0) / audienceMax) * 100;
+};
+
+/** Screen 2 - the judges' scores, before the reveal. */
+function JudgesScreen({ f, light }: { f: LiveFinalsView; light: boolean }) {
   const rows = f.finalists ?? [];
-  const max = Math.max(1, ...rows.map((x) => x.total ?? 0));
-  const winner = rows.find((x) => x.rank === 1);
-  if (f.hidden) {
-    return (
-      <section className="slide">
-        <span className="kick">תודה שהצבעתן</span>
-        <h1 className="h">{f.name}</h1>
-        <div className="projects" style={{ marginTop: "clamp(24px,4vh,48px)" }}>
-          {rows.map((x, i) => (
-            <div key={x.id} className="pr tile" style={{ animationDelay: `${150 + i * 120}ms` }}>
-              <span className="k">{x.n}</span>
-              <span className="nm">{x.name}</span>
-            </div>
-          ))}
-        </div>
-        <div className="soon">התוצאות ייחשפו בעוד רגע</div>
-      </section>
-    );
-  }
+  const judgesMax = f.weights?.judges ?? 70;
+  const n = rows.length;
+  const w = n > 3 ? Math.floor(Math.min(430, (1776 - 48 * (n - 1)) / n)) : 430;
   return (
-    <section className="slide">
-      <Confetti fire={fire} />
-      <span className="kick">התוצאות · {f.name}</span>
-      {winner ? (
-        <div className="winner">
-          <div className="l">המנצחת</div>
-          <div className="n">{winner.name}</div>
-        </div>
-      ) : (
-        <h1 className="h">{f.name}</h1>
-      )}
-      <div className="chart">
-        {rows.map((x, i) => (
-          <div key={x.id} className={`r${x.rank === 1 ? " first" : ""}`} style={{ order: x.rank ?? 100 + i, animationDelay: `${400 + i * 150}ms` }}>
-            <span className="k">{x.rank ?? x.n}</span>
-            <div className="nm">{x.name}</div>
-            <div className="tr">
-              <div className={`fl${(x.total ?? 0) > 0 ? " nz" : ""}`} style={{ width: `${(((x.total ?? 0) / max) * 100).toFixed(1)}%`, animationDelay: `${600 + i * 150}ms` }} />
-            </div>
-            <div className="v">{x.total === null || x.total === undefined ? "—" : <Num value={x.total} decimals={1} />}</div>
-          </div>
-        ))}
-      </div>
-      {f.categories?.some((c) => c.winner) ? (
-        <div className="cats">
-          {f.categories
-            .filter((c) => c.winner)
-            .map((c, i) => (
-              <span key={c.key} style={{ animationDelay: `${900 + i * 150}ms` }}>
-                {c.label}: <b>{c.winner}</b>
-              </span>
-            ))}
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-/** A question outside the finals (an ice-breaker, a poll): numbers while open, bars once closed. */
-function QuestionSlide({ q, voted, visible, phone }: { q: LiveQuestionView; voted: number; visible: boolean; phone: string }) {
-  const max = Math.max(1, ...q.options.map((o) => o.count ?? 0));
-  return (
-    <section className="slide ballot">
-      <div className="top">
-        <span className="kick">הצבעת הקהל</span>
-        <h1 className="h">{q.text}</h1>
-      </div>
-      {!visible ? (
-        <div className="projects" style={{ flexWrap: "wrap" }}>
-          {q.options.map((o, i) => (
-            <div key={o.n} className="pr tile" style={{ animationDelay: `${150 + i * 110}ms`, maxWidth: q.options.length <= 3 ? "34%" : "30%" }}>
-              <span className="k">{o.n}</span>
-              <span className="nm">{o.label}</span>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="chart" style={{ alignSelf: "center" }}>
-          {q.options.map((o, i) => {
-            const count = o.count ?? 0;
-            const first = voted > 0 && o.leading && q.options.filter((x) => x.leading).length === 1;
+    <Frame kicker="לפני החשיפה" title="ציוני השופטות" light={light}>
+      <div className="judges">
+        <div className="jrow">
+          {rows.map((x, i) => {
+            const s = judges10(x, judgesMax);
             return (
-              <div key={o.n} className={`r${first ? " first" : ""}`} style={{ animationDelay: `${i * 120}ms` }}>
-                <span className="k">{o.n}</span>
-                <div className="nm">{o.label}</div>
-                <div className="tr">
-                  <div className={`fl${count > 0 ? " nz" : ""}`} style={{ width: `${((count / max) * 100).toFixed(1)}%`, animationDelay: `${200 + i * 120}ms` }} />
+              <div key={x.id} className="jcard" style={{ borderColor: colorOf(i), width: w, animationDelay: `${i * 120}ms` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                  <div className="key" style={{ width: 56, height: 56, fontSize: 32, background: colorOf(i) }}>
+                    {x.n}
+                  </div>
+                  <Name name={x.name} />
                 </div>
-                <div className="v">
-                  {voted ? (
-                    <>
-                      <Num value={Math.round(o.pct ?? 0)} />%
-                    </>
-                  ) : (
-                    "—"
-                  )}
-                  <small>{fmt(count)}</small>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                  <div className="jscore">{s === null ? "—" : fmt1(s)}</div>
+                  <div className="jof">/ 10</div>
                 </div>
               </div>
             );
           })}
         </div>
-      )}
-      <div className="cta">
-        {phone && !visible ? (
-          <span className="ph">
-            <span className="l">התקשרו</span>
-            <span className="n">{phone}</span>
-          </span>
-        ) : (
-          <span />
-        )}
-        {!visible ? <Counter voted={voted} /> : <span />}
+        <div className="foot">ממוצע ציוני חבר השופטות · משקל השופטות בשקלול: {judgesMax}%</div>
       </div>
-    </section>
+    </Frame>
   );
 }
 
-export function LiveDisplay({ initial, isAdmin, forcedTheme }: { initial: LiveDisplayView; isAdmin: boolean; forcedTheme: "light" | "dark" | null }) {
+/** Screen 3 - the winner and the podium. The blocks rise one by one, then her name. */
+function WinnerScreen({ f, fire, light }: { f: LiveFinalsView; fire: number; light: boolean }) {
+  const rows = f.finalists ?? [];
+  const judgesMax = f.weights?.judges ?? 70;
+  const audienceMax = f.weights?.audience ?? 30;
+  const ranked = [...rows].sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99) || a.n - b.n);
+  const winner = ranked.find((x) => x.rank === 1) ?? null;
+  // 2 · 1 · 3, the rest after
+  const order = ranked.length >= 3 ? [ranked[1], ranked[0], ranked[2], ...ranked.slice(3)] : ranked.length === 2 ? [ranked[0], ranked[1]] : ranked;
+  const heights: Record<number, number> = { 1: 340, 2: 250, 3: 190 };
+  const delayOf = (rank: number | null) => (rank === 1 ? 2.2 : rank === 2 ? 1.2 : 0.3);
+  const n = order.length;
+  const w = n > 3 ? Math.floor(Math.min(420, (1776 - 36 * (n - 1)) / n)) : 420;
+  const nCats = f.categories?.length ?? 0;
+  return (
+    <Frame kicker="שקלול קהל ושופטות" title="והזוכה היא…" light={light}>
+      <Confetti fire={fire} />
+      <div className="results">
+        {winner ? (
+          <div className="winner" style={{ animationDelay: "3.1s" }}>
+            <div className={`winner-name kr${winner.name.length > 18 ? " long" : ""}`} style={{ color: colorOf(rows.indexOf(winner)) }}>
+              {winner.name}
+            </div>
+            <div className="winner-sub">
+              ציון משוקלל <b>{fmt1(winner.total ?? 0)}</b>
+            </div>
+          </div>
+        ) : (
+          <div className="winner">
+            <div className="winner-sub">עדיין אין ציונים</div>
+          </div>
+        )}
+        <div className="podium">
+          {order.map((x) => {
+            const i = rows.indexOf(x);
+            const a = audiencePct(x, audienceMax);
+            const j = judges10(x, judgesMax);
+            const d = delayOf(x.rank);
+            return (
+              <div key={x.id} className="pod" style={{ width: w }}>
+                <div className="pod-head" style={{ animationDelay: `${d}s` }}>
+                  <Name name={x.name} />
+                  <div className="pod-stats">
+                    <span>
+                      קהל <b>{a === null ? "—" : `${Math.round(a)}%`}</b>
+                    </span>
+                    <span>
+                      שופטות <b>{j === null ? "—" : fmt1(j)}</b>
+                    </span>
+                  </div>
+                </div>
+                <div className="pod-block" style={{ height: heights[x.rank ?? 0] ?? 150, background: colorOf(i), animationDelay: `${d}s` }}>
+                  <div className="pod-rank">{x.rank ?? "—"}</div>
+                  <div className="pod-total">{x.total === null ? "—" : fmt1(x.total)}</div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="baseline" />
+        <div className="foot" style={{ marginTop: 16, fontSize: 25 }}>
+          שקלול: {audienceMax}% הצבעות הקהל ב-{nCats} הקטגוריות · {judgesMax}% ציוני השופטות
+        </div>
+      </div>
+    </Frame>
+  );
+}
+
+/** A question outside the finals (an ice-breaker, a poll) - the same columns, percentages only. */
+function QuestionScreen({ q, visible, phone, light }: { q: LiveQuestionView; visible: boolean; phone: string; light: boolean }) {
+  const items = q.options.map((o) => ({ id: String(o.n), n: o.n, name: o.label, pct: o.pct ?? 0, leading: o.leading ?? false }));
+  const flash = useFlash(items);
+  return (
+    <Frame kicker="הצבעת הקהל" title={q.text} titleClass="wrap" light={light}>
+      <div className="screen">
+        <Columns items={items} hidePct={!visible} flash={flash} />
+        <PhonePanel phone={phone} keys={items.map((x) => x.n)} state={q.status === "open" ? "open" : "closed"} left={null} />
+      </div>
+    </Frame>
+  );
+}
+
+/** The opening screen - the logos and the event's name, nothing else. */
+function OpeningScreen({ name, light }: { name: string; light: boolean }) {
+  return (
+    <div className="scene">
+      <div className="opening">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={light ? "/live/hackathon-color.png" : "/live/hackathon-white.png"} alt="האקתון AI 2026" style={{ height: 400, animation: "colIn .9s both" }} />
+        <div className="ev kr">{name}</div>
+        <div className="rule" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={light ? "/live/opencode-color.png" : "/live/opencode-white.png"} alt="קוד פתוח" style={{ height: 120, animation: "colIn .9s .4s both" }} />
+      </div>
+    </div>
+  );
+}
+
+/* the stage's scale: 1920×1080 fitted into whatever screen shows it */
+const subscribeResize = (cb: () => void) => {
+  window.addEventListener("resize", cb);
+  return () => window.removeEventListener("resize", cb);
+};
+const scaleNow = () => Math.min(window.innerWidth / STAGE_W, window.innerHeight / STAGE_H);
+
+export function LiveDisplay({ initial, isAdmin, forcedTheme, fontClass }: { initial: LiveDisplayView; isAdmin: boolean; forcedTheme: "light" | "dark" | null; fontClass: string }) {
   const [view, setView] = useState<LiveDisplayView>(initial);
   const [sessionTheme, setSessionTheme] = useState<"light" | "dark" | null>(null);
   const [lastOk, setLastOk] = useState<number>(() => Date.now());
@@ -433,6 +507,7 @@ export function LiveDisplay({ initial, isAdmin, forcedTheme }: { initial: LiveDi
   const [fire, setFire] = useState(0);
   const celebrated = useRef<string | null>(null);
   const cursorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scale = useSyncExternalStore(subscribeResize, scaleNow, () => 1);
 
   const refresh = useCallback(async () => {
     try {
@@ -494,18 +569,22 @@ export function LiveDisplay({ initial, isAdmin, forcedTheme }: { initial: LiveDi
   const v = view;
   const q = v.question;
   const f = v.finals;
-  // which slide: the finals' ballot or results when a challenge is on; a plain question when one runs; else the title
+  // which screen: the finals' vote, judges or winner when a challenge is on; a plain question when one runs; else the opening
   const finalsOn = !!f.active;
-  const ballot = finalsOn && f.status === "judging";
-  const results = finalsOn && f.status !== "judging";
+  const vote = finalsOn && f.status === "judging";
+  const closed = finalsOn && f.status !== "judging";
+  const judgesScreen = closed && !!f.hidden;
+  const winnerScreen = closed && !f.hidden;
   const plainQ = !finalsOn && !!q && !q.category;
-  const boardFinal = results && !f.hidden && (f.finalists ?? []).some((x) => x.rank === 1);
+  const boardFinal = winnerScreen && (f.finalists ?? []).some((x) => x.rank === 1);
 
   useEffect(() => {
     const key = boardFinal ? `${f.active}:${f.revealed ? "r" : "l"}` : null;
     if (key && celebrated.current !== key) {
       celebrated.current = key;
-      setFire(Date.now());
+      // after the podium rose and the name appeared
+      const t = setTimeout(() => setFire(Date.now()), 3300);
+      return () => clearTimeout(t);
     }
   }, [boardFinal, f.active, f.revealed]);
 
@@ -516,46 +595,43 @@ export function LiveDisplay({ initial, isAdmin, forcedTheme }: { initial: LiveDi
   };
 
   const theme = sessionTheme ?? forcedTheme ?? v.event.theme;
+  const light = theme === "light";
   const phone = v.event.phone;
-  const sceneKey = ballot ? `ballot:${f.active}:${(f.steps ?? []).map((s) => s.status[0]).join("")}` : results ? `results:${f.active}:${f.hidden}` : plainQ ? `q:${q!.id}:${v.resultsVisible}` : "title";
-  const netClass = stale ? "net bad" : v.health.configured && v.health.error ? "net warn" : "net";
-  const netText = stale ? "אין חיבור לשרת" : !v.health.configured ? "לא הוגדר חיבור לימות" : v.health.error ? `ימות: ${v.health.error}` : v.health.lastPollAt ? `מחובר · ${new Date(v.health.lastPollAt).toLocaleTimeString("he-IL")}` : "מחובר";
+  const shownStep = (f.steps ?? []).find((s) => s.status === "open") ?? [...(f.steps ?? [])].reverse().find((s) => s.status === "done") ?? (f.steps ?? [])[0];
+  const sceneKey = vote ? `vote:${f.active}:${shownStep?.key ?? ""}` : judgesScreen ? `judges:${f.active}` : winnerScreen ? `winner:${f.active}` : plainQ ? `q:${q!.id}` : "opening";
+  const netText = stale ? "אין חיבור לשרת" : v.health.configured && v.health.error ? `ימות: ${v.health.error}` : null;
 
   return (
-    <div className={`lv${cursor ? " cursor" : ""}`} data-theme={theme} dir="rtl" onMouseMove={onMove}>
+    <div className={`lv ${fontClass}${cursor ? " cursor" : ""}`} data-theme={theme} dir="rtl" onMouseMove={onMove}>
       <style>{CSS}</style>
-      <div className="bg">
-        <i />
-        <i />
-        <i />
-      </div>
-      {sceneKey !== "title" ? (
-        <div className="corner">
-          <span className="ev">{v.event.name}</span>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/hackathon-2026/logo-hackathon.png" alt="האקתון AI 2026" />
+      <div className="stage" style={{ transform: `scale(${scale})` }}>
+        <svg className="bracket" style={{ right: 20 }} aria-hidden="true" width="110" height="480" viewBox="0 0 110 480">
+          <path d="M100 10 L14 240 L100 470" fill="none" stroke="var(--p1)" strokeWidth="16" />
+        </svg>
+        <svg className="bracket" style={{ left: 20 }} aria-hidden="true" width="110" height="480" viewBox="0 0 110 480">
+          <path d="M10 10 L96 240 L10 470" fill="none" stroke="var(--p3)" strokeWidth="16" />
+        </svg>
+        <div key={sceneKey} style={{ position: "absolute", inset: 0 }}>
+          {vote ? (
+            <VoteScreen f={f} phone={phone} voteSeconds={v.event.voteSeconds} light={light} />
+          ) : judgesScreen ? (
+            <JudgesScreen f={f} light={light} />
+          ) : winnerScreen ? (
+            <WinnerScreen f={f} fire={fire} light={light} />
+          ) : plainQ ? (
+            <QuestionScreen q={q!} visible={v.resultsVisible} phone={phone} light={light} />
+          ) : (
+            <OpeningScreen name={v.event.name} light={light} />
+          )}
         </div>
-      ) : null}
-      <div key={sceneKey} style={{ position: "absolute", inset: 0 }}>
-        {ballot ? (
-          <BallotSlide f={f} voted={v.voted} phone={phone} voteSeconds={v.event.voteSeconds} />
-        ) : results ? (
-          <ResultsSlide f={f} fire={fire} />
-        ) : plainQ ? (
-          <QuestionSlide q={q!} voted={v.voted} visible={v.resultsVisible} phone={phone} />
-        ) : (
-          <section className="slide title">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="logo" src="/hackathon-2026/logo-hackathon.png" alt="האקתון AI 2026" />
-            <div className="ev">{v.event.name}</div>
-          </section>
-        )}
+        {netText ? (
+          <div className="net">
+            <i />
+            <span>{netText}</span>
+          </div>
+        ) : null}
+        {toast ? <div className="toast">{toast}</div> : null}
       </div>
-      <div className={netClass}>
-        <i />
-        <span>{netText}</span>
-      </div>
-      {toast ? <div className="toast">{toast}</div> : null}
     </div>
   );
 }

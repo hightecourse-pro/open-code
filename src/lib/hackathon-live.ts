@@ -367,13 +367,14 @@ async function tallyOf(q: QuestionRow): Promise<Tally> {
   return { counts, voted: last.size, changed, invalid };
 }
 
-function questionView(q: QuestionRow, t: Tally, visible: boolean, category: LiveQuestionView["category"]): LiveQuestionView {
+function questionView(q: QuestionRow, t: Tally, visible: boolean, category: LiveQuestionView["category"], admin: boolean): LiveQuestionView {
   const options = strArr(q.options);
   const max = Math.max(0, ...t.counts);
   return {
     id: q.id,
     text: q.text,
-    options: options.map((label, i) => (visible ? { n: i + 1, label, count: t.counts[i], pct: t.voted ? round1((t.counts[i] / t.voted) * 100) : 0, leading: t.voted > 0 && t.counts[i] === max } : { n: i + 1, label })),
+    // the hall gets percentages only, never a count (the approved design, 26/10); the operator gets both
+    options: options.map((label, i) => (visible ? { n: i + 1, label, ...(admin ? { count: t.counts[i] } : {}), pct: t.voted ? round1((t.counts[i] / t.voted) * 100) : 0, leading: t.voted > 0 && t.counts[i] === max } : { n: i + 1, label })),
     reveal: asReveal(q.reveal),
     status: asStatus(q.status),
     challengeKey: q.challenge_key,
@@ -837,6 +838,9 @@ async function finalsView(ctx: BoardCtx, admin: boolean): Promise<LiveFinalsView
   const ch = ctx.challenges.find((c) => c.key === key);
   if (!ch) return { active: null };
   const b = await boardOf(ch, ctx);
+  // "בסיום" holds back the outcome - the weighted total and the ranking - until the organiser reveals it.
+  // The audience's share per category is on the hall screen live (bars rising with the vote), and the
+  // judges' scores have their own slide before the reveal, so both stay.
   const hidden = !admin && ctx.settings.reveal === "end" && !ch.revealed;
   const mine = audienceQuestionsOf(ctx.questions, key);
   const steps = audienceCriteria(ctx.criteria).map((c) => {
@@ -856,10 +860,17 @@ async function finalsView(ctx: BoardCtx, admin: boolean): Promise<LiveFinalsView
     currentId: ch.current_finalist_id,
     weights: weightsOf(ctx.criteria),
     judgesTotal: b.judgesTotal,
-    categories: hidden ? b.categories.map((c) => ({ ...c, winner: null })) : b.categories,
-    finalists: b.rows.map((f) =>
-      hidden ? { id: f.id, n: f.n, name: f.name, team: f.team, judged: f.judged, judgesTotal: f.judgesTotal, judgesScore: null, audience: {}, total: null, rank: null } : { id: f.id, n: f.n, name: f.name, team: f.team, judged: f.judged, judgesTotal: f.judgesTotal, judgesScore: f.judgesScore, audience: f.audience, total: f.total, rank: f.rank }
-    ),
+    // the hall never gets a vote count - percentages only (the approved design)
+    categories: admin ? b.categories : b.categories.map(({ voted: _v, ...c }) => c),
+    finalists: b.rows.map((f) => {
+      const audience: LiveFinalistRow["audience"] = {};
+      for (const [k, cell] of Object.entries(f.audience)) {
+        const { count: _c, ...rest } = cell;
+        audience[k] = admin ? cell : rest;
+      }
+      const base = { id: f.id, n: f.n, name: f.name, team: f.team, judged: f.judged, judgesTotal: f.judgesTotal, judgesScore: f.judgesScore, audience };
+      return hidden ? { ...base, total: null, rank: null } : { ...base, total: f.total, rank: f.rank };
+    }),
   };
 }
 
@@ -899,11 +910,12 @@ export async function displayView({ poll = true, admin = false }: { poll?: boole
   const visible = !cur || admin || asReveal(cur.reveal) === "live" || cur.status !== "open";
   return {
     event: { name: ctx.settings.event_name, phone: ctx.settings.phone_display, theme: ctx.settings.theme === "dark" ? "dark" : "light", voteSeconds: ctx.settings.vote_seconds },
-    question: cur && tally ? questionView(cur, tally, visible, categoryOf(cur, ctx)) : null,
+    question: cur && tally ? questionView(cur, tally, visible, categoryOf(cur, ctx), admin) : null,
     resultsVisible: visible,
-    voted: tally?.voted ?? 0,
-    changed: tally?.changed ?? 0,
-    invalid: tally?.invalid ?? 0,
+    // counts are the operator's; the hall shows percentages only
+    voted: admin ? (tally?.voted ?? 0) : 0,
+    changed: admin ? (tally?.changed ?? 0) : 0,
+    invalid: admin ? (tally?.invalid ?? 0) : 0,
     connected: ctx.settings.connected,
     finals: await finalsView(ctx, admin),
     health: { configured: !!(ctx.settings.yemot_token.trim() && ctx.settings.yemot_extension.trim()), lastPollAt: ctx.settings.last_poll_at, error: ctx.settings.poll_error },

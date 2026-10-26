@@ -56,7 +56,8 @@ export interface LiveJudgeCell {
 }
 
 export interface LiveAudienceCell {
-  count: number;
+  /** Operator only - the hall sees percentages, never counts (the approved design). */
+  count?: number;
   pct: number;
   /** Points out of the criterion's weight; null until anyone voted. */
   score: number | null;
@@ -83,7 +84,8 @@ export interface LiveCategoryView {
   key: string;
   label: string;
   weight: number;
-  voted: number;
+  /** Operator only. */
+  voted?: number;
   /** The finalist leading this audience vote (null while nobody voted or on a tie). */
   winner: string | null;
 }
