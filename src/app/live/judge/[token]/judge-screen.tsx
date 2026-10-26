@@ -242,7 +242,7 @@ export function JudgeScreen({ token, initial }: { token: string; initial: LiveJu
                     <div className="total">
                       <div className="big">
                         <span>{t.total}</span>
-                        <small> / 100</small>
+                        <small> / {view.maxTotal}</small>
                       </div>
                       <div className="st">
                         {t.complete ? (

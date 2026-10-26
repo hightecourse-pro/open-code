@@ -2093,14 +2093,14 @@ export interface Database {
       };
       /** גמר ההאקתון בשידור חי - see 20261026160000 (26/10). */
       hackathon_live_settings: {
-        Row: { id: number; event_name: string; phone_display: string; yemot_token: string; yemot_extension: string; weights_judges: number; audience_mode: string; reveal: string; criteria: Json; active_challenge: string | null; theme: string; poll_claimed_at: string | null; last_poll_at: string | null; poll_error: string | null; calls_claimed_at: string | null; connected: number | null; updated_at: string };
-        Insert: { id?: number; event_name?: string; phone_display?: string; yemot_token?: string; yemot_extension?: string; weights_judges?: number; audience_mode?: string; reveal?: string; criteria?: Json; active_challenge?: string | null; theme?: string; poll_claimed_at?: string | null; last_poll_at?: string | null; poll_error?: string | null; calls_claimed_at?: string | null; connected?: number | null; updated_at?: string };
+        Row: { id: number; event_name: string; phone_display: string; yemot_token: string; yemot_extension: string; audience_mode: string; reveal: string; criteria: Json; active_challenge: string | null; theme: string; poll_claimed_at: string | null; last_poll_at: string | null; poll_error: string | null; calls_claimed_at: string | null; connected: number | null; updated_at: string };
+        Insert: { id?: number; event_name?: string; phone_display?: string; yemot_token?: string; yemot_extension?: string; audience_mode?: string; reveal?: string; criteria?: Json; active_challenge?: string | null; theme?: string; poll_claimed_at?: string | null; last_poll_at?: string | null; poll_error?: string | null; calls_claimed_at?: string | null; connected?: number | null; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_live_settings"]["Insert"]>;
         Relationships: [];
       };
       hackathon_live_challenges: {
-        Row: { key: string; name: string; org: string; logos: Json; sort: number; status: string; revealed: boolean; current_finalist_id: string | null; question_id: string | null; updated_at: string };
-        Insert: { key: string; name: string; org?: string; logos?: Json; sort?: number; status?: string; revealed?: boolean; current_finalist_id?: string | null; question_id?: string | null; updated_at?: string };
+        Row: { key: string; name: string; org: string; logos: Json; sort: number; status: string; revealed: boolean; current_finalist_id: string | null; updated_at: string };
+        Insert: { key: string; name: string; org?: string; logos?: Json; sort?: number; status?: string; revealed?: boolean; current_finalist_id?: string | null; updated_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_live_challenges"]["Insert"]>;
         Relationships: [];
       };
@@ -2123,8 +2123,8 @@ export interface Database {
         Relationships: [];
       };
       hackathon_live_questions: {
-        Row: { id: string; text: string; options: Json; sort: number; challenge_key: string | null; status: string; reveal: string; opened_at: string | null; closed_at: string | null; created_at: string };
-        Insert: { id?: string; text: string; options?: Json; sort?: number; challenge_key?: string | null; status?: string; reveal?: string; opened_at?: string | null; closed_at?: string | null; created_at?: string };
+        Row: { id: string; text: string; options: Json; sort: number; challenge_key: string | null; criterion_key: string | null; status: string; reveal: string; opened_at: string | null; closed_at: string | null; created_at: string };
+        Insert: { id?: string; text: string; options?: Json; sort?: number; challenge_key?: string | null; criterion_key?: string | null; status?: string; reveal?: string; opened_at?: string | null; closed_at?: string | null; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_live_questions"]["Insert"]>;
         Relationships: [];
       };

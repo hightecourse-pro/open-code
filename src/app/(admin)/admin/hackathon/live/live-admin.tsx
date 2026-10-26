@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { LIVE_MAX_OPTIONS, LIVE_MIN_OPTIONS, parseFinalistLines, type LiveAdminChallenge, type LiveAdminView, type LiveCriterion } from "@/lib/hackathon-live-shared";
+import { LIVE_MAX_OPTIONS, LIVE_MIN_OPTIONS, audienceCriteria, judgesCriteria, parseFinalistLines, weightSum, type LiveAdminChallenge, type LiveAdminView, type LiveCriterion } from "@/lib/hackathon-live-shared";
 
 export interface SubmittedTeam {
   teamKey: string;
@@ -114,7 +114,7 @@ export function LiveAdmin({ initial, submitted }: { initial: LiveAdminView; subm
           <div className="flex items-center gap-3 flex-wrap">
             <span className="text-[13px] text-ink-500 font-mono">{q ? `שאלה ${view.questions.findIndex((x) => x.id === q.id) + 1} מתוך ${view.questions.length}` : view.questions.length ? `${view.questions.length} שאלות מוכנות` : "אין שאלה פעילה"}</span>
             <span className={pillCls(q?.status ?? "")}>{q?.status === "open" ? "ההצבעה פתוחה" : q?.status === "closed" ? "ההצבעה סגורה" : "ממתינים"}</span>
-            {q?.challengeKey ? <span className="text-[12px] rounded-full bg-tint-purple text-brand-purple px-2 py-0.5">שאלת קהל של הגמר</span> : null}
+            {q?.category ? <span className="text-[12px] rounded-full bg-tint-purple text-brand-purple px-2 py-0.5">הצבעת קהל: {q.category.label}</span> : null}
           </div>
           <div className="font-display text-xl font-bold text-ink-1000">{q ? q.text : "—"}</div>
           {q ? (
@@ -192,8 +192,7 @@ export function LiveAdmin({ initial, submitted }: { initial: LiveAdminView; subm
                   <li key={item.id} className={`flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-ink-50 ${item.current ? "bg-tint-purple outline-2 outline-brand-purple -outline-offset-2" : ""}`} onClick={() => control("goto", item.id)}>
                     <span className="w-6 text-[12px] text-ink-500 font-mono">{i + 1}</span>
                     <span className="flex-1 truncate text-sm">
-                      {item.reveal === "end" ? "👁 " : ""}
-                      {item.challengeKey ? "🏆 " : ""}
+                      {item.criterionKey ? "🏆 " : item.reveal === "end" ? "👁 " : ""}
                       {item.text}
                     </span>
                     <span className="text-[12px] text-ink-500 whitespace-nowrap">
@@ -288,8 +287,8 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
         </div>
       </div>
       <div className="flex gap-2 flex-wrap items-center">
-        <button className={quiet} disabled={busy} onClick={() => run({ action: "finals", op: "question", key: ch.key }, "שאלת הקהל מוכנה - אפשר לצרף לה הקלטה בלשונית השאלות")}>
-          הכיני שאלת קהל
+        <button className={quiet} disabled={busy} onClick={() => run({ action: "finals", op: "question", key: ch.key }, "שאלות הקהל מוכנות - אחת לכל קטגוריה, ברשימת השאלות למטה")}>
+          הכיני שאלות קהל
         </button>
         <button className={ghost} disabled={busy} onClick={() => run({ action: "finals", op: "show", key: ch.key })}>
           הציגי על המסך
@@ -342,9 +341,13 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
                     {j.name}
                   </th>
                 ))}
-                <th className="px-2 py-1">ממוצע שופטות</th>
-                <th className="px-2 py-1">קהל</th>
-                <th className="px-2 py-1">ציון קהל</th>
+                <th className="px-2 py-1">שופטות / {view.settings.weights.judges}</th>
+                {ch.categories.map((c) => (
+                  <th key={c.key} className="px-2 py-1">
+                    {c.label}
+                    <span className="block font-normal">{c.voted ? `${fmt(c.voted)} הצביעו` : "אין הצבעות"}</span>
+                  </th>
+                ))}
                 <th className="px-2 py-1">סופי</th>
                 <th className="px-2 py-1">דירוג</th>
               </tr>
@@ -359,15 +362,20 @@ function ChallengeCard({ ch, view, api, busy, submitted }: { ch: LiveAdminChalle
                   </td>
                   {(f.judges ?? []).map((j) => (
                     <td key={j.judgeId} className="px-2 py-1.5 tabular-nums">
-                      {j.total === null ? (j.filled ? <span className="text-ink-500">{j.filled}/{view.settings.criteria.length}</span> : "—") : j.total}
+                      {j.total === null ? (j.filled ? <span className="text-ink-500">{j.filled}/{judgesCriteria(view.settings.criteria).length}</span> : "—") : j.total}
                     </td>
                   ))}
-                  <td className="px-2 py-1.5 font-bold tabular-nums">{f.judgesAvg === null || f.judgesAvg === undefined ? "—" : f.judgesAvg}</td>
-                  <td className="px-2 py-1.5 tabular-nums">
-                    {fmt(f.audience.count)} · {f.audience.pct}%
-                  </td>
-                  <td className="px-2 py-1.5 tabular-nums">{f.audience.score === null ? "—" : f.audience.score}</td>
-                  <td className="px-2 py-1.5 font-bold tabular-nums">{f.total === null || f.total === undefined ? "—" : f.total}</td>
+                  <td className="px-2 py-1.5 font-bold tabular-nums">{f.judgesScore === null ? "—" : f.judgesScore}</td>
+                  {ch.categories.map((c) => {
+                    const a = f.audience[c.key];
+                    return (
+                      <td key={c.key} className="px-2 py-1.5 tabular-nums whitespace-nowrap">
+                        {a ? `${fmt(a.count)}${a.leading && c.voted ? " ★" : ""}` : "—"}
+                        {a && a.score !== null ? <span className="text-ink-500"> · {a.score}</span> : null}
+                      </td>
+                    );
+                  })}
+                  <td className="px-2 py-1.5 font-bold tabular-nums">{f.total === null ? "—" : f.total}</td>
                   <td className="px-2 py-1.5">{f.rank ?? "—"}</td>
                 </tr>
               ))}
@@ -477,55 +485,54 @@ function JudgesCard({ view, api, busy }: { view: LiveAdminView; api: Api; busy: 
 
 function WeightsCard({ view, api, busy }: { view: LiveAdminView; api: Api; busy: boolean }) {
   const s = view.settings;
-  const [judgesW, setJudgesW] = useState(String(s.weights.judges));
   const [audienceMode, setAudienceMode] = useState(s.audienceMode);
   const [reveal, setReveal] = useState(s.reveal);
   const [criteria, setCriteria] = useState<LiveCriterion[]>(s.criteria);
   const [msg, setMsg] = useState<Msg>(null);
-  const sum = Math.round(criteria.reduce((a, c) => a + (Number(c.weight) || 0), 0) * 10) / 10;
+  const sum = weightSum(criteria);
+  const jw = weightSum(judgesCriteria(criteria));
+  const aw = weightSum(audienceCriteria(criteria));
   const save = async () => {
     try {
-      await api({ action: "settings", weightsJudges: judgesW, audienceMode, reveal, criteria });
+      await api({ action: "settings", audienceMode, reveal, criteria });
       setMsg({ kind: "ok", text: "השקלול נשמר" });
     } catch (e) {
       setMsg({ kind: "err", text: (e as Error).message });
     }
   };
+  const set = (i: number, patch: Partial<LiveCriterion>) => setCriteria((cs) => cs.map((x, k) => (k === i ? { ...x, ...patch } : x)));
   return (
     <div className={card}>
-      <h2 className="font-display font-bold text-ink-1000">השקלול <span className="text-[12px] font-mono text-brand-pink-deep">&lt;ציון סופי = שופטות + קהל/&gt;</span></h2>
+      <h2 className="font-display font-bold text-ink-1000">
+        השקלול <span className="text-[12px] font-mono text-brand-pink-deep">&lt;שופטות {jw}% + קהל {aw}%/&gt;</span>
+      </h2>
+      <p className="text-[13px] text-ink-500">
+        לכל קריטריון יש משקל ומי שמדרגת אותו. השופטות מדרגות את שלהן 1 עד 10 מהטלפון (סכום דירוג ÷ 10 × משקל). בקריטריון של הקהל כל אחת בוחרת בטלפון את הפרויקט הטוב ביותר, והמנצחת מקבלת את מלוא
+        הנקודות. סכום המשקלים חייב להיות 100.
+      </p>
       <div className="flex gap-3 flex-wrap items-end">
         <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
-          משקל השופטות %<input className={`${input} w-24`} type="number" min={0} max={100} value={judgesW} onChange={(e) => setJudgesW(e.target.value)} />
-        </label>
-        <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
-          משקל הקהל %<input className={`${input} w-24`} type="number" min={0} max={100} value={String(100 - (Number(judgesW) || 0))} onChange={(e) => setJudgesW(String(100 - (Number(e.target.value) || 0)))} />
-        </label>
-        <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
-          ציון הקהל
+          נקודות הקהל לשאר הפרויקטים
           <select className={input} value={audienceMode} onChange={(e) => setAudienceMode(e.target.value as "leader" | "share")}>
-            <option value="leader">יחסית למובילה - המובילה מקבלת 100</option>
-            <option value="share">חלק מכלל הקולות - 40% מהקולות = 40</option>
+            <option value="leader">יחסית למנצחת - המנצחת מקבלת הכול, השאר לפי היחס אליה</option>
+            <option value="share">לפי חלקן בקולות - 40% מהקולות = 40% מהנקודות</option>
           </select>
         </label>
         <label className="flex flex-col gap-1 text-[12px] text-ink-700 font-semibold">
-          הציונים על המסך
+          לוח הגמר על המסך
           <select className={input} value={reveal} onChange={(e) => setReveal(e.target.value as "live" | "end")}>
-            <option value="live">בזמן אמת - השקלול זז תוך כדי</option>
-            <option value="end">בסיום - הקהל חי, הציונים נחשפים בלחיצה</option>
+            <option value="live">בזמן אמת - הציונים זזים תוך כדי</option>
+            <option value="end">בסיום - הציונים נחשפים בלחיצה על ״חשפי תוצאות״</option>
           </select>
         </label>
       </div>
-      <h3 className="font-display font-bold text-ink-1000 mt-2">
-        הקריטריונים <span className={`text-[12px] font-mono ${Math.abs(sum - 100) < 0.01 ? "text-success" : "text-danger"}`}>&lt;סה״כ {sum}%/&gt;</span>
-      </h3>
-      <p className="text-[13px] text-ink-500">השופטת מדרגת כל קריטריון 1 עד 10; הציון שלה = סכום (דירוג ÷ 10 × משקל). סכום המשקלים חייב להיות 100.</p>
       <table className="w-full text-sm">
         <thead>
           <tr className="text-[12px] text-ink-500 text-right">
             <th className="px-2 py-1">קריטריון</th>
+            <th className="px-2 py-1">מי מדרגת</th>
             <th className="px-2 py-1">משקל %</th>
-            <th className="px-2 py-1">רמז לשופטת</th>
+            <th className="px-2 py-1">הסבר קצר</th>
             <th />
           </tr>
         </thead>
@@ -533,13 +540,19 @@ function WeightsCard({ view, api, busy }: { view: LiveAdminView; api: Api; busy:
           {criteria.map((c, i) => (
             <tr key={c.key || i} className="border-t border-ink-200">
               <td className="px-2 py-1.5">
-                <input className={`${input} w-full`} value={c.label} onChange={(e) => setCriteria((cs) => cs.map((x, k) => (k === i ? { ...x, label: e.target.value } : x)))} placeholder="שם הקריטריון" />
+                <input className={`${input} w-full`} value={c.label} onChange={(e) => set(i, { label: e.target.value })} placeholder="שם הקריטריון" />
               </td>
               <td className="px-2 py-1.5">
-                <input className={`${input} w-24`} type="number" min={0} max={100} step={0.5} value={c.weight} onChange={(e) => setCriteria((cs) => cs.map((x, k) => (k === i ? { ...x, weight: Number(e.target.value) } : x)))} />
+                <select className={input} value={c.owner} onChange={(e) => set(i, { owner: e.target.value === "audience" ? "audience" : "judges" })}>
+                  <option value="judges">השופטות</option>
+                  <option value="audience">הקהל</option>
+                </select>
               </td>
               <td className="px-2 py-1.5">
-                <input className={`${input} w-full`} value={c.hint} onChange={(e) => setCriteria((cs) => cs.map((x, k) => (k === i ? { ...x, hint: e.target.value } : x)))} placeholder="רמז קצר" />
+                <input className={`${input} w-24`} type="number" min={0} max={100} step={0.5} value={c.weight} onChange={(e) => set(i, { weight: Number(e.target.value) })} />
+              </td>
+              <td className="px-2 py-1.5">
+                <input className={`${input} w-full`} value={c.hint} onChange={(e) => set(i, { hint: e.target.value })} placeholder="הסבר קצר" />
               </td>
               <td className="px-2 py-1.5">
                 <button className={quiet} onClick={() => setCriteria((cs) => cs.filter((_, k) => k !== i))} title="הסרה">
@@ -550,13 +563,14 @@ function WeightsCard({ view, api, busy }: { view: LiveAdminView; api: Api; busy:
           ))}
         </tbody>
       </table>
-      <div className="flex gap-2">
-        <button className={quiet} onClick={() => setCriteria((cs) => [...cs, { key: "", label: "", weight: 0, hint: "" }])}>
+      <div className="flex gap-2 items-center">
+        <button className={quiet} onClick={() => setCriteria((cs) => [...cs, { key: "", label: "", weight: 0, owner: "judges", hint: "" }])}>
           + קריטריון
         </button>
         <button className={btn} disabled={busy} onClick={save}>
           שמרי שקלול
         </button>
+        <span className={`text-[12px] font-mono ${Math.abs(sum - 100) < 0.01 ? "text-success" : "text-danger"}`}>סה״כ {sum}%</span>
       </div>
       <Note m={msg} />
     </div>
@@ -649,8 +663,7 @@ function QuestionsCard({ view, api, busy }: { view: LiveAdminView; api: Api; bus
             <tr key={item.id} className={`border-t border-ink-200 ${item.current ? "bg-tint-purple" : ""}`}>
               <td className="px-2 py-1.5 font-mono text-[12px] text-ink-500">{i + 1}</td>
               <td className="px-2 py-1.5">
-                {item.challengeKey ? "🏆 " : ""}
-                {item.reveal === "end" ? "👁 " : ""}
+                {item.criterionKey ? "🏆 " : item.reveal === "end" ? "👁 " : ""}
                 {item.text}
               </td>
               <td className="px-2 py-1.5">

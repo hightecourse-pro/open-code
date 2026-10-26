@@ -1,6 +1,10 @@
 // Client-safe types and helpers of גמר ההאקתון בשידור חי (the owner, 26/10):
 // the hall screen (/live), the judges' page (/live/judge/<token>) and the
 // control panel share these; the server logic lives in hackathon-live.ts.
+//
+// Every criterion has an owner: the judges score theirs 1-10 from their phones,
+// the audience picks the best project per criterion in a phone vote. The final
+// score is one weighted sum - judges 70, audience 30 by default.
 
 export const LIVE_SCALE = 10;
 export const LIVE_MAX_FINALISTS = 9; // phone keys 1-9
@@ -8,10 +12,13 @@ export const LIVE_MIN_FINALISTS = 2;
 export const LIVE_MAX_OPTIONS = 9;
 export const LIVE_MIN_OPTIONS = 2;
 
+export type LiveOwner = "judges" | "audience";
+
 export interface LiveCriterion {
   key: string;
   label: string;
   weight: number;
+  owner: LiveOwner;
   hint: string;
 }
 
@@ -36,6 +43,8 @@ export interface LiveQuestionView {
   reveal: LiveReveal;
   status: LiveQuestionStatus;
   challengeKey: string | null;
+  /** An audience vote of the finals: which criterion, under which challenge. */
+  category: { key: string; label: string; challenge: string } | null;
   openedAt: string | null;
 }
 
@@ -46,6 +55,14 @@ export interface LiveJudgeCell {
   filled: number;
 }
 
+export interface LiveAudienceCell {
+  count: number;
+  pct: number;
+  /** Points out of the criterion's weight; null until anyone voted. */
+  score: number | null;
+  leading: boolean;
+}
+
 export interface LiveFinalistRow {
   id: string;
   n: number;
@@ -53,12 +70,22 @@ export interface LiveFinalistRow {
   team: string;
   judged: number;
   judgesTotal: number;
-  audience: { count: number; pct: number; score: number | null; leading: boolean };
-  /** Missing on the hall screen while the totals are locked. */
-  judgesAvg?: number | null;
-  total?: number | null;
-  rank?: number | null;
+  /** Points out of the judges' share; null until a judge completed her scoring. */
+  judgesScore: number | null;
+  /** Per audience criterion key. */
+  audience: Record<string, LiveAudienceCell>;
+  total: number | null;
+  rank: number | null;
   judges?: LiveJudgeCell[];
+}
+
+export interface LiveCategoryView {
+  key: string;
+  label: string;
+  weight: number;
+  voted: number;
+  /** The finalist leading this audience vote (null while nobody voted or on a tie). */
+  winner: string | null;
 }
 
 export interface LiveFinalsView {
@@ -73,7 +100,7 @@ export interface LiveFinalsView {
   currentId?: string | null;
   weights?: { judges: number; audience: number };
   judgesTotal?: number;
-  voted?: number;
+  categories?: LiveCategoryView[];
   finalists?: LiveFinalistRow[];
 }
 
@@ -96,6 +123,7 @@ export interface LiveAdminQuestion {
   options: string[];
   sort: number;
   challengeKey: string | null;
+  criterionKey: string | null;
   status: LiveQuestionStatus;
   reveal: LiveReveal;
   voted: number;
@@ -110,9 +138,8 @@ export interface LiveAdminChallenge {
   status: LiveChallengeStatus;
   revealed: boolean;
   currentId: string | null;
-  questionId: string | null;
   judgesTotal: number;
-  voted: number;
+  categories: LiveCategoryView[];
   finalists: LiveFinalistRow[];
   finalistsRaw: { id: string; n: number; name: string; team: string; teamKey: string | null }[];
 }
@@ -150,26 +177,33 @@ export interface LiveJudgeView {
   ok: true;
   judge: { id: string; name: string };
   challenge: { key: string; name: string; org: string; logos: string[]; status: LiveChallengeStatus; currentId: string | null } | null;
+  /** The judges' criteria only. */
   criteria: LiveCriterion[];
   scale: number;
+  /** What a complete scoring adds up to - the judges' share of 100. */
+  maxTotal: number;
   finalists: LiveJudgeFinalist[];
   updatedAt: string;
 }
 
 export const round1 = (x: number) => Math.round(x * 10) / 10;
+export const judgesCriteria = (criteria: LiveCriterion[]) => criteria.filter((c) => c.owner === "judges");
+export const audienceCriteria = (criteria: LiveCriterion[]) => criteria.filter((c) => c.owner === "audience");
+export const weightSum = (criteria: LiveCriterion[]) => round1(criteria.reduce((s, c) => s + c.weight, 0));
 
-/** One judge's weighted total for one finalist; complete only when every criterion is scored. */
+/** One judge's weighted points for one finalist over the judges' criteria; complete only when every one is scored. */
 export function judgeTotal(scores: Record<string, number | undefined>, criteria: LiveCriterion[], scale = LIVE_SCALE): { total: number; complete: boolean; filled: number } {
+  const mine = judgesCriteria(criteria);
   let total = 0;
   let filled = 0;
-  for (const c of criteria) {
+  for (const c of mine) {
     const v = scores[c.key];
     if (typeof v === "number" && Number.isFinite(v)) {
       total += (v / scale) * c.weight;
       filled += 1;
     }
   }
-  return { total: round1(total), complete: filled === criteria.length && filled > 0, filled };
+  return { total: round1(total), complete: filled === mine.length && filled > 0, filled };
 }
 
 /** "שם הפרויקט | הצוות" lines from the control panel's textarea. */

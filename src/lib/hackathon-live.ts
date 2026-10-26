@@ -2,6 +2,11 @@
 // question order and the weights, the hall screen shows the audience's phone
 // votes and the judges' scores live, and the judges score from their phones.
 //
+// Every criterion has an owner. The judges score theirs 1-10; the audience
+// picks the best project per audience criterion in a phone vote of its own
+// (one question per criterion, run one after another). The final score is one
+// weighted sum - judges 70, audience 30 by default.
+//
 // The audience votes through Yemot Hamashiach: the extension is of type
 // recording_and_entering_data looping on itself, every keypress is a line in
 // its ApprovalAll.ymgr, and we poll that file - one fetch per 1.5s, claimed
@@ -10,8 +15,11 @@
 // keypress counted once. All logic is here; the pages only render.
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  audienceCriteria,
   judgeTotal,
+  judgesCriteria,
   round1,
+  weightSum,
   LIVE_MAX_FINALISTS,
   LIVE_MAX_OPTIONS,
   LIVE_MIN_FINALISTS,
@@ -20,6 +28,7 @@ import {
   type LiveAdminChallenge,
   type LiveAdminView,
   type LiveAudienceMode,
+  type LiveCategoryView,
   type LiveChallengeStatus,
   type LiveCriterion,
   type LiveDisplayView,
@@ -66,11 +75,12 @@ export function normalizeCriteria(list: unknown): LiveCriterion[] {
     const weight = Number(c?.weight);
     if (!Number.isFinite(weight) || weight < 0 || weight > 100) fail(`המשקל של "${label}" חייב להיות בין 0 ל-100`);
     const key = /^[a-z0-9_-]{1,24}$/i.test(String(c?.key ?? "")) ? String(c.key) : `c${Math.random().toString(36).slice(2, 8)}`;
-    return { key, label, weight: Math.round(weight * 10) / 10, hint: String(c?.hint ?? "").trim() };
+    return { key, label, weight: Math.round(weight * 10) / 10, owner: c?.owner === "audience" ? "audience" : "judges", hint: String(c?.hint ?? "").trim() };
   });
   const sum = out.reduce((s, c) => s + c.weight, 0);
   if (Math.abs(sum - 100) > 0.01) fail(`סכום המשקלים חייב להיות 100 (עכשיו ${round1(sum)})`);
   if (new Set(out.map((c) => c.key)).size !== out.length) fail("שני קריטריונים עם אותו מפתח");
+  if (!judgesCriteria(out).length) fail("נדרש לפחות קריטריון אחד לשופטות");
   return out;
 }
 
@@ -81,6 +91,8 @@ function criteriaOf(s: SettingsRow): LiveCriterion[] {
     return [];
   }
 }
+
+const weightsOf = (criteria: LiveCriterion[]) => ({ judges: weightSum(judgesCriteria(criteria)), audience: weightSum(audienceCriteria(criteria)) });
 
 /** Yemot writes Israel local time ("dd/MM/yyyy", "HH:mm:ss"); we store UTC. */
 function israelToUtc(dateStr: string, timeStr: string): number {
@@ -230,11 +242,6 @@ export async function updateLiveSettings(patch: Record<string, unknown>): Promis
   if (typeof patch.yemotToken === "string" && patch.yemotToken.trim()) next.yemot_token = patch.yemotToken.trim();
   if (patch.clearToken) next.yemot_token = "";
   if (patch.yemotExtension !== undefined) next.yemot_extension = String(patch.yemotExtension ?? "").trim().replace(/^\/+|\/+$/g, "").slice(0, 20);
-  if (patch.weightsJudges !== undefined) {
-    const w = Number(patch.weightsJudges);
-    if (!Number.isFinite(w) || w < 0 || w > 100) fail("משקל השופטות חייב להיות בין 0 ל-100");
-    next.weights_judges = Math.round(w);
-  }
   if (patch.audienceMode !== undefined) {
     const mode = String(patch.audienceMode);
     if (mode !== "leader" && mode !== "share") fail("שיטת ציון הקהל לא מוכרת");
@@ -350,7 +357,7 @@ async function tallyOf(q: QuestionRow): Promise<Tally> {
   return { counts, voted: last.size, changed, invalid };
 }
 
-function questionView(q: QuestionRow, t: Tally, visible: boolean): LiveQuestionView {
+function questionView(q: QuestionRow, t: Tally, visible: boolean, category: LiveQuestionView["category"]): LiveQuestionView {
   const options = strArr(q.options);
   const max = Math.max(0, ...t.counts);
   return {
@@ -360,6 +367,7 @@ function questionView(q: QuestionRow, t: Tally, visible: boolean): LiveQuestionV
     reveal: asReveal(q.reveal),
     status: asStatus(q.status),
     challengeKey: q.challenge_key,
+    category,
     openedAt: q.opened_at,
   };
 }
@@ -382,7 +390,7 @@ function cleanOptions(raw: unknown): string[] {
   return options.map((o, i) => o || `אפשרות ${i + 1}`);
 }
 
-export async function saveQuestion(input: { id?: string; text?: unknown; options?: unknown; reveal?: unknown; challengeKey?: unknown }): Promise<QuestionRow> {
+export async function saveQuestion(input: { id?: string; text?: unknown; options?: unknown; reveal?: unknown; challengeKey?: unknown; criterionKey?: unknown }): Promise<QuestionRow> {
   const admin = createAdminClient();
   const text = String(input.text ?? "").trim().slice(0, 300);
   if (!text) fail("לשאלה חסר טקסט");
@@ -396,7 +404,8 @@ export async function saveQuestion(input: { id?: string; text?: unknown; options
   const qs = await questionRows();
   const sort = qs.length ? Math.max(...qs.map((q) => q.sort)) + 1 : 1;
   const challenge_key = typeof input.challengeKey === "string" && input.challengeKey ? input.challengeKey : null;
-  const { data, error } = await admin.from("hackathon_live_questions").insert({ text, options, reveal, sort, challenge_key }).select("*").single();
+  const criterion_key = typeof input.criterionKey === "string" && input.criterionKey ? input.criterionKey : null;
+  const { data, error } = await admin.from("hackathon_live_questions").insert({ text, options, reveal, sort, challenge_key, criterion_key }).select("*").single();
   if (error) fail(error.message);
   return data!;
 }
@@ -507,6 +516,9 @@ async function finalistsOf(key: string): Promise<FinalistRow[]> {
   return data ?? [];
 }
 
+/** The audience questions of a challenge - one per audience criterion. */
+const audienceQuestionsOf = (qs: QuestionRow[], key: string) => qs.filter((q) => q.challenge_key === key && q.criterion_key);
+
 export async function saveChallenge(key: string, patch: { name?: unknown; finalists?: unknown }): Promise<void> {
   const admin = createAdminClient();
   const ch = await challengeRow(key);
@@ -539,8 +551,8 @@ export async function saveChallenge(key: string, patch: { name?: unknown; finali
       else await admin.from("hackathon_live_finalists").insert({ challenge_key: key, n: i + 1, name: f.name, team: f.team, team_key: f.teamKey });
     }
     if (ch.current_finalist_id && !keep.has(ch.current_finalist_id)) await admin.from("hackathon_live_challenges").update({ current_finalist_id: null }).eq("key", key);
-    // an audience question that already exists follows the finalists
-    if (ch.question_id && next.length >= LIVE_MIN_FINALISTS) await syncAudienceQuestion(key).catch(() => {});
+    // audience questions that already exist follow the finalists
+    if (audienceQuestionsOf(await questionRows(), key).length && next.length >= LIVE_MIN_FINALISTS) await syncAudienceQuestions(key).catch(() => {});
   }
 }
 
@@ -568,21 +580,35 @@ export async function saveJudges(list: unknown): Promise<void> {
   if (gone.length) await admin.from("hackathon_live_judges").delete().in("id", gone);
 }
 
-/** The phone question of a challenge - created, or updated from the finalists. */
-export async function syncAudienceQuestion(key: string): Promise<QuestionRow> {
+/**
+ * The phone questions of a challenge - one per audience criterion, in the
+ * criteria's order, each with the finalists as its options. Created the first
+ * time, kept in step afterwards; a criterion that is no longer the audience's
+ * loses its question (unless it is open right now).
+ */
+export async function syncAudienceQuestions(key: string): Promise<QuestionRow[]> {
   const admin = createAdminClient();
   const ch = await challengeRow(key);
   const finalists = await finalistsOf(key);
   if (finalists.length < LIVE_MIN_FINALISTS) fail(`צריך לפחות ${LIVE_MIN_FINALISTS} סופיות כדי לפתוח הצבעת קהל`);
-  const text = `הצבעת הקהל - ${ch.name}: הקישו את מספר הפרויקט`;
+  const criteria = audienceCriteria(criteriaOf(await loadSettings()));
+  if (!criteria.length) fail("אין קריטריונים לקהל - סמני ״קהל״ לפחות בקריטריון אחד בשקלול");
   const options = finalists.map((f) => f.name);
-  if (ch.question_id) {
-    const { data } = await admin.from("hackathon_live_questions").update({ text, options, reveal: "live", challenge_key: key }).eq("id", ch.question_id).select("*").maybeSingle();
-    if (data) return data;
+  let qs = await questionRows();
+  const mine = audienceQuestionsOf(qs, key);
+  for (const q of mine) if (!criteria.some((c) => c.key === q.criterion_key) && q.status !== "open") await admin.from("hackathon_live_questions").delete().eq("id", q.id);
+  let sort = qs.length ? Math.max(...qs.map((q) => q.sort)) : 0;
+  for (const c of criteria) {
+    const text = `${c.label} - ${ch.name}: הקישו את מספר הפרויקט`;
+    const existing = mine.find((q) => q.criterion_key === c.key);
+    if (existing) await admin.from("hackathon_live_questions").update({ text, options }).eq("id", existing.id);
+    else {
+      sort += 1;
+      await admin.from("hackathon_live_questions").insert({ text, options, reveal: "end", sort, challenge_key: key, criterion_key: c.key });
+    }
   }
-  const q = await saveQuestion({ text, options, reveal: "live", challengeKey: key });
-  await admin.from("hackathon_live_challenges").update({ question_id: q.id }).eq("key", key);
-  return q;
+  qs = await questionRows();
+  return audienceQuestionsOf(qs, key);
 }
 
 export async function finalsControl(op: string, key: string | null, body: { finalistId?: unknown } = {}): Promise<void> {
@@ -599,22 +625,15 @@ export async function finalsControl(op: string, key: string | null, body: { fina
       if (finalists.length < LIVE_MIN_FINALISTS) fail(`צריך לפחות ${LIVE_MIN_FINALISTS} סופיות כדי לפתוח שיפוט`);
       await admin.from("hackathon_live_challenges").update({ status: "judging" }).eq("key", ch.key);
       await admin.from("hackathon_live_settings").update({ active_challenge: ch.key }).eq("id", 1);
-      let qid = ch.question_id;
-      if (qid) {
-        const { data } = await admin.from("hackathon_live_questions").select("id, status").eq("id", qid).maybeSingle();
-        if (!data) qid = null;
-        else if (data.status === "open") return;
-      }
-      if (!qid) qid = (await syncAudienceQuestion(ch.key)).id;
-      await openQuestion(qid);
+      const mine = await syncAudienceQuestions(ch.key);
+      // the first audience vote of the challenge opens on the phone; "הבאה" moves to the next category
+      if (!mine.some((q) => q.status === "open") && mine[0]) await openQuestion(mine[0].id);
       return;
     }
     case "close": {
       await admin.from("hackathon_live_challenges").update({ status: "closed" }).eq("key", ch.key);
-      if (ch.question_id) {
-        const open = await openQuestionRow();
-        if (open?.id === ch.question_id) await closeQuestion();
-      }
+      const open = await openQuestionRow();
+      if (open?.challenge_key === ch.key) await closeQuestion();
       return;
     }
     case "reveal":
@@ -636,11 +655,13 @@ export async function finalsControl(op: string, key: string | null, body: { fina
       if (ch.status === "judging") fail("סגרי את השיפוט לפני האיפוס");
       const ids = (await finalistsOf(ch.key)).map((f) => f.id);
       if (ids.length) await admin.from("hackathon_live_scores").delete().in("finalist_id", ids);
+      const mine = audienceQuestionsOf(await questionRows(), ch.key).map((q) => q.id);
+      if (mine.length) await admin.from("hackathon_live_votes").delete().in("question_id", mine);
       await admin.from("hackathon_live_challenges").update({ status: "idle", revealed: false }).eq("key", ch.key);
       return;
     }
     case "question":
-      await syncAudienceQuestion(ch.key);
+      await syncAudienceQuestions(ch.key);
       return;
     default:
       fail("פעולה לא מוכרת");
@@ -668,7 +689,7 @@ export async function setJudgeScore(token: string, finalistId: string, scores: u
   const criteria = criteriaOf(await loadSettings());
   const clean: Record<string, number> = {};
   const raw = (scores && typeof scores === "object" ? scores : {}) as Record<string, unknown>;
-  for (const c of criteria) {
+  for (const c of judgesCriteria(criteria)) {
     const v = raw[c.key];
     if (v === null || v === undefined || v === "") continue;
     const n = Number(v);
@@ -686,6 +707,7 @@ export async function judgeView(token: string): Promise<LiveJudgeView | null> {
   if (!judge) return null;
   const s = await loadSettings();
   const criteria = criteriaOf(s);
+  const mineCriteria = judgesCriteria(criteria);
   const ch = judge.challenge_key ? await challengeRow(judge.challenge_key).catch(() => null) : null;
   const finalists = ch ? await finalistsOf(ch.key) : [];
   const { data: mine } = finalists.length ? await createAdminClient().from("hackathon_live_scores").select("finalist_id, scores").eq("judge_id", judge.id) : { data: [] as Pick<ScoreRow, "finalist_id" | "scores">[] };
@@ -694,8 +716,9 @@ export async function judgeView(token: string): Promise<LiveJudgeView | null> {
     ok: true,
     judge: { id: judge.id, name: judge.name },
     challenge: ch ? { key: ch.key, name: ch.name, org: ch.org, logos: strArr(ch.logos), status: asChStatus(ch.status), currentId: ch.current_finalist_id } : null,
-    criteria,
+    criteria: mineCriteria,
     scale: LIVE_SCALE,
+    maxTotal: weightSum(mineCriteria),
     finalists: finalists.map((f) => {
       const sc = scoreOf.get(f.id) ?? {};
       const t = judgeTotal(sc, criteria);
@@ -713,28 +736,32 @@ interface BoardCtx {
   judges: JudgeRow[];
   scores: ScoreRow[];
   questions: QuestionRow[];
+  challenges: ChallengeRow[];
 }
 
 async function boardCtx(): Promise<BoardCtx> {
   const admin = createAdminClient();
-  const [settings, questions, { data: judges }, { data: scores }] = await Promise.all([
+  const [settings, questions, challenges, { data: judges }, { data: scores }] = await Promise.all([
     loadSettings(),
     questionRows(),
+    challengeRows(),
     admin.from("hackathon_live_judges").select("*").order("sort", { ascending: true }).order("created_at", { ascending: true }),
     admin.from("hackathon_live_scores").select("*"),
   ]);
-  return { settings, criteria: criteriaOf(settings), judges: judges ?? [], scores: scores ?? [], questions };
+  return { settings, criteria: criteriaOf(settings), judges: judges ?? [], scores: scores ?? [], questions, challenges: challenges ?? [] };
 }
 
-async function boardOf(ch: ChallengeRow, ctx: BoardCtx): Promise<{ rows: LiveFinalistRow[]; judgesTotal: number; voted: number }> {
+async function boardOf(ch: ChallengeRow, ctx: BoardCtx): Promise<{ rows: LiveFinalistRow[]; judgesTotal: number; categories: LiveCategoryView[] }> {
   const finalists = await finalistsOf(ch.key);
   const judges = ctx.judges.filter((j) => j.challenge_key === ch.key);
-  const q = ch.question_id ? ctx.questions.find((x) => x.id === ch.question_id) : null;
-  const tally = q ? await tallyOf(q) : null;
-  const voted = tally ? tally.voted : 0;
-  const counts = finalists.map((_, i) => (tally ? tally.counts[i] ?? 0 : 0));
-  const maxVotes = counts.length ? Math.max(...counts) : 0;
-  const w = { judges: ctx.settings.weights_judges, audience: 100 - ctx.settings.weights_judges };
+  const ac = audienceCriteria(ctx.criteria);
+  const mine = audienceQuestionsOf(ctx.questions, ch.key);
+  // one tally per audience criterion
+  const tallies = new Map<string, Tally>();
+  for (const c of ac) {
+    const q = mine.find((x) => x.criterion_key === c.key);
+    if (q) tallies.set(c.key, await tallyOf(q));
+  }
   const rows: LiveFinalistRow[] = finalists.map((f, i) => {
     const per = judges.map((j) => {
       const rec = ctx.scores.find((s) => s.judge_id === j.id && s.finalist_id === f.id);
@@ -742,35 +769,39 @@ async function boardOf(ch: ChallengeRow, ctx: BoardCtx): Promise<{ rows: LiveFin
       return { judgeId: j.id, name: j.name, total: t && t.complete ? t.total : null, filled: t ? t.filled : 0 };
     });
     const done = per.filter((p) => p.total !== null);
-    const judgesAvg = done.length ? round1(done.reduce((s, p) => s + (p.total as number), 0) / done.length) : null;
-    const count = counts[i];
-    const audienceScore = tally && voted > 0 ? round1(ctx.settings.audience_mode === "share" ? (count / voted) * 100 : maxVotes ? (count / maxVotes) * 100 : 0) : null;
-    const total = judgesAvg === null && audienceScore === null ? null : round1((w.judges / 100) * (judgesAvg ?? 0) + (w.audience / 100) * (audienceScore ?? 0));
-    return {
-      id: f.id,
-      n: f.n,
-      name: f.name,
-      team: f.team,
-      judges: per,
-      judged: done.length,
-      judgesTotal: judges.length,
-      judgesAvg,
-      audience: { count, pct: voted ? round1((count / voted) * 100) : 0, score: audienceScore, leading: voted > 0 && count === maxVotes },
-      total,
-      rank: null,
-    };
+    const judgesScore = done.length ? round1(done.reduce((s, p) => s + (p.total as number), 0) / done.length) : null;
+    const audience: LiveFinalistRow["audience"] = {};
+    let audienceSum: number | null = null;
+    for (const c of ac) {
+      const t = tallies.get(c.key);
+      const count = t ? t.counts[i] ?? 0 : 0;
+      const voted = t ? t.voted : 0;
+      const maxVotes = t ? Math.max(0, ...t.counts) : 0;
+      const score = t && voted > 0 ? round1((ctx.settings.audience_mode === "share" ? count / voted : maxVotes ? count / maxVotes : 0) * c.weight) : null;
+      if (score !== null) audienceSum = (audienceSum ?? 0) + score;
+      audience[c.key] = { count, pct: voted ? round1((count / voted) * 100) : 0, score, leading: voted > 0 && count === maxVotes };
+    }
+    const total = judgesScore === null && audienceSum === null ? null : round1((judgesScore ?? 0) + (audienceSum ?? 0));
+    return { id: f.id, n: f.n, name: f.name, team: f.team, judges: per, judged: done.length, judgesTotal: judges.length, judgesScore, audience, total, rank: null };
   });
-  const ranked = rows.filter((r) => r.total !== null && r.total !== undefined).sort((a, b) => (b.total as number) - (a.total as number) || (b.judgesAvg ?? 0) - (a.judgesAvg ?? 0));
+  const ranked = rows.filter((r) => r.total !== null).sort((a, b) => (b.total as number) - (a.total as number) || (b.judgesScore ?? 0) - (a.judgesScore ?? 0));
   ranked.forEach((r, i) => {
     r.rank = i + 1;
   });
-  return { rows, judgesTotal: judges.length, voted };
+  const categories: LiveCategoryView[] = ac.map((c) => {
+    const t = tallies.get(c.key);
+    const voted = t ? t.voted : 0;
+    const max = t ? Math.max(0, ...t.counts) : 0;
+    const leaders = t && voted > 0 ? t.counts.map((n, i) => (n === max ? i : -1)).filter((i) => i >= 0) : [];
+    return { key: c.key, label: c.label, weight: c.weight, voted, winner: leaders.length === 1 ? (finalists[leaders[0]]?.name ?? null) : null };
+  });
+  return { rows, judgesTotal: judges.length, categories };
 }
 
 async function finalsView(ctx: BoardCtx, admin: boolean): Promise<LiveFinalsView> {
   const key = ctx.settings.active_challenge;
   if (!key) return { active: null };
-  const ch = (await challengeRows()).find((c) => c.key === key);
+  const ch = ctx.challenges.find((c) => c.key === key);
   if (!ch) return { active: null };
   const b = await boardOf(ch, ctx);
   const hidden = !admin && ctx.settings.reveal === "end" && !ch.revealed;
@@ -784,15 +815,20 @@ async function finalsView(ctx: BoardCtx, admin: boolean): Promise<LiveFinalsView
     reveal: asReveal(ctx.settings.reveal),
     hidden,
     currentId: ch.current_finalist_id,
-    weights: { judges: ctx.settings.weights_judges, audience: 100 - ctx.settings.weights_judges },
+    weights: weightsOf(ctx.criteria),
     judgesTotal: b.judgesTotal,
-    voted: b.voted,
+    categories: hidden ? b.categories.map((c) => ({ ...c, winner: null })) : b.categories,
     finalists: b.rows.map((f) =>
-      hidden
-        ? { id: f.id, n: f.n, name: f.name, team: f.team, judged: f.judged, judgesTotal: f.judgesTotal, audience: f.audience }
-        : { id: f.id, n: f.n, name: f.name, team: f.team, judged: f.judged, judgesTotal: f.judgesTotal, audience: f.audience, judgesAvg: f.judgesAvg, total: f.total, rank: f.rank }
+      hidden ? { id: f.id, n: f.n, name: f.name, team: f.team, judged: f.judged, judgesTotal: f.judgesTotal, judgesScore: null, audience: {}, total: null, rank: null } : { id: f.id, n: f.n, name: f.name, team: f.team, judged: f.judged, judgesTotal: f.judgesTotal, judgesScore: f.judgesScore, audience: f.audience, total: f.total, rank: f.rank }
     ),
   };
+}
+
+function categoryOf(q: QuestionRow | null, ctx: BoardCtx): LiveQuestionView["category"] {
+  if (!q?.criterion_key) return null;
+  const c = ctx.criteria.find((x) => x.key === q.criterion_key);
+  const ch = ctx.challenges.find((x) => x.key === q.challenge_key);
+  return { key: q.criterion_key, label: c?.label ?? q.criterion_key, challenge: ch?.name ?? "" };
 }
 
 /** What the hall sees. `poll` pulls the phone file first (one caller per 1.5s actually does). */
@@ -804,7 +840,7 @@ export async function displayView({ poll = true, admin = false }: { poll?: boole
   const visible = !cur || admin || asReveal(cur.reveal) === "live" || cur.status !== "open";
   return {
     event: { name: ctx.settings.event_name, phone: ctx.settings.phone_display, theme: ctx.settings.theme === "dark" ? "dark" : "light" },
-    question: cur && tally ? questionView(cur, tally, visible) : null,
+    question: cur && tally ? questionView(cur, tally, visible, categoryOf(cur, ctx)) : null,
     resultsVisible: visible,
     voted: tally?.voted ?? 0,
     changed: tally?.changed ?? 0,
@@ -821,7 +857,7 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
   const ctx = await boardCtx();
   const cur = currentOf(ctx.questions);
   const challenges: LiveAdminChallenge[] = [];
-  for (const ch of await challengeRows()) {
+  for (const ch of ctx.challenges) {
     const b = await boardOf(ch, ctx);
     const raw = await finalistsOf(ch.key);
     challenges.push({
@@ -832,9 +868,8 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
       status: asChStatus(ch.status),
       revealed: ch.revealed,
       currentId: ch.current_finalist_id,
-      questionId: ch.question_id,
       judgesTotal: b.judgesTotal,
-      voted: b.voted,
+      categories: b.categories,
       finalists: b.rows,
       finalistsRaw: raw.map((f) => ({ id: f.id, n: f.n, name: f.name, team: f.team, teamKey: f.team_key })),
     });
@@ -842,7 +877,7 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
   const questions = [];
   for (const q of ctx.questions) {
     const t = await tallyOf(q);
-    questions.push({ id: q.id, text: q.text, options: strArr(q.options), sort: q.sort, challengeKey: q.challenge_key, status: asStatus(q.status), reveal: asReveal(q.reveal), voted: t.voted, current: cur?.id === q.id });
+    questions.push({ id: q.id, text: q.text, options: strArr(q.options), sort: q.sort, challengeKey: q.challenge_key, criterionKey: q.criterion_key, status: asStatus(q.status), reveal: asReveal(q.reveal), voted: t.voted, current: cur?.id === q.id });
   }
   return {
     ...base,
@@ -851,7 +886,7 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
       phoneDisplay: ctx.settings.phone_display,
       hasToken: !!ctx.settings.yemot_token.trim(),
       yemotExtension: ctx.settings.yemot_extension,
-      weights: { judges: ctx.settings.weights_judges, audience: 100 - ctx.settings.weights_judges },
+      weights: weightsOf(ctx.criteria),
       audienceMode: (ctx.settings.audience_mode === "share" ? "share" : "leader") as LiveAudienceMode,
       reveal: asReveal(ctx.settings.reveal),
       theme: ctx.settings.theme === "dark" ? "dark" : "light",
@@ -866,11 +901,12 @@ export async function adminView({ poll = true }: { poll?: boolean } = {}): Promi
 
 export async function exportCsv(): Promise<string> {
   const ctx = await boardCtx();
+  const ac = audienceCriteria(ctx.criteria);
   const esc = (v: unknown) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
-  const rows: unknown[][] = [["אתגר", "מס׳", "פרויקט", "צוות", "דירוג", "שופטות", "ממוצע שופטות", "קולות קהל", "אחוז קהל", "ציון קהל", "ציון סופי"]];
-  for (const ch of await challengeRows()) {
+  const rows: unknown[][] = [["אתגר", "מס׳", "פרויקט", "צוות", "דירוג", "שופטות (פירוט)", "ציון שופטות", ...ac.flatMap((c) => [`${c.label} - קולות`, `${c.label} - נקודות`]), "ציון סופי"]];
+  for (const ch of ctx.challenges) {
     const b = await boardOf(ch, ctx);
-    for (const f of b.rows) rows.push([ch.name, f.n, f.name, f.team, f.rank, (f.judges ?? []).map((j) => `${j.name}: ${j.total === null ? "—" : j.total}`).join(" | "), f.judgesAvg, f.audience.count, f.audience.pct, f.audience.score, f.total]);
+    for (const f of b.rows) rows.push([ch.name, f.n, f.name, f.team, f.rank, (f.judges ?? []).map((j) => `${j.name}: ${j.total === null ? "—" : j.total}`).join(" | "), f.judgesScore, ...ac.flatMap((c) => [f.audience[c.key]?.count ?? 0, f.audience[c.key]?.score ?? ""]), f.total]);
   }
   rows.push([]);
   rows.push(["שאלה", "אפשרות", "מקש", "הצבעות", "אחוז", "סה״כ הצביעו"]);
