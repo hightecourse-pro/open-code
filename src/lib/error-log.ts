@@ -25,7 +25,8 @@ export async function recordAppError(item: Omit<AppErrorItem, "at">): Promise<vo
   try {
     const admin = createAdminClient();
     const { data } = await admin.from("app_settings").select("value").eq("key", KEY).maybeSingle();
-    const prev = Array.isArray((data?.value as { items?: unknown } | null)?.items) ? ((data!.value as { items: AppErrorItem[] }).items ?? []) : [];
+    const raw = (data?.value ?? null) as unknown as { items?: unknown } | null;
+    const prev = Array.isArray(raw?.items) ? (raw!.items as AppErrorItem[]) : [];
     const next: AppErrorItem[] = [
       {
         at: new Date().toISOString(),
@@ -38,7 +39,8 @@ export async function recordAppError(item: Omit<AppErrorItem, "at">): Promise<vo
       },
       ...prev,
     ].slice(0, KEEP);
-    await admin.from("app_settings").upsert({ key: KEY, value: { items: next } }, { onConflict: "key" });
+    // Through JSON so the typed client accepts it as a plain Json value.
+    await admin.from("app_settings").upsert({ key: KEY, value: JSON.parse(JSON.stringify({ items: next })) }, { onConflict: "key" });
   } catch (e) {
     console.error("[error-log] could not record:", e instanceof Error ? e.message : e);
   }
