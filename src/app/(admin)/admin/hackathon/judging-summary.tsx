@@ -32,20 +32,41 @@ const RECOMMEND = 3;
 export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; challenges: { key: string; short: string; emoji: string }[] }) {
   const [q, setQ] = useState("");
   const [only, setOnly] = useState("all");
-  const [sort, setSort] = useState<"rank" | "average" | "auto" | "team">("rank");
+  const [sort, setSort] = useState<string>("rank");
+  const [dir, setDir] = useState<"asc" | "desc">("desc");
   const visible = rows.filter((r) => (only === "all" || r.challengeKey === only) && (!q.trim() || r.team.includes(q.trim())));
-  const order = (a: SummaryRow, b: SummaryRow) => {
-    switch (sort) {
-      case "average":
-        return (b.average ?? -1) - (a.average ?? -1) || a.team.localeCompare(b.team, "he");
-      case "auto":
-        return (b.auto ?? -1) - (a.auto ?? -1) || a.team.localeCompare(b.team, "he");
-      case "team":
-        return a.team.localeCompare(b.team, "he");
-      default:
-        return (a.rank ?? 999) - (b.rank ?? 999) || (b.average ?? -1) - (a.average ?? -1);
-    }
+  // any column sorts (the owner, 26/10): a click on a header, again to flip; a judge's column sorts by her score
+  const valueOf = (r: SummaryRow): number | string | null => {
+    if (sort === "team") return r.team;
+    if (sort === "rank") return r.rank;
+    if (sort === "auto") return r.auto;
+    if (sort === "average") return r.average;
+    if (sort.startsWith("judge:")) return r.judges.find((j) => j.id === sort.slice(6))?.total ?? null;
+    return null;
   };
+  const order = (a: SummaryRow, b: SummaryRow) => {
+    const va = valueOf(a), vb = valueOf(b);
+    if (sort === "team") return (dir === "asc" ? 1 : -1) * String(va).localeCompare(String(vb), "he");
+    if (sort === "rank") return (dir === "desc" ? 1 : -1) * (((va as number | null) ?? 999) - ((vb as number | null) ?? 999)) || (b.average ?? -1) - (a.average ?? -1);
+    const na = (va as number | null) ?? -1, nb = (vb as number | null) ?? -1;
+    return (dir === "desc" ? nb - na : na - nb) || a.team.localeCompare(b.team, "he");
+  };
+  function sortBy(key: string) {
+    if (sort === key) setDir((d) => (d === "desc" ? "asc" : "desc"));
+    else {
+      setSort(key);
+      setDir(key === "team" ? "asc" : "desc");
+    }
+  }
+  const arrow = (key: string) => (sort === key ? (dir === "desc" ? " ▼" : " ▲") : "");
+  const th = (key: string, label: string, align = "text-start") => (
+    <th className={`${align} px-2.5 py-1.5 font-semibold whitespace-nowrap`}>
+      <button type="button" onClick={() => sortBy(key)} className={cn("hover:text-brand-purple", sort === key && "text-brand-purple")} data-testid={`summary-sort-${key.replace(":", "-")}`}>
+        {label}
+        {arrow(key)}
+      </button>
+    </th>
+  );
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const judgeNames = [...new Set(rows.flatMap((r) => r.judges.map((j) => j.name)))];
@@ -92,12 +113,21 @@ export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; chall
             {c.emoji} {c.short}
           </button>
         ))}
-        <select value={sort} onChange={(e) => setSort(e.target.value as typeof sort)} className="border border-ink-200 rounded-md px-2 py-1 bg-white" data-testid="summary-sort">
+        <select
+          value={sort.startsWith("judge:") ? "average" : sort}
+          onChange={(e) => {
+            setSort(e.target.value);
+            setDir(e.target.value === "team" ? "asc" : "desc");
+          }}
+          className="border border-ink-200 rounded-md px-2 py-1 bg-white"
+          data-testid="summary-sort"
+        >
           <option value="rank">לפי דירוג</option>
           <option value="average">לפי ממוצע השופטות</option>
           <option value="auto">לפי הבדיקה האוטומטית</option>
           <option value="team">לפי שם</option>
         </select>
+        <span className="text-[12px] text-ink-500">או לחיצה על כותרת עמודה</span>
         <div className="relative ms-auto min-w-[200px]">
           <Search className="absolute top-1/2 -translate-y-1/2 end-3 h-4 w-4 text-ink-400" aria-hidden />
           <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש צוות" className="pe-9" data-testid="summary-search" />
@@ -115,15 +145,18 @@ export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; chall
             <table className="w-full text-[13px]">
               <thead className="bg-ink-50 text-ink-600 text-[12px]">
                 <tr>
-                  <th className="text-start px-2.5 py-1.5 font-semibold w-8">#</th>
-                  <th className="text-start px-2.5 py-1.5 font-semibold">צוות</th>
+                  {th("rank", "#")}
+                  {th("team", "צוות")}
                   {judgeCols.map(([id, name]) => (
                     <th key={id} className="text-center px-2.5 py-1.5 font-semibold whitespace-nowrap">
-                      {name}
+                      <button type="button" onClick={() => sortBy(`judge:${id}`)} className={cn("hover:text-brand-purple", sort === `judge:${id}` && "text-brand-purple")}>
+                        {name}
+                        {arrow(`judge:${id}`)}
+                      </button>
                     </th>
                   ))}
-                  <th className="text-center px-2.5 py-1.5 font-semibold whitespace-nowrap">בדיקה אוטומטית</th>
-                  <th className="text-center px-2.5 py-1.5 font-semibold">ממוצע</th>
+                  {th("auto", "בדיקה אוטומטית", "text-center")}
+                  {th("average", "ממוצע", "text-center")}
                   <th className="text-start px-2.5 py-1.5 font-semibold">המלצה</th>
                 </tr>
               </thead>

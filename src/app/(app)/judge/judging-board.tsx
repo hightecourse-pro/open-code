@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { JudgingEntry } from "@/lib/judging";
-import { CRITERIA, type AutoCheck } from "@/lib/judging-shared";
+import { CRITERIA, CAPPED_TOTAL, CORRECTNESS_FLOOR, ZERO_SCORES, readAutoReport, totalOf, type AutoCheck, type AutoReport } from "@/lib/judging-shared";
 import { formatBytes } from "@/lib/hackathon-shared";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { ScoreForm } from "./score-form";
@@ -99,54 +99,21 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
       )}
 
       <div className={cn("px-5 py-4 grid grid-cols-1 gap-5", manage && "lg:grid-cols-5")}>
-        {/* the automated report - the owner's view only (23/10) */}
+        {/* the automated report - the owner's view only (23/10); readable (26/10): the score first, a note per criterion, the bottom line */}
         {manage && (
-        <div className="lg:col-span-2 flex flex-col gap-2">
-          <div className="font-mono text-[12px] text-brand-pink-deep">{"// דשבורד הבדיקה האוטומטית"}</div>
-          {report ? (
-            <>
-              <div className="text-[12px] text-ink-500">
-                {passed}/{checks.length} בדיקות עברו{e.reportUpdatedAt ? ` · רץ ${WHEN.format(new Date(e.reportUpdatedAt))}` : ""}
-              </div>
-              <ul className="flex flex-col gap-1">
-                {checks.map((c) => (
-                  <li key={c.key} className="flex items-start gap-2 text-[13px]">
-                    <span className={`shrink-0 mt-0.5 h-[18px] w-[18px] rounded-full inline-flex items-center justify-center text-[11px] font-black ${(STATUS[c.status] ?? STATUS.skip).cls}`}>{(STATUS[c.status] ?? STATUS.skip).icon}</span>
-                    <span>
-                      <b className="text-ink-900">{c.label}</b>
-                      {c.detail && <span className="text-ink-600"> · {c.detail}</span>}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              {report.summary && <p className="text-[13px] text-ink-800 leading-relaxed bg-tint-purple/30 rounded-[12px] px-3 py-2 whitespace-pre-wrap">{report.summary}</p>}
-              {/* the reviewer's screenshot of the live product (a small data URI - the owner's eyes on what ran) */}
-              {report.screenshots?.[0]?.startsWith("data:image/") && (
-                // eslint-disable-next-line @next/next/no-img-element -- an inline data URI from the automated report
-                <img src={report.screenshots[0]} alt="צילום מסך מהבדיקה האוטומטית" className="w-full max-w-[420px] rounded-[10px] border border-ink-200" data-testid="auto-report-shot" />
-              )}
-              {report.suggested && (
-                <div className="text-[12px] text-ink-600">
-                  ציון מוצע מהבדיקה:{" "}
-                  {CRITERIA.filter((c) => report.suggested?.[c.key] !== undefined)
-                    .map((c) => `${c.label} ${report.suggested?.[c.key]}/${c.max}`)
-                    .join(" · ")}
-                </div>
-              )}
-            </>
-          ) : (
-            <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>
-          )}
-        </div>
+          <div className="lg:col-span-2 flex flex-col gap-2">
+            <div className="font-mono text-[12px] text-brand-pink-deep">{"// הבדיקה האוטומטית"}</div>
+            {report ? <AutoReportPanel report={report} ranAt={e.reportUpdatedAt} passed={passed} checks={checks} /> : <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>}
+          </div>
         )}
 
-        {/* what they wrote */}
+        {/* what they wrote - all of it, open (the owner, 26/10: the judges must see everything the participant answered) */}
         <div className={cn("flex flex-col gap-3", manage && "lg:col-span-3")}>
-          <details className="group">
-            <summary className="list-none cursor-pointer font-mono text-[12px] text-brand-pink-deep [&::-webkit-details-marker]:hidden">{"// הארכיטקטורה, הפיצ׳ר המקורי, ומה שנכתב בגרסה הקודמת של הטופס"} <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span></summary>
+          <details className="group" open data-testid="team-wrote">
+            <summary className="list-none cursor-pointer font-mono text-[12px] text-brand-pink-deep [&::-webkit-details-marker]:hidden">{"// מה שהצוות כתב: הארכיטקטורה, הפיצ׳ר המקורי, והשאלות האישיות"} <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span></summary>
             <div className="mt-2 flex flex-col gap-3">
               <div>
-                <div className="text-[12px] font-semibold text-ink-500">הארכיטקטורה</div>
+                <div className="text-[12px] font-semibold text-ink-500">הארכיטקטורה (קריטריון ״ארכיטקטורה של פיתוח AI״, 10 נק׳)</div>
                 <Rich html={s.architecture} />
               </div>
               <div className="rounded-[12px] bg-tint-pink/30 border border-brand-pink/30 px-3 py-2">
@@ -176,6 +143,30 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
                   )}
                 </div>
               )}
+              {/* the personal answers - one block per member (the owner, 26/10) */}
+              {s.members.map((m) => (
+                <div key={m.id} className="rounded-[12px] bg-tint-warm/40 border border-[#F0DCA8]/60 px-3 py-2" data-testid="member-reflection" data-answered={m.reflected ? "1" : "0"}>
+                  <div className="text-[12px] font-bold text-ink-900">{m.name} - השאלות האישיות</div>
+                  {m.reflection ? (
+                    <dl className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1.5 mt-1 text-[13px]">
+                      <div>
+                        <dt className="text-[12px] font-semibold text-ink-500">מה תרם לך הפרויקט?</dt>
+                        <dd><Rich html={m.reflection.contributed} /></dd>
+                      </div>
+                      <div>
+                        <dt className="text-[12px] font-semibold text-ink-500">מה למדת על עצמך?</dt>
+                        <dd><Rich html={m.reflection.learned} /></dd>
+                      </div>
+                      <div>
+                        <dt className="text-[12px] font-semibold text-ink-500">ממה הכי נהנית?</dt>
+                        <dd><Rich html={m.reflection.enjoyed} /></dd>
+                      </div>
+                    </dl>
+                  ) : (
+                    <p className="text-[12.5px] text-ink-500 mt-0.5">עדיין לא ענתה על השאלות האישיות.</p>
+                  )}
+                </div>
+              ))}
             </div>
           </details>
 
@@ -221,4 +212,90 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
 function Rich({ html }: { html: string | null }) {
   if (!html) return <p className="text-[13px] text-ink-500">-</p>;
   return <div className={RICH} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+
+/**
+ * The automated review, readable (the owner, 26/10): the score first - big,
+ * with the cap when correctness is low - then one row per criterion with the
+ * points and the reasoned note, the video note, the bottom line, and the
+ * blocker in red. The raw checks fold under a line; the screenshot stays small.
+ */
+function AutoReportPanel({ report, ranAt, passed, checks }: { report: AutoReport; ranAt: string | null; passed: number; checks: AutoCheck[] }) {
+  const read = readAutoReport(report);
+  const suggested = report.suggested ? totalOf({ ...ZERO_SCORES, ...report.suggested }) : null;
+  return (
+    <div className="flex flex-col gap-2.5" data-testid="auto-report">
+      {suggested && (
+        <div className={cn("rounded-[14px] px-4 py-3 flex items-baseline gap-3 flex-wrap", read.blocked ? "bg-[#FDE8E8]" : "bg-tint-purple/40")} data-testid="auto-report-total">
+          <span className="font-display text-[30px] font-black leading-none text-ink-1000 tabular-nums">{suggested.total}</span>
+          <span className="text-[13px] text-ink-600">מתוך 100</span>
+          {suggested.capped && (
+            <span className="text-[12px] font-semibold text-[#B42318]">
+              מוגבל ל-{CAPPED_TOTAL}: נכונות מתחת ל-{CORRECTNESS_FLOOR} (הסכום הגולמי {suggested.raw})
+            </span>
+          )}
+          {ranAt && <span className="ms-auto text-[11.5px] text-ink-500">רץ {WHEN.format(new Date(ranAt))}</span>}
+        </div>
+      )}
+      {read.blocked && (
+        <div className="rounded-[12px] border border-[#F2BBC8] bg-[#FDE8E8] px-3 py-2 text-[13px] text-[#A8254B]" data-testid="auto-report-blocked">
+          <b>חסום:</b> {read.blocked}
+        </div>
+      )}
+      {report.suggested && (
+        <table className="w-full text-[13px]" data-testid="auto-report-criteria">
+          <tbody>
+            {CRITERIA.filter((c) => report.suggested?.[c.key] !== undefined).map((c) => {
+              const v = report.suggested?.[c.key] ?? 0;
+              const ratio = v / c.max;
+              return (
+                <tr key={c.key} className="border-t border-ink-100 align-top">
+                  <td className="py-1.5 pe-2 whitespace-nowrap font-semibold text-ink-900 w-[1%]">{c.label}</td>
+                  <td className="py-1.5 pe-2 whitespace-nowrap tabular-nums w-[1%]">
+                    <span className={cn("inline-block rounded-md px-1.5 py-0.5 font-bold", ratio >= 0.8 ? "bg-tint-mint text-success" : ratio >= 0.5 ? "bg-tint-warm text-[#8C5E0E]" : "bg-[#FDE8E8] text-[#B42318]")}>
+                      {v}/{c.max}
+                    </span>
+                  </td>
+                  <td className="py-1.5 text-ink-700 leading-relaxed">{read.notes[c.key] ?? <span className="text-ink-400">-</span>}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      )}
+      {read.videoNote && (
+        <div className="text-[12.5px] text-ink-700 leading-relaxed">
+          <b className="text-ink-900">סרטון:</b> {read.videoNote}
+        </div>
+      )}
+      {read.bottomLine && (
+        <p className="text-[13px] text-ink-900 leading-relaxed bg-tint-purple/30 rounded-[12px] px-3 py-2" data-testid="auto-report-bottom-line">
+          <b>השורה התחתונה:</b> {read.bottomLine}
+        </p>
+      )}
+      {!report.suggested && report.summary && <p className="text-[13px] text-ink-800 leading-relaxed bg-tint-purple/30 rounded-[12px] px-3 py-2 whitespace-pre-wrap">{report.summary}</p>}
+      {checks.length > 0 && (
+        <details className="group text-[12.5px]">
+          <summary className="list-none cursor-pointer text-ink-600 font-semibold [&::-webkit-details-marker]:hidden">
+            הבדיקות שרצו: {passed}/{checks.length} עברו <span className="text-ink-400 group-open:rotate-90 inline-block transition-transform">›</span>
+          </summary>
+          <ul className="mt-1.5 flex flex-col gap-1">
+            {checks.map((c) => (
+              <li key={c.key} className="flex items-start gap-2">
+                <span className={`shrink-0 mt-0.5 h-[18px] w-[18px] rounded-full inline-flex items-center justify-center text-[11px] font-black ${(STATUS[c.status] ?? STATUS.skip).cls}`}>{(STATUS[c.status] ?? STATUS.skip).icon}</span>
+                <span>
+                  <b className="text-ink-900">{c.label}</b>
+                  {c.detail && <span className="text-ink-600"> · {c.detail}</span>}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+      {report.screenshots?.[0]?.startsWith("data:image/") && (
+        // eslint-disable-next-line @next/next/no-img-element -- an inline data URI from the automated report
+        <img src={report.screenshots[0]} alt="צילום מסך מהבדיקה האוטומטית" className="w-full max-w-[320px] rounded-[10px] border border-ink-200" data-testid="auto-report-shot" />
+      )}
+    </div>
+  );
 }
