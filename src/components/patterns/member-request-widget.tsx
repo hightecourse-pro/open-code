@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { usePathname } from "next/navigation";
 import { MessageSquarePlus, X } from "lucide-react";
 import { Alert, Button, Field, Input, Textarea } from "@/components/ui";
 import { AttachmentPicker } from "@/components/patterns/attachment-picker";
@@ -37,6 +38,7 @@ export function MemberRequestWidget({
   /** The launch-period "מצאת באג?" bubble - the admin turns it off in הגדרות. */
   launchNudge?: boolean;
 }) {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,6 +105,8 @@ export function MemberRequestWidget({
     }
   }
 
+  // Not on the judging desk (the owner, 26/10 night: "והפניות למטה") - the desk needs the whole screen; every other page keeps it.
+  if (pathname.startsWith("/judge")) return null;
   return (
     <div className="fixed bottom-4 end-4 z-40 flex flex-col items-end gap-2 pointer-events-none" dir="rtl">
       {open && (
