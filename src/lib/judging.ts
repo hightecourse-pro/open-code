@@ -146,7 +146,7 @@ export async function loadJudgingBoard(viewer: { id: string; role: string; statu
       const average = totals.length ? Math.round((totals.reduce((a, b) => a + b, 0) / totals.length) * 10) / 10 : null;
       const gap = totals.length >= 2 && Math.max(...totals) - Math.min(...totals) > GAP_THRESHOLD;
       const rep = reportOf.get(submission.teamKey);
-      return { submission, report: (rep?.report as AutoReport | null) ?? null, reportUpdatedAt: rep?.updated_at ?? null, scores, mine, average, gap, rank: null };
+      return { submission, report: slimReport(rep?.report), reportUpdatedAt: rep?.updated_at ?? null, scores, mine, average, gap, rank: null };
     });
   // Rank inside each challenge, by average (the owner's view only has all the scores).
   if (full) {
@@ -156,6 +156,18 @@ export async function loadJudgingBoard(viewer: { id: string; role: string; statu
     }
   }
   return { entries, judges, access };
+}
+
+/**
+ * A report without its screenshot bytes (26/10 night): sixty reports with a JPEG data URI each put ~4MB into the
+ * owner's /judge and /admin/hackathon - nine seconds to load and, through a filtering proxy that rewrites big
+ * pages, a corrupted payload. The page keeps a flag; the image itself comes from /api/judge/shot on demand.
+ */
+function slimReport(raw: unknown): AutoReport | null {
+  if (!raw || typeof raw !== "object") return null;
+  const { screenshots, ...rest } = raw as AutoReport;
+  const first = Array.isArray(screenshots) ? screenshots[0] : undefined;
+  return { ...rest, hasScreenshot: typeof first === "string" && first.startsWith("data:image/") };
 }
 
 export function blankScores(): Scores {

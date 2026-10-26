@@ -118,7 +118,7 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
             )}
             {manage && (
               <Collapsible scope={SCOPE} id="auto-report" title="הבדיקה האוטומטית" compact summary={suggested ? `${suggested.total} מתוך 100` : "עוד לא רצה"}>
-                {report ? <AutoReportPanel report={report} ranAt={e.reportUpdatedAt} passed={passed} checks={checks} /> : <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>}
+                {report ? <AutoReportPanel report={report} teamKey={s.teamKey} ranAt={e.reportUpdatedAt} passed={passed} checks={checks} /> : <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>}
               </Collapsible>
             )}
           </div>
@@ -240,7 +240,7 @@ function Rich({ html }: { html: string | null }) {
  * points and the reasoned note, the video note, the bottom line, and the
  * blocker in red. The raw checks fold under a line; the screenshot stays small.
  */
-function AutoReportPanel({ report, ranAt, passed, checks }: { report: AutoReport; ranAt: string | null; passed: number; checks: AutoCheck[] }) {
+function AutoReportPanel({ report, teamKey, ranAt, passed, checks }: { report: AutoReport; teamKey: string; ranAt: string | null; passed: number; checks: AutoCheck[] }) {
   const read = readAutoReport(report);
   const suggested = report.suggested ? totalOf({ ...ZERO_SCORES, ...report.suggested }) : null;
   return (
@@ -313,9 +313,9 @@ function AutoReportPanel({ report, ranAt, passed, checks }: { report: AutoReport
           </ul>
         </details>
       )}
-      {report.screenshots?.[0]?.startsWith("data:image/") && (
-        // eslint-disable-next-line @next/next/no-img-element -- an inline data URI from the automated report
-        <img src={report.screenshots[0]} alt="צילום מסך מהבדיקה האוטומטית" className="w-full max-w-[320px] rounded-[10px] border border-ink-200" data-testid="auto-report-shot" />
+      {(report.hasScreenshot || report.screenshots?.[0]?.startsWith("data:image/")) && (
+        // eslint-disable-next-line @next/next/no-img-element -- the report's own JPEG, served on demand by /api/judge/shot (the page carries only a flag)
+        <img src={report.screenshots?.[0] ?? `/api/judge/shot?team=${encodeURIComponent(teamKey)}`} loading="lazy" alt="צילום מסך מהבדיקה האוטומטית" className="w-full max-w-[320px] rounded-[10px] border border-ink-200" data-testid="auto-report-shot" />
       )}
     </div>
   );
