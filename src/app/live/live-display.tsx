@@ -41,7 +41,7 @@ const CSS = `
 .chart{flex:1;display:flex;justify-content:center;gap:100px;padding:0 60px;min-height:0}
 .col{width:400px;display:flex;flex-direction:column;align-items:center;animation:colIn .7s cubic-bezier(.2,.8,.2,1) both}
 @keyframes colIn{from{opacity:0;transform:translateY(20px)}}
-.col-top{height:530px;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:14px}
+.col-top{height:500px;flex:none;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:14px}
 .lead{font-weight:800;font-size:22px;line-height:1;color:var(--bg);background:var(--ink);padding:9px 18px;border-radius:999px;visibility:hidden}
 .lead.show{visibility:visible;animation:leadIn .4s cubic-bezier(.2,.8,.2,1) both}
 @keyframes leadIn{from{opacity:0;transform:translateY(8px)}}
@@ -257,7 +257,7 @@ function PhonePanel({ phone, keys, state, left }: { phone: string; keys: number[
           <div style={{ fontWeight: 700, fontSize: 24, lineHeight: 1, opacity: 0.85 }}>חייגו מכל טלפון</div>
           <div className="phone-num">{phone || "[מספר הקו]"}</div>
         </div>
-        <div className="phone-txt">{state === "open" ? `והקישו את מספר הפרויקט - ${keysText(keys)}. קול אחד לכל טלפון בכל קטגוריה.` : state === "done" ? "תודה שהצבעתן! התוצאות בעוד רגע." : "ההצבעה תיפתח בעוד רגע."}</div>
+        <div className="phone-txt">{state === "open" ? `והקישו את מספר הפרויקט הטוב ביותר בקטגוריה - ${keysText(keys)}. קול אחד לכל טלפון בכל קטגוריה.` : state === "done" ? "תודה שהצבעתן! התוצאות בעוד רגע." : "ההצבעה תיפתח בעוד רגע."}</div>
       </div>
       <div className="live">
         <div className={`dot${state === "open" ? "" : " off"}`} />
@@ -284,7 +284,7 @@ function Columns({ items, hidePct, flash }: { items: { id: string; n: number; na
           <div className="col-top">
             <div className={`lead${!hidePct && max > 0 && unique && x.pct === max ? " show" : ""}`}>מובילה כרגע</div>
             <Pct value={hidePct ? 0 : x.pct} hidden={hidePct} />
-            <div className="bar" style={{ background: colorOf(i), width: Math.min(270, colW - 40), height: hidePct ? 0 : Math.round((x.pct / scale) * 380), boxShadow: flash.has(x.id) ? `0 0 70px ${colorOf(i)}` : "none" }} />
+            <div className="bar" style={{ background: colorOf(i), width: Math.min(270, colW - 40), height: hidePct ? 0 : Math.round((x.pct / scale) * 330), boxShadow: flash.has(x.id) ? `0 0 70px ${colorOf(i)}` : "none" }} />
           </div>
           <div className="base" style={{ width: Math.min(360, colW) }} />
           <div className="label">
@@ -334,7 +334,7 @@ function VoteScreen({ f, phone, voteSeconds, light }: { f: LiveFinalsView; phone
   const state = open ? "open" : allDone ? "done" : shown?.status === "done" ? "closed" : "paused";
   const title = shown?.label ?? f.name ?? "";
   return (
-    <Frame kicker={`${f.name ? `${f.name} · ` : ""}קטגוריה ${idx + 1} מתוך ${steps.length} · מי הפרויקט הטוב ביותר ב־`} title={title} titleClass={title.length > 14 ? "long" : ""} light={light}>
+    <Frame kicker={`${f.name ? `${f.name} · ` : ""}קטגוריה ${idx + 1} מתוך ${steps.length} · איזה פרויקט הכי טוב בקטגוריה?`} title={title} titleClass={title.length > 14 ? "long" : ""} light={light}>
       <div className="screen">
         <div className="steps">
           {steps.map((s) => (
