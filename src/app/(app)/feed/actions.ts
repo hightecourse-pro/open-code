@@ -1,7 +1,6 @@
 "use server";
 
-import { decodeHtmlEntities, isRichHtml } from "@/lib/rich-text-lite";
-import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
+import { htmlToPlainText, settleComposerBody } from "@/lib/rich-text";
 import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
 
 import { revalidatePath } from "next/cache";
@@ -34,15 +33,9 @@ async function canWrite(): Promise<boolean> {
  * markup must never eat a member's character budget.
  */
 function normalizeBody(raw: string): { body: string; plain: string } {
-  const trimmed = raw.trim();
-  if (!isRichHtml(trimmed)) {
-    // Tagless editor output can still carry entities ("&nbsp;") - store it
-    // decoded so plain-path renderers never show entity codes.
-    const decoded = decodeHtmlEntities(trimmed);
-    return { body: decoded, plain: decoded };
-  }
-  const body = sanitizeRichHtml(trimmed);
-  return { body, plain: htmlToPlainText(body).trim() };
+  // Any tag counts as HTML (26/10: a <font> wrapper pasted from Gmail used to pass as plain text and show up as markup).
+  const settled = settleComposerBody(raw);
+  return settled.rich ? { body: settled.body, plain: htmlToPlainText(settled.body).trim() } : { body: settled.body, plain: settled.body };
 }
 
 export async function editPost(postId: string, formData: FormData): Promise<{ error?: string }> {

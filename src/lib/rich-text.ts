@@ -83,6 +83,30 @@ export function sanitizeRichHtml(html: string): string {
 }
 
 /**
+ * What a composer sends, settled (the owner, 26/10: a phone number pasted
+ * from Gmail arrived wrapped in <font …> - no allowed tag, so the body was
+ * taken for plain text and the markup showed in the bubble). ANY tag means
+ * HTML: it is sanitized to the allowlist; if nothing but text survives, the
+ * message is stored as plain text with its entities decoded.
+ */
+export function settleComposerBody(raw: string): { body: string; rich: boolean } {
+  const trimmed = raw.trim();
+  if (!/<[a-zA-Z!/][^>]*>/.test(trimmed)) return { body: decodeEntities(trimmed), rich: false };
+  const clean = sanitizeRichHtml(trimmed);
+  if (/<(p|div|ul|ol|li|h3|b|strong|i|em|br|a|s|strike|del|code)(\s|\/?>)/i.test(clean)) return { body: clean, rich: true };
+  return { body: decodeEntities(clean.replace(/<[^>]*>/g, "")).trim(), rich: false };
+}
+function decodeEntities(text: string): string {
+  return text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/gi, "&");
+}
+
+/**
  * The ARENA sanitizer (the owner, 16/10, "צילומי מסך בבייס 64"): everything
  * sanitizeRichHtml allows, plus code blocks and images embedded as data URIs
  * (png/jpeg/webp/gif, up to ~600KB each) - nothing is fetched from a host a
