@@ -34,72 +34,28 @@ export async function activateSubscription(input: ActivateInput) {
   const plan = buildPlans(pricing)[input.plan];
   const admin = createAdminClient();
 
-  // Upsert the subscription for this member (one live sub per member). The
-  // NEWEST row wins: Nedarim sends two callbacks for one keva setup a few ms
-  // apart, which raced into two rows, and maybeSingle() then errored on the
-  // pair - so the real charge created a THIRD row instead of updating, and
-  // the daily expiry later paused her over the leftover grace rows (אילה
-  // שמואלביץ, 19/10). Every other live row is closed below.
-  const { data: existingRows } = await admin
-    .from("subscriptions")
-    .select("id, current_period_end")
-    .eq("profile_id", input.profileId)
-    .order("current_period_end", { ascending: false, nullsFirst: false })
-    .limit(1);
-  const existing = existingRows?.[0] ?? null;
-
-  const periodEnd = new Date();
-  if (input.setupOnly) {
-    // Grace until the charge arrives - never shorter than a period she has
-    // already paid for (a card replaced mid-month keeps the month).
-    periodEnd.setDate(periodEnd.getDate() + KEVA_SETUP_GRACE_DAYS);
-    const paidUntil = existing?.current_period_end ? new Date(existing.current_period_end) : null;
-    if (paidUntil && paidUntil > periodEnd) periodEnd.setTime(paidUntil.getTime());
-  } else {
-    periodEnd.setMonth(periodEnd.getMonth() + plan.periodMonths);
-  }
-
-  let subscriptionId = existing?.id ?? null;
-
-  if (subscriptionId) {
-    await admin
-      .from("subscriptions")
-      .update({
-        plan: input.plan,
-        status: "active",
-        provider_sub_id: input.providerSubId ?? undefined,
-        current_period_end: periodEnd.toISOString(),
-        canceled_at: null,
-      })
-      .eq("id", subscriptionId);
-  } else {
-    const { data: created } = await admin
-      .from("subscriptions")
-      .insert({
-        profile_id: input.profileId,
-        plan: input.plan,
-        status: "active",
-        provider: "nedarim",
-        provider_sub_id: input.providerSubId ?? null,
-        min_term_months: pricing.minTermMonths,
-        current_period_end: periodEnd.toISOString(),
-      })
-      .select("id")
-      .single();
-    subscriptionId = created?.id ?? null;
-  }
-
-  // One live subscription per member: any other live row (a stale keva grace,
-  // a duplicate from a double callback) is closed now, so the daily expiry
-  // never pauses a paying member over a leftover row.
-  if (subscriptionId) {
-    await admin
-      .from("subscriptions")
-      .update({ status: "canceled", canceled_at: new Date().toISOString() })
-      .eq("profile_id", input.profileId)
-      .neq("id", subscriptionId)
-      .in("status", ["active", "trialing", "past_due"]);
-  }
+  // One activation at a time per member, in ONE database transaction (the
+  // locked RPC): Nedarim sends two callbacks for one keva setup a few ms
+  // apart, and when both ran here concurrently each saw no row, inserted its
+  // own, and then closed "every other live row" - the other one's. תהילה
+  // גולדשמידט (26/10) saw "המנוי לא פעיל כרגע" minutes after paying, with two
+  // canceled rows; 27 such pairs in the month before. Inside the function the
+  // NEWEST row (by period end) wins and is updated - a setup opens a 3-day
+  // grace never shorter than a period already paid for, a charge opens the
+  // month - and every other live row is closed, so a member holds one live
+  // row (אילה שמואלביץ, 19/10: the daily expiry paused her over leftover
+  // grace rows). The second callback waits for the first instead of racing it.
+  const { data: rpcId, error: rpcErr } = await admin.rpc("activate_subscription_row", {
+    p_profile_id: input.profileId,
+    p_plan: input.plan,
+    p_provider_sub_id: input.providerSubId ?? null,
+    p_min_term_months: pricing.minTermMonths,
+    p_setup_only: !!input.setupOnly,
+    p_grace_days: KEVA_SETUP_GRACE_DAYS,
+    p_period_months: plan.periodMonths,
+  });
+  if (rpcErr) throw new Error(`activate_subscription_row: ${rpcErr.message}`);
+  const subscriptionId: string | null = (rpcId as string | null) ?? null;
 
   // Card replacement (the owner, 1/9): a NEW standing order for a member who
   // already has one means the OLD keva must be canceled in the Nedarim

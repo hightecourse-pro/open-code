@@ -48,7 +48,7 @@ async function logEvent(value: Record<string, unknown>) {
     const rows = [{ key: "last_webhook", value: value as unknown as Json }];
     // Rejections are the interesting ones - a successful call would otherwise
     // immediately overwrite the evidence of an attempt.
-    if (value.outcome !== "activated") {
+    if (!String(value.outcome ?? "").startsWith("activated")) {
       rows.push({ key: "last_webhook_rejected", value: value as unknown as Json });
     }
     await admin.from("app_settings").upsert(rows, { onConflict: "key" });

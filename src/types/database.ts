@@ -2363,6 +2363,19 @@ export interface Database {
         Args: { p_ids: string[] };
         Returns: { id: string; email: string | null }[];
       };
+      /** One locked activation per member - see 20261026130000 (26/10). */
+      activate_subscription_row: {
+        Args: {
+          p_profile_id: string;
+          p_plan: "monthly" | "annual";
+          p_provider_sub_id: string | null;
+          p_min_term_months: number;
+          p_setup_only: boolean;
+          p_grace_days: number;
+          p_period_months: number;
+        };
+        Returns: string | null;
+      };
       auth_user_id_by_email: { Args: { p_email: string }; Returns: string | null };
       /** Links email-keyed coordinator reviews to fresh signups (16/9). */
       link_coordinator_reviews: { Args: Record<string, never>; Returns: number };
