@@ -22,4 +22,6 @@ export interface DymoStatus {
   printers: DymoPrinter[];
   /** The printer we will print on (chosen by the person, or the first connected LabelWriter). */
   printer?: string;
+  /** What DYMO actually answered (GetPrinters' XML) - shown under ״פרטים טכניים״ so a stuck desk can be diagnosed from a screenshot. */
+  detail?: string;
 }
