@@ -79,12 +79,19 @@ function cookieValueFor(s: TagsSettings & { spreadsheetId: string; code: string 
   return crypto.createHash("sha256").update(`${s.code}|${s.spreadsheetId}`).digest("hex");
 }
 
-/** The browser entered the code (a cookie bound to the current code and sheet), or an admin is signed in. */
+/**
+ * The browser entered the code (a cookie bound to the current code and sheet),
+ * or an admin is signed in - she gets in as soon as a sheet is set, even before
+ * a code exists (the owner, 27/10: she connected the sheet, left the code empty
+ * and found the desk closed).
+ */
 export async function hasTagsAccess(settings?: TagsSettings): Promise<boolean> {
   const s = settings ?? (await tagsSettings());
-  if (!isConfigured(s)) return false;
-  const c = (await cookies()).get(ACCESS_COOKIE)?.value;
-  if (c && c === cookieValueFor(s)) return true;
+  if (!s.spreadsheetId) return false;
+  if (isConfigured(s)) {
+    const c = (await cookies()).get(ACCESS_COOKIE)?.value;
+    if (c && c === cookieValueFor(s)) return true;
+  }
   const profile = await getProfile().catch(() => null);
   return profile?.role === "admin";
 }
