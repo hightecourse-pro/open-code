@@ -199,14 +199,23 @@ function dymoFetch(path: string, init: RequestInit = {}): Promise<Response> {
  */
 export function parsePrinters(xml: string): DymoPrinter[] {
   const out: DymoPrinter[] = [];
-  const re = /<(LabelWriterPrinter|LabelManagerPrinter)>([\s\S]*?)<\/\1>/g;
+  // the element may carry attributes (xmlns:xsi="..." and the like) - the owner's DYMO Label 8 does
+  const re = /<(LabelWriterPrinter|LabelManagerPrinter)(?:\s[^>]*)?>([\s\S]*?)<\/\1\s*>/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(xml))) {
     const block = m[2];
-    const tag = (name: string) => block.match(new RegExp(`<${name}>([^<]*)</${name}>`))?.[1]?.trim() ?? "";
+    const tag = (name: string) => block.match(new RegExp(`<${name}(?:\\s[^>]*)?>([^<]*)</${name}\\s*>`))?.[1]?.trim() ?? "";
     const name = tag("Name");
     if (!name) continue;
-    out.push({ name, model: tag("ModelName") || name, connected: /^true$/i.test(tag("IsConnected")), labelWriter: m[1] === "LabelWriterPrinter" });
+    const connectedText = tag("IsConnected");
+    out.push({ name, model: tag("ModelName") || name, connected: connectedText ? /^true$/i.test(connectedText) : true, labelWriter: m[1] === "LabelWriterPrinter" });
+  }
+  if (out.length === 0 && /<LabelWriterPrinter/i.test(xml)) {
+    // a shape we did not foresee: fall back to the original's reading - every <Name> is a LabelWriter, state unknown
+    for (const n of xml.matchAll(/<Name(?:\s[^>]*)?>([^<]+)<\/Name\s*>/g)) {
+      const name = n[1].trim();
+      if (name && !out.some((p) => p.name === name)) out.push({ name, model: name, connected: true, labelWriter: true });
+    }
   }
   return out;
 }
@@ -228,13 +237,15 @@ export async function initDymo(preferred?: string | null): Promise<DymoStatus> {
     if (!response.ok) return { isReady: false, message: "DYMO Web Service לא זמין", printers: [] };
 
     const printersResponse = await dymoFetch("/GetPrinters");
-    if (!printersResponse.ok) return { isReady: false, message: "לא ניתן לקבל רשימת מדפסות", printers: [] };
+    if (!printersResponse.ok) return { isReady: false, message: "לא ניתן לקבל רשימת מדפסות", printers: [], detail: `GetPrinters: ${printersResponse.status}` };
 
-    const printers = parsePrinters(await printersResponse.text());
+    const xml = await printersResponse.text();
+    const printers = parsePrinters(xml);
+    const detail = `GetPrinters:\n${xml.trim().slice(0, 3000)}`;
     const chosen = pickPrinter(printers, preferred);
-    if (!chosen) return { isReady: false, message: "לא נמצאה מדפסת DYMO LabelWriter", printers };
-    if (!chosen.connected) return { isReady: false, message: `${chosen.name} - לא מחוברת לפי DYMO`, printers, printer: chosen.name };
-    return { isReady: true, message: `DYMO מוכן - ${chosen.name}`, printers, printer: chosen.name };
+    if (!chosen) return { isReady: false, message: "לא נמצאה מדפסת DYMO LabelWriter", printers, detail };
+    if (!chosen.connected) return { isReady: false, message: `${chosen.name} - לא מחוברת לפי DYMO`, printers, printer: chosen.name, detail };
+    return { isReady: true, message: `DYMO מוכן - ${chosen.name}`, printers, printer: chosen.name, detail };
   } catch (error) {
     console.error("Error checking DYMO status:", error);
     return { isReady: false, message: "שגיאה בבדיקת מצב DYMO", printers: [] };

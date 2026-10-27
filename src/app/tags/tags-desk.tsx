@@ -243,6 +243,14 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
           {testResult}
         </p>
       )}
+      {dymoStatus.detail && (
+        <details className="text-[12.5px]" style={{ color: H.muted }} data-testid="tags-dymo-detail">
+          <summary className="cursor-pointer select-none">פרטים טכניים - מה DYMO ענה</summary>
+          <pre dir="ltr" className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap bg-white p-3 text-left text-[11.5px]" style={{ border: `1px solid ${H.line}`, borderRadius: 8, color: H.ink }}>
+            {dymoStatus.detail}
+          </pre>
+        </details>
+      )}
       {printError && (
         <p role="alert" className="px-4 py-3 text-[14px] font-medium" style={{ background: "#FBEAE8", color: H.red, borderRadius: 10 }} data-testid="tags-print-error">
           {printError}
