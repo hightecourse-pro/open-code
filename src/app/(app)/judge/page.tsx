@@ -8,6 +8,7 @@ import { guarded } from "@/lib/error-log";
 import { CHALLENGES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
 import { Collapsible } from "@/components/patterns/fold-section";
 import { JudgingDesk } from "./judging-desk";
+import { PreviewAs } from "./preview-as";
 
 export const metadata: Metadata = { title: "שיפוט ההאקתון" };
 export const dynamic = "force-dynamic";
@@ -21,7 +22,8 @@ const FULL = "owner";
  * time, and sees only her own scores. The owner (an admin who is not an
  * appointed judge) opens the desk as a judge sees it (26/10 night: "תסתיר גם
  * ממני שם כדי שאוכל לראות מה הן רואות"); ?as=owner is her full view - every
- * project, the automated report, every score.
+ * project, the automated report, every score. ?as=<judge id> (27/10) is her
+ * look through one judge's eyes - the AI's exam too, if she opened it to her.
  */
 export default async function JudgePage({ searchParams }: { searchParams: Promise<{ as?: string }> }) {
   return guarded("/judge", () => judgePageBody(searchParams));
@@ -46,15 +48,23 @@ async function judgePageBody(searchParams: Promise<{ as?: string }>) {
       </div>
     );
   }
-  const preview = !access.restricted && (await searchParams).as !== FULL;
+  const asParam = (await searchParams).as ?? "";
+  const preview = !access.restricted && asParam !== FULL;
   const restricted = access.restricted || preview;
-  const { entries: loaded } = await loadJudgingBoard(profile);
-  // The preview strips what a judge never gets: the automated report, the other judges, the ranking.
+  const { entries: loaded, judges } = await loadJudgingBoard(profile);
+  // The owner may look through one judge's eyes (27/10: "שגם אני אראה כמוה"): her challenges, the AI's exam only if it was opened to her.
+  const asJudge = preview ? (judges.find((j) => j.id === asParam) ?? null) : null;
+  // May this view read the automated review? The full view always; a judge only when the owner opened it to her (27/10).
+  const reportOpen = !restricted || (access.restricted ? access.autoReport : !!asJudge?.seesReport);
+  // The preview strips what a judge never gets: the other judges, the ranking - and the automated report unless it is open to her.
   const entries: JudgingEntry[] = preview
-    ? loaded.map((e) => ({ ...e, report: null, reportUpdatedAt: null, scores: e.mine ? [e.mine] : [], average: null, gap: false, rank: null }))
+    ? loaded
+        .filter((e) => !asJudge || asJudge.challengeKeys.includes(e.submission.challengeKey))
+        .map((e) => ({ ...e, report: reportOpen ? e.report : null, reportUpdatedAt: reportOpen ? e.reportUpdatedAt : null, scores: e.mine ? [e.mine] : [], average: null, gap: false, rank: null }))
     : loaded;
   const mineDone = entries.filter((e) => e.mine).length;
-  const myChallenges = access.challengeKeys.length ? access.challengeKeys.map((k) => CHALLENGES.find((c) => c.key === k)?.short ?? k).join(" · ") : null;
+  const challengeKeys = asJudge ? asJudge.challengeKeys : access.challengeKeys;
+  const myChallenges = challengeKeys.length ? challengeKeys.map((k) => CHALLENGES.find((c) => c.key === k)?.short ?? k).join(" · ") : null;
   if (access.restricted && !myChallenges) {
     return (
       <div className="flex flex-col gap-5 max-w-5xl">
@@ -76,13 +86,17 @@ async function judgePageBody(searchParams: Promise<{ as?: string }>) {
       <Header
         subtitle={
           restricted
-            ? `ההגשות של ${challengesLine}: המוצר החי, הקוד, הסרטון, מה שהצוות כתב - והציון שלך. את רואה רק את הציונים שלך.`
+            ? `ההגשות של ${challengesLine}: המוצר החי, הקוד, הסרטון, מה שהצוות כתב - והציון שלך${reportOpen ? " לצד הבחינה של ה-AI, עם טבלת השוואה" : ""}. את רואה רק את הציונים שלך.`
             : "כל ההגשות: המוצר החי, הקוד, הסרטון, הבדיקה האוטומטית, כל הציונים - והציון שלך."
         }
       />
       {preview && (
-        <div className="rounded-[14px] border border-brand-purple/30 bg-tint-purple/40 px-4 py-2.5 text-[13px] text-ink-900 flex items-center gap-3 flex-wrap" data-testid="judge-preview">
-          <b>את רואה את הדף כמו שופטת:</b> בלי הבדיקה האוטומטית, בלי ציונים של אחרות. ציון שתשמרי כאן נשמר על שמך.
+        <div className="rounded-[14px] border border-brand-purple/30 bg-tint-purple/40 px-4 py-2.5 text-[13px] text-ink-900 flex items-center gap-3 flex-wrap" data-testid="judge-preview" data-as={asJudge?.id ?? "judge"}>
+          <span>
+            <b>{asJudge ? `את רואה את הדף כמו ${asJudge.name}:` : "את רואה את הדף כמו שופטת:"}</b> {asJudge ? "האתגרים שלה, " : ""}
+            {reportOpen ? "עם הבחינה של ה-AI לצד הבחינה שלה (פתחת לה אותה)" : "בלי הבחינה של ה-AI"}, בלי ציונים של אחרות. ציון שתשמרי כאן נשמר על שמך.
+          </span>
+          {judges.length > 0 && <PreviewAs judges={judges.map((j) => ({ id: j.id, name: j.name, seesReport: j.seesReport }))} current={asJudge?.id ?? "judge"} />}
           <Link href="/judge?as=owner" className="ms-auto font-bold text-brand-purple hover:underline" data-testid="judge-preview-off">
             לתצוגה המלאה: הבדיקה האוטומטית וכל הציונים ←
           </Link>
@@ -125,20 +139,20 @@ async function judgePageBody(searchParams: Promise<{ as?: string }>) {
       </Collapsible>
       {restricted && (
         <Collapsible scope="judging" id="guide" title="איך שופטים" compact summary="בוחרים · מתרשמים · מנקדים · שומרים וממשיכים">
-          <JudgeGuide />
+          <JudgeGuide reportOpen={reportOpen} />
         </Collapsible>
       )}
-      <JudgingDesk entries={entries} viewerId={profile.id} manage={!restricted} />
+      <JudgingDesk entries={entries} viewerId={profile.id} manage={!restricted} reportOpen={reportOpen} />
     </div>
   );
 }
 
 /** What to do, in four steps (26/10: a judge wrote "לא ברור לי מה לעשות"). */
-function JudgeGuide() {
+function JudgeGuide({ reportOpen }: { reportOpen: boolean }) {
   const steps = [
     ["בוחרים פרויקט", "ברשימה שבצד, או עם ״הבאה״. מספר הפרויקטים שכבר שפטת מופיע למעלה."],
     ["מתרשמים", "צופים בסרטון, פותחים את ״המוצר החי״ ואת הקוד, וקוראים מה הצוות כתב על הארכיטקטורה והפיצ׳ר המקורי."],
-    ["מנקדים", "בששת הקריטריונים, כל אחד עד המקסימום שלו. על כל קריטריון אפשר להוסיף משפט לצוות - הוא יגיע אליו."],
+    ["מנקדים", `בששת הקריטריונים, כל אחד עד המקסימום שלו. על כל קריטריון אפשר להוסיף משפט לצוות - הוא יגיע אליו.${reportOpen ? " בטאב ״הבחינה של ה-AI״ הבדיקה האוטומטית של הפרויקט, ומתחת טבלת השוואה - הציון שלך מול שלה, קריטריון אחרי קריטריון." : ""}`],
     ["שומרים וממשיכים", "״שמירת הציון״ ואז ״הבאה״. אפשר לחזור לכל פרויקט ולעדכן את הציון עד סוף השיפוט."],
   ];
   return (

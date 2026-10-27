@@ -15,7 +15,7 @@ import { JudgingEntryCard } from "./judging-board";
  * challenge (scored ones ticked), the position and the progress - and the
  * arrow keys page too.
  */
-export function JudgingDesk({ entries, viewerId, manage }: { entries: JudgingEntry[]; viewerId: string; manage: boolean }) {
+export function JudgingDesk({ entries, viewerId, manage, reportOpen = false }: { entries: JudgingEntry[]; viewerId: string; manage: boolean; reportOpen?: boolean }) {
   // Start on the first project she has not scored yet.
   const [index, setIndex] = useState(() => {
     const i = entries.findIndex((e) => !e.mine);
@@ -107,7 +107,7 @@ export function JudgingDesk({ entries, viewerId, manage }: { entries: JudgingEnt
       </div>
 
       <div className={cn("min-w-0 flex flex-col gap-3")}>
-        <JudgingEntryCard key={current.submission.teamKey} e={current} viewerId={viewerId} manage={manage} />
+        <JudgingEntryCard key={current.submission.teamKey} e={current} viewerId={viewerId} manage={manage} reportOpen={reportOpen} />
         <div className="flex items-center justify-between gap-2">
           {prev}
           <span className="text-[11.5px] text-ink-400 text-center">מקשי החצים במקלדת מדפדפים בין הפרויקטים.</span>

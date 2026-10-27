@@ -7,6 +7,7 @@ import { formatBytes } from "@/lib/hackathon-shared";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { Collapsible } from "@/components/patterns/fold-section";
 import { ScoreForm } from "./score-form";
+import { ExamTabs } from "./exam-tabs";
 import { LazyVideo } from "@/components/patterns/lazy-video";
 import { MediaIsland, imgHtml } from "@/components/patterns/media-island";
 
@@ -56,11 +57,25 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
 /**
  * One project, the whole width (the owner, 26/10 evening: "צריך למלא את רוחב
  * המסך", "אפשרות להרחיב ולכווץ כל מקטע"): header + links; then the video beside
- * the automated report (owner only); what the team wrote in two columns with
+ * the automated report (the owner; since 27/10 also a judge the owner opened it to - as a tab
+ * beside her own exam, with a comparison table); what the team wrote in two columns with
  * the personal answers under it; the other judges (owner only); the score
  * form. Every block folds, and the fold is remembered per browser.
  */
-export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e: JudgingEntry; viewerId: string; manage: boolean; lazyVideo?: boolean }) {
+export function JudgingEntryCard({
+  e,
+  viewerId,
+  manage,
+  reportOpen = false,
+  lazyVideo = false,
+}: {
+  e: JudgingEntry;
+  viewerId: string;
+  manage: boolean;
+  /** A judge the owner opened the automated review to (27/10): her exam and the AI's as two tabs + a comparison table. */
+  reportOpen?: boolean;
+  lazyVideo?: boolean;
+}) {
   const s = e.submission;
   const report = e.report;
   const checks = report?.checks ?? [];
@@ -205,12 +220,28 @@ export function JudgingEntryCard({ e, viewerId, manage, lazyVideo = false }: { e
           </Collapsible>
         )}
 
-        {/* the score */}
-        <Collapsible scope={SCOPE} id="score" title="הציון שלך" compact summary={e.mine ? `${e.mine.total} מתוך 100 · נשמר` : "עוד לא שפטת"}>
-          <div data-testid="score-section">
-            <ScoreForm teamKey={s.teamKey} initial={e.mine?.scores ?? null} notes={e.mine?.notes ?? {}} comment={e.mine?.comment ?? null} savedAt={e.mine?.updatedAt ?? null} />
-          </div>
-        </Collapsible>
+        {/* the score - or, for a judge the owner opened the review to (27/10), her exam and the AI's as two tabs with a comparison table */}
+        {reportOpen && !manage ? (
+          <Collapsible scope={SCOPE} id="exam" title="הבחינה שלך והבחינה של ה-AI" compact summary={`${e.mine ? `שלך ${e.mine.total} · נשמר` : "עוד לא שפטת"} · ה-AI: ${suggested ? `${suggested.total} מתוך 100` : "עוד לא רצה"}`}>
+            <div data-testid="score-section">
+              <ExamTabs
+                teamKey={s.teamKey}
+                initial={e.mine?.scores ?? null}
+                notes={e.mine?.notes ?? {}}
+                comment={e.mine?.comment ?? null}
+                savedAt={e.mine?.updatedAt ?? null}
+                suggested={report?.suggested ?? null}
+                ai={report ? <AutoReportPanel report={report} teamKey={s.teamKey} ranAt={e.reportUpdatedAt} passed={passed} checks={checks} /> : <p className="text-[13px] text-ink-500">הבדיקה האוטומטית עוד לא רצה על ההגשה הזו.</p>}
+              />
+            </div>
+          </Collapsible>
+        ) : (
+          <Collapsible scope={SCOPE} id="score" title="הציון שלך" compact summary={e.mine ? `${e.mine.total} מתוך 100 · נשמר` : "עוד לא שפטת"}>
+            <div data-testid="score-section">
+              <ScoreForm teamKey={s.teamKey} initial={e.mine?.scores ?? null} notes={e.mine?.notes ?? {}} comment={e.mine?.comment ?? null} savedAt={e.mine?.updatedAt ?? null} />
+            </div>
+          </Collapsible>
+        )}
 
         {manage && (
           <div className="text-[12px] text-ink-500">

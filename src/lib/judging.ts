@@ -9,7 +9,8 @@ import { CRITERIA, GAP_THRESHOLD, ZERO_SCORES, totalOf, type AutoReport, type Cr
  * (hackathon_judges - a mentor OR a team member) sees only the projects of her
  * challenges and only her own scores - never the automated report, never
  * another judge's score, not even in the admin. An admin who is NOT an
- * appointed judge (the owner) sees everything, side by side.
+ * appointed judge (the owner) sees everything, side by side. Since 27/10 the
+ * owner may open the automated review to a judge she picks (autoReport).
  */
 export interface JudgeAccess {
   judge: boolean;
@@ -17,16 +18,18 @@ export interface JudgeAccess {
   restricted: boolean;
   /** Empty = every challenge. */
   challengeKeys: string[];
+  /** May read the automated review: the owner, or a judge the owner opened it to (27/10). */
+  autoReport: boolean;
 }
 
 export async function judgeAccessFor(profile: { id: string; role: string; status: string }): Promise<JudgeAccess> {
-  const { data } = await createAdminClient().from("hackathon_judges").select("challenge_keys").eq("profile_id", profile.id).maybeSingle();
+  const { data } = await createAdminClient().from("hackathon_judges").select("challenge_keys, sees_auto_report").eq("profile_id", profile.id).maybeSingle();
   if (data) {
     const eligible = profile.role === "admin" || (profile.role === "mentor" && profile.status === "active");
-    return { judge: eligible, restricted: true, challengeKeys: data.challenge_keys ?? [] };
+    return { judge: eligible, restricted: true, challengeKeys: data.challenge_keys ?? [], autoReport: eligible && !!data.sees_auto_report };
   }
-  if (profile.role === "admin") return { judge: true, restricted: false, challengeKeys: [] };
-  return { judge: false, restricted: true, challengeKeys: [] };
+  if (profile.role === "admin") return { judge: true, restricted: false, challengeKeys: [], autoReport: true };
+  return { judge: false, restricted: true, challengeKeys: [], autoReport: false };
 }
 
 /** The sidebar's gate. */
@@ -40,15 +43,18 @@ export interface JudgeRow {
   initials: string;
   role: string;
   challengeKeys: string[];
+  /** The automated review is open to her (27/10). */
+  seesReport: boolean;
   scored: number;
 }
 
 export async function loadJudges(): Promise<JudgeRow[]> {
   const admin = createAdminClient();
-  const { data: rows } = await admin.from("hackathon_judges").select("profile_id, challenge_keys");
+  const { data: rows } = await admin.from("hackathon_judges").select("profile_id, challenge_keys, sees_auto_report");
   const ids = (rows ?? []).map((r) => r.profile_id);
   if (ids.length === 0) return [];
   const keysOf = new Map((rows ?? []).map((r) => [r.profile_id, r.challenge_keys ?? []]));
+  const reportOf = new Set((rows ?? []).filter((r) => r.sees_auto_report).map((r) => r.profile_id));
   const [{ data: profs }, { data: scores }] = await Promise.all([
     admin.from("profiles").select("id, full_name, avatar_initials, role").in("id", ids),
     admin.from("hackathon_scores").select("judge_id").in("judge_id", ids),
@@ -62,6 +68,7 @@ export async function loadJudges(): Promise<JudgeRow[]> {
     initials: p.avatar_initials || p.full_name.slice(0, 1),
     role: p.role,
     challengeKeys: keysOf.get(p.id) ?? [],
+    seesReport: reportOf.has(p.id),
     scored: countOf.get(p.id) ?? 0,
   }));
 }
@@ -79,7 +86,7 @@ export interface ScoreRow {
 
 export interface JudgingEntry {
   submission: AdminSubmissionRow;
-  /** The automated report - the owner's view only. */
+  /** The automated report - the owner's view, or a judge the owner opened it to (27/10). */
   report: AutoReport | null;
   reportUpdatedAt: string | null;
   /** The viewer's own score (judge view) - or, for the owner, every judge's. */
@@ -102,9 +109,11 @@ export async function loadJudgingBoard(viewer: { id: string; role: string; statu
   const admin = createAdminClient();
   const access = await judgeAccessFor(viewer);
   const full = access.judge && !access.restricted;
+  // The automated review rides along for the owner - and for a judge the owner opened it to (27/10).
+  const withReport = full || access.autoReport;
   const [submissions, { data: reports }, { data: scoreRows }, judges] = await Promise.all([
     loadAdminSubmissions(),
-    full ? admin.from("hackathon_auto_reports").select("team_key, report, updated_at") : Promise.resolve({ data: [] as { team_key: string; report: unknown; updated_at: string }[] }),
+    withReport ? admin.from("hackathon_auto_reports").select("team_key, report, updated_at") : Promise.resolve({ data: [] as { team_key: string; report: unknown; updated_at: string }[] }),
     full ? admin.from("hackathon_scores").select("*") : admin.from("hackathon_scores").select("*").eq("judge_id", viewer.id),
     full ? loadJudges() : Promise.resolve([] as JudgeRow[]),
   ]);

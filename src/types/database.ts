@@ -2074,8 +2074,8 @@ export interface Database {
         Relationships: [];
       };
       hackathon_judges: {
-        Row: { profile_id: string; added_by: string | null; challenge_keys: string[]; created_at: string };
-        Insert: { profile_id: string; added_by?: string | null; challenge_keys?: string[]; created_at?: string };
+        Row: { profile_id: string; added_by: string | null; challenge_keys: string[]; sees_auto_report: boolean; created_at: string };
+        Insert: { profile_id: string; added_by?: string | null; challenge_keys?: string[]; sees_auto_report?: boolean; created_at?: string };
         Update: Partial<Database["public"]["Tables"]["hackathon_judges"]["Insert"]>;
         Relationships: [];
       };

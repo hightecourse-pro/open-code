@@ -133,10 +133,10 @@ async function adminHackathonPageBody() {
   if (board) {
     const judgeOf = new Map(board.judges.map((j) => [j.id, j]));
     candidates = [
-      ...arenaMentors.map((m) => ({ id: m.id, name: m.name, initials: m.initials, role: "mentor" as const, ai: m.ai, judge: judgeOf.has(m.id), scored: judgeOf.get(m.id)?.scored ?? 0, challengeKeys: judgeOf.get(m.id)?.challengeKeys ?? [] })),
+      ...arenaMentors.map((m) => ({ id: m.id, name: m.name, initials: m.initials, role: "mentor" as const, ai: m.ai, judge: judgeOf.has(m.id), scored: judgeOf.get(m.id)?.scored ?? 0, challengeKeys: judgeOf.get(m.id)?.challengeKeys ?? [], seesReport: judgeOf.get(m.id)?.seesReport ?? false })),
       ...(await withPrevSurnames(teamRows ?? []))
         .filter((t) => t.id !== me.id)
-        .map((t) => ({ id: t.id, name: t.full_name, initials: t.avatar_initials || t.full_name.slice(0, 1), role: "admin" as const, ai: false, judge: judgeOf.has(t.id), scored: judgeOf.get(t.id)?.scored ?? 0, challengeKeys: judgeOf.get(t.id)?.challengeKeys ?? [] })),
+        .map((t) => ({ id: t.id, name: t.full_name, initials: t.avatar_initials || t.full_name.slice(0, 1), role: "admin" as const, ai: false, judge: judgeOf.has(t.id), scored: judgeOf.get(t.id)?.scored ?? 0, challengeKeys: judgeOf.get(t.id)?.challengeKeys ?? [], seesReport: judgeOf.get(t.id)?.seesReport ?? false })),
     ];
     summary = board.entries.map((e) => ({
       teamKey: e.submission.teamKey,

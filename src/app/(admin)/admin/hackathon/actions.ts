@@ -129,6 +129,20 @@ export async function setJudgeChallenges(profileId: string, challengeKeys: strin
   return {};
 }
 
+/**
+ * The automated review, opened to one judge - or closed again (the owner,
+ * 27/10: "תפתח לרות אפין את הבחינה שלך"). Her desk then carries her exam and
+ * the AI's as two tabs with a comparison table.
+ */
+export async function setJudgeSeesReport(profileId: string, on: boolean): Promise<{ error?: string }> {
+  await requireRole("admin");
+  const { error } = await createAdminClient().from("hackathon_judges").update({ sees_auto_report: on }).eq("profile_id", profileId);
+  if (error) return { error: "השמירה נכשלה. נסי שוב." };
+  revalidatePath("/admin/hackathon");
+  revalidatePath("/judge");
+  return {};
+}
+
 /** The Drive folders the owner shared with the service account (23/10). */
 export async function listDriveFolders(): Promise<{ folders?: { id: string; name: string; owner: string | null; sharedDrive: boolean }[]; error?: string }> {
   await requireRole("admin");

@@ -6,10 +6,30 @@ import { CAPPED_TOTAL, CORRECTNESS_FLOOR, CRITERIA, ZERO_SCORES, totalOf, type C
 import { saveScore, type ScoreState } from "./actions";
 
 /** The rubric as a form: seven sliders-as-numbers with a live total, a line per criterion. */
-export function ScoreForm({ teamKey, initial, notes, comment, savedAt }: { teamKey: string; initial: Scores | null; notes: Partial<Record<CriterionKey, string>>; comment: string | null; savedAt: string | null }) {
+export function ScoreForm({
+  teamKey,
+  initial,
+  notes,
+  comment,
+  savedAt,
+  onChange,
+}: {
+  teamKey: string;
+  initial: Scores | null;
+  notes: Partial<Record<CriterionKey, string>>;
+  comment: string | null;
+  savedAt: string | null;
+  /** Every change of a number (27/10: the comparison table beside the AI's exam follows the form). */
+  onChange?: (values: Scores) => void;
+}) {
   const [state, action, pending] = useActionState<ScoreState, FormData>(saveScore.bind(null, teamKey), {});
   const [values, setValues] = useState<Scores>(initial ?? { ...ZERO_SCORES });
   const t = useMemo(() => totalOf(values), [values]);
+  const set = (key: CriterionKey, raw: number, max: number) => {
+    const next = { ...values, [key]: Math.max(0, Math.min(max, raw || 0)) };
+    setValues(next);
+    onChange?.(next);
+  };
   return (
     <form action={action} className="flex flex-col gap-3">
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-x-6 gap-y-3">
@@ -27,7 +47,7 @@ export function ScoreForm({ teamKey, initial, notes, comment, savedAt }: { teamK
                 max={c.max}
                 step={1}
                 value={values[c.key]}
-                onChange={(e) => setValues((v) => ({ ...v, [c.key]: Math.max(0, Math.min(c.max, Number(e.target.value) || 0)) }))}
+                onChange={(e) => set(c.key, Number(e.target.value), c.max)}
                 className="w-16 text-center text-[14px] font-bold border border-ink-300 rounded-md px-2 py-1 focus:border-brand-purple outline-none"
               />
             </div>
@@ -37,7 +57,7 @@ export function ScoreForm({ teamKey, initial, notes, comment, savedAt }: { teamK
               max={c.max}
               step={1}
               value={values[c.key]}
-              onChange={(e) => setValues((v) => ({ ...v, [c.key]: Number(e.target.value) }))}
+              onChange={(e) => set(c.key, Number(e.target.value), c.max)}
               aria-label={c.label}
               className="w-full accent-[#7C3AED]"
             />
