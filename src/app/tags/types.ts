@@ -6,7 +6,20 @@ export interface Participant {
   row: number;
 }
 
+/** A printer as DYMO Web Service lists it. */
+export interface DymoPrinter {
+  /** The Windows printer name - what PrintLabel is addressed to. */
+  name: string;
+  model: string;
+  /** DYMO sees it plugged in right now. */
+  connected: boolean;
+  labelWriter: boolean;
+}
+
 export interface DymoStatus {
   isReady: boolean;
   message: string;
+  printers: DymoPrinter[];
+  /** The printer we will print on (chosen by the person, or the first connected LabelWriter). */
+  printer?: string;
 }

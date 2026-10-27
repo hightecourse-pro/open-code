@@ -10,7 +10,7 @@
   standalone HTML in the same zip printed on 30252 address labels (landscape,
   text rotated 270°). The person at the desk picks the roll that is loaded.
 */
-import type { DymoStatus } from "./types";
+import type { DymoPrinter, DymoStatus } from "./types";
 
 export const DYMO_SERVICE_URL = "https://127.0.0.1:41951/DYMO/DLS/Printing";
 
@@ -167,38 +167,77 @@ export function saveLabelKey(key: LabelKey): void {
   }
 }
 
-/** "Checking DYMO Web Service" - is it running, and is a LabelWriter connected. */
-export async function initDymo(): Promise<DymoStatus> {
+const PRINTER_PREF = "hc-tags-printer";
+/** DYMO answers in well under a second; a hanging call means the spooler is stuck - say so instead of ״מדפיסה...״ forever. */
+const REQUEST_TIMEOUT = 20_000;
+
+export function loadPrinterPref(): string | null {
   try {
-    const response = await fetch(`${DYMO_SERVICE_URL}/Check`, { method: "GET" });
-    if (!response.ok) return { isReady: false, message: "DYMO Web Service לא זמין" };
-
-    const printersResponse = await fetch(`${DYMO_SERVICE_URL}/GetPrinters`, { method: "GET" });
-    if (!printersResponse.ok) return { isReady: false, message: "לא ניתן לקבל רשימת מדפסות" };
-
-    const printersXml = await printersResponse.text();
-    if (!printersXml.includes("<LabelWriterPrinter")) return { isReady: false, message: "לא נמצאה מדפסת DYMO LabelWriter" };
-
-    const nameMatch = printersXml.match(/<Name>([^<]+)<\/Name>/);
-    const printerName = nameMatch?.[1]?.trim() || "DYMO LabelWriter 450";
-    return { isReady: true, message: `DYMO מוכן - ${printerName}` };
-  } catch (error) {
-    console.error("Error checking DYMO status:", error);
-    return { isReady: false, message: "שגיאה בבדיקת מצב DYMO" };
+    return window.localStorage.getItem(PRINTER_PREF);
+  } catch {
+    return null;
   }
 }
 
-export async function getLabelWriterPrinter(): Promise<{ name: string } | null> {
+export function savePrinterPref(name: string): void {
   try {
-    const printersResponse = await fetch(`${DYMO_SERVICE_URL}/GetPrinters`, { method: "GET" });
-    if (!printersResponse.ok) return null;
-    const printersXml = await printersResponse.text();
-    if (!printersXml.includes("<LabelWriterPrinter")) return null;
-    const nameMatch = printersXml.match(/<Name>([^<]+)<\/Name>/);
-    return { name: nameMatch?.[1]?.trim() || "DYMO LabelWriter 450" };
+    window.localStorage.setItem(PRINTER_PREF, name);
+  } catch {
+    /* a private window keeps the default */
+  }
+}
+
+function dymoFetch(path: string, init: RequestInit = {}): Promise<Response> {
+  return fetch(`${DYMO_SERVICE_URL}${path}`, { ...init, signal: AbortSignal.timeout(REQUEST_TIMEOUT) });
+}
+
+/**
+ * Every printer DYMO knows, from GetPrinters' XML: the Windows name, the model
+ * and whether DYMO sees it plugged in right now. The original took the first
+ * <Name> blindly - on a computer with an old, unplugged DYMO entry that sends
+ * the labels into a queue nothing ever prints.
+ */
+export function parsePrinters(xml: string): DymoPrinter[] {
+  const out: DymoPrinter[] = [];
+  const re = /<(LabelWriterPrinter|LabelManagerPrinter)>([\s\S]*?)<\/\1>/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(xml))) {
+    const block = m[2];
+    const tag = (name: string) => block.match(new RegExp(`<${name}>([^<]*)</${name}>`))?.[1]?.trim() ?? "";
+    const name = tag("Name");
+    if (!name) continue;
+    out.push({ name, model: tag("ModelName") || name, connected: /^true$/i.test(tag("IsConnected")), labelWriter: m[1] === "LabelWriterPrinter" });
+  }
+  return out;
+}
+
+/** The printer to use: the one she picked if DYMO still lists it, else a connected LabelWriter, else any LabelWriter. */
+export function pickPrinter(printers: DymoPrinter[], preferred?: string | null): DymoPrinter | null {
+  const writers = printers.filter((p) => p.labelWriter);
+  if (preferred) {
+    const p = writers.find((x) => x.name === preferred);
+    if (p) return p;
+  }
+  return writers.find((p) => p.connected) ?? writers[0] ?? null;
+}
+
+/** "Checking DYMO Web Service" - is it running, which printers it sees, which one we will print on. */
+export async function initDymo(preferred?: string | null): Promise<DymoStatus> {
+  try {
+    const response = await dymoFetch("/Check");
+    if (!response.ok) return { isReady: false, message: "DYMO Web Service לא זמין", printers: [] };
+
+    const printersResponse = await dymoFetch("/GetPrinters");
+    if (!printersResponse.ok) return { isReady: false, message: "לא ניתן לקבל רשימת מדפסות", printers: [] };
+
+    const printers = parsePrinters(await printersResponse.text());
+    const chosen = pickPrinter(printers, preferred);
+    if (!chosen) return { isReady: false, message: "לא נמצאה מדפסת DYMO LabelWriter", printers };
+    if (!chosen.connected) return { isReady: false, message: `${chosen.name} - לא מחוברת לפי DYMO`, printers, printer: chosen.name };
+    return { isReady: true, message: `DYMO מוכן - ${chosen.name}`, printers, printer: chosen.name };
   } catch (error) {
-    console.error("Error getting printers:", error);
-    return null;
+    console.error("Error checking DYMO status:", error);
+    return { isReady: false, message: "שגיאה בבדיקת מצב DYMO", printers: [] };
   }
 }
 
@@ -217,17 +256,25 @@ export function labelXmlFor(key: LabelKey, tagName: string, officeLine: string):
   );
 }
 
-/** Sends one label to the printer - the same form-encoded PrintLabel call the original made. */
+/** Sends one label to the printer - the same form-encoded PrintLabel call the original made. Throws a Hebrew message. */
 export async function printLabel(tagName: string, officeLine: string, printerName: string, key: LabelKey): Promise<void> {
   const labelXml = labelXmlFor(key, tagName, officeLine);
-  const body = "printerName=" + printerName + "&printParamsXml=" + "&labelXml=" + encodeURIComponent(labelXml) + "&labelSetXml=";
-  const response = await fetch(`${DYMO_SERVICE_URL}/PrintLabel`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
-  });
-  if (!response.ok) {
-    console.error("Print error response:", await response.text().catch(() => ""));
-    throw new Error("שגיאה בהדפסת התג");
+  const body = "printerName=" + encodeURIComponent(printerName) + "&printParamsXml=" + "&labelXml=" + encodeURIComponent(labelXml) + "&labelSetXml=";
+  let response: Response;
+  try {
+    response = await dymoFetch("/PrintLabel", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body,
+    });
+  } catch (e) {
+    const timedOut = e instanceof Error && e.name === "TimeoutError";
+    throw new Error(timedOut ? "DYMO לא ענה תוך 20 שניות - בדקי את תור ההדפסה של המדפסת ב-Windows (עבודות תקועות, Offline או Paused)" : "לא הצלחתי לדבר עם DYMO Web Service");
   }
+  const answer = (await response.text().catch(() => "")).trim();
+  if (!response.ok) {
+    console.error("Print error response:", answer);
+    throw new Error(`DYMO סירב להדפיס${answer ? `: ${answer.slice(0, 200)}` : ""}`);
+  }
+  if (/^false$/i.test(answer)) throw new Error("DYMO ענה false - המדבקה לא נשלחה למדפסת");
 }
