@@ -30,6 +30,8 @@ export default async function TagsPage() {
   const profile = access ? null : await getProfile().catch(() => null);
   // what is missing, said plainly: the sheet, or (for the code gate) the code
   const missing = !sheetSet ? "sheet" : !isConfigured(settings) ? "code" : null;
+  // the deployed commit, shown small at the bottom - a cached old page is told apart from a fresh one at a glance
+  const build = (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7) || "dev";
 
   return (
     <div dir="rtl" className={`${rubik.className} flex min-h-screen flex-col`} style={{ background: H.bg, color: H.ink }}>
@@ -64,6 +66,9 @@ export default async function TagsPage() {
         ) : (
           <TagsGate />
         )}
+        <p className="mt-8 text-center text-[11px]" style={{ color: H.muted }} data-testid="tags-build">
+          גרסה {build}
+        </p>
       </main>
       <PageFooter wide />
     </div>
