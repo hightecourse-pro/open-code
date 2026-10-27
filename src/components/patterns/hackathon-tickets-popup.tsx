@@ -7,6 +7,14 @@ import { X } from "lucide-react";
 /** The finals evening - the popup runs through that day and then disappears by itself. */
 const UNTIL = "2026-10-28T23:59:59+02:00";
 const TICKETS_URL = "https://glatticket.co.il/114929";
+/** Counted like a page view (the owner, 27/10: "תספור את אלה שראו... ומי לחצה על רכישה"). */
+const SHOWN_PATH = "/hackathon/tickets-popup";
+const BUY_PATH = "/hackathon/tickets-popup/buy";
+const beacon = (path: string) => {
+  try {
+    fetch("/api/track", { method: "POST", body: JSON.stringify({ path, referrer: null, search: null }), headers: { "content-type": "application/json" }, keepalive: true }).catch(() => {});
+  } catch {}
+};
 
 /**
  * The finals-tickets popup (the owner, 27/10): after she signed in, on every
@@ -30,7 +38,10 @@ export function HackathonTicketsPopup({ subscriber }: { subscriber: boolean }) {
     if (/^\/judge(\/|$)/.test(pathname)) return;
     decided.current = true;
     if (Date.now() > Date.parse(UNTIL)) return;
-    const t = setTimeout(() => setOpen(true), 600);
+    const t = setTimeout(() => {
+      setOpen(true);
+      beacon(SHOWN_PATH);
+    }, 600);
     return () => clearTimeout(t);
   }, [pathname]);
 
@@ -126,7 +137,10 @@ export function HackathonTicketsPopup({ subscriber }: { subscriber: boolean }) {
             href={TICKETS_URL}
             target="_blank"
             rel="noreferrer"
-            onClick={close}
+            onClick={() => {
+              beacon(BUY_PATH);
+              close();
+            }}
             className="mt-4 inline-flex items-center justify-center gap-1.5 rounded-full bg-brand-pink text-white font-display font-bold py-2.5 px-6 shadow-[0_6px_16px_rgba(224,65,141,.35)] hover:bg-brand-pink-deep transition-colors whitespace-nowrap"
             style={{ fontSize: "clamp(14px, 4vw, 16px)" }}
           >
