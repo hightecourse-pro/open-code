@@ -7,6 +7,7 @@ import { MemberRequestWidget } from "@/components/patterns/member-request-widget
 import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
 import { CoursePromoStrip } from "@/components/patterns/course-promo-popup";
+import { HackathonTicketsPopup } from "@/components/patterns/hackathon-tickets-popup";
 import { PresenceHeartbeat } from "@/components/patterns/presence-heartbeat";
 import { ViewerMarker } from "@/components/patterns/stale-while-revalidate";
 import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
@@ -302,6 +303,8 @@ export default async function AuthenticatedLayout({
       <ViewerMarker id={profile.id} />
       <PresenceHeartbeat />
       <CoursePromoStrip show={showCoursePromo} />
+      {/* The finals-tickets popup (the owner, 27/10): after sign-in, on every load, until the finals. */}
+      <HackathonTicketsPopup subscriber={subscriber} />
       {gradesCount === 0 && <GradesNudge />}
       {!subscriber && (
         <Link
