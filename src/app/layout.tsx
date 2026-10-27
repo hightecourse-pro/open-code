@@ -3,6 +3,7 @@ import { Noto_Sans_Hebrew, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { getSiteUrl } from "@/lib/site";
 import { PageViewTracker } from "@/components/patterns/page-view-tracker";
+import { HackathonTicketsPopup } from "@/components/patterns/hackathon-tickets-popup";
 
 // Noto Sans Hebrew is a variable font - omit `weight` to get the full 300–900 range.
 const notoSansHebrew = Noto_Sans_Hebrew({
@@ -90,6 +91,7 @@ export default function RootLayout({
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD) }} />
         {children}
         <PageViewTracker />
+        <HackathonTicketsPopup />
       </body>
     </html>
   );
