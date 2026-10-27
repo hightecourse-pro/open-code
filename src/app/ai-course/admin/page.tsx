@@ -7,6 +7,8 @@ import { rubik } from "../font";
 import { H } from "../theme";
 import { AdminLogin, NotAdmin } from "./login";
 import { Dashboard, type QuizEvent, type QuizRow } from "./dashboard";
+import { TagsSettings, type TagsSettingsView } from "./tags-settings";
+import { DEFAULT_TAB, ENABLE_SHEETS_API_URL, sheetUrlOf, tagsServiceAccountEmail, tagsSettings } from "@/app/tags/server";
 
 export const metadata: Metadata = {
   title: { absolute: "ניהול שאלון הקורס | הייטקורס" },
@@ -34,19 +36,28 @@ export default async function AiCourseAdminPage() {
 
   let rows: QuizRow[] = [];
   let events: QuizEvent[] = [];
+  let tags: TagsSettingsView | null = null;
   if (isAdmin) {
     const admin = createAdminClient();
     const since = twoWeeksAgo();
-    const [subs, evs] = await Promise.all([
+    const [subs, evs, ts] = await Promise.all([
       admin
         .from("ai_course_quiz_submissions")
         .select("id, email, first_name, last_name, signup_status, answers, questions_done, score, recommendation, wants_placement, downloaded_syllabus, completed_at, created_at, updated_at")
         .order("created_at", { ascending: false })
         .limit(2000),
       admin.from("ai_course_quiz_events").select("id, kind, submission_id, step, message, digest, user_agent, created_at").gte("created_at", since).order("created_at", { ascending: false }).limit(50),
+      tagsSettings(),
     ]);
     rows = (subs.data ?? []) as QuizRow[];
     events = (evs.data ?? []) as QuizEvent[];
+    tags = {
+      sheetUrl: ts.spreadsheetId ? sheetUrlOf(ts.spreadsheetId) : "",
+      tab: ts.tab || DEFAULT_TAB,
+      code: ts.code ?? "",
+      serviceAccountEmail: tagsServiceAccountEmail(),
+      enableApiUrl: ENABLE_SHEETS_API_URL,
+    };
   }
 
   return (
@@ -66,7 +77,16 @@ export default async function AiCourseAdminPage() {
       />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {isAdmin ? <Dashboard rows={rows} events={events} /> : profile ? <NotAdmin name={profile.first_name || profile.full_name || ""} /> : <AdminLogin />}
+        {isAdmin ? (
+          <div className="flex flex-col gap-8">
+            <Dashboard rows={rows} events={events} />
+            {tags && <TagsSettings initial={tags} />}
+          </div>
+        ) : profile ? (
+          <NotAdmin name={profile.first_name || profile.full_name || ""} />
+        ) : (
+          <AdminLogin />
+        )}
       </main>
 
       <PageFooter wide />
