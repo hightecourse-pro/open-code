@@ -51,12 +51,12 @@ export function HackathonTicketsPopup({ subscriber }: { subscriber: boolean }) {
         @keyframes oc-tp-hover { 0%,100% { transform: translateY(0) rotate(0) } 50% { transform: translateY(-9px) rotate(8deg) } }
         @keyframes oc-tp-nudge { 0%,100% { transform: translateX(0) } 50% { transform: translateX(-4px) } }
         @keyframes oc-tp-logo-in { 0% { opacity: 0; transform: translateY(14px) scale(.6) rotate(-6deg) } 70% { opacity: 1; transform: translateY(-4px) scale(1.06) rotate(2deg) } 100% { opacity: 1; transform: none } }
-        @keyframes oc-tp-logo { 0%,100% { transform: translateY(0) rotate(0) scale(1) } 30% { transform: translateY(-6px) rotate(-2.5deg) scale(1.03) } 70% { transform: translateY(2px) rotate(2deg) scale(1) } }
+        @keyframes oc-tp-logo { 0%,52%,100% { transform: translateY(0) rotate(0) scale(1) } 8% { transform: translateY(-22px) rotate(-9deg) scale(1.12) } 18% { transform: translateY(0) rotate(7deg) scale(.95) } 28% { transform: translateY(-13px) rotate(-6deg) scale(1.08) } 38% { transform: translateY(0) rotate(4deg) scale(.98) } 46% { transform: translateY(-5px) rotate(-2deg) scale(1.02) } }
         .oc-tp-backdrop { background: rgba(31, 30, 63, .5); backdrop-filter: blur(3px); animation: oc-tp-fade .35s ease-out both }
         .oc-tp-card { animation: oc-tp-pop .75s cubic-bezier(.34,1.56,.64,1) .05s both, oc-tp-ring 2.8s ease-in-out 1s infinite }
         .oc-tp-x { animation: oc-tp-hover 2.6s ease-in-out .9s infinite }
         .oc-tp-arrow { display: inline-block; animation: oc-tp-nudge 1.4s ease-in-out 1.2s infinite }
-        .oc-tp-logo { animation: oc-tp-logo-in .9s cubic-bezier(.34,1.56,.64,1) .25s both, oc-tp-logo 4s ease-in-out 1.3s infinite; transform-origin: 50% 60% }
+        .oc-tp-logo { animation: oc-tp-logo-in .9s cubic-bezier(.34,1.56,.64,1) .25s both, oc-tp-logo 3.2s ease-in-out 1.3s infinite; transform-origin: 50% 70% }
         @media (prefers-reduced-motion: reduce) { .oc-tp-backdrop, .oc-tp-card, .oc-tp-x, .oc-tp-arrow, .oc-tp-logo { animation: none } }
       `}</style>
       <div className="relative" onClick={(e) => e.stopPropagation()} style={{ width: "min(92vw, 470px)" }}>
