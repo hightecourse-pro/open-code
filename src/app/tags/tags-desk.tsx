@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Printer, RefreshCw, Search } from "lucide-react";
 import { H } from "@/app/ai-course/theme";
-import { getLabelWriterPrinter, initDymo, LABELS, loadLabelKey, printLabel, saveLabelKey, type LabelKey } from "./dymo";
+import { initDymo, LABELS, loadLabelKey, loadPrinterPref, printLabel, saveLabelKey, savePrinterPref, type LabelKey } from "./dymo";
 import type { DymoStatus, Participant } from "./types";
 
 /*
@@ -32,10 +32,12 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(initialError);
-  const [dymoStatus, setDymoStatus] = useState<DymoStatus>({ isReady: false, message: "מאתחל..." });
+  const [dymoStatus, setDymoStatus] = useState<DymoStatus>({ isReady: false, message: "מאתחל...", printers: [] });
   const [isPrinting, setIsPrinting] = useState<string | null>(null);
   const [printError, setPrintError] = useState<string | null>(null);
   const [labelKey, setLabelKey] = useState<LabelKey>("30334");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   const loadParticipants = useCallback(async () => {
     setIsLoading(true);
@@ -66,7 +68,7 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
       const key = loadLabelKey();
       if (alive && key !== "30334") setLabelKey(key);
       await new Promise((r) => setTimeout(r, 500));
-      const status = await initDymo();
+      const status = await initDymo(loadPrinterPref());
       if (alive) setDymoStatus(status);
     })();
     return () => {
@@ -83,8 +85,8 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
 
   const handlePrint = async (participant: Participant) => {
     setPrintError(null);
-    if (!dymoStatus.isReady) {
-      setPrintError("מדפסת DYMO לא זמינה. ודאי שהמדפסת מחוברת ושתוכנת DYMO פועלת במחשב הזה.");
+    if (!dymoStatus.isReady || !dymoStatus.printer) {
+      setPrintError(`מדפסת DYMO לא זמינה (${dymoStatus.message}). ודאי שהמדפסת מחוברת ושתוכנת DYMO פועלת במחשב הזה.`);
       return;
     }
     const isPrinted = participant.cols["הודפס"] === "כן";
@@ -99,9 +101,7 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
     try {
       const tagName = participant.cols["שם לתג"] || `${participant.cols["פרטי"] || ""} ${participant.cols["משפחה"] || ""}`.trim();
       const officeLine = participant.cols["משרד"] || "";
-      const printer = await getLabelWriterPrinter();
-      if (!printer) throw new Error("לא נמצאה מדפסת DYMO LabelWriter");
-      await printLabel(tagName, officeLine, printer.name, labelKey);
+      await printLabel(tagName, officeLine, dymoStatus.printer, labelKey);
       const marked = await api<{ ok: true } | { ok: false; error: string }>("printed", { method: "POST", body: JSON.stringify({ tz }) });
       if (!marked.ok) setPrintError(`התג הודפס, אבל הסימון בגיליון נכשל: ${marked.error}`);
       await loadParticipants();
@@ -120,6 +120,29 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
   const pickLabel = (key: LabelKey) => {
     setLabelKey(key);
     saveLabelKey(key);
+  };
+
+  const pickPrinterName = (name: string) => {
+    savePrinterPref(name);
+    void initDymo(name).then(setDymoStatus);
+  };
+
+  /** A label that says ״בדיקה״ - to see the printer move before the first real tag. Marks nothing. */
+  const testPrint = async () => {
+    setTestResult(null);
+    if (!dymoStatus.isReady || !dymoStatus.printer) {
+      setTestResult(`אי אפשר להדפיס ניסיון: ${dymoStatus.message}`);
+      return;
+    }
+    setTesting(true);
+    try {
+      await printLabel("בדיקה", "הייטקורס", dymoStatus.printer, labelKey);
+      setTestResult(`נשלח ל-${dymoStatus.printer}. אם לא יצאה מדבקה - בדקי את תור ההדפסה של המדפסת ב-Windows.`);
+    } catch (e) {
+      setTestResult(e instanceof Error ? e.message : "שגיאה בהדפסת הניסיון");
+    } finally {
+      setTesting(false);
+    }
   };
 
   const printedCount = participants.filter((p) => p.cols["הודפס"] === "כן").length;
@@ -166,10 +189,26 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
                 <span className="inline-block h-2 w-2 rounded-full" style={{ background: dymoStatus.isReady ? H.green : H.red }} />
                 {dymoStatus.message}
               </span>
-              <button type="button" onClick={() => void initDymo().then(setDymoStatus)} className="text-[12.5px] font-semibold underline" style={{ color: H.muted }} data-testid="tags-printer-check">
+              <button type="button" onClick={() => void initDymo(loadPrinterPref()).then(setDymoStatus)} className="text-[12.5px] font-semibold underline" style={{ color: H.muted }} data-testid="tags-printer-check">
                 בדיקה
               </button>
             </div>
+            {dymoStatus.printers.length > 0 && (
+              <label className="flex items-center gap-2 text-[13px]" style={{ color: H.ink }}>
+                להדפיס על:
+                <select value={dymoStatus.printer ?? ""} onChange={(e) => pickPrinterName(e.target.value)} className="bg-white px-2 py-1 text-[13px]" style={{ border: `1px solid ${H.line}`, borderRadius: 8 }} data-testid="tags-printer-pick">
+                  {dymoStatus.printers.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name}
+                      {p.connected ? "" : " (לא מחוברת)"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <button type="button" onClick={() => void testPrint()} disabled={testing} className="px-3 py-1 text-[12.5px] font-bold disabled:opacity-50" style={{ background: H.yellow, color: H.navy, borderRadius: 8 }} data-testid="tags-test-print">
+              {testing ? "מדפיסה..." : "הדפסת ניסיון"}
+            </button>
             <label className="flex items-center gap-2 text-[13px]" style={{ color: H.ink }}>
               מדבקה:
               <select value={labelKey} onChange={(e) => pickLabel(e.target.value as LabelKey)} className="bg-white px-2 py-1 text-[13px]" style={{ border: `1px solid ${H.line}`, borderRadius: 8 }} data-testid="tags-label">
@@ -199,6 +238,11 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
         </div>
       </div>
 
+      {testResult && (
+        <p className="px-4 py-3 text-[14px] font-medium" style={{ background: testResult.startsWith("נשלח") ? "#E9F6EE" : "#FBEAE8", color: testResult.startsWith("נשלח") ? H.green : H.red, borderRadius: 10 }} data-testid="tags-test-print-result">
+          {testResult}
+        </p>
+      )}
       {printError && (
         <p role="alert" className="px-4 py-3 text-[14px] font-medium" style={{ background: "#FBEAE8", color: H.red, borderRadius: 10 }} data-testid="tags-print-error">
           {printError}
