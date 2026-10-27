@@ -192,6 +192,26 @@ function dymoFetch(path: string, init: RequestInit = {}): Promise<Response> {
 }
 
 /**
+ * DYMO Label 8's service answers GetPrinters with the XML wrapped as a JSON
+ * string - quotes around it and every "</" escaped as "<\/" (seen on the
+ * owner's computer, 27/10). The original never unwrapped it, so its <Name>
+ * regex failed and it printed to its hard-coded default ״DYMO LabelWriter
+ * 450״ - which on her machine is an old, unplugged entry. Unwrap first.
+ */
+export function unwrapDymoText(text: string): string {
+  const t = text.trim();
+  if (t.startsWith('"')) {
+    try {
+      const parsed: unknown = JSON.parse(t);
+      if (typeof parsed === "string") return parsed;
+    } catch {
+      /* not JSON after all - fall through to the raw text */
+    }
+  }
+  return t.replace(/\\\//g, "/");
+}
+
+/**
  * Every printer DYMO knows, from GetPrinters' XML: the Windows name, the model
  * and whether DYMO sees it plugged in right now. The original took the first
  * <Name> blindly - on a computer with an old, unplugged DYMO entry that sends
@@ -239,7 +259,7 @@ export async function initDymo(preferred?: string | null): Promise<DymoStatus> {
     const printersResponse = await dymoFetch("/GetPrinters");
     if (!printersResponse.ok) return { isReady: false, message: "לא ניתן לקבל רשימת מדפסות", printers: [], detail: `GetPrinters: ${printersResponse.status}` };
 
-    const xml = await printersResponse.text();
+    const xml = unwrapDymoText(await printersResponse.text());
     const printers = parsePrinters(xml);
     const detail = `GetPrinters:\n${xml.trim().slice(0, 3000)}`;
     const chosen = pickPrinter(printers, preferred);
@@ -282,7 +302,7 @@ export async function printLabel(tagName: string, officeLine: string, printerNam
     const timedOut = e instanceof Error && e.name === "TimeoutError";
     throw new Error(timedOut ? "DYMO לא ענה תוך 20 שניות - בדקי את תור ההדפסה של המדפסת ב-Windows (עבודות תקועות, Offline או Paused)" : "לא הצלחתי לדבר עם DYMO Web Service");
   }
-  const answer = (await response.text().catch(() => "")).trim();
+  const answer = unwrapDymoText(await response.text().catch(() => ""));
   if (!response.ok) {
     console.error("Print error response:", answer);
     throw new Error(`DYMO סירב להדפיס${answer ? `: ${answer.slice(0, 200)}` : ""}`);
