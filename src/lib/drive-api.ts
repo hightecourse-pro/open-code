@@ -40,31 +40,30 @@ function base64url(input: string | Buffer): string {
     .replace(/=+$/, "");
 }
 
-let cachedToken: { token: string; expiresAt: number } | null = null;
-
-/** Tokens per identity: the service account itself, or a Workspace user it impersonates (domain-wide delegation). */
+/** Tokens per identity and scope: the service account itself, or a Workspace user it impersonates (domain-wide delegation). */
 const tokenCache = new Map<string, { token: string; expiresAt: number }>();
 
 /**
  * A service-account access token, cached until shortly before it expires.
  * `as` = a Workspace user to act as (domain-wide delegation) - the hackathon
  * mirror uses it because a service account owns no storage of its own.
+ * `scope` defaults to Drive; the Hightecourse tags screen asks for Sheets.
  */
-async function getAccessToken(as?: string): Promise<string> {
+async function getAccessToken(as?: string, scope: string = SCOPE): Promise<string> {
   const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
   const key = privateKey();
   if (!email || !key) throw new Error("drive_not_configured");
 
   const now = Math.floor(Date.now() / 1000);
-  const cacheKey = as ?? "";
-  const cached = cacheKey ? tokenCache.get(cacheKey) : cachedToken;
+  const cacheKey = `${as ?? ""}|${scope}`;
+  const cached = tokenCache.get(cacheKey);
   if (cached && cached.expiresAt > now + 60) return cached.token;
 
   const header = base64url(JSON.stringify({ alg: "RS256", typ: "JWT" }));
   const claims = base64url(
     JSON.stringify({
       iss: email,
-      scope: SCOPE,
+      scope,
       aud: TOKEN_URL,
       iat: now,
       exp: now + 3600,
@@ -89,10 +88,17 @@ async function getAccessToken(as?: string): Promise<string> {
     throw new Error(`drive_auth_failed: ${(await res.text()).slice(0, 200)}`);
   }
   const data = (await res.json()) as { access_token: string; expires_in: number };
-  const entry = { token: data.access_token, expiresAt: now + data.expires_in };
-  if (cacheKey) tokenCache.set(cacheKey, entry);
-  else cachedToken = entry;
+  tokenCache.set(cacheKey, { token: data.access_token, expiresAt: now + data.expires_in });
   return data.access_token;
+}
+
+/** The same service account, for another Google API (the Sheets client of the Hightecourse tags screen). */
+export async function serviceAccountToken(scope: string, as?: string): Promise<string> {
+  return getAccessToken(as, scope);
+}
+
+export function serviceAccountEmail(): string | null {
+  return process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || null;
 }
 
 async function driveFetch(path: string, init: RequestInit = {}, as?: string): Promise<Response> {
