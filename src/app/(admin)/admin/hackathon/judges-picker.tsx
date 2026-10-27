@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Avatar, Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
-import { setHackathonJudge, setJudgeChallenges } from "./actions";
+import { setHackathonJudge, setJudgeChallenges, setJudgeSeesReport } from "./actions";
 
 export interface JudgeCandidate {
   id: string;
@@ -15,6 +15,8 @@ export interface JudgeCandidate {
   scored: number;
   /** Empty = every challenge. */
   challengeKeys: string[];
+  /** The automated review is open to her (27/10: "תפתח לרות אפין את הבחינה שלך"). */
+  seesReport: boolean;
 }
 
 /**
@@ -35,7 +37,7 @@ export function JudgesPicker({ candidates, challenges }: { candidates: JudgeCand
     start(async () => {
       const r = await setHackathonJudge(m.id, on, m.challengeKeys);
       if (r.error) return setError(r.error);
-      setRows((cur) => cur.map((x) => (x.id === m.id ? { ...x, judge: on, challengeKeys: on ? x.challengeKeys : [] } : x)));
+      setRows((cur) => cur.map((x) => (x.id === m.id ? { ...x, judge: on, challengeKeys: on ? x.challengeKeys : [], seesReport: on ? x.seesReport : false } : x)));
     });
   };
   const toggleChallenge = (m: JudgeCandidate, key: string) => {
@@ -45,6 +47,16 @@ export function JudgesPicker({ candidates, challenges }: { candidates: JudgeCand
       const r = await setJudgeChallenges(m.id, next);
       if (r.error) return setError(r.error);
       setRows((cur) => cur.map((x) => (x.id === m.id ? { ...x, challengeKeys: next } : x)));
+    });
+  };
+  // The AI's exam, opened to her or closed (27/10).
+  const toggleReport = (m: JudgeCandidate) => {
+    const next = !m.seesReport;
+    setError(null);
+    start(async () => {
+      const r = await setJudgeSeesReport(m.id, next);
+      if (r.error) return setError(r.error);
+      setRows((cur) => cur.map((x) => (x.id === m.id ? { ...x, seesReport: next } : x)));
     });
   };
   const shown = rows.filter((m) => !m.judge && (!q.trim() || m.name.includes(q.trim())));
@@ -85,6 +97,17 @@ export function JudgesPicker({ candidates, challenges }: { candidates: JudgeCand
               );
             })}
             {j.challengeKeys.length === 0 && <span className="text-[11.5px] font-semibold text-[#8C5E0E]">עוד לא שובצה - לא רואה הגשות</span>}
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => toggleReport(j)}
+              aria-pressed={j.seesReport}
+              data-testid="judge-report"
+              title={j.seesReport ? "הבחינה של ה-AI פתוחה לה - טאב ליד הבחינה שלה, עם טבלת השוואה. לחיצה סוגרת." : "לפתוח לה את הבחינה של ה-AI - טאב ליד הבחינה שלה, עם טבלת השוואה"}
+              className={cn("ms-2 rounded-full px-2.5 py-0.5 text-[12px] font-semibold border transition-colors", j.seesReport ? "bg-tint-mint text-success border-transparent" : "bg-white text-ink-500 border-ink-200 hover:border-brand-purple hover:text-ink-800")}
+            >
+              {j.seesReport ? "✓ רואה את הבחינה של ה-AI" : "הבחינה של ה-AI: סגורה"}
+            </button>
             <button type="button" disabled={pending} onClick={() => appoint(j, false)} className="ms-auto text-ink-400 hover:text-[#B42318] text-[12.5px]" aria-label={`הסרת ${j.name} מהשופטות`}>
               ✕ הסרה
             </button>
@@ -119,7 +142,7 @@ export function JudgesPicker({ candidates, challenges }: { candidates: JudgeCand
             {shown.filter((m) => m.role === "admin").length === 0 && <span className="text-[12.5px] text-ink-500">אין חברות צוות נוספות למינוי.</span>}
           </div>
           <p className="text-[12px] text-ink-500">
-            אחרי המינוי בוחרים לה אתגר (או יותר); בלי שיבוץ היא לא רואה הגשות. שופטת רואה רק את ההגשות של האתגרים שלה ורק את הציונים שלה - לא של שופטות אחרות ולא את הבדיקה האוטומטית. חברת צוות שמונתה
+            אחרי המינוי בוחרים לה אתגר (או יותר); בלי שיבוץ היא לא רואה הגשות. שופטת רואה רק את ההגשות של האתגרים שלה ורק את הציונים שלה - לא של שופטות אחרות, ולא את הבדיקה האוטומטית אלא אם פתחת לה אותה בכפתור ״הבחינה של ה-AI״ בשורה שלה (אז היא מקבלת שני טאבים - הבחינה שלה והבחינה של ה-AI - וטבלת השוואה ביניהן). חברת צוות שמונתה
             לשופטת לא רואה ציונים של אחרות גם כאן בניהול, עד שתוסר מהרשימה. מנטורית שמונתה מקבלת מייל עם הקישור לשיפוט.
           </p>
         </div>
