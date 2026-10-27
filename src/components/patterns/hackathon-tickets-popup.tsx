@@ -93,7 +93,7 @@ export function HackathonTicketsPopup() {
         className="oc-tp-card relative w-full max-w-[460px] overflow-hidden rounded-[28px] bg-brand-gradient text-white shadow-glow-pink"
       >
         <span className="oc-tp-shine pointer-events-none absolute inset-0" aria-hidden />
-        <span className="oc-tp-ticket pointer-events-none absolute -top-4 -start-3 text-[96px] opacity-25 select-none" aria-hidden>
+        <span className="oc-tp-ticket pointer-events-none absolute -bottom-5 -end-4 text-[96px] opacity-20 select-none" aria-hidden>
           🎟️
         </span>
         <button
@@ -118,7 +118,7 @@ export function HackathonTicketsPopup() {
               <p className="text-[14px] leading-snug text-white/95 mt-1 font-semibold">2 כרטיסים במחיר מוזל של 20 ש״ח בהקשת מספר הטלפון שלך בקהילה.</p>
             </div>
           ) : (
-            <p className="text-[15px] leading-snug text-white/90 mt-3 font-semibold">הפתרונות עולות לבמה, הקהל מצביע בטלפון, והזוכות נחשפות על המסך. מקומך שמור?</p>
+            <p className="text-[15px] leading-snug text-white/90 mt-3 font-semibold">הפתרונות עולים לבמה, הקהל מצביע בטלפון, והזוכות נחשפות על המסך. מקומך שמור?</p>
           )}
           <a
             href={TICKETS_URL}
