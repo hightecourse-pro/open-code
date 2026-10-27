@@ -24,10 +24,12 @@ export const dynamic = "force-dynamic";
 */
 export default async function TagsPage() {
   const settings = await tagsSettings();
-  const configured = isConfigured(settings);
-  const access = configured && (await hasTagsAccess(settings));
+  const sheetSet = !!settings.spreadsheetId;
+  const access = sheetSet && (await hasTagsAccess(settings));
   const list = access ? await listParticipants() : null;
-  const profile = configured && access ? null : await getProfile().catch(() => null);
+  const profile = access ? null : await getProfile().catch(() => null);
+  // what is missing, said plainly: the sheet, or (for the code gate) the code
+  const missing = !sheetSet ? "sheet" : !isConfigured(settings) ? "code" : null;
 
   return (
     <div dir="rtl" className={`${rubik.className} flex min-h-screen flex-col`} style={{ background: H.bg, color: H.ink }}>
@@ -40,14 +42,18 @@ export default async function TagsPage() {
         }
       />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">
-        {!configured ? (
-          <div className="mx-auto w-full max-w-md bg-white p-7 text-center sm:p-9" style={{ border: `1px solid ${H.line}`, borderRadius: 12 }} data-testid="tags-not-configured">
+        {access && list ? (
+          <TagsDesk initial={list.ok ? list.data : null} initialError={list.ok ? null : list.error} />
+        ) : missing ? (
+          <div className="mx-auto w-full max-w-md bg-white p-7 text-center sm:p-9" style={{ border: `1px solid ${H.line}`, borderRadius: 12 }} data-testid={missing === "sheet" ? "tags-not-configured" : "tags-no-code"}>
             <h1 className="text-[22px] font-black" style={{ color: H.navy }}>
-              המערכת עוד לא חוברה לגיליון
+              {missing === "sheet" ? "המערכת עוד לא חוברה לגיליון" : "עוד לא נקבע קוד כניסה"}
             </h1>
             <span className="mx-auto mt-2 block h-[4px] w-16" style={{ background: H.yellow, borderRadius: 2 }} />
             <p className="mt-4 text-[15px] leading-relaxed" style={{ color: H.ink }}>
-              מנהלת צריכה להזין את הקישור לגיליון המשתתפות ואת קוד הכניסה בניהול הייטקורס.
+              {missing === "sheet"
+                ? "מנהלת צריכה להזין את הקישור לגיליון המשתתפות בניהול הייטקורס."
+                : "הגיליון מחובר, אבל כדי להיכנס בלי חשבון מנהלת צריך קוד כניסה - מנהלת קובעת אותו בכרטיס ״מערכת הדפסת תגים״ בניהול הייטקורס."}
             </p>
             {profile?.role === "admin" && (
               <Link href="/ai-course/admin#tags" className="mt-6 inline-block px-6 py-3 text-[15px] font-bold text-white" style={{ background: H.navy, borderRadius: 10 }}>
@@ -55,10 +61,8 @@ export default async function TagsPage() {
               </Link>
             )}
           </div>
-        ) : !access || !list ? (
-          <TagsGate />
         ) : (
-          <TagsDesk initial={list.ok ? list.data : null} initialError={list.ok ? null : list.error} />
+          <TagsGate />
         )}
       </main>
       <PageFooter wide />
