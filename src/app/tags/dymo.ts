@@ -263,6 +263,8 @@ export async function initDymo(preferred?: string | null): Promise<DymoStatus> {
     const printers = parsePrinters(xml);
     const detail = `GetPrinters:\n${xml.trim().slice(0, 3000)}`;
     const chosen = pickPrinter(printers, preferred);
+    // an empty <Printers /> (seen 28/10 on a second computer whose DYMO install had failed half-way): the service runs, Windows has no DYMO printer
+    if (!printers.length) return { isReady: false, message: "DYMO רץ, אבל אין מדפסת DYMO מותקנת ב-Windows - בדקי את ההתקנה וה-USB", printers, detail };
     if (!chosen) return { isReady: false, message: "לא נמצאה מדפסת DYMO LabelWriter", printers, detail };
     if (!chosen.connected) return { isReady: false, message: `${chosen.name} - לא מחוברת לפי DYMO`, printers, printer: chosen.name, detail };
     return { isReady: true, message: `DYMO מוכן - ${chosen.name}`, printers, printer: chosen.name, detail };
