@@ -2091,6 +2091,49 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hackathon_auto_reports"]["Insert"]>;
         Relationships: [];
       };
+      /** גמר ההאקתון בשידור חי - see 20261026160000 (26/10). */
+      hackathon_live_settings: {
+        Row: { id: number; event_name: string; phone_display: string; yemot_token: string; yemot_extension: string; judge_code: string; vote_seconds: number; audience_mode: string; reveal: string; criteria: Json; active_challenge: string | null; theme: string; poll_claimed_at: string | null; last_poll_at: string | null; poll_error: string | null; calls_claimed_at: string | null; connected: number | null; updated_at: string };
+        Insert: { id?: number; event_name?: string; phone_display?: string; yemot_token?: string; yemot_extension?: string; judge_code?: string; vote_seconds?: number; audience_mode?: string; reveal?: string; criteria?: Json; active_challenge?: string | null; theme?: string; poll_claimed_at?: string | null; last_poll_at?: string | null; poll_error?: string | null; calls_claimed_at?: string | null; connected?: number | null; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_live_settings"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_live_challenges: {
+        Row: { key: string; name: string; org: string; logos: Json; sort: number; status: string; revealed: boolean; current_finalist_id: string | null; updated_at: string };
+        Insert: { key: string; name: string; org?: string; logos?: Json; sort?: number; status?: string; revealed?: boolean; current_finalist_id?: string | null; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_live_challenges"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_live_finalists: {
+        Row: { id: string; challenge_key: string; n: number; name: string; team: string; team_key: string | null; created_at: string };
+        Insert: { id?: string; challenge_key: string; n: number; name: string; team?: string; team_key?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_live_finalists"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_live_judges: {
+        Row: { id: string; name: string; challenge_key: string | null; token: string; sort: number; created_at: string };
+        Insert: { id?: string; name: string; challenge_key?: string | null; token?: string; sort?: number; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_live_judges"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_live_scores: {
+        Row: { judge_id: string; finalist_id: string; scores: Json; updated_at: string };
+        Insert: { judge_id: string; finalist_id: string; scores?: Json; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_live_scores"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_live_questions: {
+        Row: { id: string; text: string; options: Json; sort: number; challenge_key: string | null; criterion_key: string | null; status: string; reveal: string; opened_at: string | null; closed_at: string | null; created_at: string };
+        Insert: { id?: string; text: string; options?: Json; sort?: number; challenge_key?: string | null; criterion_key?: string | null; status?: string; reveal?: string; opened_at?: string | null; closed_at?: string | null; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_live_questions"]["Insert"]>;
+        Relationships: [];
+      };
+      hackathon_live_votes: {
+        Row: { key: string; question_id: string | null; phone: string; digit: number; voted_at: string; created_at: string };
+        Insert: { key: string; question_id?: string | null; phone: string; digit: number; voted_at: string; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_live_votes"]["Insert"]>;
+        Relationships: [];
+      };
       hackathon_materials: {
         Row: { id: string; challenge_key: string; title: string; file_path: string; size_bytes: number | null; created_at: string };
         Insert: { id?: string; challenge_key: string; title: string; file_path: string; size_bytes?: number | null; created_at?: string };
