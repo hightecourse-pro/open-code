@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { getProfile } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { serviceAccountEmail } from "@/lib/drive-api";
-import { readSheet, sheetTabs, SheetsError, writeCell } from "@/lib/google-sheets";
+import { appendRow, readSheet, sheetTabs, SheetsError, writeCell } from "@/lib/google-sheets";
 import type { Json } from "@/types/database";
 import type { Participant } from "./types";
 
@@ -21,9 +21,14 @@ export const TAGS_SETTINGS_KEY = "hightecourse_tags";
 export const ACCESS_COOKIE = "hc_tags";
 export const DEFAULT_TAB = "משתתפות";
 export const TZ_COLUMN = "ת.ז.";
+export const FIRST_COLUMN = "פרטי";
+export const LAST_COLUMN = "משפחה";
+export const OFFICE_COLUMN = "משרד";
 export const PRINTED_COLUMN = "הודפס";
+/** A walk-in the desk added (the owner, 28/10: ״יוסיף לאקסל עם אינדיקציה של חדש״) - the column is created on first use. */
+export const NEW_COLUMN = "חדש";
 /** The columns the desk shows and searches. Mails and phones never leave the server. */
-export const DESK_COLUMNS = ["ת.ז.", "פרטי", "משפחה", "שם לתג", "תפקיד", "קורס", "משרד", "הודפס"] as const;
+export const DESK_COLUMNS = ["ת.ז.", "פרטי", "משפחה", "שם לתג", "תפקיד", "קורס", "משרד", "הודפס", "חדש"] as const;
 /** The Cloud project of the service account - where "Google Sheets API" has to be switched on (from Google's own 403 text). */
 export const ENABLE_SHEETS_API_URL = "https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=263857418461";
 
@@ -174,25 +179,101 @@ export async function listParticipants(): Promise<{ ok: true; data: Participant[
   }
 }
 
-/** הודפס = כן on the row whose ת.ז. matches - what markPrintedByTz did in the Apps Script. */
-export async function markPrinted(tz: string): Promise<{ ok: true } | SheetFailure> {
-  const t = tz.trim();
-  if (!t) return fail("bad_request", "חסר מספר ת.ז.");
+export interface PrintedRef {
+  tz?: string;
+  /** Her 1-based sheet row as the list reported it. */
+  row?: number;
+  first?: string;
+  last?: string;
+}
+
+/**
+ * הודפס = כן on her row. The Apps Script found the row by ת.ז. only; a walk-in
+ * added at the desk may have no ת.ז., so the row number the list handed out
+ * is tried first (and must still carry her ת.ז. / names - the sheet may have
+ * been re-sorted meanwhile), then ת.ז., then a unique first + last name.
+ */
+export async function markPrinted(ref: PrintedRef): Promise<{ ok: true } | SheetFailure> {
+  const tz = (ref.tz ?? "").trim();
+  const first = (ref.first ?? "").trim();
+  const last = (ref.last ?? "").trim();
+  if (!tz && !(first && last)) return fail("bad_request", "חסר מספר ת.ז. או שם.");
   const s = await tagsSettings();
   if (!s.spreadsheetId) return fail("not_configured", "המערכת עוד לא חוברה לגיליון.");
   try {
     const rows = await readSheet(s.spreadsheetId, s.tab);
     const headers = trimmedHeaders(rows);
     const tzCol = headers.indexOf(TZ_COLUMN);
+    const firstCol = headers.indexOf(FIRST_COLUMN);
+    const lastCol = headers.indexOf(LAST_COLUMN);
     const printedCol = headers.indexOf(PRINTED_COLUMN);
-    if (tzCol < 0 || printedCol < 0) return fail("columns", `בגיליון חסרות העמודות ״${TZ_COLUMN}״ או ״${PRINTED_COLUMN}״.`);
-    for (let i = 1; i < rows.length; i++) {
-      if ((rows[i][tzCol] ?? "").trim() === t) {
-        await writeCell(s.spreadsheetId, s.tab, i + 1, printedCol, "כן");
-        return { ok: true };
-      }
+    if (printedCol < 0) return fail("columns", `בגיליון חסרה העמודה ״${PRINTED_COLUMN}״.`);
+    const cell = (i: number, col: number) => (col >= 0 ? (rows[i]?.[col] ?? "").trim() : "");
+    const sameNames = (i: number) => !!first && !!last && cell(i, firstCol) === first && cell(i, lastCol) === last;
+    let target = -1;
+    if (ref.row && ref.row >= 2 && ref.row <= rows.length) {
+      const i = ref.row - 1;
+      const tzOk = tz ? cell(i, tzCol) === tz : true;
+      const namesOk = first && last ? sameNames(i) : true;
+      if (tzOk && namesOk && (tz || (first && last))) target = i;
     }
-    return fail("no_row", `לא נמצאה בגיליון שורה עם ת.ז. ${t}.`);
+    if (target < 0 && tz && tzCol >= 0) target = rows.findIndex((_, i) => i > 0 && cell(i, tzCol) === tz);
+    if (target < 0 && first && last) {
+      const hits = rows.map((_, i) => i).filter((i) => i > 0 && sameNames(i));
+      if (hits.length === 1) target = hits[0];
+    }
+    if (target < 0) return fail("no_row", tz ? `לא נמצאה בגיליון שורה עם ת.ז. ${tz}.` : `לא נמצאה בגיליון שורה אחת ויחידה בשם ${first} ${last}.`);
+    await writeCell(s.spreadsheetId, s.tab, target + 1, printedCol, "כן");
+    return { ok: true };
+  } catch (e) {
+    return failureOf(e, s.tab);
+  }
+}
+
+export interface WalkIn {
+  first: string;
+  last: string;
+  office?: string;
+  tz?: string;
+}
+
+/**
+ * A name that is not in the sheet (the owner, 28/10: ״אפשרות להוסיף שם שלא
+ * קיים (רק שם פרטי ומשפחה חובה) הוא ידפיס ויוסיף לאקסל עם אינדיקציה של חדש״):
+ * appended as a new row, already הודפס = כן (the desk prints before it calls
+ * this), with חדש = כן - the column is added to the header the first time.
+ */
+export async function addParticipant(input: WalkIn): Promise<{ ok: true; row: number } | SheetFailure> {
+  const first = (input.first ?? "").trim();
+  const last = (input.last ?? "").trim();
+  const office = (input.office ?? "").trim();
+  const tz = (input.tz ?? "").trim();
+  if (!first || !last) return fail("bad_request", "שם פרטי ושם משפחה הם חובה.");
+  if (tz && !/^\d{5,9}$/.test(tz)) return fail("bad_request", "ת.ז. צריכה להיות ספרות בלבד.");
+  const s = await tagsSettings();
+  if (!s.spreadsheetId) return fail("not_configured", "המערכת עוד לא חוברה לגיליון.");
+  try {
+    const rows = await readSheet(s.spreadsheetId, s.tab);
+    let headers = trimmedHeaders(rows);
+    const missing = [FIRST_COLUMN, LAST_COLUMN, PRINTED_COLUMN].filter((c) => !headers.includes(c));
+    if (missing.length) return fail("columns", `בגיליון חסרות העמודות: ${missing.join(", ")}.`);
+    if (!headers.includes(NEW_COLUMN)) {
+      await writeCell(s.spreadsheetId, s.tab, 1, headers.length, NEW_COLUMN);
+      headers = [...headers, NEW_COLUMN];
+    }
+    const values = headers.map(() => "");
+    const set = (column: string, value: string) => {
+      const i = headers.indexOf(column);
+      if (i >= 0) values[i] = value;
+    };
+    set(TZ_COLUMN, tz);
+    set(FIRST_COLUMN, first);
+    set(LAST_COLUMN, last);
+    set(OFFICE_COLUMN, office);
+    set(PRINTED_COLUMN, "כן");
+    set(NEW_COLUMN, "כן");
+    await appendRow(s.spreadsheetId, s.tab, values);
+    return { ok: true, row: rows.length + 1 };
   } catch (e) {
     return failureOf(e, s.tab);
   }

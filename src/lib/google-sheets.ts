@@ -92,6 +92,16 @@ export function columnLetter(index0: number): string {
   return s;
 }
 
+/** Appends one row under the tab's data (Sheets finds the table's end itself). */
+export async function appendRow(spreadsheetId: string, tab: string, values: string[]): Promise<void> {
+  await body(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(quoteTab(tab))}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+      method: "POST",
+      body: JSON.stringify({ majorDimension: "ROWS", values: [values] }),
+    })
+  );
+}
+
 /** Writes one cell. `row1` is the 1-based sheet row, `col0` the 0-based column. */
 export async function writeCell(spreadsheetId: string, tab: string, row1: number, col0: number, value: string): Promise<void> {
   const a1 = `${quoteTab(tab)}!${columnLetter(col0)}${row1}`;
