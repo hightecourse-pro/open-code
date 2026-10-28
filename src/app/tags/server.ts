@@ -27,8 +27,17 @@ export const OFFICE_COLUMN = "משרד";
 export const PRINTED_COLUMN = "הודפס";
 /** A walk-in the desk added (the owner, 28/10: ״יוסיף לאקסל עם אינדיקציה של חדש״) - the column is created on first use. */
 export const NEW_COLUMN = "חדש";
+/** When the tag was printed (the owner, 28/10: ״עמודה של תאריך ושעת ההדפסה״), Israel time - created on first use. */
+export const PRINTED_AT_COLUMN = "תאריך ושעת ההדפסה";
 /** The columns the desk shows and searches. Mails and phones never leave the server. */
-export const DESK_COLUMNS = ["ת.ז.", "פרטי", "משפחה", "שם לתג", "תפקיד", "קורס", "משרד", "הודפס", "חדש"] as const;
+export const DESK_COLUMNS = ["ת.ז.", "פרטי", "משפחה", "שם לתג", "תפקיד", "קורס", "משרד", "הודפס", "חדש", "תאריך ושעת ההדפסה"] as const;
+
+/** ״28.10.2026 14:05״ - Israel time, as the sheet should read it. */
+export function printStamp(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Jerusalem", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("day")}.${get("month")}.${get("year")} ${get("hour")}:${get("minute")}`;
+}
 /** The Cloud project of the service account - where "Google Sheets API" has to be switched on (from Google's own 403 text). */
 export const ENABLE_SHEETS_API_URL = "https://console.developers.google.com/apis/api/sheets.googleapis.com/overview?project=263857418461";
 
@@ -152,6 +161,13 @@ function trimmedHeaders(rows: string[][]): string[] {
   return (rows[0] ?? []).map((h) => h.trim());
 }
 
+/** Adds a header cell at the end of the header row when the column is not there yet; returns the headers as they are now. */
+async function ensureColumn(spreadsheetId: string, tab: string, headers: string[], name: string): Promise<string[]> {
+  if (headers.includes(name)) return headers;
+  await writeCell(spreadsheetId, tab, 1, headers.length, name);
+  return [...headers, name];
+}
+
 /** The sheet's rows as objects - the same shape the Apps Script returned, minus the private columns. */
 export async function listParticipants(): Promise<{ ok: true; data: Participant[] } | SheetFailure> {
   const s = await tagsSettings();
@@ -202,7 +218,7 @@ export async function markPrinted(ref: PrintedRef): Promise<{ ok: true } | Sheet
   if (!s.spreadsheetId) return fail("not_configured", "המערכת עוד לא חוברה לגיליון.");
   try {
     const rows = await readSheet(s.spreadsheetId, s.tab);
-    const headers = trimmedHeaders(rows);
+    let headers = trimmedHeaders(rows);
     const tzCol = headers.indexOf(TZ_COLUMN);
     const firstCol = headers.indexOf(FIRST_COLUMN);
     const lastCol = headers.indexOf(LAST_COLUMN);
@@ -224,6 +240,8 @@ export async function markPrinted(ref: PrintedRef): Promise<{ ok: true } | Sheet
     }
     if (target < 0) return fail("no_row", tz ? `לא נמצאה בגיליון שורה עם ת.ז. ${tz}.` : `לא נמצאה בגיליון שורה אחת ויחידה בשם ${first} ${last}.`);
     await writeCell(s.spreadsheetId, s.tab, target + 1, printedCol, "כן");
+    headers = await ensureColumn(s.spreadsheetId, s.tab, headers, PRINTED_AT_COLUMN);
+    await writeCell(s.spreadsheetId, s.tab, target + 1, headers.indexOf(PRINTED_AT_COLUMN), printStamp());
     return { ok: true };
   } catch (e) {
     return failureOf(e, s.tab);
@@ -257,10 +275,8 @@ export async function addParticipant(input: WalkIn): Promise<{ ok: true; row: nu
     let headers = trimmedHeaders(rows);
     const missing = [FIRST_COLUMN, LAST_COLUMN, PRINTED_COLUMN].filter((c) => !headers.includes(c));
     if (missing.length) return fail("columns", `בגיליון חסרות העמודות: ${missing.join(", ")}.`);
-    if (!headers.includes(NEW_COLUMN)) {
-      await writeCell(s.spreadsheetId, s.tab, 1, headers.length, NEW_COLUMN);
-      headers = [...headers, NEW_COLUMN];
-    }
+    headers = await ensureColumn(s.spreadsheetId, s.tab, headers, NEW_COLUMN);
+    headers = await ensureColumn(s.spreadsheetId, s.tab, headers, PRINTED_AT_COLUMN);
     const values = headers.map(() => "");
     const set = (column: string, value: string) => {
       const i = headers.indexOf(column);
@@ -272,6 +288,7 @@ export async function addParticipant(input: WalkIn): Promise<{ ok: true; row: nu
     set(OFFICE_COLUMN, office);
     set(PRINTED_COLUMN, "כן");
     set(NEW_COLUMN, "כן");
+    set(PRINTED_AT_COLUMN, printStamp());
     await appendRow(s.spreadsheetId, s.tab, values);
     return { ok: true, row: rows.length + 1 };
   } catch (e) {

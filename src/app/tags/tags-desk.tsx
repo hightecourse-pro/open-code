@@ -455,6 +455,9 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
                   <th className={th} style={{ width: 80 }}>
                     סטטוס
                   </th>
+                  <th className={th} style={{ width: 150 }}>
+                    הודפס ב
+                  </th>
                   <th className={th} style={{ width: 120 }}>
                     פעולה
                   </th>
@@ -495,6 +498,9 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
                             </span>
                           )}
                         </span>
+                      </td>
+                      <td className={td} dir="ltr" style={{ color: H.muted, textAlign: "right", fontVariantNumeric: "tabular-nums" }} data-testid="tags-printed-at">
+                        {participant.cols["תאריך ושעת ההדפסה"] || ""}
                       </td>
                       <td className={td}>
                         <button
