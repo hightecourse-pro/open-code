@@ -13,7 +13,10 @@ const STAGE_H = 1080;
    screens - the vote per category (bars rising with the audience's share, in
    percentages only - never a vote count), the judges' scores before the reveal,
    and the winner on a podium - plus a clean opening screen while nothing runs.
-   The operator's buttons live in the control panel, never on this screen. */
+   The operator's buttons live in the control panel, never on this screen.
+   28/10 (the owner, finals day): the question itself is written on every vote,
+   no ״שקלול קהל ושופטות״ anywhere, the winner's name bigger, dramatic music on
+   the vote and a fanfare for the winner - synthesised in the browser. */
 const CSS = `
 .lv{position:fixed;inset:0;overflow:hidden;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--ink);cursor:none;-webkit-font-smoothing:antialiased;
   font-family:var(--font-heebo),Heebo,"Noto Sans Hebrew",sans-serif;
@@ -34,14 +37,16 @@ const CSS = `
 .ttl.wrap{white-space:normal;font-size:84px;line-height:.95;max-width:1200px}
 .rule{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--p3),var(--p2),var(--p1));margin-top:8px;flex-shrink:0}
 .screen{flex:1;display:flex;flex-direction:column;min-height:0}
-.steps{display:flex;justify-content:center;gap:14px;margin-top:22px}
+.question{font-weight:800;font-size:44px;line-height:1.15;text-align:center;margin-top:16px;flex-shrink:0}
+.question b{color:var(--p1)}
+.steps{display:flex;justify-content:center;gap:14px;margin-top:14px}
 .chip{font-weight:700;font-size:24px;line-height:1;padding:11px 24px;border-radius:999px;border:2px solid var(--chip-idle);color:var(--muted);transition:background .4s,border-color .4s,color .4s}
 .chip.done{border-color:var(--p3);color:var(--ink)}
 .chip.on{background:var(--p1);border-color:var(--p1);color:#fff}
 .chart{flex:1;display:flex;justify-content:center;gap:100px;padding:0 60px;min-height:0}
 .col{width:400px;display:flex;flex-direction:column;align-items:center;animation:colIn .7s cubic-bezier(.2,.8,.2,1) both}
 @keyframes colIn{from{opacity:0;transform:translateY(20px)}}
-.col-top{height:500px;flex:none;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:14px}
+.col-top{height:440px;flex:none;width:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:14px}
 .lead{font-weight:800;font-size:22px;line-height:1;color:var(--bg);background:var(--ink);padding:9px 18px;border-radius:999px;visibility:hidden}
 .lead.show{visibility:visible;animation:leadIn .4s cubic-bezier(.2,.8,.2,1) both}
 @keyframes leadIn{from{opacity:0;transform:translateY(8px)}}
@@ -72,10 +77,10 @@ const CSS = `
 .jof{font-weight:700;font-size:40px;opacity:.8}
 .foot{font-weight:700;font-size:27px;line-height:1.3;color:var(--muted);text-align:center}
 .results{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0}
-.winner{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:14px;animation:winIn 1s cubic-bezier(.2,.8,.2,1) both}
-.winner-name{font-weight:700;font-size:156px;line-height:.95;white-space:nowrap}
-.winner-name.long{font-size:120px}
-.winner-sub{font-weight:700;font-size:32px;color:var(--muted)}
+.winner{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:10px;animation:winIn 1s cubic-bezier(.2,.8,.2,1) both}
+.winner-name{font-weight:700;font-size:200px;line-height:.92;white-space:nowrap}
+.winner-name.long{font-size:150px}
+.winner-sub{font-weight:700;font-size:34px;color:var(--muted)}
 .winner-sub b{color:var(--ink)}
 @keyframes winIn{from{opacity:0;transform:translateY(40px) scale(.96)}}
 .podium{flex:1;display:flex;align-items:flex-end;justify-content:center;gap:36px;width:100%;min-height:0}
@@ -96,6 +101,8 @@ const CSS = `
 .net i{width:8px;height:8px;border-radius:50%;background:var(--p1)}
 .toast{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:var(--panel);color:#fff;border-radius:14px;padding:8px 16px;font-size:18px}
 .confetti{position:absolute;inset:0;pointer-events:none;z-index:4}
+.sound{position:absolute;top:12px;left:16px;z-index:6;font:inherit;font-weight:800;font-size:22px;padding:10px 18px;border-radius:999px;border:2px solid var(--p1);background:var(--panel);color:#fff;cursor:pointer}
+.sound.on{opacity:.25}
 @media (prefers-reduced-motion:reduce){.lv *{animation:none !important;transition:none !important}}
 `;
 
@@ -174,13 +181,13 @@ function Confetti({ fire }: { fire: number }) {
     if (!ctx) return;
     c.width = STAGE_W;
     c.height = STAGE_H;
-    const colors = ["#F0306E", "#C35BC0", "#7B83F0", "#ffffff"];
-    const parts = Array.from({ length: 240 }, () => ({
-      x: c.width * (0.3 + Math.random() * 0.4),
+    const colors = ["#F0306E", "#C35BC0", "#7B83F0", "#ffffff", "#FFD166"];
+    const parts = Array.from({ length: 320 }, () => ({
+      x: c.width * (0.25 + Math.random() * 0.5),
       y: c.height * 0.35,
-      vx: (Math.random() - 0.5) * 20,
-      vy: -Math.random() * 18 - 6,
-      s: 7 + Math.random() * 10,
+      vx: (Math.random() - 0.5) * 22,
+      vy: -Math.random() * 19 - 6,
+      s: 7 + Math.random() * 11,
       r: Math.random() * Math.PI,
       vr: (Math.random() - 0.5) * 0.3,
       col: colors[Math.floor(Math.random() * colors.length)],
@@ -199,18 +206,137 @@ function Confetti({ fire }: { fire: number }) {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(p.r);
-        ctx.globalAlpha = Math.max(0, 1 - t / 3.8);
+        ctx.globalAlpha = Math.max(0, 1 - t / 4.5);
         ctx.fillStyle = p.col;
         ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
         ctx.restore();
       }
-      if (t < 4) raf = requestAnimationFrame(draw);
+      if (t < 4.6) raf = requestAnimationFrame(draw);
       else ctx.clearRect(0, 0, c.width, c.height);
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
   }, [fire]);
   return <canvas ref={ref} className="confetti" />;
+}
+
+/**
+ * The evening's sound, synthesised in the browser (no files): on an open vote
+ * a low drone with a heartbeat; on the winner a fanfare that lands with her
+ * name. Browsers only play after a click, so the operator presses ״🔊״ once.
+ */
+type DramaMode = "vote" | "winner" | "off";
+function useDrama(mode: DramaMode, enabled: boolean) {
+  const ctxRef = useRef<AudioContext | null>(null);
+  const stopRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    if (!enabled || mode === "off") return;
+    const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
+    if (!ctxRef.current) ctxRef.current = new AC();
+    const ctx = ctxRef.current;
+    void ctx.resume();
+    stopRef.current();
+    if (mode === "vote") {
+      const master = ctx.createGain();
+      master.gain.value = 0;
+      master.connect(ctx.destination);
+      master.gain.linearRampToValueAtTime(0.32, ctx.currentTime + 1.5);
+      const lp = ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.value = 240;
+      lp.connect(master);
+      const oscs = [55, 55.5, 82.4].map((f, i) => {
+        const o = ctx.createOscillator();
+        o.type = i === 2 ? "triangle" : "sawtooth";
+        o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.value = i === 2 ? 0.12 : 0.24;
+        o.connect(g);
+        g.connect(lp);
+        o.start();
+        return o;
+      });
+      let alive = true;
+      let next = ctx.currentTime + 0.4;
+      let timer = 0;
+      const beat = (at: number, strong: boolean) => {
+        const o = ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.setValueAtTime(strong ? 72 : 60, at);
+        o.frequency.exponentialRampToValueAtTime(36, at + 0.25);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(strong ? 0.9 : 0.55, at);
+        g.gain.exponentialRampToValueAtTime(0.001, at + 0.3);
+        o.connect(g);
+        g.connect(master);
+        o.start(at);
+        o.stop(at + 0.32);
+      };
+      const schedule = () => {
+        if (!alive) return;
+        while (next < ctx.currentTime + 2) {
+          beat(next, true);
+          beat(next + 0.3, false);
+          next += 1.15;
+        }
+        timer = window.setTimeout(schedule, 500);
+      };
+      schedule();
+      stopRef.current = () => {
+        alive = false;
+        clearTimeout(timer);
+        master.gain.cancelScheduledValues(ctx.currentTime);
+        master.gain.setValueAtTime(master.gain.value, ctx.currentTime);
+        master.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
+        setTimeout(() => {
+          oscs.forEach((o) => o.stop());
+          master.disconnect();
+        }, 700);
+      };
+    } else {
+      // the fanfare lands when the name appears (the podium rises first)
+      const master = ctx.createGain();
+      master.gain.value = 0.5;
+      master.connect(ctx.destination);
+      const now = ctx.currentTime + 3.0;
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+        const o = ctx.createOscillator();
+        o.type = "triangle";
+        o.frequency.value = f;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, now + i * 0.18);
+        g.gain.linearRampToValueAtTime(0.32, now + i * 0.18 + 0.05);
+        g.gain.setValueAtTime(0.32, now + 2.3);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 3.8);
+        o.connect(g);
+        g.connect(master);
+        o.start(now + i * 0.18);
+        o.stop(now + 3.9);
+      });
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 1.4), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+      const n = ctx.createBufferSource();
+      n.buffer = buf;
+      const hp = ctx.createBiquadFilter();
+      hp.type = "highpass";
+      hp.frequency.value = 3000;
+      const ng = ctx.createGain();
+      ng.gain.value = 0.22;
+      n.connect(hp);
+      hp.connect(ng);
+      ng.connect(master);
+      n.start(now + 0.55);
+      stopRef.current = () => {
+        setTimeout(() => master.disconnect(), 4500);
+      };
+    }
+    return () => {
+      stopRef.current();
+      stopRef.current = () => {};
+    };
+  }, [mode, enabled]);
 }
 
 function PhoneIcon() {
@@ -284,7 +410,7 @@ function Columns({ items, hidePct, flash }: { items: { id: string; n: number; na
           <div className="col-top">
             <div className={`lead${!hidePct && max > 0 && unique && x.pct === max ? " show" : ""}`}>מובילה כרגע</div>
             <Pct value={hidePct ? 0 : x.pct} hidden={hidePct} />
-            <div className="bar" style={{ background: colorOf(i), width: Math.min(270, colW - 40), height: hidePct ? 0 : Math.round((x.pct / scale) * 330), boxShadow: flash.has(x.id) ? `0 0 70px ${colorOf(i)}` : "none" }} />
+            <div className="bar" style={{ background: colorOf(i), width: Math.min(270, colW - 40), height: hidePct ? 0 : Math.round((x.pct / scale) * 290), boxShadow: flash.has(x.id) ? `0 0 70px ${colorOf(i)}` : "none" }} />
           </div>
           <div className="base" style={{ width: Math.min(360, colW) }} />
           <div className="label">
@@ -316,7 +442,7 @@ function useFlash(items: { id: string; pct: number }[]): Set<string> {
   return flash;
 }
 
-/** Screen 1 - the vote per category: the chips, the three columns, the phone. */
+/** Screen 1 - the vote per category: the question itself, the chips, the three columns, the phone. */
 function VoteScreen({ f, phone, voteSeconds, light }: { f: LiveFinalsView; phone: string; voteSeconds: number; light: boolean }) {
   const rows = f.finalists ?? [];
   const steps = f.steps ?? [];
@@ -334,8 +460,11 @@ function VoteScreen({ f, phone, voteSeconds, light }: { f: LiveFinalsView; phone
   const state = open ? "open" : allDone ? "done" : shown?.status === "done" ? "closed" : "paused";
   const title = shown?.label ?? f.name ?? "";
   return (
-    <Frame kicker={`${f.name ? `${f.name} · ` : ""}קטגוריה ${idx + 1} מתוך ${steps.length} · איזה פרויקט הכי טוב בקטגוריה?`} title={title} titleClass={title.length > 14 ? "long" : ""} light={light}>
+    <Frame kicker={`${f.name ? `${f.name} · ` : ""}שאלה ${idx + 1} מתוך ${steps.length}`} title={title} titleClass={title.length > 14 ? "long" : ""} light={light}>
       <div className="screen">
+        <div className="question" data-testid="live-question">
+          השאלה: למי מגיע הציון הגבוה ביותר על <b>{title}</b>? הקישו את מספר הפרויקט.
+        </div>
         <div className="steps">
           {steps.map((s) => (
             <div key={s.key} className={`chip ${s.status === "open" ? "on" : s.status === "done" ? "done" : ""}`}>
@@ -386,13 +515,13 @@ function JudgesScreen({ f, light }: { f: LiveFinalsView; light: boolean }) {
             );
           })}
         </div>
-        <div className="foot">ממוצע ציוני חבר השופטות · משקל השופטות בשקלול: {judgesMax}%</div>
+        <div className="foot">ממוצע ציוני חבר השופטות</div>
       </div>
     </Frame>
   );
 }
 
-/** Screen 3 - the winner and the podium. The blocks rise one by one, then her name. */
+/** Screen 3 - the winner and the podium. The blocks rise one by one, then her name, big. */
 function WinnerScreen({ f, fire, light }: { f: LiveFinalsView; fire: number; light: boolean }) {
   const rows = f.finalists ?? [];
   const judgesMax = f.weights?.judges ?? 70;
@@ -401,13 +530,12 @@ function WinnerScreen({ f, fire, light }: { f: LiveFinalsView; fire: number; lig
   const winner = ranked.find((x) => x.rank === 1) ?? null;
   // 2 · 1 · 3, the rest after
   const order = ranked.length >= 3 ? [ranked[1], ranked[0], ranked[2], ...ranked.slice(3)] : ranked.length === 2 ? [ranked[0], ranked[1]] : ranked;
-  const heights: Record<number, number> = { 1: 340, 2: 250, 3: 190 };
+  const heights: Record<number, number> = { 1: 320, 2: 230, 3: 170 };
   const delayOf = (rank: number | null) => (rank === 1 ? 2.2 : rank === 2 ? 1.2 : 0.3);
   const n = order.length;
   const w = n > 3 ? Math.floor(Math.min(420, (1776 - 36 * (n - 1)) / n)) : 420;
-  const nCats = f.categories?.length ?? 0;
   return (
-    <Frame kicker="שקלול קהל ושופטות" title="והזוכה היא…" light={light}>
+    <Frame kicker={f.name ?? "הגמר"} title="והזוכה היא…" light={light}>
       <Confetti fire={fire} />
       <div className="results">
         {winner ? (
@@ -452,9 +580,6 @@ function WinnerScreen({ f, fire, light }: { f: LiveFinalsView; fire: number; lig
           })}
         </div>
         <div className="baseline" />
-        <div className="foot" style={{ marginTop: 16, fontSize: 25 }}>
-          שקלול: {audienceMax}% הצבעות הקהל ב-{nCats} הקטגוריות · {judgesMax}% ציוני השופטות
-        </div>
       </div>
     </Frame>
   );
@@ -505,6 +630,7 @@ export function LiveDisplay({ initial, isAdmin, forcedTheme, fontClass }: { init
   const [cursor, setCursor] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [fire, setFire] = useState(0);
+  const [sound, setSound] = useState(false);
   const celebrated = useRef<string | null>(null);
   const cursorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scale = useSyncExternalStore(subscribeResize, scaleNow, () => 1);
@@ -554,6 +680,10 @@ export function LiveDisplay({ initial, isAdmin, forcedTheme, fontClass }: { init
         setSessionTheme((t) => ((t ?? forcedTheme ?? view.event.theme) === "dark" ? "light" : "dark"));
         return;
       }
+      if (e.code === "KeyM") {
+        setSound((s) => !s);
+        return;
+      }
       if (!isAdmin) return;
       const map: Record<string, string> = { PageDown: "next", ArrowLeft: "next", PageUp: "prev", ArrowRight: "prev", Space: "toggle" };
       const op = map[e.code];
@@ -577,6 +707,8 @@ export function LiveDisplay({ initial, isAdmin, forcedTheme, fontClass }: { init
   const winnerScreen = closed && !f.hidden;
   const plainQ = !finalsOn && !!q && !q.category;
   const boardFinal = winnerScreen && (f.finalists ?? []).some((x) => x.rank === 1);
+  const voteOpen = vote && (f.steps ?? []).some((s) => s.status === "open");
+  useDrama(voteOpen ? "vote" : boardFinal ? "winner" : "off", sound);
 
   useEffect(() => {
     const key = boardFinal ? `${f.active}:${f.revealed ? "r" : "l"}` : null;
@@ -611,6 +743,9 @@ export function LiveDisplay({ initial, isAdmin, forcedTheme, fontClass }: { init
         <svg className="bracket" style={{ left: 20 }} aria-hidden="true" width="110" height="480" viewBox="0 0 110 480">
           <path d="M10 10 L96 240 L10 470" fill="none" stroke="var(--p3)" strokeWidth="16" />
         </svg>
+        <button type="button" className={`sound${sound ? " on" : ""}`} onClick={() => setSound((s) => !s)} data-testid="live-sound" data-on={sound ? "1" : "0"} title="M">
+          {sound ? "🔊 מוזיקה פועלת" : "🔇 הפעלת מוזיקה"}
+        </button>
         <div key={sceneKey} style={{ position: "absolute", inset: 0 }}>
           {vote ? (
             <VoteScreen f={f} phone={phone} voteSeconds={v.event.voteSeconds} light={light} />
