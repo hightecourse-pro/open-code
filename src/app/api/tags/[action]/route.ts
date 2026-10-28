@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { enterWithCode, hasTagsAccess, leaveTags, listParticipants, markPrinted } from "@/app/tags/server";
+import { addParticipant, enterWithCode, hasTagsAccess, leaveTags, listParticipants, markPrinted } from "@/app/tags/server";
 
 /*
   JSON endpoints of מערכת הדפסת תגים (/tags): `enter` takes the code and sets
@@ -47,8 +47,14 @@ export async function POST(req: Request, ctx: { params: Promise<{ action: string
         return json({ ok: true });
       case "printed": {
         if (!(await hasTagsAccess())) return json({ ok: false, error: "entry" }, 401);
-        const tz = typeof body.tz === "string" ? body.tz : String(body.tz ?? "");
-        return json(await markPrinted(tz));
+        const str = (v: unknown) => (typeof v === "string" ? v : v === undefined || v === null ? "" : String(v));
+        const row = typeof body.row === "number" && Number.isFinite(body.row) ? body.row : undefined;
+        return json(await markPrinted({ tz: str(body.tz), row, first: str(body.first), last: str(body.last) }));
+      }
+      case "add": {
+        if (!(await hasTagsAccess())) return json({ ok: false, error: "entry" }, 401);
+        const str = (v: unknown) => (typeof v === "string" ? v : "");
+        return json(await addParticipant({ first: str(body.first), last: str(body.last), office: str(body.office), tz: str(body.tz) }));
       }
       default:
         return json({ ok: false, error: "unknown action" }, 404);
