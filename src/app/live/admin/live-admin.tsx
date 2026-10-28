@@ -330,16 +330,44 @@ function RunOfShow({ view, api, busy, control, sel, setSel }: { view: LiveAdminV
               </>
             ) : null}
 
+            {/* who is on stage - the judges' pages jump to her (the owner, 28/10) */}
+            <div className="flex items-center gap-2 flex-wrap rounded-lg border border-ink-200 bg-white px-3 py-2" data-testid="run-presenters">
+              <span className="text-[12.5px] font-bold text-ink-700">מציגות עכשיו:</span>
+              {ch.finalistsRaw.map((f) => {
+                const on = f.id === ch.currentId;
+                return (
+                  <button
+                    key={f.id}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => finals("current", ch.key, { finalistId: on ? null : f.id })}
+                    className={`rounded-full border px-3 py-1 text-[13px] font-semibold ${on ? "bg-brand-gradient text-white border-transparent" : "bg-ink-50 text-ink-700 border-ink-200 hover:bg-white"}`}
+                    data-testid="run-presenter"
+                    data-id={f.id}
+                    data-on={on ? "1" : "0"}
+                  >
+                    {f.n}. {f.name}
+                  </button>
+                );
+              })}
+              <button
+                type="button"
+                className={ghost}
+                disabled={busy || !ch.finalistsRaw.length}
+                onClick={() => {
+                  const list = ch.finalistsRaw;
+                  const i = list.findIndex((f) => f.id === ch.currentId);
+                  const nx = list[(i + 1) % list.length];
+                  if (nx) finals("current", ch.key, { finalistId: nx.id });
+                }}
+                data-testid="run-presenter-next"
+              >
+                המציגה הבאה ▶
+              </button>
+              <span className="text-[12px] text-ink-500">{ch.currentId ? "דפי השופטות קפצו אליה" : "אף אחת - דפי השופטות מראים את כולן"}</span>
+            </div>
             {/* small levers that are always there */}
             <div className="flex gap-2 flex-wrap items-center pt-1">
-              <select className={input} value={ch.currentId ?? ""} onChange={(e) => finals("current", ch.key, { finalistId: e.target.value || null })} aria-label="מציגות עכשיו" data-testid="run-current">
-                <option value="">— מציגות עכשיו —</option>
-                {ch.finalistsRaw.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.n}. {f.name}
-                  </option>
-                ))}
-              </select>
               {stage !== "judging" && stage !== "shown" && stage !== "idle" && stage !== "setup" ? null : onScreen ? null : (
                 <button className={quiet} disabled={busy} onClick={() => finals("show", ch.key)}>
                   הציגי על המסך

@@ -21,11 +21,18 @@ const CSS = `
 .jg .pill.closed{color:#ce2462;border-color:#e0418d;background:#fdecf3} .jg .pill.closed i{background:#e0418d}
 .jg main{max-width:640px;margin:0 auto;padding:14px 14px 0;display:flex;flex-direction:column;gap:14px}
 .jg .note{font-size:14px;color:#3a3a5c;background:#fff;border:1px solid #e2e2ec;border-radius:16px;padding:12px 14px}
-.jg .card{background:#fff;border:1px solid #e2e2ec;border-radius:20px;padding:16px;box-shadow:0 2px 8px #2e2e6e12}
-.jg .card.now{outline:2px solid #e0418d}
+.jg .card{background:#fff;border:1px solid #e2e2ec;border-radius:20px;padding:16px;box-shadow:0 2px 8px #2e2e6e12;scroll-margin-top:124px}
+.jg .card.now{outline:3px solid #e0418d;box-shadow:0 0 0 6px #e0418d22}
+.jg .nowbar{position:sticky;top:63px;z-index:4;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--grad);color:#fff;box-shadow:0 4px 12px #913f8040}
+.jg .nowbar .n{width:34px;height:34px;border-radius:10px;background:#fff;color:#913f80;display:grid;place-items:center;font-weight:900;font-size:17px;flex:none}
+.jg .nowbar .txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2}
+.jg .nowbar .txt small{font-size:12px;opacity:.9}
+.jg .nowbar .txt b{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jg .nowbar button{font-family:inherit;font-size:13px;font-weight:700;background:#fff;color:#913f80;border:0;border-radius:9999px;padding:6px 12px;cursor:pointer;flex:none}
+.jg .nowbar.none{display:block;background:#fff;color:#6e6e8a;font-size:13px;font-weight:600;border-bottom:1px solid #e2e2ec;box-shadow:none}
 .jg .card .name{font-size:22px;font-weight:900;line-height:1.2;margin:0 0 4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .jg .card .name .n{width:30px;height:30px;border-radius:10px;background:var(--grad);color:#fff;display:grid;place-items:center;font-size:15px;flex:none}
-.jg .card .name .live{font-size:11px;font-weight:800;color:#ce2462;border:1.5px solid #e0418d;border-radius:9999px;padding:1px 9px}
+.jg .card .name .live{font-size:13px;font-weight:800;color:#ce2462;background:#fdecf3;border:1.5px solid #e0418d;border-radius:9999px;padding:2px 10px}
 .jg .crit{padding:12px 0;border-top:1px solid #e2e2ec}
 .jg .crit .head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .jg .crit .head b{font-size:16px}
@@ -36,7 +43,7 @@ const CSS = `
 .jg .scale button.on{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px #913f8040}
 .jg .scale button:disabled{opacity:.5;cursor:default}
 @media (max-width:380px){.jg .scale{grid-template-columns:repeat(5,1fr)}.jg .scale button{height:42px}}
-@media (min-width:700px){.jg main{max-width:820px;padding:20px 20px 0;gap:18px}.jg .card{padding:20px}.jg .card .name{font-size:26px}.jg .crit .head b{font-size:18px}.jg .scale{gap:8px}.jg .scale button{height:56px;font-size:19px;border-radius:12px}.jg header img{height:52px}.jg .who b{font-size:18px}}
+@media (min-width:700px){.jg .nowbar{top:73px}.jg main{max-width:820px;padding:20px 20px 0;gap:18px}.jg .card{padding:20px}.jg .card .name{font-size:26px}.jg .crit .head b{font-size:18px}.jg .scale{gap:8px}.jg .scale button{height:56px;font-size:19px;border-radius:12px}.jg header img{height:52px}.jg .who b{font-size:18px}}
 .jg .total{display:flex;align-items:center;gap:12px;margin-top:10px;padding-top:12px;border-top:1px solid #e2e2ec;font-size:13px;color:#6e6e8a}
 .jg .total .big{font-size:28px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;direction:ltr;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .jg .total .big small{font-size:14px;color:#6e6e8a;-webkit-text-fill-color:#6e6e8a;font-weight:600}
@@ -123,6 +130,20 @@ export function JudgeScreen({ token, initial, onLeave }: { token: string; initia
     flushRef.current = flush;
   }, [flush]);
 
+  // in sync with the control panel (the owner, 28/10: "to show who is presenting now"): when the organiser
+  // picks who is on stage, the page jumps to her card; the first load stays where it is
+  const currentId = view?.challenge?.currentId ?? null;
+  const lastNow = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (lastNow.current === undefined) {
+      lastNow.current = currentId;
+      return;
+    }
+    if (currentId && currentId !== lastNow.current) document.querySelector(`[data-id="${currentId}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    lastNow.current = currentId;
+  }, [currentId]);
+  const jumpTo = (id: string) => document.querySelector(`[data-id="${id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+
   if (gone) {
     return (
       <div className="jg" dir="rtl">
@@ -140,6 +161,7 @@ export function JudgeScreen({ token, initial, onLeave }: { token: string; initia
   const finalists = view?.finalists ?? [];
   const scoresOf = (id: string): Scores => local.get(id) ?? finalists.find((f) => f.id === id)?.scores ?? {};
   const open = ch?.status === "judging";
+  const now = ch ? finalists.find((f) => f.id === ch.currentId) ?? null : null;
 
   const tap = (fid: string, key: string, val: number) => {
     if (!open) return;
@@ -168,6 +190,24 @@ export function JudgeScreen({ token, initial, onLeave }: { token: string; initia
           <span>{ch?.status === "judging" ? "השיפוט פתוח" : ch?.status === "closed" ? "השיפוט נסגר" : "עוד לא נפתח"}</span>
         </span>
       </header>
+      {ch && finalists.length ? (
+        now ? (
+          <div className="nowbar" data-testid="judge-now" data-id={now.id}>
+            <span className="n">{now.n}</span>
+            <span className="txt">
+              <small>מציגות עכשיו</small>
+              <b>{now.name}</b>
+            </span>
+            <button type="button" onClick={() => jumpTo(now.id)}>
+              לדירוג ↓
+            </button>
+          </div>
+        ) : (
+          <div className="nowbar none" data-testid="judge-now" data-id="">
+            עוד לא נבחרה מציגה - המארגנת בוחרת אותה בלוח הבקרה, והדף יקפוץ אליה.
+          </div>
+        )
+      ) : null}
       <main>
         {!view ? null : !ch ? (
           <div className="note">המארגנת עוד לא פתחה את האתגר הזה. הדף יתעדכן לבד.</div>
