@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { LiveError, adminView, deleteQuestion, exportCsv, finalsControl, moveQuestion, questionControl, resetQuestion, saveChallenge, saveJudges, saveQuestion, updateLiveSettings, yemotTest } from "@/lib/hackathon-live";
+import { LiveError, adminView, deleteQuestion, exportCsv, finalsControl, moveQuestion, questionControl, resetQuestion, saveChallenge, saveJudges, saveQuestion, updateLiveSettings, yemotTest, moveChallenge } from "@/lib/hackathon-live";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -39,6 +39,7 @@ export async function GET(req: Request) {
  *   control {op: open|close|toggle|next|prev|goto|archive, id?}
  *   challenge-save {key, name?, finalists?: [{name, team, teamKey?}]}
  *   judges-save {judges: [{id?, name, challengeKey}]}
+ *   challenge-move {key, direction: up|down}
  *   finals {op: open|close|reveal|hide|show|clear|current|reset|question, key, finalistId?}
  * Every answer carries the fresh admin view.
  */
@@ -77,6 +78,9 @@ export async function POST(req: Request) {
         break;
       case "challenge-save":
         await saveChallenge(String(body.key ?? ""), { name: body.name, finalists: body.finalists });
+        break;
+      case "challenge-move":
+        await moveChallenge(String(body.key ?? ""), body.direction === "up" ? "up" : "down");
         break;
       case "judges-save":
         await saveJudges(body.judges);

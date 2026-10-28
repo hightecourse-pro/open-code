@@ -567,6 +567,20 @@ export async function saveChallenge(key: string, patch: { name?: unknown; finali
   }
 }
 
+/** The order of the evening (the owner, 28/10: ״אני מנהלת את סדר האתגרים״) - swaps the sort with the neighbour. */
+export async function moveChallenge(key: string, direction: "up" | "down"): Promise<void> {
+  const admin = createAdminClient();
+  const rows = await challengeRows();
+  const i = rows.findIndex((c) => c.key === key);
+  if (i < 0) fail("אתגר לא מוכר");
+  const k = direction === "up" ? i - 1 : i + 1;
+  if (k < 0 || k >= rows.length) return;
+  // re-number everything 1..n so two challenges never share a sort value
+  const order = rows.map((c) => c.key);
+  [order[i], order[k]] = [order[k], order[i]];
+  for (const [n, ck] of order.entries()) await admin.from("hackathon_live_challenges").update({ sort: n + 1 }).eq("key", ck);
+}
+
 export async function saveJudges(list: unknown): Promise<void> {
   const admin = createAdminClient();
   const rows = (Array.isArray(list) ? list : []) as Record<string, unknown>[];

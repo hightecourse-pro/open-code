@@ -36,6 +36,7 @@ const CSS = `
 .jg .scale button.on{background:var(--grad);color:#fff;border-color:transparent;box-shadow:0 4px 12px #913f8040}
 .jg .scale button:disabled{opacity:.5;cursor:default}
 @media (max-width:380px){.jg .scale{grid-template-columns:repeat(5,1fr)}.jg .scale button{height:42px}}
+@media (min-width:700px){.jg main{max-width:820px;padding:20px 20px 0;gap:18px}.jg .card{padding:20px}.jg .card .name{font-size:26px}.jg .crit .head b{font-size:18px}.jg .scale{gap:8px}.jg .scale button{height:56px;font-size:19px;border-radius:12px}.jg header img{height:52px}.jg .who b{font-size:18px}}
 .jg .total{display:flex;align-items:center;gap:12px;margin-top:10px;padding-top:12px;border-top:1px solid #e2e2ec;font-size:13px;color:#6e6e8a}
 .jg .total .big{font-size:28px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums;direction:ltr;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .jg .total .big small{font-size:14px;color:#6e6e8a;-webkit-text-fill-color:#6e6e8a;font-weight:600}
