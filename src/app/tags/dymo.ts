@@ -254,10 +254,10 @@ export function pickPrinter(printers: DymoPrinter[], preferred?: string | null):
 export async function initDymo(preferred?: string | null): Promise<DymoStatus> {
   try {
     const response = await dymoFetch("/Check");
-    if (!response.ok) return { isReady: false, message: "DYMO Web Service לא זמין", printers: [] };
+    if (!response.ok) return { isReady: false, message: "DYMO Web Service לא זמין", printers: [], detail: `Check: HTTP ${response.status}` };
 
     const printersResponse = await dymoFetch("/GetPrinters");
-    if (!printersResponse.ok) return { isReady: false, message: "לא ניתן לקבל רשימת מדפסות", printers: [], detail: `GetPrinters: ${printersResponse.status}` };
+    if (!printersResponse.ok) return { isReady: false, message: "לא ניתן לקבל רשימת מדפסות", printers: [], detail: `GetPrinters: HTTP ${printersResponse.status}` };
 
     const xml = unwrapDymoText(await printersResponse.text());
     const printers = parsePrinters(xml);
@@ -268,7 +268,10 @@ export async function initDymo(preferred?: string | null): Promise<DymoStatus> {
     return { isReady: true, message: `DYMO מוכן - ${chosen.name}`, printers, printer: chosen.name, detail };
   } catch (error) {
     console.error("Error checking DYMO status:", error);
-    return { isReady: false, message: "שגיאה בבדיקת מצב DYMO", printers: [] };
+    // the browser could not reach the service at all: not installed, not running, or its local certificate not yet accepted
+    const e = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    return { isReady: false, message: "שגיאה בבדיקת מצב DYMO - השירות לא נגיש מהדפדפן", printers: [], detail: `Check (${DYMO_SERVICE_URL}/Check) failed in the browser:
+${e}` };
   }
 }
 

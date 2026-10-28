@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Printer, RefreshCw, Search, UserPlus } from "lucide-react";
 import { H } from "@/app/ai-course/theme";
-import { initDymo, LABELS, loadLabelKey, loadPrinterPref, printLabel, saveLabelKey, savePrinterPref, type LabelKey } from "./dymo";
+import { DYMO_SERVICE_URL, initDymo, LABELS, loadLabelKey, loadPrinterPref, printLabel, saveLabelKey, savePrinterPref, type LabelKey } from "./dymo";
 import type { DymoStatus, Participant } from "./types";
 
 /*
@@ -391,6 +391,22 @@ export function TagsDesk({ initial, initialError }: { initial: Participant[] | n
         </form>
       )}
 
+      {!dymoStatus.isReady && dymoStatus.message !== "מאתחל..." && (
+        <div className="px-4 py-3 text-[13.5px] leading-relaxed" style={{ background: "#FFF4C2", color: H.ink, borderRadius: 10, border: `1px solid ${H.yellow}` }} data-testid="tags-dymo-help">
+          <b>המדפסת לא מוכנה במחשב הזה.</b> הדף מדפיס דרך שירות DYMO שמותקן במחשב שאליו המדפסת מחוברת, ואין מה להעביר בין מחשבים - רק לוודא כאן:
+          <ol className="mt-1 list-decimal pr-5">
+            <li>המדפסת מחוברת ב-USB למחשב הזה ודולקת, וב-Windows → מדפסות ״DYMO LabelWriter 450״ לא Offline.</li>
+            <li>תוכנת DYMO מותקנת ושירות DYMO Web Service רץ (אייקון ליד השעון; אם אין - תפריט התחל → DYMO → DYMO Web Service).</li>
+            <li>
+              פתחי בלשונית חדשה{" "}
+              <a href={`${DYMO_SERVICE_URL}/Check`} target="_blank" rel="noreferrer" dir="ltr" className="underline" style={{ color: H.navy }}>
+                {DYMO_SERVICE_URL}/Check
+              </a>
+              {" "}- אם יש אזהרת אבטחה, אשרי פעם אחת; אם הדף נטען, חזרי לכאן ולחצי ״בדיקה״.
+            </li>
+          </ol>
+        </div>
+      )}
       {walkInDone && (
         <p className="px-4 py-3 text-[14px] font-medium" style={{ background: "#E9F6EE", color: H.green, borderRadius: 10 }} data-testid="walkin-done">
           {walkInDone}
