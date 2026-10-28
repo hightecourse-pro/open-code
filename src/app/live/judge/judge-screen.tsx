@@ -230,7 +230,6 @@ export function JudgeScreen({ token, initial, onLeave }: { token: string; initia
                     <div className="crit" key={c.key}>
                       <div className="head">
                         <b>{c.label}</b>
-                        <span className="w">{c.weight}%</span>
                       </div>
                       {c.hint ? <div className="hint">{c.hint}</div> : null}
                       <div className="scale">
