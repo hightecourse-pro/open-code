@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
  * ⭐ ״לחזור אליה״ (the owner, 30/10): an admin marks a chat thread she has to
  * come back to. Rendered only for admins; the server action and its RPC enforce
- * that too. Optimistic - the star flips at once and rolls back if the save fails.
+ * that too. Optimistic: the star flips at once, and settles on whatever the
+ * server says once the page revalidates - so the row's star and the header's
+ * star (two instances of the same thread) never disagree.
  */
 export function ChatStar({
   conversationId,
@@ -22,7 +24,7 @@ export function ChatStar({
   size?: number;
   className?: string;
 }) {
-  const [on, setOn] = useState(starred);
+  const [on, setOptimistic] = useOptimistic(starred);
   const [pending, start] = useTransition();
   const label = on ? "להסיר את הכוכב" : "לסמן: לחזור אליה";
   return (
@@ -30,12 +32,12 @@ export function ChatStar({
       type="button"
       onClick={() => {
         const next = !on;
-        setOn(next);
         start(async () => {
+          setOptimistic(next);
           try {
             await action(conversationId, next);
           } catch {
-            setOn(!next);
+            /* the optimistic value falls back to the server's once the transition ends */
           }
         });
       }}
