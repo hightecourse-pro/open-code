@@ -275,3 +275,18 @@ export async function searchChatMembers(q: string): Promise<ChatMemberHit[]> {
     id, full_name, specialization, avatar_initials,
   }));
 }
+
+/**
+ * ⭐ ״לחזור אליה״ (the owner, 30/10): an admin flags one of her own threads to
+ * come back to it, or clears the flag. Admins only - the RPC checks the role
+ * and the participation again on the database side.
+ */
+export async function setChatStar(conversationId: string, starred: boolean): Promise<void> {
+  const me = await getProfile();
+  if (!me || me.role !== "admin") return;
+  if (!/^[0-9a-f-]{36}$/.test(conversationId)) return;
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_chat_star", { p_conversation: conversationId, p_starred: starred });
+  if (error) throw new Error("הסימון לא נשמר - נסי שוב");
+  revalidatePath("/chat");
+}

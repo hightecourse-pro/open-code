@@ -169,6 +169,15 @@ const OUR_TEMPLATE_HE: Record<string, string> = {
   // The owner's natural continuation after the 24h window (11/10): "היי, / {תוכן} / תודה ויום טוב" - one parameter, no team intro, no emoji.
   // Approved by Meta 13/10; the backup submission (wa_continue_v2) was deleted the same day.
   wa_continue_chat: "המשך שיחה (היי / תוכן / תודה ויום טוב)",
+  // Two more personal continuations (the owner, 30/10): a name, the content, a closing line. Submitted to Meta
+  // 30/10; ״תודה ויום טוב״ had to become ״תודה רבה ויום טוב״ - Meta rejects two variables against four words.
+  wa_hi_thanks_day: "היי {שם} / תוכן / תודה רבה ויום טוב",
+  wa_hi_keep_in_touch: "היי {שם} / תוכן / נהיה בקשר",
+};
+/** Parameter labels for the two-parameter templates (name, content). */
+const PARAM_LABELS_BY_TEMPLATE: Record<string, string[]> = {
+  wa_hi_thanks_day: ["שם הנמענת", "תוכן ההודעה"],
+  wa_hi_keep_in_touch: ["שם הנמענת", "תוכן ההודעה"],
 };
 
 /** The template-only door for NEW conversations (Meta's rule). */
@@ -297,7 +306,7 @@ function NewChatDialog({
                     key={i}
                     value={params[i] ?? ""}
                     onChange={(e) => setParams((p) => p.map((v, j) => (j === i ? e.target.value : v)))}
-                    placeholder={isOurs ? OUR_PARAM_LABELS[i] : `שדה ${i + 1} בתבנית`}
+                    placeholder={(tpl && PARAM_LABELS_BY_TEMPLATE[tpl.name]?.[i]) ?? (isOurs ? OUR_PARAM_LABELS[i] : `שדה ${i + 1} בתבנית`)}
                     className="w-full border border-ink-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-brand-purple"
                   />
                 ))}

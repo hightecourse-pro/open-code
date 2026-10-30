@@ -15,7 +15,8 @@ import { cn, timeAgo } from "@/lib/utils";
 import type { UserRole } from "@/types/database";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { PresenceAvatar, PresenceText } from "@/components/patterns/presence-dot";
-import { editMessage, sendMessage, startConversation, toggleReaction } from "./actions";
+import { ChatStar } from "@/components/patterns/chat-star";
+import { editMessage, sendMessage, setChatStar, startConversation, toggleReaction } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
 
@@ -43,6 +44,10 @@ export default async function ChatPage({
   const me = await requireProfile();
   const { c: activeId, with: withId, filter } = await searchParams;
   const onlyUnread = filter === "unread";
+  // ⭐ ״לחזור אליה״ (the owner, 30/10): admins star a thread to come back to and
+  // can list only the starred ones. A member never sees a star.
+  const isAdmin = me.role === "admin";
+  const onlyStarred = isAdmin && filter === "starred";
   // ?with={profileId}: a deep link that opens (or starts) the 1:1 with that
   // member - lets other screens link INTO a conversation with a plain <a>
   // (e.g. "שאלה על המשרה?" on the apply page, opened in a new tab so her
@@ -54,7 +59,7 @@ export default async function ChatPage({
 
   const { data: conversations } = await supabase
     .from("conversations")
-    .select("id, a_id, b_id, last_message_at, created_at")
+    .select("id, a_id, b_id, last_message_at, created_at, starred_at")
     .order("last_message_at", { ascending: false });
 
   const active = (conversations ?? []).find((c) => c.id === activeId) ?? null;
@@ -224,8 +229,16 @@ export default async function ChatPage({
   const isUnread = (id: string) => (unreadCount.get(id) ?? 0) > 0;
   const unreadConvCount = listedConversations.filter((c) => isUnread(c.id)).length;
   const allCount = listedConversations.length;
-  // "?filter=unread": only the threads she has not opened yet. The open one stays visible.
-  const shownConversations = onlyUnread ? listedConversations.filter((c) => c.id === activeId || isUnread(c.id)) : listedConversations;
+  const isStarred = (c: { starred_at: string | null }) => isAdmin && !!c.starred_at;
+  const starredCount = listedConversations.filter(isStarred).length;
+  // "?filter=unread": only the threads she has not opened yet; "?filter=starred"
+  // (admins): only the starred ones. The open one stays visible either way.
+  const shownConversations = onlyStarred
+    ? listedConversations.filter((c) => c.id === activeId || isStarred(c))
+    : onlyUnread
+      ? listedConversations.filter((c) => c.id === activeId || isUnread(c.id))
+      : listedConversations;
+  const filterOn = onlyUnread || onlyStarred;
 
   const activeIsMyMentor = !!activeOther && myMentorIds.has(activeOther.id);
   const activeSubtitle = activeOther
@@ -304,26 +317,49 @@ export default async function ChatPage({
               ) : (
                 <span data-testid="chat-unread-count">הכול נקרא 💜</span>
               )}
-              {/* the filter is a visible button, not a link hiding in the text (the owner, 22/10) */}
-              {(unreadConvCount > 0 || onlyUnread) &&
-                (onlyUnread ? (
+              {isAdmin && starredCount > 0 && (
+                <>
+                  <span className="text-ink-300">·</span>
+                  <span className="font-bold text-[#B98700]" data-testid="chat-star-count">
+                    ⭐ {starredCount} {starredCount === 1 ? "לחזור אליה" : "לחזור אליהן"}
+                  </span>
+                </>
+              )}
+              {/* the filters are visible buttons, not links hiding in the text (the owner, 22/10) */}
+              <span className="ms-auto flex items-center gap-1">
+                {filterOn ? (
                   <Link
                     href={activeId ? `/chat?c=${activeId}` : "/chat"}
-                    className="ms-auto text-[11px] font-bold border border-ink-200 text-ink-600 hover:border-brand-purple hover:text-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
+                    className="text-[11px] font-bold border border-ink-200 text-ink-600 hover:border-brand-purple hover:text-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
                     data-testid="chat-filter-all"
                   >
                     לכל השיחות
                   </Link>
                 ) : (
-                  <Link
-                    href={`/chat?filter=unread${activeId ? `&c=${activeId}` : ""}`}
-                    className="ms-auto text-[11px] font-bold bg-brand-pink-deep text-white hover:bg-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
-                    title="להציג רק את השיחות שעוד לא פתחת"
-                    data-testid="chat-filter-unread"
-                  >
-                    רק שלא נקראו
-                  </Link>
-                ))}
+                  <>
+                    {unreadConvCount > 0 && (
+                      <Link
+                        href={`/chat?filter=unread${activeId ? `&c=${activeId}` : ""}`}
+                        className="text-[11px] font-bold bg-brand-pink-deep text-white hover:bg-brand-purple rounded-full px-2 py-0.5 whitespace-nowrap"
+                        title="להציג רק את השיחות שעוד לא פתחת"
+                        data-testid="chat-filter-unread"
+                      >
+                        רק שלא נקראו
+                      </Link>
+                    )}
+                    {isAdmin && starredCount > 0 && (
+                      <Link
+                        href={`/chat?filter=starred${activeId ? `&c=${activeId}` : ""}`}
+                        className="text-[11px] font-bold bg-[#FFF2C2] text-[#8A6400] border border-[#F0D27A] hover:bg-[#FFE89A] rounded-full px-2 py-0.5 whitespace-nowrap"
+                        title="להציג רק את השיחות שסימנת בכוכב"
+                        data-testid="chat-filter-starred"
+                      >
+                        ⭐ רק לחזור אליהן
+                      </Link>
+                    )}
+                  </>
+                )}
+              </span>
             </div>
           )}
           {shownConversations.length > 3 && (
@@ -341,6 +377,15 @@ export default async function ChatPage({
               const unread = unreadCount.get(c.id) ?? 0;
               return (
                 <div key={c.id} className="relative">
+                {/* admins: ⭐ ״לחזור אליה״ - a sibling of the row link, never nested in it (30/10) */}
+                {isAdmin && (
+                  <ChatStar
+                    conversationId={c.id}
+                    starred={!!c.starred_at}
+                    action={setChatStar}
+                    className="absolute bottom-1 end-7 z-10"
+                  />
+                )}
                 {/* admins: her file, one click away - a sibling of the row link, never nested in it */}
                 {me.role === "admin" && other && (
                   <Link
@@ -359,10 +404,13 @@ export default async function ChatPage({
                   href={`/chat?c=${c.id}`}
                   className={cn(
                     "flex items-center gap-2.5 p-2.5 rounded-md transition-colors border",
+                    // room at the end of the preview line for the star + the file icon
+                    isAdmin && "pe-14",
                     c.id === activeId
                       ? "bg-tint-pink border-brand-pink"
                       : "border-transparent hover:bg-ink-100"
                   )}
+                  data-starred={isStarred(c) ? "1" : "0"}
                 >
                   <PresenceAvatar lastSeen={other?.last_seen_at} role={other?.role}>
                     <Avatar
@@ -470,6 +518,13 @@ export default async function ChatPage({
                     {isPaidMember(activeOther) && (
                       <span className="text-[10.5px] font-bold bg-tint-pink text-brand-pink-deep px-2 py-0.5 rounded-full">
                         מנויה 💜
+                      </span>
+                    )}
+                    {/* ⭐ the same star, on the open thread too (admins, 30/10) */}
+                    {isAdmin && (
+                      <span className="inline-flex items-center gap-1 text-[11px] text-ink-500" data-testid="chat-star-header">
+                        <ChatStar conversationId={active.id} starred={!!active.starred_at} action={setChatStar} size={17} />
+                        {active.starred_at ? "לחזור אליה" : ""}
                       </span>
                     )}
                   </div>
