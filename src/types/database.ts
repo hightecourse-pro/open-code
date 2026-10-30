@@ -1507,8 +1507,25 @@ export interface Database {
         Relationships: [];
       };
       conversations: {
-        Row: { id: string; a_id: string; b_id: string; last_message_at: string; created_at: string };
-        Insert: { id?: string; a_id: string; b_id: string; last_message_at?: string; created_at?: string };
+        Row: {
+          id: string;
+          a_id: string;
+          b_id: string;
+          last_message_at: string;
+          created_at: string;
+          /** ⭐ ״לחזור אליה״ - set by an admin participant (30/10); null = no star. */
+          starred_at: string | null;
+          starred_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          a_id: string;
+          b_id: string;
+          last_message_at?: string;
+          created_at?: string;
+          starred_at?: string | null;
+          starred_by?: string | null;
+        };
         Update: Partial<Database["public"]["Tables"]["conversations"]["Insert"]>;
         Relationships: [];
       };
@@ -2395,6 +2412,11 @@ export interface Database {
       /** "אין צורך במענה" on a thread (or undo) - by a participant (22/10). */
       set_reply_dismissed: {
         Args: { p_conversation: string; p_dismissed: boolean };
+        Returns: undefined;
+      };
+      /** ⭐ an admin's ״לחזור אליה״ on one of her own threads (30/10); admins only. */
+      set_chat_star: {
+        Args: { p_conversation: string; p_starred: boolean };
         Returns: undefined;
       };
       /** How many of her threads end with the other side's word (22/10). */
