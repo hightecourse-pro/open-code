@@ -8,8 +8,10 @@ import {
   setSessionOpenToAll,
   updateSessionFiles,
 } from "@/app/(admin)/admin/content/actions";
+import { removeShare } from "@/app/(admin)/admin/shares/actions";
 import type { ContentLink } from "@/types/database";
 import { netfreeSafeUrl } from "@/lib/netfree";
+import { SessionShareForm } from "./session-share-form";
 
 /**
  * Everything a session TEACHES, managed on the session itself - reorganized
@@ -76,6 +78,7 @@ function LinkRow({
 export function SessionContentPanel({
   session,
   links,
+  shares,
 }: {
   session: {
     id: string;
@@ -85,6 +88,8 @@ export function SessionContentPanel({
     pre_topics: string | null;
   };
   links: ContentLink[];
+  /** Personal shares of this session (the owner, 1/11) - who, and whether Drive already has it. */
+  shares?: { id: string; name: string; status: string }[];
 }) {
   const recordings = links.filter((l) => l.kind === "video");
   const materials = links.filter((l) => l.kind === "materials");
@@ -221,6 +226,32 @@ export function SessionContentPanel({
             {session.open_to_all ? "פתוח לכל הקהילה ✓ (לחיצה סוגרת למנויות)" : "פתיחה לכל הקהילה"}
           </button>
         </form>
+        {/* personal share - one session, one woman, subscriber or not (the owner, 1/11) */}
+        <div className="flex flex-col gap-1.5 mt-1" data-testid="session-personal-shares">
+          <span className="text-[12px] text-ink-700">
+            <b>שיתוף אישי</b> - גם למי שאינה מנויה: היא תראה רק את הסשן הזה פתוח (הקלטה, קישור זום, חומרים ותזכורות).
+          </span>
+          <SessionShareForm sessionId={session.id} />
+          {(shares ?? []).length > 0 && (
+            <ul className="flex flex-wrap gap-1.5">
+              {(shares ?? []).map((sh) => (
+                <li
+                  key={sh.id}
+                  className="inline-flex items-center gap-1 text-[12px] bg-tint-purple text-brand-purple border border-[#DDC9EC] rounded-full ps-2.5 pe-0.5 py-0.5"
+                  data-testid="session-share-row"
+                >
+                  <span className="font-semibold">{sh.name}</span>
+                  {sh.status === "pending" && <span className="text-ink-500">· הדרייב בדרך</span>}
+                  <form action={removeShare.bind(null, sh.id)}>
+                    <button type="submit" title="הסרת השיתוף" aria-label={`הסרת השיתוף של ${sh.name}`} className="text-ink-400 hover:text-danger cursor-pointer px-1.5">
+                      ✕
+                    </button>
+                  </form>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </Section>
     </div>
   );

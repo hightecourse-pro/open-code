@@ -106,7 +106,10 @@ export async function grantShareManually(
       }
     }
     revalidatePath("/admin/shares");
+    revalidatePath("/admin/sessions");
     revalidatePath("/courses");
+    revalidatePath("/recordings");
+    revalidatePath("/events");
     return { ok: "התוכן כבר פתוח עבורה - סימנו אותו כשיתוף אישי ✓" };
   }
 
@@ -127,8 +130,11 @@ export async function grantShareManually(
   }
 
   revalidatePath("/admin/shares");
+  revalidatePath("/admin/sessions");
   revalidatePath("/courses");
-  return { ok: "פתחנו לה את התוכן ✓ הוא מופיע עכשיו ב״מה משותף למי״." };
+  revalidatePath("/recordings");
+  revalidatePath("/events");
+  return { ok: ownerType === "session" ? "פתחנו לה את הסשן ✓ היא רואה אותו עכשיו באירועים ובהקלטות." : "פתחנו לה את התוכן ✓ הוא מופיע עכשיו ב״מה משותף למי״." };
 }
 
 /**
@@ -156,5 +162,8 @@ export async function removeShare(id: string): Promise<void> {
   }
 
   revalidatePath("/admin/shares");
+  revalidatePath("/admin/sessions");
   revalidatePath("/courses");
+  revalidatePath("/recordings");
+  revalidatePath("/events");
 }

@@ -36,7 +36,7 @@ export default async function RecordingsPage() {
   const paysForSessions = mayOpenSessions(profile);
 
   // Free members read the sanitized views - no video URLs in them at all.
-  const [{ data: recordings }, { data: doneSessions }, { data: myShares }] = await Promise.all([
+  const [{ data: recordings }, { data: doneSessions }, { data: myShares }, { data: sharedSessions }, { data: sharedRecordings }] = await Promise.all([
     supabase
       .from(subscriber ? "recordings" : "recordings_public")
       .select("*")
@@ -59,8 +59,14 @@ export default async function RecordingsPage() {
           .eq("owner_type", "session")
           .eq("status", "shared")
       : Promise.resolve({ data: [] }),
+    // Sessions an admin shared with her personally (the owner, 1/11) - a free
+    // member's only way into a paid session: its materials and curated video.
+    subscriber ? Promise.resolve({ data: [] }) : supabase.from("sessions_shared_with_me").select("*"),
+    subscriber ? Promise.resolve({ data: [] }) : supabase.from("recordings_shared_with_me").select("*"),
   ]);
   const unlockedSessions = new Set((myShares ?? []).map((s) => s.owner_id));
+  const personal = new Map((sharedSessions ?? []).map((s) => [s.id, s]));
+  const personalVideo = new Map((sharedRecordings ?? []).map((r) => [r.id, r.video_url]));
 
   // Finished sessions land here automatically, with their Drive video links
   // (from ניהול תכנים). Sessions already curated into `recordings` are skipped.
@@ -74,8 +80,10 @@ export default async function RecordingsPage() {
   // approval, and a member whose subscription ended, see the locked row rather
   // than a button that would refuse them.
   const inCommunity = profile.status === "active";
-  const mayOpen = (s: { open_to_all: boolean }) =>
-    paysForSessions || (inCommunity && s.open_to_all);
+  // A personal share needs no floor here - the view behind `personal` already
+  // answers only for a member who is not rejected.
+  const mayOpen = (s: { id: string; open_to_all: boolean }) =>
+    paysForSessions || (inCommunity && s.open_to_all) || personal.has(s.id);
   // Drive links are paid material - never fetched for a free member.
   // A free member sees the recordings of sessions the team opened to the whole
   // community; everything else stays paid material. RLS enforces exactly the
@@ -113,9 +121,11 @@ export default async function RecordingsPage() {
           mentorWaiting={profile.role === "mentor"}
           title="הצפייה בהקלטות נפתחת עם מנוי"
           body={
-            openToAllCount > 0
-              ? "כמה סשנים פתחנו לכל הקהילה ואת מוזמנת לצפות בהם עכשיו. שאר ההקלטות נפתחות עם מנוי."
-              : "כאן את רואה מה כבר נלמד בקהילה. עם מנוי כל ההקלטות נפתחות לצפייה מתי שנוח לך."
+            personal.size > 0
+              ? `${personal.size === 1 ? "סשן אחד נפתח לך אישית - הוא מסומן כאן ב״צפייה״." : `${personal.size} סשנים נפתחו לך אישית - הם מסומנים כאן ב״צפייה״.`} שאר ההקלטות נפתחות עם מנוי.`
+              : openToAllCount > 0
+                ? "כמה סשנים פתחנו לכל הקהילה ואת מוזמנת לצפות בהם עכשיו. שאר ההקלטות נפתחות עם מנוי."
+                : "כאן את רואה מה כבר נלמד בקהילה. עם מנוי כל ההקלטות נפתחות לצפייה מתי שנוח לך."
           }
         />
       )}
@@ -159,7 +169,9 @@ export default async function RecordingsPage() {
                     <Lock size={13} /> נפתח עם מנוי
                   </Link>
                 ) : (() => {
-                    const hasMaterials = (materialsBySession.get(s.id)?.length ?? 0) > 0 || materialsUrl(s);
+                    // the free view has no materials_url; a personal share carries it (1/11)
+                    const sessionMaterials = materialsUrl(s) ?? personal.get(s.id)?.materials_url ?? null;
+                    const hasMaterials = (materialsBySession.get(s.id)?.length ?? 0) > 0 || sessionMaterials;
                     const materialsRow = hasMaterials ? (
                       <span className="flex flex-wrap items-center gap-2 text-[12.5px]">
                         <span className="font-semibold text-ink-700">חומרים:</span>
@@ -174,9 +186,9 @@ export default async function RecordingsPage() {
                             {m.title} <ExternalLink size={11} />
                           </a>
                         ))}
-                        {materialsUrl(s) && (
+                        {sessionMaterials && (
                           <a
-                            href={materialsUrl(s)!}
+                            href={sessionMaterials}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 font-semibold text-brand-purple bg-tint-purple border border-[#DDC9EC] rounded-md px-2.5 py-1 hover:bg-tint-indigo"
@@ -232,13 +244,17 @@ export default async function RecordingsPage() {
               as every other session (the owner, 30/8: "כל סשן אמור להיות
               שורה"), not a card grid. */}
           {(recordings ?? []).map((rec) => {
-            const href = subscriber ? videoUrl(rec) ?? "#" : "/join";
+            // A free member with a personal share of this recording's session gets its video too (1/11).
+            const personalRec = !subscriber && !!rec.session_id && personal.has(rec.session_id);
+            const recVideo = videoUrl(rec) ?? (personalRec ? (personalVideo.get(rec.id) ?? null) : null);
+            const canWatch = subscriber || personalRec;
+            const href = canWatch ? recVideo ?? "#" : "/join";
             // Curated links live on `recordings.video_url` - but the WATCHING
             // experience must match the session rows (the owner, 1/9: session
             // #1 opened only externally while #2 embedded): same gate, same
             // inline player.
             const watch =
-              subscriber && rec.session_id && videoUrl(rec) ? (
+              canWatch && rec.session_id && recVideo ? (
                 <ContentGate
                   ownerType="session"
                   ownerId={rec.session_id as string}
@@ -249,11 +265,11 @@ export default async function RecordingsPage() {
                   <div className="flex flex-col gap-2 w-full">
                     <SessionWatch
                       sessionId={rec.session_id as string}
-                      links={[{ id: rec.id, url: videoUrl(rec)! }]}
+                      links={[{ id: rec.id, url: recVideo }]}
                     />
                   </div>
                 </ContentGate>
-              ) : subscriber ? (
+              ) : canWatch ? (
                 <a
                   href={href}
                   target="_blank"
