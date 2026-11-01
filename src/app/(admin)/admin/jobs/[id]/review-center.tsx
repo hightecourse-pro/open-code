@@ -29,6 +29,8 @@ import { askCoordinatorQuestion } from "@/app/(admin)/admin/coordinators/actions
 import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
+import type { MemberHackathonReview } from "@/lib/member-overview";
+import { HackathonStrip } from "./hackathon-strip";
 
 // ----------------------------------------------------------------- data types
 
@@ -127,6 +129,8 @@ export interface ReviewApplication {
   crmNote: string | null;
   /** Note tied to HER × THIS JOB (application_notes) - the table's הערה column. */
   adminNote: string | null;
+  /** Her hackathon submission (the owner, 1/11): the video, and the AI review + score when the viewer may read it. */
+  hackathon?: MemberHackathonReview | null;
 }
 
 // -------------------------------------------------------------------- labels
@@ -1685,6 +1689,12 @@ export function ReviewCenter({
                     {a.profile?.specialization ?? "-"} · {fmtDate(a.submittedAt)}
                   </span>
                   <span className="flex flex-wrap gap-1">
+                    {/* הגישה להאקתון - לסריקה מהירה (the owner, 1/11); the score only when the viewer may read the review. */}
+                    {a.hackathon?.submittedAt && (
+                      <span className="rounded-full bg-tint-pink border border-brand-pink-deep/30 px-2 py-0.5 text-[10.5px] font-bold text-brand-pink-deep" data-testid="review-hackathon-chip">
+                        🏆 האקתון{a.hackathon.autoTotal !== null ? ` · ${a.hackathon.autoTotal}/100` : ""}
+                      </span>
+                    )}
                     {/* חוות דעת המערכת - צ'יפ מהיר לסריקה (the owner, 5/9). */}
                     {a.assessment?.depth && ASSESS_DEPTH[a.assessment.depth] && (
                       <span className={cn("rounded-full px-2 py-0.5 text-[10.5px] font-bold", ASSESS_DEPTH[a.assessment.depth].cls)}>
@@ -1749,6 +1759,10 @@ export function ReviewCenter({
         {/* detail pane */}
         {selected ? (
           <div className="rounded-[14px] border border-ink-200 bg-ink-0 p-4 flex flex-col gap-4">
+            {/* Her hackathon submission, loud and first (the owner, 1/11): the video + the AI review bubble. */}
+            {selected.hackathon?.submittedAt && (
+              <HackathonStrip key={`hk-${selected.applicantId}`} h={selected.hackathon} candidateName={selected.profile?.fullName ?? "המועמדת"} />
+            )}
             {/* Internal note, front and center while flipping through
                 candidates (the owner, 3/9) - admin-only, rides on HER. */}
             <MemberNoteBox key={selected.applicantId} app={selected} />
