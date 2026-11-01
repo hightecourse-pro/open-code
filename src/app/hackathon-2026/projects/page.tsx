@@ -71,7 +71,7 @@ export default function ShowcasePage() {
             {[
               { n: COUNTS.projects, label: "פרויקטים שהוגשו", tilt: "-rotate-2" },
               { n: COUNTS.people, label: "משתתפות", tilt: "rotate-1" },
-              { n: COUNTS.challenges, label: "אתגרים · 3 שותפים", tilt: "-rotate-1" },
+              { n: COUNTS.challenges, label: "אתגרים אמיתיים", tilt: "-rotate-1" },
             ].map((s, i) => (
               <div
                 key={s.label}

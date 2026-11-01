@@ -209,7 +209,7 @@ export function ChallengeCard({ k, count, href, i = 0, compact = false }: { k: C
         </details>
       )}
       <div className="flex items-center justify-between gap-3 mt-auto pt-1">
-        <span className="font-display font-black text-[17px] text-brand-pink-deep" data-testid="sc-challenge-count">
+        <span className="font-display font-black text-[17px] text-brand-pink-deep whitespace-nowrap" data-testid="sc-challenge-count">
           {count} פרויקטים
         </span>
         <Link
