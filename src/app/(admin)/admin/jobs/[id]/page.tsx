@@ -39,6 +39,8 @@ import { ReviewCenter, type ReviewApplication } from "./review-center";
 import { CandidateFinder, type FinderCandidate } from "./candidate-finder";
 import { matchCandidates, studyInfoOf } from "@/lib/admin/candidate-match";
 import { SendCandidatesButton } from "./send-candidates-button";
+import { loadMembersHackathon } from "@/lib/member-overview";
+import { judgeAccessFor } from "@/lib/judging";
 
 // Gemini rides a model-chain with retries - a stormy run outlives the platform
 // default window. Server actions inherit the page segment they POST from.
@@ -90,7 +92,7 @@ export default async function AdminJobPage({
 }) {
   // This page reads employer-portal data via the service role, so gate it
   // explicitly beyond the (admin) layout.
-  await requireRole("admin");
+  const viewer = await requireRole("admin");
   const [{ id }, { tab }] = await Promise.all([params, searchParams]);
   const admin = createAdminClient();
 
@@ -336,6 +338,9 @@ export default async function AdminJobPage({
   // forwards + proactive job_candidates rows, across ALL jobs, with the
   // per-place outcome note.
   const applicantIdsAll = [...new Set((applications ?? []).map((a) => a.applicant_id))];
+  // Her hackathon submission on top of every application (the owner, 1/11): the video, and the AI review + score for
+  // whoever may read it - the judging rule: an appointed judge sees the review only if the owner opened it to her.
+  const hackathonOf = await loadMembersHackathon(applicantIdsAll, { withReport: (await judgeAccessFor(viewer)).autoReport });
   const fwd: Map<string, { jobId: string; when: string | null; status: string | null }[]> = new Map();
   if (applicantIdsAll.length) {
     const [{ data: fwdApps }, { data: fwdCands }] = await Promise.all([
@@ -591,6 +596,7 @@ export default async function AdminJobPage({
       ),
       crmNote: crmNoteOf.get(a.applicant_id) ?? null,
       adminNote: noteOf.get(a.id) ?? null,
+      hackathon: hackathonOf.get(a.applicant_id) ?? null,
     };
   });
 

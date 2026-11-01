@@ -5,7 +5,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { teamKeyOf } from "@/lib/hackathon-submission";
-import { totalOf, ZERO_SCORES } from "@/lib/judging-shared";
+import { totalOf, ZERO_SCORES, type AutoReport } from "@/lib/judging-shared";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { withPrevSurnames } from "@/lib/prev-surname";
 import type { ApplicationStatus } from "@/types/database";
@@ -164,47 +164,119 @@ export interface MemberHackathon {
   autoCapped: boolean;
 }
 
+export interface MemberHackathonReview extends MemberHackathon {
+  /** The automated review without its screenshots (megabytes per report) - null when it never ran, or when the viewer may not read it. */
+  report: AutoReport | null;
+  reportRanAt: string | null;
+}
+
 /** Her hackathon trail: the registration, the team, the submission's links, the automated score. */
 export async function loadMemberHackathon(profileId: string): Promise<MemberHackathon | null> {
+  return (await loadMembersHackathon([profileId])).get(profileId) ?? null;
+}
+
+/**
+ * The same trail for many women at once - the review center shows it on top of
+ * every application (the owner, 1/11: ״בהגשת משרה שים למעלה בצורה בולטת הגישה
+ * להאקתון עם לינק לסרטון + אפשרות לפתוח בועה עם חוות הדעת המלאה של ה-AI
+ * והציון״). One query per table instead of one per applicant. She reaches a
+ * team by her own registration, or as the confirmed partner on someone else's.
+ *
+ * `withReport: false` = the viewer may not read the automated review (an
+ * appointed judge the owner has not opened it to - judgeAccessFor): the report
+ * AND the score it implies stay out.
+ */
+export async function loadMembersHackathon(profileIds: string[], opts?: { withReport?: boolean }): Promise<Map<string, MemberHackathonReview>> {
+  const out = new Map<string, MemberHackathonReview>();
+  const ids = [...new Set(profileIds)];
+  if (ids.length === 0) return out;
   const admin = createAdminClient();
-  const { data: reg } = await admin.from("hackathon_registrations").select("challenge_key, partner_profile_id, partner_confirmed_at").eq("profile_id", profileId).maybeSingle();
-  if (!reg) return null;
-  const teamKey = teamKeyOf(profileId, reg.partner_profile_id, !!reg.partner_confirmed_at);
-  const [{ data: sub }, partner, { data: report }] = await Promise.all([
-    admin.from("hackathon_submissions").select("team_key, product_url, repo_url, video_url, video_path, drive_file_id, submitted_at").eq("team_key", teamKey).maybeSingle(),
-    reg.partner_profile_id ? admin.from("profiles").select("id, full_name").eq("id", reg.partner_profile_id).maybeSingle() : Promise.resolve({ data: null }),
-    admin.from("hackathon_auto_reports").select("report").eq("team_key", teamKey).maybeSingle(),
+  const withReport = opts?.withReport !== false;
+  const [{ data: own }, { data: asPartner }] = await Promise.all([
+    admin.from("hackathon_registrations").select("profile_id, challenge_key, partner_profile_id, partner_confirmed_at").in("profile_id", ids),
+    admin.from("hackathon_registrations").select("profile_id, challenge_key, partner_profile_id, partner_confirmed_at").in("partner_profile_id", ids).not("partner_confirmed_at", "is", null),
   ]);
-  const challenge = CHALLENGES.find((c) => c.key === reg.challenge_key);
-  let videoUrl: string | null = null;
-  let videoKind: MemberHackathon["videoKind"] = null;
-  if (sub?.drive_file_id) {
-    videoUrl = `https://drive.google.com/file/d/${encodeURIComponent(sub.drive_file_id)}/view`;
-    videoKind = "drive";
-  } else if (sub?.video_url) {
-    videoUrl = sub.video_url;
-    videoKind = "link";
-  } else if (sub?.video_path) {
-    const { data: signed } = await admin.storage.from("hackathon").createSignedUrl(sub.video_path, 3600);
-    videoUrl = netfreeSafeUrl(signed?.signedUrl ?? null);
-    videoKind = videoUrl ? "file" : null;
+  const regOf = new Map<string, { challengeKey: string; teamKey: string; partnerId: string | null; partnerConfirmed: boolean }>();
+  for (const r of own ?? []) {
+    regOf.set(r.profile_id, {
+      challengeKey: r.challenge_key,
+      teamKey: teamKeyOf(r.profile_id, r.partner_profile_id, !!r.partner_confirmed_at),
+      partnerId: r.partner_profile_id,
+      partnerConfirmed: !!r.partner_confirmed_at,
+    });
   }
-  const suggested = report?.report && typeof report.report === "object" ? (report.report as { suggested?: Record<string, number> }).suggested : undefined;
-  const auto = suggested ? totalOf({ ...ZERO_SCORES, ...suggested }) : null;
-  const partnerName = partner.data ? (await withPrevSurnames([partner.data]))[0]?.full_name ?? partner.data.full_name : null;
-  return {
-    challengeKey: reg.challenge_key,
-    challengeShort: challenge?.short ?? reg.challenge_key,
-    challengeEmoji: challenge?.emoji ?? "🏆",
-    partnerName,
-    partnerConfirmed: !!reg.partner_confirmed_at,
-    teamKey,
-    submittedAt: sub?.submitted_at ?? null,
-    productUrl: sub?.product_url ?? null,
-    repoUrl: sub?.repo_url ?? null,
-    videoUrl,
-    videoKind,
-    autoTotal: auto?.total ?? null,
-    autoCapped: auto?.capped ?? false,
-  };
+  for (const r of asPartner ?? []) {
+    const me = r.partner_profile_id;
+    if (!me || regOf.has(me)) continue;
+    regOf.set(me, { challengeKey: r.challenge_key, teamKey: teamKeyOf(r.profile_id, me, true), partnerId: r.profile_id, partnerConfirmed: true });
+  }
+  if (regOf.size === 0) return out;
+  const teamKeys = [...new Set([...regOf.values()].map((r) => r.teamKey))];
+  const partnerIds = [...new Set([...regOf.values()].flatMap((r) => (r.partnerId ? [r.partnerId] : [])))];
+  const [{ data: subs }, { data: reports }, { data: partnerRows }] = await Promise.all([
+    admin.from("hackathon_submissions").select("team_key, product_url, repo_url, video_url, video_path, drive_file_id, submitted_at").in("team_key", teamKeys),
+    withReport
+      ? admin.from("hackathon_auto_reports").select("team_key, report, updated_at").in("team_key", teamKeys)
+      : Promise.resolve({ data: [] as { team_key: string; report: unknown; updated_at: string }[] }),
+    partnerIds.length
+      ? admin.from("profiles").select("id, full_name").in("id", partnerIds)
+      : Promise.resolve({ data: [] as { id: string; full_name: string }[] }),
+  ]);
+  const partnerName = new Map((await withPrevSurnames(partnerRows ?? [])).map((p) => [p.id, p.full_name]));
+  const subOf = new Map((subs ?? []).map((s) => [s.team_key, s]));
+  const reportOf = new Map((reports ?? []).map((r) => [r.team_key, r]));
+  // The uploaded files' signed links (1h) - one per team that has one.
+  const signedOf = new Map<string, string | null>();
+  await Promise.all(
+    [...subOf.values()]
+      .filter((s) => !s.drive_file_id && !s.video_url && s.video_path)
+      .map(async (s) => {
+        const { data: signed } = await admin.storage.from("hackathon").createSignedUrl(s.video_path!, 3600);
+        signedOf.set(s.team_key, netfreeSafeUrl(signed?.signedUrl ?? null));
+      })
+  );
+  for (const [profileId, reg] of regOf) {
+    const challenge = CHALLENGES.find((c) => c.key === reg.challengeKey);
+    const sub = subOf.get(reg.teamKey);
+    let videoUrl: string | null = null;
+    let videoKind: MemberHackathon["videoKind"] = null;
+    if (sub?.drive_file_id) {
+      videoUrl = `https://drive.google.com/file/d/${encodeURIComponent(sub.drive_file_id)}/view`;
+      videoKind = "drive";
+    } else if (sub?.video_url) {
+      videoUrl = sub.video_url;
+      videoKind = "link";
+    } else if (sub?.video_path) {
+      videoUrl = signedOf.get(reg.teamKey) ?? null;
+      videoKind = videoUrl ? "file" : null;
+    }
+    const rep = reportOf.get(reg.teamKey);
+    const report = slimReport(rep?.report);
+    const auto = report?.suggested ? totalOf({ ...ZERO_SCORES, ...report.suggested }) : null;
+    out.set(profileId, {
+      challengeKey: reg.challengeKey,
+      challengeShort: challenge?.short ?? reg.challengeKey,
+      challengeEmoji: challenge?.emoji ?? "🏆",
+      partnerName: reg.partnerId ? (partnerName.get(reg.partnerId) ?? null) : null,
+      partnerConfirmed: reg.partnerConfirmed,
+      teamKey: reg.teamKey,
+      submittedAt: sub?.submitted_at ?? null,
+      productUrl: sub?.product_url ?? null,
+      repoUrl: sub?.repo_url ?? null,
+      videoUrl,
+      videoKind,
+      autoTotal: auto?.total ?? null,
+      autoCapped: auto?.capped ?? false,
+      report,
+      reportRanAt: rep?.updated_at ?? null,
+    });
+  }
+  return out;
+}
+
+/** The report without its screenshots - data URIs of megabytes that no list page should carry. */
+function slimReport(raw: unknown): AutoReport | null {
+  if (!raw || typeof raw !== "object") return null;
+  const { screenshots, ...rest } = raw as AutoReport;
+  return { ...rest, hasScreenshot: !!screenshots?.length || !!rest.hasScreenshot };
 }
