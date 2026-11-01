@@ -73,7 +73,20 @@ export async function canAccess(
     // never gets a Drive permission, and a member whose subscription ended
     // can't press her way back in after `queueRevokeAll` took it away.
     if (session.open_to_all) return profile.status === "active";
-    return mayOpenSessions(profile);
+    if (mayOpenSessions(profile)) return true;
+    // A session an admin shared with her personally (the owner, 1/11: ״לשתף
+    // סשן ספציפי למישהי שלא מנויה״). Approved membership is still the floor.
+    if (profile.status !== "active") return false;
+    const { data: personal } = await admin
+      .from("content_shares")
+      .select("id")
+      .eq("profile_id", profileId)
+      .eq("owner_type", "session")
+      .eq("owner_id", ownerId)
+      .eq("granted_manually", true)
+      .neq("status", "revoked")
+      .maybeSingle();
+    return !!personal;
   }
 
   // A course: her active enrolment on THIS course, or a share an admin opened

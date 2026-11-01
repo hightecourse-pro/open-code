@@ -95,6 +95,13 @@ export default async function EventsPage() {
       .limit(6),
   ]);
 
+  // Sessions an admin shared with her personally (the owner, 1/11): their zoom
+  // link and materials, which the free view leaves out. One session, one woman.
+  const { data: sharedRows } = subscriber
+    ? { data: [] as { id: string; zoom_url: string | null; materials_url: string | null }[] }
+    : await supabase.from("sessions_shared_with_me").select("*");
+  const personal = new Map((sharedRows ?? []).map((s) => [s.id, s]));
+
   // A live session ENDS (the owner, 30/8: "צריך להפסיק להיות לייב"): with a
   // duration - when it runs out; without one - two hours after the start.
   // A long hackathon evening stays live by getting a real duration.
@@ -161,6 +168,11 @@ export default async function EventsPage() {
       {!subscriber && (
         <UpgradeNote mentorWaiting={profile.role === "mentor"}>
           את רואה מה מתוכנן - קישורי ההצטרפות והתזכורות נפתחים עם מנוי.
+          {personal.size > 0
+            ? personal.size === 1
+              ? " הסשן שפתחו לך אישית מסומן כאן עם כפתור הצטרפות."
+              : " הסשנים שפתחו לך אישית מסומנים כאן עם כפתור הצטרפות."
+            : ""}
         </UpgradeNote>
       )}
 
@@ -169,6 +181,9 @@ export default async function EventsPage() {
         {upcoming.length > 0 ? (
           upcoming.map((s) => {
             const live = isLive(s);
+            // a subscriber's row carries the link; a personal share brings it for a free member (1/11)
+            const mayJoin = subscriber || personal.has(s.id);
+            const join = joinUrl(s) ?? personal.get(s.id)?.zoom_url ?? null;
             return (
               <div
                 key={s.id}
@@ -219,8 +234,8 @@ export default async function EventsPage() {
                     ) : null}
                     <SessionFiles
                       syllabus={s.syllabus_url ?? null}
-                      materials={materialsUrl(s)}
-                      subscriber={subscriber}
+                      materials={materialsUrl(s) ?? personal.get(s.id)?.materials_url ?? null}
+                      subscriber={subscriber || personal.has(s.id)}
                     />
                   </div>
                   {/* "נושאים שחשוב להכיר" - prep only, so it shows ONLY until
@@ -233,10 +248,10 @@ export default async function EventsPage() {
                   )}
                 </div>
                 {!s.canceled_at &&
-                  (subscriber ? (
-                    joinUrl(s) && (
+                  (mayJoin ? (
+                    join && (
                       <a
-                        href={joinUrl(s)!}
+                        href={join}
                         className="inline-flex items-center gap-1.5 font-display font-semibold text-[13px] px-4 py-2 rounded-md bg-brand-gradient text-white shrink-0"
                       >
                         <Video size={14} /> {live ? "מצטרפת עכשיו!" : "הצטרפות"}
@@ -285,12 +300,12 @@ export default async function EventsPage() {
                 </div>
                 <SessionFiles
                   syllabus={s.syllabus_url ?? null}
-                  materials={materialsUrl(s)}
-                  subscriber={subscriber}
+                  materials={materialsUrl(s) ?? personal.get(s.id)?.materials_url ?? null}
+                  subscriber={subscriber || personal.has(s.id)}
                 />
                 {recordedSessions.has(s.id) && (
                   <a href="/recordings" className="text-brand-purple text-sm font-semibold shrink-0">
-                    {subscriber ? "לצפייה בהקלטה ←" : "להקלטות"}
+                    {subscriber || personal.has(s.id) ? "לצפייה בהקלטה ←" : "להקלטות"}
                   </a>
                 )}
               </div>

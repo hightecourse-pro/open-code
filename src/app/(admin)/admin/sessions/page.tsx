@@ -47,6 +47,32 @@ export default async function AdminSessionsPage() {
     (recordings ?? []).filter((r) => r.session_id).map((r) => [r.session_id as string, r.video_url])
   );
 
+  // Personal shares per session (the owner, 1/11): who the session was opened
+  // to by hand, subscriber or not - shown on the session, removable there.
+  const { data: personalShares } = ids.length
+    ? await supabase
+        .from("content_shares")
+        .select("id, owner_id, profile_id, status")
+        .eq("owner_type", "session")
+        .eq("granted_manually", true)
+        .neq("status", "revoked")
+        .in("owner_id", ids)
+    : { data: [] as never[] };
+  const shareNames = new Map<string, string>();
+  {
+    const pids = [...new Set((personalShares ?? []).map((s) => s.profile_id))];
+    if (pids.length) {
+      const { data: ps } = await supabase.from("profiles").select("id, full_name").in("id", pids);
+      for (const pr of await withPrevSurnames(ps)) shareNames.set(pr.id, pr.full_name);
+    }
+  }
+  const sharesBySession = new Map<string, { id: string; name: string; status: string }[]>();
+  for (const sh of personalShares ?? []) {
+    const arr = sharesBySession.get(sh.owner_id) ?? [];
+    arr.push({ id: sh.id, name: shareNames.get(sh.profile_id) ?? "חברת קהילה", status: sh.status });
+    sharesBySession.set(sh.owner_id, arr);
+  }
+
   // Per-session feedback (the owner, 30/8): average stars + who said what.
   const { data: fbRows } = ids.length
     ? await supabase
@@ -139,6 +165,7 @@ export default async function AdminSessionsPage() {
                 pre_topics: sx.pre_topics ?? null,
               }}
               links={linksOf.get(sx.id) ?? []}
+              shares={sharesBySession.get(sx.id) ?? []}
             />,
           ])
         )}

@@ -1798,6 +1798,24 @@ export interface Database {
         Relationships: [];
       };
       /**
+       * The paid-only columns of the sessions an admin shared with the caller
+       * personally (content_shares.granted_manually, not revoked) - a free
+       * member's way into one specific session (1/11).
+       */
+      sessions_shared_with_me: {
+        Row: { id: string; zoom_url: string | null; materials_url: string | null };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /** The curated recordings of those personally shared sessions, video included. */
+      recordings_shared_with_me: {
+        Row: { id: string; session_id: string | null; video_url: string | null };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
+      /**
        * Every time a member opens course/session material. `owner_type`/
        * `owner_id` are what an admin actually reads ("she watched this
        * session"); `link_id` is the specific video when there is one, and is

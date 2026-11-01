@@ -134,10 +134,27 @@ async function enqueueDueReminders(admin: AdminClient, now: Date) {
     const { data: poolRows } = session.open_to_all
       ? await pool
       : await pool.or("member_tier.eq.paid,role.eq.mentor,role.eq.admin");
-    const rows = (poolRows ?? []).map((p) => ({
+    const recipientIds = new Set((poolRows ?? []).map((p) => p.id));
+    // Plus the women this session was shared with personally (the owner, 1/11) -
+    // the zoom link is theirs for this one session, so the reminders are too.
+    if (!session.open_to_all) {
+      const { data: personal } = await admin
+        .from("content_shares")
+        .select("profile_id")
+        .eq("owner_type", "session")
+        .eq("owner_id", session.id)
+        .eq("granted_manually", true)
+        .neq("status", "revoked");
+      const extra = (personal ?? []).map((r) => r.profile_id).filter((id) => !recipientIds.has(id));
+      if (extra.length) {
+        const { data: activeExtra } = await admin.from("profiles").select("id").in("id", extra).eq("status", "active");
+        for (const p of activeExtra ?? []) recipientIds.add(p.id);
+      }
+    }
+    const rows = [...recipientIds].map((id) => ({
       session_id: session.id,
       stage,
-      profile_id: p.id,
+      profile_id: id,
     }));
     for (let i = 0; i < rows.length; i += 1000) {
       await admin
