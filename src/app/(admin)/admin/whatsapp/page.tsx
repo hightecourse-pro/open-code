@@ -6,7 +6,6 @@ import { fetchAll } from "@/lib/chunk";
 import { getWaConfig, getWaVerifyToken, listWaTemplates, toWaId, waWindowLeftMs } from "@/lib/whatsapp";
 import { markWaContactRead, waInboxState } from "@/lib/whatsapp-inbox";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
-import { netfreeSafeUrl } from "@/lib/netfree";
 import { WaInbox, type WaContactRow, type WaMemberOption, type WaMessageRow, type WaTemplateOption } from "./wa-inbox";
 
 export const metadata: Metadata = { title: "וואטסאפ" };
@@ -104,17 +103,13 @@ export default async function AdminWhatsAppPage({
         .limit(500)
     : { data: [] };
 
-  // Short-lived signed URLs for the thread's media - the bucket is private.
+  // The thread's media through our own team-only route - no expiry. A signed
+  // storage link made at render time died after an hour in a tab kept open,
+  // and a voice note showed as a dead player (the owner, 1/11: ״בווצאפ אני
+  // לא מצליחה לשמוע הקלטה״); same domain for Netfree either way.
   const mediaUrlOf = new Map<string, string>();
-  const withMedia = (messages ?? []).filter((m) => m.media_path);
-  if (withMedia.length) {
-    const { data: signed } = await admin.storage
-      .from("wa-media")
-      .createSignedUrls(withMedia.map((m) => m.media_path!), 3600);
-    withMedia.forEach((m, i) => {
-      const u = signed?.[i]?.signedUrl;
-      if (u) mediaUrlOf.set(m.id, netfreeSafeUrl(u));
-    });
+  for (const m of messages ?? []) {
+    if (m.media_path) mediaUrlOf.set(m.id, `/api/admin/whatsapp/media/${m.id}`);
   }
 
   const rows: WaContactRow[] = (contacts ?? []).map((ct) => ({

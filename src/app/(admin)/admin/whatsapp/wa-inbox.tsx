@@ -131,6 +131,28 @@ function Linkify({ text }: { text: string }) {
   );
 }
 
+/**
+ * A voice note: the player, and under it a download link - for a browser that
+ * cannot play Ogg Opus (Safari) or a load that failed, so the recording is
+ * never out of reach (the owner, 1/11).
+ */
+function AudioNote({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      <audio src={src} controls preload="metadata" className="max-w-[240px]" onError={() => setFailed(true)} data-testid="wa-audio" />
+      <a
+        href={`${src}?download=1`}
+        className={cn("text-[11px] underline", failed ? "font-bold" : "text-ink-500")}
+        data-testid="wa-audio-download"
+        data-failed={failed ? "1" : "0"}
+      >
+        {failed ? "ההקלטה לא נטענה כאן - להורדה ולהאזנה מהמחשב" : "להורדת ההקלטה"}
+      </a>
+    </span>
+  );
+}
+
 function MediaBubble({ m }: { m: WaMessageRow }) {
   if (!m.mediaUrl) return null;
   if (m.kind === "image" || m.kind === "sticker") {
@@ -144,7 +166,7 @@ function MediaBubble({ m }: { m: WaMessageRow }) {
     return <video src={m.mediaUrl} controls className="rounded-lg max-h-64 max-w-full" />;
   }
   if (m.kind === "audio") {
-    return <audio src={m.mediaUrl} controls className="max-w-[240px]" />;
+    return <AudioNote src={m.mediaUrl} />;
   }
   return (
     <a
