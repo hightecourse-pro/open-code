@@ -147,8 +147,9 @@ async function enqueueDueReminders(admin: AdminClient, now: Date) {
         .neq("status", "revoked");
       const extra = (personal ?? []).map((r) => r.profile_id).filter((id) => !recipientIds.has(id));
       if (extra.length) {
-        const { data: activeExtra } = await admin.from("profiles").select("id").in("id", extra).eq("status", "active");
-        for (const p of activeExtra ?? []) recipientIds.add(p.id);
+        // a pending or paused member counts here - the admin chose her for this session
+        const { data: stillHere } = await admin.from("profiles").select("id").in("id", extra).in("status", ["active", "pending", "paused"]);
+        for (const p of stillHere ?? []) recipientIds.add(p.id);
       }
     }
     const rows = [...recipientIds].map((id) => ({

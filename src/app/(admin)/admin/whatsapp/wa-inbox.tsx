@@ -173,11 +173,14 @@ const OUR_TEMPLATE_HE: Record<string, string> = {
   // 30/10; ״תודה ויום טוב״ had to become ״תודה רבה ויום טוב״ - Meta rejects two variables against four words.
   wa_hi_thanks_day: "היי {שם} / תוכן / תודה רבה ויום טוב",
   wa_hi_keep_in_touch: "היי {שם} / תוכן / נהיה בקשר",
+  // the first submission sat ״pending״ for two days; deleted and resubmitted 1/11 under _v2 (Meta kept the old name busy)
+  wa_hi_keep_in_touch_v2: "היי {שם} / תוכן / נהיה בקשר",
 };
 /** Parameter labels for the two-parameter templates (name, content). */
 const PARAM_LABELS_BY_TEMPLATE: Record<string, string[]> = {
   wa_hi_thanks_day: ["שם הנמענת", "תוכן ההודעה"],
   wa_hi_keep_in_touch: ["שם הנמענת", "תוכן ההודעה"],
+  wa_hi_keep_in_touch_v2: ["שם הנמענת", "תוכן ההודעה"],
 };
 
 /** The template-only door for NEW conversations (Meta's rule). */

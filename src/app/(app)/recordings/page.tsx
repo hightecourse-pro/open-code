@@ -80,8 +80,10 @@ export default async function RecordingsPage() {
   // approval, and a member whose subscription ended, see the locked row rather
   // than a button that would refuse them.
   const inCommunity = profile.status === "active";
+  // A personal share needs no floor here - the view behind `personal` already
+  // answers only for a member who is not rejected.
   const mayOpen = (s: { id: string; open_to_all: boolean }) =>
-    paysForSessions || (inCommunity && (s.open_to_all || personal.has(s.id)));
+    paysForSessions || (inCommunity && s.open_to_all) || personal.has(s.id);
   // Drive links are paid material - never fetched for a free member.
   // A free member sees the recordings of sessions the team opened to the whole
   // community; everything else stays paid material. RLS enforces exactly the

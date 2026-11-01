@@ -75,8 +75,9 @@ export async function canAccess(
     if (session.open_to_all) return profile.status === "active";
     if (mayOpenSessions(profile)) return true;
     // A session an admin shared with her personally (the owner, 1/11: ״לשתף
-    // סשן ספציפי למישהי שלא מנויה״). Approved membership is still the floor.
-    if (profile.status !== "active") return false;
+    // סשן ספציפי למישהי שלא מנויה״) - ״not a subscriber״ here means a pending
+    // or paused membership, so those pass; only rejected (above) and left don't.
+    if (profile.status === "left") return false;
     const { data: personal } = await admin
       .from("content_shares")
       .select("id")
