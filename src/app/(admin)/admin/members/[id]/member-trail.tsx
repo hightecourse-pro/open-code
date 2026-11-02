@@ -160,11 +160,7 @@ export function MemberHackathonCard({ h }: { h: MemberHackathon | null }) {
           </span>
         )}
         {h.submittedAt ? <Badge variant="mint">הגישה ✓ {DMY.format(new Date(h.submittedAt))}</Badge> : <Badge variant="gray">לא הגישה</Badge>}
-        {h.autoTotal !== null && (
-          <span className="text-ink-600">
-            · בדיקה אוטומטית <b className="text-ink-900">{h.autoTotal}</b>/100{h.autoCapped ? " (מוגבל)" : ""}
-          </span>
-        )}
+        {/* the automated check's score is not shown here (the owner, 2/11: scores only inside the detail) */}
       </div>
       {h.submittedAt && (
         <div className="flex items-center gap-2 flex-wrap">

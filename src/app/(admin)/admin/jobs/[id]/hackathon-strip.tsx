@@ -104,7 +104,7 @@ function ReviewBubble({ h, report, candidateName }: { h: MemberHackathonReview; 
         aria-haspopup="dialog"
         aria-expanded={open}
       >
-        <Sparkles size={13} /> חוות הדעת של ה-AI{suggested ? ` · ${suggested.total}/100` : ""}
+        <Sparkles size={13} /> חוות הדעת של ה-AI
       </button>
       {open &&
         typeof document !== "undefined" &&

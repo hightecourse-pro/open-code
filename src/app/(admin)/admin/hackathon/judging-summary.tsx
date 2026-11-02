@@ -98,7 +98,7 @@ export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; chall
       <div className="flex items-center gap-3 flex-wrap">
         <div>
           <h3 className="font-display text-base font-bold">השוואת הציונים והמלצה</h3>
-          <p className="text-[12.5px] text-ink-500 mt-0.5">כל שופטת בעמודה משלה, הבדיקה האוטומטית לצידן, ממוצע ודירוג בכל אתגר. שלוש הראשונות בכל אתגר מסומנות ״מומלצת לגמר״; פער מעל 15 בין שופטות מסומן.</p>
+          <p className="text-[12.5px] text-ink-500 mt-0.5">כל שופטת בעמודה משלה, ממוצע ודירוג בכל אתגר. שלוש הראשונות בכל אתגר מסומנות ״מומלצת לגמר״; פער מעל 15 בין שופטות מסומן. ציון הבדיקה האוטומטית נשאר בפירוט של כל פרויקט (ובייצוא).</p>
         </div>
         <Button type="button" size="sm" variant="secondary" className="ms-auto" onClick={exportCsv} disabled={rows.length === 0}>
           ייצוא ציונים CSV
@@ -124,7 +124,6 @@ export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; chall
         >
           <option value="rank">לפי דירוג</option>
           <option value="average">לפי ממוצע השופטות</option>
-          <option value="auto">לפי הבדיקה האוטומטית</option>
           <option value="team">לפי שם</option>
         </select>
         <span className="text-[12px] text-ink-500">או לחיצה על כותרת עמודה</span>
@@ -155,7 +154,7 @@ export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; chall
                       </button>
                     </th>
                   ))}
-                  {th("auto", "בדיקה אוטומטית", "text-center")}
+                  {/* the automated check's score is not a column any more (the owner, 2/11: scores only inside the detail) */}
                   {th("average", "ממוצע", "text-center")}
                   <th className="text-start px-2.5 py-1.5 font-semibold">המלצה</th>
                 </tr>
@@ -175,7 +174,6 @@ export function JudgingSummary({ rows, challenges }: { rows: SummaryRow[]; chall
                           </td>
                         );
                       })}
-                      <td className="px-2.5 py-1.5 text-center tabular-nums text-ink-600">{r.auto ?? <span className="text-ink-300">-</span>}</td>
                       <td className="px-2.5 py-1.5 text-center tabular-nums font-bold text-ink-900">{r.average ?? <span className="text-ink-300 font-normal">-</span>}</td>
                       <td className="px-2.5 py-1.5">
                         <span className="inline-flex items-center gap-1.5 flex-wrap">

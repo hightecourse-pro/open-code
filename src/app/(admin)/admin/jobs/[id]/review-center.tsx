@@ -1692,7 +1692,7 @@ export function ReviewCenter({
                     {/* הגישה להאקתון - לסריקה מהירה (the owner, 1/11); the score only when the viewer may read the review. */}
                     {a.hackathon?.submittedAt && (
                       <span className="rounded-full bg-tint-pink border border-brand-pink-deep/30 px-2 py-0.5 text-[10.5px] font-bold text-brand-pink-deep" data-testid="review-hackathon-chip">
-                        🏆 האקתון{a.hackathon.autoTotal !== null ? ` · ${a.hackathon.autoTotal}/100` : ""}
+                        🏆 האקתון
                       </span>
                     )}
                     {/* חוות דעת המערכת - צ'יפ מהיר לסריקה (the owner, 5/9). */}
