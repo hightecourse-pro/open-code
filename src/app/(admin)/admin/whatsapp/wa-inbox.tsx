@@ -612,7 +612,14 @@ export function WaInbox({
             </div>
 
             <div ref={listRef} className="flex-1 min-h-0 max-h-[440px] overflow-y-auto p-4 flex flex-col gap-1.5 bg-ink-50/40">
-              {messages.map((m) => (
+              {messages.map((m) =>
+                m.kind === "system" ? (
+                  // Meta's notice (a number change, a device change) - a grey line in the middle, not a bubble (the owner, 2/11)
+                  <div key={m.id} className="self-center max-w-[88%] text-center text-[12px] text-ink-600 bg-ink-100 rounded-full px-3.5 py-1 my-1" data-testid="wa-system">
+                    {m.body}
+                    <span className="text-ink-400"> · {TIME_IL.format(new Date(m.created_at))}</span>
+                  </div>
+                ) : (
                 <div
                   key={m.id}
                   className={cn("flex flex-col max-w-[75%]", m.direction === "out" ? "self-end items-end" : "self-start items-start")}
@@ -638,7 +645,8 @@ export function WaInbox({
                     {m.status === "failed" && m.error && ` - ${m.error}`}
                   </span>
                 </div>
-              ))}
+                )
+              )}
               {messages.length === 0 && (
                 <p className="text-sm text-ink-500 text-center my-auto">אין הודעות בשיחה הזו</p>
               )}

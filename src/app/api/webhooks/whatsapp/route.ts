@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { formatSharedContacts, formatSharedLocation, type WaSharedContact, type WaSharedLocation } from "@/lib/whatsapp-format";
+import { formatSharedContacts, formatSharedLocation, formatSystemNotice, type WaSharedContact, type WaSharedLocation, type WaSystemNotice } from "@/lib/whatsapp-format";
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
@@ -53,6 +53,8 @@ type WaInboundMessage = {
   contacts?: WaSharedContact[];
   /** A shared location (type "location"). */
   location?: WaSharedLocation;
+  /** Meta's own notice (type "system"): the contact changed her number, or her device identity changed. */
+  system?: WaSystemNotice;
 };
 type WaWebhookValue = {
   contacts?: { wa_id: string; profile?: { name?: string } }[];
@@ -160,6 +162,10 @@ export async function POST(req: Request) {
             .maybeSingle();
           const quietBefore =
             !prev?.last_inbound_at || Date.now() - new Date(prev.last_inbound_at).getTime() > 15 * 60_000;
+          // Meta's own notice (the owner, 2/11: ״תציג גם הודעות מערכת אצלנו״) - a
+          // number change, a device change. Nobody wrote to us, so it never marks
+          // the conversation unread / awaiting a reply and never rings the mail.
+          const isSystem = m.type === "system";
           // Contact row - upsert by wa_id, keep the freshest pushed name.
           const { data: contact } = await admin
             .from("wa_contacts")
@@ -168,13 +174,29 @@ export async function POST(req: Request) {
                 wa_id: m.from,
                 display_name: nameOf.get(m.from) ?? undefined,
                 last_message_at: new Date().toISOString(),
-                last_inbound_at: new Date().toISOString(),
+                ...(isSystem ? {} : { last_inbound_at: new Date().toISOString() }),
               },
               { onConflict: "wa_id" }
             )
             .select("id, display_name")
             .single();
           if (!contact) continue;
+          if (isSystem) {
+            await admin.from("wa_messages").upsert(
+              {
+                contact_id: contact.id,
+                direction: "in",
+                body: formatSystemNotice(m.system, m.from).slice(0, 4000),
+                kind: "system",
+                wa_message_id: m.id,
+                status: "received",
+                email_notified_at: new Date().toISOString(),
+                raw: m as unknown as import("@/types/database").Json,
+              },
+              { onConflict: "wa_message_id", ignoreDuplicates: true }
+            );
+            continue;
+          }
           // An emoji reaction (the owner, 1/9: showed as an ugly placeholder)
           // renders as a friendly line quoting what was reacted to. A removed
           // reaction (empty emoji) is silently ignored.

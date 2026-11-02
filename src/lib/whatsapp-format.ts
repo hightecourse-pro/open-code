@@ -56,6 +56,41 @@ const WA_INVISIBLE = new RegExp(`[${ch(0x200b, 0x200c, 0x200d, 0xfeff, 0x200e, 0
 const WA_BREAKS = new RegExp(`[${ch(0x00a0, 0x2028, 0x2029, 0x09, 0x0d, 0x0a)}]+`, "g");
 const WA_CONTROL = new RegExp(`[${ch(0x01)}-${ch(0x1f)}${ch(0x7f)}]`, "g");
 
+/** Meta's "system" message payload - the contact changed her number, or her device identity changed. */
+export interface WaSystemNotice {
+  type?: string;
+  body?: string;
+  /** The contact's NEW WhatsApp id after a number change. */
+  wa_id?: string;
+  identity?: string;
+}
+
+/** 972507313233 → 050-7313233; anything else stays as +number. */
+export function prettyWaNumber(waId: string): string {
+  const d = String(waId ?? "").replace(/\D/g, "");
+  if (/^972\d{9}$/.test(d)) return `0${d.slice(3, 5)}-${d.slice(5)}`;
+  return d ? `+${d}` : "";
+}
+
+/**
+ * The Hebrew line the team inbox shows for a system notice (the owner, 2/11: ״תציג גם הודעות מערכת
+ * אצלנו״). A number change names both numbers; a device change says so; anything else quotes Meta's text.
+ */
+export function formatSystemNotice(sys: WaSystemNotice | undefined | null, from: string): string {
+  const type = (sys?.type ?? "").toLowerCase();
+  const body = sys?.body ?? "";
+  if (/changed_number/.test(type) || /changed from .+ to .+/i.test(body)) {
+    const m = body.match(/from\s+\+?(\d+)\s+to\s+\+?(\d+)/i);
+    const oldN = m?.[1] ?? from;
+    const newN = sys?.wa_id ?? m?.[2] ?? "";
+    return newN
+      ? `איש הקשר החליף מספר בווטסאפ: מ-${prettyWaNumber(oldN)} ל-${prettyWaNumber(newN)}. הודעות חדשות ממנה יגיעו מהמספר החדש.`
+      : `איש הקשר החליף מספר בווטסאפ (${prettyWaNumber(oldN)}).`;
+  }
+  if (/identity/.test(type)) return "הזיהוי של המכשיר של איש הקשר השתנה (מכשיר חדש או התקנה מחדש של ווטסאפ).";
+  return body ? `הודעת מערכת מווטסאפ: ${body}` : "הודעת מערכת מווטסאפ.";
+}
+
 export function cleanWaParam(value: string): string {
   return value.replace(WA_INVISIBLE, "").replace(WA_BREAKS, " ").replace(WA_CONTROL, " ").replace(/ {2,}/g, " ").trim();
 }
