@@ -71,7 +71,7 @@ export function StatsDashboard() {
   ];
   const splitTotal = s.solo + s.pairs;
   return (
-    <section id="numbers" className="px-4 sm:px-6 pb-14 scroll-mt-14" data-testid="sc-dash">
+    <section id="numbers" className="px-4 sm:px-6 pt-16 pb-14 scroll-mt-14" data-testid="sc-dash">
       <div className="max-w-6xl mx-auto">
         <Reveal className="text-center mb-7">
           <span className="font-mono text-xs text-brand-pink-deep">&lt;במספרים/&gt;</span>

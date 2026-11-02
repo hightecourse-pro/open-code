@@ -2,8 +2,8 @@
 // by challenge and by free-text search; each one opens to its video, its live system in the cloud,
 // ״מה שמעבר לאתגר״, the technologies and one personal sentence per member. PUBLIC - no login; the
 // texts are the printed booklet's, nothing judged is shown. The challenges read like the booklet.
-// 2/11 (the owner): a short top - the logo, one line, two buttons - and a numbers dashboard
-// instead of the long text.
+// 2/11 (the owner): a short top - the logo, one line, two buttons - instead of the long text, and a
+// numbers dashboard after the projects, before the employers' call (not at the top).
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { CHALLENGE_ORDER, COUNTS, PROJECTS, SHOWCASE_PATH, projectsOf, topTech } from "@/lib/hackathon-showcase";
@@ -49,8 +49,9 @@ export default function ShowcasePage() {
             <HackathonLogo priority className="block w-full" />
             <span className="sr-only">הפרויקטים של האקתון AI קוד פתוח 2026</span>
           </h1>
-          <p className="font-display font-black text-[25px] sm:text-[32px] leading-tight text-ink-900 max-w-2xl" style={{ textWrap: "balance" }} data-testid="sc-headline">
-            <span className="sc-grad">{COUNTS.projects} מערכות AI עובדות.</span> {COUNTS.people} מפתחות. {COUNTS.challenges} אתגרים אמיתיים.
+          <p className="font-display font-black text-[25px] sm:text-[32px] leading-tight text-ink-900 max-w-2xl" data-testid="sc-headline">
+            <span className="sc-grad block">{COUNTS.projects} מערכות AI עובדות.</span>
+            <span className="whitespace-nowrap">{COUNTS.people} מפתחות.</span> <span className="whitespace-nowrap">{COUNTS.challenges} אתגרים אמיתיים.</span>
           </p>
           <p className="t-body text-ink-700 max-w-xl">לכל פרויקט: סרטון, מערכת חיה בענן, הטכנולוגיות ומשפט אישי של מי שבנתה אותו.</p>
           <div className="flex items-center justify-center gap-3 flex-wrap mt-1">
@@ -63,9 +64,6 @@ export default function ShowcasePage() {
           </div>
         </div>
       </section>
-
-      {/* ─────────────────────────── the numbers ─────────────────────────── */}
-      <StatsDashboard />
 
       {/* a ticker of the technologies they built with */}
       <div className="bg-brand-gradient py-2 overflow-hidden" dir="ltr" aria-hidden>
@@ -114,6 +112,10 @@ export default function ShowcasePage() {
       <Suspense fallback={<div className="max-w-6xl mx-auto px-4 py-16 text-center text-ink-500">טוענת את הפרויקטים…</div>}>
         <Explorer projects={PROJECTS} topTech={tech} />
       </Suspense>
+
+      {/* ─────────────────────────── the numbers ─────────────────────────── */}
+      {/* after the projects (the owner, 2/11: not at the top) - the summary before the employers' call */}
+      <StatsDashboard />
 
       <Wave flip tint="#FBF7FF" />
       <div className="bg-[#FBF7FF]">

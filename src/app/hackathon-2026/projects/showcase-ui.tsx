@@ -66,6 +66,9 @@ export function TopBar({ onProjectPage = false }: { onProjectPage?: boolean }) {
           <Link href={anchor("projects")} className="px-2.5 py-1.5 rounded-full hover:bg-tint-pink hover:text-brand-pink-deep transition-colors">
             הפרויקטים
           </Link>
+          <Link href={anchor("numbers")} className="px-2.5 py-1.5 rounded-full hover:bg-tint-pink hover:text-brand-pink-deep transition-colors hidden sm:block">
+            במספרים
+          </Link>
           <Link href={anchor("employers")} className="px-3 py-1.5 rounded-full bg-brand-gradient text-white shadow-sm hover:-translate-y-0.5 transition-transform">
             למעסיקים
           </Link>
