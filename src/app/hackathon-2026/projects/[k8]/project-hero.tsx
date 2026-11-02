@@ -96,7 +96,7 @@ export function ProjectHero({ p }: { p: ShowcaseProject }) {
               className="inline-flex items-center gap-2 rounded-full bg-brand-gradient text-white font-bold text-[16px] px-5 py-2.5 shadow-md hover:-translate-y-0.5 transition-transform"
               data-testid="sc-play-btn"
             >
-              🎬 לצפייה בסרטון
+              לצפייה בסרטון
             </button>
           ) : p.video?.link ? (
             <a
@@ -106,7 +106,7 @@ export function ProjectHero({ p }: { p: ShowcaseProject }) {
               className="inline-flex items-center gap-2 rounded-full bg-brand-gradient text-white font-bold text-[16px] px-5 py-2.5 shadow-md hover:-translate-y-0.5 transition-transform"
               data-testid="sc-video-link"
             >
-              🎬 לצפייה בסרטון ↗
+              לצפייה בסרטון ↗
             </a>
           ) : null}
           {p.productUrl && (
@@ -117,7 +117,7 @@ export function ProjectHero({ p }: { p: ShowcaseProject }) {
               className="inline-flex items-center gap-2 rounded-full bg-white border-2 border-brand-purple text-brand-purple font-bold text-[16px] px-5 py-2.5 shadow-[3px_4px_0_0_#EDE4F7] hover:bg-brand-purple hover:text-white transition-colors"
               data-testid="sc-live"
             >
-              🌐 למערכת החיה בענן ↗
+              למערכת החיה בענן ↗
             </a>
           )}
         </div>

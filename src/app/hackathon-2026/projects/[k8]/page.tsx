@@ -56,7 +56,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
             </Link>
             <span className="font-mono">&lt;</span>
             <Link href={`${SHOWCASE_PATH}?ch=${p.challenge}#projects`} className="font-bold text-ink-700 hover:underline">
-              {c.emoji} {c.short}
+              {c.short}
             </Link>
             <span className="font-mono">&lt;</span>
             <span className="text-ink-900">{teamName(p)}</span>
@@ -67,8 +67,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-10 items-start">
             <Reveal>
               <section className="bg-white border-2 border-ink-900/10 shadow-[5px_6px_0_0_#EDE4F7] p-6 rotate-[0.6deg] hover:rotate-0 transition-transform" style={{ borderRadius: "20px 28px 22px 26px" }} data-testid="sc-tech-section">
-                <span className="font-mono text-xs text-brand-pink-deep">&lt;טכנולוגיות/&gt;</span>
-                <h2 className="font-display font-black text-[22px] mt-1 text-ink-900">הטכנולוגיות שבנו איתן</h2>
+                <h2 className="font-display font-black text-[22px] text-ink-900">הטכנולוגיות שבנו איתן</h2>
                 <p className="text-[14px] text-ink-500 mt-0.5">לחיצה על טכנולוגיה מציגה את כל הפרויקטים שנבנו איתה.</p>
                 <div className="flex flex-wrap gap-2 mt-4">
                   {p.tech.map((t) => (
@@ -108,8 +107,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
       <section className="px-6 py-14 bg-[#FBF7FF] relative" data-testid="sc-project-challenge">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-8 items-start">
           <Reveal>
-            <span className="font-mono text-xs text-brand-pink-deep">&lt;האתגר/&gt;</span>
-            <h2 className="font-display text-[28px] font-black mt-1 -rotate-1 relative inline-block text-ink-900">
+            <h2 className="font-display text-[28px] font-black relative inline-block text-ink-900">
               האתגר שהפרויקט הזה פותר
               <Squiggle className="absolute -bottom-3 right-2 w-28 h-3" />
             </h2>
@@ -135,8 +133,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
         <section className="px-6 py-14">
           <div className="max-w-6xl mx-auto">
             <Reveal className="text-center mb-8">
-              <span className="font-mono text-xs text-brand-pink-deep">&lt;עוד/&gt;</span>
-              <h2 className="font-display text-[26px] font-black mt-1 rotate-1 text-ink-900">עוד פרויקטים באתגר של {c.short}</h2>
+              <h2 className="font-display text-[26px] font-black text-ink-900">עוד פרויקטים באתגר של {c.short}</h2>
             </Reveal>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="sc-more">
               {more.map((s, i) => (

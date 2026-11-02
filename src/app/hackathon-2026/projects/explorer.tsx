@@ -58,15 +58,12 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
         <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2.5">
           <div className="flex items-center gap-2 flex-wrap">
             <label className="relative flex-1 min-w-[240px]">
-              <span className="absolute inset-y-0 start-3.5 flex items-center text-[18px]" aria-hidden>
-                🔍
-              </span>
               <input
                 type="search"
                 value={q}
                 onChange={(e) => onType(e.target.value)}
                 placeholder="חיפוש חופשי: שם, טכנולוגיה, מילה מהתיאור…"
-                className="w-full h-11 ps-11 pe-4 rounded-full bg-white border-2 border-ink-900/10 focus:border-brand-pink focus:outline-none text-[15.5px] text-ink-900 placeholder:text-ink-400 shadow-[3px_4px_0_0_#F3C6DD] focus:shadow-[3px_4px_0_0_#E0418D] transition-shadow"
+                className="w-full h-11 ps-5 pe-4 rounded-full bg-white border-2 border-ink-900/10 focus:border-brand-pink focus:outline-none text-[15.5px] text-ink-900 placeholder:text-ink-400 shadow-[3px_4px_0_0_#F3C6DD] focus:shadow-[3px_4px_0_0_#E0418D] transition-shadow"
                 aria-label="חיפוש בפרויקטים"
                 data-testid="sc-search"
               />
@@ -121,10 +118,7 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
           </div>
         ) : (
           <div className="max-w-md mx-auto text-center py-16 sc-pop" data-testid="sc-empty">
-            <span className="text-[44px]" aria-hidden>
-              🔎
-            </span>
-            <p className="font-display font-black text-[22px] text-ink-900 mt-2">לא מצאנו פרויקט שמתאים לחיפוש הזה</p>
+            <p className="font-display font-black text-[22px] text-ink-900">לא מצאנו פרויקט שמתאים לחיפוש הזה</p>
             <p className="t-body text-ink-700 mt-1">נסו שם אחר, טכנולוגיה, או מילה מהתיאור - או הסירו את הסינון.</p>
             <button type="button" onClick={clearAll} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand-gradient text-white font-bold px-5 py-2 shadow-md">
               להצגת כל הפרויקטים
@@ -138,7 +132,6 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
 
 function ChallengePill({ k, on, count, onClick }: { k: ChallengeKey | ""; on: boolean; count: number; onClick: () => void }) {
   const label = k ? CHALLENGE_INFO[k].short : "הכל";
-  const emoji = k ? CHALLENGE_INFO[k].emoji : "✦";
   return (
     <button
       type="button"
@@ -151,7 +144,6 @@ function ChallengePill({ k, on, count, onClick }: { k: ChallengeKey | ""; on: bo
       data-ch={k}
       aria-pressed={on}
     >
-      <span aria-hidden>{emoji}</span>
       {label}
       <span className={`font-mono text-[11.5px] ${on ? "text-white/85" : "text-ink-500"}`}>{count}</span>
     </button>

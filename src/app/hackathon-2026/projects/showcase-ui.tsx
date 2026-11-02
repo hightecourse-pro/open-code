@@ -82,7 +82,6 @@ export function ChallengeBadge({ k, className = "" }: { k: ChallengeKey; classNa
   const c = CHALLENGE_INFO[k];
   return (
     <span className={`inline-flex items-center gap-1 rounded-full bg-white/95 border border-ink-900/10 text-ink-900 text-[12.5px] font-bold px-2.5 py-0.5 shadow-sm ${className}`} data-testid="sc-badge" data-ch={k}>
-      <span aria-hidden>{c.emoji}</span>
       {c.short}
     </span>
   );
@@ -183,9 +182,6 @@ export function ChallengeCard({ k, count, href, i = 0, compact = false }: { k: C
             <img src={l} alt="" className="h-10 w-auto max-w-[140px] object-contain" />
           </span>
         ))}
-        <span className="ms-auto text-[30px] h26-wiggle" style={{ animationDelay: `${i * 0.7}s` }} aria-hidden>
-          {c.emoji}
-        </span>
       </div>
       <div>
         <h3 className="font-display font-black text-[23px] leading-tight text-ink-900">{c.title}</h3>
@@ -203,7 +199,7 @@ export function ChallengeCard({ k, count, href, i = 0, compact = false }: { k: C
             <span className="font-mono group-open/brief:rotate-90 transition-transform">&gt;</span>
           </summary>
           <div className="mt-3 flex flex-col gap-2 bg-white/80 border border-ink-100 rounded-[16px] p-4" data-testid="sc-brief">
-            <div className="font-mono text-[13.5px] text-brand-pink-deep">{"// האתגר"}</div>
+            <div className="font-display font-black text-[14.5px] text-brand-pink-deep">האתגר</div>
             <p className="text-[15px] text-ink-900 leading-relaxed">{brief.challenge}</p>
             {brief.details?.length ? (
               <ul className="list-disc ps-5 text-[14.5px] text-ink-700 leading-relaxed flex flex-col gap-1">
@@ -240,8 +236,7 @@ export function EmployerCta() {
       <div className="max-w-3xl mx-auto bg-brand-gradient text-white p-8 sm:p-10 text-center relative overflow-hidden rotate-[-0.5deg]" style={{ borderRadius: "28px 22px 30px 24px" }} data-testid="sc-employers">
         <span aria-hidden className="h26-blob absolute -top-10 -right-10 w-44 h-44 bg-white/10" />
         <span aria-hidden className="h26-blob absolute -bottom-12 -left-8 w-52 h-52 bg-white/10" style={{ animationDelay: "3s" }} />
-        <span className="font-mono text-[13px] text-white/80">&lt;למעסיקים/&gt;</span>
-        <h2 className="font-display font-black text-[28px] sm:text-[32px] leading-tight mt-1">מחפשים מפתחת AI לצוות שלכם?</h2>
+        <h2 className="font-display font-black text-[28px] sm:text-[32px] leading-tight">מחפשים מפתחת AI לצוות שלכם?</h2>
         <p className="t-body-lg text-white/90 mt-3 max-w-xl mx-auto">
           כל פרויקט כאן נבנה בשבועיים, על בעיה אמיתית של ארגון אמיתי, ועלה לענן. מי שבנתה אותו - בוגרת מסלול פיתוח, חברה בקהילת קוד פתוח, ומחפשת את הצוות הבא שלה.
         </p>
@@ -250,7 +245,7 @@ export function EmployerCta() {
             href="mailto:office@opencode.org.il?subject=%D7%94%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%D7%99%D7%9D%20%D7%A9%D7%9C%20%D7%94%D7%90%D7%A7%D7%AA%D7%95%D7%9F"
             className="inline-flex items-center gap-2 rounded-full bg-white text-brand-pink-deep font-bold text-[16px] px-5 py-2.5 shadow-md hover:-translate-y-0.5 transition-transform"
           >
-            ✉️ דברו איתנו · office@opencode.org.il
+            דברו איתנו · office@opencode.org.il
           </a>
           <Link href="/portal" className="inline-flex items-center gap-2 rounded-full border-2 border-white/80 text-white font-bold text-[16px] px-5 py-2.5 hover:bg-white/15 transition-colors">
             לפורטל המעסיקים <span className="font-mono">&lt;</span>

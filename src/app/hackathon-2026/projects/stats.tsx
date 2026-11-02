@@ -1,8 +1,9 @@
-// The numbers dashboard of the portal (the owner, 2/11: ״דשבורד נחמד של מספרים״ instead of the long
-// text at the top): four headline figures that count up, the projects per challenge, where the live
-// systems run, the ten most used technologies, and two small splits - alone or in pairs, and the AI
-// models inside the products. Every bar carries its own label and number, so colour never stands
-// alone; every bar that can filter the projects is a link into the explorer.
+// The numbers dashboard of the portal (the owner, 2/11: ״דשבורד נחמד של מספרים״; it sits after the
+// projects, before the employers' call - not at the top): four headline figures that count up, the
+// projects per challenge, where the live systems run, the ten most used technologies, and two small
+// splits - alone or in pairs, and the AI models inside the products. No icons (the owner: ״פחות
+// אייקונים שלא יראה AI״). Every bar carries its own label and number, so colour never stands alone;
+// every bar that can filter the projects is a link into the explorer.
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { CHALLENGE_INFO, COUNTS, SHOWCASE_PATH, STATS, type ChallengeKey } from "@/lib/hackathon-showcase";
@@ -12,27 +13,21 @@ import { CountUp, Reveal } from "./reveal";
 /** The challenge's bar colour - one hue per challenge, the family of its card tint. */
 const BAR: Record<ChallengeKey, string> = { strauss: "#1B9E6A", virology: "#E0418D", phoenix: "#E9892A" };
 
-function Card({ children, className = "", title, eyebrow, testid }: { children: ReactNode; className?: string; title?: string; eyebrow?: string; testid?: string }) {
+function Card({ children, className = "", title, testid }: { children: ReactNode; className?: string; title?: string; testid?: string }) {
   return (
     <div className={`bg-white rounded-[22px] border border-ink-200 shadow-[0_10px_30px_-18px_rgba(70,76,160,.35)] p-5 flex flex-col gap-3 ${className}`} data-testid={testid}>
-      {(eyebrow || title) && (
-        <div className="flex flex-col gap-0.5">
-          {eyebrow && <span className="font-mono text-[12px] text-brand-pink-deep">{eyebrow}</span>}
-          {title && <h3 className="font-display font-black text-[18px] leading-tight text-ink-900">{title}</h3>}
-        </div>
-      )}
+      {title && <h3 className="font-display font-black text-[18px] leading-tight text-ink-900">{title}</h3>}
       {children}
     </div>
   );
 }
 
 /** One row: label on the right, a bar that grows from the right once the card is seen, the count on the left. */
-function BarRow({ label, count, max, color, href, suffix, emoji, i = 0, wide = false }: { label: string; count: number; max: number; color?: string; href?: string; suffix?: string; emoji?: string; i?: number; wide?: boolean }) {
+function BarRow({ label, count, max, color, href, suffix, i = 0, wide = false }: { label: string; count: number; max: number; color?: string; href?: string; suffix?: string; i?: number; wide?: boolean }) {
   const body = (
     <>
-      <span className={`flex items-center gap-1.5 text-[14px] font-bold text-ink-900 min-w-0 ${wide ? "leading-tight" : "whitespace-nowrap"}`}>
-        {emoji && <span aria-hidden>{emoji}</span>}
-        <span className={wide ? "" : "truncate"} dir="auto">{label}</span>
+      <span className={`text-[14px] font-bold text-ink-900 min-w-0 ${wide ? "leading-tight" : "truncate"}`} dir="auto">
+        {label}
       </span>
       <span className="h-3 rounded-full bg-ink-100 overflow-hidden" aria-hidden>
         <span
@@ -63,19 +58,18 @@ export function StatsDashboard() {
   const s = STATS;
   const maxCh = Math.max(...s.byChallenge.map((c) => c.count));
   const maxTech = s.topTech[0]?.count ?? 1;
-  const kpis: { n: number; label: string; sub: string; emoji: string }[] = [
-    { n: COUNTS.projects, label: "פרויקטים", sub: `${s.live} חיים בענן · ${s.videos} עם סרטון`, emoji: "🚀" },
-    { n: COUNTS.people, label: "מפתחות", sub: "מקהילת קוד פתוח", emoji: "👩‍💻" },
-    { n: s.tech, label: "טכנולוגיות", sub: `כ-${s.avgTech} בממוצע לפרויקט`, emoji: "🧰" },
-    ...(COUNTS.institutions ? [{ n: COUNTS.institutions, label: "מוסדות לימוד", sub: "מהם הגיעו המפתחות", emoji: "🎓" }] : []),
+  const kpis: { n: number; label: string; sub: string }[] = [
+    { n: COUNTS.projects, label: "פרויקטים", sub: `${s.live} חיים בענן · ${s.videos} עם סרטון` },
+    { n: COUNTS.people, label: "מפתחות", sub: "מקהילת קוד פתוח" },
+    { n: s.tech, label: "טכנולוגיות", sub: `כ-${s.avgTech} בממוצע לפרויקט` },
+    ...(COUNTS.institutions ? [{ n: COUNTS.institutions, label: "מוסדות לימוד", sub: "מהם הגיעו המפתחות" }] : []),
   ];
   const splitTotal = s.solo + s.pairs;
   return (
     <section id="numbers" className="px-4 sm:px-6 pt-16 pb-14 scroll-mt-14" data-testid="sc-dash">
       <div className="max-w-6xl mx-auto">
         <Reveal className="text-center mb-7">
-          <span className="font-mono text-xs text-brand-pink-deep">&lt;במספרים/&gt;</span>
-          <h2 className="font-display text-[28px] sm:text-[30px] font-black mt-1 relative inline-block">
+          <h2 className="font-display text-[28px] sm:text-[30px] font-black relative inline-block">
             ההאקתון במספרים
             <Squiggle className="absolute -bottom-3 right-2 w-28 h-3" />
           </h2>
@@ -85,10 +79,7 @@ export function StatsDashboard() {
           {/* the four headline figures */}
           {kpis.map((k, i) => (
             <Reveal key={k.label} delay={i * 90} className="h-full">
-              <Card className="h-full items-start gap-1 relative" testid="sc-kpi">
-                <span aria-hidden className="absolute top-4 left-4 w-9 h-9 rounded-full bg-tint-pink flex items-center justify-center text-[18px]">
-                  {k.emoji}
-                </span>
+              <Card className="h-full items-start gap-1" testid="sc-kpi">
                 <CountUp to={k.n} className="font-display font-black text-[46px] sm:text-[54px] leading-none sc-num" />
                 <span className="font-display font-black text-[17px] text-ink-900 mt-1">{k.label}</span>
                 <span className="text-[13.5px] text-ink-500 font-semibold leading-snug">{k.sub}</span>
@@ -98,7 +89,7 @@ export function StatsDashboard() {
 
           {/* per challenge */}
           <Reveal delay={120} className="col-span-2 h-full">
-            <Card className="h-full" eyebrow="// לפי אתגר" title="כמה פרויקטים לכל אתגר?" testid="sc-dash-challenges">
+            <Card className="h-full" title="כמה פרויקטים לכל אתגר?" testid="sc-dash-challenges">
               <div className="flex flex-col gap-4 my-auto py-1">
                 {s.byChallenge.map((c, i) => (
                   <BarRow
@@ -106,7 +97,6 @@ export function StatsDashboard() {
                     i={i}
                     wide
                     label={CHALLENGE_INFO[c.key].short}
-                    emoji={CHALLENGE_INFO[c.key].emoji}
                     count={c.count}
                     max={maxCh}
                     color={BAR[c.key]}
@@ -121,7 +111,7 @@ export function StatsDashboard() {
 
           {/* where the live systems run */}
           <Reveal delay={180} className="col-span-2 h-full">
-            <Card className="h-full" eyebrow="// הענן" title="איפה המערכות רצות?" testid="sc-dash-hosts">
+            <Card className="h-full" title="איפה המערכות רצות?" testid="sc-dash-hosts">
               <div className="flex flex-col gap-1.5 mt-1">
                 {s.hosts.map((h, i) => (
                   <BarRow key={h.name} i={i} label={h.name} count={h.count} max={s.hosts[0]?.count ?? 1} />
@@ -133,7 +123,7 @@ export function StatsDashboard() {
 
           {/* the technologies */}
           <Reveal delay={240} className="col-span-2 h-full">
-            <Card className="h-full" eyebrow="// הטכנולוגיות" title={`${s.topTech.length} הטכנולוגיות הנפוצות`} testid="sc-dash-tech">
+            <Card className="h-full" title={`${s.topTech.length} הטכנולוגיות הנפוצות`} testid="sc-dash-tech">
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5 mt-1">
                 {s.topTech.map((t, i) => (
                   <BarRow key={t.name} i={i} label={t.name} count={t.count} max={maxTech} href={`${SHOWCASE_PATH}?t=${encodeURIComponent(t.name)}#projects`} />
@@ -145,7 +135,7 @@ export function StatsDashboard() {
 
           {/* alone or in pairs */}
           <Reveal delay={300} className="col-span-2 lg:col-span-1 h-full">
-            <Card className="h-full" eyebrow="// צוותים" title="לבד או בזוג?" testid="sc-dash-teams">
+            <Card className="h-full" title="לבד או בזוג?" testid="sc-dash-teams">
               <div className="flex h-4 rounded-full overflow-hidden gap-0.5 mt-1" aria-hidden>
                 <span className="sc-bar block h-full bg-brand-purple rounded-s-full" style={{ ["--w" as string]: `${(s.solo / splitTotal) * 100}%`, ["--d" as string]: "160ms" }} />
                 <span className="sc-bar block h-full bg-brand-pink rounded-e-full" style={{ ["--w" as string]: `${(s.pairs / splitTotal) * 100}%`, ["--d" as string]: "160ms" }} />
@@ -165,7 +155,7 @@ export function StatsDashboard() {
 
           {/* the AI models */}
           <Reveal delay={360} className="col-span-2 lg:col-span-1 h-full">
-            <Card className="h-full" eyebrow="// המודלים" title="המודל שבתוך המוצר" testid="sc-dash-models">
+            <Card className="h-full" title="המודל שבתוך המוצר" testid="sc-dash-models">
               <div className="flex flex-col gap-2 mt-1">
                 {s.models.map((m, i) => (
                   <BarRow key={m.name} i={i} label={m.name} count={m.count} max={COUNTS.projects} href={`${SHOWCASE_PATH}?t=${encodeURIComponent(m.name)}#projects`} />

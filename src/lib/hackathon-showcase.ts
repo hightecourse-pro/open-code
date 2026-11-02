@@ -72,7 +72,8 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
     short: "המעבדה המרכזית לנגיפים",
     org: "משרד הבריאות · המרכז הרפואי שיבא",
     emoji: "🧬",
-    logos: ["/hackathon-2026/logo-moh.jpg", "/hackathon-2026/logo-virology.png"],
+    // the lab's logo only (the owner, 2/11: ״תוריד את הלוגו של משרד הבריאות״)
+    logos: ["/hackathon-2026/logo-virology.png"],
     blurb:
       "עשרות טפסי התחייבות סרוקים ביום, בכתב יד ובחותמות. המערכות קוראות אותם, ממלאות שבעה שדות מובנים, מסמנות בכנות את מה שלא בטוח, ומשאירות את ההחלטה לבודקת - ואז מייצאות לאקסל של המעבדה.",
     pattern: "קריאת מסמכים עם בקרה אנושית",
