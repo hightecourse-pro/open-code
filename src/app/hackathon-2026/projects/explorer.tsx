@@ -4,7 +4,7 @@
 // view can be sent as a link, and the challenge cards above can point into it.
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
-import { CHALLENGE_INFO, CHALLENGE_ORDER, filterProjects, isChallengeKey, normalize, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
+import { CHALLENGE_INFO, CHALLENGE_ORDER, byAward, filterProjects, isChallengeKey, normalize, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
 import { Reveal } from "./reveal";
 import { ProjectCard, TechChip } from "./showcase-ui";
 
@@ -15,6 +15,8 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
   const chParam = sp.get("ch");
   const ch: ChallengeKey | "" = isChallengeKey(chParam) ? chParam : "";
   const techSel = (sp.get("t") ?? "").split(",").map((t) => t.trim()).filter(Boolean);
+  // ?f=finals - only the winners and the finalists of 28.10
+  const finals = sp.get("f") === "finals";
   const urlQ = sp.get("q") ?? "";
   // The typed text wins while it was typed against the current URL; a URL change from outside (a chip
   // on a project's page, the browser's back) wins otherwise - derived in render, no effect.
@@ -47,9 +49,11 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
     router.replace(pathname, { scroll: false });
   };
 
-  const list = filterProjects(projects, { challenge: ch, q, tech: techSel });
-  const countOf = (k: ChallengeKey | "") => filterProjects(projects, { challenge: k, q, tech: techSel }).length;
-  const active = !!(ch || q || techSel.length);
+  // winners first, then finalists, then the rest
+  const list = byAward(filterProjects(projects, { challenge: ch, q, tech: techSel, finals }));
+  const countOf = (k: ChallengeKey | "") => filterProjects(projects, { challenge: k, q, tech: techSel, finals }).length;
+  const finalsCount = filterProjects(projects, { challenge: ch, q, tech: techSel, finals: true }).length;
+  const active = !!(ch || q || techSel.length || finals);
 
   return (
     <section id="projects" className="scroll-mt-14" data-testid="sc-explorer">
@@ -73,6 +77,8 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
               {CHALLENGE_ORDER.map((k) => (
                 <ChallengePill key={k} k={k} on={ch === k} count={countOf(k)} onClick={() => setParams({ ch: ch === k ? null : k })} />
               ))}
+              <span className="w-px h-5 bg-ink-200 mx-1" aria-hidden />
+              <Pill label="עלו לגמר" on={finals} count={finalsCount} onClick={() => setParams({ f: finals ? null : "finals" })} testid="sc-finals-pill" />
             </div>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -94,6 +100,7 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
             <span data-testid="sc-count">
               <b className="font-display font-black text-[17px] text-ink-900">{list.length}</b> {list.length === 1 ? "פרויקט" : "פרויקטים"}
               {ch && <span className="text-ink-500"> · {CHALLENGE_INFO[ch].short}</span>}
+              {finals && <span className="text-ink-500"> · הגמר</span>}
               {q && <span className="text-ink-500"> · ״{q}״</span>}
               {techSel.length > 0 && <span className="text-ink-500"> · {techSel.join(" + ")}</span>}
             </span>
@@ -131,7 +138,10 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
 }
 
 function ChallengePill({ k, on, count, onClick }: { k: ChallengeKey | ""; on: boolean; count: number; onClick: () => void }) {
-  const label = k ? CHALLENGE_INFO[k].short : "הכל";
+  return <Pill label={k ? CHALLENGE_INFO[k].short : "הכל"} on={on} count={count} onClick={onClick} testid="sc-pill" ch={k} />;
+}
+
+function Pill({ label, on, count, onClick, testid, ch }: { label: string; on: boolean; count: number; onClick: () => void; testid: string; ch?: string }) {
   return (
     <button
       type="button"
@@ -140,8 +150,8 @@ function ChallengePill({ k, on, count, onClick }: { k: ChallengeKey | ""; on: bo
         on ? "bg-brand-gradient text-white border-transparent shadow-sm" : "bg-white text-ink-900 border-ink-900/10 hover:border-brand-pink/60"
       }`}
       data-on={on ? "1" : "0"}
-      data-testid="sc-pill"
-      data-ch={k}
+      data-testid={testid}
+      data-ch={ch}
       aria-pressed={on}
     >
       {label}

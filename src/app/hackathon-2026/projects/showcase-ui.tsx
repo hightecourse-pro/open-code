@@ -5,7 +5,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Logo } from "@/components/ui";
-import { CHALLENGE_INFO, SHOWCASE_PATH, hasStream, teamName, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
+import { Fragment } from "react";
+import { CHALLENGE_INFO, SHOWCASE_PATH, awardOf, finalsOf, hasStream, teamName, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
 import { CHALLENGES, Sparkle } from "../shared";
 
 /** Portal-only motion: scroll reveal, gradient shimmer on the headline, card hover, the play pulse. */
@@ -87,6 +88,23 @@ export function ChallengeBadge({ k, className = "" }: { k: ChallengeKey; classNa
   );
 }
 
+/** The finals of 28.10: ״זוכת האתגר״ (gradient) or ״עלתה לגמר״ (outlined); nothing for the other projects. */
+export function AwardBadge({ p, className = "", large = false }: { p: ShowcaseProject; className?: string; large?: boolean }) {
+  const a = awardOf(p);
+  if (!a) return null;
+  return (
+    <span
+      className={`inline-flex items-center rounded-full font-bold shadow-sm whitespace-nowrap ${large ? "text-[13.5px] px-3 py-1" : "text-[12.5px] px-2.5 py-0.5"} ${
+        a.kind === "winner" ? "bg-brand-gradient text-white" : "bg-white/95 text-brand-purple border border-brand-purple/50"
+      } ${className}`}
+      data-testid="sc-award"
+      data-award={a.kind}
+    >
+      {a.label}
+    </span>
+  );
+}
+
 /** A technology chip - a link into the portal filtered by it, or a plain label. */
 export function TechChip({ name, href, on = false, count, small = false }: { name: string; href?: string; on?: boolean; count?: number; small?: boolean }) {
   const cls = `sc-chip inline-flex items-center gap-1 rounded-full border font-semibold whitespace-nowrap ${small ? "text-[12.5px] px-2 py-0.5" : "text-[13.5px] px-3 py-1"} ${
@@ -136,6 +154,7 @@ export function ProjectCard({ p, i = 0, eager = false }: { p: ShowcaseProject; i
           />
         )}
         <ChallengeBadge k={p.challenge} className="absolute top-3 right-3" />
+        <AwardBadge p={p} className="absolute top-3 left-3" />
         {hasStream(p) && (
           <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-ink-1000/80 text-white text-[12px] font-bold px-2 py-0.5">
             <span aria-hidden>▶</span> סרטון
@@ -167,6 +186,7 @@ export function ProjectCard({ p, i = 0, eager = false }: { p: ShowcaseProject; i
 export function ChallengeCard({ k, count, href, i = 0, compact = false }: { k: ChallengeKey; count: number; href: string; i?: number; compact?: boolean }) {
   const c = CHALLENGE_INFO[k];
   const brief = CHALLENGES.find((x) => x.key === k);
+  const finals = finalsOf(k);
   return (
     <article
       className={`relative ${c.tint} border-2 border-ink-900/10 p-6 flex flex-col gap-3`}
@@ -210,6 +230,29 @@ export function ChallengeCard({ k, count, href, i = 0, compact = false }: { k: C
             ) : null}
           </div>
         </details>
+      )}
+      {finals.winner && (
+        <div className="bg-white/80 border border-ink-100 rounded-[16px] px-4 py-3 text-[14px] text-ink-900 flex flex-col gap-1" data-testid="sc-challenge-finals">
+          <div>
+            <span className="font-black text-brand-pink-deep">זוכת האתגר: </span>
+            <Link href={`${SHOWCASE_PATH}/${finals.winner.k8}`} className="font-bold hover:underline">
+              {teamName(finals.winner)}
+            </Link>
+          </div>
+          {finals.finalists.length > 0 && (
+            <div className="text-ink-700">
+              <span className="font-bold">עלו לגמר: </span>
+              {finals.finalists.map((f, i) => (
+                <Fragment key={f.k8}>
+                  {i > 0 && " · "}
+                  <Link href={`${SHOWCASE_PATH}/${f.k8}`} className="hover:underline">
+                    {teamName(f)}
+                  </Link>
+                </Fragment>
+              ))}
+            </div>
+          )}
+        </div>
       )}
       <div className="flex items-center justify-between gap-3 mt-auto pt-1">
         <span className="font-display font-black text-[17px] text-brand-pink-deep whitespace-nowrap" data-testid="sc-challenge-count">

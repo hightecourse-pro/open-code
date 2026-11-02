@@ -96,11 +96,6 @@ export default function ShowcasePage() {
       <Wave tint="#FBF7FF" />
 
       {/* ─────────────────────────── the projects ─────────────────────────── */}
-      <div className="max-w-6xl mx-auto px-6 pt-4 pb-4 text-center">
-        <h2 className="font-display text-[30px] font-black">
-          {COUNTS.projects} פרויקטים. כל אחד נכנס, רץ, ועובד.
-        </h2>
-      </div>
       <Suspense fallback={<div className="max-w-6xl mx-auto px-4 py-16 text-center text-ink-500">טוענת את הפרויקטים…</div>}>
         <Explorer projects={PROJECTS} topTech={tech} />
       </Suspense>

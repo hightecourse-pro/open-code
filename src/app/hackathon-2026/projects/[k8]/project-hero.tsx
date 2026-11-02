@@ -6,7 +6,7 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 import { CHALLENGE_INFO, hasStream, teamName, type ShowcaseProject } from "@/lib/hackathon-showcase";
-import { ChallengeBadge } from "../showcase-ui";
+import { AwardBadge, ChallengeBadge } from "../showcase-ui";
 
 export function ProjectHero({ p }: { p: ShowcaseProject }) {
   const [playing, setPlaying] = useState(false);
@@ -77,6 +77,7 @@ export function ProjectHero({ p }: { p: ShowcaseProject }) {
       <div className="flex flex-col gap-4">
         <div className="flex items-center gap-2 flex-wrap">
           <ChallengeBadge k={p.challenge} />
+          <AwardBadge p={p} large />
           <span className="text-[13.5px] text-ink-500">{c.org}</span>
         </div>
         <h1 className="font-display font-black text-[32px] sm:text-[40px] leading-[1.1] text-ink-900" style={{ textWrap: "balance" }} data-testid="sc-title">

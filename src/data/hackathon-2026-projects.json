@@ -1,5 +1,5 @@
 {
- "builtAt": "2026-11-02T09:15:40.036Z",
+ "builtAt": "2026-11-02T10:01:48.853Z",
  "counts": {
   "projects": 60,
   "people": 82,
@@ -32,6 +32,8 @@
     "Google AI Studio",
     "GitHub Copilot"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "7e5d560c-ddc7-49fc-a579-0767bcec43a6",
@@ -71,6 +73,8 @@
     "PydanticAI",
     "Vercel"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "6ea27ea1-6577-4146-8373-0756fe9baa97",
@@ -108,9 +112,10 @@
     "PostgreSQL",
     "Java",
     "Spring",
-    "Excel",
     "Render"
    ],
+   "finalist": 2,
+   "award": null,
    "quotes": [
     {
      "id": "b04e60f4-54c6-4008-8f71-1302d2df641f",
@@ -152,6 +157,8 @@
     "GitHub Copilot",
     "Kiro"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "1612646f-89cf-40a4-bbea-bbd075ea2b60",
@@ -193,6 +200,8 @@
     "Next.js",
     "Docker"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "718fcb78-d2f6-4e75-8c5d-67adfdcf4bd0",
@@ -233,6 +242,8 @@
     "PydanticAI",
     "Docker"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "93eadf22-5311-4d67-8367-dae04aba91c3",
@@ -269,6 +280,8 @@
     "Vercel",
     "Codex"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "5051a051-8ff6-430c-8349-58b7aaca977c",
@@ -302,9 +315,10 @@
     "Gemini",
     "Supabase",
     "Next.js",
-    "Excel",
     "Vercel"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "e178d9cf-ecaa-4a6d-8f69-429cdc486476",
@@ -343,6 +357,8 @@
     "React Native (Expo)",
     "Render"
    ],
+   "finalist": 3,
+   "award": "winner",
    "quotes": [
     {
      "id": "df715cf4-1547-49ae-8746-bd286ff7605a",
@@ -379,6 +395,8 @@
     "Python",
     "Kiro"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [],
    "productUrl": "https://strauss-car-advisor-gbzj.onrender.com/",
    "video": {
@@ -407,11 +425,12 @@
     "Python",
     "FastAPI",
     "React",
-    "Excel",
     "Vercel",
     "Render",
     "Kiro"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "f26921a1-e78e-4eb5-b864-2e654f690572",
@@ -453,6 +472,8 @@
     "React",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "253eebfd-4676-4352-8116-706bb6af83a9",
@@ -494,6 +515,8 @@
     "Render",
     "Docker"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "551d39dc-75c6-4ac1-af51-9c30cb796000",
@@ -527,6 +550,8 @@
     "Python",
     "Streamlit"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "bfdd08ac-a5d1-483c-aad0-54786befc5c7",
@@ -569,6 +594,8 @@
     "Zod",
     "Vercel"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "c8e5c037-2182-4ce8-90ea-d38bb38bf41f",
@@ -611,6 +638,8 @@
     "Python",
     "Angular"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "eb8693ba-46dd-4570-9794-a2ed59a32173",
@@ -651,6 +680,8 @@
     "Playwright",
     "GitHub"
    ],
+   "finalist": 1,
+   "award": null,
    "quotes": [
     {
      "id": "3c90616a-6b6a-4b45-9190-413e6fbb3f4c",
@@ -691,6 +722,8 @@
     "React",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "019caa60-dd28-40b6-8556-8c516d111d5b",
@@ -733,6 +766,8 @@
     "Railway",
     "Codex"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "41ee5d6d-d113-4e63-9315-6a8b350189aa",
@@ -772,6 +807,8 @@
     "SQLite",
     "Streamlit"
    ],
+   "finalist": 1,
+   "award": null,
    "quotes": [
     {
      "id": "32e52b46-bc95-48a6-b61a-a406600fa64d",
@@ -807,9 +844,10 @@
    "tech": [
     "Gemini",
     "Node.js",
-    "React",
-    "Excel"
+    "React"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "20b4da31-9ed5-4c0e-b427-a29f3e13de9a",
@@ -849,6 +887,8 @@
     "Render",
     "Docker"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "e491ae4f-f285-470c-bed5-2b6bd43877a6",
@@ -884,10 +924,11 @@
     "FastAPI",
     "TypeScript",
     "React",
-    "Excel",
     "Render",
     "Codex"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "d99eb4fd-e099-4a43-96ed-581feef823c1",
@@ -925,9 +966,10 @@
     "PostgreSQL",
     "FastAPI",
     "Streamlit",
-    "Excel",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "e786d296-2b57-45ca-85d7-2f919e69e3dd",
@@ -971,10 +1013,11 @@
     "FastAPI",
     "TypeScript",
     "React",
-    "Excel",
     "Render",
     "Google AI Studio"
    ],
+   "finalist": 3,
+   "award": null,
    "quotes": [
     {
      "id": "cd0e6d24-50ad-4822-a700-cc3729adb2a0",
@@ -1022,6 +1065,8 @@
     "Render",
     "Docker"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "eba61697-6e77-45e3-9e67-e3b888875e51",
@@ -1060,9 +1105,10 @@
     "Claude",
     "SQLite",
     "Python",
-    "Streamlit",
-    "Excel"
+    "Streamlit"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "5dd355a1-6018-4440-9e74-11a80de56523",
@@ -1097,6 +1143,8 @@
     "Python",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "5cd116f5-4ce2-48b7-8dfa-10eebfd107e3",
@@ -1136,10 +1184,11 @@
     "Python",
     "FastAPI",
     "React",
-    "Excel",
     "Render",
     "Docker"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "a52f9a22-9636-4591-b4e2-3406479792d5",
@@ -1185,6 +1234,8 @@
     "Vite",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "df59fa41-8d54-48c8-9dd6-0b0e915bd663",
@@ -1223,9 +1274,10 @@
    "blurb": "כמה אפשר לסמוך על ציון הביטחון של המודל? המערכת מודדת זאת בעצמה: כל אישור או תיקון של הטכנאית נרשם מול הציון שדווח, ופאנל ״כיול אמון״ מראה את הדיוק בפועל בכל טווח ציונים וממליץ - בלי להחליט - אם להוריד את סף הבדיקה וכמה בדיקות ידניות ייחסכו. ועוד: גיליון ״יומן שינויים״ באקסל - לכל שדה מה חולץ, מה נשמר ומי אישר - סורק ברקודים, ו״בדיקה מהירה״ שעוברת על כל השדות שדורשים בדיקה עם הגדלה לצד כל אחד.",
    "tech": [
     "Claude",
-    "Tesseract",
-    "Excel"
+    "Tesseract"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "3cc3190f-528b-4aa1-9c2d-97495a2c2abe",
@@ -1269,9 +1321,10 @@
     "TypeScript",
     "React",
     "Tailwind",
-    "Excel",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "80213887-0dc1-454f-96a5-b88ef27c4b47",
@@ -1310,9 +1363,10 @@
     "FastAPI",
     "TypeScript",
     "React",
-    "Vite",
-    "Excel"
+    "Vite"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "084c9f00-2ae6-4553-a49c-ff2da45b5830",
@@ -1352,9 +1406,10 @@
    "tech": [
     "Gemini",
     "OpenAI / GPT",
-    "Claude",
-    "Excel"
+    "Claude"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "90c33bfe-ed78-4b0e-bdc3-9697daa016e0",
@@ -1395,10 +1450,11 @@
     "FastAPI",
     "TypeScript",
     "React",
-    "Excel",
     "Vercel",
     "WhatsApp"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "12edfc42-e0d1-47cd-b731-e9f3acd7ef1d",
@@ -1440,9 +1496,10 @@
     "Python",
     "FastAPI",
     "React",
-    "Excel",
     "AWS"
    ],
+   "finalist": 2,
+   "award": "winner",
    "quotes": [
     {
      "id": "57effa0a-06bb-4120-92d4-91329957fd18",
@@ -1484,6 +1541,8 @@
     "OpenCV",
     "Vercel"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "a5ad1182-40f4-421b-9965-ba296a9938a6",
@@ -1517,9 +1576,10 @@
     "Tesseract",
     "Supabase",
     "PostgreSQL",
-    "React",
-    "Excel"
+    "React"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "86955892-1809-4dab-ac5e-789c411602e6",
@@ -1562,9 +1622,10 @@
     "Redis",
     "Python",
     "FastAPI",
-    "React",
-    "Excel"
+    "React"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "12c49a67-6b99-43ee-8697-c4452ece76e8",
@@ -1609,6 +1670,8 @@
     "GitHub",
     "GitHub Copilot"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "0b89bc98-035e-4973-9f8f-9c0fde0edea7",
@@ -1645,6 +1708,8 @@
     "Tesseract",
     "OpenCV"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "a39ed923-0f6d-4314-bd29-b61bd2bac087",
@@ -1685,10 +1750,11 @@
     "Supabase",
     "FastAPI",
     "React",
-    "Excel",
     "Vercel",
     "Kiro"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "79c2ce73-d1e9-4287-8f1e-620fec4350b8",
@@ -1730,6 +1796,8 @@
     "Vercel",
     "Render"
    ],
+   "finalist": 1,
+   "award": null,
    "quotes": [
     {
      "id": "1da3dbcf-5e13-4e46-be7c-908ad2e87985",
@@ -1769,6 +1837,8 @@
     "Render",
     "GitHub"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "fe373ef4-4e01-4e87-990a-2bdd42659593",
@@ -1804,6 +1874,8 @@
     "Python",
     "Streamlit"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "548a3dd7-6c07-4ac5-91cb-aeb8328077f7",
@@ -1839,9 +1911,10 @@
     "Gemini",
     "Claude",
     "Embeddings",
-    "Streamlit",
-    "Excel"
+    "Streamlit"
    ],
+   "finalist": 3,
+   "award": "winner",
    "quotes": [
     {
      "id": "f63ad049-0605-4df0-aa14-c992a3fa7e9e",
@@ -1886,6 +1959,8 @@
     "Render",
     "GitHub"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "1eb4fa18-308f-4dbd-af63-e8fa532d857e",
@@ -1922,6 +1997,8 @@
     "Angular",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "031ce1be-2b97-4ace-a1b7-ba12aeaa6c62",
@@ -1958,6 +2035,8 @@
     "JavaScript",
     "PyMuPDF"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "c1372b36-701d-481f-81f9-0735e176b1fd",
@@ -1990,6 +2069,8 @@
     "RAG",
     "Embeddings"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "fac8200f-a769-4923-a785-a9ca5941c9b8",
@@ -2025,6 +2106,8 @@
     "Python",
     "Streamlit"
    ],
+   "finalist": 2,
+   "award": null,
    "quotes": [
     {
      "id": "45494404-7e10-4c5d-8546-bd2921b0eb24",
@@ -2064,6 +2147,8 @@
     "GitHub",
     "GitHub Copilot"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "ca89f849-b4e6-46eb-bccf-e6213362b16d",
@@ -2102,6 +2187,8 @@
     "Vercel",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "a299532d-09d7-431e-ab1f-2e293dac1437",
@@ -2141,6 +2228,8 @@
     "Vercel",
     "Render"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "0ba8b56e-495c-4c32-8e0c-2c499a99514a",
@@ -2180,6 +2269,8 @@
     "Supabase",
     "PostgreSQL"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "d73b5fa5-22ef-42ed-aac8-e007e0ff9fd2",
@@ -2227,6 +2318,8 @@
     "Streamlit",
     "Docker"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "cabaf845-02db-45dd-81d8-499f31194fd0",
@@ -2267,6 +2360,8 @@
     "Flask",
     "JavaScript"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "4870abdf-df6a-4f55-8ac6-b00d3ce39227",
@@ -2308,6 +2403,8 @@
     "React",
     "Playwright"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "5a2c3a18-737e-417b-a876-064d9935883c",
@@ -2341,6 +2438,8 @@
     "TypeScript",
     "React"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "3b768750-97b6-4390-8f15-248a15679cb3",
@@ -2377,6 +2476,8 @@
     "Google AI Studio",
     "Cursor"
    ],
+   "finalist": null,
+   "award": null,
    "quotes": [
     {
      "id": "e632e7e3-0899-4440-b216-e431bae76302",

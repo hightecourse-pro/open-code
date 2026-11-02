@@ -32,6 +32,10 @@ export interface ShowcaseProject {
   image: string | null;
   caption: string | null;
   submittedAt: string | null;
+  /** The finals of 28.10 (catalog/finals.json via tools/finals-rank.mjs): the finalist's number inside her challenge, null for the rest. */
+  finalist: number | null;
+  /** ״winner״ for the challenge's winning project (judges 70 + audience 30), null otherwise. */
+  award: "winner" | null;
 }
 
 export interface ChallengeInfo {
@@ -189,6 +193,25 @@ export function hasStream(p: ShowcaseProject): boolean {
   return !!(p.video?.drive || p.video?.storage);
 }
 
+/** The finals' label of a project: the challenge's winner, a finalist, or nothing. */
+export function awardOf(p: ShowcaseProject): { kind: "winner" | "finalist"; label: string } | null {
+  if (p.award === "winner") return { kind: "winner", label: "זוכת האתגר" };
+  if (p.finalist) return { kind: "finalist", label: "עלתה לגמר" };
+  return null;
+}
+
+/** The challenge's winner and its other finalists (the finals of 28.10). */
+export function finalsOf(challenge: ChallengeKey): { winner: ShowcaseProject | null; finalists: ShowcaseProject[] } {
+  const all = projectsOf(challenge).filter((p) => p.finalist);
+  return { winner: all.find((p) => p.award === "winner") ?? null, finalists: all.filter((p) => p.award !== "winner").sort((a, b) => (a.finalist ?? 0) - (b.finalist ?? 0)) };
+}
+
+/** Winners first, then finalists, then everyone else - each group in the booklet's order. */
+export function byAward(list: ShowcaseProject[]): ShowcaseProject[] {
+  const rank = (p: ShowcaseProject) => (p.award === "winner" ? 0 : p.finalist ? 1 : 2);
+  return [...list].sort((a, b) => rank(a) - rank(b));
+}
+
 /** The technologies by how many projects used them. */
 export function topTech(n = 14): { name: string; count: number }[] {
   const counts = new Map<string, number>();
@@ -235,12 +258,15 @@ export interface ShowcaseFilter {
   challenge?: ChallengeKey | "" | null;
   q?: string | null;
   tech?: string[] | null;
+  /** Only the finals' projects (the winners and the finalists). */
+  finals?: boolean | null;
 }
 
 export function filterProjects(list: ShowcaseProject[], f: ShowcaseFilter): ShowcaseProject[] {
   const tech = (f.tech ?? []).map(normalize).filter(Boolean);
   return list.filter((p) => {
     if (f.challenge && p.challenge !== f.challenge) return false;
+    if (f.finals && !p.finalist) return false;
     if (tech.length) {
       const mine = p.tech.map(normalize);
       if (!tech.every((t) => mine.includes(t))) return false;
