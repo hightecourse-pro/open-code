@@ -1,5 +1,5 @@
 {
- "builtAt": "2026-11-02T10:01:48.853Z",
+ "builtAt": "2026-11-02T11:18:42.047Z",
  "counts": {
   "projects": 60,
   "people": 82,
@@ -30,7 +30,9 @@
     "Vite",
     "GitHub",
     "Google AI Studio",
-    "GitHub Copilot"
+    "GitHub Copilot",
+    "Kiro",
+    "Codex"
    ],
    "finalist": null,
    "award": null,
@@ -198,6 +200,7 @@
     "SQLite",
     "TypeScript",
     "Next.js",
+    "OpenRouter",
     "Docker"
    ],
    "finalist": null,
@@ -355,6 +358,8 @@
     "React",
     "Vite",
     "React Native (Expo)",
+    "OpenRouter",
+    "Groq",
     "Render"
    ],
    "finalist": 3,
@@ -526,6 +531,7 @@
    ],
    "productUrl": "https://vehicle-advisor.onrender.com/",
    "video": {
+    "drive": "1SlM1O4vB87lYG5jkT-erfep1s-s3AXhk",
     "link": "https://drive.google.com/file/d/1EsDdpihZWjDERjGDbcyy6xTw0-c1gZTl/view?usp=sharing"
    },
    "image": "/hackathon-2026/catalog/551d39dc.webp",
@@ -592,6 +598,7 @@
     "React",
     "Next.js",
     "Zod",
+    "Groq",
     "Vercel"
    ],
    "finalist": null,
@@ -654,8 +661,8 @@
    ],
    "productUrl": "https://strauss-vehicle-advisor.vercel.app/",
    "video": {
-    "drive": "1El-OAivk9-jUxEB_4rvgzUJ0pKPyx86s",
-    "link": "https://drive.google.com/file/d/1qEgW2LQBds7HLXRRTSkhVU1sEfYfRnXh/view"
+    "drive": "18HrGFHYnGh3Sy0raOirQYVyH3DNCGIz0",
+    "link": "https://drive.google.com/file/d/1M8R4GaY_lxajpolAAqMtDqfuh-uOr_FM/view?usp=sharing"
    },
    "image": "/hackathon-2026/catalog/5d0cc593.webp",
    "caption": "שרה אוחנה + דבורה מייזליק · שטראוס",
@@ -884,6 +891,8 @@
     "React",
     "Vite",
     "PyMuPDF",
+    "Pillow",
+    "openpyxl",
     "Render",
     "Docker"
    ],
@@ -1141,6 +1150,7 @@
     "Gemini",
     "PostgreSQL",
     "Python",
+    "Groq",
     "Render"
    ],
    "finalist": null,
@@ -1184,6 +1194,7 @@
     "Python",
     "FastAPI",
     "React",
+    "zxing-cpp",
     "Render",
     "Docker"
    ],
@@ -1274,7 +1285,19 @@
    "blurb": "כמה אפשר לסמוך על ציון הביטחון של המודל? המערכת מודדת זאת בעצמה: כל אישור או תיקון של הטכנאית נרשם מול הציון שדווח, ופאנל ״כיול אמון״ מראה את הדיוק בפועל בכל טווח ציונים וממליץ - בלי להחליט - אם להוריד את סף הבדיקה וכמה בדיקות ידניות ייחסכו. ועוד: גיליון ״יומן שינויים״ באקסל - לכל שדה מה חולץ, מה נשמר ומי אישר - סורק ברקודים, ו״בדיקה מהירה״ שעוברת על כל השדות שדורשים בדיקה עם הגדלה לצד כל אחד.",
    "tech": [
     "Claude",
-    "Tesseract"
+    "Tesseract",
+    "Next.js",
+    "TypeScript",
+    "Python",
+    "FastAPI",
+    "python-multipart",
+    "Pydantic",
+    "python-dotenv",
+    "PyMuPDF",
+    "NumPy",
+    "zxing-cpp",
+    "SQLite",
+    "Vercel"
    ],
    "finalist": null,
    "award": null,
@@ -1321,7 +1344,8 @@
     "TypeScript",
     "React",
     "Tailwind",
-    "Render"
+    "Render",
+    "Google AI Studio"
    ],
    "finalist": null,
    "award": null,
@@ -1450,6 +1474,8 @@
     "FastAPI",
     "TypeScript",
     "React",
+    "openpyxl",
+    "Material UI",
     "Vercel",
     "WhatsApp"
    ],
@@ -1539,7 +1565,9 @@
     "React",
     "PyMuPDF",
     "OpenCV",
-    "Vercel"
+    "Vercel",
+    "Render",
+    "Docker"
    ],
    "finalist": null,
    "award": null,
@@ -1622,7 +1650,11 @@
     "Redis",
     "Python",
     "FastAPI",
-    "React"
+    "React",
+    "zxing-cpp",
+    "Vercel",
+    "Render",
+    "Docker"
    ],
    "finalist": null,
    "award": null,
@@ -1666,6 +1698,7 @@
     "Python",
     "FastAPI",
     "JavaScript",
+    "zxing-cpp",
     "Render",
     "GitHub",
     "GitHub Copilot"
@@ -1706,7 +1739,8 @@
    "tech": [
     "Gemini",
     "Tesseract",
-    "OpenCV"
+    "OpenCV",
+    "zxing-cpp"
    ],
    "finalist": null,
    "award": null,
@@ -1750,6 +1784,8 @@
     "Supabase",
     "FastAPI",
     "React",
+    "zxing-cpp",
+    "PaddleOCR",
     "Vercel",
     "Kiro"
    ],
@@ -1794,7 +1830,9 @@
     "React",
     "Tailwind",
     "Vercel",
-    "Render"
+    "Render",
+    "Railway",
+    "Kiro"
    ],
    "finalist": 1,
    "award": null,
@@ -1955,6 +1993,8 @@
     "Supabase",
     "FastAPI",
     "React",
+    "OpenRouter",
+    "Groq",
     "Vercel",
     "Render",
     "GitHub"
@@ -2184,6 +2224,7 @@
     "TypeScript",
     "React",
     "BeautifulSoup",
+    "Groq",
     "Vercel",
     "Render"
    ],
@@ -2316,6 +2357,8 @@
     "SQLite",
     "Python",
     "Streamlit",
+    "PyTorch",
+    "JWT",
     "Docker"
    ],
    "finalist": null,
@@ -2358,7 +2401,8 @@
     "SQLite",
     "Python",
     "Flask",
-    "JavaScript"
+    "JavaScript",
+    "NumPy"
    ],
    "finalist": null,
    "award": null,
@@ -2401,7 +2445,10 @@
     "Python",
     "FastAPI",
     "React",
-    "Playwright"
+    "Playwright",
+    "Vercel",
+    "Render",
+    "WhatsApp"
    ],
    "finalist": null,
    "award": null,
