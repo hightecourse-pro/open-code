@@ -1,0 +1,2545 @@
+{
+ "builtAt": "2026-11-02T11:18:42.047Z",
+ "counts": {
+  "projects": 60,
+  "people": 82,
+  "challenges": 3,
+  "institutions": 28
+ },
+ "projects": [
+  {
+   "k8": "7e5d560c",
+   "teamKey": "7e5d560c-ddc7-49fc-a579-0767bcec43a6",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "7e5d560c-ddc7-49fc-a579-0767bcec43a6",
+     "name": "שרה פינק"
+    }
+   ],
+   "blurb": "המספרים אומרים כמה יישאר, אבל לא איזה רכב מתאים למשפחה עם שלושה ילדים ובלי עמדת טעינה. היועץ של שרה שואל על החיים, ממליץ על שלושה רכבים מתוך הזכאות עם נימוק לכל אחד, והשכר עצמו לא עובר למודל.",
+   "tech": [
+    "Gemini",
+    "Claude",
+    "Supabase",
+    "Node.js",
+    "Express",
+    "TypeScript",
+    "React",
+    "Tailwind",
+    "Vite",
+    "GitHub",
+    "Google AI Studio",
+    "GitHub Copilot",
+    "Kiro",
+    "Codex"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "7e5d560c-ddc7-49fc-a579-0767bcec43a6",
+     "name": "שרה פינק",
+     "quote": "גיליתי שאני אוהבת את התחום הזה של פיתוח סוכנים"
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor-black.vercel.app/",
+   "video": {
+    "drive": "1tU-d6lzoTz8qz-QkIKhlVqVNCCIuyK_z",
+    "storage": "submissions/7e5d560c-ddc7-49fc-a579-0767bcec43a6/1792572189161-strauss-car-advisor-demo-v2.mp4"
+   },
+   "image": "/hackathon-2026/catalog/7e5d560c.webp",
+   "caption": "שרה פינק · שטראוס",
+   "submittedAt": "2026-10-20 19:39:08.122+00"
+  },
+  {
+   "k8": "6ea27ea1",
+   "teamKey": "6ea27ea1-6577-4146-8373-0756fe9baa97+fa23824f-8f9b-4b90-864c-0b055e94ded5",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "6ea27ea1-6577-4146-8373-0756fe9baa97",
+     "name": "רבקה סבו"
+    },
+    {
+     "id": "fa23824f-8f9b-4b90-864c-0b055e94ded5",
+     "name": "שני לבין"
+    }
+   ],
+   "blurb": "ההשתתפות הסופית ידועה רק אחרי שהנציג עונה, אז התשובה כאן לא מחכה לו: ״מתי זה משתנה?״ מראה עד איזה סכום השתתפות החלופה עדיין משתלמת. העובדת יודעת מראש איפה היתרון בנטו נגמר, והמספר מחושב בקוד ונבדק פעמיים.",
+   "tech": [
+    "Supabase",
+    "Python",
+    "FastAPI",
+    "Next.js",
+    "PydanticAI",
+    "Vercel"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "6ea27ea1-6577-4146-8373-0756fe9baa97",
+     "name": "רבקה סבו",
+     "quote": "גיליתי שאני לא מוותרת כשמשהו מסתבך, ושאני יודעת לשלב בין חשיבה טכנית לבין הסתכלות על מה שהמשתמש באמת צריך ורוצה."
+    },
+    {
+     "id": "fa23824f-8f9b-4b90-864c-0b055e94ded5",
+     "name": "שני לבין",
+     "quote": "דווקא בתיקונים הקטנים האלה הרגשתי שאני מבינה את המערכת לעומק."
+    }
+   ],
+   "productUrl": "https://strauss-web.vercel.app/",
+   "video": {
+    "drive": "1gIDtY6av8-yVrgPBMuJnEOXTDtBBpDQJ",
+    "storage": "submissions/6ea27ea1-6577-4146-8373-0756fe9baa97+fa23824f-8f9b-4b90-864c-0b055e94ded5/1792673743310-Strauss_Drive_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/6ea27ea1.webp",
+   "caption": "רבקה סבו + שני לבין · שטראוס",
+   "submittedAt": "2026-10-22 13:06:24.795+00"
+  },
+  {
+   "k8": "b04e60f4",
+   "teamKey": "b04e60f4-54c6-4008-8f71-1302d2df641f",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "b04e60f4-54c6-4008-8f71-1302d2df641f",
+     "name": "שני וועג"
+    }
+   ],
+   "blurb": "שטראוס ביקשו בוט לעובד ומסך לנציג. שני הוסיפה את המבט של ההנהלה: קובץ אקסל אחד עם שורה לכל פנייה וגיליון מגמות - כמה בודקים רכב חשמלי, איך משתנה הנטו לפי רכב וקבוצה, וכמה מהר הנציגים עונים. ולצד כל רכב קישור לעמוד הדגם, כדי להחליט בלי לצאת מהאתר.",
+   "tech": [
+    "Gemini",
+    "PostgreSQL",
+    "Java",
+    "Spring",
+    "Render"
+   ],
+   "finalist": 2,
+   "award": null,
+   "quotes": [
+    {
+     "id": "b04e60f4-54c6-4008-8f71-1302d2df641f",
+     "name": "שני וועג",
+     "quote": "מהרגע שהמערכת התחילה להרגיש כמו מוצר, כשזה ממש עבד, כשהמספרים של שטראוס יצאו נכונים עד השקל, וכשראיתי את ההשוואה מתעדכנת מעצמה אחרי שהנציג ענה."
+    }
+   ],
+   "productUrl": "https://car-advisor-dqeg.onrender.com/",
+   "video": {
+    "drive": "1yRcWwe2VGnla7dEqwFUh7CSb0UsLCJ7o",
+    "storage": "submissions/b04e60f4-54c6-4008-8f71-1302d2df641f/1792691197079-car-advisor-demo.mp4"
+   },
+   "image": "/hackathon-2026/catalog/b04e60f4.webp",
+   "caption": "שני וועג · שטראוס",
+   "submittedAt": "2026-10-22 17:55:30.542+00"
+  },
+  {
+   "k8": "1612646f",
+   "teamKey": "1612646f-89cf-40a4-bbea-bbd075ea2b60",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "1612646f-89cf-40a4-bbea-bbd075ea2b60",
+     "name": "חדוה אברמוביץ"
+    }
+   ],
+   "blurb": "לדעת כמה יישאר בנטו זה חצי החלטה. השאלון של חדוה מתחיל מהחיים - מי נוסע, כמה מטען, איך נראות הנסיעות - ומציע רכבים מתוך הזכאות עם הסבר, על סמך נתוני היצרנים בלבד. משם ממשיכים ישר לחישוב. ובנוסף: דיבור בעברית עם תמלול לעריכה, הורדת סיכום ל-PDF, תפריט נגישות והיסטוריית שיחות שאפשר לחזור אליהן.",
+   "tech": [
+    "Gemini",
+    "OpenAI / GPT",
+    "Claude",
+    "Vercel AI SDK",
+    "Supabase",
+    "TypeScript",
+    "React",
+    "Next.js",
+    "Vercel",
+    "GitHub",
+    "GitHub Copilot",
+    "Kiro"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "1612646f-89cf-40a4-bbea-bbd075ea2b60",
+     "name": "חדוה אברמוביץ",
+     "quote": "היה לי חשוב להגיע לגמר, אבל יותר מהכול רציתי לעמוד במשימה וליצור מוצר שלם שאני גאה בו."
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor.vercel.app/",
+   "video": {
+    "drive": "1e94tLrEsHezLN7AAqHEmqOVz8D5fmMzh",
+    "link": "https://drive.google.com/file/d/1VAeO7FihbiYZhDh7wGAEeTi3I84a8z32/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/1612646f.webp",
+   "caption": "חדוה אברמוביץ · שטראוס",
+   "submittedAt": "2026-10-22 18:05:58.343+00"
+  },
+  {
+   "k8": "718fcb78",
+   "teamKey": "718fcb78-d2f6-4e75-8c5d-67adfdcf4bd0+8ba0a840-0291-40b5-adbf-ceb69d2e9f4c",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "718fcb78-d2f6-4e75-8c5d-67adfdcf4bd0",
+     "name": "הודיה פרידלנד"
+    },
+    {
+     "id": "8ba0a840-0291-40b5-adbf-ceb69d2e9f4c",
+     "name": "נחמה פינקל"
+    }
+   ],
+   "blurb": "עובדת לא חושבת ב״שווי שימוש״, היא חושבת בתלוש. לכן ההשוואה כאן מוצגת כתלוש של החודש הבא: שורה אחרי שורה, הסכום של היום מחוק לידה והשינוי צבוע. וכפתור אחד שולח את כל החלופות למייל, להתייעץ בבית. ועוד: ״מה הכי משתלם לי?״ - כל החלופות בגרף אחד, ו״לאן הלך כל שקל״ - ההפרש מפורק לסיבות שמסתכמות בדיוק.",
+   "tech": [
+    "Gemini",
+    "OpenAI / GPT",
+    "Claude",
+    "Mistral",
+    "SQLite",
+    "TypeScript",
+    "Next.js",
+    "OpenRouter",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "718fcb78-d2f6-4e75-8c5d-67adfdcf4bd0",
+     "name": "הודיה פרידלנד",
+     "quote": "גיליתי שאני יודעת לעבוד עם כלי AI כמו מנהלת: להגדיר בדיוק מה אני רוצה, לבדוק את מה שקיבלתי, ולא לקבל תשובה רק כי היא נשמעת בטוחה."
+    },
+    {
+     "id": "8ba0a840-0291-40b5-adbf-ceb69d2e9f4c",
+     "name": "נחמה פינקל",
+     "quote": "למדתי שאני יכולה לכתוב קוד לגמרי למרות שאני בעיקרון DevOps"
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor-5bjl.onrender.com/",
+   "video": {
+    "drive": "1mUVvniN5tBbZh6LGn2SAYf2M1YbEnjF3",
+    "storage": "submissions/718fcb78-d2f6-4e75-8c5d-67adfdcf4bd0+8ba0a840-0291-40b5-adbf-ceb69d2e9f4c/1792687129505-strauss-demo-final.mp4"
+   },
+   "image": "/hackathon-2026/catalog/718fcb78.webp",
+   "caption": "הודיה פרידלנד + נחמה פינקל · שטראוס",
+   "submittedAt": "2026-10-22 18:32:41.88+00"
+  },
+  {
+   "k8": "93eadf22",
+   "teamKey": "93eadf22-5311-4d67-8367-dae04aba91c3",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "93eadf22-5311-4d67-8367-dae04aba91c3",
+     "name": "מלכה גרינפלד"
+    }
+   ],
+   "blurb": "אצל מלכה שום מספר לא עובר בלי מקור: תשובה עם סכום שלא הגיע ממנוע החישוב נדחית, ולכל השתתפות רשום מאיפה הגיעה ועד מתי היא בתוקף. כשהנציג עונה, השיחה ממשיכה מהנקודה שבה נעצרה.",
+   "tech": [
+    "OpenAI / GPT",
+    "Python",
+    "FastAPI",
+    "Angular",
+    "PydanticAI",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "93eadf22-5311-4d67-8367-dae04aba91c3",
+     "name": "מלכה גרינפלד",
+     "quote": "לנהל צוות של סשנים ולראות את קצב העבודה מוכפל"
+    }
+   ],
+   "productUrl": "http://34.22.142.208:8080/employee",
+   "video": {
+    "drive": "155nMUYwUqLgxAzd7ebm6ief1lyczVlWM",
+    "storage": "submissions/93eadf22-5311-4d67-8367-dae04aba91c3/1792698933359-Hackathon_vidio.mp4"
+   },
+   "image": "/hackathon-2026/catalog/93eadf22.webp",
+   "caption": "מלכה גרינפלד · שטראוס",
+   "submittedAt": "2026-10-22 20:02:05.258+00"
+  },
+  {
+   "k8": "5051a051",
+   "teamKey": "5051a051-8ff6-430c-8349-58b7aaca977c",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "5051a051-8ff6-430c-8349-58b7aaca977c",
+     "name": "רחל וסרמן"
+    }
+   ],
+   "blurb": "לא רק כמה זה יעלה, אלא איזה רכב מתאים לה: שאלון קצר על המשפחה, הנסיעות ומה חשוב ברכב, וממנו המלצות מתוך קבוצת הזכאות. קטלוג חזותי מציג את הדגמים ומשווה ביניהם, בלי לצאת מהשיחה.",
+   "tech": [
+    "Gemini",
+    "Claude",
+    "Supabase",
+    "TypeScript",
+    "Next.js",
+    "Vercel",
+    "Codex"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "5051a051-8ff6-430c-8349-58b7aaca977c",
+     "name": "רחל וסרמן",
+     "quote": "ובעיקר הבנתי שאני מסוגלת להרבה יותר ממה שחשבתי!"
+    }
+   ],
+   "productUrl": "https://strauss-carwise.vercel.app/",
+   "video": {
+    "drive": "1H5_X_9WV5e8r7DJP66_cJGBXLPx-J557",
+    "storage": "submissions/5051a051-8ff6-430c-8349-58b7aaca977c/1792697263622-straussCarwise-60s.mp4",
+    "link": "https://drive.google.com/file/d/1IJMFQ4wONnghw8F35ynVoItVvNZEB7ND/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/5051a051.webp",
+   "caption": "רחל וסרמן · שטראוס",
+   "submittedAt": "2026-10-22 20:06:05.642+00"
+  },
+  {
+   "k8": "e178d9cf",
+   "teamKey": "e178d9cf-ecaa-4a6d-8f69-429cdc486476",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "e178d9cf-ecaa-4a6d-8f69-429cdc486476",
+     "name": "שושנה בצלאל"
+    }
+   ],
+   "blurb": "כל שאלה שהבוט לא ידע לענות עליה - רכב שאין בקטלוג, השתתפות שמחכה לאישור - נרשמת מעצמה ביומן פערי מידע. הנציג רואה סיכום, מגמה שבועית והמלצות, ושטראוס יודעת בדיוק מה להשלים בקטלוג ובכללים.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Supabase",
+    "Next.js",
+    "Vercel"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "e178d9cf-ecaa-4a6d-8f69-429cdc486476",
+     "name": "שושנה בצלאל",
+     "quote": "ההתעסקות עם פיתוח מערכת חידד את חושי שקהו והושיב אותי חזרה על כיסא המתכנתת."
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor-smoky.vercel.app/",
+   "video": {
+    "drive": "1zKYtRMrMHXCErTgrXczsy1BgJ69q-BS_",
+    "storage": "submissions/e178d9cf-ecaa-4a6d-8f69-429cdc486476/1792700377963-strauss_car_advisor.mp4"
+   },
+   "image": "/hackathon-2026/catalog/e178d9cf.webp",
+   "caption": "שושנה בצלאל · שטראוס",
+   "submittedAt": "2026-10-22 20:20:14.387+00"
+  },
+  {
+   "k8": "df715cf4",
+   "teamKey": "df715cf4-1547-49ae-8746-bd286ff7605a",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "df715cf4-1547-49ae-8746-bd286ff7605a",
+     "name": "תהילה פריד"
+    }
+   ],
+   "blurb": "״איזה רכב הכי בטיחותי מבין אלה שמגיעים לי?״ כובי מדרג רק רכבים שבזכאות, לפי נתונים רשמיים עם מקור ותאריך, והנטו ליד כל אחד. ו״נוח״ הוא לא מנחש: הוא שואל ״נוח מבחינת מה?״ ומתרגם את התשובה לנתון. ובונוס: גרסת מובייל על אותו שרת ואותו מנוע חישוב, שרצה על טלפון אמיתי ומוכנה לפיילוט.",
+   "tech": [
+    "Gemini",
+    "Claude",
+    "LangGraph",
+    "PostgreSQL",
+    "FastAPI",
+    "React",
+    "Vite",
+    "React Native (Expo)",
+    "OpenRouter",
+    "Groq",
+    "Render"
+   ],
+   "finalist": 3,
+   "award": "winner",
+   "quotes": [
+    {
+     "id": "df715cf4-1547-49ae-8746-bd286ff7605a",
+     "name": "תהילה פריד",
+     "quote": "למדתי שאני יכולה למצוא את הטעויות של עצמי ולתקן אותן."
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor-y1x6.onrender.com/",
+   "video": {
+    "drive": "1NzxbqeplJAvlzHZmuLkXxDjGyn1Gjgxq",
+    "link": "https://drive.google.com/file/d/1wuCVQVTfI_bcBagWdwJaTAsKebSyG90J/view"
+   },
+   "image": "/hackathon-2026/catalog/df715cf4.webp",
+   "caption": "תהילה פריד · שטראוס",
+   "submittedAt": "2026-10-22 20:31:48.55+00"
+  },
+  {
+   "k8": "d87c86e5",
+   "teamKey": "d87c86e5-9714-486a-bd1e-d58c8d467f3d+f290d2c5-b096-4f26-95a4-654a015c38e2",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "d87c86e5-9714-486a-bd1e-d58c8d467f3d",
+     "name": "חנה טורצין"
+    },
+    {
+     "id": "f290d2c5-b096-4f26-95a4-654a015c38e2",
+     "name": "תמר מרגי"
+    }
+   ],
+   "blurb": "ליד השיחה יש לוח ״ההחלטה שלך״ שמתעדכן אחרי כל הודעה: מה כבר נמסר, מה עוד חסר, האם הרכב מותר וכמה ישתנה הנטו. הלוח נבנה מהחישוב בשרת ולא ממה שהמודל כתב, ונשאר גם אחרי רענון.",
+   "tech": [
+    "Gemini",
+    "Python",
+    "Kiro"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [],
+   "productUrl": "https://strauss-car-advisor-gbzj.onrender.com/",
+   "video": {
+    "drive": "1uScJ-4khLzLIDv_SK9VBKQMTT2P-VE7l",
+    "link": "https://drive.google.com/file/d/1HBTs5ZAByltDDuRitQOpuRLIfpH8lI5q/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/d87c86e5.webp",
+   "caption": "חנה טורצין + תמר מרגי · שטראוס",
+   "submittedAt": "2026-10-22 20:37:51.195+00"
+  },
+  {
+   "k8": "f26921a1",
+   "teamKey": "f26921a1-e78e-4eb5-b864-2e654f690572",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "f26921a1-e78e-4eb5-b864-2e654f690572",
+     "name": "שושנה פרוכטר"
+    }
+   ],
+   "blurb": "העובדת שואלת על רכב אחד ומקבלת את התמונה כולה: הנטו לכל חלופה שמותרת לה, כולל מסלול ברוכת ילדים וויתור על הרכב, מדורג מהמשתלם ביותר. כך נועה גילתה שוויתור נותן לה 3,199 ₪ יותר - שאלה שלא חשבה לשאול.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Supabase",
+    "Python",
+    "FastAPI",
+    "React",
+    "Vercel",
+    "Render",
+    "Kiro"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "f26921a1-e78e-4eb5-b864-2e654f690572",
+     "name": "שושנה פרוכטר",
+     "quote": "לדעת שאני יודעת להקים מערכת מאפס ועד production"
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor-hackathon.vercel.app/",
+   "video": {
+    "drive": "14tQXSyRq75gCR7eI201nT5EypG88lXoW",
+    "storage": "submissions/f26921a1-e78e-4eb5-b864-2e654f690572/1792701819203-_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/f26921a1.webp",
+   "caption": "Shoshana Fruchter · שטראוס",
+   "submittedAt": "2026-10-22 20:44:25.652+00"
+  },
+  {
+   "k8": "253eebfd",
+   "teamKey": "253eebfd-4676-4352-8116-706bb6af83a9+7ccb331e-c254-4fd5-9420-6542e9635a9a",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "253eebfd-4676-4352-8116-706bb6af83a9",
+     "name": "רבקה שלנגר"
+    },
+    {
+     "id": "7ccb331e-c254-4fd5-9420-6542e9635a9a",
+     "name": "רות שלזינגר"
+    }
+   ],
+   "blurb": "כל מספר שהבוט כותב אפשר ללחוץ עליו ולראות מאיפה הגיע: חושב בשרת, השתתפות שאישר הנציג, שכר מהתלוש. מספר שאין לו מקור ודאי פשוט לא מקבל מקור. ומתג ״חדר המנועים״ מראה לבוחנות אילו כלים הופעלו ומה השומר אישר. ועוד: תפקידים ופרטיות בקוד - המנהלת לא רואה שכר, התלוש נקרא ולא נשמר - וזיכרון בין שיחות רק באישור העובדת.",
+   "tech": [
+    "Claude Code",
+    "Claude",
+    "SQLite",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "253eebfd-4676-4352-8116-706bb6af83a9",
+     "name": "רבקה שלנגר",
+     "quote": "גיליתי גם שיש לי עין חדה לבאגים."
+    },
+    {
+     "id": "7ccb331e-c254-4fd5-9420-6542e9635a9a",
+     "name": "רות שלזינגר",
+     "quote": "גיליתי שאני אוהבת סדר ודיוק, והוכחה שאכן המודל עובד לפי נתונים ולא ממציא, לדעתי מספר בלי מקור הוא לא מספר."
+    }
+   ],
+   "productUrl": "https://compass-web-hcpz.onrender.com/",
+   "video": {
+    "drive": "1hgpIsjPfI1N7-cwS4n5gxgY9uclMgsqp",
+    "storage": "submissions/253eebfd-4676-4352-8116-706bb6af83a9+7ccb331e-c254-4fd5-9420-6542e9635a9a/1792697994673-Compass.mp4"
+   },
+   "image": "/hackathon-2026/catalog/253eebfd.webp",
+   "caption": "רבקה שלנגר + רות שלזינגר · שטראוס",
+   "submittedAt": "2026-10-22 20:46:43.232+00"
+  },
+  {
+   "k8": "551d39dc",
+   "teamKey": "551d39dc-75c6-4ac1-af51-9c30cb796000",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "551d39dc-75c6-4ac1-af51-9c30cb796000",
+     "name": "חסי פוברסקי"
+    }
+   ],
+   "blurb": "כשחסר נתון שרק הנציגה יודעת, הבוט של חסי לא מנחש: השאלה עוברת למסך שלה, העובדת רואה בינתיים את מצב היום, וכשהתשובה מגיעה השיחה ממשיכה לבד. ״מה הכי משתלם לי?״ מדרג 13 חלופות, ו״נקודת מפנה״ אומרת מתי עליית שכר משנה את הבחירה.",
+   "tech": [
+    "Gemini",
+    "SQLite",
+    "Python",
+    "FastAPI",
+    "Angular",
+    "Render",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "551d39dc-75c6-4ac1-af51-9c30cb796000",
+     "name": "חסי פוברסקי",
+     "quote": "הרגע שבו המספרים מהמערכת יצאו זהים לתוצאות של ששת העובדים לדוגמה"
+    }
+   ],
+   "productUrl": "https://vehicle-advisor.onrender.com/",
+   "video": {
+    "drive": "1SlM1O4vB87lYG5jkT-erfep1s-s3AXhk",
+    "link": "https://drive.google.com/file/d/1EsDdpihZWjDERjGDbcyy6xTw0-c1gZTl/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/551d39dc.webp",
+   "caption": "חסי פוברסקי · שטראוס",
+   "submittedAt": "2026-10-22 20:50:35.048+00"
+  },
+  {
+   "k8": "bfdd08ac",
+   "teamKey": "bfdd08ac-a5d1-483c-aad0-54786befc5c7",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "bfdd08ac-a5d1-483c-aad0-54786befc5c7",
+     "name": "יעל קרביץ"
+    }
+   ],
+   "blurb": "הדירוג של יעל הוא עובדה ולא המלצה: כל החלופות שבזכאות לפי נטו, ולצד כל נתון מאיפה הוא - מהעובדת, מהתלוש, מהנציג או מהקטלוג. ״הצג איך חושב״ מפרק את הנטו שורה אחרי שורה, עם הכלל שהפעיל כל שלב. ולמנהלת מסך ניהול: כל השיחות בטבלה עם סינון, סטטיסטיקות שימוש וניהול משתמשים.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "LlamaIndex",
+    "Python",
+    "Streamlit"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "bfdd08ac-a5d1-483c-aad0-54786befc5c7",
+     "name": "יעל קרביץ",
+     "quote": "למדתי שאני לא מסתפקת ב\"זה עובד אצלי\"."
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor.onrender.com/",
+   "video": {
+    "drive": "1cRHuU3P6xPo8Caq_kq_BhTXU8k916wwd",
+    "link": "https://drive.google.com/file/d/1Z8a79TNfR9sL_jVUIG1oFo-J8KUZSo8O/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/bfdd08ac.webp",
+   "caption": "יעל קרביץ · שטראוס",
+   "submittedAt": "2026-10-22 20:59:55.819+00"
+  },
+  {
+   "k8": "a1e796ba",
+   "teamKey": "a1e796ba-11ef-463a-89b1-24e50a9c8e64+c8e5c037-2182-4ce8-90ea-d38bb38bf41f",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "c8e5c037-2182-4ce8-90ea-d38bb38bf41f",
+     "name": "חנה זילברשטיין"
+    },
+    {
+     "id": "a1e796ba-11ef-463a-89b1-24e50a9c8e64",
+     "name": "שני פרינץ"
+    }
+   ],
+   "blurb": "החלטה על רכב לא נגמרת מול המסך. בלחיצה אחת העובדת מורידה סיכום PDF בעמוד אחד - ההשוואה, ההנחות ומקור כל נתון - לשמור, להראות בבית ולהחליט בשקט. וכל מספר בו הגיע ממנוע החישוב.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Vercel AI SDK",
+    "Supabase",
+    "TypeScript",
+    "React",
+    "Next.js",
+    "Zod",
+    "Groq",
+    "Vercel"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "c8e5c037-2182-4ce8-90ea-d38bb38bf41f",
+     "name": "חנה זילברשטיין",
+     "quote": "המון ביטחון, התנסות מקצועית ואמיתית בבניית AI"
+    },
+    {
+     "id": "a1e796ba-11ef-463a-89b1-24e50a9c8e64",
+     "name": "שני פרינץ",
+     "quote": "אני יכולה לעבוד היטב עם כלי AI, אבל אני לא מקבלת את מה שמציעים לי בלי לבדוק."
+    }
+   ],
+   "productUrl": "https://netwise-beta.vercel.app/",
+   "video": {
+    "drive": "1z_oRZB4oj3RiO53K1NzcBjLG1h-tWezs",
+    "link": "https://drive.google.com/file/d/19pqdT36sNlAt8sA28dm9K9VRurMb2XHf/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/a1e796ba.webp",
+   "caption": "שני פרינץ + חנה זילברשטיין · שטראוס",
+   "submittedAt": "2026-10-22 21:01:15.655+00"
+  },
+  {
+   "k8": "5d0cc593",
+   "teamKey": "5d0cc593-50e6-4523-b60c-c6410d3ecdda+eb8693ba-46dd-4570-9794-a2ed59a32173",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "eb8693ba-46dd-4570-9794-a2ed59a32173",
+     "name": "דבורה מייזליק"
+    },
+    {
+     "id": "5d0cc593-50e6-4523-b60c-c6410d3ecdda",
+     "name": "שרה אוחנה"
+    }
+   ],
+   "blurb": "מרכז פניות של ממש לנציגות: תור משותף שבו רואים את כל הפניות הפתוחות, נציגה תופסת פנייה לטיפול בלעדי ומשחררת אם צריך, וכל צעד נרשם ביומן. אף פנייה לא הולכת לאיבוד ואף אחת לא נענית פעמיים, והתשובה נכנסת ישר לשיחת העובדת. ובנוסף: קטלוג רכבים עם תמונות והשוואת נטו מול כמה רכבים בבת אחת, ועמוד פנייה ישירה לנציגה אנושית עם כל הפניות והתשובות.",
+   "tech": [
+    "LangGraph",
+    "PostgreSQL",
+    "Python",
+    "Angular"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "eb8693ba-46dd-4570-9794-a2ed59a32173",
+     "name": "דבורה מייזליק",
+     "quote": "למדתי לדייק יותר, למדתי לעבוד בזוג"
+    },
+    {
+     "id": "5d0cc593-50e6-4523-b60c-c6410d3ecdda",
+     "name": "שרה אוחנה",
+     "quote": "שיש לי חשיבה ממש יצירתית"
+    }
+   ],
+   "productUrl": "https://strauss-vehicle-advisor.vercel.app/",
+   "video": {
+    "drive": "18HrGFHYnGh3Sy0raOirQYVyH3DNCGIz0",
+    "link": "https://drive.google.com/file/d/1M8R4GaY_lxajpolAAqMtDqfuh-uOr_FM/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/5d0cc593.webp",
+   "caption": "שרה אוחנה + דבורה מייזליק · שטראוס",
+   "submittedAt": "2026-10-22 21:03:54.974+00"
+  },
+  {
+   "k8": "3c90616a",
+   "teamKey": "3c90616a-6b6a-4b45-9190-413e6fbb3f4c",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "3c90616a-6b6a-4b45-9190-413e6fbb3f4c",
+     "name": "זהבי רוזנטל"
+    }
+   ],
+   "blurb": "בחירת רכב כמו באולם תצוגה: כל האפשרויות של העובדת, תצוגת 360 מעלות לכל דגם, בחירה של עד שלושה להשוואה מלאה עם ההשפעה על הנטו. כשהנציג עונה מגיע מייל, ואת ההשוואה שבחרה אפשר להוריד כדוח אישי.",
+   "tech": [
+    "Gemini",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Playwright",
+    "GitHub"
+   ],
+   "finalist": 1,
+   "award": null,
+   "quotes": [
+    {
+     "id": "3c90616a-6b6a-4b45-9190-413e6fbb3f4c",
+     "name": "זהבי רוזנטל",
+     "quote": "אני מאוד אוהבת את התחום."
+    }
+   ],
+   "productUrl": "https://strauss-drive.onrender.com/",
+   "video": {
+    "drive": "1BSN_uNzd-X3sV1gFxlCzPFtcIvvZWOtz",
+    "link": "https://drive.google.com/file/d/1N1EIMMheSQslppRjtoFcJLvV9B5HccNo/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/3c90616a.webp",
+   "caption": "זהבי רוזנטל · שטראוס",
+   "submittedAt": "2026-10-22 21:55:39.141+00"
+  },
+  {
+   "k8": "019caa60",
+   "teamKey": "019caa60-dd28-40b6-8556-8c516d111d5b+49f002c3-67ab-4858-b328-9f742fabbd15",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "019caa60-dd28-40b6-8556-8c516d111d5b",
+     "name": "תמר יגלניק"
+    },
+    {
+     "id": "49f002c3-67ab-4858-b328-9f742fabbd15",
+     "name": "אסתר סגל"
+    }
+   ],
+   "blurb": "פעם בחודש המנהלת מקבלת דוח ״נקודות הבלבול״: על מה עובדים שואלים שוב ושוב, פעולה מוצעת לכל נושא, וכמה שיחות נסגרו בלי נציג - בלי לחשוף אף עובד. במקום לענות על אותה שאלה שוב, שטראוס משפרת את ההסבר.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "SQLite",
+    "Python",
+    "FastAPI",
+    "React",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "019caa60-dd28-40b6-8556-8c516d111d5b",
+     "name": "תמר יגלניק",
+     "quote": "אני שואלת \"האם זה נכון?\" ובודקת לפני שאני מגישה."
+    },
+    {
+     "id": "49f002c3-67ab-4858-b328-9f742fabbd15",
+     "name": "אסתר סגל",
+     "quote": "גיליתי שיש לי יכולת למידה עצמית טובה, סבלנות ויכולת למצוא פתרונות לבעיות."
+    }
+   ],
+   "productUrl": "https://strauss-car-advisor-frontend.onrender.com/",
+   "video": {
+    "drive": "1xYWz54E2JnEOEuLAlNPuROTadAdEyiZ6",
+    "storage": "submissions/019caa60-dd28-40b6-8556-8c516d111d5b+49f002c3-67ab-4858-b328-9f742fabbd15/1792710950293-_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/019caa60.webp",
+   "caption": "Tamar Yagelnik + אסתר סגל · שטראוס",
+   "submittedAt": "2026-10-22 23:14:31.249+00"
+  },
+  {
+   "k8": "41ee5d6d",
+   "teamKey": "41ee5d6d-d113-4e63-9315-6a8b350189aa",
+   "challenge": "strauss",
+   "members": [
+    {
+     "id": "41ee5d6d-d113-4e63-9315-6a8b350189aa",
+     "name": "מרים שטרן"
+    }
+   ],
+   "blurb": "״מעבדת ההחלטה״ היא תאום דיגיטלי של הנטו: העובדת משנה בונוס, עמלות או השתתפות ורואה בגרף חי מתי חלופה אחרת נעשית עדיפה. ולארגון - החלפות רכבים בין עובדים שרוצים להחליף, בהסכמתם ובאישור קצין הרכב. ו-Intent Analytics להנהלה: בהסכמת העובדים, אילו חלופות נבדקות ומה נבחר, כולל בחינת תרחישי מדיניות - בלי לחשוף שכר אישי.",
+   "tech": [
+    "OpenAI / GPT",
+    "Supabase",
+    "PostgreSQL",
+    "TypeScript",
+    "React",
+    ".NET / C#",
+    "Railway",
+    "Codex"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "41ee5d6d-d113-4e63-9315-6a8b350189aa",
+     "name": "מרים שטרן",
+     "quote": "למדתי יותר לעבוד עם כלי AI, לדייק אותם, לא לזרום עם כל מה שהם כותבים"
+    }
+   ],
+   "productUrl": "https://carwise-production-8144.up.railway.app/",
+   "video": {
+    "drive": "15IP7ifK5fPHmpwHsYuLe2A02ikMmzVai",
+    "storage": "submissions/41ee5d6d-d113-4e63-9315-6a8b350189aa/1792714210879-CarWise-demo.mp4"
+   },
+   "image": "/hackathon-2026/catalog/41ee5d6d.webp",
+   "caption": "מרים שטרן · שטראוס",
+   "submittedAt": "2026-10-23 00:10:23.298+00"
+  },
+  {
+   "k8": "32e52b46",
+   "teamKey": "32e52b46-bc95-48a6-b61a-a406600fa64d+f8c52dd5-381a-414f-83a4-19e7b3edd1bc",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "32e52b46-bc95-48a6-b61a-a406600fa64d",
+     "name": "עטי פרוינד"
+    },
+    {
+     "id": "f8c52dd5-381a-414f-83a4-19e7b3edd1bc",
+     "name": "תהילה לוין"
+    }
+   ],
+   "blurb": "במקום לסנן טבלאות, שואלים: ״כמה טפסים ממתינים לבדיקה?״, ״באילו חסר מספר התחייבות?״. עוזר המאגר של עטי ותהילה עונה מתוך הרשומות עצמן, אומר מכמה טפסים ונכון לאיזו שעה, ולחיצה על התשובה פותחת את הטופס לתיקון. הוא לא ממציא - הוא סופר.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Claude",
+    "OCR",
+    "SQLite",
+    "Streamlit"
+   ],
+   "finalist": 1,
+   "award": null,
+   "quotes": [
+    {
+     "id": "32e52b46-bc95-48a6-b61a-a406600fa64d",
+     "name": "עטי פרוינד",
+     "quote": "נהניתי מהתהליך שבו רעיון הופך לפתרון אמיתי, כל אתגר דרש מאיתנו לעצור, לחשוב מחדש ולמצוא דרך יצירתית לשפר את התוצאה."
+    },
+    {
+     "id": "f8c52dd5-381a-414f-83a4-19e7b3edd1bc",
+     "name": "תהילה לוין",
+     "quote": "הבנתי כמה חשוב מחקר יסודי וכמה זמן עבודה זה חוסך"
+    }
+   ],
+   "productUrl": "https://labextract-3qetzizcdmhmusfcfibefj.streamlit.app/",
+   "video": {
+    "drive": "1nO82R-Rb7daZuN2dpg3KgMzU6n2IJrEk",
+    "storage": "submissions/32e52b46-bc95-48a6-b61a-a406600fa64d+f8c52dd5-381a-414f-83a4-19e7b3edd1bc/1792656266290-LabExtract.mp4"
+   },
+   "image": "/hackathon-2026/catalog/32e52b46.webp",
+   "caption": "עטי פרוינד + תהילה לוין · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 08:12:20.9+00"
+  },
+  {
+   "k8": "20b4da31",
+   "teamKey": "20b4da31-9ed5-4c0e-b427-a29f3e13de9a",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "20b4da31-9ed5-4c0e-b427-a29f3e13de9a",
+     "name": "רחל וינברגר"
+    }
+   ],
+   "blurb": "הטופס הסרוק והנתונים שחולצו ממנו על מסך אחד: מגדילים את האזור הרלוונטי, מסובבים דף שנסרק הפוך, משווים פרט מול פרט ומאשרים - בלי לפתוח קובץ ובלי לעבור בין מסכים. המודל קורא מהר, ורחל השאירה את המילה האחרונה בידי האדם.",
+   "tech": [
+    "Gemini",
+    "Node.js",
+    "React"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "20b4da31-9ed5-4c0e-b427-a29f3e13de9a",
+     "name": "רחל וינברגר",
+     "quote": "למדתי על עצמי שאני אוהבת לקחת על עצמי אתגרים חדשים, להיכנס לעומק של דברים ולמצוא דרכים יצירתיות להתמודד איתם."
+    }
+   ],
+   "productUrl": "https://medical-commitment-parser.onrender.com/",
+   "video": {
+    "drive": "1RNbY-zDNkblcf_S6LqM26dwB9Kl1vYZ9",
+    "storage": "submissions/20b4da31-9ed5-4c0e-b427-a29f3e13de9a/1792673271225-_2.mp4"
+   },
+   "image": "/hackathon-2026/catalog/20b4da31.webp",
+   "caption": "Rachel Weinberger · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 12:53:09.086+00"
+  },
+  {
+   "k8": "e491ae4f",
+   "teamKey": "e491ae4f-f285-470c-bed5-2b6bd43877a6",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "e491ae4f-f285-470c-bed5-2b6bd43877a6",
+     "name": "רות רובין"
+    }
+   ],
+   "blurb": "המנהלת כותבת בעברית: ״אם הקופה מכבי והבדיקה PCR - חובה מספר הפניה״. המערכת של רות מתרגמת את המשפט לכלל, מציגה לאישור מה הבינה, ומראה כמה טפסים קיימים הכלל היה מסמן לפני שמפעילים אותו. מונח לא מוכר מעלה שאלה, לא ניחוש. המעבדה משנה את הכללים בלי מתכנת. והמערכת לומדת מהתיקונים: תיקון שאושר פעמיים הופך ללקח שנטען בערימה הבאה, ושדה שהמודל טועה בו בביטחון עובר תמיד לבדיקה אנושית.",
+   "tech": [
+    "Gemini",
+    "Claude",
+    "SQLite",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Vite",
+    "PyMuPDF",
+    "Pillow",
+    "openpyxl",
+    "Render",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "e491ae4f-f285-470c-bed5-2b6bd43877a6",
+     "name": "רות רובין",
+     "quote": "יכולת להסתגל לטכנולוגיות חדשות במהירות"
+    }
+   ],
+   "productUrl": "https://commitment-forms-web.onrender.com/",
+   "video": {
+    "drive": "1MbrTGUIix_IGOOodjMeN9HFHpt3GMem9",
+    "link": "https://drive.google.com/drive/folders/1CQrlhAqgho8mAoX0hbzKZhiyUuwk_6eg?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/e491ae4f.webp",
+   "caption": "Ruth Rubin · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 17:12:51.071+00"
+  },
+  {
+   "k8": "d99eb4fd",
+   "teamKey": "d99eb4fd-e099-4a43-96ed-581feef823c1",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "d99eb4fd-e099-4a43-96ed-581feef823c1",
+     "name": "שפרה למברגר"
+    }
+   ],
+   "blurb": "כל תיקון במערכת של שפרה נשמר עם הסיפור שלו: מה המודל זיהה במקור, מה שונה, מי תיקנה, מתי ולמה - ובלי שם בודקת ונימוק אי אפשר לשמור. כשמתגלה מספר התחייבות שגוי, אפשר לברר אם הטעות נולדה בחילוץ או בתיקון ידני, ולתקן את המקור ולא רק את התוצאה.",
+   "tech": [
+    "Gemini",
+    "OpenAI / GPT",
+    "PostgreSQL",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Render",
+    "Codex"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "d99eb4fd-e099-4a43-96ed-581feef823c1",
+     "name": "שפרה למברגר",
+     "quote": "למדתי שאני מסוגלת להתמודד עם פרויקט מורכב גם כשאני לא יודעת בדיוק איך לבנות אותו"
+    }
+   ],
+   "productUrl": "https://viral-lab-judges-demo.onrender.com/",
+   "video": {
+    "drive": "1NyrllNGNvZhbQRfvDAEJXePMjde0JQpP",
+    "link": "https://drive.google.com/file/d/1Bw50TGYS2dKs7y2j9j-Qsz9KaswJn6e3/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/d99eb4fd.webp",
+   "caption": "שפרה למברגר · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 17:45:09.555+00"
+  },
+  {
+   "k8": "80f09d72",
+   "teamKey": "80f09d72-440a-4765-b0cf-0138f98a787f+e786d296-2b57-45ca-85d7-2f919e69e3dd",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "e786d296-2b57-45ca-85d7-2f919e69e3dd",
+     "name": "ברכה שורץ"
+    },
+    {
+     "id": "80f09d72-440a-4765-b0cf-0138f98a787f",
+     "name": "פנינה פריימן"
+    }
+   ],
+   "blurb": "ליד כל שדה שנשאר בספק יש הסבר במילים - למשל ״כתב יד לא קריא״ - כך שהבודקת יודעת מה לבדוק ולא רק שיש בעיה. נתון בספק נשמר באזהרה ולא יוצא לאקסל בלי אישור, והמסמכים הרפואיים נפתחים רק בכניסה אישית.",
+   "tech": [
+    "Gemini",
+    "Supabase",
+    "PostgreSQL",
+    "FastAPI",
+    "Streamlit",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "e786d296-2b57-45ca-85d7-2f919e69e3dd",
+     "name": "ברכה שורץ",
+     "quote": "שאני יודעת להתמודד עם בעיות שאין להן פתרון ברור מראש, לפרק אותן לשלבים קטנים ולהתמיד גם ברגעים של תסכול."
+    },
+    {
+     "id": "80f09d72-440a-4765-b0cf-0138f98a787f",
+     "name": "פנינה פריימן",
+     "quote": "התמדה: אני לא מוותרת מול תקלות, אלא מפרקת כל בעיה לשלבים עד שהיא נפתרת."
+    }
+   ],
+   "productUrl": "https://aiproject-r75x.onrender.com/",
+   "video": {
+    "drive": "1grmMJCtnQqb0g2xOE8wynTMNARNyGVzl",
+    "storage": "submissions/80f09d72-440a-4765-b0cf-0138f98a787f+e786d296-2b57-45ca-85d7-2f919e69e3dd/1792692091425-_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/80f09d72.webp",
+   "caption": "פנינה פריימן + ברכה שורץ · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 18:46:06.095+00"
+  },
+  {
+   "k8": "3a35296e",
+   "teamKey": "3a35296e-2f78-4bf2-bdd3-6f4afcf24104+cd0e6d24-50ad-4822-a700-cc3729adb2a0",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "cd0e6d24-50ad-4822-a700-cc3729adb2a0",
+     "name": "בלה פלורסהיים"
+    },
+    {
+     "id": "3a35296e-2f78-4bf2-bdd3-6f4afcf24104",
+     "name": "שרה כץ"
+    }
+   ],
+   "blurb": "שם בכתב יד עברי הוא השדה הכי קשה למודל, אז כאן הוא נקרא פעמיים - מהעמוד המלא ומחיתוך מוגדל - ושתי הקריאות מושוות לפני אישור. ליד כל שדה הלבורנטית רואה בדיוק את התמונה שהמודל ראה, מוגדלת וממוקדת, ואפשר לצלם טופס ישר מהטלפון. והממשק מקבל עדכונים בזמן אמת על התקדמות העיבוד ומצב התור.",
+   "tech": [
+    "Gemini",
+    "SQLite",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Render",
+    "Google AI Studio"
+   ],
+   "finalist": 3,
+   "award": null,
+   "quotes": [
+    {
+     "id": "cd0e6d24-50ad-4822-a700-cc3729adb2a0",
+     "name": "בלה פלורסהיים",
+     "quote": "מצאתי את עצמי מסוגלת לתכנן ארכיטקטורה שלמה מהבסיס ועד הסוף"
+    },
+    {
+     "id": "3a35296e-2f78-4bf2-bdd3-6f4afcf24104",
+     "name": "שרה כץ",
+     "quote": "נהניתי במיוחד מהרגעים שבהם הצלחתי להבין מדוע המודל מתקשה, לחשוב על פתרון ולראות כיצד שינוי ממוקד משפר את התוצאה."
+    }
+   ],
+   "productUrl": "https://sheba-f05x.onrender.com/",
+   "video": {
+    "drive": "13oft4f2omgqeKAtiibiH1yoibiCst_P5",
+    "link": "https://drive.google.com/file/d/1K3qKuDb0bYsxwZOvq5r0zCZVJ_yuZyHa/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/3a35296e.webp",
+   "caption": "שרה כץ + בלה פלורסהיים · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 19:21:06.008+00"
+  },
+  {
+   "k8": "7719f72b",
+   "teamKey": "7719f72b-6e25-4e09-8333-e16ee8156008+eba61697-6e77-45e3-9e67-e3b888875e51",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "eba61697-6e77-45e3-9e67-e3b888875e51",
+     "name": "ציפורה אטינגר"
+    },
+    {
+     "id": "7719f72b-6e25-4e09-8333-e16ee8156008",
+     "name": "אסתי רוזנשטיין"
+    }
+   ],
+   "blurb": "רוב הטעויות בטפסים האלה הן בחירה של המספר הלא נכון - מספר מקרה במקום תעודת זהות - ולא קריאה שגויה של ספרות. לכן כשעומדים על שדה, מלבן מסומן על הסריקה בדיוק במקום שממנו נלקח הערך, והבודקת רואה בשנייה אם זה המספר הנכון. בנוסף: זיהוי כפילויות מול ההיסטוריה.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Claude",
+    "PostgreSQL",
+    "Python",
+    "FastAPI",
+    "React",
+    "Render",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "eba61697-6e77-45e3-9e67-e3b888875e51",
+     "name": "ציפורה אטינגר",
+     "quote": "גיליתי שחשוב לי מאוד שהמערכת תהיה אמינה ולא רק תיראה טוב."
+    },
+    {
+     "id": "7719f72b-6e25-4e09-8333-e16ee8156008",
+     "name": "אסתי רוזנשטיין",
+     "quote": "אני אלופה ויכולה להתמודד עם אתגרים בתכנות גם שאני ג'וניור!"
+    }
+   ],
+   "productUrl": "https://virus-lab-e0zp.onrender.com/login",
+   "video": {
+    "drive": "1u9BDeCNEcoJwn-Vg-zjxXwcmQRiLxjyl",
+    "link": "https://drive.google.com/drive/folders/1c29o_neZUk1ymH55lpUU0epLFQ7RRmsU?usp=shahttps://drive.google.com/drive/folders/1c29o_neZUk1ymH55lpUU0epLFQ7RRmsU?usp=sharingring"
+   },
+   "image": "/hackathon-2026/catalog/7719f72b.webp",
+   "caption": "אסתי רוזנשטיין + Tzipora Etinger · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 20:04:50.339+00"
+  },
+  {
+   "k8": "5dd355a1",
+   "teamKey": "5dd355a1-6018-4440-9e74-11a80de56523",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "5dd355a1-6018-4440-9e74-11a80de56523",
+     "name": "שירי דויטש"
+    }
+   ],
+   "blurb": "בבדיקה ידנית רוב הזמן הולך על חיפוש, לא על ההחלטה. לכן ״התחלת בדיקה״ אצל שירי עוברת תא אחרי תא רק על מה שהמערכת לא בטוחה בו: החיתוך מהטופס, מה נקרא, למה יש ספק וערך מוצע. Enter מאשר וממשיך, ושורה בלי ספק מאושרת בלחיצה אחת.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Claude",
+    "SQLite",
+    "Python",
+    "Streamlit"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "5dd355a1-6018-4440-9e74-11a80de56523",
+     "name": "שירי דויטש",
+     "quote": "כל עוד משהו לא עובד לי ישבתי ודייקתי את מה שצריך כדי לראות שהכל עובד"
+    }
+   ],
+   "productUrl": "https://central-virology-laboratory.streamlit.app/",
+   "video": {
+    "drive": "1jEpM6mazgJw4RETESOUYLsA8YLia9Xp2",
+    "storage": "submissions/5dd355a1-6018-4440-9e74-11a80de56523/1792699262245-Video_Project.mp4"
+   },
+   "image": "/hackathon-2026/catalog/5dd355a1.webp",
+   "caption": "שירי דויטש · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 20:15:49.554+00"
+  },
+  {
+   "k8": "5cd116f5",
+   "teamKey": "5cd116f5-4ce2-48b7-8dfa-10eebfd107e3",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "5cd116f5-4ce2-48b7-8dfa-10eebfd107e3",
+     "name": "תהילה זכריהו"
+    }
+   ],
+   "blurb": "הטעויות החוזרות הן החלק המייגע בבדיקה, אז המערכת של תהילה זוכרת אותן: אחרי שלושה תיקונים עקביים באותו סוג טופס היא מציעה - ״בטפסים קודמים נקרא שיבא ותוקן למאוחדת (3 מתוך 3)״. מציעה בלבד, אדם מאשר, וכך המערכת משתפרת עם השימוש בלי לאמן מודל.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "PostgreSQL",
+    "Python",
+    "Groq",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "5cd116f5-4ce2-48b7-8dfa-10eebfd107e3",
+     "name": "תהילה זכריהו",
+     "quote": "שאני מאוד נהנית להבין לעומק איך המערכת עובדת ולחשוב איך אפשר לשפר אותה"
+    }
+   ],
+   "productUrl": "https://formextract.onrender.com/",
+   "video": {
+    "drive": "1MVkBmXxsQrLfldrRKf9GwtgRCqbZmyQS",
+    "link": "https://drive.google.com/file/d/1nvy_cGF9nPxZpJGG9YwGDXKosNjT8gCk/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/5cd116f5.webp",
+   "caption": "תהילה זכריהו · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 20:20:52.901+00"
+  },
+  {
+   "k8": "118fe200",
+   "teamKey": "118fe200-7f1f-4fb3-b416-2ebe53d9f291+a52f9a22-9636-4591-b4e2-3406479792d5",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "a52f9a22-9636-4591-b4e2-3406479792d5",
+     "name": "אלישבע לוי"
+    },
+    {
+     "id": "118fe200-7f1f-4fb3-b416-2ebe53d9f291",
+     "name": "חגית לוי"
+    }
+   ],
+   "blurb": "המערכת מדרגת את הגורמים השולחים לפי איכות הקריאה: אילו בתי חולים וקופות שולחים טפסים שנקראים היטב, ואילו מייצרים הכי הרבה בדיקה ידנית - נתון שמאפשר למעבדה לבקש סריקה טובה יותר מהמקור. כל רשומה יוצאת לאקסל, PDF או הדפסה לפי הסינון, וכל ערך מוצלב גם מול הברקוד.",
+   "tech": [
+    "Claude Code",
+    "Claude",
+    "Tesseract",
+    "PostgreSQL",
+    "Python",
+    "FastAPI",
+    "React",
+    "zxing-cpp",
+    "Render",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "a52f9a22-9636-4591-b4e2-3406479792d5",
+     "name": "אלישבע לוי",
+     "quote": "אין דבר העומד בפני הרצון!"
+    },
+    {
+     "id": "118fe200-7f1f-4fb3-b416-2ebe53d9f291",
+     "name": "חגית לוי",
+     "quote": "הכלי לא מחליף את החשיבה, הוא דורש ממני יותר ממנה."
+    }
+   ],
+   "productUrl": "https://lab-form-intake.onrender.com/",
+   "video": {
+    "drive": "1Uy3euXwmu3Ee-9cKxyVS8mgVE6sH7Gf3",
+    "storage": "submissions/118fe200-7f1f-4fb3-b416-2ebe53d9f291+a52f9a22-9636-4591-b4e2-3406479792d5/1792702489069-lab-form-intake-demo_2.mp4"
+   },
+   "image": "/hackathon-2026/catalog/118fe200.webp",
+   "caption": "חגית לוי + אלישבע לוי · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 20:55:11.036+00"
+  },
+  {
+   "k8": "cb8abc17",
+   "teamKey": "cb8abc17-a9bb-4f0f-9345-6921ec30a895+df59fa41-8d54-48c8-9dd6-0b0e915bd663",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "df59fa41-8d54-48c8-9dd6-0b0e915bd663",
+     "name": "יעל כהן"
+    },
+    {
+     "id": "cb8abc17-a9bb-4f0f-9345-6921ec30a895",
+     "name": "מלכה לורינץ"
+    }
+   ],
+   "blurb": "לחיצה על שדה בטבלה מקפיצה את החיתוך המדויק של אותו מקום בטופס המקורי - מדבקה, חותמת, ברקוד או שורה בכתב יד - מוגדל ומסומן. הלבורנטית משווה ערך למקור בשניות, במקום לפתוח את הקובץ ולגלול בעיניים עייפות.",
+   "tech": [
+    "Gemini",
+    "Supabase",
+    "PostgreSQL",
+    "FastAPI",
+    "React",
+    "Vite",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "df59fa41-8d54-48c8-9dd6-0b0e915bd663",
+     "name": "יעל כהן",
+     "quote": "למדתי שגם מה שנראה לא הגיוני לביצוע,עם תפילה, מאמץ, עוד ניסוי, עוד אחד, אפשר להגיע לתוצאות מדהימות ומפתיעות."
+    },
+    {
+     "id": "cb8abc17-a9bb-4f0f-9345-6921ec30a895",
+     "name": "מלכה לורינץ",
+     "quote": "נהניתי מכל הנסיונות לשפר וליעל את המערכת ואת הAI."
+    }
+   ],
+   "productUrl": "https://autocommit-bw6k.onrender.com/",
+   "video": {
+    "drive": "1GXwuwHe9DFwifQjpBa7EoaUvWY-l2JYl",
+    "link": "https://drive.google.com/drive/folders/16ZUxLiMjTy33NCgRDYb59LvM391svywL?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/cb8abc17.webp",
+   "caption": "מלכה לורינץ + יעל כהן · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 21:00:28.531+00"
+  },
+  {
+   "k8": "3cc3190f",
+   "teamKey": "3cc3190f-528b-4aa1-9c2d-97495a2c2abe+a33f5799-c615-4a9b-bcb5-625162d68ec1",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "3cc3190f-528b-4aa1-9c2d-97495a2c2abe",
+     "name": "טובי גולדשטיין"
+    },
+    {
+     "id": "a33f5799-c615-4a9b-bcb5-625162d68ec1",
+     "name": "שרה קוליץ"
+    }
+   ],
+   "blurb": "כמה אפשר לסמוך על ציון הביטחון של המודל? המערכת מודדת זאת בעצמה: כל אישור או תיקון של הטכנאית נרשם מול הציון שדווח, ופאנל ״כיול אמון״ מראה את הדיוק בפועל בכל טווח ציונים וממליץ - בלי להחליט - אם להוריד את סף הבדיקה וכמה בדיקות ידניות ייחסכו. ועוד: גיליון ״יומן שינויים״ באקסל - לכל שדה מה חולץ, מה נשמר ומי אישר - סורק ברקודים, ו״בדיקה מהירה״ שעוברת על כל השדות שדורשים בדיקה עם הגדלה לצד כל אחד.",
+   "tech": [
+    "Claude",
+    "Tesseract",
+    "Next.js",
+    "TypeScript",
+    "Python",
+    "FastAPI",
+    "python-multipart",
+    "Pydantic",
+    "python-dotenv",
+    "PyMuPDF",
+    "NumPy",
+    "zxing-cpp",
+    "SQLite",
+    "Vercel"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "3cc3190f-528b-4aa1-9c2d-97495a2c2abe",
+     "name": "טובי גולדשטיין",
+     "quote": "למדתי לעבוד עם קלוד בצורה נכונה ולהגיע לדברים מדהימים בזמן קצר"
+    },
+    {
+     "id": "a33f5799-c615-4a9b-bcb5-625162d68ec1",
+     "name": "שרה קוליץ",
+     "quote": "למדתי שבסוף אני יכולה להוציא מוצר עובד, לא משנה בכמה בעיות נתקלתי בדרך, והכי חשוב לא להתייאש!!!"
+    }
+   ],
+   "productUrl": "https://extractingfilesai.vercel.app/",
+   "video": {
+    "drive": "1LRFv7WWX9LIx9Yx8iySJE3nF2w8_XBM8",
+    "link": "https://drive.google.com/open?id=1ueL7MYZ6rveRDPMpMAIKRGvC72Dv-Plx"
+   },
+   "image": "/hackathon-2026/catalog/3cc3190f.webp",
+   "caption": "טובי גולדשטיין + שרה קוליץ · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 21:01:25.64+00"
+  },
+  {
+   "k8": "80213887",
+   "teamKey": "80213887-0dc1-454f-96a5-b88ef27c4b47",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "80213887-0dc1-454f-96a5-b88ef27c4b47",
+     "name": "חנה קוסובסקי"
+    }
+   ],
+   "blurb": "לחיצה על שדה במסך הבדיקה מגדילה את תמונת הטופס וממסגרת את המקום שבו הערך כתוב, וכשפותחים רשומה השדה הראשון כבר מסומן. במספרים שיש להם ברקוד המסגרת נקבעת לפי הברקוד עצמו, ולכן מדויקת במיוחד. חנה בחרה את המודל אחרי מדידה מול טבלת אמת, ושם שלא נקרא נשאר ריק.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Claude",
+    "Supabase",
+    "PostgreSQL",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Tailwind",
+    "Render",
+    "Google AI Studio"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "80213887-0dc1-454f-96a5-b88ef27c4b47",
+     "name": "חנה קוסובסקי",
+     "quote": "הבנתי איך בוחרים מודל לפי מדידה ולא לפי תחושה, ואיך משלבים בדיקות בקוד כדי לא לסמוך על המודל באופן עיוור."
+    }
+   ],
+   "productUrl": "https://medextract-pszj.onrender.com/",
+   "video": {
+    "drive": "1oI6S8R7EqArv-46o7bdBFXLeeuAZ-Ujt",
+    "storage": "submissions/80213887-0dc1-454f-96a5-b88ef27c4b47/1792702666573-MedExtract-video.mp4"
+   },
+   "image": "/hackathon-2026/catalog/80213887.webp",
+   "caption": "חנה קוסובסקי · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 21:02:02.856+00"
+  },
+  {
+   "k8": "084c9f00",
+   "teamKey": "084c9f00-2ae6-4553-a49c-ff2da45b5830+d6a065c6-4386-4b46-8f2e-07a0b0f9b150",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "084c9f00-2ae6-4553-a49c-ff2da45b5830",
+     "name": "זהבה סבו"
+    },
+    {
+     "id": "d6a065c6-4386-4b46-8f2e-07a0b0f9b150",
+     "name": "טובה זק"
+    }
+   ],
+   "blurb": "״אי אפשר לייצא עם שגיאות״: הייצוא לאקסל נחסם, במסך וגם בשרת, כל עוד נותרה בעיה פתוחה - עם מונה ורשימה מפורשת של מה לתקן. וכשמתוך 30 עמודים שניים נכשלו, רק הם מעובדים מחדש, בלי לדרוס תיקונים ידניים ובלי לשלם שוב על 28 קריאות למודל.",
+   "tech": [
+    "Gemini",
+    "Supabase",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Vite"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "084c9f00-2ae6-4553-a49c-ff2da45b5830",
+     "name": "זהבה סבו",
+     "quote": "גיליתי שאני מסוגלת ללמוד טכנולוגיות חדשות במהירות, להתמודד עם אתגרים גם כשהפתרון לא ברור בהתחלה, ולמצוא דרכים יצירתיות להתקדם."
+    },
+    {
+     "id": "d6a065c6-4386-4b46-8f2e-07a0b0f9b150",
+     "name": "טובה זק",
+     "quote": "אני מתחברת יותר לארכיטקטורה והשוואה בין דרכים שונות לביצוע הפתרון"
+    }
+   ],
+   "productUrl": "https://virology-lab-staging-frontend.onrender.com/",
+   "video": {
+    "drive": "1lyOuoTWHH0khF2dNS6clADTd34cCf2Gy",
+    "link": "https://drive.google.com/drive/u/0/folders/1z5vH33WyZKKuQb0uYskZ6iWfhiq3IVnn"
+   },
+   "image": "/hackathon-2026/catalog/084c9f00.webp",
+   "caption": "זהבה סבו + טובה זק · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 21:03:09.941+00"
+  },
+  {
+   "k8": "90c33bfe",
+   "teamKey": "90c33bfe-ed78-4b0e-bdc3-9697daa016e0+e63df94e-c88d-4701-926f-74c099581751",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "90c33bfe-ed78-4b0e-bdc3-9697daa016e0",
+     "name": "הניה כץ"
+    },
+    {
+     "id": "e63df94e-c88d-4701-926f-74c099581751",
+     "name": "חיה טאומן"
+    }
+   ],
+   "blurb": "כשמעבדים מאות טפסים ורק עשרה אחוזים דורשים תשומת לב, מצב ״בדיקה מהירה״ מציג רק אותם: טפסים עם שדות חסרים או לא בטוחים, והשאר עוברים בלי מגע יד. ואת המודל שקורא את הטפסים - Gemini, GPT או Claude - כל משתמשת בוחרת לפי דיוק, מהירות ועלות.",
+   "tech": [
+    "Gemini",
+    "OpenAI / GPT",
+    "Claude"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "90c33bfe-ed78-4b0e-bdc3-9697daa016e0",
+     "name": "הניה כץ",
+     "quote": "ההבנה כמה חשובה החשיבה המוקדמת והחקירה המעמיקה"
+    }
+   ],
+   "productUrl": "https://form-to-excel-hk-ct.streamlit.app/",
+   "video": {
+    "drive": "1AhcMyRnWiVCGFWlDKt16jpf0QR7TbrIt",
+    "storage": "submissions/90c33bfe-ed78-4b0e-bdc3-9697daa016e0+e63df94e-c88d-4701-926f-74c099581751/1792703768860-_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/90c33bfe.webp",
+   "caption": "Henya Katz + חיה טאומן · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 21:10:48.775+00"
+  },
+  {
+   "k8": "12edfc42",
+   "teamKey": "12edfc42-e0d1-47cd-b731-e9f3acd7ef1d+4b68fd54-85ed-40e5-b01c-8a3317da7e16",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "12edfc42-e0d1-47cd-b731-e9f3acd7ef1d",
+     "name": "נועה בינט"
+    },
+    {
+     "id": "4b68fd54-85ed-40e5-b01c-8a3317da7e16",
+     "name": "יהודית קראוס"
+    }
+   ],
+   "blurb": "כשהמזכירה לא בטוחה בערך, היא לוחצת ״עזרה״ ליד השדה ושולחת לממונה קישור מאובטח במייל או בוואטסאפ - בלי שום פרט מטופל בהודעה. הממונה רואה את התקריב של השדה ועונה בלחיצה, התשובה חוזרת לבד למסך, והטופס לא מאושר עד שהיא מגיעה. הקישור פג אחרי 48 שעות. וליד כל ערך תקריב של המקום בטופס שממנו נקרא, להשוואה במבט אחד.",
+   "tech": [
+    "Claude Code",
+    "Claude",
+    "Supabase",
+    "PostgreSQL",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "openpyxl",
+    "Material UI",
+    "Vercel",
+    "WhatsApp"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "12edfc42-e0d1-47cd-b731-e9f3acd7ef1d",
+     "name": "נועה בינט",
+     "quote": "שאני מאוד אוהבת לחשוב ולהבין איך עובדת מערכת לבנות ארכיטקטורה ממש נכונה להנדס מערכת"
+    },
+    {
+     "id": "4b68fd54-85ed-40e5-b01c-8a3317da7e16",
+     "name": "יהודית קראוס",
+     "quote": "לא לרוץ על כל מה שאני מקבלת, אלא לעצור, לבדוק ולהבין לפני שמתקדמים. ככה אני שולטת בתהליך ולא ה-AI שולט בי."
+    }
+   ],
+   "productUrl": "https://tofes-demo-noa-2162.vercel.app/",
+   "video": {
+    "drive": "1U1jIDyvjPMjnDmuAoXAuBS5HphQACIJ8",
+    "storage": "submissions/12edfc42-e0d1-47cd-b731-e9f3acd7ef1d+4b68fd54-85ed-40e5-b01c-8a3317da7e16/1792752653663-_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/12edfc42.webp",
+   "caption": "Noa Binet + יהודית קראוס · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 21:36:42.971+00"
+  },
+  {
+   "k8": "57effa0a",
+   "teamKey": "57effa0a-06bb-4120-92d4-91329957fd18",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "57effa0a-06bb-4120-92d4-91329957fd18",
+     "name": "שרה וייסבורד"
+    }
+   ],
+   "blurb": "כל תיקון של הלבורנטית הופך למידע לניהול: המערכת מתעדת את היסטוריית התיקונים בלי לשמור את הערכים הרפואיים עצמם, מסווגת את סוג הטעות - החלפת ספרות, יום וחודש, שדה לא נכון, ערך שהמודל החמיץ - ומציגה לוח תובנות עם המלצה לכל דפוס. המעבדה יודעת איפה להשקיע.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Claude",
+    "OCR",
+    "PostgreSQL",
+    "Python",
+    "FastAPI",
+    "React",
+    "AWS"
+   ],
+   "finalist": 2,
+   "award": "winner",
+   "quotes": [
+    {
+     "id": "57effa0a-06bb-4120-92d4-91329957fd18",
+     "name": "שרה וייסבורד",
+     "quote": "למדתי שאני מסוגלת להתמודד עם אתגרים מורכבים, לחקור כלים שלא הכרתי ולמצוא פתרונות גם כשהדברים לא עובדים בניסיון הראשון."
+    }
+   ],
+   "productUrl": "https://virolab.site/",
+   "video": {
+    "drive": "1rWUdbpWNajT76NaLBme6VTlHUYyvWM7I",
+    "storage": "submissions/57effa0a-06bb-4120-92d4-91329957fd18/1792706047486-_________.mp4"
+   },
+   "image": "/hackathon-2026/catalog/57effa0a.webp",
+   "caption": "שרה וייסבורד · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 21:54:39.931+00"
+  },
+  {
+   "k8": "a5ad1182",
+   "teamKey": "a5ad1182-40f4-421b-9965-ba296a9938a6",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "a5ad1182-40f4-421b-9965-ba296a9938a6",
+     "name": "יפה אדלר"
+    }
+   ],
+   "blurb": "דגימה שהגיעה בלי התחייבות היא בדיקה שהמעבדה לא תקבל עליה תשלום. לכן המערכת של יפה מצליבה את ההתחייבויות שחולצו עם רשימת הדגימות שהתקבלו, לפי המספר המרכזי, ומציגה מה מותאם, אילו דגימות חסרות התחייבות ואילו התחייבויות בלי דגימה. החיבור עדיין מדומה, המבנה מוכן למערכת האמיתית.",
+   "tech": [
+    "Claude Code",
+    "Claude",
+    "OCR",
+    "Tesseract",
+    "PostgreSQL",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "PyMuPDF",
+    "OpenCV",
+    "Vercel",
+    "Render",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "a5ad1182-40f4-421b-9965-ba296a9938a6",
+     "name": "יפה אדלר",
+     "quote": "שאני יכולה להקים מערכת מקצה לקצה בכמה ימים"
+    }
+   ],
+   "productUrl": "https://commitments-extractor-lac.vercel.app/",
+   "video": {
+    "drive": "1S7jM82C0qPmGiheHw2ZUJNtNbbZtJ57Y",
+    "storage": "submissions/a5ad1182-40f4-421b-9965-ba296a9938a6/1792879842717-_.mp4",
+    "link": "https://drive.google.com/file/d/1Aq6msnBbJ2EQWZgTVzVV6ECht3G29UyO/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/a5ad1182.webp",
+   "caption": "Yaffa Adler · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 22:14:28.814+00"
+  },
+  {
+   "k8": "86955892",
+   "teamKey": "86955892-1809-4dab-ac5e-789c411602e6",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "86955892-1809-4dab-ac5e-789c411602e6",
+     "name": "יעל יוליארד"
+    }
+   ],
+   "blurb": "״עין המקור״: ריחוף על ערך בטבלה פותח גזירה מהטופס המקורי, עם מסגרת סביב המקום המדויק שממנו נקרא, רמת הביטחון והסיבה שסומן לבדיקה. לחיצה פותחת את הטופס המלא עם הגדלה וגרירה. וכשהמיקום לא ידוע, מוצג הטופס כולו - לעולם לא מיקום מנוחש. הבדיקה לוקחת שנייה: מסתכלים ומאשרים. ועוד: המערכת שומרת מי אישרה כל שורה ומתי, ואחרי האישור אפשר למחוק את תמונות המקור כדי שמידע רפואי לא יישמר מעבר לנדרש.",
+   "tech": [
+    "Claude",
+    "Tesseract",
+    "Supabase",
+    "PostgreSQL",
+    "React"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "86955892-1809-4dab-ac5e-789c411602e6",
+     "name": "יעל יוליארד",
+     "quote": "הבנתי שהשאלה החשובה היא לא \"כמה הוא מצליח\", אלא \"מה קורה כשהוא לא בטוח\"."
+    }
+   ],
+   "productUrl": "https://virus-lab.vercel.app/",
+   "video": {
+    "drive": "1X2L-lMoTLrryXgF8nJNSKelXQ9Mn6s54",
+    "storage": "submissions/86955892-1809-4dab-ac5e-789c411602e6/1792709513733-_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/86955892.webp",
+   "caption": "יעל יוליארד · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-22 22:52:45.584+00"
+  },
+  {
+   "k8": "12c49a67",
+   "teamKey": "12c49a67-6b99-43ee-8697-c4452ece76e8+4a6eac79-3aa7-41ab-921c-f5c85333f19e",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "12c49a67-6b99-43ee-8697-c4452ece76e8",
+     "name": "ברכי ורטהיימר"
+    },
+    {
+     "id": "4a6eac79-3aa7-41ab-921c-f5c85333f19e",
+     "name": "תמר וינר"
+    }
+   ],
+   "blurb": "VERA, עוזרת בעברית שמכירה את כל מה שקורה במערכת: מה מחכה עכשיו, אילו מבחנות הגיעו בלי טופס ואילו בירורים באיחור. כל מספר שהיא אומרת מגיע מהנתונים, והיא לא משנה דבר בלי כרטיס אישור של אדם. ובנוסף: קליטה חיה מתיקיית הסורק, ובירורים מול השולח שנפתחים לבד עם טיוטת מכתב. ועוד: דוח שבועי לפי שולח עם טיוטת מכתב אליו בלחיצה, וסימון ידני של המקום בטופס שנשמר כראיה.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "OpenAI / GPT",
+    "Claude",
+    "Google Vision",
+    "Tesseract",
+    "SQLite",
+    "Redis",
+    "Python",
+    "FastAPI",
+    "React",
+    "zxing-cpp",
+    "Vercel",
+    "Render",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "12c49a67-6b99-43ee-8697-c4452ece76e8",
+     "name": "ברכי ורטהיימר",
+     "quote": "גיליתי שאכפת לי מאוד מהפרטים הקטנים: רוחב של עמודה, פס גלילה מיותר, צליל שמודיע שהקבצים מוכנים."
+    },
+    {
+     "id": "4a6eac79-3aa7-41ab-921c-f5c85333f19e",
+     "name": "תמר וינר",
+     "quote": "יצאתי ממנו עם ביטחון מקצועי ועם תוצר שווה!!"
+    }
+   ],
+   "productUrl": "https://btw-hackaton.vercel.app/",
+   "video": {
+    "drive": "1k_bW-2WNtCgRI_apOnK2QCS70vhUpSyj",
+    "link": "https://drive.google.com/file/d/1_IERRs_aqJqOX8ChEpMVwcVUf2e6Gcpw/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/12c49a67.webp",
+   "caption": "ברכי ורטהיימר + תמר וינר · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-23 00:22:56.499+00"
+  },
+  {
+   "k8": "0b89bc98",
+   "teamKey": "0b89bc98-035e-4973-9f8f-9c0fde0edea7",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "0b89bc98-035e-4973-9f8f-9c0fde0edea7",
+     "name": "שושנה בן-חיים"
+    }
+   ],
+   "blurb": "המספר המרכזי הוא המפתח של הדגימה, ולכן הוא מאומת בלי לסמוך על המודל: הברקוד שעל המדבקה מפוענח בשרת ומושווה למה שהמודל קרא. לכל מדבקה מצב ברור - התאמה מלאה, קריאה אחת בלבד, או סתירה לבדיקה ידנית. בבדיקה זה קרה באמת: המודל פספס מדבקה, והברקוד החזיר את המספר.",
+   "tech": [
+    "Gemini",
+    "Claude",
+    "OCR",
+    "SQLite",
+    "Python",
+    "FastAPI",
+    "JavaScript",
+    "zxing-cpp",
+    "Render",
+    "GitHub",
+    "GitHub Copilot"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "0b89bc98-035e-4973-9f8f-9c0fde0edea7",
+     "name": "שושנה בן-חיים",
+     "quote": "היה כיף לשבת על פרויקט שאת יודעת שזה משהו אמיתי מהתעשייה!"
+    }
+   ],
+   "productUrl": "https://decipher-kleq.onrender.com/",
+   "video": {
+    "drive": "1JfxZ7V89xZo2UhY5tbZbFFVKbgQMY2-k",
+    "link": "https://drive.google.com/file/d/1-HTsuQbaf5DERdRFFxJObV72wCNEtXBj/view"
+   },
+   "image": "/hackathon-2026/catalog/0b89bc98.webp",
+   "caption": "Shoshana Ben-Haim · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-23 00:51:06.958+00"
+  },
+  {
+   "k8": "a39ed923",
+   "teamKey": "a39ed923-0f6d-4314-bd29-b61bd2bac087+d09903b6-905d-4a10-a3df-500b89693ed5",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "a39ed923-0f6d-4314-bd29-b61bd2bac087",
+     "name": "שירה גרשי"
+    },
+    {
+     "id": "d09903b6-905d-4a10-a3df-500b89693ed5",
+     "name": "אהובה אזולאי"
+    }
+   ],
+   "blurb": "״עדשת הראיות״: לחיצה על כל תא מציגה את חיתוך הפיקסלים המקורי מהטופס, ליד איזו תווית נמצא, מי קרא מה ולמה השדה ירוק או כתום - ובתא כתום מועמדים לבחירה בלחיצה. ערך מקבל ירוק רק כשברקוד או שני קוראים בלתי תלויים מסכימים עליו. אמון דרך ראיה, לא דרך ציון. ולולאת למידה מתיקוני הצוות: מהתיקון השלישי המודל מקבל הנחיות ממוקדות לכל מוסד ושדה, ושדה שתוקן הרבה לא מאושר יותר מקריאה יחידה - בלי לשמור ערך של מטופל.",
+   "tech": [
+    "Gemini",
+    "Tesseract",
+    "OpenCV",
+    "zxing-cpp"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "a39ed923-0f6d-4314-bd29-b61bd2bac087",
+     "name": "שירה גרשי",
+     "quote": "גיליתי על עצמי שאני יודעת לתפקד מצוין תחת לחץ, להתמקד בעיקר ולחתוך פינות לא קריטיות כדי להעמיד מוצר עובד."
+    },
+    {
+     "id": "d09903b6-905d-4a10-a3df-500b89693ed5",
+     "name": "אהובה אזולאי",
+     "quote": "מה שבאמת גילינו על עצמנו הוא היכולת להרים מוצר עובד תחת לחץ קיצוני."
+    }
+   ],
+   "productUrl": "https://viroengine.onrender.com/",
+   "video": {
+    "drive": "1RPQk1zw2hFFXOG89SSH_V1mfv1vj-t3m",
+    "link": "https://drive.google.com/file/d/17_kVyS5Z_HUISC44pInrXpMxd5vk1MG7/view"
+   },
+   "image": "/hackathon-2026/catalog/a39ed923.webp",
+   "caption": "Shira Gershi + אהובה אזולאי · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-23 01:57:46.14+00"
+  },
+  {
+   "k8": "79c2ce73",
+   "teamKey": "79c2ce73-d1e9-4287-8f1e-620fec4350b8",
+   "challenge": "virology",
+   "members": [
+    {
+     "id": "79c2ce73-d1e9-4287-8f1e-620fec4350b8",
+     "name": "חנה ישראלי"
+    }
+   ],
+   "blurb": "״בדיקה ממוקדת״: ערך שחולץ בוודאות מוצג על רקע לבן ונעול לעריכה, ורק התאים הצבועים פתוחים לתיקון - עם סיבת הספק, כמו ״סתירה בין קריאות״, ומועמד להשלמה. הטופס המקורי נפתח לצד השדה, מסומן על המקום. זיהוי הטקסט רץ בשרת פרטי, ורק חיתוך של שדה בכתב יד יוצא למודל חיצוני.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "OCR",
+    "Tesseract",
+    "Supabase",
+    "FastAPI",
+    "React",
+    "zxing-cpp",
+    "PaddleOCR",
+    "Vercel",
+    "Kiro"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "79c2ce73-d1e9-4287-8f1e-620fec4350b8",
+     "name": "חנה ישראלי",
+     "quote": "שאני אוהבת ליצור מערכות מלאות ומורכבות מהתחלה עד הסוף"
+    }
+   ],
+   "productUrl": "https://labextract-preview.vercel.app/",
+   "video": {
+    "drive": "1r_u8xSFRlPGjmZGH4TravWbFhvA8UvPa",
+    "link": "https://drive.google.com/file/d/104lHJOZss1xIl1alX8x1F24CNqAz0aFg/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/79c2ce73.webp",
+   "caption": "חנה ישראלי · המעבדה המרכזית לנגיפים",
+   "submittedAt": "2026-10-24 19:00:00.039+00"
+  },
+  {
+   "k8": "1da3dbcf",
+   "teamKey": "1da3dbcf-5e13-4e46-be7c-908ad2e87985",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "1da3dbcf-5e13-4e46-be7c-908ad2e87985",
+     "name": "יפה חבקין"
+    }
+   ],
+   "blurb": "אותה שאלה, אותו מאגר, אותו חיפוש - שני קהלים. במתג ״מצב לקוח / מצב סוכן״ הלקוחה מקבלת הסבר פשוט בלי מונחים מקצועיים, והסוכן ניסוח מפורט עם תנאים, חריגים ושמות מסלולים כפי שמופיעים במקורות. ואחרי כל תשובה הבוט מציע שאלות המשך.",
+   "tech": [
+    "Gemini",
+    "OpenAI / GPT",
+    "Claude",
+    "RAG",
+    "Embeddings",
+    "ChromaDB",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Tailwind",
+    "Vercel",
+    "Render",
+    "Railway",
+    "Kiro"
+   ],
+   "finalist": 1,
+   "award": null,
+   "quotes": [
+    {
+     "id": "1da3dbcf-5e13-4e46-be7c-908ad2e87985",
+     "name": "יפה חבקין",
+     "quote": "אם הייתם אומרים לי לפני שבוע שאני אבנה מאפס מערכת RAG שלמה, אנהל סריקת אתרים, אטפל בבעיות קידוד (Encoding) מורכבות בעברית, ואפרוס בעצמי אפליקציה מלאה לענן – הייתי מחייכת בספק."
+    }
+   ],
+   "productUrl": "https://phoenix-rag-bot-roan.vercel.app/",
+   "video": {
+    "drive": "1vVennASvEG3Yk9r9GPN2eAdqpLOdv_J9",
+    "link": "https://drive.google.com/file/d/13SMKkkX1a9Q4YwrPNs6QmU0K-zQ7moKe/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/1da3dbcf.webp",
+   "caption": "יפה חבקין · הפניקס",
+   "submittedAt": "2026-10-18 19:08:58.373+00"
+  },
+  {
+   "k8": "fe373ef4",
+   "teamKey": "fe373ef4-4e01-4e87-990a-2bdd42659593",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "fe373ef4-4e01-4e87-990a-2bdd42659593",
+     "name": "רחל הרשנבוים"
+    }
+   ],
+   "blurb": "תוסף דפדפן שמוסיף צ׳אט לכל עמוד באתר הפניקס ויודע באיזה עמוד הלקוחה נמצאת. לכל תשובה מצורף המשפט המדויק מהאתר, ו״הראו לי בעמוד״ גולל אליו באתר החי ומדגיש אותו, גם כשהוא בעמוד אחר. בביטוח, הלקוחה לא צריכה להאמין לבוט - היא רואה את הנוסח הרשמי.",
+   "tech": [
+    "Claude Code",
+    "Claude",
+    "RAG",
+    "Embeddings",
+    "LlamaIndex",
+    "Pinecone",
+    "FastAPI",
+    "Vercel",
+    "Render",
+    "GitHub"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "fe373ef4-4e01-4e87-990a-2bdd42659593",
+     "name": "רחל הרשנבוים",
+     "quote": "הכלי כותב קוד מהר, אבל ההחלטות היו שלי: מה נחשב תשובה טובה, מתי הבוט צריך לשתוק, ומה מספיק טוב כדי לעלות לאוויר."
+    }
+   ],
+   "productUrl": "https://fnx-bot.onrender.com/",
+   "video": {
+    "drive": "1__npgfuo4Ciw5nioFr7AW7yqy13yaPL1",
+    "storage": "submissions/fe373ef4-4e01-4e87-990a-2bdd42659593/1792647799126-demo.mp4"
+   },
+   "image": "/hackathon-2026/catalog/fe373ef4.webp",
+   "caption": "רחל הרשנבוים · הפניקס",
+   "submittedAt": "2026-10-20 12:44:25.684+00"
+  },
+  {
+   "k8": "548a3dd7",
+   "teamKey": "548a3dd7-6c07-4ac5-91cb-aeb8328077f7",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "548a3dd7-6c07-4ac5-91cb-aeb8328077f7",
+     "name": "רייזי מן"
+    }
+   ],
+   "blurb": "שיחה שמובילה, לא רק עונה: אחרי כל תשובה הבוט מציע שלוש שאלות המשך קצרות - ״איזה מסמכים צריך לצרף?״, ״תוך כמה זמן מקבלים תשובה?״ - ולחיצה שולחת אותן. ההצעות מסוננות בקוד כך שכל אחת נשענת על מידע שבאמת קיים באתר, והלקוחה לא נשלחת לשאלה שאין לה תשובה. ושתי שאלות בהודעה אחת - ״מה זה ביטוח דירה ומה זה ביטוח רכב?״ - מקבלות תשובה מסודרת בסעיפים, כל אחד עם המקורות שלו.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Claude",
+    "ChromaDB",
+    "Python",
+    "Streamlit"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "548a3dd7-6c07-4ac5-91cb-aeb8328077f7",
+     "name": "רייזי מן",
+     "quote": "שאני יכולה! עם קצת דרבון ומעשיות פשוט אפשר להצליח להגיע לתוצרים מדהימים!"
+    }
+   ],
+   "productUrl": "https://phoenix-chatbot.streamlit.app/",
+   "video": {
+    "drive": "1WrkN-XjPSIQOpwBoj2ut6vw2njdvajlX",
+    "storage": "submissions/548a3dd7-6c07-4ac5-91cb-aeb8328077f7/1792596798823-phoenix_demo_v4.mp4"
+   },
+   "image": "/hackathon-2026/catalog/548a3dd7.webp",
+   "caption": "רייזי מן · הפניקס",
+   "submittedAt": "2026-10-21 15:34:19.311+00"
+  },
+  {
+   "k8": "116be4f9",
+   "teamKey": "116be4f9-8e6a-42be-a213-9833c5bdd929+f63ad049-0605-4df0-aa14-c992a3fa7e9e",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "f63ad049-0605-4df0-aa14-c992a3fa7e9e",
+     "name": "מרים חדש"
+    },
+    {
+     "id": "116be4f9-8e6a-42be-a213-9833c5bdd929",
+     "name": "אילה שמואלביץ"
+    }
+   ],
+   "blurb": "״אל תאמינו לבוט, תבדקו אותו״: בלחיצה על ״הראו לי איפה זה כתוב״ רואים את המשפטים המדויקים מהאתר, והקוד מאמת כל ציטוט מילה במילה, כולל סכומים, וחוסם תשובה שלא עוברת. ו״מכ״ם הפערים״ אוסף כל שאלה שנותרה בלי מענה, בלי פרטים מזהים, לרשימת עבודה של צוות התוכן.",
+   "tech": [
+    "Gemini",
+    "Claude",
+    "Embeddings",
+    "Streamlit"
+   ],
+   "finalist": 3,
+   "award": "winner",
+   "quotes": [
+    {
+     "id": "f63ad049-0605-4df0-aa14-c992a3fa7e9e",
+     "name": "מרים חדש",
+     "quote": "אני אוהבת לא רק לתכנת, אלא גם לחשוב איך נכון לבנות את הפתרון ואיך לגרום לכל החלקים לעבוד ביחד."
+    },
+    {
+     "id": "116be4f9-8e6a-42be-a213-9833c5bdd929",
+     "name": "אילה שמואלביץ",
+     "quote": "למדתי שגם כשאני נעזרת בקלוד, חשוב לי להבין את הפתרונות, לבחון אותם באופן ביקורתי וללמוד מהם, ולא רק להסתמך על התשובות שהוא מספק."
+    }
+   ],
+   "productUrl": "https://fnx-bot.streamlit.app/",
+   "video": {
+    "drive": "1GgkttacDmCWDXeYeKYUfE-iaI-qwJWCv",
+    "storage": "submissions/116be4f9-8e6a-42be-a213-9833c5bdd929+f63ad049-0605-4df0-aa14-c992a3fa7e9e/1792618659067-fnx_demo.mp4"
+   },
+   "image": "/hackathon-2026/catalog/116be4f9.webp",
+   "caption": "אילה שמואלביץ + Miriam Chodosh · הפניקס",
+   "submittedAt": "2026-10-21 21:56:27.844+00"
+  },
+  {
+   "k8": "1eb4fa18",
+   "teamKey": "1eb4fa18-308f-4dbd-af63-e8fa532d857e",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "1eb4fa18-308f-4dbd-af63-e8fa532d857e",
+     "name": "תמר שרייבר"
+    }
+   ],
+   "blurb": "צ׳אט שנגיש גם למי שלא קוראת או מקלידה בקלות: הקראת התשובה עם הדגשת המילה הנקראת, שאלה בקול, הגדלת טקסט וניגודיות גבוהה. ולצדו עמוד ״מדד אמינות״ שמפרסם את תוצאות הבדיקות האוטומטיות - כמה ענה נכון, מתי הודה שאין מידע והאם הביא את המקור הנכון.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "Embeddings",
+    "pgvector",
+    "Supabase",
+    "FastAPI",
+    "React",
+    "OpenRouter",
+    "Groq",
+    "Vercel",
+    "Render",
+    "GitHub"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "1eb4fa18-308f-4dbd-af63-e8fa532d857e",
+     "name": "תמר שרייבר",
+     "quote": "עם סקרנות, התמדה ורצון ללמוד, אפשר להגיע הרבה יותר רחוק ממה שחשבתי."
+    }
+   ],
+   "productUrl": "https://fnx-chatbot.vercel.app/",
+   "video": {
+    "drive": "1W5s3m7HRO10O-o-s9dd3PCU3k1WXkuQd",
+    "link": "https://drive.google.com/file/d/1-vxdUY3RKzG6xqFZ1i0v2zZ0OZyUkQy5/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/1eb4fa18.webp",
+   "caption": "Tamar Shraiber · הפניקס",
+   "submittedAt": "2026-10-22 11:41:59.618+00"
+  },
+  {
+   "k8": "031ce1be",
+   "teamKey": "031ce1be-2b97-4ace-a1b7-ba12aeaa6c62",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "031ce1be-2b97-4ace-a1b7-ba12aeaa6c62",
+     "name": "מירב יאיר"
+    }
+   ],
+   "blurb": "מצב ״ליווי״ למי שעומדת לפני הגשת תביעה ולא יודעת מאיפה להתחיל: בוחרים תחום ביטוח, מתארים בקצרה מה קרה - ״קניתי דירה והייתה בה נזילה״ - והבוט מציג צעדים אפשריים מתוך עמודי התביעות באתר, עם קישור לכל מקור ובלי למסור פרט אישי אחד. מידע כללי, בלי לקבוע זכאות.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "ChromaDB",
+    "Python",
+    "FastAPI",
+    "Angular",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "031ce1be-2b97-4ace-a1b7-ba12aeaa6c62",
+     "name": "מירב יאיר",
+     "quote": "גיליתי שאני סקרנית, אוהבת לחקור ולגלות ולפתור בעיות"
+    }
+   ],
+   "productUrl": "https://phoenix-rag-bot.onrender.com/",
+   "video": {
+    "drive": "1i7oKLLeRRWF77g7fQXmMSqCmAz1FNUKv",
+    "link": "https://drive.google.com/file/d/1-pLqE8vgOgl776f0WUSv8tkBlOllKR2H/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/031ce1be.webp",
+   "caption": "Merav Yair · הפניקס",
+   "submittedAt": "2026-10-22 13:19:14.307+00"
+  },
+  {
+   "k8": "c1372b36",
+   "teamKey": "c1372b36-701d-481f-81f9-0735e176b1fd",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "c1372b36-701d-481f-81f9-0735e176b1fd",
+     "name": "רבקה בראשי"
+    }
+   ],
+   "blurb": "ליד כל מספר טלפון בתשובה מופיע תג חי: ״פתוח עכשיו״ או ״סגור כרגע, ייפתח ביום א׳ ב-8:30״ - מחושב משעות הפעילות שבעמוד צור קשר, לפי שעון ישראל, כדי שאף לקוחה לא תתקשר למוקד סגור. ובנוסף: קישור מקור שגולל עד המשפט עצמו, ולוח נגישות עם ניווט מלא במקלדת.",
+   "tech": [
+    "Gemini",
+    "RAG",
+    "Embeddings",
+    "ChromaDB",
+    "Streamlit",
+    "JavaScript",
+    "PyMuPDF"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "c1372b36-701d-481f-81f9-0735e176b1fd",
+     "name": "רבקה בראשי",
+     "quote": "לדעת לא לוותר על איכות גם כאשר זה נראה טוב והקלווד מדבר ממש יפה ומשכנע"
+    }
+   ],
+   "productUrl": "https://phoenixbot.streamlit.app/",
+   "video": {
+    "drive": "1XLGZ2S4pWUN3APDFdUDNOog67xKIw-wc",
+    "storage": "submissions/c1372b36-701d-481f-81f9-0735e176b1fd/1792677561008-demo.mp4"
+   },
+   "image": "/hackathon-2026/catalog/c1372b36.webp",
+   "caption": "רבקה בראשי · הפניקס",
+   "submittedAt": "2026-10-22 14:28:16.697+00"
+  },
+  {
+   "k8": "fac8200f",
+   "teamKey": "fac8200f-a769-4923-a785-a9ca5941c9b8",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "fac8200f-a769-4923-a785-a9ca5941c9b8",
+     "name": "נעמי נוישטט"
+    }
+   ],
+   "blurb": "האתגר ביקש בוט שיודע להגיד ״זה לא כתוב באתר״. נעמי הפכה את הרגעים האלה לכלי עבודה: כל שאלה בלי תשובה נרשמת בדוח ״מה חסר באתר״, ממוינת לפי האזור הקרוב באתר ומנוקה מקשקושים ומפרטים מזהים - רשימת תוכן להוסיף, שהגולשות כתבו בעצמן. בבדיקה הדוח כבר החזיק 51 שאלות אמיתיות. ועוד שניים שלא נדרשו: קישור למקור שפותח את העמוד כשהמשפט כבר מסומן בצהוב, ובשאלה אישית - המוקד המתאים, כולל אם הוא פתוח ברגע זה.",
+   "tech": [
+    "Vercel",
+    "RAG",
+    "Embeddings"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "fac8200f-a769-4923-a785-a9ca5941c9b8",
+     "name": "נעמי נוישטט",
+     "quote": "גיליתי שאני יודעת להחליט מה אני רוצה, להגיד 'זה עוד לא זה', ולהשקיע דווקא במה שבאמת עושה את ההבדל."
+    }
+   ],
+   "productUrl": "https://makor-phoenix.vercel.app/",
+   "video": {
+    "drive": "1kNtG8FVL-TriC0OkwSGiwTgTJ4VzQEbC",
+    "storage": "submissions/fac8200f-a769-4923-a785-a9ca5941c9b8/1792678102966-demo.mp4"
+   },
+   "image": "/hackathon-2026/catalog/fac8200f.webp",
+   "caption": "נעמי נוישטט · הפניקס",
+   "submittedAt": "2026-10-22 15:10:23.517+00"
+  },
+  {
+   "k8": "45494404",
+   "teamKey": "45494404-7e10-4c5d-8546-bd2921b0eb24",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "45494404-7e10-4c5d-8546-bd2921b0eb24",
+     "name": "חוה שטרן"
+    }
+   ],
+   "blurb": "״מפת פערי תוכן״: כל שאלה שהבוט ענה עליה ״זה לא מופיע באתר״ נשמרת ומוצגת לצוות התוכן, מקובצת לפי משמעות ולא לפי ניסוח, מהנשאלת ביותר ומטה. כך רואים בדיוק מה הלקוחות מחפשות ולא מוצאות. חוה בנתה את כל המערכת לבד, מאיסוף האתר ועד מוצר שרץ בענן.",
+   "tech": [
+    "Claude Code",
+    "OpenAI / GPT",
+    "Embeddings",
+    "Pinecone",
+    "Python",
+    "Streamlit"
+   ],
+   "finalist": 2,
+   "award": null,
+   "quotes": [
+    {
+     "id": "45494404-7e10-4c5d-8546-bd2921b0eb24",
+     "name": "חוה שטרן",
+     "quote": "גיליתי שאני מעדיפה פתרון סטנדרטי ופשוט שאני יכולה להגן עליו על פני טריק חכם."
+    }
+   ],
+   "productUrl": "https://phoenix-bot.streamlit.app/",
+   "video": {
+    "drive": "1lF9lnBsbuwob07lUq1N5HhzJpDAtZ7ZO",
+    "storage": "submissions/45494404-7e10-4c5d-8546-bd2921b0eb24/1792684107097-_.mp4"
+   },
+   "image": "/hackathon-2026/catalog/45494404.webp",
+   "caption": "Chava Stern · הפניקס",
+   "submittedAt": "2026-10-22 15:55:18.549+00"
+  },
+  {
+   "k8": "ca89f849",
+   "teamKey": "ca89f849-b4e6-46eb-bccf-e6213362b16d",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "ca89f849-b4e6-46eb-bccf-e6213362b16d",
+     "name": "מילכה בלומר"
+    }
+   ],
+   "blurb": "בוט שיודע גם מתי לא לענות: שכבת בטיחות בקוד חוסמת שאלות אישיות ובקשות לייעוץ רפואי או משפטי. ומאחורי הקלעים עבודה הנדסית שרוב הלקוחות לא יראו - סט של 30 שאלות הערכה, מדדים וסריקת ספים - שמוודאת שהחיפוש מביא את הקטע הנכון לפני שהבוט פותח את הפה.",
+   "tech": [
+    "Gemini",
+    "RAG",
+    "Embeddings",
+    "pgvector",
+    "Supabase",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "GitHub",
+    "GitHub Copilot"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "ca89f849-b4e6-46eb-bccf-e6213362b16d",
+     "name": "מילכה בלומר",
+     "quote": "שאני יכולה ליצור דברים מהממים רק צריך דדליין באופק"
+    }
+   ],
+   "productUrl": "https://phoenix-website-rag-chatbot.vercel.app/",
+   "video": {
+    "link": "https://drive.google.com/drive/u/0/folders/1kVN0352lDsmSMC84WiFoSuZKAFM10Fed"
+   },
+   "image": "/hackathon-2026/catalog/ca89f849.webp",
+   "caption": "milka blumer · הפניקס",
+   "submittedAt": "2026-10-22 18:11:46.665+00"
+  },
+  {
+   "k8": "a299532d",
+   "teamKey": "a299532d-09d7-431e-ab1f-2e293dac1437",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "a299532d-09d7-431e-ab1f-2e293dac1437",
+     "name": "יעל אקסלרד"
+    }
+   ],
+   "blurb": "שיחה קולית דו-כיוונית בעברית: לוחצים על המיקרופון, שואלים בקול, ומקבלים תשובה מבוססת מקורות שאפשר גם להאזין לה בלחיצת כפתור. יעל בנתה את זה בשביל מי שמתקשה להקליד, לקרוא טקסט ארוך או להתמצא במידע ביטוחי מורכב - וגם למי שפשוט מעדיפה לדבר.",
+   "tech": [
+    "Gemini",
+    "OpenAI / GPT",
+    "RAG",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "BeautifulSoup",
+    "Groq",
+    "Vercel",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "a299532d-09d7-431e-ab1f-2e293dac1437",
+     "name": "יעל אקסלרד",
+     "quote": "הכי נהניתי מהרגע שבו העליתי את המערכת לענן, פתחתי את הקישור וראיתי שהכול פשוט עובד!"
+    }
+   ],
+   "productUrl": "https://phoenix-ai-theta.vercel.app/",
+   "video": {
+    "drive": "1hlEEwPUXbCAoLvOzGE5GaxMX9T6-X1R6",
+    "storage": "submissions/a299532d-09d7-431e-ab1f-2e293dac1437/1792696478014-PhoenixAI.mp4"
+   },
+   "image": "/hackathon-2026/catalog/a299532d.webp",
+   "caption": "יעל אקסלרד · הפניקס",
+   "submittedAt": "2026-10-22 19:15:24.25+00"
+  },
+  {
+   "k8": "0ba8b56e",
+   "teamKey": "0ba8b56e-495c-4c32-8e0c-2c499a99514a",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "0ba8b56e-495c-4c32-8e0c-2c499a99514a",
+     "name": "לאה הילדסהיימר"
+    }
+   ],
+   "blurb": "לא כל לקוחה יודעת מה לשאול. במצב ״ליווי חכם״ בוחרים נושא מכרטיס, מתארים את המקרה במילים חופשיות או בקול, ואחרי כל תשובה המערכת מציעה אפשרויות המשך שמקדמות לשלב הבא - בלי להתחיל את הבירור מחדש ובלי להכיר מראש מונחים מקצועיים. וכל תשובה עובדתית עוברת אימות מקורות.",
+   "tech": [
+    "Gemini",
+    "OpenAI / GPT",
+    "RAG",
+    "Qdrant",
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React",
+    "Vercel",
+    "Render"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "0ba8b56e-495c-4c32-8e0c-2c499a99514a",
+     "name": "לאה הילדסהיימר",
+     "quote": "אני אחת שאוהבת אתגרים ונהנית מזה שלא מצליחים מנסים מנסים מנסים.... מהאלה שלא יעזבו עד שבע\"ה אצליח..."
+    }
+   ],
+   "productUrl": "https://phoenix-rag.vercel.app/?utm_source=chatgpt.com",
+   "video": {
+    "drive": "1iWWICDtzTo7BWIjThXRJzSoGUiL4qyJM",
+    "storage": "submissions/0ba8b56e-495c-4c32-8e0c-2c499a99514a/1792701353029-_2026-10-22_233446.mp4"
+   },
+   "image": "/hackathon-2026/catalog/0ba8b56e.webp",
+   "caption": "לאה הילדסהיימר · הפניקס",
+   "submittedAt": "2026-10-22 20:38:47.684+00"
+  },
+  {
+   "k8": "939119cc",
+   "teamKey": "939119cc-046e-45a3-a7c9-2d577b18bcba+d73b5fa5-22ef-42ed-aac8-e007e0ff9fd2",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "d73b5fa5-22ef-42ed-aac8-e007e0ff9fd2",
+     "name": "הדס דינאי"
+    },
+    {
+     "id": "939119cc-046e-45a3-a7c9-2d577b18bcba",
+     "name": "חני פראנק"
+    }
+   ],
+   "blurb": "השפה הביטוחית מתורגמת תוך כדי שיחה: מונח מקצועי בתשובה מודגש בכתום, ריחוף מעליו מציג את תחילת ההגדרה, ולחיצה פותחת הסבר מלא - בלי לקטוע את השיחה ובלי קריאה נוספת למודל. 20 מונחים שמזוהים בדפדפן עצמו, ולכן זה מיידי ולא עולה כלום.",
+   "tech": [
+    "Gemini",
+    "RAG",
+    "Embeddings",
+    "pgvector",
+    "Supabase",
+    "PostgreSQL"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "d73b5fa5-22ef-42ed-aac8-e007e0ff9fd2",
+     "name": "הדס דינאי",
+     "quote": "למדתי שאני שמה לב לפרטים, ויש לי סבלנות."
+    },
+    {
+     "id": "939119cc-046e-45a3-a7c9-2d577b18bcba",
+     "name": "חני פראנק",
+     "quote": "למדתי על עצמי שחשובה לי מאוד היסודיות בתהליך העבודה, ושאני לא מתפשרת על פתרונות מהירים וקלים, אלא חותרת לתוצאה מושלמת ומקצועית באמת."
+    }
+   ],
+   "productUrl": "https://phoenix-bot-cnwba6ntz228n4smyrewvh.streamlit.app/",
+   "video": {
+    "drive": "10r2L8xjqxdYR8LM-ljeg_ZNQOim2MD7_",
+    "storage": "submissions/939119cc-046e-45a3-a7c9-2d577b18bcba+d73b5fa5-22ef-42ed-aac8-e007e0ff9fd2/1792702251963-DinayFrankThe_Phoenix.mp4"
+   },
+   "image": "/hackathon-2026/catalog/939119cc.webp",
+   "caption": "חני פראנק + הדס דינאי · הפניקס",
+   "submittedAt": "2026-10-22 20:52:01.744+00"
+  },
+  {
+   "k8": "4fd451bd",
+   "teamKey": "4fd451bd-93f1-4483-8889-e9d3c5d1251c+cabaf845-02db-45dd-81d8-499f31194fd0",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "cabaf845-02db-45dd-81d8-499f31194fd0",
+     "name": "רינה קימל"
+    },
+    {
+     "id": "4fd451bd-93f1-4483-8889-e9d3c5d1251c",
+     "name": "שרה ברייש"
+    }
+   ],
+   "blurb": "בוט שלומד מאגודל למטה: הלקוחה מסבירה מה לא היה בסדר, התשובה נמחקת מהזיכרון כדי שאף אחת לא תקבל אותה שוב, הקטע שעמד מאחוריה מאבד ניקוד, והדיווח מגיע ללוח הניהול עם אבחנה - בעיה במידע או בניסוח. ולצד זה: שאלות המשך, סגנון ואורך לפי בחירה, ושיחת אורחת שנשמרת כשנרשמים.",
+   "tech": [
+    "Gemini",
+    "RAG",
+    "Embeddings",
+    "LangChain",
+    "ChromaDB",
+    "SQLite",
+    "Python",
+    "Streamlit",
+    "PyTorch",
+    "JWT",
+    "Docker"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "cabaf845-02db-45dd-81d8-499f31194fd0",
+     "name": "רינה קימל",
+     "quote": "למדתי שאני אוהבת לקחת אתגרים, ללמוד, לעבוד קשה, להבין עד הסוף את מאחורי הקלעים ולהיות חלק ממשהו גדול."
+    },
+    {
+     "id": "4fd451bd-93f1-4483-8889-e9d3c5d1251c",
+     "name": "שרה ברייש",
+     "quote": "למדתי שאני יכולה לבנות דבר כזה לבד, ושכל תקלה שנראית סוף העולם היא בסך הכול עוד שורה שצריך לתקן."
+    }
+   ],
+   "productUrl": "https://fnx-direct.onrender.com/",
+   "video": {
+    "drive": "15sB6u8dvafEEBBq4bMLoeMWAWRgfwSpQ",
+    "storage": "submissions/4fd451bd-93f1-4483-8889-e9d3c5d1251c+cabaf845-02db-45dd-81d8-499f31194fd0/1792702790675-FnxDirect_demo.mp4"
+   },
+   "image": "/hackathon-2026/catalog/4fd451bd.webp",
+   "caption": "שרה ברייש + רינה קימל · הפניקס",
+   "submittedAt": "2026-10-22 21:02:44.518+00"
+  },
+  {
+   "k8": "4870abdf",
+   "teamKey": "4870abdf-df6a-4f55-8ac6-b00d3ce39227",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "4870abdf-df6a-4f55-8ac6-b00d3ce39227",
+     "name": "רבקה שוורץ"
+    }
+   ],
+   "blurb": "בביטוח, תנאי קטן משנה את משמעות ההנחיה. לכן מתחת לכל חלק בתשובה אפשר לפתוח ״למה זו התשובה?״ - הציטוט המדויק שעליו הוא נשען, שלוף מטקסט המקור השמור ולא מנוסח מחדש, ומאומת בשרת שהוא באמת שם. לקוחה או נציגת שירות בודקת את הבסיס לתשובה בשנייה, בלי לחפש בעמוד שלם.",
+   "tech": [
+    "OpenAI / GPT",
+    "RAG",
+    "SQLite",
+    "Python",
+    "Flask",
+    "JavaScript",
+    "NumPy"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "4870abdf-df6a-4f55-8ac6-b00d3ce39227",
+     "name": "רבקה שוורץ",
+     "quote": "למדתי שאני יכולה להתחיל גם בלי לחכות לתנאים מושלמים, ולהתקדם תוך כדי התמודדות עם קשיים."
+    }
+   ],
+   "productUrl": "https://phoenix-ai-assistant.onrender.com/",
+   "video": {
+    "drive": "1KZu5z8A_aHoxEQGvqYdJz50S2C-4s56Z",
+    "link": "https://drive.google.com/file/d/1ZPwPu6EIJVcBWcw_rMj7DWAAHqPbj8bg/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/4870abdf.webp",
+   "caption": "רבקה שוורץ · הפניקס",
+   "submittedAt": "2026-10-22 21:12:16.16+00"
+  },
+  {
+   "k8": "5a2c3a18",
+   "teamKey": "5a2c3a18-737e-417b-a876-064d9935883c",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "5a2c3a18-737e-417b-a876-064d9935883c",
+     "name": "בתיה אקבלי"
+    }
+   ],
+   "blurb": "לקוחה באמצע תביעה יוצאת מהשיחה עם רשימה כתובה: בלחיצת כפתור היא מקבלת סיכום של כל שאלה, התשובה שקיבלה וקישור לעמוד המקור - להעתקה, לוואטסאפ או להדפסה. הסיכום נבנה מהתשובות שכבר ניתנו, בלי מודל, ולכן אין בו המצאה, אין עלות ולא נאסף מידע אישי. נבדק אוטומטית בדסקטופ ובמובייל.",
+   "tech": [
+    "Claude Code",
+    "Gemini",
+    "OpenAI / GPT",
+    "Claude",
+    "RAG",
+    "Embeddings",
+    "ChromaDB",
+    "Supabase",
+    "Python",
+    "FastAPI",
+    "React",
+    "Playwright",
+    "Vercel",
+    "Render",
+    "WhatsApp"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "5a2c3a18-737e-417b-a876-064d9935883c",
+     "name": "בתיה אקבלי",
+     "quote": "שעם התמדה ורצון חזק אפשר להצליח"
+    }
+   ],
+   "productUrl": "https://fnx-bbot.vercel.app/",
+   "video": {
+    "drive": "1kwXoiYcppZcSaDmTNuc7qHgNWFGPhe6p",
+    "link": "https://drive.google.com/file/d/16Lsd7UjymWUybUXcxEfziPC7GFiMqejd/view?usp=sharing"
+   },
+   "image": "/hackathon-2026/catalog/5a2c3a18.webp",
+   "caption": "בתיה אקבלי · הפניקס",
+   "submittedAt": "2026-10-22 21:21:47.542+00"
+  },
+  {
+   "k8": "3b768750",
+   "teamKey": "3b768750-97b6-4390-8f15-248a15679cb3",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "3b768750-97b6-4390-8f15-248a15679cb3",
+     "name": "מרים יונגר"
+    }
+   ],
+   "blurb": "עוזרת שמעדיפה לשתוק מאשר לטעות: מנגנון בקרה מזהה את נושא השאלה, מדרג ומסנן את המקורות לפיו, וכשאין מידע מתאים מציג תשובה חלופית במקום להישען על מקור לא קשור. בביטוח, תשובה לא רלוונטית פוגעת באמון, וזה בדיוק מה שהמנגנון נועד למנוע. וכל תשובה מביאה את הקטע מהאתר כלשונו.",
+   "tech": [
+    "Python",
+    "FastAPI",
+    "TypeScript",
+    "React"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "3b768750-97b6-4390-8f15-248a15679cb3",
+     "name": "מרים יונגר",
+     "quote": "גיליתי שיש לי סבלנות לחקור, לבדוק אפשרויות שונות, לנתח תקלות ולחפש פתרונות עד שאני מבינה מה מקור הבעיה."
+    }
+   ],
+   "productUrl": "https://phoenix-insurance-assistant-site.onrender.com/",
+   "video": {
+    "drive": "1231bH8pVoIFzgSHt8j0GPgJ6U_0hB_aJ",
+    "link": "https://drive.google.com/file/d/1Vk4IRRlvWV3H-HU3h6k2ttW7n3PAbH36/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/3b768750.webp",
+   "caption": "מרים יונגר · הפניקס",
+   "submittedAt": "2026-10-22 21:44:48.492+00"
+  },
+  {
+   "k8": "e632e7e3",
+   "teamKey": "e632e7e3-0899-4440-b216-e431bae76302",
+   "challenge": "phoenix",
+   "members": [
+    {
+     "id": "e632e7e3-0899-4440-b216-e431bae76302",
+     "name": "רחל פויכטונגר"
+    }
+   ],
+   "blurb": "שיחה על הטקסט עצמו: מסמנים משפט מתוך התשובה, הוא נכנס לשאלה הבאה, ושואלים עליו המשך. הבוט זוכר מהשאלה הקודמת את סוג הביטוח והנזק ועונה בהתאם, בלי שהלקוחה חוזרת על הפרטים, ואפשר גם להקליט את השאלה בעברית במקום להקליד.",
+   "tech": [
+    "Gemini",
+    "RAG",
+    "Python",
+    "FastAPI",
+    "Railway",
+    "Google AI Studio",
+    "Cursor"
+   ],
+   "finalist": null,
+   "award": null,
+   "quotes": [
+    {
+     "id": "e632e7e3-0899-4440-b216-e431bae76302",
+     "name": "רחל פויכטונגר",
+     "quote": "גיליתי שקשה יותר לגרום לבוט לשתוק מאשר לגרום לו לדבר."
+    }
+   ],
+   "productUrl": "https://phoenix-rag-production.up.railway.app/",
+   "video": {
+    "drive": "1g0YpN5MLsgf9K7Ujv95dLnJ35uY5Ugtm",
+    "link": "https://drive.google.com/file/d/1bLYllIEpWRLP8M0Bpv1DR8BPE4-ToQqO/view?usp=drive_link"
+   },
+   "image": "/hackathon-2026/catalog/e632e7e3.webp",
+   "caption": "רחל פויכטונגר · הפניקס",
+   "submittedAt": "2026-10-23 09:37:37.984+00"
+  }
+ ]
+}
