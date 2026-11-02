@@ -29,14 +29,18 @@ export function ShowcaseStyle() {
         .sc-chip { transition: transform .2s cubic-bezier(.34,1.56,.64,1), background-color .2s, color .2s, border-color .2s; }
         .sc-chip:hover { transform: translateY(-2px) rotate(-1.5deg); }
         .sc-chip[data-on="1"] { transform: scale(1.04); }
+        .sc-num { background: linear-gradient(95deg, #E0418D 0%, #913F80 50%, #464CA0 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+        .sc-bar { width: 0; transition: width 1.1s cubic-bezier(.2,.8,.2,1) var(--d, 0ms); }
+        .sc-reveal.in .sc-bar { width: var(--w); }
         @media (prefers-reduced-motion: reduce) {
           .sc-reveal { opacity: 1; }
           .sc-reveal.in, .sc-grad, .sc-play, .sc-pop { animation: none !important; }
-          .sc-card, .sc-card img, .sc-chip { transition: none; }
+          .sc-card, .sc-card img, .sc-chip, .sc-bar { transition: none; }
+          .sc-bar { width: var(--w); }
         }
       `}</style>
       <noscript>
-        <style>{`.sc-reveal { opacity: 1; }`}</style>
+        <style>{`.sc-reveal { opacity: 1; } .sc-bar { width: var(--w); }`}</style>
       </noscript>
     </>
   );
@@ -163,7 +167,7 @@ export function ChallengeCard({ k, count, href, i = 0, compact = false }: { k: C
   const brief = CHALLENGES.find((x) => x.key === k);
   return (
     <article
-      className={`relative ${c.tint} border-2 border-ink-900/10 p-6 flex flex-col gap-3 ${compact ? "" : TILTS[i % 3]} transition-transform hover:rotate-0`}
+      className={`relative ${c.tint} border-2 border-ink-900/10 p-6 flex flex-col gap-3`}
       style={{ borderRadius: RADII[i % 3], boxShadow: `5px 6px 0 0 ${c.shadow}` }}
       data-testid="sc-challenge"
       data-ch={k}
@@ -217,7 +221,7 @@ export function ChallengeCard({ k, count, href, i = 0, compact = false }: { k: C
           className="inline-flex items-center gap-1.5 rounded-full bg-white border-[1.5px] border-brand-pink/60 text-brand-pink-deep font-bold text-[14px] px-3.5 py-1.5 hover:bg-brand-purple hover:text-white hover:border-brand-purple transition-colors"
           data-testid="sc-challenge-link"
         >
-          לפרויקטים של {c.short} <span className="font-mono">&lt;</span>
+          לפרויקטים <span className="font-mono">&lt;</span>
         </Link>
       </div>
     </article>

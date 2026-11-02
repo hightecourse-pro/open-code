@@ -95,7 +95,79 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
 };
 
 export const PROJECTS: ShowcaseProject[] = data.projects as unknown as ShowcaseProject[];
-export const COUNTS: { projects: number; people: number; challenges: number } = data.counts;
+export const COUNTS: { projects: number; people: number; challenges: number; institutions?: number } = data.counts;
+
+/** One row of the numbers dashboard: a name, how many projects, and (for a link) the filter value. */
+export interface StatRow {
+  name: string;
+  count: number;
+}
+
+export interface ShowcaseStats {
+  /** Distinct technologies across the booklet's technology lines. */
+  tech: number;
+  /** Technologies per project, rounded. */
+  avgTech: number;
+  byChallenge: { key: ChallengeKey; count: number }[];
+  topTech: StatRow[];
+  /** Projects built by one member / by a pair. */
+  solo: number;
+  pairs: number;
+  /** Projects whose product runs on an AI model (a project can use several). */
+  models: StatRow[];
+  /** Where the live systems run, by the product URL's host. */
+  hosts: StatRow[];
+  /** Projects with a live system in the cloud / with a demo video. */
+  live: number;
+  videos: number;
+}
+
+const HOSTS: [RegExp, string][] = [
+  [/onrender\.com$/i, "Render"],
+  [/vercel\.app$/i, "Vercel"],
+  [/streamlit\.app$/i, "Streamlit"],
+  [/railway\.app$/i, "Railway"],
+];
+const MODELS: [RegExp, string][] = [
+  [/gemini/i, "Gemini"],
+  [/^claude$/i, "Claude"],
+  [/openai|gpt/i, "OpenAI / GPT"],
+];
+
+function buildStats(): ShowcaseStats {
+  const tech = new Map<string, number>();
+  for (const p of PROJECTS) for (const t of p.tech) tech.set(t, (tech.get(t) ?? 0) + 1);
+  const hosts = new Map<string, number>();
+  for (const p of PROJECTS) {
+    let host = "";
+    try {
+      host = p.productUrl ? new URL(p.productUrl).hostname : "";
+    } catch {
+      host = "";
+    }
+    const name = HOSTS.find(([re]) => re.test(host))?.[1] ?? "אחר";
+    hosts.set(name, (hosts.get(name) ?? 0) + 1);
+  }
+  const hostRows = [...hosts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => (a.name === "אחר" ? 1 : b.name === "אחר" ? -1 : b.count - a.count));
+  const techTotal = PROJECTS.reduce((n, p) => n + p.tech.length, 0);
+  return {
+    tech: tech.size,
+    avgTech: Math.round(techTotal / Math.max(1, PROJECTS.length)),
+    byChallenge: CHALLENGE_ORDER.map((key) => ({ key, count: PROJECTS.filter((p) => p.challenge === key).length })),
+    topTech: topTech(10),
+    solo: PROJECTS.filter((p) => p.members.length === 1).length,
+    pairs: PROJECTS.filter((p) => p.members.length > 1).length,
+    models: MODELS.map(([re, name]) => ({ name, count: PROJECTS.filter((p) => p.tech.some((t) => re.test(t))).length })).filter((r) => r.count > 0),
+    hosts: hostRows,
+    live: PROJECTS.filter((p) => !!p.productUrl).length,
+    videos: PROJECTS.filter((p) => !!p.video).length,
+  };
+}
+
+/** The numbers dashboard's figures - computed once from the static dataset. */
+export const STATS: ShowcaseStats = buildStats();
 
 export const isChallengeKey = (v: unknown): v is ChallengeKey => typeof v === "string" && (CHALLENGE_ORDER as string[]).includes(v);
 
