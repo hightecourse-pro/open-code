@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Alert, Badge, Button, Checkbox, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { splitPrevSurname } from "@/lib/names";
 import {
   addJobCandidate,
   sendJobChatMessage,
@@ -2200,6 +2201,7 @@ function exportCsv(
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const header = [
     "שם",
+    "שם משפחה קודם",
     "התמחות",
     "עיר",
     "אזור",
@@ -2212,7 +2214,8 @@ function exportCsv(
     ...questions.map((q) => q.question),
   ];
   const rows = list.map((a) => [
-    a.profile?.fullName ?? "",
+    splitPrevSurname(a.profile?.fullName).name,
+    splitPrevSurname(a.profile?.fullName).prevSurname,
     a.profile?.specialization ?? "",
     a.profile?.city ?? "",
     a.profile?.region ?? "",

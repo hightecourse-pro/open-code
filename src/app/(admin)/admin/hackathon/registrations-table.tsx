@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, Trash2 } from "lucide-react";
+import { splitPrevSurname } from "@/lib/names";
 import { Alert, Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { adminRemoveHackathonRegistration } from "./actions";
@@ -102,10 +103,11 @@ export function RegistrationsTable({ rows: initial, challenges }: { rows: Regist
 
   function exportCsv() {
     const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const head = ["שם", "מייל", "סמינר", "שנת סיום", "אתגר", "זוג עם", "סטטוס זוג", "הגשה", "הוגש ב", "קישור למוצר", "נרשמה", "עודכן"];
+    const head = ["שם", "שם משפחה קודם", "מייל", "סמינר", "שנת סיום", "אתגר", "זוג עם", "סטטוס זוג", "הגשה", "הוגש ב", "קישור למוצר", "נרשמה", "עודכן"];
     const lines = shown.map((r) =>
       [
-        r.name,
+        splitPrevSurname(r.name).name,
+        splitPrevSurname(r.name).prevSurname,
         r.email ?? "",
         r.seminar ?? "",
         r.graduationYear ?? "",

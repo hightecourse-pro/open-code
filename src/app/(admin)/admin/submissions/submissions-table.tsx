@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Download, Search, StickyNote } from "lucide-react";
+import { splitPrevSurname } from "@/lib/names";
 import { Badge } from "@/components/ui";
 
 export interface SubmissionRow {
@@ -65,6 +66,7 @@ export function SubmissionsTable({ rows }: { rows: SubmissionRow[] }) {
     const esc = (v: string) => `"${(v ?? "").replace(/"/g, '""')}"`;
     const header = [
       "שם",
+      "שם משפחה קודם",
       "התמחות",
       "מוסד לימודים",
       "שנת סיום",
@@ -77,7 +79,8 @@ export function SubmissionsTable({ rows }: { rows: SubmissionRow[] }) {
       "סטטוס",
     ];
     const body = filtered.map((r) => [
-      r.name,
+      splitPrevSurname(r.name).name,
+      splitPrevSurname(r.name).prevSurname,
       r.specialization,
       r.studyPlace,
       r.graduationYear,

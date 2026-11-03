@@ -4,6 +4,7 @@
 // id produced a third. Charges are counted by distinct charge DAYS - the
 // import recorded some charges twice (keva-N + bare transaction id).
 import { withPrevSurnames } from "@/lib/prev-surname";
+import { splitPrevSurname } from "@/lib/names";
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -168,7 +169,7 @@ export async function GET() {
   });
 
   const header = [
-    "שם", "מייל", "טלפון", "מזהה קבע", "תחילת הקבע (נדרים)",
+    "שם", "שם משפחה קודם", "מייל", "טלפון", "מזהה קבע", "תחילת הקבע (נדרים)",
     "חיוב ראשון שנקלט", "חיוב אחרון שנקלט", "חיובים שנקלטו",
     "משולם עד", "חידוש", "סטטוס חברה", "סכום ₪",
   ];
@@ -185,7 +186,8 @@ export async function GET() {
       : "מתחדש";
     lines.push(
       [
-        prof?.full_name || r.name || "-",
+        splitPrevSurname(prof?.full_name || r.name || "-").name,
+        splitPrevSurname(prof?.full_name || r.name || "-").prevSurname,
         r.email,
         r.phone,
         r.newestKeva ?? "-",
