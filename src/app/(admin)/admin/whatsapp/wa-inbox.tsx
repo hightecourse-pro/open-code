@@ -186,6 +186,12 @@ function AudioNote({ src }: { src: string }) {
     setFault(null);
     ref.current?.load();
   };
+  // The browser asks for the sound as soon as the HTML arrives - before React is listening. A note that
+  // failed in that gap would stay silent, so once we listen, an element that already failed loads again.
+  useEffect(() => {
+    const el = ref.current;
+    if (el?.error) el.load();
+  }, []);
   const failed = fault !== null;
   const retryable = fault === "server" || fault === "network" || fault === "unknown";
   return (
