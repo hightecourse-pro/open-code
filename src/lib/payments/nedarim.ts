@@ -40,6 +40,15 @@ export function nedarimCallbackIps(): string[] {
   ];
 }
 
+/**
+ * The checkout's קטגוריה on every membership transaction. One Nedarim account
+ * takes everything the community sells (dues, hackathon tickets, course fees,
+ * donations), so a callback without Param1 is recognized as MEMBERSHIP money
+ * by this category or by a plan's exact price - nothing else may touch a
+ * subscription (classifyExternalPayment).
+ */
+export const MEMBERSHIP_GROUPE = "דמי מנוי - קהילת קוד פתוח";
+
 export interface TransactionParty {
   profileId: string;
   fullName: string;
@@ -88,8 +97,8 @@ export function buildTransactionFields(
     City: party.city,
     // The report's קטגוריה - the owner's fixed wording; the plan itself rides
     // in Param2 (and the amount). Comment stays empty, like her reference.
-    Groupe: "דמי מנוי - קהילת קוד פתוח",
-    Category: "דמי מנוי - קהילת קוד פתוח",
+    Groupe: MEMBERSHIP_GROUPE,
+    Category: MEMBERSHIP_GROUPE,
     Comment: "",
     CallBack: callbackUrl,
     Param1: party.profileId,

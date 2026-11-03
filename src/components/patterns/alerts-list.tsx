@@ -79,6 +79,7 @@ function actionFor(a: AlertItem): { href: string; label: string } | null {
     case "external_payment_unverified":
     case "external_payment_stored":
     case "external_payment_matched":
+    case "external_payment_not_membership":
     case "external_payment_claimed":
     case "payment_rejected":
     case "payment_renewal_incomplete":

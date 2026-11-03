@@ -18,7 +18,7 @@ export default async function AdminExternalPaymentsPage() {
   const [{ data: payments }, { data: profiles }] = await Promise.all([
     admin
       .from("external_payments")
-      .select("id, client_name, email, phone, amount_agorot, provider_payment_id, needs_review, created_at, claimed_at, claimed_by")
+      .select("id, client_name, email, phone, amount_agorot, provider_payment_id, needs_review, review_reason, raw, created_at, claimed_at, claimed_by")
       .order("created_at", { ascending: false }),
     admin
       .from("profiles")
@@ -37,6 +37,9 @@ export default async function AdminExternalPaymentsPage() {
     amount_agorot: p.amount_agorot,
     provider_payment_id: p.provider_payment_id,
     needs_review: p.needs_review === true,
+    review_reason: p.review_reason ?? null,
+    // Nedarim's קטגוריה - what the money was for, when it was not membership.
+    groupe: ((p.raw as { Groupe?: string } | null)?.Groupe ?? "").trim() || null,
     created_at: p.created_at,
     claimed_at: p.claimed_at,
     claimedName: p.claimed_by ? (nameOf.get(p.claimed_by) ?? null) : null,
