@@ -25,6 +25,12 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
   const timer = useRef<number | null>(null);
 
   const setParams = (patch: Record<string, string | null>) => {
+    // a keystroke still waiting for its debounce rides along, so it can never land later and undo this change
+    if (timer.current) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+      patch = { q: typed.value || null, ...patch };
+    }
     const n = new URLSearchParams(sp.toString());
     for (const [k, v] of Object.entries(patch)) {
       if (v) n.set(k, v);
@@ -45,6 +51,11 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
     setParams({ t: next.join(",") || null });
   };
   const clearAll = () => {
+    // cancel a pending debounce - otherwise the last keystroke could re-apply ?q= right after the reset
+    if (timer.current) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
     setTyped({ base: "", value: "" });
     router.replace(pathname, { scroll: false });
   };

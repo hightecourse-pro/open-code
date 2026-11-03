@@ -132,22 +132,91 @@ function Linkify({ text }: { text: string }) {
 }
 
 /**
- * A voice note: the player, and under it a download link - for a browser that
- * cannot play Ogg Opus (Safari) or a load that failed, so the recording is
- * never out of reach (the owner, 1/11).
+ * Why a voice note did not play. The player only says "error"; asking the same
+ * route the way the player did tells the two apart that matter here: the route
+ * answered with audio and this browser cannot decode it, or something between
+ * the browser and the server replaced the answer (the owner, 3/11: the note was
+ * a valid 42-second Ogg Opus that played everywhere but on her screen - a
+ * network filter that blocks sound on the site answers with an HTML page).
+ */
+type AudioFault = "filtered" | "codec" | "session" | "missing" | "server" | "network" | "unknown";
+
+const AUDIO_FAULT_HE: Record<AudioFault | "checking", string> = {
+  checking: "ההקלטה לא נטענה כאן.",
+  filtered: "ההקלטה לא הגיעה לדפדפן כקובץ שמע - כנראה סינון הרשת (נטפרי) חוסם שמע באתר. אפשר לבקש פתיחת שמע ל-app.opencode.org.il.",
+  codec: "הדפדפן הזה לא מנגן את הפורמט של ווטסאפ (Ogg Opus).",
+  session: "ההתחברות פגה - לרענן את הדף.",
+  missing: "ההקלטה לא נשמרה אצלנו.",
+  server: "השרת לא הצליח להביא את ההקלטה כרגע.",
+  network: "אין חיבור לשרת כרגע.",
+  unknown: "ההקלטה לא נטענה כאן.",
+};
+
+async function diagnoseAudio(src: string, mediaErrorCode: number | null): Promise<AudioFault> {
+  let r: Response;
+  try {
+    r = await fetch(src, { cache: "no-store", credentials: "same-origin", headers: { range: "bytes=0-1" } });
+  } catch {
+    return "network";
+  }
+  const type = (r.headers.get("content-type") ?? "").toLowerCase();
+  // the route answered with sound - so it is this browser that cannot play it (3 = decode, 4 = format)
+  if (type.startsWith("audio/")) return mediaErrorCode === 3 || mediaErrorCode === 4 ? "codec" : "unknown";
+  // the route's own refusals: JSON for the session, plain text for a missing object or a storage failure
+  if (type.includes("json") && (r.status === 401 || r.status === 403)) return "session";
+  if (type.startsWith("text/plain") && r.status === 404) return "missing";
+  if (type.startsWith("text/plain") && r.status >= 500) return "server";
+  // anything else (an HTML page in place of the sound) was put there on the way
+  return "filtered";
+}
+
+/**
+ * A voice note: the player, under it the reason when it does not play, and a
+ * download link - so the recording is never out of reach (the owner, 1/11).
  */
 function AudioNote({ src }: { src: string }) {
-  const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLAudioElement>(null);
+  const [fault, setFault] = useState<AudioFault | "checking" | null>(null);
+  const onError = () => {
+    const code = ref.current?.error?.code ?? null;
+    setFault("checking");
+    void diagnoseAudio(src, code).then(setFault);
+  };
+  const retry = () => {
+    setFault(null);
+    ref.current?.load();
+  };
+  // The browser asks for the sound as soon as the HTML arrives - before React is listening. A note that
+  // failed in that gap would stay silent, so once we listen, an element that already failed loads again.
+  useEffect(() => {
+    const el = ref.current;
+    if (el?.error) el.load();
+  }, []);
+  const failed = fault !== null;
+  const retryable = fault === "server" || fault === "network" || fault === "unknown";
   return (
-    <span className="inline-flex flex-col gap-0.5">
-      <audio src={src} controls preload="metadata" className="max-w-[240px]" onError={() => setFailed(true)} data-testid="wa-audio" />
+    <span className="inline-flex flex-col gap-0.5 max-w-[260px]">
+      <audio ref={ref} src={src} controls preload="metadata" className="max-w-[240px]" onError={onError} data-testid="wa-audio" />
+      {fault && (
+        <span className="text-[11px] font-bold text-ink-900 leading-snug" data-testid="wa-audio-fault" data-reason={fault}>
+          {AUDIO_FAULT_HE[fault]}
+          {retryable && (
+            <>
+              {" "}
+              <button type="button" onClick={retry} className="underline" data-testid="wa-audio-retry">
+                לנסות שוב
+              </button>
+            </>
+          )}
+        </span>
+      )}
       <a
         href={`${src}?download=1`}
         className={cn("text-[11px] underline", failed ? "font-bold" : "text-ink-500")}
         data-testid="wa-audio-download"
         data-failed={failed ? "1" : "0"}
       >
-        {failed ? "ההקלטה לא נטענה כאן - להורדה ולהאזנה מהמחשב" : "להורדת ההקלטה"}
+        {failed ? "להורדה ולהאזנה מהמחשב" : "להורדת ההקלטה"}
       </a>
     </span>
   );
