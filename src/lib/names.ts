@@ -9,3 +9,14 @@ export function nameWithPrevSurname(fullName: string | null | undefined, prevSur
   const prev = prevSurname?.trim();
   return prev ? `${name} (${prev})` : name;
 }
+
+/**
+ * The reverse, for Excel: there the previous surname gets its own column
+ * (the owner, 3.11: ״שם משפחה קודם צריך להיות בעמודה נפרדת ולא בסוגריים״).
+ * Splits exactly what nameWithPrevSurname joined - a trailing ״(…)״.
+ */
+export function splitPrevSurname(display: string | null | undefined): { name: string; prevSurname: string } {
+  const s = (display ?? "").trim();
+  const m = /^(.*\S)\s*\(([^()]+)\)$/.exec(s);
+  return m ? { name: m[1], prevSurname: m[2].trim() } : { name: s, prevSurname: "" };
+}

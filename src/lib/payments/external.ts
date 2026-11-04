@@ -7,6 +7,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { raiseAlert } from "@/lib/alerts";
 import { activateSubscription } from "./subscription";
+import { buildPlans } from "./plans";
+import { getPricingAdmin } from "./pricing";
+import { MEMBERSHIP_GROUPE } from "./nedarim";
 import type { Json, SubscriptionPlan } from "@/types/database";
 
 /**
@@ -128,6 +131,36 @@ export function isKevaSetupCallback(params: Record<string, string>): boolean {
 }
 
 /**
+ * Is this MEMBERSHIP money? One Nedarim account takes everything the
+ * community sells - dues, hackathon tickets, course fees, donations - and a
+ * callback without Param1 says nothing about what was bought except its
+ * קטגוריה (Groupe) and its amount. 29/10: זהבי כהן paid 20 ₪ for the
+ * hackathon (Groupe ״האקתון AI קוד פתוח 2026״), the email matched her
+ * account and she became a monthly subscriber (the owner, 3/11: ״באג - 20
+ * ש"ח מפעיל מנוי״).
+ *
+ * Membership = the checkout's own category (an older keva keeps charging the
+ * price it was opened at, so the category alone must do), or exactly a
+ * plan's price (a bare direct link). Anything else is written down and never
+ * activates anyone - the admin can still activate it by hand.
+ */
+export type ExternalPaymentKind =
+  | { membership: true; plan: SubscriptionPlan }
+  | { membership: false; groupe: string | null; monthlyAgorot: number };
+
+export async function classifyExternalPayment(
+  params: Record<string, string>,
+  amountAgorot: number | null
+): Promise<ExternalPaymentKind> {
+  const plans = buildPlans(await getPricingAdmin());
+  const groupe = (params.Groupe ?? params.Category ?? "").trim() || null;
+  if (amountAgorot !== null && amountAgorot === plans.annual.amountAgorot) return { membership: true, plan: "annual" };
+  if (amountAgorot !== null && amountAgorot === plans.monthly.amountAgorot) return { membership: true, plan: "monthly" };
+  if (groupe === MEMBERSHIP_GROUPE) return { membership: true, plan: "monthly" };
+  return { membership: false, groupe, monthlyAgorot: plans.monthly.amountAgorot };
+}
+
+/**
  * A REFUND callback (negative amount; Nedarim's Comments say "זיכוי עסקה: <id>").
  * It is money going BACK, so it must never activate or extend anything -
  * 12/10: the owner refunded זהבה הררי 39 ₪ in Nedarim right after canceling
@@ -197,6 +230,7 @@ export async function handleExternalPayment(
   | "external_matched_activated"
   | "external_stored"
   | "external_stored_unverified"
+  | "external_not_membership"
   | "external_duplicate"
   | "refund_recorded"
   | "refund_unmatched"
@@ -212,12 +246,46 @@ export async function handleExternalPayment(
     return recordRefund(params, { transactionId: tx.transactionId, amountAgorot: tx.amountAgorot });
   }
 
+  // What was bought? Only membership money may touch a subscription.
+  const kind = await classifyExternalPayment(params, tx.amountAgorot);
+  if (!kind.membership) {
+    const profileId = email ? await userIdByEmail(email) : null;
+    const { error } = await admin.from("external_payments").insert({
+      email,
+      phone: params.Phone?.trim() || null,
+      zeout: params.Zeout?.trim() || null,
+      client_name: name,
+      provider_payment_id: tx.transactionId,
+      amount_agorot: tx.amountAgorot,
+      plan: "monthly",
+      raw: params as unknown as Json,
+      needs_review: true,
+      review_reason: "not_membership",
+    });
+    if (error) {
+      if (error.message.includes("duplicate")) return "external_duplicate";
+      throw error;
+    }
+    const shekels = (tx.amountAgorot ?? 0) / 100;
+    await raiseAlert({
+      kind: "external_payment_not_membership",
+      severity: "info",
+      title: `תשלום שאינו דמי מנוי: ${name ?? email ?? "ללא שם"} · ${shekels} ₪${kind.groupe ? ` · ${kind.groupe}` : ""}`,
+      body: `התשלום הגיע מנדרים בלי זיהוי חברה${kind.groupe ? `, בקטגוריה ״${kind.groupe}״` : ""}, ובסכום שאינו דמי מנוי (${kind.monthlyAgorot / 100} ₪ לחודש). לא הופעל מנוי${
+        profileId ? ` - גם לא ל-${name ?? email}, שהכתובת שלה רשומה אצלנו` : ""
+      }. אסמכתא ${tx.transactionId}. אם זה בכל זאת תשלום על מנוי, אפשר להפעיל אותו ממסך התשלומים.`,
+      context: { profileId, transactionId: tx.transactionId, groupe: kind.groupe, amountAgorot: tx.amountAgorot },
+      dedupeKey: `ext-pay:${tx.transactionId}`,
+    });
+    return "external_not_membership";
+  }
+
   if (email && !needsReview) {
     const profileId = await userIdByEmail(email);
     if (profileId) {
       await activateSubscription({
         profileId,
-        plan: tx.plan ?? "monthly",
+        plan: tx.plan ?? kind.plan,
         providerPaymentId: tx.transactionId,
         amountAgorot: tx.amountAgorot ?? undefined,
         raw: params,
@@ -242,9 +310,10 @@ export async function handleExternalPayment(
     client_name: name,
     provider_payment_id: tx.transactionId,
     amount_agorot: tx.amountAgorot,
-    plan: tx.plan ?? "monthly",
+    plan: tx.plan ?? kind.plan,
     raw: params as unknown as Json,
     needs_review: needsReview,
+    review_reason: needsReview ? "unverified_caller" : null,
   });
   if (error) {
     // unique(provider_payment_id) - a replayed webhook is already recorded.

@@ -14,6 +14,9 @@ export interface ExternalPaymentRow {
   amount_agorot: number | null;
   provider_payment_id: string;
   needs_review: boolean;
+  review_reason: "unverified_caller" | "not_membership" | null;
+  /** Nedarim's קטגוריה (what the money was for). */
+  groupe: string | null;
   created_at: string;
   claimed_at: string | null;
   claimedName: string | null;
@@ -95,12 +98,18 @@ export function ExternalPaymentsList({
   members: MemberOption[];
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [otherOpen, setOtherOpen] = useState(false);
   const [pendingDelete, start] = useTransition();
 
   // One row per woman: all her waiting charges folded together, keyed by the
   // keva's email (name as fallback). needs_review rows stay individual - each
-  // must be approved on its own merits.
-  const reviewRows = waiting.filter((p) => p.needs_review);
+  // must be approved on its own merits. Two reasons to wait: the caller could
+  // not be authenticated (approve after the Nedarim console), or the money is
+  // not membership money at all - a hackathon ticket, a course fee, a
+  // donation (the owner, 3.11: ״באג - 20 ש"ח מפעיל מנוי״). Those sit apart
+  // and activate nobody unless the admin says so in as many words.
+  const reviewRows = waiting.filter((p) => p.needs_review && p.review_reason !== "not_membership");
+  const otherRows = waiting.filter((p) => p.needs_review && p.review_reason === "not_membership");
   // Plain computation, no memo - a couple dozen rows, and the compiler
   // handles the rest.
   const groups: WaitingGroup[] = (() => {
@@ -235,6 +244,76 @@ export function ExternalPaymentsList({
           )}
         </div>
       </div>
+
+      {otherRows.length > 0 && (
+        <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm" data-testid="ext-not-membership">
+          <button
+            type="button"
+            onClick={() => setOtherOpen((v) => !v)}
+            className="w-full flex items-center gap-2 font-display text-base font-bold text-ink-1000 cursor-pointer"
+          >
+            <ChevronDown size={16} className={cn("transition-transform", !otherOpen && "-rotate-90")} />
+            תשלומים שאינם דמי מנוי ({otherRows.length})
+          </button>
+          <p className="text-[12.5px] text-ink-500 mt-1">
+            הגיעו מנדרים בלי זיהוי חברה, בקטגוריה אחרת או בסכום שאינו דמי מנוי (כרטיס לגמר, קורס, תרומה). לא מפעילים מנוי
+            לאף אחת.
+          </p>
+          {otherOpen && (
+            <div className="flex flex-col mt-2">
+              {otherRows.map((p) => (
+                <div
+                  key={p.id}
+                  className="py-3 border-b border-ink-100 last:border-b-0 flex items-center gap-3 flex-wrap"
+                  data-testid="ext-not-membership-row"
+                >
+                  <div className="flex-1 min-w-[220px]">
+                    <div className="font-medium text-ink-900 flex items-center gap-2 flex-wrap">
+                      {p.client_name ?? "ללא שם"}
+                      <span className="font-display font-bold text-brand-purple">
+                        {((p.amount_agorot ?? 0) / 100).toFixed(0)} ₪
+                      </span>
+                      {p.groupe && <Badge variant="purple">{p.groupe}</Badge>}
+                    </div>
+                    <div className="text-xs text-ink-500 mt-0.5 flex items-center gap-2.5 flex-wrap">
+                      {p.email && <span dir="ltr">{p.email}</span>}
+                      <span className="tabular-nums">{DATE_HE.format(new Date(p.created_at))}</span>
+                      <span className="text-ink-400" dir="ltr">{p.provider_payment_id}</span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
+                      if (
+                        !window.confirm(
+                          `זה לא תשלום על מנוי (${(p.amount_agorot ?? 0) / 100} ₪${p.groupe ? `, ${p.groupe}` : ""}). להפעיל ל-${p.client_name ?? p.email ?? "המשלמת"} מנוי חודשי בכל זאת?`
+                        )
+                      )
+                        return;
+                      start(() => void approveExternalPayment(p.id));
+                    }}
+                  >
+                    להפעיל מנוי בכל זאת
+                  </Button>
+                  <button
+                    type="button"
+                    title="מחיקה"
+                    disabled={pendingDelete}
+                    onClick={() => {
+                      if (!window.confirm(`למחוק את הרישום של ${p.client_name ?? "התשלום"}? התשלום עצמו נשאר בנדרים.`)) return;
+                      start(() => void deleteExternalPayment(p.id));
+                    }}
+                    className="text-ink-300 hover:text-danger p-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">
         <button

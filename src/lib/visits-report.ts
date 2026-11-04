@@ -1,4 +1,5 @@
 import { withPrevSurnames } from "@/lib/prev-surname";
+import { splitPrevSurname } from "@/lib/names";
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { inChunks } from "@/lib/chunk";
@@ -60,10 +61,11 @@ const fmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit",
 export function visitingMembersCsv(members: VisitingMember[]): string {
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const areaLabel = new Map(VISIT_AREAS.map((a) => [a.key, a.label]));
-  const head = ["שם", "מייל", "תפקיד", "מנויה", "כניסות", "כניסה אחרונה", "כניסה ראשונה בטווח", "אזורים"];
+  const head = ["שם", "שם משפחה קודם", "מייל", "תפקיד", "מנויה", "כניסות", "כניסה אחרונה", "כניסה ראשונה בטווח", "אזורים"];
   const lines = members.map((m) =>
     [
-      m.name,
+      splitPrevSurname(m.name).name,
+      splitPrevSurname(m.name).prevSurname,
       m.email,
       ROLE_HE[m.role] ?? m.role,
       m.subscriber ? "כן" : "לא",

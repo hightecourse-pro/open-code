@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, Copy, Search, X, StickyNote, UserRound, Target, Star, Eye } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { PresenceAvatar } from "@/components/patterns/presence-dot";
+import { splitPrevSurname } from "@/lib/names";
 import { cn } from "@/lib/utils";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { MemberCrm } from "@/components/patterns/member-crm";
@@ -296,12 +297,16 @@ export function MembersTable({
           type="button"
           onClick={() => {
             const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-            const header = ["שם", "טלפון", "מייל", "סמינר", "אזור", "סטטוס", "מצב תשלום", "VIP", "הצטרפה"];
+            // The previous surname is its own column in Excel, not ״(…)״
+            // after the name (the owner, 3.11).
+            const header = ["שם", "שם משפחה קודם", "טלפון", "מייל", "סמינר", "אזור", "סטטוס", "מצב תשלום", "VIP", "הצטרפה"];
             const lines = [header.map(esc).join(",")];
             for (const m of rows) {
+              const nm = splitPrevSurname(m.full_name);
               lines.push(
                 [
-                  m.full_name,
+                  nm.name,
+                  nm.prevSurname,
                   m.phone ?? "",
                   m.email ?? "",
                   m.study_place ?? "",

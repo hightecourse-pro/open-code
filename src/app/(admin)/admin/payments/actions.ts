@@ -21,7 +21,8 @@ export async function approveExternalPayment(id: string): Promise<void> {
     .maybeSingle();
   if (!row || row.claimed_at) return;
 
-  await admin.from("external_payments").update({ needs_review: false }).eq("id", id);
+  // The admin's explicit word: from here it is a membership payment.
+  await admin.from("external_payments").update({ needs_review: false, review_reason: null }).eq("id", id);
 
   if (row.email) {
     // Same paged lookup the webhook path uses.

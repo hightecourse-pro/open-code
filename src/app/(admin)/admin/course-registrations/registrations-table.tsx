@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Search, Trash2 } from "lucide-react";
+import { splitPrevSurname } from "@/lib/names";
 import { Alert, Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { deleteCourseRegistration, updateCourseRegistration, type CourseRegistrationStatus } from "./actions";
@@ -42,10 +43,11 @@ const fmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit",
 
 function csvOf(rows: RegistrationRow[]): string {
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["שם", "מייל", "טלפון", "קוד הרשמה", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "סכום ששולם", "תשלומים", "אסמכתא נדרים", "חזרה מדף התשלום", "שולם ב", "הערה", "נרשמה ב"];
+  const head = ["שם", "שם משפחה קודם", "מייל", "טלפון", "קוד הרשמה", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "סכום ששולם", "תשלומים", "אסמכתא נדרים", "חזרה מדף התשלום", "שולם ב", "הערה", "נרשמה ב"];
   const lines = rows.map((r) =>
     [
-      r.full_name,
+      splitPrevSurname(r.full_name).name,
+      splitPrevSurname(r.full_name).prevSurname,
       r.email,
       r.phone ?? "",
       r.reg_code ?? "",

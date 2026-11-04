@@ -927,13 +927,16 @@ export interface Database {
           raw: Json | null;
           claimed_by: string | null;
           claimed_at: string | null;
-          /** Arrived from an unrecognized caller - admin must confirm first. */
+          /** Waits for the admin - never activates anyone on its own. */
           needs_review: boolean;
+          /** Why it waits: an unauthenticated caller, or money that is not membership money. */
+          review_reason: "unverified_caller" | "not_membership" | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           needs_review?: boolean;
+          review_reason?: "unverified_caller" | "not_membership" | null;
           email?: string | null;
           phone?: string | null;
           zeout?: string | null;
