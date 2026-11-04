@@ -76,12 +76,21 @@ export function TopBar({ onProjectPage = false }: { onProjectPage?: boolean }) {
   );
 }
 
-/** One of the four headline figures under the hero (the canvas's stats strip). */
-export function StatBox({ n, label }: { n: number; label: string }) {
-  return (
-    <div className="bg-white px-7 py-6 flex flex-col gap-1" data-testid="sh-stat">
+/** One of the four headline figures under the hero (the canvas's stats strip); with `href` the box leads somewhere. */
+export function StatBox({ n, label, href }: { n: number; label: string; href?: string }) {
+  const inner = (
+    <>
       <CountUp to={n} className="text-[40px] leading-none font-black text-[#4A4EA3]" />
       <span className="text-[15px] text-[#4E4862]">{label}</span>
+    </>
+  );
+  return href ? (
+    <Link href={href} className="bg-white px-7 py-6 flex flex-col gap-1 hover:bg-[#F7F5FB] transition-colors" data-testid="sh-stat">
+      {inner}
+    </Link>
+  ) : (
+    <div className="bg-white px-7 py-6 flex flex-col gap-1" data-testid="sh-stat">
+      {inner}
     </div>
   );
 }
@@ -130,37 +139,58 @@ export function Tech({ name, href, count }: { name: string; href?: string; count
   );
 }
 
-/** One project in the grid, as the canvas draws it - the whole card is the link to its page. */
+/** A visible link to a project's page - the same words everywhere (the owner, 4/11: ״תן לינקים לפרויקטים בכל מקום״). */
+export function ProjectLink({ p, className = "", dark = false }: { p: ShowcaseProject; className?: string; dark?: boolean }) {
+  return (
+    <Link href={`${BASE}/${p.k8}`} className={`inline-flex items-center gap-1 text-[15px] font-bold ${dark ? "text-[#F07AA3] hover:text-white" : "text-[#4A4EA3] hover:text-[#1B1530]"} ${className}`} data-testid="sh-project-link" data-k8={p.k8}>
+      לפרויקט ←
+    </Link>
+  );
+}
+
+/** The live system in the cloud, when the project has one. */
+export function LiveLink({ p, className = "" }: { p: ShowcaseProject; className?: string }) {
+  if (!p.productUrl) return null;
+  return (
+    <a href={p.productUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 text-[15px] font-bold text-[#1B1530] hover:text-[#4A4EA3] ${className}`} data-testid="sh-live-link">
+      מערכת חיה ↗
+    </a>
+  );
+}
+
+/** One project in the grid, as the canvas draws it: the picture and the name lead to its page; the foot carries the two links. */
 export function ProjectCard({ p, eager = false }: { p: ShowcaseProject; eager?: boolean }) {
   const title = teamName(p);
+  const href = `${BASE}/${p.k8}`;
   return (
-    <Link
-      href={`${BASE}/${p.k8}`}
-      className="group flex flex-col h-full bg-white border border-[#ECE8F2] rounded-[14px] overflow-hidden hover:border-[#1B1530] transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3]"
-      data-testid="sh-card"
-      data-k8={p.k8}
-      data-ch={p.challenge}
-    >
-      <span className="relative block h-[180px] bg-[#F2EFF8] border-b border-[#ECE8F2] overflow-hidden">
+    <article className="flex flex-col h-full bg-white border border-[#ECE8F2] rounded-[14px] overflow-hidden hover:border-[#1B1530] transition-colors" data-testid="sh-card" data-k8={p.k8} data-ch={p.challenge}>
+      <Link href={href} className="relative block h-[180px] bg-[#F2EFF8] border-b border-[#ECE8F2] overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3]" aria-label={title} tabIndex={-1}>
         {p.image && <Image src={p.image} alt={p.caption ?? title} fill sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" priority={eager} />}
         <AwardTag p={p} className="absolute top-3 left-3" />
-      </span>
-      <span className="flex flex-col gap-3 p-[22px] flex-1">
+      </Link>
+      <div className="flex flex-col gap-3 p-[22px] flex-1">
         <ChallengeChip k={p.challenge} className="self-start" />
-        <span className="text-[21px] font-bold leading-tight text-[#1B1530]">{title}</span>
-        <span className="text-[15px] text-[#4E4862] leading-relaxed line-clamp-3 flex-1">{p.blurb}</span>
-        <span className="flex flex-wrap gap-1.5">
+        <h3 className="text-[21px] font-bold leading-tight text-[#1B1530]">
+          <Link href={href} className="hover:text-[#4A4EA3] hover:underline underline-offset-4">
+            {title}
+          </Link>
+        </h3>
+        <p className="text-[15px] text-[#4E4862] leading-relaxed line-clamp-3 flex-1">{p.blurb}</p>
+        <div className="flex flex-wrap gap-1.5">
           {p.tech.slice(0, 4).map((t) => (
             <Tech key={t} name={t} />
           ))}
           {p.tech.length > 4 && <span className="text-[12px] text-[#6B6580] px-1 py-[3px]">+{p.tech.length - 4}</span>}
-        </span>
-        <span className="flex items-center justify-between gap-3 pt-3 border-t border-[#F0EDF5]">
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#F0EDF5]">
           <span className="text-[13px] text-[#6B6580]">{p.members.length === 1 ? "מפתחת אחת" : "זוג"}</span>
-          <span className="text-[15px] font-bold text-[#4A4EA3] group-hover:text-[#1B1530]">לפרויקט ←</span>
-        </span>
-      </span>
-    </Link>
+          <span className="flex items-center gap-4">
+            <LiveLink p={p} />
+            <ProjectLink p={p} />
+          </span>
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -206,7 +236,7 @@ export function CompanyDetails({ k, href = "#projects", className = "bg-[#F7F5FB
         {finals.winner && (
           <div>
             <span className="font-black text-[#B0154B]">זוכת האתגר: </span>
-            <Link href={`${BASE}/${finals.winner.k8}`} className="font-bold text-[#1B1530] hover:underline">
+            <Link href={`${BASE}/${finals.winner.k8}`} className="font-bold text-[#4A4EA3] underline underline-offset-4 hover:text-[#1B1530]" data-testid="sh-finals-link">
               {teamName(finals.winner)}
             </Link>
           </div>
@@ -217,7 +247,7 @@ export function CompanyDetails({ k, href = "#projects", className = "bg-[#F7F5FB
             {finals.finalists.map((f, i) => (
               <Fragment key={f.k8}>
                 {i > 0 && " · "}
-                <Link href={`${BASE}/${f.k8}`} className="hover:underline">
+                <Link href={`${BASE}/${f.k8}`} className="text-[#4A4EA3] underline underline-offset-4 hover:text-[#1B1530]" data-testid="sh-finals-link">
                   {teamName(f)}
                 </Link>
               </Fragment>
@@ -236,7 +266,7 @@ export function CompanyDetails({ k, href = "#projects", className = "bg-[#F7F5FB
 export function HowItWorked() {
   const steps: [string, string][] = [
     ["הרשמה לאתגר", "חברות הקהילה, לבד או כזוג, אתגר אחד משלושה."],
-    ["שבועיים של פיתוח", "עם כלי ה-AI שכל אחת בחרה, עד מערכת שרצה בענן."],
+    ["שבוע של פיתוח", "עם כלי ה-AI שכל אחת בחרה, עד מערכת שרצה בענן."],
     ["הגשת התוצרים", "קישור למערכת, גיט ציבורי, ארכיטקטורה, סרטון של עד דקה, הפיצ׳ר המקורי."],
     ["ערב הגמר 28.10", "שלוש עולות לגמר בכל אתגר. שופטות 70, קהל האולם 30."],
   ];
@@ -266,16 +296,23 @@ export function WinnersStrip() {
           const w = finalsOf(k).winner;
           if (!w) return null;
           return (
-            <Link key={k} href={`${BASE}/${w.k8}`} className="flex items-center gap-4 p-3 pe-5 rounded-[14px] bg-[#1B1530] text-white hover:bg-[#2A2244] transition-colors" data-testid="sh-winner" data-k8={w.k8} data-ch={k}>
-              <span className="relative block w-[128px] h-[72px] shrink-0 rounded-[8px] overflow-hidden bg-[#2A2244]">{w.image && <Image src={w.image} alt="" fill sizes="128px" className="object-cover object-top" />}</span>
-              <span className="flex flex-col gap-1 min-w-0">
+            <div key={k} className="flex items-center gap-4 p-3 pe-5 rounded-[14px] bg-[#1B1530] text-white" data-testid="sh-winner" data-k8={w.k8} data-ch={k}>
+              <Link href={`${BASE}/${w.k8}`} className="relative block w-[128px] h-[72px] shrink-0 rounded-[8px] overflow-hidden bg-[#2A2244]" aria-label={teamName(w)} tabIndex={-1}>
+                {w.image && <Image src={w.image} alt="" fill sizes="128px" className="object-cover object-top" />}
+              </Link>
+              <span className="flex flex-col gap-1 min-w-0 flex-1">
                 <span className="text-[13px] font-bold text-[#F07AA3]">זוכת האתגר · {CHALLENGE_INFO[k].short}</span>
-                <span className="text-[19px] font-extrabold leading-tight truncate">{teamName(w)}</span>
-                <span className="text-[13px] text-[#B9B2CC] truncate" dir="ltr">
-                  {w.tech.slice(0, 3).join(" · ")}
+                <Link href={`${BASE}/${w.k8}`} className="text-[19px] font-extrabold leading-tight truncate hover:underline underline-offset-4">
+                  {teamName(w)}
+                </Link>
+                <span className="flex items-center justify-between gap-3">
+                  <span className="text-[13px] text-[#B9B2CC] truncate" dir="ltr">
+                    {w.tech.slice(0, 3).join(" · ")}
+                  </span>
+                  <ProjectLink p={w} dark className="text-[14px] shrink-0" />
                 </span>
               </span>
-            </Link>
+            </div>
           );
         })}
       </div>
@@ -352,19 +389,19 @@ export function Numbers({ quote }: { quote: ShowcaseProject | null }) {
               rows={[
                 { name: "מפתחת אחת", count: s.solo },
                 { name: "זוג", count: s.pairs },
-                ...s.byChallenge.map((c) => ({ name: CHALLENGE_INFO[c.key].short, count: c.count })),
               ]}
             />
+            <Rows rows={s.byChallenge.map((c) => ({ name: CHALLENGE_INFO[c.key].short, count: c.count }))} hrefOf={(name) => `${BASE}?ch=${CHALLENGE_ORDER.find((k) => CHALLENGE_INFO[k].short === name) ?? ""}#projects`} />
           </div>
         </div>
         {q && (
           <figure className="m-0 px-9 py-8 rounded-[12px] bg-white border border-[#E3DDEE] flex flex-col gap-3" data-testid="sh-quotes">
             <blockquote className="m-0 text-[22px] leading-relaxed font-medium text-[#1B1530]">״{q.quote}״</blockquote>
-            <figcaption className="text-[15px] text-[#4E4862]">
-              <Link href={`${BASE}/${quote.k8}`} className="font-bold hover:underline">
-                {q.name}
-              </Link>
-              , {CHALLENGE_INFO[quote.challenge].short}
+            <figcaption className="text-[15px] text-[#4E4862] flex items-center gap-4 flex-wrap">
+              <span>
+                <span className="font-bold text-[#1B1530]">{q.name}</span>, {CHALLENGE_INFO[quote.challenge].short}
+              </span>
+              <ProjectLink p={quote} />
             </figcaption>
           </figure>
         )}
@@ -381,7 +418,7 @@ export function Employers() {
         <div className="flex-[999_1_420px] min-w-0 flex flex-col gap-3">
           <h2 className="text-[30px] sm:text-[36px] font-extrabold leading-[1.2]">מחפשים מפתחת AI לצוות שלכם?</h2>
           <p className="text-[18px] leading-relaxed text-[#DCD7E8] max-w-2xl">
-            כל פרויקט כאן נבנה בשבועיים, על בעיה אמיתית של ארגון אמיתי, ועלה לענן. מי שבנתה אותו - בוגרת מסלול פיתוח, חברה בקהילת קוד פתוח, ומחפשת את הצוות הבא שלה.
+            כל פרויקט כאן נבנה בשבוע, על בעיה אמיתית של ארגון אמיתי, ועלה לענן. מי שבנתה אותו - בוגרת מסלול פיתוח, חברה בקהילת קוד פתוח, ומחפשת את הצוות הבא שלה.
           </p>
         </div>
         <div className="flex-[1_1_260px] flex flex-wrap gap-3">

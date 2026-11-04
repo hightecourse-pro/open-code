@@ -12,7 +12,7 @@ import { COUNTS, PROJECTS, STATS, projectByK8, topTech } from "@/lib/hackathon-s
 import { Explorer } from "./explorer";
 import { BTN_INK, BTN_PINK, Employers, Footer, HowItWorked, Numbers, StatBox, TopBar, WRAP, WinnersStrip } from "./ui";
 
-const DESCRIPTION = `${COUNTS.projects} מערכות AI עובדות שבנו ${COUNTS.people} מפתחות מקהילת קוד פתוח בשבועיים, לשלושה ארגונים אמיתיים: שטראוס, הפניקס והמעבדה המרכזית לנגיפים. לכל פרויקט - הסרטון, המערכת החיה בענן, הטכנולוגיות ומשפט אישי.`;
+const DESCRIPTION = `${COUNTS.projects} מערכות AI עובדות שבנו ${COUNTS.people} מפתחות מקהילת קוד פתוח בשבוע, לשלושה ארגונים אמיתיים: שטראוס, הפניקס והמעבדה המרכזית לנגיפים. לכל פרויקט - הסרטון, המערכת החיה בענן, הטכנולוגיות ומשפט אישי.`;
 
 export const metadata: Metadata = {
   title: "הפרויקטים של האקתון AI 2026",
@@ -58,7 +58,7 @@ export default function ShowcasePage() {
         </div>
         <div className={`${WRAP} pb-16`}>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-[#E3DDEE] border border-[#E3DDEE] rounded-[12px] overflow-hidden" data-testid="sh-stats">
-            <StatBox n={COUNTS.projects} label="פרויקטים" />
+            <StatBox n={COUNTS.projects} label="פרויקטים" href="#projects" />
             <StatBox n={COUNTS.people} label="מפתחות" />
             <StatBox n={STATS.tech} label="טכנולוגיות" />
             <StatBox n={COUNTS.institutions ?? 0} label="מוסדות לימוד" />
