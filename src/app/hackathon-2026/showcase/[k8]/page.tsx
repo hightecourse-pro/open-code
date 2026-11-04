@@ -1,13 +1,12 @@
 // One project in the second design (the owner, 4/11: ״בכניסה לפרויקט נשאר העיצוב הישן״): the stage
 // with the video, ״מה שמעבר לאתגר״, the technologies (a click filters the grid), one sentence from
-// each member, the partner's details as on the portal, the neighbours of the same challenge.
-// Statically generated for the 60. Same data as /hackathon-2026/projects/[k8].
+// each member, the partner's details as on the portal, the neighbours of the same challenge - in the
+// canvas's rhythm (the same heading block, the same cards). Statically generated for the 60.
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CHALLENGE_INFO, PROJECTS, SHOWCASE2_PATH as BASE, projectByK8, projectsOf, teamName } from "@/lib/hackathon-showcase";
-import { BTN_INK, CompanyDetails, Employers, Eyebrow, Footer, ProjectCard, Tech, TopBar, WRAP } from "../ui";
+import { BTN_INK, CompanyDetails, Employers, Footer, ProjectCard, SectionHead, Tech, TopBar, WRAP } from "../ui";
 import { ProjectStage } from "./hero";
 
 export const dynamicParams = false;
@@ -45,7 +44,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
     <main className="min-h-full bg-white text-[#1B1530] overflow-x-hidden">
       <TopBar onProjectPage />
 
-      <article className={`${WRAP} pt-8 pb-14 flex flex-col gap-8`}>
+      <article className={`${WRAP} pt-10 pb-16 flex flex-col gap-10`}>
         <nav className="flex items-center gap-2 text-[14px] text-[#6B6580] flex-wrap" aria-label="ניווט">
           <Link href={BASE} className="font-bold text-[#B0154B] hover:underline">
             כל הפרויקטים
@@ -60,22 +59,22 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
 
         <ProjectStage p={p} />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
-          <section className="rounded-[14px] border border-[#ECE8F2] p-6 flex flex-col gap-3" data-testid="sh-tech-section">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <section className="rounded-[12px] border border-[#ECE8F2] p-7 flex flex-col gap-3" data-testid="sh-tech-section">
             <h2 className="text-[20px] font-bold text-[#1B1530]">הטכנולוגיות</h2>
             <div className="flex flex-wrap gap-2">
               {p.tech.map((t) => (
                 <Tech key={t} name={t} href={`${BASE}?t=${encodeURIComponent(t)}#projects`} />
               ))}
-              {!p.tech.length && <span className="text-[#6B6580] text-[14.5px]">הצוות לא פירט טכנולוגיות.</span>}
+              {!p.tech.length && <span className="text-[#6B6580] text-[15px]">הצוות לא פירט טכנולוגיות.</span>}
             </div>
           </section>
-          <section className="rounded-[14px] bg-[#F7F5FB] p-6 flex flex-col gap-3" data-testid="sh-quotes">
+          <section className="rounded-[12px] border border-[#ECE8F2] p-7 flex flex-col gap-3" data-testid="sh-quotes">
             <h2 className="text-[20px] font-bold text-[#1B1530]">משפט אחד מכל מי שבנתה</h2>
             <div className="flex flex-col gap-3">
               {p.quotes.map((q) => (
-                <blockquote key={q.id} className="m-0 bg-white rounded-[10px] px-4 py-3 border border-[#E3DDEE]" data-testid="sh-quote">
-                  <p className="text-[15.5px] leading-relaxed text-[#1B1530]">״{q.quote}״</p>
+                <blockquote key={q.id} className="m-0 bg-[#F7F5FB] rounded-[10px] px-5 py-4" data-testid="sh-quote">
+                  <p className="text-[16px] leading-relaxed text-[#1B1530]">״{q.quote}״</p>
                   <cite className="block not-italic font-bold text-[14px] text-[#4A4EA3] mt-1.5">{q.name}</cite>
                 </blockquote>
               ))}
@@ -91,29 +90,24 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
         </div>
       </article>
 
-      {/* the partner and its challenge */}
+      {/* the partner and its challenge - the tinted band */}
       <section className="bg-[#F7F5FB]" data-testid="sh-project-challenge">
-        <div className={`${WRAP} py-14 flex flex-col gap-6`}>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <span className="h-12 flex items-center bg-white rounded-[10px] px-3 border border-[#E3DDEE]">
-                <Image src={c.logos[0]} alt="" width={220} height={151} className="h-8 w-auto max-w-[120px] object-contain" />
-              </span>
-              <div className="flex flex-col">
-                <span className="flex items-center gap-2">
-                  <Eyebrow>האתגר</Eyebrow>
-                  <span className="inline-flex items-center rounded-full bg-[#EEEFFA] text-[#3B3F8F] text-[12.5px] font-bold px-2.5 py-0.5" dir="ltr" data-testid="sh-company-tech">
-                    {c.techLabel}
-                  </span>
+        <div className={`${WRAP} py-22 flex flex-col gap-9`}>
+          <div className="flex flex-wrap items-end justify-between gap-5">
+            <SectionHead
+              eyebrow="האתגר"
+              title={c.short}
+              line={
+                <span dir="ltr" className="inline-block font-bold text-[#1B1530]" data-testid="sh-company-tech">
+                  {c.techLabel}
                 </span>
-                <span className="text-[24px] font-black leading-tight text-[#1B1530]">{c.short}</span>
-              </div>
-            </div>
+              }
+            />
             <div className="flex items-center gap-2 flex-wrap">
-              <Link href={`${BASE}/${prev.k8}`} className={`${BTN_INK} min-h-10 px-4 text-[14px]`} data-testid="sh-prev">
+              <Link href={`${BASE}/${prev.k8}`} className={`${BTN_INK} min-h-11 px-5 text-[15px]`} data-testid="sh-prev">
                 › הקודם
               </Link>
-              <Link href={`${BASE}/${next.k8}`} className={`${BTN_INK} min-h-10 px-4 text-[14px]`} data-testid="sh-next">
+              <Link href={`${BASE}/${next.k8}`} className={`${BTN_INK} min-h-11 px-5 text-[15px]`} data-testid="sh-next">
                 הבא ‹
               </Link>
             </div>
@@ -123,14 +117,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
       </section>
 
       {more.length > 0 && (
-        <section className={`${WRAP} py-14 flex flex-col gap-6`}>
-          <div className="flex items-baseline justify-between gap-4 flex-wrap">
-            <h2 className="text-[24px] font-extrabold text-[#1B1530]">עוד מהאתגר של {c.short}</h2>
-            <Link href={filtered} className="text-[14.5px] font-bold text-[#4A4EA3] hover:underline">
+        <section className={`${WRAP} pt-14 pb-22 flex flex-col gap-7`}>
+          <div className="flex flex-wrap items-end justify-between gap-5">
+            <SectionHead eyebrow="עוד מהאתגר" title={`עוד פרויקטים של ${c.short}`} />
+            <Link href={filtered} className="text-[15px] font-bold text-[#4A4EA3] hover:text-[#1B1530]">
               כל {siblings.length} הפרויקטים ←
             </Link>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" data-testid="sh-more">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="sh-more">
             {more.map((s) => (
               <ProjectCard key={s.k8} p={s} />
             ))}
@@ -138,9 +132,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
         </section>
       )}
 
-      <div className="bg-[#F7F5FB]">
-        <Employers />
-      </div>
+      <Employers />
       <Footer />
     </main>
   );
