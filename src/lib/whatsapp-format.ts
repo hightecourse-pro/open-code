@@ -91,6 +91,20 @@ export function formatSystemNotice(sys: WaSystemNotice | undefined | null, from:
   return body ? `הודעת מערכת מווטסאפ: ${body}` : "הודעת מערכת מווטסאפ.";
 }
 
+/**
+ * Her edit or deletion of one of her own messages reaches the Cloud API only as
+ * an "unsupported" event that names the action - the new text never arrives
+ * (Meta: UNSUPPORTED_TYPE "edit"; "revoke" for a deletion). The team line says
+ * what happened (the owner, 5/11: ״תעשה אפשרות עריכה בווצאפ״). Null for any
+ * other unsupported type - those keep the generic placeholder.
+ */
+export function formatUnsupportedNotice(type: string | undefined | null): string | null {
+  const t = (type ?? "").toLowerCase();
+  if (t === "edit") return "ערכה הודעה קודמת שלה - הנוסח המעודכן נראה רק בטלפון.";
+  if (t === "revoke") return "מחקה אצלה הודעה קודמת - כאן היא נשארת כפי שהתקבלה.";
+  return null;
+}
+
 export function cleanWaParam(value: string): string {
   return value.replace(WA_INVISIBLE, "").replace(WA_BREAKS, " ").replace(WA_CONTROL, " ").replace(/ {2,}/g, " ").trim();
 }
