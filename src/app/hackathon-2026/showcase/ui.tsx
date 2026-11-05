@@ -13,7 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { Logo } from "@/components/ui";
-import { CHALLENGE_INFO, CHALLENGE_ORDER, COUNTS, SHOWCASE2_PATH as BASE, STATS, awardOf, finalsOf, projectsOf, teamName, type ChallengeKey, type ShowcaseProject, type StatRow } from "@/lib/hackathon-showcase";
+import { CHALLENGE_INFO, CHALLENGE_ORDER, COUNTS, SHOWCASE2_PATH as BASE, STATS, awardOf, finalsOf, projectsOf, teamName, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
 import { CHALLENGES } from "../shared";
 import { CountUp } from "../projects/reveal";
 import { HackathonLogo } from "./logo";
@@ -95,82 +95,46 @@ export function StatBox({ n, label, href }: { n: number; label: string; href?: s
   );
 }
 
-/** A small card of the dashboard: a title and a few thin bars, the count at the end of each; a row can lead into the grid. */
-function Bars({ title, rows, hrefOf }: { title: string; rows: StatRow[]; hrefOf?: (name: string) => string }) {
-  // four rows at most - the band must stay short (the smaller hosts fall off, never the first three)
-  const shown = rows.slice(0, 4);
-  const max = Math.max(1, ...shown.map((r) => r.count));
-  return (
-    <div className="bg-white border border-[#E3DDEE] rounded-[12px] px-5 py-4 flex flex-col gap-2.5" data-testid="sh-dash-card">
-      <h3 className="text-[15px] font-bold text-[#1B1530]">{title}</h3>
-      <ul className="flex flex-col gap-2">
-        {shown.map((r) => {
-          const inner = (
-            <>
-              <span className="flex items-center justify-between gap-3 text-[13.5px] leading-none">
-                <span className="text-[#1B1530]" dir="auto">
-                  {r.name}
-                </span>
-                <span className="font-black text-[#1B1530]" style={{ fontVariantNumeric: "tabular-nums" }}>
-                  {r.count}
-                </span>
-              </span>
-              <span className="block h-[6px] rounded-full bg-[#EEEFFA] overflow-hidden">
-                <span className="block h-full rounded-full bg-[#4A4EA3]" style={{ width: `${Math.max(4, Math.round((r.count / max) * 100))}%` }} />
-              </span>
-            </>
-          );
-          return (
-            <li key={r.name} data-testid="sh-bar">
-              {hrefOf ? (
-                <Link href={hrefOf(r.name)} className="flex flex-col gap-1.5 hover:text-[#4A4EA3]">
-                  {inner}
-                </Link>
-              ) : (
-                <span className="flex flex-col gap-1.5">{inner}</span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
+/** The three partners' marks for the dashboard - Sheba's for the virology lab (the owner, 5/11: ״במקום משרד הבריאות שים את הסמל של בית החולים שיבא״). */
+const PARTNER_LOGO: Record<ChallengeKey, { src: string; width: number; height: number; alt: string }> = {
+  strauss: { src: "/hackathon-2026/logo-strauss.png", width: 220, height: 151, alt: "שטראוס" },
+  virology: { src: "/hackathon-2026/logo-sheba.png", width: 600, height: 301, alt: "המרכז הרפואי שיבא" },
+  phoenix: { src: "/hackathon-2026/logo-phoenix.png", width: 387, height: 132, alt: "הפניקס" },
+};
 
 /**
  * The top of the page (the owner, 5/11: ״צריך בקצרה דשבורד של נתונים … כל הטקסט למעלה מיותר … צריך את
- * הלוגו של ההאקתון עם הנפשה״): the jumping logo on the right, the five figures and three small cards of
- * bars on the left - no words. Tinted, as the canvas's hero. Short enough that the winners show on the
- * first screen.
+ * הלוגו של ההאקתון עם הנפשה … במקום 60 פרויקטים כתוב 3 אתגרים מהתעשיה ובמקום החלק שהורדת את 3 הסמלים של
+ * האתגרים״): the jumping logo on the right; the five figures and the three partners' marks on the left - no
+ * words. Tinted, as the canvas's hero. Short enough that the winners show on the first screen.
  */
 export function Dashboard() {
   const s = STATS;
-  const tech = (name: string) => `${BASE}?t=${encodeURIComponent(name)}#projects`;
   return (
     <section id="numbers" className="bg-[#F7F5FB] scroll-mt-16" data-testid="sh-hero">
       <div className={`${WRAP} pt-8 pb-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-10 items-center`}>
         <div className="flex justify-center lg:justify-start">
           <HackathonLogo className="w-[260px] lg:w-[280px] max-w-full h-auto" />
         </div>
-        <div className="flex flex-col gap-5 min-w-0">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-[#E3DDEE] border border-[#E3DDEE] rounded-[12px] overflow-hidden" data-testid="sh-stats">
-          <StatBox n={COUNTS.projects} label="פרויקטים" href="#projects" />
-          <StatBox n={COUNTS.people} label="מפתחות" />
-          <StatBox n={s.live} label="מערכות חיות בענן" />
-          <StatBox n={s.tech} label="טכנולוגיות" />
-          <StatBox n={COUNTS.institutions ?? 0} label="מוסדות לימוד" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="sh-dash">
-          <Bars title="המודל שבתוך המוצר" rows={s.models} hrefOf={tech} />
-          <Bars title="איפה המערכות רצות" rows={s.hosts} />
-          <Bars
-            title="לבד או בזוג"
-            rows={[
-              { name: "מפתחת אחת", count: s.solo },
-              { name: "זוג", count: s.pairs },
-            ]}
-          />
-        </div>
+        <div className="flex flex-col gap-4 min-w-0">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-[#E3DDEE] border border-[#E3DDEE] rounded-[12px] overflow-hidden" data-testid="sh-stats">
+            <StatBox n={COUNTS.challenges} label="אתגרים מהתעשייה" href="#challenges" />
+            <StatBox n={COUNTS.people} label="מפתחות" />
+            <StatBox n={s.live} label="מערכות חיות בענן" />
+            <StatBox n={s.tech} label="טכנולוגיות" />
+            <StatBox n={COUNTS.institutions ?? 0} label="מוסדות לימוד" />
+          </div>
+          {/* the three partners - a click shows that partner's projects */}
+          <div className="grid grid-cols-3 gap-3" role="group" aria-label="החברות השותפות" data-testid="sh-partners">
+            {CHALLENGE_ORDER.map((k) => {
+              const l = PARTNER_LOGO[k];
+              return (
+                <Link key={k} href={`${BASE}?ch=${k}#projects`} className="flex items-center justify-center h-[84px] px-4 bg-white border border-[#E3DDEE] rounded-[12px] hover:border-[#1B1530] transition-colors" aria-label={`הפרויקטים של ${CHALLENGE_INFO[k].short}`} data-testid="sh-partner-logo" data-ch={k}>
+                  <Image src={l.src} alt={l.alt} width={l.width} height={l.height} className="h-11 w-auto max-w-[80%] object-contain" />
+                </Link>
+              );
+            })}
+          </div>
         </div>
       </div>
     </section>
