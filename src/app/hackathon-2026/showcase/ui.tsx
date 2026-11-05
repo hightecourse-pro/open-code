@@ -3,16 +3,17 @@
 // A separate route (/hackathon-2026/showcase) beside the first one, so the two can be compared.
 // Same static data, the booklet's words, nothing judged. The pieces here need no browser state.
 //
-// The canvas's rhythm, kept exactly (the owner, 4/11: ״בלגן קצת בעין במעבר בין החלקים - תיצמד יותר
-// לעיצוב בדיזיין״): one container (1240 + 24px gutters), one heading block in every section (an eyebrow
-// of 14px, an h2 of 40px/800, an optional 18px line), 88px above a section, cards with 1px #ECE8F2
-// borders and 12-14px corners, white sections between the tinted hero, the tinted ״numbers״ and the
-// dark employers' block on white.
+// The order, since 5/11 (the owner: ״אף אחד לא יגלול למטה עד הפרויקטים״): a short numbers dashboard at
+// the top, the three winners with their pictures, then every other project in small tiles with the
+// filter line stuck under the top bar - the partners, ״איך זה עבד״ and the employers' call come after.
+// The canvas's rhythm stays: one container (1240 + 24px gutters), one heading block in every section
+// (an eyebrow of 14px, an h2 of 40px/800, an optional 18px line), cards with 1px #ECE8F2 borders and
+// 12-14px corners, the tinted band on top, the dark employers' block on white.
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, type ReactNode } from "react";
 import { Logo } from "@/components/ui";
-import { CHALLENGE_INFO, CHALLENGE_ORDER, COUNTS, SHOWCASE2_PATH as BASE, STATS, awardOf, finalsOf, projectsOf, teamName, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
+import { CHALLENGE_INFO, CHALLENGE_ORDER, COUNTS, SHOWCASE2_PATH as BASE, STATS, awardOf, finalsOf, projectsOf, teamName, type ChallengeKey, type ShowcaseProject, type StatRow } from "@/lib/hackathon-showcase";
 import { CHALLENGES } from "../shared";
 import { CountUp } from "../projects/reveal";
 
@@ -41,31 +42,28 @@ export function SectionHead({ eyebrow, title, line, children, className = "" }: 
   );
 }
 
-/** Sticky top bar, as the canvas's header: the community's logo, the anchors, the dark button. */
+/** Sticky top bar, as the canvas's header: the community's logo, the anchors in the page's order, the dark button. */
 export function TopBar({ onProjectPage = false }: { onProjectPage?: boolean }) {
   const anchor = (hash: string) => (onProjectPage ? `${BASE}#${hash}` : `#${hash}`);
   const item = "text-[16px] font-medium text-[#1B1530] hover:text-[#4A4EA3] transition-colors";
   return (
     <header className="sticky top-0 z-40 bg-white border-b border-[#ECE8F2]" data-testid="sh-topbar">
-      <div className={`${WRAP} py-3 flex flex-wrap items-center justify-between gap-4`}>
+      <div className={`${WRAP} min-h-16 py-3 flex flex-wrap items-center justify-between gap-4`}>
         <Link href="/" className="shrink-0" aria-label="קהילת קוד פתוח">
           <Logo width={132} />
         </Link>
         <nav className="flex flex-wrap items-center gap-5 sm:gap-7">
-          <Link href={anchor("challenges")} className={item}>
-            האתגרים
-          </Link>
           <Link href={anchor("featured")} className={item}>
             הזוכות
-          </Link>
-          <Link href={anchor("about")} className={`${item} hidden sm:block`}>
-            איך זה עבד
           </Link>
           <Link href={anchor("projects")} className={item}>
             כל הפרויקטים
           </Link>
-          <Link href={anchor("numbers")} className={`${item} hidden md:block`}>
-            במספרים
+          <Link href={anchor("challenges")} className={item}>
+            האתגרים
+          </Link>
+          <Link href={anchor("about")} className={`${item} hidden sm:block`}>
+            איך זה עבד
           </Link>
         </nav>
         <Link href={anchor("employers")} className="inline-flex items-center min-h-11 px-[22px] rounded-lg bg-[#1B1530] text-white text-[15px] font-bold hover:bg-[#2A2244] transition-colors">
@@ -76,7 +74,7 @@ export function TopBar({ onProjectPage = false }: { onProjectPage?: boolean }) {
   );
 }
 
-/** One of the four headline figures under the hero (the canvas's stats strip); with `href` the box leads somewhere. */
+/** One of the headline figures in the dashboard (the canvas's stats strip); with `href` the box leads somewhere. */
 export function StatBox({ n, label, href }: { n: number; label: string; href?: string }) {
   const inner = (
     <>
@@ -85,13 +83,106 @@ export function StatBox({ n, label, href }: { n: number; label: string; href?: s
     </>
   );
   return href ? (
-    <Link href={href} className="bg-white px-7 py-6 flex flex-col gap-1 hover:bg-[#F7F5FB] transition-colors" data-testid="sh-stat">
+    <Link href={href} className="bg-white px-6 py-5 flex flex-col gap-1 hover:bg-[#F7F5FB] transition-colors" data-testid="sh-stat">
       {inner}
     </Link>
   ) : (
-    <div className="bg-white px-7 py-6 flex flex-col gap-1" data-testid="sh-stat">
+    <div className="bg-white px-6 py-5 flex flex-col gap-1" data-testid="sh-stat">
       {inner}
     </div>
+  );
+}
+
+/** A small card of the dashboard: a title and a few thin bars, the count at the end of each; a row can lead into the grid. */
+function Bars({ title, rows, hrefOf }: { title: string; rows: StatRow[]; hrefOf?: (name: string) => string }) {
+  const max = Math.max(1, ...rows.map((r) => r.count));
+  return (
+    <div className="bg-white border border-[#E3DDEE] rounded-[12px] px-5 py-4 flex flex-col gap-3" data-testid="sh-dash-card">
+      <h3 className="text-[15px] font-bold text-[#1B1530]">{title}</h3>
+      <ul className="flex flex-col gap-2.5">
+        {rows.map((r) => {
+          const inner = (
+            <>
+              <span className="flex items-center justify-between gap-3 text-[13.5px] leading-none">
+                <span className="text-[#1B1530]" dir="auto">
+                  {r.name}
+                </span>
+                <span className="font-black text-[#1B1530]" style={{ fontVariantNumeric: "tabular-nums" }}>
+                  {r.count}
+                </span>
+              </span>
+              <span className="block h-[6px] rounded-full bg-[#EEEFFA] overflow-hidden">
+                <span className="block h-full rounded-full bg-[#4A4EA3]" style={{ width: `${Math.max(4, Math.round((r.count / max) * 100))}%` }} />
+              </span>
+            </>
+          );
+          return (
+            <li key={r.name} data-testid="sh-bar">
+              {hrefOf ? (
+                <Link href={hrefOf(r.name)} className="flex flex-col gap-1.5 hover:text-[#4A4EA3]">
+                  {inner}
+                </Link>
+              ) : (
+                <span className="flex flex-col gap-1.5">{inner}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * The top of the page (the owner, 5/11: ״צריך בקצרה דשבורד של נתונים״): the badge, the one-line headline,
+ * the two buttons; the five figures; three small cards of bars. Tinted, as the canvas's hero. Short enough
+ * that the winners show on the first screen.
+ */
+export function Dashboard() {
+  const s = STATS;
+  const tech = (name: string) => `${BASE}?t=${encodeURIComponent(name)}#projects`;
+  return (
+    <section id="numbers" className="bg-[#F7F5FB] scroll-mt-16" data-testid="sh-hero">
+      <div className={`${WRAP} pt-10 pb-10 flex flex-col gap-7`}>
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="flex flex-col gap-3.5 max-w-[800px]">
+            <span className="inline-flex self-start items-center gap-2 rounded-full bg-white border border-[#E3DDEE] text-[14px] font-bold text-[#B0154B] px-3.5 py-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#D81B5C]" aria-hidden />
+              האקתון AI קוד פתוח 2026 · הפרויקטים
+            </span>
+            <h1 className="text-[32px] sm:text-[44px] font-black leading-[1.1] tracking-[-0.3px]" data-testid="sh-headline">
+              {COUNTS.projects} מערכות AI עובדות. {COUNTS.people} מפתחות. {COUNTS.challenges} אתגרים אמיתיים.
+            </h1>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="#projects" className={BTN_PINK}>
+              לכל הפרויקטים
+            </Link>
+            <Link href="#employers" className={BTN_INK}>
+              למעסיקים
+            </Link>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-[#E3DDEE] border border-[#E3DDEE] rounded-[12px] overflow-hidden" data-testid="sh-stats">
+          <StatBox n={COUNTS.projects} label="פרויקטים" href="#projects" />
+          <StatBox n={COUNTS.people} label="מפתחות" />
+          <StatBox n={s.live} label="מערכות חיות בענן" />
+          <StatBox n={s.tech} label="טכנולוגיות" />
+          <StatBox n={COUNTS.institutions ?? 0} label="מוסדות לימוד" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4" data-testid="sh-dash">
+          <Bars title="המודל שבתוך המוצר" rows={s.models} hrefOf={tech} />
+          <Bars title="איפה המערכות רצות" rows={s.hosts} />
+          <Bars
+            title="לבד או בזוג"
+            rows={[
+              { name: "מפתחת אחת", count: s.solo },
+              { name: "זוג", count: s.pairs },
+            ]}
+          />
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -101,7 +192,7 @@ export function AwardTag({ p, className = "" }: { p: ShowcaseProject; className?
   if (!a) return null;
   return (
     <span
-      className={`inline-flex items-center rounded-full text-[13px] font-bold px-3 py-1 whitespace-nowrap ${a.kind === "winner" ? "bg-[#D81B5C] text-white" : "bg-white text-[#1B1530] border border-[#1B1530]"} ${className}`}
+      className={`inline-flex items-center rounded-full text-[12.5px] font-bold px-2.5 py-[3px] whitespace-nowrap ${a.kind === "winner" ? "bg-[#D81B5C] text-white" : "bg-white text-[#1B1530] border border-[#1B1530]"} ${className}`}
       data-testid="sh-award"
       data-award={a.kind}
     >
@@ -139,10 +230,12 @@ export function Tech({ name, href, count }: { name: string; href?: string; count
   );
 }
 
+const sized = (className: string) => (className.includes("text-[") ? "" : "text-[15px]");
+
 /** A visible link to a project's page - the same words everywhere (the owner, 4/11: ״תן לינקים לפרויקטים בכל מקום״). */
 export function ProjectLink({ p, className = "", dark = false }: { p: ShowcaseProject; className?: string; dark?: boolean }) {
   return (
-    <Link href={`${BASE}/${p.k8}`} className={`inline-flex items-center gap-1 text-[15px] font-bold ${dark ? "text-[#F07AA3] hover:text-white" : "text-[#4A4EA3] hover:text-[#1B1530]"} ${className}`} data-testid="sh-project-link" data-k8={p.k8}>
+    <Link href={`${BASE}/${p.k8}`} className={`inline-flex items-center gap-1 font-bold ${sized(className)} ${dark ? "text-[#F07AA3] hover:text-white" : "text-[#4A4EA3] hover:text-[#1B1530]"} ${className}`} data-testid="sh-project-link" data-k8={p.k8}>
       לפרויקט ←
     </Link>
   );
@@ -152,25 +245,62 @@ export function ProjectLink({ p, className = "", dark = false }: { p: ShowcasePr
 export function LiveLink({ p, className = "" }: { p: ShowcaseProject; className?: string }) {
   if (!p.productUrl) return null;
   return (
-    <a href={p.productUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 text-[15px] font-bold text-[#1B1530] hover:text-[#4A4EA3] ${className}`} data-testid="sh-live-link">
+    <a href={p.productUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 font-bold ${sized(className)} text-[#1B1530] hover:text-[#4A4EA3] ${className}`} data-testid="sh-live-link">
       מערכת חיה ↗
     </a>
   );
 }
 
-/** One project in the grid, as the canvas draws it: the picture and the name lead to its page; the foot carries the two links. */
+/**
+ * One project in the grid - a small tile (the owner, 5/11: ״בקוביות קטנות יותר״): the picture and the
+ * name lead to its page, the partner's chip, three technologies, the two links. The sentence about the
+ * project waits on its page.
+ */
 export function ProjectCard({ p, eager = false }: { p: ShowcaseProject; eager?: boolean }) {
   const title = teamName(p);
   const href = `${BASE}/${p.k8}`;
   return (
-    <article className="flex flex-col h-full bg-white border border-[#ECE8F2] rounded-[14px] overflow-hidden hover:border-[#1B1530] transition-colors" data-testid="sh-card" data-k8={p.k8} data-ch={p.challenge}>
-      <Link href={href} className="relative block h-[180px] bg-[#F2EFF8] border-b border-[#ECE8F2] overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3]" aria-label={title} tabIndex={-1}>
-        {p.image && <Image src={p.image} alt={p.caption ?? title} fill sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" priority={eager} />}
-        <AwardTag p={p} className="absolute top-3 left-3" />
+    <article className="flex flex-col h-full bg-white border border-[#ECE8F2] rounded-[12px] overflow-hidden hover:border-[#1B1530] transition-colors" data-testid="sh-card" data-k8={p.k8} data-ch={p.challenge}>
+      <Link href={href} className="relative block h-[132px] bg-[#F2EFF8] border-b border-[#ECE8F2] overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3]" aria-label={title} tabIndex={-1}>
+        {p.image && <Image src={p.image} alt={p.caption ?? title} fill sizes="(min-width: 1280px) 300px, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover object-top" priority={eager} />}
+        <AwardTag p={p} className="absolute top-2 left-2" />
       </Link>
-      <div className="flex flex-col gap-3 p-[22px] flex-1">
+      <div className="flex flex-col gap-2 p-4 flex-1">
         <ChallengeChip k={p.challenge} className="self-start" />
-        <h3 className="text-[21px] font-bold leading-tight text-[#1B1530]">
+        <h3 className="text-[16.5px] font-bold leading-snug text-[#1B1530]">
+          <Link href={href} className="hover:text-[#4A4EA3] hover:underline underline-offset-4">
+            {title}
+          </Link>
+        </h3>
+        <div className="flex flex-wrap gap-1 flex-1 content-start">
+          {p.tech.slice(0, 3).map((t) => (
+            <Tech key={t} name={t} />
+          ))}
+          {p.tech.length > 3 && <span className="text-[11px] text-[#6B6580] px-1 py-[3px]">+{p.tech.length - 3}</span>}
+        </div>
+        <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-[#F0EDF5]">
+          <LiveLink p={p} className="text-[13.5px]" />
+          <ProjectLink p={p} className="text-[13.5px]" />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/** A winner's card - picture first, the partner's line, the name, the sentence, the technologies, the links. */
+function WinnerCard({ p }: { p: ShowcaseProject }) {
+  const title = teamName(p);
+  const href = `${BASE}/${p.k8}`;
+  return (
+    <article className="flex flex-col h-full bg-white border border-[#ECE8F2] rounded-[14px] overflow-hidden hover:border-[#1B1530] transition-colors" data-testid="sh-winner" data-k8={p.k8} data-ch={p.challenge}>
+      <Link href={href} className="relative block h-[224px] bg-[#F2EFF8] border-b border-[#ECE8F2] overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3]" aria-label={title} tabIndex={-1}>
+        {p.image && <Image src={p.image} alt={p.caption ?? title} fill sizes="(min-width: 768px) 420px, 100vw" className="object-cover object-top" priority />}
+      </Link>
+      <div className="flex flex-col gap-3 p-6 flex-1">
+        <span className="text-[13px] font-bold" style={{ color: COLOR[p.challenge] }}>
+          זוכת האתגר · {CHALLENGE_INFO[p.challenge].short}
+        </span>
+        <h3 className="text-[24px] font-extrabold leading-tight text-[#1B1530]">
           <Link href={href} className="hover:text-[#4A4EA3] hover:underline underline-offset-4">
             {title}
           </Link>
@@ -180,17 +310,28 @@ export function ProjectCard({ p, eager = false }: { p: ShowcaseProject; eager?: 
           {p.tech.slice(0, 4).map((t) => (
             <Tech key={t} name={t} />
           ))}
-          {p.tech.length > 4 && <span className="text-[12px] text-[#6B6580] px-1 py-[3px]">+{p.tech.length - 4}</span>}
         </div>
         <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#F0EDF5]">
-          <span className="text-[13px] text-[#6B6580]">{p.members.length === 1 ? "מפתחת אחת" : "זוג"}</span>
-          <span className="flex items-center gap-4">
-            <LiveLink p={p} />
-            <ProjectLink p={p} />
-          </span>
+          <LiveLink p={p} />
+          <ProjectLink p={p} />
         </div>
       </div>
     </article>
+  );
+}
+
+/** The three winners, right under the dashboard (the owner, 5/11: ״פרויקטים מנצחים״ first, with pictures). */
+export function Winners() {
+  return (
+    <section id="featured" className={`${WRAP} pt-14 pb-4 flex flex-col gap-7 scroll-mt-16`} data-testid="sh-winners">
+      <SectionHead eyebrow="הזוכות" title="שלוש זוכות, אחת לכל אתגר" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {CHALLENGE_ORDER.map((k) => {
+          const w = finalsOf(k).winner;
+          return w ? <WinnerCard key={k} p={w} /> : null;
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -271,7 +412,7 @@ export function HowItWorked() {
     ["ערב הגמר 28.10", "שלוש עולות לגמר בכל אתגר. שופטות 70, קהל האולם 30."],
   ];
   return (
-    <section id="about" className={`${WRAP} pt-22 pb-10 flex flex-col gap-10 scroll-mt-16`} data-testid="sh-about">
+    <section id="about" className={`${WRAP} pt-22 pb-6 flex flex-col gap-10 scroll-mt-16`} data-testid="sh-about">
       <SectionHead eyebrow="איך זה עבד" title="מהרשמה לאתגר ועד ערב הגמר" />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {steps.map(([title, text], i) => (
@@ -286,126 +427,21 @@ export function HowItWorked() {
   );
 }
 
-/** The three winners in the canvas's dark cards, folded to one thin row (the owner, 4/11: ״תופס מקום רב מידי״). */
-export function WinnersStrip() {
+/** One sentence from a participant, with the way to her project - between ״איך זה עבד״ and the employers. */
+export function Quote({ p }: { p: ShowcaseProject | null }) {
+  const q = p?.quotes[0];
+  if (!p || !q) return null;
   return (
-    <section id="featured" className={`${WRAP} py-14 flex flex-col gap-7 scroll-mt-16`} data-testid="sh-winners">
-      <SectionHead eyebrow="הזוכות" title="שלוש זוכות, אחת לכל אתגר" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {CHALLENGE_ORDER.map((k) => {
-          const w = finalsOf(k).winner;
-          if (!w) return null;
-          return (
-            <div key={k} className="flex items-center gap-4 p-3 pe-5 rounded-[14px] bg-[#1B1530] text-white" data-testid="sh-winner" data-k8={w.k8} data-ch={k}>
-              <Link href={`${BASE}/${w.k8}`} className="relative block w-[128px] h-[72px] shrink-0 rounded-[8px] overflow-hidden bg-[#2A2244]" aria-label={teamName(w)} tabIndex={-1}>
-                {w.image && <Image src={w.image} alt="" fill sizes="128px" className="object-cover object-top" />}
-              </Link>
-              <span className="flex flex-col gap-1 min-w-0 flex-1">
-                <span className="text-[13px] font-bold text-[#F07AA3]">זוכת האתגר · {CHALLENGE_INFO[k].short}</span>
-                <Link href={`${BASE}/${w.k8}`} className="text-[19px] font-extrabold leading-tight truncate hover:underline underline-offset-4">
-                  {teamName(w)}
-                </Link>
-                <span className="flex items-center justify-between gap-3">
-                  <span className="text-[13px] text-[#B9B2CC] truncate" dir="ltr">
-                    {w.tech.slice(0, 3).join(" · ")}
-                  </span>
-                  <ProjectLink p={w} dark className="text-[14px] shrink-0" />
-                </span>
-              </span>
-            </div>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function Rows({ rows, hrefOf }: { rows: { name: string; count: number }[]; hrefOf?: (name: string) => string }) {
-  return (
-    <ul className="flex flex-col divide-y divide-[#F0EDF5]">
-      {rows.map((r) => {
-        const inner = (
-          <>
-            <span className="text-[15px] text-[#1B1530]" dir="auto">
-              {r.name}
-            </span>
-            <span className="text-[17px] font-black text-[#1B1530]" style={{ fontVariantNumeric: "tabular-nums" }}>
-              {r.count}
-            </span>
-          </>
-        );
-        return (
-          <li key={r.name} data-testid="sh-bar">
-            {hrefOf ? (
-              <Link href={hrefOf(r.name)} className="flex items-center justify-between gap-3 py-2 hover:text-[#4A4EA3]">
-                {inner}
-              </Link>
-            ) : (
-              <span className="flex items-center justify-between gap-3 py-2">{inner}</span>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-const ICON = { width: 28, height: 28, viewBox: "0 0 24 24", fill: "none", stroke: "#D81B5C", strokeWidth: 2, strokeLinecap: "round" as const, strokeLinejoin: "round" as const, "aria-hidden": true };
-
-/** ״ההאקתון במספרים״ - the canvas's tinted band with three white cards and one quote. */
-export function Numbers({ quote }: { quote: ShowcaseProject | null }) {
-  const s = STATS;
-  const tech = (name: string) => `${BASE}?t=${encodeURIComponent(name)}#projects`;
-  const q = quote?.quotes[0];
-  return (
-    <section id="numbers" className="bg-[#F7F5FB] scroll-mt-16" data-testid="sh-numbers">
-      <div className={`${WRAP} py-22 flex flex-col gap-10`}>
-        <SectionHead eyebrow="ההאקתון במספרים" title={`${COUNTS.projects} פרויקטים, ${COUNTS.people} מפתחות, ${s.tech} טכנולוגיות`} line={`${s.live} מערכות חיות בענן, ${s.videos} סרטונים, ${COUNTS.institutions} מוסדות לימוד.`} />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <div className="bg-white rounded-[12px] p-7 flex flex-col gap-3">
-            <svg {...ICON}>
-              <polyline points="16 18 22 12 16 6"></polyline>
-              <polyline points="8 6 2 12 8 18"></polyline>
-            </svg>
-            <h3 className="text-[20px] font-bold text-[#1B1530]">המודל שבתוך המוצר</h3>
-            <Rows rows={s.models} hrefOf={tech} />
-          </div>
-          <div className="bg-white rounded-[12px] p-7 flex flex-col gap-3">
-            <svg {...ICON}>
-              <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
-            </svg>
-            <h3 className="text-[20px] font-bold text-[#1B1530]">איפה המערכות רצות</h3>
-            <Rows rows={s.hosts} />
-          </div>
-          <div className="bg-white rounded-[12px] p-7 flex flex-col gap-3">
-            <svg {...ICON}>
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-            </svg>
-            <h3 className="text-[20px] font-bold text-[#1B1530]">לבד או בזוג</h3>
-            <Rows
-              rows={[
-                { name: "מפתחת אחת", count: s.solo },
-                { name: "זוג", count: s.pairs },
-              ]}
-            />
-            <Rows rows={s.byChallenge.map((c) => ({ name: CHALLENGE_INFO[c.key].short, count: c.count }))} hrefOf={(name) => `${BASE}?ch=${CHALLENGE_ORDER.find((k) => CHALLENGE_INFO[k].short === name) ?? ""}#projects`} />
-          </div>
-        </div>
-        {q && (
-          <figure className="m-0 px-9 py-8 rounded-[12px] bg-white border border-[#E3DDEE] flex flex-col gap-3" data-testid="sh-quotes">
-            <blockquote className="m-0 text-[22px] leading-relaxed font-medium text-[#1B1530]">״{q.quote}״</blockquote>
-            <figcaption className="text-[15px] text-[#4E4862] flex items-center gap-4 flex-wrap">
-              <span>
-                <span className="font-bold text-[#1B1530]">{q.name}</span>, {CHALLENGE_INFO[quote.challenge].short}
-              </span>
-              <ProjectLink p={quote} />
-            </figcaption>
-          </figure>
-        )}
-      </div>
+    <section className={`${WRAP} pt-14 pb-2`}>
+      <figure className="m-0 px-9 py-8 rounded-[12px] bg-[#F7F5FB] border border-[#E3DDEE] flex flex-col gap-3" data-testid="sh-quotes">
+        <blockquote className="m-0 text-[22px] leading-relaxed font-medium text-[#1B1530]">״{q.quote}״</blockquote>
+        <figcaption className="text-[15px] text-[#4E4862] flex items-center gap-4 flex-wrap">
+          <span>
+            <span className="font-bold text-[#1B1530]">{q.name}</span>, {CHALLENGE_INFO[p.challenge].short}
+          </span>
+          <ProjectLink p={p} />
+        </figcaption>
+      </figure>
     </section>
   );
 }
