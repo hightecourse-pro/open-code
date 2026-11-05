@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { Alert, Button } from "@/components/ui";
 import { setFeedbackPublished } from "./actions";
@@ -15,6 +16,7 @@ const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric"
 export function FeedbackPublication({ publishedAt, teams }: { publishedAt: string | null; teams: number }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const router = useRouter();
   const on = !!publishedAt;
   const toggle = () => {
     const q = on ? "לסגור את המשוב? הצוותים יפסיקו לראות את המשוב בדף ההגשה." : `לפתוח את המשוב ל-${teams} הצוותים? כל צוות יראה את המשוב על הפרויקט שלו בדף הגשת התוצרים - בלי ציונים.`;
@@ -23,6 +25,7 @@ export function FeedbackPublication({ publishedAt, teams }: { publishedAt: strin
     start(async () => {
       const r = await setFeedbackPublished(!on);
       if (r.error) setError(r.error);
+      else router.refresh(); // the row above reads the new state from the server
     });
   };
   return (
