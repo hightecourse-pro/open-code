@@ -97,7 +97,7 @@ export default async function AdminWhatsAppPage({
   const { data: messages } = active
     ? await admin
         .from("wa_messages")
-        .select("id, direction, body, status, error, created_at, kind, media_path, media_mime, filename")
+        .select("id, direction, body, status, error, created_at, kind, media_path, media_mime, filename, edit_of")
         .eq("contact_id", active.id)
         .order("created_at", { ascending: true })
         .limit(500)

@@ -281,7 +281,7 @@ export function EmployerCta() {
         <span aria-hidden className="h26-blob absolute -bottom-12 -left-8 w-52 h-52 bg-white/10" style={{ animationDelay: "3s" }} />
         <h2 className="font-display font-black text-[28px] sm:text-[32px] leading-tight">מחפשים מפתחת AI לצוות שלכם?</h2>
         <p className="t-body-lg text-white/90 mt-3 max-w-xl mx-auto">
-          כל פרויקט כאן נבנה בשבועיים, על בעיה אמיתית של ארגון אמיתי, ועלה לענן. מי שבנתה אותו - בוגרת מסלול פיתוח, חברה בקהילת קוד פתוח, ומחפשת את הצוות הבא שלה.
+          כל פרויקט כאן נבנה בשבוע, על בעיה אמיתית של ארגון אמיתי, ועלה לענן. מי שבנתה אותו - בוגרת מסלול פיתוח, חברה בקהילת קוד פתוח, ומחפשת את הצוות הבא שלה.
         </p>
         <div className="flex items-center justify-center gap-3 flex-wrap mt-6">
           <a

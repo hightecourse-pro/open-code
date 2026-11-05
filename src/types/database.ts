@@ -1978,6 +1978,8 @@ export interface Database {
           error: string | null;
           sent_by: string | null;
           raw: Json | null;
+          /** The message this one corrects (the inbox's ״עריכה״, 5/11) - a new message quoting the original. */
+          edit_of: string | null;
           created_at: string;
         };
         Insert: {
@@ -1997,6 +1999,7 @@ export interface Database {
           error?: string | null;
           sent_by?: string | null;
           raw?: Json | null;
+          edit_of?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["wa_messages"]["Insert"]>;
         Relationships: [];

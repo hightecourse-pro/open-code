@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { formatSharedContacts, formatSharedLocation, formatSystemNotice, type WaSharedContact, type WaSharedLocation, type WaSystemNotice } from "@/lib/whatsapp-format";
+import { formatSharedContacts, formatSharedLocation, formatSystemNotice, formatUnsupportedNotice, type WaSharedContact, type WaSharedLocation, type WaSystemNotice } from "@/lib/whatsapp-format";
 import crypto from "node:crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { raiseAlert } from "@/lib/alerts";
@@ -55,6 +55,8 @@ type WaInboundMessage = {
   location?: WaSharedLocation;
   /** Meta's own notice (type "system"): the contact changed her number, or her device identity changed. */
   system?: WaSystemNotice;
+  /** Type "unsupported": what she did that the Cloud API does not carry - an "edit" or a "revoke" of her own message. */
+  unsupported?: { type?: string };
 };
 type WaWebhookValue = {
   contacts?: { wa_id: string; profile?: { name?: string } }[];
@@ -165,7 +167,10 @@ export async function POST(req: Request) {
           // Meta's own notice (the owner, 2/11: ״תציג גם הודעות מערכת אצלנו״) - a
           // number change, a device change. Nobody wrote to us, so it never marks
           // the conversation unread / awaiting a reply and never rings the mail.
-          const isSystem = m.type === "system";
+          // Her edit / deletion of one of her own messages arrives as an "unsupported" event that names only
+          // the action (5/11) - shown like a system notice: a grey line, no unread mark, no mail, window untouched.
+          const unsupportedNotice = m.type === "unsupported" ? formatUnsupportedNotice(m.unsupported?.type) : null;
+          const isSystem = m.type === "system" || unsupportedNotice !== null;
           // Contact row - upsert by wa_id, keep the freshest pushed name.
           const { data: contact } = await admin
             .from("wa_contacts")
@@ -186,7 +191,7 @@ export async function POST(req: Request) {
               {
                 contact_id: contact.id,
                 direction: "in",
-                body: formatSystemNotice(m.system, m.from).slice(0, 4000),
+                body: (unsupportedNotice ?? formatSystemNotice(m.system, m.from)).slice(0, 4000),
                 kind: "system",
                 wa_message_id: m.id,
                 status: "received",

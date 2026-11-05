@@ -13,7 +13,7 @@ import { Reveal } from "./reveal";
 import { ChallengeCard, EmployerCta, ShowcaseStyle, TopBar } from "./showcase-ui";
 import { StatsDashboard } from "./stats";
 
-const DESCRIPTION = `${COUNTS.projects} מערכות AI עובדות שבנו ${COUNTS.people} מפתחות מקהילת קוד פתוח בשבועיים, לשלושה ארגונים אמיתיים: שטראוס, הפניקס והמעבדה המרכזית לנגיפים. לכל פרויקט - הסרטון, המערכת החיה בענן, הטכנולוגיות ומשפט אישי.`;
+const DESCRIPTION = `${COUNTS.projects} מערכות AI עובדות שבנו ${COUNTS.people} מפתחות מקהילת קוד פתוח בשבוע, לשלושה ארגונים אמיתיים: שטראוס, הפניקס והמעבדה המרכזית לנגיפים. לכל פרויקט - הסרטון, המערכת החיה בענן, הטכנולוגיות ומשפט אישי.`;
 
 export const metadata: Metadata = {
   title: "הפרויקטים של האקתון AI 2026",

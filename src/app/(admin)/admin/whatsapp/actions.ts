@@ -79,6 +79,71 @@ export async function sendWhatsAppReply(
   return { ok: true };
 }
 
+/**
+ * ״עריכה״ of a message the team already sent (the owner, 5/11). Meta's Cloud API
+ * cannot change or withdraw a sent message, so the corrected text goes out as a
+ * NEW message that quotes the original (the reply context) - on her phone the
+ * correction sits under the message it corrects. Our row links back with
+ * edit_of, so the thread shows the quote here too and marks the original.
+ */
+export async function editWhatsAppMessage(
+  messageId: string,
+  formData: FormData
+): Promise<{ ok: boolean; error?: string }> {
+  const me = await requireRole("admin");
+  const body = String(formData.get("body") ?? "").trim();
+  if (!body || body.length > 4000) return { ok: false, error: "הודעה ריקה או ארוכה מדי" };
+
+  const admin = createAdminClient();
+  const { data: original } = await admin
+    .from("wa_messages")
+    .select("id, contact_id, direction, kind, body, status, wa_message_id")
+    .eq("id", messageId)
+    .maybeSingle();
+  if (
+    !original ||
+    original.direction !== "out" ||
+    !["text", "template"].includes(original.kind) ||
+    !original.wa_message_id ||
+    original.status === "failed"
+  ) {
+    return { ok: false, error: "אפשר לערוך רק הודעת טקסט שנשלחה מכאן והגיעה למטא" };
+  }
+  if (body === original.body.trim()) return { ok: false, error: "הנוסח לא השתנה" };
+
+  const { data: contact } = await admin
+    .from("wa_contacts")
+    .select("id, wa_id, last_inbound_at")
+    .eq("id", original.contact_id)
+    .maybeSingle();
+  if (!contact) return { ok: false, error: "השיחה לא נמצאה" };
+  if (waWindowLeftMs(contact.last_inbound_at) <= 0) {
+    return {
+      ok: false,
+      error: "חלון ה-24 שעות של מטא נסגר - תיקון אפשר לשלוח רק תוך יממה מההודעה האחרונה שלה.",
+    };
+  }
+
+  const sent = await sendWaText(contact.wa_id, body, { replyTo: original.wa_message_id });
+  if (!sent.ok) return { ok: false, error: sent.error };
+
+  await admin.from("wa_messages").insert({
+    contact_id: contact.id,
+    direction: "out",
+    body,
+    wa_message_id: sent.waMessageId,
+    status: "sent",
+    sent_by: me.id,
+    edit_of: original.id,
+  });
+  await admin
+    .from("wa_contacts")
+    .update({ last_message_at: new Date().toISOString() })
+    .eq("id", contact.id);
+  revalidatePath("/admin/whatsapp");
+  return { ok: true };
+}
+
 /** Vercel's serverless request cap is ~4.5MB - stay safely under it. */
 const MAX_WA_FILE_BYTES = 4 * 1024 * 1024;
 

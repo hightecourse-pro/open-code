@@ -41,7 +41,9 @@ export function toWaId(phone: string): string | null {
  */
 export async function sendWaText(
   to: string,
-  body: string
+  body: string,
+  /** replyTo: Meta's id of a message in this conversation - WhatsApp shows it quoted above the new one. */
+  opts?: { replyTo?: string }
 ): Promise<{ ok: true; waMessageId: string } | { ok: false; error: string }> {
   const cfg = getWaConfig();
   if (!cfg) return { ok: false, error: "whatsapp not configured" };
@@ -58,6 +60,9 @@ export async function sendWaText(
         to,
         type: "text",
         text: { body },
+        // A reply (the inbox's ״עריכה״, 5/11): the Cloud API cannot change a sent message, so a
+        // correction goes out as a new message that quotes the one it corrects.
+        ...(opts?.replyTo ? { context: { message_id: opts.replyTo } } : {}),
       }),
     });
     const data = (await res.json().catch(() => null)) as {

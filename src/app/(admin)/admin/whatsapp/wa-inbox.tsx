@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { cleanWaParam } from "@/lib/whatsapp-format";
-import { sendWhatsAppMedia, sendWhatsAppReply, startTemplateConversation, renameWaContact } from "./actions";
+import { editWhatsAppMessage, sendWhatsAppMedia, sendWhatsAppReply, startTemplateConversation, renameWaContact } from "./actions";
 
 export interface WaContactRow {
   id: string;
@@ -33,6 +33,8 @@ export interface WaMessageRow {
   filename: string | null;
   /** Signed, short-lived - generated server-side per render. */
   mediaUrl: string | null;
+  /** The message this one corrects (״עריכה״, 5/11) - the bubble quotes it, the original says ״תוקנה״. */
+  edit_of: string | null;
 }
 
 export interface WaMemberOption {
@@ -471,6 +473,9 @@ export function WaInbox({
   const [emojiOpen, setEmojiOpen] = useState(false);
   const [newChat, setNewChat] = useState<null | { presetPhone?: string }>(null);
   const [attachment, setAttachment] = useState<File | null>(null);
+  // ״עריכה״ (the owner, 5/11): the message being corrected. Meta cannot change a sent message, so the
+  // corrected text goes out as a new message quoting it. Only meaningful while that message is on screen.
+  const [editing, setEditing] = useState<WaMessageRow | null>(null);
   const [recording, setRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -483,6 +488,35 @@ export function WaInbox({
   }, [count, activeId]);
 
   const win = active ? windowChip(active.windowLeftMs) : null;
+  const edit = editing && messages.some((m) => m.id === editing.id) ? editing : null;
+  const byId = new Map(messages.map((m) => [m.id, m]));
+  // Messages that already have a correction - they say ״תוקנה״ and are not offered for a second edit.
+  const correctedIds = new Set(messages.map((m) => m.edit_of).filter((id): id is string => !!id));
+  const canEdit = (m: WaMessageRow) =>
+    canSend &&
+    !!win?.open &&
+    m.direction === "out" &&
+    (m.kind === "text" || m.kind === "template") &&
+    m.status !== "failed" &&
+    !correctedIds.has(m.id);
+  const startEdit = (m: WaMessageRow) => {
+    setEditing(m);
+    setAttachment(null);
+    setError(null);
+    const el = inputRef.current;
+    if (el) {
+      el.value = m.body;
+      el.focus();
+      el.selectionStart = el.selectionEnd = el.value.length;
+    }
+  };
+  const cancelEdit = () => {
+    setEditing(null);
+    if (inputRef.current) {
+      inputRef.current.value = "";
+      inputRef.current.focus();
+    }
+  };
   const shown = useMemo(
     () =>
       search.trim()
@@ -504,6 +538,20 @@ export function WaInbox({
     if (!active || pending) return;
     const text = inputRef.current?.value.trim() ?? "";
     setError(null);
+    if (edit) {
+      if (!text) return;
+      const fd = new FormData();
+      fd.set("body", text);
+      startTransition(async () => {
+        const res = await editWhatsAppMessage(edit.id, fd);
+        if (!res.ok) setError(res.error ?? "השליחה נכשלה");
+        else {
+          setEditing(null);
+          if (inputRef.current) inputRef.current.value = "";
+        }
+      });
+      return;
+    }
     if (attachment) {
       const fd = new FormData();
       fd.set("file", attachment);
@@ -681,17 +729,24 @@ export function WaInbox({
             </div>
 
             <div ref={listRef} className="flex-1 min-h-0 max-h-[440px] overflow-y-auto p-4 flex flex-col gap-1.5 bg-ink-50/40">
-              {messages.map((m) =>
-                m.kind === "system" ? (
+              {messages.map((m) => {
+                if (m.kind === "system") {
                   // Meta's notice (a number change, a device change) - a grey line in the middle, not a bubble (the owner, 2/11)
-                  <div key={m.id} className="self-center max-w-[88%] text-center text-[12px] text-ink-600 bg-ink-100 rounded-full px-3.5 py-1 my-1" data-testid="wa-system">
-                    {m.body}
-                    <span className="text-ink-400"> · {TIME_IL.format(new Date(m.created_at))}</span>
-                  </div>
-                ) : (
+                  return (
+                    <div key={m.id} className="self-center max-w-[88%] text-center text-[12px] text-ink-600 bg-ink-100 rounded-full px-3.5 py-1 my-1" data-testid="wa-system">
+                      {m.body}
+                      <span className="text-ink-400"> · {TIME_IL.format(new Date(m.created_at))}</span>
+                    </div>
+                  );
+                }
+                // A correction quotes the message it replaces - the way her phone shows it (5/11).
+                const original = m.edit_of ? byId.get(m.edit_of) : undefined;
+                return (
                 <div
                   key={m.id}
                   className={cn("flex flex-col max-w-[75%]", m.direction === "out" ? "self-end items-end" : "self-start items-start")}
+                  data-testid="wa-msg"
+                  data-corrected={correctedIds.has(m.id) ? "1" : undefined}
                 >
                   <div
                     className={cn(
@@ -702,6 +757,14 @@ export function WaInbox({
                       m.kind === "template" && "border-s-2 border-brand-purple"
                     )}
                   >
+                    {m.edit_of && (
+                      <span className="block border-s-[3px] border-brand-purple bg-white/70 rounded-md px-2.5 py-1.5 text-[12px] text-ink-700" data-testid="wa-edit-quote">
+                        <span className="block font-bold text-brand-purple text-[11px]">
+                          תיקון להודעה{original ? ` מ-${TIME_IL.format(new Date(original.created_at))}` : " קודמת"}
+                        </span>
+                        {original && <span className="block line-clamp-2">{original.body}</span>}
+                      </span>
+                    )}
                     <MediaBubble m={m} />
                     {(m.kind === "text" || m.kind === "template" || (m.body && !m.body.startsWith("["))) && (
                       <span><Linkify text={m.body} /></span>
@@ -712,10 +775,24 @@ export function WaInbox({
                     {TIME_IL.format(new Date(m.created_at))}
                     {m.direction === "out" && ` · ${STATUS_HE[m.status] ?? m.status}`}
                     {m.status === "failed" && m.error && ` - ${m.error}`}
+                    {correctedIds.has(m.id) && <span data-testid="wa-edited-mark"> · תוקנה</span>}
+                    {canEdit(m) && (
+                      <>
+                        {" · "}
+                        <button
+                          type="button"
+                          onClick={() => startEdit(m)}
+                          className="underline hover:text-brand-purple cursor-pointer"
+                          data-testid="wa-edit-btn"
+                        >
+                          עריכה
+                        </button>
+                      </>
+                    )}
                   </span>
                 </div>
-                )
-              )}
+                );
+              })}
               {messages.length === 0 && (
                 <p className="text-sm text-ink-500 text-center my-auto">אין הודעות בשיחה הזו</p>
               )}
@@ -739,6 +816,15 @@ export function WaInbox({
 
             {canSend && win?.open ? (
               <div className="border-t border-ink-100 p-3 flex flex-col gap-2">
+                {edit && (
+                  <div className="flex items-start gap-2 bg-tint-purple/40 border border-brand-purple/30 rounded-md px-3 py-2 text-[12.5px] text-ink-900" data-testid="wa-edit-bar">
+                    <span className="flex-1 leading-snug">
+                      <b>עריכת ההודעה מ-{TIME_IL.format(new Date(edit.created_at))}.</b>{" "}
+                      וואטסאפ לא מאפשר לשנות הודעה שכבר נשלחה - הנוסח המתוקן יישלח כהודעה חדשה שמצטטת את המקורית.
+                    </span>
+                    <button type="button" onClick={cancelEdit} aria-label="ביטול העריכה" title="ביטול העריכה" className="text-ink-400 hover:text-ink-900 font-bold cursor-pointer" data-testid="wa-edit-cancel">✕</button>
+                  </div>
+                )}
                 {emojiOpen && (
                   <div className="flex flex-wrap gap-1 bg-ink-50 rounded-md p-2">
                     {EMOJIS.map((e) => (
@@ -750,13 +836,14 @@ export function WaInbox({
                 )}
                 <div className="flex items-end gap-1.5">
                   <button type="button" onClick={() => setEmojiOpen((v) => !v)} aria-label="אימוג'ים" title="אימוג'ים" className="w-9 h-9 rounded-full text-[18px] hover:bg-ink-100 cursor-pointer shrink-0">😊</button>
-                  <button type="button" onClick={() => fileRef.current?.click()} aria-label="צירוף קובץ" title="תמונה / סרטון / קובץ (עד 4MB)" className="w-9 h-9 rounded-full text-[17px] hover:bg-ink-100 cursor-pointer shrink-0">📎</button>
+                  <button type="button" onClick={() => fileRef.current?.click()} disabled={!!edit} aria-label="צירוף קובץ" title="תמונה / סרטון / קובץ (עד 4MB)" className="w-9 h-9 rounded-full text-[17px] hover:bg-ink-100 cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default">📎</button>
                   <button
                     type="button"
                     onClick={toggleRecording}
+                    disabled={!!edit}
                     aria-label={recording ? "סיום הקלטה" : "הקלטה קולית"}
                     title={recording ? "סיום הקלטה" : "הקלטה קולית"}
-                    className={cn("w-9 h-9 rounded-full text-[17px] cursor-pointer shrink-0", recording ? "bg-danger-bg animate-pulse" : "hover:bg-ink-100")}
+                    className={cn("w-9 h-9 rounded-full text-[17px] cursor-pointer shrink-0 disabled:opacity-40 disabled:cursor-default", recording ? "bg-danger-bg animate-pulse" : "hover:bg-ink-100")}
                   >
                     {recording ? "⏹" : "🎤"}
                   </button>
@@ -774,11 +861,14 @@ export function WaInbox({
                   <textarea
                     ref={inputRef}
                     rows={2}
-                    placeholder={attachment ? "כיתוב לקובץ (לא חובה)…" : "כתבי הודעה…"}
+                    placeholder={edit ? "הנוסח המתוקן…" : attachment ? "כיתוב לקובץ (לא חובה)…" : "כתבי הודעה…"}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         sendCurrent();
+                      } else if (e.key === "Escape" && edit) {
+                        e.preventDefault();
+                        cancelEdit();
                       }
                     }}
                     className="flex-1 resize-none border border-ink-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:border-brand-purple"
@@ -789,7 +879,7 @@ export function WaInbox({
                     disabled={pending}
                     className="font-display font-semibold text-[13.5px] px-5 py-2.5 rounded-md bg-brand-gradient text-white disabled:opacity-60 shrink-0"
                   >
-                    {pending ? "שולח…" : "שליחה"}
+                    {pending ? "שולח…" : edit ? "שליחת התיקון" : "שליחה"}
                   </button>
                 </div>
               </div>

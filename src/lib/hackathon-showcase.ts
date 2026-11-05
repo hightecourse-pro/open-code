@@ -9,6 +9,8 @@ import data from "@/data/hackathon-2026-projects.json";
 export type ChallengeKey = "strauss" | "virology" | "phoenix";
 export const CHALLENGE_ORDER: ChallengeKey[] = ["strauss", "virology", "phoenix"];
 export const SHOWCASE_PATH = "/hackathon-2026/projects";
+/** The second design of the portal (the owner, 4/11: ״ראוט אחר״ so the two can be compared) - same data, same words. */
+export const SHOWCASE2_PATH = "/hackathon-2026/showcase";
 
 /** Every source we hold for the demo video: the Drive mirror and the uploaded file stream through our own domain; the participant's own link is external. */
 export interface ShowcaseVideo {
@@ -50,6 +52,8 @@ export interface ChallengeInfo {
   blurb: string;
   /** The booklet's ״שלושה סוגים של AI״ label. */
   pattern: string;
+  /** The challenge's technology in two words, as the partner's tile shows it (the owner, 4/11: ״רק עם טכנולוגיית האתגר, לדוגמא Crawling & RAG״). */
+  techLabel: string;
   /** Card tint + hard-shadow colour, in the challenge's own hue. */
   tint: string;
   shadow: string;
@@ -67,6 +71,7 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
     blurb:
       "סוכן שיחה שעוזר לעובדות שטראוס לבחור רכב: מנהל שיחה בשפה טבעית, אוסף רק את מה שחסר, מחשב בקוד מה יקרה לנטו של החודש הבא, ושואל את נציג התחבורה במקום לנחש.",
     pattern: "סוכן עם כלים וחישוב בקוד",
+    techLabel: "Agent & Tools",
     tint: "bg-tint-mint/40",
     shadow: "#CFE6D8",
   },
@@ -81,6 +86,7 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
     blurb:
       "עשרות טפסי התחייבות סרוקים ביום, בכתב יד ובחותמות. המערכות קוראות אותם, ממלאות שבעה שדות מובנים, מסמנות בכנות את מה שלא בטוח, ומשאירות את ההחלטה לבודקת - ואז מייצאות לאקסל של המעבדה.",
     pattern: "קריאת מסמכים עם בקרה אנושית",
+    techLabel: "OCR & Human-in-the-loop",
     tint: "bg-white",
     shadow: "#F3C6DD",
   },
@@ -94,6 +100,7 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
     blurb:
       "בוט שעונה ללקוחות הפניקס רק מתוך אתר הפניקס: מאתר את הקטע הנכון, עונה בשפה פשוטה, מצטט מקור, ויודע להגיד ״לא כתוב באתר״ במקום להמציא.",
     pattern: "תשובות מתוך גוף ידע (RAG)",
+    techLabel: "Crawling & RAG",
     tint: "bg-tint-warm/50",
     shadow: "#F7D9B8",
   },
