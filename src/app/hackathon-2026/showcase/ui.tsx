@@ -16,6 +16,7 @@ import { Logo } from "@/components/ui";
 import { CHALLENGE_INFO, CHALLENGE_ORDER, COUNTS, SHOWCASE2_PATH as BASE, STATS, awardOf, finalsOf, projectsOf, teamName, type ChallengeKey, type ShowcaseProject, type StatRow } from "@/lib/hackathon-showcase";
 import { CHALLENGES } from "../shared";
 import { CountUp } from "../projects/reveal";
+import { HackathonLogo } from "./logo";
 
 /** The partner's colour - the top rule of its card and of its details panel (the canvas's three). */
 export const COLOR: Record<ChallengeKey, string> = { strauss: "#D81B5C", virology: "#4A4EA3", phoenix: "#923F84" };
@@ -29,6 +30,9 @@ export const WRAP = "max-w-[1288px] mx-auto px-6";
 export const PILL_ON = "bg-[#1B1530] text-white border-[#1B1530]";
 export const PILL_OFF = "bg-white text-[#1B1530] border-[#D9D3E6] hover:border-[#1B1530]";
 export const PILL = "inline-flex items-center gap-1.5 min-h-11 px-[18px] rounded-full border text-[15px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3] transition-colors";
+
+/** The office mailbox, with the subject - the top bar's button and the employers' block share it. */
+export const MAIL_HREF = "mailto:office@opencode.org.il?subject=%D7%94%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%D7%99%D7%9D%20%D7%A9%D7%9C%20%D7%94%D7%90%D7%A7%D7%AA%D7%95%D7%9F";
 
 /** The heading block of every section: the eyebrow, the h2, an optional line - the same sizes everywhere. */
 export function SectionHead({ eyebrow, title, line, children, className = "" }: { eyebrow: string; title: ReactNode; line?: ReactNode; children?: ReactNode; className?: string }) {
@@ -62,13 +66,11 @@ export function TopBar({ onProjectPage = false }: { onProjectPage?: boolean }) {
           <Link href={anchor("challenges")} className={item}>
             האתגרים
           </Link>
-          <Link href={anchor("about")} className={`${item} hidden sm:block`}>
-            איך זה עבד
-          </Link>
         </nav>
-        <Link href={anchor("employers")} className="inline-flex items-center min-h-11 px-[22px] rounded-lg bg-[#1B1530] text-white text-[15px] font-bold hover:bg-[#2A2244] transition-colors">
-          למעסיקים
-        </Link>
+        {/* the owner, 5/11: ״לא הבנתי מה כפתור המעסיקים אומר״ - the button says what it does */}
+        <a href={MAIL_HREF} className="inline-flex items-center min-h-11 px-[22px] rounded-lg bg-[#1B1530] text-white text-[15px] font-bold hover:bg-[#2A2244] transition-colors" data-testid="sh-contact">
+          מחפשים מפתחת AI? דברו איתנו
+        </a>
       </div>
     </header>
   );
@@ -136,35 +138,21 @@ function Bars({ title, rows, hrefOf }: { title: string; rows: StatRow[]; hrefOf?
 }
 
 /**
- * The top of the page (the owner, 5/11: ״צריך בקצרה דשבורד של נתונים״): the badge, the one-line headline,
- * the two buttons; the five figures; three small cards of bars. Tinted, as the canvas's hero. Short enough
- * that the winners show on the first screen.
+ * The top of the page (the owner, 5/11: ״צריך בקצרה דשבורד של נתונים … כל הטקסט למעלה מיותר … צריך את
+ * הלוגו של ההאקתון עם הנפשה״): the jumping logo on the right, the five figures and three small cards of
+ * bars on the left - no words. Tinted, as the canvas's hero. Short enough that the winners show on the
+ * first screen.
  */
 export function Dashboard() {
   const s = STATS;
   const tech = (name: string) => `${BASE}?t=${encodeURIComponent(name)}#projects`;
   return (
     <section id="numbers" className="bg-[#F7F5FB] scroll-mt-16" data-testid="sh-hero">
-      <div className={`${WRAP} pt-8 pb-8 flex flex-col gap-6`}>
-        <div className="flex flex-wrap items-end justify-between gap-5">
-          <div className="flex-[1_1_720px] min-w-0 flex flex-col gap-3">
-            <span className="inline-flex self-start items-center gap-2 rounded-full bg-white border border-[#E3DDEE] text-[14px] font-bold text-[#B0154B] px-3.5 py-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#D81B5C]" aria-hidden />
-              האקתון AI קוד פתוח 2026 · הפרויקטים
-            </span>
-            <h1 className="text-[30px] sm:text-[40px] font-black leading-[1.1] tracking-[-0.3px] [text-wrap:balance]" data-testid="sh-headline">
-              {COUNTS.projects} מערכות AI עובדות. {COUNTS.people} מפתחות. {COUNTS.challenges} אתגרים אמיתיים.
-            </h1>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Link href="#projects" className={BTN_PINK}>
-              לכל הפרויקטים
-            </Link>
-            <Link href="#employers" className={BTN_INK}>
-              למעסיקים
-            </Link>
-          </div>
+      <div className={`${WRAP} pt-8 pb-8 grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 lg:gap-10 items-center`}>
+        <div className="flex justify-center lg:justify-start">
+          <HackathonLogo className="w-[260px] lg:w-[280px] max-w-full h-auto" />
         </div>
+        <div className="flex flex-col gap-5 min-w-0">
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-[#E3DDEE] border border-[#E3DDEE] rounded-[12px] overflow-hidden" data-testid="sh-stats">
           <StatBox n={COUNTS.projects} label="פרויקטים" href="#projects" />
           <StatBox n={COUNTS.people} label="מפתחות" />
@@ -182,6 +170,7 @@ export function Dashboard() {
               { name: "זוג", count: s.pairs },
             ]}
           />
+        </div>
         </div>
       </div>
     </section>
@@ -289,33 +278,33 @@ export function ProjectCard({ p, eager = false }: { p: ShowcaseProject; eager?: 
   );
 }
 
-/** A winner's card - picture first, the partner's line, the name, the sentence, the technologies, the links. */
+/** A winner's card, kept small (the owner, 5/11): the picture, the partner's line, the name, two lines, three technologies, the links. */
 function WinnerCard({ p }: { p: ShowcaseProject }) {
   const title = teamName(p);
   const href = `${BASE}/${p.k8}`;
   return (
     <article className="flex flex-col h-full bg-white border border-[#ECE8F2] rounded-[14px] overflow-hidden hover:border-[#1B1530] transition-colors" data-testid="sh-winner" data-k8={p.k8} data-ch={p.challenge}>
-      <Link href={href} className="relative block h-[224px] bg-[#F2EFF8] border-b border-[#ECE8F2] overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3]" aria-label={title} tabIndex={-1}>
+      <Link href={href} className="relative block h-[160px] bg-[#F2EFF8] border-b border-[#ECE8F2] overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3]" aria-label={title} tabIndex={-1}>
         {p.image && <Image src={p.image} alt={p.caption ?? title} fill sizes="(min-width: 768px) 420px, 100vw" className="object-cover object-top" priority />}
       </Link>
-      <div className="flex flex-col gap-3 p-6 flex-1">
-        <span className="text-[13px] font-bold" style={{ color: COLOR[p.challenge] }}>
+      <div className="flex flex-col gap-2 p-4 flex-1">
+        <span className="text-[12.5px] font-bold" style={{ color: COLOR[p.challenge] }}>
           זוכת האתגר · {CHALLENGE_INFO[p.challenge].short}
         </span>
-        <h3 className="text-[24px] font-extrabold leading-tight text-[#1B1530]">
+        <h3 className="text-[19px] font-extrabold leading-tight text-[#1B1530]">
           <Link href={href} className="hover:text-[#4A4EA3] hover:underline underline-offset-4">
             {title}
           </Link>
         </h3>
-        <p className="text-[15px] text-[#4E4862] leading-relaxed line-clamp-3 flex-1">{p.blurb}</p>
-        <div className="flex flex-wrap gap-1.5">
-          {p.tech.slice(0, 4).map((t) => (
+        <p className="text-[14px] text-[#4E4862] leading-relaxed line-clamp-2 flex-1">{p.blurb}</p>
+        <div className="flex flex-wrap gap-1">
+          {p.tech.slice(0, 3).map((t) => (
             <Tech key={t} name={t} />
           ))}
         </div>
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-[#F0EDF5]">
-          <LiveLink p={p} />
-          <ProjectLink p={p} />
+        <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-[#F0EDF5]">
+          <LiveLink p={p} className="text-[14px]" />
+          <ProjectLink p={p} className="text-[14px]" />
         </div>
       </div>
     </article>
@@ -325,9 +314,9 @@ function WinnerCard({ p }: { p: ShowcaseProject }) {
 /** The three winners, right under the dashboard (the owner, 5/11: ״פרויקטים מנצחים״ first, with pictures). */
 export function Winners() {
   return (
-    <section id="featured" className={`${WRAP} pt-14 pb-4 flex flex-col gap-7 scroll-mt-16`} data-testid="sh-winners">
+    <section id="featured" className={`${WRAP} pt-12 pb-2 flex flex-col gap-6 scroll-mt-16`} data-testid="sh-winners">
       <SectionHead eyebrow="הזוכות" title="שלוש זוכות, אחת לכל אתגר" />
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {CHALLENGE_ORDER.map((k) => {
           const w = finalsOf(k).winner;
           return w ? <WinnerCard key={k} p={w} /> : null;
@@ -405,31 +394,7 @@ export function CompanyDetails({ k, href = "#projects", className = "bg-[#F7F5FB
   );
 }
 
-/** ״איך זה עבד״ - the canvas's four numbered cards, with what really happened, one line each. */
-export function HowItWorked() {
-  const steps: [string, string][] = [
-    ["הרשמה לאתגר", "חברות הקהילה, לבד או כזוג, אתגר אחד משלושה."],
-    ["שבוע של פיתוח", "עם כלי ה-AI שכל אחת בחרה, עד מערכת שרצה בענן."],
-    ["הגשת התוצרים", "קישור למערכת, גיט ציבורי, ארכיטקטורה, סרטון של עד דקה, הפיצ׳ר המקורי."],
-    ["ערב הגמר 28.10", "שלוש עולות לגמר בכל אתגר. שופטות 70, קהל האולם 30."],
-  ];
-  return (
-    <section id="about" className={`${WRAP} pt-22 pb-6 flex flex-col gap-10 scroll-mt-16`} data-testid="sh-about">
-      <SectionHead eyebrow="איך זה עבד" title="מהרשמה לאתגר ועד ערב הגמר" />
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {steps.map(([title, text], i) => (
-          <div key={title} className="flex flex-col gap-2.5 p-6 rounded-[12px] border border-[#ECE8F2] bg-white">
-            <span className="text-[14px] font-extrabold text-[#4A4EA3]">0{i + 1}</span>
-            <h3 className="text-[20px] font-bold text-[#1B1530]">{title}</h3>
-            <p className="text-[15px] leading-relaxed text-[#4E4862]">{text}</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-/** One sentence from a participant, with the way to her project - between ״איך זה עבד״ and the employers. */
+/** One sentence from a participant, with the way to her project - between the partners and the employers. */
 export function Quote({ p }: { p: ShowcaseProject | null }) {
   const q = p?.quotes[0];
   if (!p || !q) return null;
@@ -460,7 +425,7 @@ export function Employers() {
           </p>
         </div>
         <div className="flex-[1_1_260px] flex flex-wrap gap-3">
-          <a href="mailto:office@opencode.org.il?subject=%D7%94%D7%A4%D7%A8%D7%95%D7%99%D7%A7%D7%98%D7%99%D7%9D%20%D7%A9%D7%9C%20%D7%94%D7%90%D7%A7%D7%AA%D7%95%D7%9F" className={`${BTN_PINK} min-h-13 px-7 text-[17px]`}>
+          <a href={MAIL_HREF} className={`${BTN_PINK} min-h-13 px-7 text-[17px]`}>
             דברו איתנו · office@opencode.org.il
           </a>
           <Link href="/portal" className={`${BTN_GHOST} min-h-13 px-7 text-[17px]`}>
