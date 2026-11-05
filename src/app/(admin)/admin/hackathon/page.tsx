@@ -169,6 +169,13 @@ async function adminHackathonPageBody() {
       </Collapsible>
       <Collapsible id="submissions" title="הגשות התוצרים" summary={`${submissions.filter((s) => s.submittedAt).length} הוגשו · ${submissions.filter((s) => !s.submittedAt).length} טיוטות${closure.closedAt ? " · ההגשות סגורות" : ""}`}>
         <SubmissionsClosure closedAt={closure.closedAt} />
+        {full && (
+          <p className="text-[13px]">
+            <Link href="/admin/hackathon/feedback" className="font-bold text-brand-purple hover:underline" data-testid="feedback-link">
+              המשוב לצוותים - תצוגה מקדימה ופתיחה ←
+            </Link>
+          </p>
+        )}
         <SubmissionsTable rows={submissions} challenges={challengeList} />
       </Collapsible>
       <Collapsible id="arena" title="זירת המנטוריות" summary={`${arena.open} פתוחות · ${arena.answered} נענו`} defaultOpen={false}>

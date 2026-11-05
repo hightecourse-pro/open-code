@@ -9,6 +9,7 @@ import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { runArenaDigest } from "@/lib/arena-digest";
 import { setSubmissionsClosure } from "@/lib/hackathon-submission";
+import { setFeedbackPublication } from "@/lib/hackathon-feedback";
 import { listDriveTargets, setDriveFolder, shareVideosWithJudges } from "@/lib/hackathon-drive";
 import { judgeAccessFor } from "@/lib/judging";
 import { REQUEST_KINDS, deleteReviewRequest, tomorrowEndOfDayIsrael, upsertReviewRequest, type RequestKind } from "@/lib/hackathon-review-requests";
@@ -177,6 +178,19 @@ export async function setSubmissionsClosed(closed: boolean): Promise<{ error?: s
   revalidatePath("/admin/hackathon");
   revalidatePath("/hackathon/submit");
   revalidatePath("/hackathon");
+  return {};
+}
+
+/** פתיחת המשוב לצוותים / סגירה (the owner, 5/11). */
+export async function setFeedbackPublished(on: boolean): Promise<{ error?: string }> {
+  const me = await requireRole("admin");
+  try {
+    await setFeedbackPublication(on, me.id);
+  } catch {
+    return { error: "השמירה נכשלה. נסי שוב." };
+  }
+  revalidatePath("/admin/hackathon/feedback");
+  revalidatePath("/hackathon/submit");
   return {};
 }
 

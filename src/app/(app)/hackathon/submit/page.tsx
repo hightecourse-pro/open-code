@@ -13,6 +13,8 @@ import { FinalSubmit } from "./final-submit";
 import { LockedBanner, LockedView } from "./locked-view";
 import { loadReviewRequest } from "@/lib/hackathon-review-requests";
 import { ReviewRequestCard } from "./review-request-card";
+import { getFeedbackPublication, loadTeamFeedback } from "@/lib/hackathon-feedback";
+import { FeedbackCard } from "./feedback-card";
 
 export const metadata: Metadata = { title: "הגשת התוצרים - האקתון" };
 export const dynamic = "force-dynamic";
@@ -46,7 +48,9 @@ export default async function HackathonSubmitPage() {
     );
   }
 
-  const [submission, reflections, closure, request] = await Promise.all([loadSubmission(team.teamKey), loadReflections(team.members.map((m) => m.id)), getSubmissionsClosure(), loadReviewRequest(team.teamKey)]);
+  const [submission, reflections, closure, request, publication] = await Promise.all([loadSubmission(team.teamKey), loadReflections(team.members.map((m) => m.id)), getSubmissionsClosure(), loadReviewRequest(team.teamKey), getFeedbackPublication()]);
+  // The feedback (5/11): only once the owner opened it, only for a team that submitted and was reviewed.
+  const feedback = publication.publishedAt && submission?.submittedAt ? await loadTeamFeedback(team.teamKey) : null;
   const locked = closure.closedAt;
   const mine = reflections.get(profile.id) ?? null;
   const partner = team.members.find((m) => m.id !== profile.id) ?? null;
@@ -112,6 +116,8 @@ export default async function HackathonSubmitPage() {
       {request && <ReviewRequestCard request={request} />}
 
       {locked && <LockedBanner closedAt={locked} />}
+
+      {feedback && <FeedbackCard feedback={feedback} isPair={team.isPair} />}
 
       {/* how the finalists are picked - the same rubric the judges see (the owner, 20/10) */}
       <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm" data-testid="rubric">
