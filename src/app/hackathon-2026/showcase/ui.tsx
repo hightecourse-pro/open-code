@@ -83,11 +83,11 @@ export function StatBox({ n, label, href }: { n: number; label: string; href?: s
     </>
   );
   return href ? (
-    <Link href={href} className="bg-white px-6 py-5 flex flex-col gap-1 hover:bg-[#F7F5FB] transition-colors" data-testid="sh-stat">
+    <Link href={href} className="bg-white px-6 py-4 flex flex-col gap-1 hover:bg-[#F7F5FB] transition-colors" data-testid="sh-stat">
       {inner}
     </Link>
   ) : (
-    <div className="bg-white px-6 py-5 flex flex-col gap-1" data-testid="sh-stat">
+    <div className="bg-white px-6 py-4 flex flex-col gap-1" data-testid="sh-stat">
       {inner}
     </div>
   );
@@ -95,12 +95,14 @@ export function StatBox({ n, label, href }: { n: number; label: string; href?: s
 
 /** A small card of the dashboard: a title and a few thin bars, the count at the end of each; a row can lead into the grid. */
 function Bars({ title, rows, hrefOf }: { title: string; rows: StatRow[]; hrefOf?: (name: string) => string }) {
-  const max = Math.max(1, ...rows.map((r) => r.count));
+  // four rows at most - the band must stay short (the smaller hosts fall off, never the first three)
+  const shown = rows.slice(0, 4);
+  const max = Math.max(1, ...shown.map((r) => r.count));
   return (
-    <div className="bg-white border border-[#E3DDEE] rounded-[12px] px-5 py-4 flex flex-col gap-3" data-testid="sh-dash-card">
+    <div className="bg-white border border-[#E3DDEE] rounded-[12px] px-5 py-4 flex flex-col gap-2.5" data-testid="sh-dash-card">
       <h3 className="text-[15px] font-bold text-[#1B1530]">{title}</h3>
-      <ul className="flex flex-col gap-2.5">
-        {rows.map((r) => {
+      <ul className="flex flex-col gap-2">
+        {shown.map((r) => {
           const inner = (
             <>
               <span className="flex items-center justify-between gap-3 text-[13.5px] leading-none">
@@ -143,14 +145,14 @@ export function Dashboard() {
   const tech = (name: string) => `${BASE}?t=${encodeURIComponent(name)}#projects`;
   return (
     <section id="numbers" className="bg-[#F7F5FB] scroll-mt-16" data-testid="sh-hero">
-      <div className={`${WRAP} pt-10 pb-10 flex flex-col gap-7`}>
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="flex flex-col gap-3.5 max-w-[800px]">
+      <div className={`${WRAP} pt-8 pb-8 flex flex-col gap-6`}>
+        <div className="flex flex-wrap items-end justify-between gap-5">
+          <div className="flex-[1_1_720px] min-w-0 flex flex-col gap-3">
             <span className="inline-flex self-start items-center gap-2 rounded-full bg-white border border-[#E3DDEE] text-[14px] font-bold text-[#B0154B] px-3.5 py-1.5">
               <span className="w-2 h-2 rounded-full bg-[#D81B5C]" aria-hidden />
               האקתון AI קוד פתוח 2026 · הפרויקטים
             </span>
-            <h1 className="text-[32px] sm:text-[44px] font-black leading-[1.1] tracking-[-0.3px]" data-testid="sh-headline">
+            <h1 className="text-[30px] sm:text-[40px] font-black leading-[1.1] tracking-[-0.3px] [text-wrap:balance]" data-testid="sh-headline">
               {COUNTS.projects} מערכות AI עובדות. {COUNTS.people} מפתחות. {COUNTS.challenges} אתגרים אמיתיים.
             </h1>
           </div>
