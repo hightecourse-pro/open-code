@@ -297,7 +297,8 @@ function WinnerCard({ p }: { p: ShowcaseProject }) {
 export function Winners() {
   return (
     <section id="featured" className={`${WRAP} pt-12 pb-2 flex flex-col gap-6 scroll-mt-16`} data-testid="sh-winners">
-      <SectionHead eyebrow="הזוכות" title="שלוש זוכות במקום הראשון, אחת לכל אתגר" />
+      {/* The owner (5.11): ״אחת לכל אתגר״ on a line of its own, in another colour. */}
+      <SectionHead eyebrow="הזוכות" title={<>שלוש זוכות במקום הראשון<br /><span className="text-[#D81B5C]" data-testid="sh-winners-sub">אחת לכל אתגר</span></>} />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {CHALLENGE_ORDER.map((k) => {
           const w = finalsOf(k).winner;
