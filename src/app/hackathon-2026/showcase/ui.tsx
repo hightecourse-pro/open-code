@@ -17,6 +17,7 @@ import { CHALLENGE_INFO, CHALLENGE_ORDER, COUNTS, SHOWCASE2_PATH as BASE, STATS,
 import { CHALLENGES } from "../shared";
 import { CountUp } from "../projects/reveal";
 import { HackathonLogo } from "./logo";
+import { QuoteCarousel, type QuoteItem } from "./quotes";
 
 /** The partner's colour - the top rule of its card and of its details panel (the canvas's three). */
 export const COLOR: Record<ChallengeKey, string> = { strauss: "#D81B5C", virology: "#4A4EA3", phoenix: "#923F84" };
@@ -66,11 +67,16 @@ export function TopBar({ onProjectPage = false }: { onProjectPage?: boolean }) {
           <Link href={anchor("challenges")} className={item}>
             האתגרים
           </Link>
+          {CLIP_URL && (
+            <a href={CLIP_URL} target="_blank" rel="noopener noreferrer" className={`${item} inline-flex items-center gap-1.5 font-bold text-[#B0154B] hover:text-[#D81B5C]`} data-testid="sh-clip">
+              <span aria-hidden>▶</span> לקליפ של ההאקתון
+            </a>
+          )}
         </nav>
-        {/* the owner, 5/11: ״לא הבנתי מה כפתור המעסיקים אומר״ - the button says what it does */}
-        <a href={MAIL_HREF} className="inline-flex items-center min-h-11 px-[22px] rounded-lg bg-[#1B1530] text-white text-[15px] font-bold hover:bg-[#2A2244] transition-colors" data-testid="sh-contact">
+        {/* the owner, 5/11: ״לא הבנתי מה כפתור המעסיקים אומר״ - the button says what it does and leads to the three ways to reach us */}
+        <Link href={anchor("employers")} className="inline-flex items-center min-h-11 px-[22px] rounded-lg bg-[#1B1530] text-white text-[15px] font-bold hover:bg-[#2A2244] transition-colors" data-testid="sh-contact">
           מחפשים מפתחת AI? דברו איתנו
-        </a>
+        </Link>
       </div>
     </header>
   );
@@ -95,11 +101,24 @@ export function StatBox({ n, label, href }: { n: number; label: string; href?: s
   );
 }
 
-/** The three partners' marks for the dashboard - Sheba's for the virology lab (the owner, 5/11: ״במקום משרד הבריאות שים את הסמל של בית החולים שיבא״). */
-const PARTNER_LOGO: Record<ChallengeKey, { src: string; width: number; height: number; alt: string }> = {
-  strauss: { src: "/hackathon-2026/logo-strauss.png", width: 220, height: 151, alt: "שטראוס" },
-  virology: { src: "/hackathon-2026/logo-sheba.png", width: 600, height: 301, alt: "המרכז הרפואי שיבא" },
-  phoenix: { src: "/hackathon-2026/logo-phoenix.png", width: 387, height: 132, alt: "הפניקס" },
+/** Sheba's mark - beside the virology lab's emblem wherever the lab appears (the owner, 5/11). */
+export const SHEBA_LOGO = { src: "/hackathon-2026/logo-sheba.png", width: 600, height: 301, alt: "המרכז הרפואי שיבא" };
+type Mark = { src: string; width: number; height: number; alt: string };
+/** The partners' marks for the dashboard - the lab's tile carries Sheba AND the lab's own emblem. */
+const PARTNER_LOGOS: Record<ChallengeKey, Mark[]> = {
+  strauss: [{ src: "/hackathon-2026/logo-strauss.png", width: 220, height: 151, alt: "שטראוס" }],
+  virology: [SHEBA_LOGO, { src: "/hackathon-2026/logo-virology.png", width: 120, height: 120, alt: "המעבדה המרכזית לנגיפים" }],
+  phoenix: [{ src: "/hackathon-2026/logo-phoenix.png", width: 387, height: 132, alt: "הפניקס" }],
+};
+
+/** The clip of the hackathon - the top bar's link shows once the owner gives the address. */
+export const CLIP_URL = "";
+
+/** The office: the owner's phone, the community number on WhatsApp, the mailbox (the owner, 5/11). */
+export const CONTACT = {
+  phone: { label: "050-4122899", href: "tel:+972504122899" },
+  whatsapp: { label: "02-5800296 בוואטסאפ", href: "https://wa.me/97225800296" },
+  mail: { label: "office@opencode.org.il", href: MAIL_HREF },
 };
 
 /**
@@ -126,14 +145,13 @@ export function Dashboard() {
           </div>
           {/* the three partners - a click shows that partner's projects */}
           <div className="grid grid-cols-3 gap-3" role="group" aria-label="החברות השותפות" data-testid="sh-partners">
-            {CHALLENGE_ORDER.map((k) => {
-              const l = PARTNER_LOGO[k];
-              return (
-                <Link key={k} href={`${BASE}?ch=${k}#projects`} className="flex items-center justify-center h-[84px] px-4 bg-white border border-[#E3DDEE] rounded-[12px] hover:border-[#1B1530] transition-colors" aria-label={`הפרויקטים של ${CHALLENGE_INFO[k].short}`} data-testid="sh-partner-logo" data-ch={k}>
-                  <Image src={l.src} alt={l.alt} width={l.width} height={l.height} className="h-11 w-auto max-w-[80%] object-contain" />
-                </Link>
-              );
-            })}
+            {CHALLENGE_ORDER.map((k) => (
+              <Link key={k} href={`${BASE}?ch=${k}#projects`} className="flex items-center justify-center gap-4 h-[84px] px-4 bg-white border border-[#E3DDEE] rounded-[12px] hover:border-[#1B1530] transition-colors" aria-label={`הפרויקטים של ${CHALLENGE_INFO[k].short}`} data-testid="sh-partner-logo" data-ch={k}>
+                {PARTNER_LOGOS[k].map((l) => (
+                  <Image key={l.src} src={l.src} alt={l.alt} width={l.width} height={l.height} className="h-11 w-auto max-w-[45%] object-contain" />
+                ))}
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -279,7 +297,7 @@ function WinnerCard({ p }: { p: ShowcaseProject }) {
 export function Winners() {
   return (
     <section id="featured" className={`${WRAP} pt-12 pb-2 flex flex-col gap-6 scroll-mt-16`} data-testid="sh-winners">
-      <SectionHead eyebrow="הזוכות" title="שלוש זוכות, אחת לכל אתגר" />
+      <SectionHead eyebrow="הזוכות" title="שלוש זוכות במקום הראשון, אחת לכל אתגר" />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {CHALLENGE_ORDER.map((k) => {
           const w = finalsOf(k).winner;
@@ -358,21 +376,12 @@ export function CompanyDetails({ k, href = "#projects", className = "bg-[#F7F5FB
   );
 }
 
-/** One sentence from a participant, with the way to her project - between the partners and the employers. */
-export function Quote({ p }: { p: ShowcaseProject | null }) {
-  const q = p?.quotes[0];
-  if (!p || !q) return null;
+/** The participants' sentences, moving on their own - between the partners and the employers (the owner, 5/11). */
+export function Quotes({ items }: { items: QuoteItem[] }) {
+  if (!items.length) return null;
   return (
-    <section className={`${WRAP} pt-14 pb-2`}>
-      <figure className="m-0 px-9 py-8 rounded-[12px] bg-[#F7F5FB] border border-[#E3DDEE] flex flex-col gap-3" data-testid="sh-quotes">
-        <blockquote className="m-0 text-[22px] leading-relaxed font-medium text-[#1B1530]">״{q.quote}״</blockquote>
-        <figcaption className="text-[15px] text-[#4E4862] flex items-center gap-4 flex-wrap">
-          <span>
-            <span className="font-bold text-[#1B1530]">{q.name}</span>, {CHALLENGE_INFO[p.challenge].short}
-          </span>
-          <ProjectLink p={p} />
-        </figcaption>
-      </figure>
+    <section className={`${WRAP} pt-14 pb-2`} data-testid="sh-quotes-section">
+      <QuoteCarousel items={items} />
     </section>
   );
 }
@@ -388,12 +397,21 @@ export function Employers() {
             כל פרויקט כאן נבנה בשבוע, על בעיה אמיתית של ארגון אמיתי, ועלה לענן. מי שבנתה אותו - בוגרת מסלול פיתוח, חברה בקהילת קוד פתוח, ומחפשת את הצוות הבא שלה.
           </p>
         </div>
-        <div className="flex-[1_1_260px] flex flex-wrap gap-3">
-          <a href={MAIL_HREF} className={`${BTN_PINK} min-h-13 px-7 text-[17px]`}>
-            דברו איתנו · office@opencode.org.il
+        <div className="flex-[1_1_300px] flex flex-col gap-3" data-testid="sh-contact-ways">
+          <a href={CONTACT.phone.href} className={`${BTN_PINK} min-h-13 px-7 text-[17px] justify-start`} data-testid="sh-contact-phone">
+            <span className="font-medium text-white/80">טלפון</span>
+            <span dir="ltr">{CONTACT.phone.label}</span>
           </a>
-          <Link href="/portal" className={`${BTN_GHOST} min-h-13 px-7 text-[17px]`}>
-            לפורטל המעסיקים
+          <a href={CONTACT.whatsapp.href} target="_blank" rel="noopener noreferrer" className={`${BTN_GHOST} min-h-13 px-7 text-[17px] justify-start`} data-testid="sh-contact-whatsapp">
+            <span className="font-medium text-[#DCD7E8]">וואטסאפ</span>
+            <span dir="ltr">02-5800296</span>
+          </a>
+          <a href={CONTACT.mail.href} className={`${BTN_GHOST} min-h-13 px-7 text-[17px] justify-start`} data-testid="sh-contact-mail">
+            <span className="font-medium text-[#DCD7E8]">מייל</span>
+            <span dir="ltr">{CONTACT.mail.label}</span>
+          </a>
+          <Link href="/portal" className="text-[15px] font-bold text-[#F07AA3] hover:text-white">
+            לפורטל המעסיקים ←
           </Link>
         </div>
       </div>

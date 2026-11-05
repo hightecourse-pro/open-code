@@ -10,7 +10,7 @@ import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import { CHALLENGE_INFO, CHALLENGE_ORDER, byAward, filterProjects, isChallengeKey, normalize, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
-import { COLOR, CompanyDetails, PILL, PILL_OFF, PILL_ON, ProjectCard, SectionHead, WRAP } from "./ui";
+import { COLOR, CompanyDetails, PILL, PILL_OFF, PILL_ON, ProjectCard, SHEBA_LOGO, SectionHead, WRAP } from "./ui";
 
 export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; topTech: { name: string; count: number }[] }) {
   const sp = useSearchParams();
@@ -177,7 +177,11 @@ function CompanyCard({ k, on, count, onClick }: { k: ChallengeKey; on: boolean; 
     >
       <span className="flex items-center justify-between gap-3">
         <span className="text-[13px] font-bold text-[#6B6580]">{c.org}</span>
-        <Image src={c.logos[0]} alt="" width={220} height={151} className="h-8 w-auto max-w-[110px] object-contain" />
+        <span className="flex items-center gap-2.5">
+          <Image src={c.logos[0]} alt="" width={220} height={151} className="h-8 w-auto max-w-[110px] object-contain" />
+          {/* Sheba beside the lab's emblem (the owner, 5/11: ״למטה באתגרים תוסיף את הלוגו של שיבא ליד המעבדה״) */}
+          {k === "virology" && <Image src={SHEBA_LOGO.src} alt={SHEBA_LOGO.alt} width={SHEBA_LOGO.width} height={SHEBA_LOGO.height} className="h-8 w-auto max-w-[110px] object-contain" data-testid="sh-company-sheba" />}
+        </span>
       </span>
       <span className="text-[28px] font-black leading-[1.2] text-[#1B1530]">{c.short}</span>
       <span className="text-[17px] font-bold text-[#1B1530]" dir="ltr" data-testid="sh-company-tech">
