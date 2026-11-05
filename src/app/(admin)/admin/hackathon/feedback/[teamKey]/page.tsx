@@ -16,7 +16,9 @@ export const dynamic = "force-dynamic";
  */
 export default async function FeedbackPreviewPage({ params }: { params: Promise<{ teamKey: string }> }) {
   await requireRole("admin");
-  const { teamKey } = await params;
+  // A pair's key joins two ids with ״+״, which a URL turns into a space - so the links encode it and this undoes both.
+  const { teamKey: raw } = await params;
+  const teamKey = decodeURIComponent(raw).replace(/ /g, "+");
   const [feedback, teams, publication] = await Promise.all([loadTeamFeedback(teamKey), loadFeedbackTeams(), getFeedbackPublication()]);
   const i = teams.findIndex((t) => t.teamKey === teamKey);
   if (!feedback || i < 0) notFound();
@@ -35,12 +37,12 @@ export default async function FeedbackPreviewPage({ params }: { params: Promise<
         </h1>
         <div className="mt-1 flex items-center gap-4 text-[13px]">
           {prev ? (
-            <Link href={`/admin/hackathon/feedback/${prev.teamKey}`} className={nav} data-testid="feedback-prev">
+            <Link href={`/admin/hackathon/feedback/${encodeURIComponent(prev.teamKey)}`} className={nav} data-testid="feedback-prev">
               → {prev.names.join(" + ")}
             </Link>
           ) : null}
           {next ? (
-            <Link href={`/admin/hackathon/feedback/${next.teamKey}`} className={nav} data-testid="feedback-next">
+            <Link href={`/admin/hackathon/feedback/${encodeURIComponent(next.teamKey)}`} className={nav} data-testid="feedback-next">
               {next.names.join(" + ")} ←
             </Link>
           ) : null}

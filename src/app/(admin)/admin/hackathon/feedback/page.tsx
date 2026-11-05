@@ -44,7 +44,7 @@ export default async function FeedbackIndexPage() {
             <ul className="mt-2 flex flex-col divide-y divide-ink-100">
               {rows.map((t) => (
                 <li key={t.teamKey} className="py-2 flex items-center gap-3 flex-wrap" data-testid="feedback-team" data-team={t.teamKey}>
-                  <Link href={`/admin/hackathon/feedback/${t.teamKey}`} className="font-medium text-ink-900 hover:text-brand-purple hover:underline">
+                  <Link href={`/admin/hackathon/feedback/${encodeURIComponent(t.teamKey)}`} className="font-medium text-ink-900 hover:text-brand-purple hover:underline">
                     {t.names.join(" + ")}
                   </Link>
                   {t.blocked && <Badge variant="pink">הבדיקה נעצרה</Badge>}
