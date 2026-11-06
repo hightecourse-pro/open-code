@@ -10,6 +10,8 @@ import { ScoreForm } from "./score-form";
 import { ExamTabs } from "./exam-tabs";
 import { LazyVideo } from "@/components/patterns/lazy-video";
 import { MediaIsland, imgHtml } from "@/components/patterns/media-island";
+import { HackathonFeedbackNotesFold } from "@/components/patterns/hackathon-feedback-notes";
+import type { FeedbackNote } from "@/lib/hackathon-feedback-notes";
 
 const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 const RICH = "text-[13px] leading-relaxed break-words [&_ul]:list-disc [&_ul]:ps-5 [&_ol]:list-decimal [&_ol]:ps-5 [&_a]:text-brand-purple [&_a]:underline [&_h3]:font-bold [&_h3]:mt-1";
@@ -28,7 +30,7 @@ const STATUS: Record<AutoCheck["status"], { icon: string; cls: string }> = {
  * The judging board - the same component for the team (every judge's scores,
  * average, gap, rank) and for an appointed mentor (her own score only).
  */
-export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEntry[]; viewerId: string; manage: boolean }) {
+export function JudgingBoard({ entries, viewerId, manage, feedbackNotes }: { entries: JudgingEntry[]; viewerId: string; manage: boolean; /** The admin's page only (6.11): what the team said about the hackathon, by team key. */ feedbackNotes?: Record<string, FeedbackNote[]> }) {
   const byChallenge = new Map<string, JudgingEntry[]>();
   for (const e of entries) byChallenge.set(e.submission.challengeKey, [...(byChallenge.get(e.submission.challengeKey) ?? []), e]);
   if (entries.length === 0) {
@@ -45,7 +47,7 @@ export function JudgingBoard({ entries, viewerId, manage }: { entries: JudgingEn
               <span className="text-[13px] font-semibold text-ink-500">· {group.length} הגשות</span>
             </h2>
             {group.map((e) => (
-              <JudgingEntryCard key={e.submission.teamKey} e={e} viewerId={viewerId} manage={manage} lazyVideo />
+              <JudgingEntryCard key={e.submission.teamKey} e={e} viewerId={viewerId} manage={manage} lazyVideo feedbackNotes={feedbackNotes ? (feedbackNotes[e.submission.teamKey] ?? []) : undefined} />
             ))}
           </section>
         );
@@ -68,10 +70,13 @@ export function JudgingEntryCard({
   manage,
   reportOpen = false,
   lazyVideo = false,
+  feedbackNotes,
 }: {
   e: JudgingEntry;
   viewerId: string;
   manage: boolean;
+  /** Given only by the admin's page (6.11): the team's hackathon feedback, folded on top of the card. */
+  feedbackNotes?: FeedbackNote[];
   /** A judge the owner opened the automated review to (27/10): her exam and the AI's as two tabs + a comparison table. */
   reportOpen?: boolean;
   lazyVideo?: boolean;
@@ -122,6 +127,19 @@ export function JudgingEntryCard({
       </div>
 
       <div className="px-5 py-4 flex flex-col gap-4">
+        {feedbackNotes && (
+          <>
+            <HackathonFeedbackNotesFold notes={feedbackNotes} compact />
+            {/* the owner (6.11): ״עם לינק גם מההגשה תיבת מיילים״ - her mailbox on her admin page */}
+            <div className="-mt-2 flex items-center gap-3 flex-wrap text-[12px]" data-testid="team-mail-links">
+              {s.members.map((m) => (
+                <Link key={m.id} href={`/admin/members/${m.id}#mail`} className="font-semibold text-brand-purple hover:underline">
+                  תיבת המיילים של {m.name} ↗
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
         {/* the video beside the automated report (the owner); a judge gets the video alone */}
         {(hasVideo || manage) && (
           <div className={cn("grid grid-cols-1 gap-4 items-start", hasVideo && manage && "lg:grid-cols-2")}>

@@ -67,6 +67,7 @@ function Row({
   closedLabel,
   stageLabel,
   editHref,
+  detailsHref,
 }: {
   title: string;
   pill: { label: string; cls: string };
@@ -75,6 +76,8 @@ function Row({
   stageLabel?: string | null;
   /** When set - the application is still open for edits/withdrawal. */
   editHref?: string | null;
+  /** ״מה הגשתי״ (the owner, 6.11): her own answers and CV, also after the job closed. */
+  detailsHref?: string | null;
 }) {
   return (
     <div className="flex items-center gap-2.5 py-2 border-b border-ink-100 last:border-b-0 flex-wrap">
@@ -84,6 +87,11 @@ function Row({
           <span className="text-[11.5px] text-ink-400 ms-2" suppressHydrationWarning>
             הוגשה {DATE_HE.format(new Date(appliedAt))}
           </span>
+        )}
+        {detailsHref && (
+          <Link href={detailsHref} className="text-[11.5px] font-semibold text-brand-purple hover:underline ms-2" data-testid="my-application-link">
+            מה הגשתי
+          </Link>
         )}
         {editHref && (
           <Link href={editHref} className="text-[11.5px] font-semibold text-brand-purple hover:underline ms-2">
@@ -168,7 +176,7 @@ export function MyApplications({
           hint="הצוות עובר על כל הגשה אישית ובוחר את המתאימות ביותר לכל משרה - לא כל הגשה מועברת ללקוח, וברגע שהמועמדות שלך עוברת תראי את זה כאן."
         >
           {inProgress.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} detailsHref={`/jobs/${a.jobId}/application`} />
           ))}
         </Group>
       )}
@@ -180,7 +188,7 @@ export function MyApplications({
           hint="קורות החיים שלך אצל המעסיק - נעדכן אותך בכל צעד."
         >
           {forwarded.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} detailsHref={`/jobs/${a.jobId}/application`} />
           ))}
           {submittedOpen.map((s) => (
             <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} stageLabel={s.stageLabel} />
@@ -191,7 +199,7 @@ export function MyApplications({
       {(done.length > 0 || submittedClosed.length > 0) && (
         <Group icon={HeartHandshake} title={`הסתיימו (${done.length + submittedClosed.length})`}>
           {done.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} />
+            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} detailsHref={`/jobs/${a.jobId}/application`} />
           ))}
           {submittedClosed.map((s) => (
             <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} stageLabel={s.stageLabel} />

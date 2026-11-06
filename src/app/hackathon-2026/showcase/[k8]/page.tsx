@@ -70,7 +70,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
             </div>
           </section>
           <section className="rounded-[12px] border border-[#ECE8F2] p-7 flex flex-col gap-3" data-testid="sh-quotes">
-            <h2 className="text-[20px] font-bold text-[#1B1530]">משפט אחד מכל מי שבנתה</h2>
+            <h2 className="text-[20px] font-bold text-[#1B1530]">באופן אישי</h2>
             <div className="flex flex-col gap-3">
               {p.quotes.map((q) => (
                 <blockquote key={q.id} className="m-0 bg-[#F7F5FB] rounded-[10px] px-5 py-4" data-testid="sh-quote">

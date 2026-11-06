@@ -9,6 +9,8 @@ import { hackathonJudgeAppointedEmail } from "@/lib/email/templates";
 import { getSiteUrl } from "@/lib/site";
 import { runArenaDigest } from "@/lib/arena-digest";
 import { setSubmissionsClosure } from "@/lib/hackathon-submission";
+import { setFeedbackPublication } from "@/lib/hackathon-feedback";
+import { KINDS, SOURCES, audienceOf, insertFeedbackNote, setFeedbackNoteHidden, type FeedbackKind, type FeedbackSource } from "@/lib/hackathon-feedback-notes";
 import { listDriveTargets, setDriveFolder, shareVideosWithJudges } from "@/lib/hackathon-drive";
 import { judgeAccessFor } from "@/lib/judging";
 import { REQUEST_KINDS, deleteReviewRequest, tomorrowEndOfDayIsrael, upsertReviewRequest, type RequestKind } from "@/lib/hackathon-review-requests";
@@ -177,6 +179,57 @@ export async function setSubmissionsClosed(closed: boolean): Promise<{ error?: s
   revalidatePath("/admin/hackathon");
   revalidatePath("/hackathon/submit");
   revalidatePath("/hackathon");
+  return {};
+}
+
+/** פתיחת המשוב לצוותים / סגירה (the owner, 5/11). */
+/** משובים על ההאקתון (6.11): a quote typed by hand - from a phone call, a mail, a judge at the event. */
+export async function addFeedbackNote(_prev: { error: string | null; ok: boolean }, form: FormData): Promise<{ error: string | null; ok: boolean }> {
+  const me = await requireRole("admin");
+  const profileId = String(form.get("profile_id") ?? "").trim() || null;
+  let displayName = String(form.get("display_name") ?? "").trim();
+  const body = String(form.get("body") ?? "").trim();
+  const source = String(form.get("source") ?? "manual") as FeedbackSource;
+  const kind = String(form.get("kind") ?? "praise") as FeedbackKind;
+  const date = String(form.get("written_at") ?? "").trim();
+  if (!body) return { error: "חסר הטקסט של המשוב", ok: false };
+  if (!SOURCES.includes(source) || !KINDS.includes(kind)) return { error: "מקור או סוג לא מוכרים", ok: false };
+  if (profileId) {
+    const { data } = await createAdminClient().from("profiles").select("full_name").eq("id", profileId).maybeSingle();
+    if (data?.full_name) displayName = displayName || data.full_name;
+  }
+  if (!displayName) return { error: "צריך לבחור חברה או לכתוב שם", ok: false };
+  try {
+    const { audience, teamKey } = await audienceOf(profileId);
+    await insertFeedbackNote(
+      { profileId, teamKey, displayName, audience, source, sourceRef: null, sourceUrl: null, kind, topic: null, body, writtenAt: /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T12:00:00+02:00`).toISOString() : new Date().toISOString() },
+      me.id,
+    );
+  } catch {
+    return { error: "השמירה נכשלה. נסי שוב.", ok: false };
+  }
+  revalidatePath("/admin/hackathon");
+  if (profileId) revalidatePath(`/admin/members/${profileId}`);
+  return { error: null, ok: true };
+}
+
+export async function setFeedbackNoteHiddenAction(form: FormData): Promise<void> {
+  await requireRole("admin");
+  const id = String(form.get("id") ?? "");
+  if (!id) return;
+  await setFeedbackNoteHidden(id, String(form.get("hidden") ?? "") === "1");
+  revalidatePath("/admin/hackathon");
+}
+
+export async function setFeedbackPublished(on: boolean): Promise<{ error?: string }> {
+  const me = await requireRole("admin");
+  try {
+    await setFeedbackPublication(on, me.id);
+  } catch {
+    return { error: "השמירה נכשלה. נסי שוב." };
+  }
+  revalidatePath("/admin/hackathon/feedback");
+  revalidatePath("/hackathon/submit");
   return {};
 }
 

@@ -80,7 +80,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ k8: st
 
             <Reveal delay={100}>
               <section className="bg-[#FFF4F8] border-2 border-brand-pink/30 shadow-[5px_6px_0_0_#F3C6DD] p-6 -rotate-[0.6deg] hover:rotate-0 transition-transform" style={{ borderRadius: "26px 20px 28px 22px" }} data-testid="sc-quotes">
-                <h2 className="font-display font-black text-[22px] text-ink-900">משפט אחד מכל מי שבנתה</h2>
+                <h2 className="font-display font-black text-[22px] text-ink-900">באופן אישי</h2>
                 <div className="flex flex-col gap-3 mt-4">
                   {p.quotes.map((q) => (
                     <blockquote key={q.id} className="border-s-4 border-brand-pink bg-white rounded-[12px] px-4 py-3 shadow-sm" data-testid="sc-quote">

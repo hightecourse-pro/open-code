@@ -2114,6 +2114,18 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["hackathon_review_requests"]["Insert"]>;
         Relationships: [];
       };
+      hackathon_feedback_notes: {
+        Row: { id: string; profile_id: string | null; team_key: string | null; display_name: string; audience: string; source: string; source_ref: string | null; source_url: string | null; kind: string; topic: string | null; body: string; written_at: string; hidden_at: string | null; created_by: string | null; created_at: string; updated_at: string };
+        Insert: { id?: string; profile_id?: string | null; team_key?: string | null; display_name: string; audience?: string; source: string; source_ref?: string | null; source_url?: string | null; kind?: string; topic?: string | null; body: string; written_at: string; hidden_at?: string | null; created_by?: string | null; created_at?: string; updated_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hackathon_feedback_notes"]["Insert"]>;
+        Relationships: [];
+      };
+      office_mail: {
+        Row: { id: string; gmail_id: string; thread_id: string | null; from_email: string | null; from_name: string | null; profile_id: string | null; matched_by: string | null; subject: string | null; snippet: string | null; body: string | null; sent_at: string; synced_at: string; direction: string; unread: boolean; rfc_message_id: string | null; read_in_app_at: string | null; sent_by: string | null };
+        Insert: { id?: string; gmail_id: string; thread_id?: string | null; from_email?: string | null; from_name?: string | null; profile_id?: string | null; matched_by?: string | null; subject?: string | null; snippet?: string | null; body?: string | null; sent_at: string; synced_at?: string; direction?: string; unread?: boolean; rfc_message_id?: string | null; read_in_app_at?: string | null; sent_by?: string | null };
+        Update: Partial<Database["public"]["Tables"]["office_mail"]["Insert"]>;
+        Relationships: [];
+      };
       hackathon_judges: {
         Row: { profile_id: string; added_by: string | null; challenge_keys: string[]; sees_auto_report: boolean; created_at: string };
         Insert: { profile_id: string; added_by?: string | null; challenge_keys?: string[]; sees_auto_report?: boolean; created_at?: string };
@@ -2418,6 +2430,7 @@ export interface Database {
       };
     };
     Functions: {
+      office_mail_link: { Args: Record<string, never>; Returns: number };
       /** Admin-only: payers on the external list with no auth account yet. */
       admin_unregistered_payers_count: { Args: Record<string, never>; Returns: number | null };
       is_admin: { Args: Record<string, never>; Returns: boolean };
