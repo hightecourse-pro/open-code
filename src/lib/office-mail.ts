@@ -176,12 +176,14 @@ async function copyNew(ids: string[], refreshKnown: boolean): Promise<{ added: n
     added += rows.length;
   }
   if (refreshKnown) {
-    // The unread flag follows the mailbox: a message read there stops being marked here.
-    const stale = [...known.entries()].filter(([, unread]) => unread).map(([id]) => id);
-    for (let i = 0; i < stale.length; i += 10) {
-      const batch = await Promise.all(stale.slice(i, i + 10).map((id) => gmail<{ id: string; labelIds?: string[] }>(`messages/${id}?format=minimal`)));
-      const nowRead = batch.filter((m) => !(m.labelIds ?? []).includes("UNREAD")).map((m) => m.id);
+    // The unread flag follows the mailbox, both ways: read there = not marked here; marked unread again there = marked here.
+    const knownIds = [...known.keys()];
+    for (let i = 0; i < knownIds.length; i += 10) {
+      const batch = await Promise.all(knownIds.slice(i, i + 10).map((id) => gmail<{ id: string; labelIds?: string[] }>(`messages/${id}?format=minimal`)));
+      const nowRead = batch.filter((m) => !(m.labelIds ?? []).includes("UNREAD") && known.get(m.id) === true).map((m) => m.id);
+      const nowUnread = batch.filter((m) => (m.labelIds ?? []).includes("UNREAD") && !(m.labelIds ?? []).includes("SENT") && known.get(m.id) === false).map((m) => m.id);
       if (nowRead.length) await admin.from("office_mail").update({ unread: false }).in("gmail_id", nowRead);
+      if (nowUnread.length) await admin.from("office_mail").update({ unread: true }).eq("direction", "in").in("gmail_id", nowUnread);
     }
   }
   return { added, oldest };
