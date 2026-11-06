@@ -2121,8 +2121,8 @@ export interface Database {
         Relationships: [];
       };
       office_mail: {
-        Row: { id: string; gmail_id: string; thread_id: string | null; from_email: string | null; from_name: string | null; profile_id: string | null; matched_by: string | null; subject: string | null; snippet: string | null; body: string | null; sent_at: string; synced_at: string };
-        Insert: { id?: string; gmail_id: string; thread_id?: string | null; from_email?: string | null; from_name?: string | null; profile_id?: string | null; matched_by?: string | null; subject?: string | null; snippet?: string | null; body?: string | null; sent_at: string; synced_at?: string };
+        Row: { id: string; gmail_id: string; thread_id: string | null; from_email: string | null; from_name: string | null; profile_id: string | null; matched_by: string | null; subject: string | null; snippet: string | null; body: string | null; sent_at: string; synced_at: string; direction: string; unread: boolean; rfc_message_id: string | null; read_in_app_at: string | null; sent_by: string | null };
+        Insert: { id?: string; gmail_id: string; thread_id?: string | null; from_email?: string | null; from_name?: string | null; profile_id?: string | null; matched_by?: string | null; subject?: string | null; snippet?: string | null; body?: string | null; sent_at: string; synced_at?: string; direction?: string; unread?: boolean; rfc_message_id?: string | null; read_in_app_at?: string | null; sent_by?: string | null };
         Update: Partial<Database["public"]["Tables"]["office_mail"]["Insert"]>;
         Relationships: [];
       };
