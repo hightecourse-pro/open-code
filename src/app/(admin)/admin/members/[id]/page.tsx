@@ -47,6 +47,8 @@ import type { ConfigQuestion, QuestionScope } from "@/types/database";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
 import { loadMemberApplications, loadMemberCoordinatorReviews, loadMemberHackathon } from "@/lib/member-overview";
 import { MemberApplications, MemberCoordinatorOpinion, MemberHackathonCard } from "./member-trail";
+import { loadFeedbackNotesFor } from "@/lib/hackathon-feedback-notes";
+import { HackathonFeedbackNotesFold } from "@/components/patterns/hackathon-feedback-notes";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
 
@@ -175,7 +177,7 @@ export default async function AdminMemberProfilePage({
   const vipReason = crm?.vip_reason ?? null;
   const internalNotes = crm?.internal_notes ?? profile.internal_notes ?? null;
   // Her trail for the team (the owner, 25/10): applications + answers + sent-to-employer, the coordinator's opinion, the hackathon links.
-  const [memberApplications, coordinatorReviews, memberHackathon] = await Promise.all([loadMemberApplications(id), loadMemberCoordinatorReviews(id), loadMemberHackathon(id)]);
+  const [memberApplications, coordinatorReviews, memberHackathon, feedbackNotes] = await Promise.all([loadMemberApplications(id), loadMemberCoordinatorReviews(id), loadMemberHackathon(id), loadFeedbackNotesFor([id])]);
 
   // Contact email lives in auth, not in profiles.
   const adminClient = createAdminClient();
@@ -732,6 +734,8 @@ export default async function AdminMemberProfilePage({
       <MemberCoordinatorOpinion reviews={coordinatorReviews} />
       <MemberApplications rows={memberApplications} note={internalNotes} />
       <MemberHackathonCard h={memberHackathon} />
+      {/* משובים להאקתון (the owner, 6.11): what she said about the hackathon, with the source - a click opens it */}
+      <HackathonFeedbackNotesFold notes={feedbackNotes.get(id) ?? []} />
 
       {/* CV files */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">

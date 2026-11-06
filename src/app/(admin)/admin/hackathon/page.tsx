@@ -24,6 +24,8 @@ import { loadReviewRequests } from "@/lib/hackathon-review-requests";
 import { ReviewRequests, type RequestTeam, type ReviewRequestRow } from "./review-requests";
 import { HackathonDashboard, type DashboardPerson } from "./dashboard";
 import { Collapsible } from "./collapsible";
+import { loadAllFeedbackNotes, loadFeedbackNotesByTeam } from "@/lib/hackathon-feedback-notes";
+import { FeedbackNotesAdmin } from "./feedback-notes-admin";
 import Link from "next/link";
 
 export const metadata: Metadata = { title: "האקתון" };
@@ -94,6 +96,9 @@ async function adminHackathonPageBody() {
 
   // בקשות השלמה (24/10) - the owner's view only; the rows hold teams' demo credentials
   const requests = full ? await loadReviewRequests() : [];
+  // משובים על ההאקתון (the owner, 6.11): every quote for the section, and per team for the submission cards.
+  const [allFeedback, feedbackByTeam] = await Promise.all([loadAllFeedbackNotes(), loadFeedbackNotesByTeam(submissions.filter((s) => s.submittedAt).map((s) => s.teamKey))]);
+  const feedbackNotesRecord = Object.fromEntries(submissions.filter((s) => s.submittedAt).map((s) => [s.teamKey, feedbackByTeam.get(s.teamKey) ?? []]));
   const requestRows: ReviewRequestRow[] = requests.map((r) => {
     const sub = submissionOf.get(r.teamKey);
     return {
@@ -178,6 +183,14 @@ async function adminHackathonPageBody() {
         )}
         <SubmissionsTable rows={submissions} challenges={challengeList} />
       </Collapsible>
+      <Collapsible
+        id="feedback-notes"
+        title="משובים על ההאקתון"
+        summary={`${allFeedback.filter((n) => !n.hiddenAt).length} משובים · ${allFeedback.filter((n) => !n.hiddenAt && n.audience === "submitter").length} ממגישות · ${allFeedback.filter((n) => !n.hiddenAt && n.audience === "participant").length} ממשתתפות`}
+        defaultOpen={false}
+      >
+        <FeedbackNotesAdmin notes={allFeedback} />
+      </Collapsible>
       <Collapsible id="arena" title="זירת המנטוריות" summary={`${arena.open} פתוחות · ${arena.answered} נענו`} defaultOpen={false}>
         <ArenaOverview data={arena} />
       </Collapsible>
@@ -211,7 +224,7 @@ async function adminHackathonPageBody() {
           </Collapsible>
           <Collapsible id="board" title="כל ההגשות בפירוט" summary="הסרטון, מה שנכתב, הבדיקה האוטומטית, הציונים וההערות של כל שופטת" defaultOpen={false}>
             <div className="bg-white border border-ink-200 rounded-[18px] shadow-sm px-5 py-5">
-              <JudgingBoard entries={board.entries} viewerId={me.id} manage />
+              <JudgingBoard entries={board.entries} viewerId={me.id} manage feedbackNotes={feedbackNotesRecord} />
             </div>
           </Collapsible>
         </>
