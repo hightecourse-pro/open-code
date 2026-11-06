@@ -24,7 +24,7 @@ export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
   waitlisted: "התקדמנו בינתיים",
 };
 export const ADMIN_MARK_LABEL: Record<string, string> = { optional: "אופציונלית", not_fit: "לא מתאימה", approved: "אישור סופי" };
-const FIT_QUESTION = "למה את חושבת שאת מתאימה למשרה?";
+export const FIT_QUESTION = "למה את חושבת שאת מתאימה למשרה?";
 
 export interface MemberApplication {
   id: string;

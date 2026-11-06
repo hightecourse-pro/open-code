@@ -98,8 +98,10 @@ function textOf(p?: Part): string {
 /** The message's own text: the quoted thread below a ״wrote:״ / ״כתב/ה:״ line is cut. */
 function freshText(p?: Part): string {
   const text = textOf(p).replace(/\r\n/g, "\n").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  const cut = text.search(/\n(?:On .{5,160}? wrote:|ב[-‏]?[^\n]{0,120}כתב\/ה:|בתאריך [^\n]{0,120}כתב)/);
-  return (cut > 40 ? text.slice(0, cut) : text).trim().slice(0, 20_000);
+  // Gmail's quote header, in English or in Hebrew (״בתאריך … מאת …״ / ״… כתב/ה:״), possibly behind RTL marks.
+  const cut = text.search(/\n[‎‏‪-‮]*(?:On .{5,160}? wrote:|ב[-‏]?[^\n]{0,120}כתב\/ה:|בתאריך [^\n]{0,200}(?:כתב|מאת))/);
+  const own = (cut > 40 ? text.slice(0, cut) : text).split("\n").filter((l) => !/^\s*[‎‏‪-‮]*>/.test(l)).join("\n");
+  return own.trim().slice(0, 20_000);
 }
 function senderOf(from: string): { email: string | null; name: string | null } {
   const email = (from.match(/[\w.+-]+@[\w.-]+\.\w+/) ?? [null])[0];
