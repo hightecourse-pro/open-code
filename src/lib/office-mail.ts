@@ -272,15 +272,49 @@ export async function markOfficeMailRead(gmailId: string): Promise<{ inMailbox: 
 
 const mimeWord = (s: string) => (/[^\x20-\x7e]/.test(s) ? `=?UTF-8?B?${Buffer.from(s, "utf8").toString("base64")}?=` : s);
 
+/** Thrown by sendOfficeMailReply when the thread already holds an answer of ours and `force` was not given. */
+export class AlreadyAnswered extends Error {
+  constructor(public replies: OfficeMailReply[]) {
+    super("already_answered");
+  }
+}
+
+/**
+ * Our answers in the message's thread, live from the mailbox (״תבדוק אם לא ענו כבר״ - the owner, 6.11):
+ * anything sent from office@ after the message, whether from the app or from Gmail. The ones the
+ * sync has not copied yet are copied now, so the page shows them too.
+ */
+async function repliesInThread(threadId: string, origId: string, origSentAt: string): Promise<OfficeMailReply[]> {
+  const admin = createAdminClient();
+  const th = await gmail<{ messages?: FullMessage[] }>(`threads/${threadId}?format=full`);
+  const after = Date.parse(origSentAt);
+  const ours = (th.messages ?? []).filter((m) => {
+    if (m.id === origId || Number(m.internalDate) <= after) return false;
+    const { email } = senderOf(header(m, "from"));
+    return (m.labelIds ?? []).includes("SENT") || email === MAILBOX().toLowerCase();
+  });
+  if (ours.length === 0) return [];
+  const rows = ours.map((m) => ({ ...rowOf(m), direction: "out", unread: false }));
+  await admin.from("office_mail").upsert(rows, { onConflict: "gmail_id", ignoreDuplicates: true });
+  const { data: stored } = await admin.from("office_mail").select("gmail_id, sent_by").in("gmail_id", ours.map((m) => m.id));
+  const viaApp = new Set((stored ?? []).filter((r) => r.sent_by).map((r) => r.gmail_id));
+  return rows.map((r) => ({ id: r.gmail_id, date: r.sent_at, from: r.from_name ?? r.from_email ?? MAILBOX_NAME, body: r.body || r.snippet, viaApp: viaApp.has(r.gmail_id) }));
+}
+
 /**
  * A reply from the app, in the message's own thread, from office@ with the admin's name
  * signed under the text. Outside production only addresses in EMAIL_ALLOWLIST may be written to.
  * The sent message is copied into office_mail at once, so it shows under the question.
  */
-export async function sendOfficeMailReply(args: { gmailId: string; text: string; byId: string; byName: string }): Promise<{ id: string }> {
+export async function sendOfficeMailReply(args: { gmailId: string; text: string; byId: string; byName: string; force?: boolean }): Promise<{ id: string }> {
   const admin = createAdminClient();
-  const { data: orig } = await admin.from("office_mail").select("gmail_id, thread_id, from_email, from_name, subject, rfc_message_id, direction").eq("gmail_id", args.gmailId).maybeSingle();
+  const { data: orig } = await admin.from("office_mail").select("gmail_id, thread_id, from_email, from_name, subject, rfc_message_id, direction, sent_at").eq("gmail_id", args.gmailId).maybeSingle();
   if (!orig || orig.direction !== "in" || !orig.from_email) throw new Error("not_found");
+  // ״אם אני באה לענות על מייל מהמערכת תבדוק אם לא ענו כבר״ (the owner, 6.11): the thread, live, unless she insists.
+  if (!args.force && orig.thread_id) {
+    const answered = await repliesInThread(orig.thread_id, orig.gmail_id, orig.sent_at);
+    if (answered.length) throw new AlreadyAnswered(answered);
+  }
   if (!isProductionEnv()) {
     const allow = (process.env.EMAIL_ALLOWLIST ?? "").split(/[,\s]+/).map((s) => s.trim().toLowerCase()).filter(Boolean);
     if (!allow.includes(orig.from_email.toLowerCase())) throw new Error("staging_allowlist");
