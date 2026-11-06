@@ -49,6 +49,8 @@ import { loadMemberApplications, loadMemberCoordinatorReviews, loadMemberHackath
 import { MemberApplications, MemberCoordinatorOpinion, MemberHackathonCard } from "./member-trail";
 import { loadFeedbackNotesFor } from "@/lib/hackathon-feedback-notes";
 import { HackathonFeedbackNotesFold } from "@/components/patterns/hackathon-feedback-notes";
+import { MemberMailbox } from "./member-mailbox";
+import { getOfficeMailSync, loadOfficeMailFor } from "@/lib/office-mail";
 
 export const metadata: Metadata = { title: "פרופיל חברה" };
 
@@ -177,7 +179,7 @@ export default async function AdminMemberProfilePage({
   const vipReason = crm?.vip_reason ?? null;
   const internalNotes = crm?.internal_notes ?? profile.internal_notes ?? null;
   // Her trail for the team (the owner, 25/10): applications + answers + sent-to-employer, the coordinator's opinion, the hackathon links.
-  const [memberApplications, coordinatorReviews, memberHackathon, feedbackNotes] = await Promise.all([loadMemberApplications(id), loadMemberCoordinatorReviews(id), loadMemberHackathon(id), loadFeedbackNotesFor([id])]);
+  const [memberApplications, coordinatorReviews, memberHackathon, feedbackNotes, officeMail, mailSync] = await Promise.all([loadMemberApplications(id), loadMemberCoordinatorReviews(id), loadMemberHackathon(id), loadFeedbackNotesFor([id]), loadOfficeMailFor(id), getOfficeMailSync()]);
 
   // Contact email lives in auth, not in profiles.
   const adminClient = createAdminClient();
@@ -736,6 +738,8 @@ export default async function AdminMemberProfilePage({
       <MemberHackathonCard h={memberHackathon} />
       {/* משובים להאקתון (the owner, 6.11): what she said about the hackathon, with the source - a click opens it */}
       <HackathonFeedbackNotesFold notes={feedbackNotes.get(id) ?? []} />
+      {/* תיבת המיילים ממנה (the owner, 6.11): everything she sent to office@, read live from the mailbox on a click */}
+      <MemberMailbox profileId={profile.id} rows={officeMail} syncedAt={mailSync.lastAt} />
 
       {/* CV files */}
       <div className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm">

@@ -127,7 +127,19 @@ export function JudgingEntryCard({
       </div>
 
       <div className="px-5 py-4 flex flex-col gap-4">
-        {feedbackNotes && <HackathonFeedbackNotesFold notes={feedbackNotes} compact />}
+        {feedbackNotes && (
+          <>
+            <HackathonFeedbackNotesFold notes={feedbackNotes} compact />
+            {/* the owner (6.11): ״עם לינק גם מההגשה תיבת מיילים״ - her mailbox on her admin page */}
+            <div className="-mt-2 flex items-center gap-3 flex-wrap text-[12px]" data-testid="team-mail-links">
+              {s.members.map((m) => (
+                <Link key={m.id} href={`/admin/members/${m.id}#mail`} className="font-semibold text-brand-purple hover:underline">
+                  תיבת המיילים של {m.name} ↗
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
         {/* the video beside the automated report (the owner); a judge gets the video alone */}
         {(hasVideo || manage) && (
           <div className={cn("grid grid-cols-1 gap-4 items-start", hasVideo && manage && "lg:grid-cols-2")}>

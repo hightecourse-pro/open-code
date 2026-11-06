@@ -15,6 +15,10 @@
     {
       "path": "/api/cron/arena-digest",
       "schedule": "40 6 * * *"
+    },
+    {
+      "path": "/api/cron/office-mail",
+      "schedule": "15 */4 * * *"
     }
   ]
 }
