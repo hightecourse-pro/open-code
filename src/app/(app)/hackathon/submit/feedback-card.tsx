@@ -12,6 +12,12 @@ export function FeedbackCard({ feedback, isPair }: { feedback: MemberFeedback; i
     <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm" data-testid="feedback-card">
       <div className="font-mono text-[12.5px] text-brand-pink-deep">{"// המשוב"}</div>
       <h2 className="font-display text-[18px] font-black text-ink-1000">המשוב על הפרויקט {isPair ? "שלכן" : "שלך"}</h2>
+      {!feedback.finalist && (
+        // The owner (6.11): half the teams got a glowing review and still stayed out - the finals had three places per challenge.
+        <p className="mt-2 rounded-[12px] border border-[#F8C8D6] bg-[#FFF1F5] px-3 py-2 text-[13.5px] leading-relaxed text-ink-900" data-testid="feedback-finals-note">
+          <b>לגמר עלו שלושה צוותים בכל אתגר, לפי ציוני השופטות.</b> המשוב כאן הוא מהבדיקה האוטומטית בלבד. הרבה פרויקטים עבדו מצוין, וההפרשים היו קטנים.
+        </p>
+      )}
       <p className="text-[12.5px] text-ink-500 mt-0.5">
         כך ראתה את המערכת הבדיקה האוטומטית של צוות ההאקתון{feedback.ranAt ? ` ב-${DM.format(new Date(feedback.ranAt))}` : ""}, לפי הקריטריונים לעלייה לגמר. הציונים עצמם לא מוצגים.
       </p>

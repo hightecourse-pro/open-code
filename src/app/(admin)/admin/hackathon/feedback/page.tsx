@@ -47,6 +47,7 @@ export default async function FeedbackIndexPage() {
                   <Link href={`/admin/hackathon/feedback/${encodeURIComponent(t.teamKey)}`} className="font-medium text-ink-900 hover:text-brand-purple hover:underline">
                     {t.names.join(" + ")}
                   </Link>
+                  {t.finalist && <Badge variant="purple">עלתה לגמר</Badge>}
                   {t.blocked && <Badge variant="pink">הבדיקה נעצרה</Badge>}
                   {!t.submitted && <Badge variant="gray">אין הגשה כאן</Badge>}
                   <span className="ms-auto text-[12.5px] text-ink-500">{t.ranAt ? `נבדק ${DM.format(new Date(t.ranAt))}` : ""}</span>

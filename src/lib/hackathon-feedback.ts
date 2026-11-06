@@ -39,10 +39,11 @@ export async function setFeedbackPublication(on: boolean, byId: string): Promise
 }
 
 /** The team's version of a report: every criterion that has a note, scrubbed; the blocker, scrubbed. */
-export function memberFeedbackOf(report: AutoReport, updatedAt: string | null): MemberFeedback {
+export function memberFeedbackOf(report: AutoReport, updatedAt: string | null, finalist: boolean): MemberFeedback {
   const read = readAutoReport(report);
   return {
     ranAt: report.ranAt ?? updatedAt,
+    finalist,
     blocked: read.blocked ? scrubNote(read.blocked) : null,
     criteria: CRITERIA.map((c) => ({ key: c.key, label: c.label, hint: c.hint, text: scrubNote(read.notes[c.key] ?? "") })).filter((c) => c.text),
   };
@@ -51,13 +52,19 @@ export function memberFeedbackOf(report: AutoReport, updatedAt: string | null): 
 export async function loadTeamFeedback(teamKey: string): Promise<MemberFeedback | null> {
   const { data } = await createAdminClient().from("hackathon_auto_reports").select("report, updated_at").eq("team_key", teamKey).maybeSingle();
   if (!data) return null;
-  const fb = memberFeedbackOf(data.report as AutoReport, data.updated_at);
+  const fb = memberFeedbackOf(data.report as AutoReport, data.updated_at, isFinalist(teamKey));
   return fb.criteria.length ? fb : null;
+}
+
+/** The finals of 28.10, as the public catalogue records them (tools/finals-rank.mjs → showcase-build.mjs). */
+export function isFinalist(teamKey: string): boolean {
+  return !!PROJECTS.find((p) => p.teamKey === teamKey)?.finalist;
 }
 
 export interface FeedbackTeam {
   teamKey: string;
   names: string[];
+  finalist: boolean;
   challengeKey: string;
   challengeShort: string;
   ranAt: string | null;
@@ -78,9 +85,9 @@ export async function loadFeedbackTeams(): Promise<FeedbackTeam[]> {
     const pub = pubOf.get(r.team_key);
     const challengeKey = sub?.challengeKey ?? pub?.challenge ?? "";
     const names = sub ? sub.members.map((m) => m.name) : (pub?.members.map((m) => m.name) ?? [r.team_key.slice(0, 8)]);
-    const fb = memberFeedbackOf((r.report ?? {}) as AutoReport, r.updated_at);
+    const fb = memberFeedbackOf((r.report ?? {}) as AutoReport, r.updated_at, !!pub?.finalist);
     if (!fb.criteria.length) continue;
-    rows.push({ teamKey: r.team_key, names, challengeKey, challengeShort: CHALLENGES.find((c) => c.key === challengeKey)?.short ?? challengeKey, ranAt: fb.ranAt, blocked: !!fb.blocked, submitted: !!sub });
+    rows.push({ teamKey: r.team_key, names, finalist: fb.finalist, challengeKey, challengeShort: CHALLENGES.find((c) => c.key === challengeKey)?.short ?? challengeKey, ranAt: fb.ranAt, blocked: !!fb.blocked, submitted: !!sub });
   }
   return rows.sort((a, b) => (order.get(a.challengeKey) ?? 9) - (order.get(b.challengeKey) ?? 9) || a.names[0].localeCompare(b.names[0], "he"));
 }

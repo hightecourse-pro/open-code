@@ -18,6 +18,8 @@ export interface MemberFeedback {
   ranAt: string | null;
   /** What stopped the run altogether - a login screen, a dead address. */
   blocked: string | null;
+  /** Reached the finals of 28.10 - then the card skips the line about the finals (the owner, 6.11). */
+  finalist: boolean;
   criteria: FeedbackCriterion[];
 }
 
