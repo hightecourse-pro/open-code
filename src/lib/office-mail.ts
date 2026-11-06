@@ -14,6 +14,10 @@ import type { Json } from "@/types/database";
 const SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const MAILBOX = () => process.env.OFFICE_MAILBOX || "office@opencode.org.il";
 const SYNC_KEY = "office_mail_sync";
+/** Everything from the hackathon's season on; older mail is not copied. */
+const FLOOR = "2026-09-01T00:00:00Z";
+/** New messages copied per run - keeps a run well inside the function's time limit; the rest waits for the next run. */
+const PER_RUN = 400;
 
 export interface OfficeMailRow {
   id: string;
@@ -33,6 +37,8 @@ export interface OfficeMailSync {
   lastAt: string | null;
   lastNew: number;
   lastError: string | null;
+  /** Unix seconds: older mail still to copy (the first runs work backwards from today to the floor); null = all caught up. */
+  backfillBefore: number | null;
 }
 
 export function isOfficeMailConfigured(): boolean {
@@ -76,51 +82,92 @@ function senderOf(from: string): { email: string | null; name: string | null } {
 
 export async function getOfficeMailSync(): Promise<OfficeMailSync> {
   const { data } = await createAdminClient().from("app_settings").select("value").eq("key", SYNC_KEY).maybeSingle();
-  const v = (data?.value ?? {}) as { last_at?: unknown; last_new?: unknown; last_error?: unknown };
-  return { lastAt: typeof v.last_at === "string" ? v.last_at : null, lastNew: typeof v.last_new === "number" ? v.last_new : 0, lastError: typeof v.last_error === "string" ? v.last_error : null };
+  const v = (data?.value ?? {}) as { last_at?: unknown; last_new?: unknown; last_error?: unknown; backfill_before?: unknown };
+  return {
+    lastAt: typeof v.last_at === "string" ? v.last_at : null,
+    lastNew: typeof v.last_new === "number" ? v.last_new : 0,
+    lastError: typeof v.last_error === "string" ? v.last_error : null,
+    backfillBefore: typeof v.backfill_before === "number" ? v.backfill_before : null,
+  };
+}
+
+async function saveSync(v: { last_at: string | null; last_new: number; last_error: string | null; backfill_before: number | null }): Promise<void> {
+  await createAdminClient().from("app_settings").upsert({ key: SYNC_KEY, value: v as unknown as Json }, { onConflict: "key" });
+}
+
+/** Gmail's ids for a query, newest first, up to `cap`. */
+async function listIds(query: string, cap: number): Promise<string[]> {
+  const ids: string[] = [];
+  let pageToken: string | undefined;
+  do {
+    const r = await gmail<{ messages?: { id: string }[]; nextPageToken?: string }>(`messages?q=${encodeURIComponent(query)}&maxResults=100${pageToken ? `&pageToken=${pageToken}` : ""}`);
+    ids.push(...(r.messages ?? []).map((m) => m.id));
+    pageToken = r.nextPageToken;
+  } while (pageToken && ids.length < cap);
+  return ids.slice(0, cap);
+}
+
+/** Copies the messages that are not in the table yet; returns how many, and the oldest date among the ones looked at. */
+async function copyNew(ids: string[]): Promise<{ added: number; oldest: number | null }> {
+  const admin = createAdminClient();
+  const known = new Set<string>();
+  for (let i = 0; i < ids.length; i += 200) {
+    const { data } = await admin.from("office_mail").select("gmail_id").in("gmail_id", ids.slice(i, i + 200));
+    for (const r of data ?? []) known.add(r.gmail_id);
+  }
+  const fresh = ids.filter((id) => !known.has(id));
+  let added = 0;
+  let oldest: number | null = null;
+  for (let i = 0; i < fresh.length; i += 10) {
+    const batch = await Promise.all(fresh.slice(i, i + 10).map((id) => gmail<FullMessage>(`messages/${id}?format=full`)));
+    const rows = batch.map((m) => {
+      const { email, name } = senderOf(header(m, "from"));
+      const sec = Math.floor(Number(m.internalDate) / 1000);
+      oldest = oldest === null ? sec : Math.min(oldest, sec);
+      return { gmail_id: m.id, thread_id: m.threadId ?? null, from_email: email, from_name: name, subject: header(m, "subject").slice(0, 500), snippet: (m.snippet ?? "").slice(0, 1000), body: freshText(m.payload), sent_at: new Date(Number(m.internalDate)).toISOString() };
+    });
+    const { error } = await admin.from("office_mail").upsert(rows, { onConflict: "gmail_id", ignoreDuplicates: true });
+    if (error) throw error;
+    added += rows.length;
+  }
+  return { added, oldest };
 }
 
 /**
- * New mail since the last run (two days of overlap; `full` = everything since 1.9.2026)
- * into office_mail, then the linking. Our own outgoing mail is left out.
+ * One run: new mail since the last run (two days of overlap) - and, while the season's
+ * older mail is not all copied yet, one more slice of it going backwards (`backfill_before`).
+ * `full` starts the backward walk again from today. Our own outgoing mail is left out.
  */
-export async function syncOfficeMail(opts?: { full?: boolean }): Promise<{ scanned: number; added: number; linked: number }> {
+export async function syncOfficeMail(opts?: { full?: boolean }): Promise<{ scanned: number; added: number; linked: number; backfillLeft: boolean }> {
   const admin = createAdminClient();
   const prev = await getOfficeMailSync();
-  const sinceSec = opts?.full || !prev.lastAt ? Math.floor(Date.parse("2026-09-01T00:00:00Z") / 1000) : Math.floor((Date.parse(prev.lastAt) - 2 * 86_400_000) / 1000);
-  const query = `after:${sinceSec} -from:${MAILBOX()} -in:sent -in:drafts`;
+  const base = `-from:${MAILBOX()} -in:sent -in:drafts`;
+  const floorSec = Math.floor(Date.parse(FLOOR) / 1000);
+  const nowSec = Math.floor(Date.now() / 1000);
+  const first = !prev.lastAt;
   try {
-    const ids: string[] = [];
-    let pageToken: string | undefined;
-    do {
-      const r = await gmail<{ messages?: { id: string }[]; nextPageToken?: string }>(`messages?q=${encodeURIComponent(query)}&maxResults=100${pageToken ? `&pageToken=${pageToken}` : ""}`);
-      ids.push(...(r.messages ?? []).map((m) => m.id));
-      pageToken = r.nextPageToken;
-    } while (pageToken && ids.length < 1000);
-
-    const known = new Set<string>();
-    for (let i = 0; i < ids.length; i += 200) {
-      const { data } = await admin.from("office_mail").select("gmail_id").in("gmail_id", ids.slice(i, i + 200));
-      for (const r of data ?? []) known.add(r.gmail_id);
+    let scanned = 0, added = 0;
+    // 1. the fresh slice - since the last run; the very first run (or `full`) starts the backward walk instead
+    let backfillBefore = opts?.full || first ? nowSec + 60 : prev.backfillBefore;
+    if (!first && !opts?.full) {
+      const ids = await listIds(`after:${Math.floor((Date.parse(prev.lastAt as string) - 2 * 86_400_000) / 1000)} ${base}`, PER_RUN);
+      scanned += ids.length;
+      added += (await copyNew(ids)).added;
     }
-    const fresh = ids.filter((id) => !known.has(id));
-    let added = 0;
-    for (let i = 0; i < fresh.length; i += 10) {
-      const batch = await Promise.all(fresh.slice(i, i + 10).map((id) => gmail<FullMessage>(`messages/${id}?format=full`)));
-      const rows = batch.map((m) => {
-        const { email, name } = senderOf(header(m, "from"));
-        return { gmail_id: m.id, thread_id: m.threadId ?? null, from_email: email, from_name: name, subject: header(m, "subject").slice(0, 500), snippet: (m.snippet ?? "").slice(0, 1000), body: freshText(m.payload), sent_at: new Date(Number(m.internalDate)).toISOString() };
-      });
-      const { error } = await admin.from("office_mail").upsert(rows, { onConflict: "gmail_id", ignoreDuplicates: true });
-      if (error) throw error;
-      added += rows.length;
+    // 2. one slice of the backlog, newest first, down to the floor
+    if (backfillBefore) {
+      const ids = await listIds(`after:${floorSec} before:${backfillBefore} ${base}`, PER_RUN);
+      scanned += ids.length;
+      const r = await copyNew(ids);
+      added += r.added;
+      backfillBefore = ids.length < PER_RUN ? null : (r.oldest ?? backfillBefore - 86_400);
     }
     const { data: linked } = await admin.rpc("office_mail_link");
-    await admin.from("app_settings").upsert({ key: SYNC_KEY, value: { last_at: new Date().toISOString(), last_new: added, last_error: null } as unknown as Json }, { onConflict: "key" });
-    return { scanned: ids.length, added, linked: typeof linked === "number" ? linked : 0 };
+    await saveSync({ last_at: new Date().toISOString(), last_new: added, last_error: null, backfill_before: backfillBefore });
+    return { scanned, added, linked: typeof linked === "number" ? linked : 0, backfillLeft: backfillBefore !== null };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    await admin.from("app_settings").upsert({ key: SYNC_KEY, value: { last_at: prev.lastAt, last_new: prev.lastNew, last_error: msg.slice(0, 300) } as unknown as Json }, { onConflict: "key" });
+    await saveSync({ last_at: prev.lastAt, last_new: prev.lastNew, last_error: msg.slice(0, 300), backfill_before: prev.backfillBefore });
     throw e;
   }
 }
