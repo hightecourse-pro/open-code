@@ -84,7 +84,7 @@ export function ProjectStage({ p }: { p: ShowcaseProject }) {
           ) : null}
           {p.productUrl && (
             <a href={p.productUrl} target="_blank" rel="noopener noreferrer" className={BTN_INK} data-testid="sh-live">
-              למערכת החיה בענן ↗
+              למוצר בענן ↗
             </a>
           )}
         </div>

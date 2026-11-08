@@ -2,15 +2,14 @@
 // The second portal's explorer (the owner, 5/11: ״בקוביות קטנות יותר את שאר הפרויקטים עם סינון נח״): the
 // heading, a filter line that sticks under the top bar while the grid scrolls (the partner pills, ״עלו
 // לגמר״, the search), a row of technology chips, and the grid of small tiles - without the three winners,
-// who have their own cards above, until a filter is on (then everything that matches, winners first).
-// Under the grid: the partners' section (three cards - the name, the challenge's technology, the count;
-// a click filters the grid AND opens the details under the row). Same URL state as the first portal
-// (?ch=&q=&t=&f=), so links between the two designs mean the same thing.
-import Image from "next/image";
+// who have their own cards above, until a filter is on (then everything that matches). The grid runs in
+// the challenges' order, each challenge opening with its finalists (the product manager, 8/11: ״העולות
+// לגמר למעלה בלי סדר״). The partners' cards moved to the top of the page (partners.tsx) and share this
+// URL state (?ch=&q=&t=&f=), as do the links between the two designs.
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
-import { CHALLENGE_INFO, CHALLENGE_ORDER, byAward, filterProjects, isChallengeKey, normalize, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
-import { COLOR, CompanyDetails, PILL, PILL_OFF, PILL_ON, ProjectCard, SHEBA_LOGO, SectionHead, WRAP } from "./ui";
+import { CHALLENGE_INFO, CHALLENGE_ORDER, byChallenge, filterProjects, isChallengeKey, normalize, type ChallengeKey, type ShowcaseProject } from "@/lib/hackathon-showcase";
+import { PILL, PILL_OFF, PILL_ON, ProjectCard, SectionHead, WRAP } from "./ui";
 
 export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; topTech: { name: string; count: number }[] }) {
   const sp = useSearchParams();
@@ -62,7 +61,7 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
 
   const active = !!(ch || q || techSel.length || finals);
   const winners = new Set(projects.filter((p) => p.award === "winner").map((p) => p.k8));
-  const matches = byAward(filterProjects(projects, { challenge: ch, q, tech: techSel, finals }));
+  const matches = byChallenge(filterProjects(projects, { challenge: ch, q, tech: techSel, finals }));
   // the three winners have their own cards above - the plain grid is ״שאר הפרויקטים״; a filter shows everything that matches
   const list = active ? matches : matches.filter((p) => !winners.has(p.k8));
   const countOf = (k: ChallengeKey | "") => filterProjects(projects, { challenge: k, q, tech: techSel, finals }).length;
@@ -84,7 +83,7 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
                 </button>
               </p>
             ) : (
-              <p className="text-[18px] leading-relaxed text-[#4E4862]">לפי אתגר, לפי טכנולוגיה או בחיפוש חופשי. לחיצה על כל פרויקט - הסרטון, המערכת החיה והמשפט של מי שבנתה אותו.</p>
+              <p className="text-[18px] leading-relaxed text-[#4E4862]">לכל פרויקט עמוד משלו: סרטון הדגמה, קישור למוצר ומשפט אישי ממי שבנתה אותה. אפשר לסנן לפי אתגר או לפי טכנולוגיה, או לחפש.</p>
             )}
           </SectionHead>
         </div>
@@ -141,57 +140,7 @@ export function Explorer({ projects, topTech }: { projects: ShowcaseProject[]; t
           )}
         </div>
       </section>
-
-      {/* the partners - under the grid; a card filters the grid above and opens its details here */}
-      <section id="challenges" className={`${WRAP} pt-10 pb-6 flex flex-col gap-9 scroll-mt-16`} data-testid="sh-companies">
-        <SectionHead eyebrow="האתגרים" title="שלושה אתגרים. שלוש בעיות אמיתיות מהשטח." />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6" role="group" aria-label="סינון לפי חברה">
-          {CHALLENGE_ORDER.map((k) => (
-            <CompanyCard key={k} k={k} on={ch === k} count={projects.filter((p) => p.challenge === k).length} onClick={() => pickCompany(k)} />
-          ))}
-        </div>
-        {ch && <CompanyDetails k={ch} />}
-      </section>
     </>
-  );
-}
-
-/**
- * A partner's card, as the canvas draws the challenge cards: the small grey line, the big name, the
- * bold line (here the challenge's technology), the count and the arrow - a button that filters the
- * grid and opens the details under the row.
- */
-function CompanyCard({ k, on, count, onClick }: { k: ChallengeKey; on: boolean; count: number; onClick: () => void }) {
-  const c = CHALLENGE_INFO[k];
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={on}
-      aria-expanded={on}
-      className={`text-start flex flex-col gap-3.5 p-7 rounded-[14px] bg-white border transition-colors outline-none focus-visible:ring-2 focus-visible:ring-[#4A4EA3] ${on ? "border-[#1B1530] shadow-[0_0_0_1.5px_#1B1530]" : "border-[#ECE8F2] hover:border-[#1B1530]"}`}
-      style={{ borderTop: `4px solid ${COLOR[k]}` }}
-      data-testid="sh-company"
-      data-ch={k}
-      data-on={on ? "1" : "0"}
-    >
-      <span className="flex items-center justify-between gap-3">
-        <span className="text-[13px] font-bold text-[#6B6580]">{c.org}</span>
-        <span className="flex items-center gap-2.5">
-          <Image src={c.logos[0]} alt="" width={220} height={151} className="h-8 w-auto max-w-[110px] object-contain" />
-          {/* Sheba beside the lab's emblem (the owner, 5/11: ״למטה באתגרים תוסיף את הלוגו של שיבא ליד המעבדה״) */}
-          {k === "virology" && <Image src={SHEBA_LOGO.src} alt={SHEBA_LOGO.alt} width={SHEBA_LOGO.width} height={SHEBA_LOGO.height} className="h-8 w-auto max-w-[110px] object-contain" data-testid="sh-company-sheba" />}
-        </span>
-      </span>
-      <span className="text-[28px] font-black leading-[1.2] text-[#1B1530]">{c.short}</span>
-      <span className="text-[17px] font-bold text-[#1B1530]" dir="ltr" data-testid="sh-company-tech">
-        {c.techLabel}
-      </span>
-      <span className="flex items-center justify-between gap-3 pt-3.5 mt-auto border-t border-[#F0EDF5]">
-        <span className="text-[14px] text-[#6B6580]">{count} פרויקטים</span>
-        <span className="text-[15px] font-bold text-[#4A4EA3]">{on ? "לסגירה ↑" : "לפרטים ←"}</span>
-      </span>
-    </button>
   );
 }
 
