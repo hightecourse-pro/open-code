@@ -3,9 +3,10 @@
 // A separate route (/hackathon-2026/showcase) beside the first one, so the two can be compared.
 // Same static data, the booklet's words, nothing judged. The pieces here need no browser state.
 //
-// The order, since 5/11 (the owner: ״אף אחד לא יגלול למטה עד הפרויקטים״): a short numbers dashboard at
-// the top, the three winners with their pictures, then every other project in small tiles with the
-// filter line stuck under the top bar - the partners, ״איך זה עבד״ and the employers' call come after.
+// The order, since 8/11 (the product manager's notes through the owner): the three partners' cards with one
+// sentence each on top and the figures under them (partners.tsx), the three winners with their pictures,
+// then every other project in small tiles - the challenges' order, each opening with its finalists - with
+// the filter line stuck under the top bar; the sentences and the employers' call come after.
 // The canvas's rhythm stays: one container (1240 + 24px gutters), one heading block in every section
 // (an eyebrow of 14px, an h2 of 40px/800, an optional 18px line), cards with 1px #ECE8F2 borders and
 // 12-14px corners, the tinted band on top, the dark employers' block on white.
@@ -58,14 +59,14 @@ export function TopBar({ onProjectPage = false }: { onProjectPage?: boolean }) {
           <Logo width={132} />
         </Link>
         <nav className="flex flex-wrap items-center gap-5 sm:gap-7">
+          <Link href={anchor("challenges")} className={item}>
+            האתגרים
+          </Link>
           <Link href={anchor("featured")} className={item}>
             הזוכות
           </Link>
           <Link href={anchor("projects")} className={item}>
             כל הפרויקטים
-          </Link>
-          <Link href={anchor("challenges")} className={item}>
-            האתגרים
           </Link>
           {CLIP_URL && (
             <a href={CLIP_URL} target="_blank" rel="noopener noreferrer" className={`${item} inline-flex items-center gap-1.5 font-bold text-[#B0154B] hover:text-[#D81B5C]`} data-testid="sh-clip">
@@ -104,8 +105,8 @@ export function StatBox({ n, label, href }: { n: number; label: string; href?: s
 /** Sheba's mark - beside the virology lab's emblem wherever the lab appears (the owner, 5/11). */
 export const SHEBA_LOGO = { src: "/hackathon-2026/logo-sheba.png", width: 600, height: 301, alt: "המרכז הרפואי שיבא" };
 type Mark = { src: string; width: number; height: number; alt: string };
-/** The partners' marks for the dashboard - the lab's tile carries Sheba AND the lab's own emblem. */
-const PARTNER_LOGOS: Record<ChallengeKey, Mark[]> = {
+/** The partners' marks on their cards (partners.tsx) - the lab's card carries Sheba AND the lab's own emblem (the owner, 5/11). */
+export const PARTNER_LOGOS: Record<ChallengeKey, Mark[]> = {
   strauss: [{ src: "/hackathon-2026/logo-strauss.png", width: 220, height: 151, alt: "שטראוס" }],
   virology: [SHEBA_LOGO, { src: "/hackathon-2026/logo-virology.png", width: 120, height: 120, alt: "המעבדה המרכזית לנגיפים" }],
   phoenix: [{ src: "/hackathon-2026/logo-phoenix.png", width: 387, height: 132, alt: "הפניקס" }],
@@ -123,11 +124,11 @@ export const CONTACT = {
 
 /**
  * The top of the page (the owner, 5/11: ״צריך בקצרה דשבורד של נתונים … כל הטקסט למעלה מיותר … צריך את
- * הלוגו של ההאקתון עם הנפשה … במקום 60 פרויקטים כתוב 3 אתגרים מהתעשיה ובמקום החלק שהורדת את 3 הסמלים של
- * האתגרים״): the jumping logo on the right; the five figures and the three partners' marks on the left - no
- * words. Tinted, as the canvas's hero. Short enough that the winners show on the first screen.
+ * הלוגו של ההאקתון עם הנפשה״; the product manager, 8/11: ״למעלה הייתי שמה את 3 החברות ומתחת את המספרים״):
+ * the jumping logo on the right; on the left the three partners' cards (`partners` - the client piece that
+ * reads ?ch=, partners.tsx) and the five figures under them - no words of its own. Tinted, as the canvas's hero.
  */
-export function Dashboard() {
+export function Dashboard({ partners }: { partners: ReactNode }) {
   const s = STATS;
   return (
     <section id="numbers" className="bg-[#F7F5FB] scroll-mt-16" data-testid="sh-hero">
@@ -136,22 +137,13 @@ export function Dashboard() {
           <HackathonLogo className="w-[260px] lg:w-[280px] max-w-full h-auto" />
         </div>
         <div className="flex flex-col gap-4 min-w-0">
+          {partners}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-px bg-[#E3DDEE] border border-[#E3DDEE] rounded-[12px] overflow-hidden" data-testid="sh-stats">
-            <StatBox n={COUNTS.challenges} label="אתגרים מהתעשייה" href="#challenges" />
+            <StatBox n={COUNTS.challenges} label="אתגרים מהתעשייה" />
             <StatBox n={COUNTS.people} label="מפתחות" />
-            <StatBox n={s.live} label="מערכות חיות בענן" />
+            <StatBox n={s.live} label="מוצרים בענן" />
             <StatBox n={s.tech} label="טכנולוגיות" />
             <StatBox n={COUNTS.institutions ?? 0} label="מוסדות לימוד" />
-          </div>
-          {/* the three partners - a click shows that partner's projects */}
-          <div className="grid grid-cols-3 gap-3" role="group" aria-label="החברות השותפות" data-testid="sh-partners">
-            {CHALLENGE_ORDER.map((k) => (
-              <Link key={k} href={`${BASE}?ch=${k}#projects`} className="flex items-center justify-center gap-4 h-[84px] px-4 bg-white border border-[#E3DDEE] rounded-[12px] hover:border-[#1B1530] transition-colors" aria-label={`הפרויקטים של ${CHALLENGE_INFO[k].short}`} data-testid="sh-partner-logo" data-ch={k}>
-                {PARTNER_LOGOS[k].map((l) => (
-                  <Image key={l.src} src={l.src} alt={l.alt} width={l.width} height={l.height} className="h-11 w-auto max-w-[45%] object-contain" />
-                ))}
-              </Link>
-            ))}
           </div>
         </div>
       </div>
@@ -214,12 +206,12 @@ export function ProjectLink({ p, className = "", dark = false }: { p: ShowcasePr
   );
 }
 
-/** The live system in the cloud, when the project has one. */
+/** The product in the cloud, when the project has one (the product manager, 8/11: ״מערכת חיה לא נשמע - תשנה ל: למוצר״). */
 export function LiveLink({ p, className = "" }: { p: ShowcaseProject; className?: string }) {
   if (!p.productUrl) return null;
   return (
     <a href={p.productUrl} target="_blank" rel="noopener noreferrer" className={`inline-flex items-center gap-1 font-bold ${sized(className)} text-[#1B1530] hover:text-[#4A4EA3] ${className}`} data-testid="sh-live-link">
-      מערכת חיה ↗
+      למוצר ↗
     </a>
   );
 }
@@ -260,7 +252,7 @@ export function ProjectCard({ p, eager = false }: { p: ShowcaseProject; eager?: 
   );
 }
 
-/** A winner's card, kept small (the owner, 5/11): the picture, the partner's line, the name, two lines, three technologies, the links. */
+/** A winner's card, kept small (the owner, 5/11): the picture, the partner's chip (8/11: its name only, one colour for all), the name, two lines, three technologies, the links. */
 function WinnerCard({ p }: { p: ShowcaseProject }) {
   const title = teamName(p);
   const href = `${BASE}/${p.k8}`;
@@ -270,9 +262,8 @@ function WinnerCard({ p }: { p: ShowcaseProject }) {
         {p.image && <Image src={p.image} alt={p.caption ?? title} fill sizes="(min-width: 768px) 420px, 100vw" className="object-cover object-top" priority />}
       </Link>
       <div className="flex flex-col gap-2 p-4 flex-1">
-        <span className="text-[12.5px] font-bold" style={{ color: COLOR[p.challenge] }}>
-          זוכת האתגר · {CHALLENGE_INFO[p.challenge].short}
-        </span>
+        {/* the product manager (8/11): ״רק את שם החברה ולכולם אותו צבע״ - the grid's chip */}
+        <ChallengeChip k={p.challenge} className="self-start" />
         <h3 className="text-[19px] font-extrabold leading-tight text-[#1B1530]">
           <Link href={href} className="hover:text-[#4A4EA3] hover:underline underline-offset-4">
             {title}

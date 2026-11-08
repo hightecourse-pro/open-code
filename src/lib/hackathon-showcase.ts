@@ -54,6 +54,8 @@ export interface ChallengeInfo {
   pattern: string;
   /** The challenge's technology in two words, as the partner's tile shows it (the owner, 4/11: ״רק עם טכנולוגיית האתגר, לדוגמא Crawling & RAG״). */
   techLabel: string;
+  /** One short sentence about the challenge, on the partner's card (the product manager, 8/11: ״משפט הסבר אחד קצר על האתגר״). */
+  sentence: string;
   /** Card tint + hard-shadow colour, in the challenge's own hue. */
   tint: string;
   shadow: string;
@@ -72,6 +74,7 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
       "סוכן שיחה שעוזר לעובדות שטראוס לבחור רכב: מנהל שיחה בשפה טבעית, אוסף רק את מה שחסר, מחשב בקוד מה יקרה לנטו של החודש הבא, ושואל את נציג התחבורה במקום לנחש.",
     pattern: "סוכן עם כלים וחישוב בקוד",
     techLabel: "Agent & Tools",
+    sentence: "סוכן שיחה שעוזר לעובדות שטראוס לבחור רכב ומחשב מה יקרה לנטו.",
     tint: "bg-tint-mint/40",
     shadow: "#CFE6D8",
   },
@@ -87,6 +90,7 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
       "עשרות טפסי התחייבות סרוקים ביום, בכתב יד ובחותמות. המערכות קוראות אותם, ממלאות שבעה שדות מובנים, מסמנות בכנות את מה שלא בטוח, ומשאירות את ההחלטה לבודקת - ואז מייצאות לאקסל של המעבדה.",
     pattern: "קריאת מסמכים עם בקרה אנושית",
     techLabel: "OCR & Human-in-the-loop",
+    sentence: "טפסי התחייבות סרוקים בכתב יד הופכים לשדות מובנים, וההחלטה נשארת אצל הבודקת.",
     tint: "bg-white",
     shadow: "#F3C6DD",
   },
@@ -101,6 +105,7 @@ export const CHALLENGE_INFO: Record<ChallengeKey, ChallengeInfo> = {
       "בוט שעונה ללקוחות הפניקס רק מתוך אתר הפניקס: מאתר את הקטע הנכון, עונה בשפה פשוטה, מצטט מקור, ויודע להגיד ״לא כתוב באתר״ במקום להמציא.",
     pattern: "תשובות מתוך גוף ידע (RAG)",
     techLabel: "Crawling & RAG",
+    sentence: "בוט שעונה ללקוחות הפניקס רק מתוך אתר הפניקס, ומצטט את המקור.",
     tint: "bg-tint-warm/50",
     shadow: "#F7D9B8",
   },
@@ -217,6 +222,16 @@ export function finalsOf(challenge: ChallengeKey): { winner: ShowcaseProject | n
 export function byAward(list: ShowcaseProject[]): ShowcaseProject[] {
   const rank = (p: ShowcaseProject) => (p.award === "winner" ? 0 : p.finalist ? 1 : 2);
   return [...list].sort((a, b) => rank(a) - rank(b));
+}
+
+/**
+ * The challenges' order, each opening with its winner and finalists (in the finals' order) and then its other
+ * projects in the booklet's order - the second portal's grid (the product manager, 8/11: ״הפרויקטים של העולות
+ * לגמר למעלה בלי סדר״).
+ */
+export function byChallenge(list: ShowcaseProject[]): ShowcaseProject[] {
+  const rank = (p: ShowcaseProject) => (p.award === "winner" ? 0 : p.finalist ? 1 : 2);
+  return [...list].sort((a, b) => CHALLENGE_ORDER.indexOf(a.challenge) - CHALLENGE_ORDER.indexOf(b.challenge) || rank(a) - rank(b) || (a.finalist ?? 0) - (b.finalist ?? 0));
 }
 
 /** The technologies by how many projects used them. */
