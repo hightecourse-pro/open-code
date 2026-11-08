@@ -10,6 +10,8 @@ import { CoursePromoStrip } from "@/components/patterns/course-promo-popup";
 import { HackathonTicketsPopup } from "@/components/patterns/hackathon-tickets-popup";
 import { PresenceHeartbeat } from "@/components/patterns/presence-heartbeat";
 import { ViewerMarker } from "@/components/patterns/stale-while-revalidate";
+import { RouteFallback } from "@/components/patterns/route-fallback";
+import { Suspense } from "react";
 import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
 import { judgeAccessFor } from "@/lib/judging";
 import { COURSE_KEY } from "@/lib/course-registration";
@@ -322,7 +324,11 @@ export default async function AuthenticatedLayout({
           </span>
         </Link>
       )}
-      {children}
+      {/* The loading boundary lives HERE, not in a loading.tsx (8/11): a loading.tsx is re-created with every
+          sibling segment and replaced the live page the moment she clicked; this boundary already shows
+          content, so a navigation keeps the old page live until the new one is ready, and only a cold load
+          shows the fallback. */}
+      <Suspense fallback={<RouteFallback />}>{children}</Suspense>
       {/* The floating message-to-the-team widget (PM ask) - the reply lands
           back in her chat. */}
       <MemberRequestWidget requests={myRequests} launchNudge={launchNudgeOn} />
