@@ -79,7 +79,10 @@ function watchNavigationFetches() {
 /**
  * A page whose server fetch is still streaming, or closed within this window, is fresh enough: no background
  * refresh (8/11 - a refresh re-renders the whole page, and she bounces between a list and its rows; 45s of
- * staleness on a quick return is nothing, and her own actions refresh explicitly anyway).
+ * staleness on a quick return is nothing, and her own actions refresh explicitly anyway). The bigger reason to
+ * refresh rarely: in Next 16 every router.refresh() invalidates the WHOLE segment cache (refresh-reducer.js:
+ * ״we invalidate the segment cache but not the route cache״), so each refresh also costs every other visited
+ * page its instant return - the next click on it is a plain fetch again (with the live page + ״טוענת…״).
  */
 const FRESH_ENOUGH_MS = 45_000;
 function fetchedWithin(path: string, ms: number): boolean {
