@@ -10,16 +10,19 @@ import { clearSnapshots, readSnapshot, setViewer, writeSnapshot } from "@/lib/sn
  *  1. A page she already visited comes straight from the router cache
  *     (next.config staleTimes). <RevalidateStale> - rendered by each route
  *     group's template.tsx, so it mounts on every navigation - watches the
- *     router's own page fetches; a cached replay has none in flight or
- *     recent, so it refreshes in the background and shows the ״מתעדכן…״
- *     pill until the fresh render swaps in.
- *  2. While a route still loads, she sees the last snapshot of it: on a
- *     click, <SnapshotCapture> swaps the current page for the destination's
- *     snapshot (dimmed, inert, with the pill) until the navigation commits -
- *     Next 16 keeps the old page on screen during a navigation, so without
- *     this a slow page reads as "nothing happened". Cold loads get the same
- *     preview from every loading.tsx (<SnapshotLoading>). Each settled
- *     render is stored for next time.
+ *     router's own page fetches; a cached replay whose last server fetch is
+ *     older than FRESH_ENOUGH_MS refreshes in the background and shows the
+ *     ״מתעדכן…״ pill until the fresh render swaps in; the page stays live
+ *     meanwhile. A quick return (under 45s) is fresh enough and costs nothing
+ *     (8/11 - every refresh re-renders the whole page).
+ *  2. While a route still loads, the page she is on STAYS - live and
+ *     clickable - with a ״טוענת…״ pill (8/11, the owner: ״כל הרעיון של עדכון
+ *     ברקע היה שאפשר יהיה לעבוד בינתיים, זה מקפיא את המסך״; until then a
+ *     dimmed, inert snapshot of the destination replaced it). Next 16 keeps
+ *     the old page on screen during a navigation; the pill is the feedback.
+ *     Only a cold document load, where there is no live page yet, shows the
+ *     last snapshot of the route from loading.tsx (<SnapshotLoading>). Each
+ *     settled render is stored for that.
  */
 
 /* ---------- which paths are being fetched from the server right now ---------- */
@@ -73,10 +76,17 @@ function watchNavigationFetches() {
     );
   };
 }
-/** A fetch that is still streaming, or closed within this window, is the navigation that just brought the page. */
-const FRESH_MS = 2500;
-function justFetched(path: string): boolean {
-  return inFlight.has(path) || Date.now() - (endedAt.get(path) ?? 0) < FRESH_MS;
+/**
+ * A page whose server fetch is still streaming, or closed within this window, is fresh enough: no background
+ * refresh (8/11 - a refresh re-renders the whole page, and she bounces between a list and its rows; 45s of
+ * staleness on a quick return is nothing, and her own actions refresh explicitly anyway). The bigger reason to
+ * refresh rarely: in Next 16 every router.refresh() invalidates the WHOLE segment cache (refresh-reducer.js:
+ * ״we invalidate the segment cache but not the route cache״), so each refresh also costs every other visited
+ * page its instant return - the next click on it is a plain fetch again (with the live page + ״טוענת…״).
+ */
+const FRESH_ENOUGH_MS = 45_000;
+function fetchedWithin(path: string, ms: number): boolean {
+  return inFlight.has(path) || Date.now() - (endedAt.get(path) ?? 0) < ms;
 }
 let firstMount = true;
 
@@ -106,9 +116,9 @@ export function UpdatingPill({ label = "מתעדכן…" }: { label?: string }) 
 
 /**
  * Mounts on every navigation (template.tsx). The document itself is fresh
- * on the first mount; afterwards, a path whose page is neither being fetched
- * nor was fetched in the last 2.5s was replayed from the router cache -
- * refresh it in the background.
+ * on the first mount (and counts as fetched now); afterwards, a path whose
+ * page was not fetched from the server in the last 45s was replayed from the
+ * router cache - refresh it in the background, the page stays live meanwhile.
  */
 export function RevalidateStale() {
   const router = useRouter();
@@ -118,9 +128,10 @@ export function RevalidateStale() {
     watchNavigationFetches();
     if (firstMount) {
       firstMount = false;
+      endedAt.set(pathname, Date.now());
       return;
     }
-    if (justFetched(pathname)) return;
+    if (fetchedWithin(pathname, FRESH_ENOUGH_MS)) return;
     // the route's loading boundary is up = its page is on the way right now
     if (document.querySelector("[data-snapshot-root] [data-snapshot-loading]")) return;
     start(() => router.refresh());
@@ -128,24 +139,23 @@ export function RevalidateStale() {
   return pending ? <UpdatingPill /> : null;
 }
 
-/* ---------- snapshots: capture, click preview ---------- */
+/* ---------- snapshots: capture; the pill while a click's page is on its way ---------- */
 
-interface Preview {
+interface Pending {
   path: string;
-  html: string | null;
-  /** The route she clicked from - once the pathname moves on, the preview is over. */
+  /** The route she clicked from - once the pathname moves on, the navigation is over. */
   from: string;
 }
 
 /**
- * Wraps the route (template.tsx): keeps the last settled render for next
- * time, and on an in-app link click shows the destination's last snapshot
- * in place of the current page until the navigation commits.
+ * Wraps the route (template.tsx): keeps the last settled render for the cold
+ * load's loading.tsx, and on an in-app link click shows the ״טוענת…״ pill
+ * while the page she is on stays live until the navigation commits.
  */
 export function SnapshotCapture({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const [preview, setPreview] = useState<Preview | null>(null);
+  const [pending, setPending] = useState<Pending | null>(null);
 
   // capture the settled render of this route
   useEffect(() => {
@@ -189,15 +199,17 @@ export function SnapshotCapture({ children }: { children: ReactNode }) {
         return;
       }
       if (url.origin !== location.origin || url.pathname === location.pathname) return;
-      const html = readSnapshot(url.pathname)?.html ?? null;
       if (timer) clearTimeout(timer);
-      // a cached destination commits at once - no need to flash a preview for it
+      // the template is not re-created between sibling routes, so the record of the previous navigation may
+      // still be here - and its `from` can equal the route we are about to reach: drop it before the move
+      setPending(null);
+      // a cached destination commits at once - no need to flash the pill for it
       const from = location.pathname;
-      timer = setTimeout(() => setPreview({ path: url.pathname, html, from }), 150);
+      timer = setTimeout(() => setPending({ path: url.pathname, from }), 150);
     };
     const onPop = () => {
       if (timer) clearTimeout(timer);
-      setPreview(null);
+      setPending(null);
     };
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPop);
@@ -208,28 +220,20 @@ export function SnapshotCapture({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // a navigation that goes nowhere (modal link, aborted): give the page back after a while
+  // a navigation that goes nowhere (modal link, aborted): drop the pill after a while
   useEffect(() => {
-    if (!preview) return;
-    const t = setTimeout(() => setPreview(null), 12000);
+    if (!pending) return;
+    const t = setTimeout(() => setPending(null), 12000);
     return () => clearTimeout(t);
-  }, [preview]);
+  }, [pending]);
 
-  // the navigation committed (new pathname) = the preview is over; the template remounts anyway
-  const active = preview && preview.from === pathname ? preview : null;
-  const showing = !!active?.html;
+  // the navigation committed (new pathname) = the pill is over; the template remounts anyway.
+  // The page itself is never hidden, dimmed or replaced: she keeps working on it until the new one is ready.
+  const active = pending && pending.from === pathname ? pending : null;
   return (
     <>
-      {active &&
-        (active.html ? (
-          <div data-nav-preview={active.path} aria-busy="true" className="relative min-w-0 max-w-full overflow-hidden">
-            <div data-snapshot-html className="pointer-events-none select-none opacity-75" dangerouslySetInnerHTML={{ __html: active.html }} />
-            <UpdatingPill label="מציגה את מה שראית לאחרונה · מתעדכן…" />
-          </div>
-        ) : (
-          <UpdatingPill label="טוענת…" />
-        ))}
-      <div ref={ref} data-snapshot-root className={showing ? "hidden" : "contents"}>
+      {active && <UpdatingPill label="טוענת…" />}
+      <div ref={ref} data-snapshot-root className="contents">
         {children}
       </div>
     </>
