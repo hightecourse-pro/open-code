@@ -197,6 +197,9 @@ export function SnapshotCapture({ children }: { children: ReactNode }) {
       }
       if (url.origin !== location.origin || url.pathname === location.pathname) return;
       if (timer) clearTimeout(timer);
+      // the template is not re-created between sibling routes, so the record of the previous navigation may
+      // still be here - and its `from` can equal the route we are about to reach: drop it before the move
+      setPending(null);
       // a cached destination commits at once - no need to flash the pill for it
       const from = location.pathname;
       timer = setTimeout(() => setPending({ path: url.pathname, from }), 150);
