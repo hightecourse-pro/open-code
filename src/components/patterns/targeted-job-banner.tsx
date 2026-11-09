@@ -33,7 +33,7 @@ export function TargetedJobBanner({ jobs }: { jobs: TargetedJobLite[] }) {
           href={`/jobs/${job.id}/apply`}
           data-targeted-job={job.id}
           data-fresh={job.isNew ? "1" : "0"}
-          className="group flex flex-wrap items-baseline gap-x-3 gap-y-1 transition-[transform,filter] duration-[220ms] hover:-translate-y-0.5 hover:brightness-105"
+          className="group flex flex-wrap items-baseline gap-x-3 gap-y-1 text-white hover:text-white hover:no-underline transition-[transform,filter] duration-[220ms] hover:-translate-y-0.5 hover:brightness-105"
         >
           <span className="font-display font-bold text-[16px]">
             {/* ״חדשה״ for a week from the opening - the board's ״חדש״ pill keeps the same week (the owner, 19/10). */}
