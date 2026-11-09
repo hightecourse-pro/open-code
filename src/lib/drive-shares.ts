@@ -34,7 +34,7 @@ import {
 } from "@/lib/drive-api";
 import { sendResendEmail } from "@/lib/email/resend";
 import { driveEmailRequestEmail } from "@/lib/email/templates";
-import type { ContentOwner } from "@/types/database";
+import type { ContentOwner, ShareStatus } from "@/types/database";
 
 // ---------------------------------------------------------------- queueing
 
@@ -255,6 +255,8 @@ export interface SyncResult {
   revoked: number;
   failed: number;
   skipped: number;
+  /** Pending rows whose content has no links yet - they wait, they are not work, and they never block the batch (9/11). */
+  waitingForLinks: number;
   /** Members emailed because their address isn't a Google account. */
   gmailRequested: number;
   /**
@@ -361,6 +363,109 @@ export async function linksFor(
   return { driveIds, totalLinks: (data ?? []).length };
 }
 
+type AdminClient = ReturnType<typeof createAdminClient>;
+
+/** One queue row as the worker reads it. */
+interface ShareRow {
+  id: string;
+  owner_type: ContentOwner;
+  owner_id: string;
+  profile_id: string;
+  status: ShareStatus;
+  granted_email: string | null;
+  created_at: string;
+}
+type OwnerLinks = { driveIds: string[]; totalLinks: number };
+
+/** `linksFor` for many owners at once (chunked), keyed `${type}:${id}`. */
+async function linksForMany(
+  admin: AdminClient,
+  rows: Pick<ShareRow, "owner_type" | "owner_id">[]
+): Promise<Map<string, OwnerLinks>> {
+  const out = new Map<string, OwnerLinks>();
+  for (const r of rows) out.set(`${r.owner_type}:${r.owner_id}`, { driveIds: [], totalLinks: 0 });
+  const ids = [...new Set(rows.map((r) => r.owner_id))];
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data } = await admin
+      .from("content_links")
+      .select("owner_type, owner_id, url")
+      .in("owner_id", ids.slice(i, i + 100));
+    for (const l of data ?? []) {
+      const entry = out.get(`${l.owner_type}:${l.owner_id}`);
+      if (!entry) continue;
+      entry.totalLinks++;
+      const id = driveFileId(l.url);
+      if (id) entry.driveIds.push(id);
+    }
+  }
+  return out;
+}
+
+/**
+ * The rows one run acts on: revokes first (losing access never waits behind
+ * grants), then the oldest grants that CAN be done. A pending row whose
+ * content has no links at all is not work - it waits for the recording or
+ * folder to arrive - so it must never take a seat in the batch. Until 9/11 it
+ * did: 110 rows of a July session that never got a recording sat at the head
+ * of the queue (oldest first), every run's 60 seats went to them and were
+ * counted ״skipped״, and nine real shares behind them - two course folders
+ * among them - starved for weeks with no failure to report (the owner: ״היא לא
+ * מצליחה להיכנס״). `blockedSet` = members we are still waiting on for a
+ * Google address; their grants are left out as before.
+ */
+async function loadShareBatch(
+  admin: AdminClient,
+  limit: number,
+  blockedSet: Set<string>
+): Promise<{ rows: ShareRow[]; waiting: number; blocked: number; files: Map<string, OwnerLinks> }> {
+  const COLS = "id, owner_type, owner_id, profile_id, status, granted_email, created_at";
+  // Over-fetch the pending rows: the waiting ones are told apart here, not by the database.
+  const [{ data: pendingRaw }, { data: revokedRaw }] = await Promise.all([
+    admin.from("content_shares").select(COLS).eq("status", "pending").order("created_at", { ascending: true }).limit(1000),
+    admin.from("content_shares").select(COLS).eq("status", "revoked").order("created_at", { ascending: true }).limit(limit),
+  ]);
+  const pendingAll = (pendingRaw ?? []) as ShareRow[];
+  const revoked = (revokedRaw ?? []) as ShareRow[];
+  const pending = pendingAll.filter((r) => !blockedSet.has(r.profile_id));
+  const files = await linksForMany(admin, [...revoked, ...pending]);
+  let waiting = 0;
+  const actionable = pending.filter((r) => {
+    if ((files.get(`${r.owner_type}:${r.owner_id}`)?.totalLinks ?? 0) > 0) return true;
+    waiting++;
+    return false;
+  });
+  return { rows: [...revoked, ...actionable].slice(0, limit), waiting, blocked: pendingAll.length - pending.length, files };
+}
+
+/** What a run would act on, without touching Google - the `?dry=1` answer of the cron route. */
+export async function inspectShareQueue(limit = 60): Promise<{
+  configured: boolean;
+  allowed: boolean;
+  grants: number;
+  revokes: number;
+  waitingForLinks: number;
+  blocked: number;
+  sample: string[];
+}> {
+  const admin = createAdminClient();
+  const { data: waitingMembers } = await admin
+    .from("member_private")
+    .select("profile_id")
+    .not("drive_email_requested_at", "is", null)
+    .limit(500);
+  const batch = await loadShareBatch(admin, limit, new Set((waitingMembers ?? []).map((p) => p.profile_id)));
+  return {
+    configured: isDriveAutomationConfigured(),
+    allowed: driveAutomationAllowed(),
+    grants: batch.rows.filter((r) => r.status === "pending").length,
+    revokes: batch.rows.filter((r) => r.status === "revoked").length,
+    waitingForLinks: batch.waiting,
+    blocked: batch.blocked,
+    // ids only - no names, no addresses
+    sample: batch.rows.slice(0, 10).map((r) => `${r.status} ${r.owner_type}:${r.owner_id.slice(0, 8)} ${r.created_at.slice(0, 10)}`),
+  };
+}
+
 /**
  * Action a bounded batch of the queue against Drive. Safe to run repeatedly -
  * every step is idempotent, and anything that fails is simply retried next
@@ -373,6 +478,7 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
     revoked: 0,
     failed: 0,
     skipped: 0,
+    waitingForLinks: 0,
     gmailRequested: 0,
   };
   if (!result.configured) return result;
@@ -399,36 +505,16 @@ export async function processShareQueue(limit = 60): Promise<SyncResult> {
     .limit(500);
   const blocked = (waiting ?? []).map((p) => p.profile_id);
 
-  const COLS = "id, owner_type, owner_id, profile_id, status, granted_email, created_at";
-
-  // Two plain queries rather than one clever combined filter: grants skip the
-  // members we're waiting on, revokes always run (they need no Google account).
-  // The blocked set is filtered in JS after an over-fetch: inlining hundreds
-  // of UUIDs into a NOT IN querystring approaches URL/header limits at scale.
-  const blockedSet = new Set(blocked);
-  const pendingQuery = admin
-    .from("content_shares")
-    .select(COLS)
-    .eq("status", "pending");
-
-  const [{ data: pendingRowsRaw }, { data: revokedRows }] = await Promise.all([
-    pendingQuery.order("created_at", { ascending: true }).limit(limit + blocked.length),
-    admin
-      .from("content_shares")
-      .select(COLS)
-      .eq("status", "revoked")
-      .order("created_at", { ascending: true })
-      .limit(limit),
-  ]);
-
-  const pendingRows = (pendingRowsRaw ?? []).filter((r) => !blockedSet.has(r.profile_id));
-  // Revokes first - losing access should never wait behind a backlog of grants.
-  const rows = [...(revokedRows ?? []), ...pendingRows].slice(0, limit);
+  // The batch: revokes first, then the oldest ACTIONABLE grants - rows whose
+  // content has no links yet wait outside it (see loadShareBatch).
+  const batch = await loadShareBatch(admin, limit, new Set(blocked));
+  result.waitingForLinks = batch.waiting;
+  const rows = batch.rows;
   if (rows.length === 0) return result;
 
-  // Resolve each member's email and each owner's file list once per batch.
+  // Resolve each member's email once per batch; the owners' file lists came with the batch.
   const emails = new Map<string, string | null>();
-  const files = new Map<string, { driveIds: string[]; totalLinks: number }>();
+  const files = batch.files;
   // Members whose address Drive rejected - asked for a Gmail once per batch.
   const askedForGmail = new Set<string>();
 
