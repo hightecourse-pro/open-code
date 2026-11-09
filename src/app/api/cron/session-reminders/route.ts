@@ -5,6 +5,7 @@ import { jobPublishedEmail, newMessageEmail, sessionReminderEmail } from "@/lib/
 import { getSiteUrl } from "@/lib/site";
 import { raiseAlert } from "@/lib/alerts";
 import { optedOutOfEmails } from "@/lib/email-prefs";
+import { normalizeEmail, optedOutEmails } from "@/lib/unsubscribe";
 
 /**
  * The 10-minute notifications tick (pg_cron): session reminders and queued
@@ -14,9 +15,10 @@ import { optedOutOfEmails } from "@/lib/email-prefs";
  * pool inside one invocation - at thousands of members that blows the
  * serverless time limit mid-loop with the stage already claimed, silently
  * skipping most of the community. Instead the claim ENQUEUES one row per
- * recipient (a single insert..select), and every tick drains a bounded batch
- * from the queue. Two overlapping ticks can't double-mail: the claim is
- * unique, and each queue row is stamped before the next is sent.
+ * recipient (a single insert..select), and every tick drains the queue through
+ * Resend's batch endpoint - a whole stage in one tick (9/11, see REMINDER_BATCH).
+ * Two ticks can't double-mail: the claim is unique, and the ticks are ten
+ * minutes apart while a drain takes seconds, so they never overlap.
  *
  * Recipients are the women entitled to join: paying members, mentors and the
  * team - or every active member when the session is open to all. Outside
@@ -26,8 +28,13 @@ import { optedOutOfEmails } from "@/lib/email-prefs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 150;
 
-// Bounded work per tick - ~35-45s of sequential sends at the worst.
-const REMINDER_BATCH = 90;
+// Bounded work per tick. The rows go out through Resend's batch endpoint (100
+// per request, 2 requests a second), so 1000 rows are ~10 requests and ~6s -
+// a whole stage reaches everyone in ONE tick. Until 9/11 this was 90 single
+// sends per tick: with 300+ subscribers ״בעוד חצי שעה״ kept arriving until the
+// session started and ״עכשיו מתחילים״ up to 30 minutes after it (sessions #4
+// and #5; the owner: ״היתה עם זה קצת בעיה בסשן האחרון״).
+const REMINDER_BATCH = 1000;
 // Batch sending (100 per request, 2 requests/second ≈ 200 emails/second):
 // 2,000 targets are ~20 requests, ~12 s - the whole three-job backlog of
 // 5/10 (~2,900) clears in two runs instead of eight hours. The publish action
@@ -167,7 +174,7 @@ async function enqueueDueReminders(admin: AdminClient, now: Date) {
   return { enqueued };
 }
 
-/** Drain a bounded batch of unsent reminder rows. */
+/** Drain the unsent reminder rows - a whole stage in one tick, through the batch endpoint. */
 async function drainReminderQueue(admin: AdminClient) {
   const { data: batch } = await admin
     .from("session_reminder_queue")
@@ -176,6 +183,7 @@ async function drainReminderQueue(admin: AdminClient) {
     .order("created_at", { ascending: true })
     .limit(REMINDER_BATCH);
   if (!batch?.length) return { sent: 0, remaining: 0 };
+  type Row = (typeof batch)[number];
 
   const sessionIds = [...new Set(batch.map((b) => b.session_id))];
   const { data: sessions } = await admin
@@ -186,27 +194,58 @@ async function drainReminderQueue(admin: AdminClient) {
   const emailOf = await emailsFor(admin, [...new Set(batch.map((b) => b.profile_id))]);
   // "בלי מיילים בכלל" (the owner, 6/10) - her reminders drain unsent.
   const optedOut = await optedOutOfEmails(admin, batch.map((b) => b.profile_id));
+  // ...and so do the addresses that pressed ״הסרה״ - the single sender checked
+  // this inside sendResendEmail, the batch endpoint leaves it to the caller.
+  const stopped = await optedOutEmails([...emailOf.values()]);
 
-  let sent = 0;
+  // Build every mail first, then one batch send; rows with nothing to send
+  // (voided session, no address, opted out) just drain.
+  const done: Row[] = [];
+  const toSend: { row: Row; to: string; subject: string; html: string }[] = [];
   for (const row of batch) {
     const session = sessionOf.get(row.session_id);
     // A canceled/finished session voids its queued reminders.
     const voided = !session || session.status === "done" || session.canceled_at || optedOut.has(row.profile_id);
     const email = voided ? null : emailOf.get(row.profile_id);
-    if (email && session) {
-      const time = TIME_IL.format(new Date(session.scheduled_at));
-      const mail = sessionReminderEmail(row.stage as Stage, session.title, time, session.zoom_url ?? null);
-      const res = await sendResendEmail({ to: email, subject: mail.subject, html: mail.html });
-      if (res.ok) sent++;
+    if (!email || !session || stopped.has(normalizeEmail(email))) {
+      done.push(row);
+      continue;
     }
-    // Stamp regardless (missing email / voided session = processed) so the
-    // queue always drains and never wedges on one bad row.
-    await admin
-      .from("session_reminder_queue")
-      .update({ sent_at: new Date().toISOString() })
-      .eq("session_id", row.session_id)
-      .eq("stage", row.stage)
-      .eq("profile_id", row.profile_id);
+    const time = TIME_IL.format(new Date(session.scheduled_at));
+    const mail = sessionReminderEmail(row.stage as Stage, session.title, time, session.zoom_url ?? null);
+    toSend.push({ row, to: email, subject: mail.subject, html: mail.html });
+  }
+  const outcomes = toSend.length ? await sendResendBatch(toSend.map(({ to, subject, html }) => ({ to, subject, html }))) : [];
+  let sent = 0;
+  let retried = 0;
+  for (let i = 0; i < toSend.length; i++) {
+    const res = outcomes[i];
+    if (res.ok) sent++;
+    // A pace refusal (429) leaves the row unstamped - the next tick retries it
+    // first. Anything else (sent, staging allowlist, a refused address) is
+    // stamped so the queue always drains and never wedges on one bad row.
+    if (res.ok || !res.error.startsWith("resend_429")) done.push(toSend[i].row);
+    else retried++;
+  }
+  if (retried) console.error(`[session reminders] ${retried} row(s) rate limited; the next tick retries them`);
+
+  // Stamp per (session, stage), 200 recipients an update - not one update a row.
+  const stampedAt = new Date().toISOString();
+  const groups = new Map<string, Row[]>();
+  for (const row of done) {
+    const key = `${row.session_id}:${row.stage}`;
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+  for (const rows of groups.values()) {
+    for (let i = 0; i < rows.length; i += 200) {
+      const slice = rows.slice(i, i + 200);
+      await admin
+        .from("session_reminder_queue")
+        .update({ sent_at: stampedAt })
+        .eq("session_id", slice[0].session_id)
+        .eq("stage", slice[0].stage)
+        .in("profile_id", slice.map((r) => r.profile_id));
+    }
   }
 
   const { count: remaining } = await admin
