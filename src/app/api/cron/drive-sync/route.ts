@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { appEnv, isProductionEnv } from "@/lib/env";
 import { checkDriveAccess } from "@/lib/drive-api";
-import { processShareQueue } from "@/lib/drive-shares";
+import { inspectShareQueue, processShareQueue } from "@/lib/drive-shares";
 
 /**
  * Actions the Drive share queue: grants access to members who should have it
@@ -26,6 +26,12 @@ function authorized(request: Request): boolean {
 export async function GET(request: Request) {
   if (!authorized(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // ?dry=1 (9/11): what the next run would act on - grants, revokes, rows still
+  // waiting for links - without touching Google. Any environment.
+  if (new URL(request.url).searchParams.get("dry") === "1") {
+    return NextResponse.json({ ok: true, dryRun: true, ...(await inspectShareQueue(60)) });
   }
 
   // The schedule ships in vercel.json, so a staging deployment gets it too.
