@@ -22,6 +22,9 @@ type ProfileLite = {
   specialization: string | null;
 };
 
+/** A targeted job is ״חדשה״ for a week from its opening - the week the board's ״חדש״ pill uses. */
+const NEW_FOR_MS = 7 * 24 * 60 * 60 * 1000;
+
 /** The saved toggle is the only URL state left - search filters client-side. */
 function forumHref(params: { saved?: boolean }): string {
   return params.saved ? "/forum?saved=1" : "/forum";
@@ -56,15 +59,33 @@ export default async function ForumPage({
         .eq("profile_id", profile.id);
       const targetIds = (myTargets ?? []).map((t) => t.job_id);
       if (targetIds.length === 0) return [];
-      const { data: tJobs } = await supabase
-        .from("jobs")
-        .select("id, title, company")
-        .in("id", targetIds)
-        .eq("status", "open")
-        .eq("source", "ours")
-        .eq("pipeline_status", "published")
-        .order("published_at", { ascending: false });
-      return tJobs ?? [];
+      // The same rule as the ״משרות בשבילך מקוד פתוח״ section of /jobs: a job
+      // she already applied to lives in ״ההגשות שלי״, a hidden one in ״הוסתרו״ -
+      // neither is waiting for her. The banner used to ignore both and kept
+      // announcing ״משרה חדשה מחכה לך״ for jobs she had applied to weeks
+      // before, while the board it sent her to showed none of them (שרי, 2.11).
+      const [{ data: tJobs }, { data: applied }, { data: hidden }] = await Promise.all([
+        supabase
+          .from("jobs")
+          .select("id, title, company, published_at, created_at")
+          .in("id", targetIds)
+          .eq("status", "open")
+          .eq("source", "ours")
+          .eq("pipeline_status", "published")
+          .order("published_at", { ascending: false }),
+        supabase.from("applications").select("job_id").eq("applicant_id", profile.id).in("job_id", targetIds),
+        supabase.from("hidden_jobs").select("job_id").eq("profile_id", profile.id).in("job_id", targetIds),
+      ]);
+      const skip = new Set([...(applied ?? []), ...(hidden ?? [])].map((r) => r.job_id));
+      return (tJobs ?? [])
+        .filter((j) => !skip.has(j.id))
+        .map((j) => ({
+          id: j.id,
+          title: j.title,
+          company: j.company,
+          // ״חדשה״ for a week from the opening, like the board's ״חדש״ pill (the owner, 19/10).
+          isNew: Date.now() - new Date(j.published_at ?? j.created_at).getTime() < NEW_FOR_MS,
+        }));
     })(),
 
     // The topic list itself. The saved filter narrows the query - applied

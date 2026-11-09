@@ -14,7 +14,8 @@ import { clearSnapshots, readSnapshot, setViewer, writeSnapshot } from "@/lib/sn
  *     older than FRESH_ENOUGH_MS refreshes in the background and shows the
  *     ״מתעדכן…״ pill until the fresh render swaps in; the page stays live
  *     meanwhile. A quick return (under 45s) is fresh enough and costs nothing
- *     (8/11 - every refresh re-renders the whole page).
+ *     (8/11 - every refresh re-renders the whole page) - except back from a
+ *     row to its list, which always refreshes (9/11, see RevalidateStale).
  *  2. While a route still loads, the page she is on STAYS - live and
  *     clickable - with a ״טוענת…״ pill (8/11, the owner: ״כל הרעיון של עדכון
  *     ברקע היה שאפשר יהיה לעבוד בינתיים, זה מקפיא את המסך״; until then a
@@ -89,6 +90,8 @@ function fetchedWithin(path: string, ms: number): boolean {
   return inFlight.has(path) || Date.now() - (endedAt.get(path) ?? 0) < ms;
 }
 let firstMount = true;
+/** The route the previous mount was on - tells a return to a list from one of its rows apart from any other move. */
+let lastPath: string | null = null;
 
 /** The shells tell the store who is signed in; a different member wipes the previous one's snapshots. */
 export function ViewerMarker({ id }: { id: string }) {
@@ -119,6 +122,14 @@ export function UpdatingPill({ label = "מתעדכן…" }: { label?: string }) 
  * on the first mount (and counts as fetched now); afterwards, a path whose
  * page was not fetched from the server in the last 45s was replayed from the
  * router cache - refresh it in the background, the page stays live meanwhile.
+ *
+ * Back from a row to its list (/forum/123 → /forum, /admin/members/… →
+ * /admin/members) refreshes even inside the 45s window: the visit itself
+ * changed what the list shows - her read stamp, an edit she saved - and the
+ * cached list still shows the old state (9/11, the owner: ״אני נכנסת וקוראת
+ * מה שחדש ועדיין נשאר הסימון חדש כשאני יוצאת מהפוסט״; until 8/11 every return
+ * refreshed, so this never showed). A list that was fetched for this very
+ * navigation (not replayed) is left alone.
  */
 export function RevalidateStale() {
   const router = useRouter();
@@ -126,12 +137,17 @@ export function RevalidateStale() {
   const [pending, start] = useTransition();
   useEffect(() => {
     watchNavigationFetches();
+    const cameFrom = lastPath;
+    lastPath = pathname;
     if (firstMount) {
       firstMount = false;
       endedAt.set(pathname, Date.now());
       return;
     }
-    if (fetchedWithin(pathname, FRESH_ENOUGH_MS)) return;
+    // fetched for this navigation (streaming now, or closed a moment ago) = fresh, whatever the move
+    if (fetchedWithin(pathname, 1_500)) return;
+    const fromRow = !!cameFrom && cameFrom.startsWith(pathname.endsWith("/") ? pathname : `${pathname}/`);
+    if (!fromRow && fetchedWithin(pathname, FRESH_ENOUGH_MS)) return;
     // the route's loading boundary is up = its page is on the way right now
     if (document.querySelector("[data-snapshot-root] [data-snapshot-loading]")) return;
     start(() => router.refresh());
