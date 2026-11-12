@@ -8,7 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { FIT_QUESTION } from "@/lib/member-overview";
 
-export const metadata: Metadata = { title: "מה הגשתי" };
+export const metadata: Metadata = { title: "פרטי המשרה ומה הגשתי" };
 
 const DATE_HE = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
 
@@ -24,6 +24,11 @@ function answerText(v: unknown): string {
  * הבאה״): her own application, read-only, also when the job has closed or is no longer
  * visible - the role, when she applied, her answers in the questions' words, the CV she
  * attached, her note. Nothing of the team's (marks, notes) is shown here.
+ *
+ * Since 10.11 the page also carries the job's requirements (חדוה אברמוביץ: ״אחרי שכבר הגשתי
+ * למשרה כלשהי אני לא יכולה לראות את הדרישות או את הפרטים של המשרה… אם רוצים להתכונן״): an applied
+ * job leaves the board, so without this the only way to its description was the edit link, and
+ * none once the application was forwarded or the job closed.
  */
 export default async function MyApplicationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -42,7 +47,7 @@ export default async function MyApplicationPage({ params }: { params: Promise<{ 
   if (!app || app.status === "draft") notFound();
 
   const [{ data: job }, { data: questions }, { data: cv }] = await Promise.all([
-    admin.from("jobs").select("id, title, company, status, pipeline_status, location, employment_type").eq("id", app.job_id).maybeSingle(),
+    admin.from("jobs").select("id, title, company, status, pipeline_status, location, employment_type, description, description_html").eq("id", app.job_id).maybeSingle(),
     admin.from("job_questions").select("id, question, sort_order").eq("job_id", app.job_id).order("sort_order", { ascending: true }),
     app.cv_document_id ? supabase.from("cv_documents").select("id, label, file_name, file_path").eq("id", app.cv_document_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
@@ -65,6 +70,9 @@ export default async function MyApplicationPage({ params }: { params: Promise<{ 
     if (data?.signedUrl) cvUrl = netfreeSafeUrl(data.signedUrl);
   }
   const appliedAt = app.submitted_at ?? app.created_at;
+  // The requirements exactly as the admin styled them (sanitized at save time by lib/rich-text).
+  const requirementsHtml = job?.description_html?.trim() ? job.description_html : null;
+  const requirementsText = !requirementsHtml && job?.description?.trim() ? job.description : null;
 
   return (
     <div className="flex flex-col gap-5 max-w-[640px]" data-testid="my-application">
@@ -73,7 +81,7 @@ export default async function MyApplicationPage({ params }: { params: Promise<{ 
       </Link>
 
       <div>
-        <span className="font-mono text-xs text-brand-pink-deep">&lt;מה הגשתי/&gt;</span>
+        <span className="font-mono text-xs text-brand-pink-deep">&lt;פרטי המשרה ומה הגשתי/&gt;</span>
         <h1 className="font-display text-[26px] font-black text-ink-1000 mt-1">{job?.title ?? "משרה"}</h1>
         <p className="text-[13.5px] text-ink-600 mt-1 flex items-center gap-2 flex-wrap">
           {appliedAt && <span>הוגשה {DATE_HE.format(new Date(appliedAt))}</span>}
@@ -84,10 +92,31 @@ export default async function MyApplicationPage({ params }: { params: Promise<{ 
             </span>
           )}
         </p>
-        <p className="text-[13px] text-ink-500 mt-2">מה שכתבת בהגשה, מילה במילה - גם כשהמשרה כבר לא פתוחה. שימושי כדי לדייק את ההגשה הבאה.</p>
+        <p className="text-[13px] text-ink-500 mt-2">דרישות המשרה ומה שכתבת בהגשה, מילה במילה - גם כשהמשרה כבר לא פתוחה. שימושי כדי להתכונן לראיון ולדייק את ההגשה הבאה.</p>
       </div>
 
-      <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4">
+      {(requirementsHtml || requirementsText) && (
+        <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm" data-testid="my-application-job">
+          <h2 className="font-display text-lg font-bold text-ink-1000 mb-3">דרישות המשרה</h2>
+          {requirementsHtml ? (
+            <div
+              dir="rtl"
+              className={[
+                "font-body text-[15px] leading-relaxed text-ink-900",
+                "[&_ul]:list-disc [&_ul]:ps-5 [&_ul]:my-1.5 [&_ol]:list-decimal [&_ol]:ps-5 [&_ol]:my-1.5",
+                "[&_h3]:font-display [&_h3]:font-bold [&_h3]:text-base [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-brand-purple",
+                "[&_a]:text-brand-purple [&_a]:underline",
+                "[&_p]:my-1.5 [&_b]:text-ink-1000 [&_strong]:text-ink-1000",
+              ].join(" ")}
+              dangerouslySetInnerHTML={{ __html: requirementsHtml }}
+            />
+          ) : (
+            <p className="t-body whitespace-pre-line text-ink-900">{requirementsText}</p>
+          )}
+        </section>
+      )}
+
+      <section className="bg-white border border-ink-200 rounded-[18px] p-5 shadow-sm flex flex-col gap-4" data-testid="my-application-answers">
         {answers.length === 0 && <p className="text-[13.5px] text-ink-500">להגשה הזו לא היו שאלות.</p>}
         {answers.map((qa, i) => (
           <div key={i} data-testid="my-application-answer">

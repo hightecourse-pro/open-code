@@ -76,7 +76,7 @@ function Row({
   stageLabel?: string | null;
   /** When set - the application is still open for edits/withdrawal. */
   editHref?: string | null;
-  /** ״מה הגשתי״ (the owner, 6.11): her own answers and CV, also after the job closed. */
+  /** ״פרטי המשרה ומה הגשתי״ (6.11; the requirements since 10.11): the job and her own answers and CV, also after the job closed. */
   detailsHref?: string | null;
 }) {
   return (
@@ -90,7 +90,7 @@ function Row({
         )}
         {detailsHref && (
           <Link href={detailsHref} className="text-[11.5px] font-semibold text-brand-purple hover:underline ms-2" data-testid="my-application-link">
-            מה הגשתי
+            פרטי המשרה ומה הגשתי
           </Link>
         )}
         {editHref && (
