@@ -9,6 +9,8 @@
  * keyed by her id - and wiped the moment the login page shows or another
  * member signs in on the same browser.
  */
+import { clearMembersCache } from "@/lib/admin-members-cache";
+
 const PREFIX = "oc-snap:";
 const VIEWER_KEY = "oc-snap-viewer";
 const INDEX_KEY = "oc-snap-index";
@@ -49,6 +51,7 @@ export function setViewer(id: string) {
 }
 
 export function clearSnapshots() {
+  clearMembersCache();
   safe(() => {
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const k = localStorage.key(i);

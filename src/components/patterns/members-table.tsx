@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Check, Copy, Search, X, StickyNote, UserRound, Target, Star, Eye } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { PresenceAvatar } from "@/components/patterns/presence-dot";
@@ -10,6 +10,7 @@ import { MemberActions } from "@/components/patterns/member-actions";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { evaluateMemberFilters } from "@/app/(admin)/admin/actions";
+import { readMembersCache, writeMembersCache } from "@/lib/admin-members-cache";
 import type { ProfileStatus, UserRole } from "@/types/database";
 
 export interface MemberRow {
@@ -38,6 +39,22 @@ export interface MemberRow {
   reminders?: string[];
   /** Presence (16/10): the heartbeat's last stamp - green dot when within 5 minutes. */
   last_seen_at?: string | null;
+}
+
+/** One filterable profile parameter (built server-side from the questions). */
+export interface FilterDef {
+  id: string; // question id
+  label: string;
+  type: "choice" | "text" | "language";
+  options: { value: string; label: string }[];
+}
+
+/** What /api/admin/members returns and the browser keeps (lib/admin-members-data, lib/admin-members-cache). */
+export interface AdminMembersData {
+  members: MemberRow[];
+  filterDefs: FilterDef[];
+  /** When the server assembled it (ISO). */
+  at: string;
 }
 
 /** The member's TYPE in words - the export's status column. */
@@ -72,14 +89,6 @@ function CopyButton({ text, title }: { text: string; title: string }) {
       {done ? <Check size={12} className="text-success" /> : <Copy size={12} />}
     </button>
   );
-}
-
-/** One filterable profile parameter (built server-side from the questions). */
-export interface FilterDef {
-  id: string; // question id
-  label: string;
-  type: "choice" | "text" | "language";
-  options: { value: string; label: string }[];
 }
 
 type ActiveFilter = { defId: string; values: string[]; text: string };
@@ -121,16 +130,78 @@ const COLUMNS: { key: string; label: string; sortVal?: (m: MemberRow) => string;
   { key: "actions", label: "פעולות" },
 ];
 
+/**
+ * Rows painted at a time (15.11). At 3,000+ members the table rendered every
+ * row, so each keystroke in the search re-rendered them all - seconds per
+ * letter on the owner's machine (״הוא גם לא מקליד לי בחיפוש חברות״). The
+ * filters and the export still run over the whole list; only the paint is
+ * windowed - the next window comes when she scrolls to the end (or clicks).
+ */
+const PAGE = 120;
+const NO_MEMBERS: MemberRow[] = [];
+const NO_DEFS: FilterDef[] = [];
+const subscribeNoop = () => () => {};
+const TIME_HE = new Intl.DateTimeFormat("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+
+/**
+ * The list, stale-while-revalidate for real (15.11): the copy her browser
+ * kept paints at once (useSyncExternalStore - the server render and the
+ * first client render agree on ״nothing yet״, then the cached copy takes
+ * over), and /api/admin/members is fetched behind it on every mount and on
+ * every server render of the shell (`renderedAt` moves: her own actions
+ * revalidate the path, RevalidateStale refreshes it in the background).
+ */
+function useAdminMembers(viewerId: string, renderedAt: number) {
+  const cached = useSyncExternalStore(subscribeNoop, () => readMembersCache(viewerId), () => null);
+  const [attempt, setAttempt] = useState(0);
+  const fetchKey = `${renderedAt}:${attempt}`;
+  const [result, setResult] = useState<{ key: string; data: AdminMembersData | null; error: string | null } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/members", { cache: "no-store", credentials: "same-origin" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = (await res.json()) as AdminMembersData;
+        if (!alive) return;
+        writeMembersCache(viewerId, data);
+        setResult({ key: fetchKey, data, error: null });
+      } catch (e) {
+        if (!alive) return;
+        setResult((r) => ({ key: fetchKey, data: r?.data ?? null, error: e instanceof Error ? e.message : String(e) }));
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [viewerId, fetchKey]);
+  const fresh = result?.data ?? null;
+  return {
+    data: fresh ?? cached,
+    /** The copy on screen is the browser's, the server's is still on its way. */
+    stale: !fresh && !!cached,
+    fetching: result?.key !== fetchKey,
+    error: result?.key === fetchKey ? result.error : null,
+    retry: () => setAttempt((a) => a + 1),
+  };
+}
+
 export function MembersTable({
-  members,
-  filterDefs = [],
   initialStatus = "",
+  viewerId,
+  renderedAt,
 }: {
-  members: MemberRow[];
-  filterDefs?: FilterDef[];
   /** Pre-applied status filter - the dashboard cubes deep-link with it. */
   initialStatus?: string;
+  /** The signed-in admin - the browser copy of the list is hers alone. */
+  viewerId: string;
+  /** The shell's server render stamp - a new one refetches the list. */
+  renderedAt: number;
 }) {
+  const { data, stale, fetching, error, retry } = useAdminMembers(viewerId, renderedAt);
+  const members = data?.members ?? NO_MEMBERS;
+  const filterDefs = data?.filterDefs ?? NO_DEFS;
+
   const [q, setQ] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const [vip, setVip] = useState(false);
@@ -139,6 +210,9 @@ export function MembersTable({
   const [sort, setSort] = useState<{ col: string; dir: 1 | -1 } | null>(null);
   const [finderOpen, setFinderOpen] = useState(false);
   const [active, setActive] = useState<ActiveFilter[]>([]);
+  // The inputs echo every keystroke at once; the table follows at lower priority.
+  const dq = useDeferredValue(q);
+  const dColFilters = useDeferredValue(colFilters);
 
   const defOf = useMemo(() => new Map(filterDefs.map((d) => [d.id, d])), [filterDefs]);
   const available = filterDefs.filter((d) => !active.some((f) => f.defId === d.id));
@@ -217,8 +291,11 @@ export function MembersTable({
     return TYPE_DEFS.find((t) => t.id === status)?.test ?? RAW_STATUS[status] ?? (() => true);
   }, [status]);
 
+  // The chips' counts - once per list, not nine passes per keystroke.
+  const typeCounts = useMemo(() => new Map(TYPE_DEFS.map((t) => [t.id, members.filter(t.test).length])), [members]);
+
   const rows = useMemo(() => {
-    const needle = q.trim().toLowerCase();
+    const needle = dq.trim().toLowerCase();
     const sortDef = sort ? COLUMNS.find((c) => c.key === sort.col) : null;
     return members
       .filter((m) => {
@@ -230,7 +307,7 @@ export function MembersTable({
         }
         // Per-column contains-filters (the owner, 1/9).
         for (const c of COLUMNS) {
-          const f = (colFilters[c.key] ?? "").trim().toLowerCase();
+          const f = (dColFilters[c.key] ?? "").trim().toLowerCase();
           if (f && c.filterVal && !c.filterVal(m).toLowerCase().includes(f)) return false;
         }
         // Candidate finder: the server returned the ids that match ALL the
@@ -247,10 +324,27 @@ export function MembersTable({
         if (finding && a.is_vip !== b.is_vip) return a.is_vip ? -1 : 1;
         return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
       });
-  }, [members, q, typeTest, vip, matchIds, finding, colFilters, sort]);
+  }, [members, dq, typeTest, vip, matchIds, finding, dColFilters, sort]);
+
+  // The paint window: PAGE rows of the current result, more on scroll/click; a new result starts over.
+  const [window_, setWindow] = useState<{ rows: MemberRow[]; limit: number } | null>(null);
+  const limit = window_ && window_.rows === rows ? window_.limit : PAGE;
+  const shown = rows.length > limit ? rows.slice(0, limit) : rows;
+  const moreRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = moreRef.current;
+    if (!el || rows.length <= limit) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) setWindow({ rows, limit: limit + PAGE });
+    });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [rows, limit]);
+
+  const listTime = data ? TIME_HE.format(new Date(data.at)) : "";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-members-table data-members-source={!data ? "none" : stale ? "cache" : "fresh"}>
       {/* instant search / filter */}
       <div className="bg-white border border-ink-200 rounded-md p-3 flex flex-wrap gap-2 items-center shadow-sm">
         <div className="relative flex-1 min-w-[180px]">
@@ -259,6 +353,7 @@ export function MembersTable({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="חיפוש לפי שם / תחום / אזור…"
+            data-members-search
             className="w-full ps-9 pe-8 py-2 rounded-md border border-ink-300 text-sm outline-none focus:border-brand-purple"
           />
           {q && (
@@ -331,15 +426,30 @@ export function MembersTable({
         >
           ⬇ יצוא לאקסל
         </button>
-        <span className="text-[12px] text-ink-500 ms-auto">
-          {finding && matching ? "מסננת…" : `${rows.length} תוצאות`}
+        <span className="text-[12px] text-ink-500 ms-auto inline-flex items-center gap-2">
+          {data && (finding && matching ? "מסננת…" : `${rows.length} תוצאות`)}
+          {/* the quiet background refresh (15.11): the list on screen stays live and typeable meanwhile */}
+          {data && fetching && (
+            <span data-members-updating className="inline-flex items-center gap-1.5 text-ink-400" title={stale ? `הרשימה מ-${listTime} - הגרסה הטרייה בדרך` : "הגרסה הטרייה בדרך"}>
+              <span className="h-2.5 w-2.5 rounded-full border-2 border-ink-300 border-t-brand-purple animate-spin" aria-hidden />
+              מתעדכן…
+            </span>
+          )}
+          {data && !fetching && error && (
+            <span data-members-error className="text-warning inline-flex items-center gap-1.5">
+              לא הצלחתי לרענן - מוצגת הרשימה מ-{listTime}
+              <button type="button" onClick={retry} className="font-semibold text-brand-purple hover:underline">
+                לנסות שוב
+              </button>
+            </span>
+          )}
         </span>
       </div>
 
       {/* one-click TYPE chips with live counts (the owner, 1/9) */}
       <div className="flex gap-2 flex-wrap">
-        {[{ id: "", label: "הכל", test: () => true as boolean, onlyWhenAny: false }, ...TYPE_DEFS].map((t) => {
-          const n = t.id === "" ? members.length : members.filter(t.test).length;
+        {[{ id: "", label: "הכל", onlyWhenAny: false }, ...TYPE_DEFS].map((t) => {
+          const n = t.id === "" ? members.length : (typeCounts.get(t.id) ?? 0);
           if (t.onlyWhenAny && n === 0) return null;
           const on = status === t.id;
           return (
@@ -497,8 +607,8 @@ export function MembersTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((m) => (
-              <tr key={m.id} className={cn(finding && m.is_vip && "bg-tint-warm/30")}>
+            {shown.map((m) => (
+              <tr key={m.id} data-member-row className={cn(finding && m.is_vip && "bg-tint-warm/30")}>
                 <td className="p-2 border-b border-ink-100">
                   <div className="flex items-center gap-2">
                     <PresenceAvatar lastSeen={m.last_seen_at} size="xs" role={m.role}>
@@ -606,13 +716,44 @@ export function MembersTable({
                 <td className="p-2 border-b border-ink-100"><MemberActions profileId={m.id} status={m.status} /></td>
               </tr>
             ))}
-            {rows.length === 0 && (
+            {!data && (
               <tr>
-                <td colSpan={9} className="p-6 text-center text-ink-500">לא נמצאו חברות בסינון הזה.</td>
+                <td colSpan={10} className="p-8 text-center text-ink-500" data-members-loading>
+                  {error ? (
+                    <span className="inline-flex items-center gap-2 flex-wrap justify-center">
+                      לא הצלחתי לטעון את רשימת החברות.
+                      <button type="button" onClick={retry} className="font-semibold text-brand-purple hover:underline">
+                        לנסות שוב
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-2" role="status">
+                      <span className="h-4 w-4 rounded-full border-2 border-tint-purple border-t-brand-purple animate-spin" aria-hidden />
+                      טוענת את רשימת החברות…
+                    </span>
+                  )}
+                </td>
+              </tr>
+            )}
+            {data && rows.length === 0 && (
+              <tr>
+                <td colSpan={10} className="p-6 text-center text-ink-500">לא נמצאו חברות בסינון הזה.</td>
               </tr>
             )}
           </tbody>
         </table>
+        {rows.length > limit && (
+          <div ref={moreRef} data-members-more className="flex items-center justify-center gap-3 pt-4 text-[12.5px] text-ink-500">
+            מוצגות {shown.length} מתוך {rows.length}
+            <button
+              type="button"
+              onClick={() => setWindow({ rows, limit: limit + PAGE })}
+              className="font-semibold text-brand-purple hover:underline"
+            >
+              הצגת עוד
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
