@@ -12,6 +12,7 @@ import { StatusPill, RoleTag } from "@/components/patterns/member-tags";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { isRichHtml } from "@/lib/rich-text-lite";
 import { nameWithPrevSurname } from "@/lib/names";
+import { dependencyMet } from "@/lib/question-deps";
 import { MemberCrm } from "@/components/patterns/member-crm";
 import { MemberActions } from "@/components/patterns/member-actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
@@ -453,17 +454,18 @@ export default async function AdminMemberProfilePage({
   }
 
   // Which questions does HER wizard actually show? Same rules as the member
-  // form: scope by role, the experience track, and bool parents (depends_on
-  // holds the parent question's key). Rendering only answered questions hid
-  // every newly activated question - staff had no way to see it on any member.
+  // form: scope by role, the experience track, and the parents (depends_on
+  // holds a parent bool's key, or a parent select's "key=value|value" - see
+  // lib/question-deps). Rendering only answered questions hid every newly
+  // activated question - staff had no way to see it on any member.
   const scope: QuestionScope[] =
     profile.role === "mentor" ? ["all", "mentor"] : ["all", "junior"];
   const boolAnswerByKey = new Map<string, boolean>();
+  const selectAnswerByKey = new Map<string, string>();
   for (const q of questions ?? []) {
-    if (q.field_type === "bool") {
-      const v = answerMap.get(q.id);
-      if (typeof v === "boolean") boolAnswerByKey.set(q.key, v);
-    }
+    const v = answerMap.get(q.id);
+    if (q.field_type === "bool" && typeof v === "boolean") boolAnswerByKey.set(q.key, v);
+    if (q.field_type === "select" && typeof v === "string") selectAnswerByKey.set(q.key, v);
   }
   const gateAnswer = boolAnswerByKey.get("has_experience");
   function inHerWizard(q: ConfigQuestion): boolean {
@@ -473,7 +475,7 @@ export default async function AdminMemberProfilePage({
     // Until she answers the gate, neither track is ruled out.
     if (gateAnswer === true && q.intake_track === "junior") return false;
     if (gateAnswer === false && q.intake_track === "experienced") return false;
-    if (q.depends_on && !boolAnswerByKey.get(q.depends_on)) return false;
+    if (!dependencyMet(q.depends_on, (k) => boolAnswerByKey.get(k), (k) => selectAnswerByKey.get(k))) return false;
     return true;
   }
 

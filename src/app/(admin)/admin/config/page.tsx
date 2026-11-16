@@ -12,6 +12,7 @@ import { setLaunchNudge, setMentorPoolNotice } from "../actions";
 import { getPricing } from "@/lib/payments/pricing";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { groupBySection } from "@/lib/profile-sections";
+import { parseDependsOn } from "@/lib/question-deps";
 import { Collapsible } from "@/components/patterns/collapsible";
 import { buildPlans, shekels } from "@/lib/payments/plans";
 import type { ConfigTaxonomy, FieldType, TaxonomyKind } from "@/types/database";
@@ -233,14 +234,22 @@ export default async function AdminConfigPage() {
               </div>
               <p className="text-[11.5px] text-ink-500 mt-1 mb-1">{section.hint}</p>
           {section.questions.map((q, i) => {
-            // A follow-up question is asked only when its parent bool is "כן" -
-            // so if the parent is switched off, the follow-up can never show up
-            // even while it says "פעילה". Say that out loud instead of leaving
-            // her to guess why an enabled question doesn't reach the members.
-            const parent = q.depends_on
-              ? (questions ?? []).find((p) => p.key === q.depends_on)
-              : undefined;
-            const parentOff = !!q.depends_on && (!parent || !parent.active);
+            // A follow-up question is asked only when its parent bool is "כן"
+            // (or its parent select holds one of the listed answers - the
+            // depends_on grammar in lib/question-deps). If the parent is
+            // switched off, the follow-up can never show up even while it says
+            // "פעילה". Say that out loud instead of leaving her to guess why an
+            // enabled question doesn't reach the members.
+            const dep = parseDependsOn(q.depends_on);
+            const parent = dep ? (questions ?? []).find((p) => p.key === dep.key) : undefined;
+            const parentOff = !!dep && (!parent || !parent.active);
+            const parentOptions =
+              parent && Array.isArray(parent.options)
+                ? (parent.options as unknown as { value: string; label: string }[])
+                : [];
+            const depAnswers = dep?.values
+              ? dep.values.map((v) => parentOptions.find((o) => o.value === v)?.label ?? v)
+              : null;
             // Structural questions drive the form's logic - they can't be disabled.
             const locked = q.key === "has_experience";
             const editable =
@@ -271,9 +280,11 @@ export default async function AdminConfigPage() {
                       {q.intake_track === "experienced" && (
                         <Badge variant="warm">רק למי שיש לה ניסיון</Badge>
                       )}
-                      {q.depends_on && (
+                      {dep && (
                         <Badge variant="tech">
-                          רק אם ענתה כן על: {parent?.label_he ?? q.depends_on}
+                          {depAnswers
+                            ? `רק אם ענתה על ״${parent?.label_he ?? dep.key}״: ${depAnswers.join(" / ")}`
+                            : `רק אם ענתה כן על: ${parent?.label_he ?? dep.key}`}
                         </Badge>
                       )}
                     </div>
@@ -281,7 +292,7 @@ export default async function AdminConfigPage() {
                       <p className="text-[11.5px] text-[#8C5E0E] bg-tint-warm border border-[#F0DCA8] rounded-md px-2.5 py-1.5 mt-1.5">
                         {parent
                           ? `השאלה פעילה, אבל "${parent.label_he}" כבויה - כל עוד היא כבויה השאלה הזו לא תופיע אצל החברות. הפעילי אותה כדי שתחזור.`
-                          : `השאלה פעילה, אבל השאלה שהיא תלויה בה (${q.depends_on}) לא קיימת - כך היא לא תופיע אצל החברות.`}
+                          : `השאלה פעילה, אבל השאלה שהיא תלויה בה (${dep?.key}) לא קיימת - כך היא לא תופיע אצל החברות.`}
                       </p>
                     )}
                   </div>

@@ -35,6 +35,7 @@ import { RichTextEditor } from "@/components/patterns/rich-text-editor";
 import { FormDraft } from "@/components/patterns/form-draft";
 import { LinksListEditor } from "@/components/patterns/links-list-editor";
 import { groupBySection } from "@/lib/profile-sections";
+import { dependencyMet, parseDependsOn } from "@/lib/question-deps";
 import { CITIES } from "@/data/cities";
 import {
   DEFAULT_LANGUAGES,
@@ -257,14 +258,15 @@ export function ProfileForm({
   const [selOther, setSelOther] = useState(initSelOther);
   const [multiVals, setMultiVals] = useState(initMultiVals);
 
-  // Select-value dependencies: depends_on may be "key=value" (e.g. the
-  // where-do-you-work follow-up shows only for "עובדת בהייטק"). Only parent
-  // selects are tracked in state - the rest stay uncontrolled.
+  // Select-value dependencies: depends_on may be "key=value|value" (e.g. the
+  // where-do-you-work follow-up shows only for the "עובדת בהייטק" answers -
+  // the grammar lives in lib/question-deps). Only parent selects are tracked
+  // in state - the rest stay uncontrolled.
   const selectParentKeys = new Set(
     rest
-      .map((q) => q.depends_on)
-      .filter((d): d is string => !!d && d.includes("="))
-      .map((d) => d.split("=")[0]),
+      .map((q) => parseDependsOn(q.depends_on))
+      .filter((d): d is { key: string; values: string[] } => !!d?.values)
+      .map((d) => d.key),
   );
   const initSelVals: Record<string, string> = {};
   for (const q of rest) {
@@ -318,14 +320,7 @@ export function ProfileForm({
     if (expChoice === null) return false;
     if (q.intake_track === "junior" && hasExperience) return false;
     if (q.intake_track === "experienced" && !hasExperience) return false;
-    if (q.depends_on) {
-      if (q.depends_on.includes("=")) {
-        const [pk, pv] = q.depends_on.split("=");
-        if (selVals[pk] !== pv) return false;
-      } else if (!bools[q.depends_on]) {
-        return false;
-      }
-    }
+    if (!dependencyMet(q.depends_on, (k) => bools[k], (k) => selVals[k])) return false;
     return true;
   }
 
