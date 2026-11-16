@@ -7,6 +7,7 @@ import { reconcileSubscriberStatus } from "@/lib/payments/external";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { FIELD_VALIDATORS } from "@/lib/validators";
+import { dependencyMet } from "@/lib/question-deps";
 import { htmlToPlainText, sanitizeRichHtml } from "@/lib/rich-text";
 import { parseLinkItems } from "@/lib/link-items";
 import { DEFAULT_LANGUAGES, LANGUAGE_SKILLS_KEY, LANG_LEVELS } from "@/lib/language-skills";
@@ -208,8 +209,8 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
   }
   const hasExperience = boolByKey.get("has_experience") ?? false;
 
-  // Select-value dependencies ("key=value"): the parent select's submitted
-  // value decides whether the follow-up is considered at all.
+  // Select-value dependencies ("key=value|value"): the parent select's
+  // submitted value decides whether the follow-up is considered at all.
   const selectValueByKey = new Map<string, string>();
   for (const q of questions ?? []) {
     if (q.field_type === "select") {
@@ -222,15 +223,9 @@ export async function saveProfile(_prev: ProfileState, formData: FormData): Prom
     // Skip questions hidden by the experience track - don't require/store them.
     if (q.intake_track === "junior" && hasExperience) continue;
     if (q.intake_track === "experienced" && !hasExperience) continue;
-    // Skip conditional follow-ups whose parent is off - don't require them.
-    if (q.depends_on) {
-      if (q.depends_on.includes("=")) {
-        const [pk, pv] = q.depends_on.split("=");
-        if (selectValueByKey.get(pk) !== pv) continue;
-      } else if (!boolByKey.get(q.depends_on)) {
-        continue;
-      }
-    }
+    // Skip conditional follow-ups whose parent is off or holds another answer -
+    // don't require them (the depends_on grammar: lib/question-deps).
+    if (!dependencyMet(q.depends_on, (k) => boolByKey.get(k), (k) => selectValueByKey.get(k))) continue;
 
     let value: Json;
     let empty = false;
