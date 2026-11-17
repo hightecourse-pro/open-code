@@ -125,6 +125,7 @@ export default async function AdminSessionsPage() {
     syllabus_url: s.syllabus_url ?? null,
     materials_url: s.materials_url ?? null,
     duration_minutes: s.duration_minutes ?? null,
+    feedback_enabled: s.feedback_enabled !== false,
     views: viewsBySession.get(s.id)?.size ?? 0,
     recordingUrl: recBySession.get(s.id) ?? null,
     feedback: fbBySession.get(s.id) ?? { avg: null, count: 0, entries: [] },

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Ban, Check, ChevronDown, Clock, Pencil, Play, Trash2, Users, Search , FolderOpen } from "lucide-react";
-import { Badge, Button, Field, Input } from "@/components/ui";
+import { Badge, Button, Checkbox, Field, Input } from "@/components/ui";
 import { cn, fmtIsraelDateTime, isoToIsraelInput, israelLocalToIso } from "@/lib/utils";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { cancelSession, deleteSession, markSessionDone } from "../actions";
@@ -19,6 +19,8 @@ export interface AdminSessionRow {
   syllabus_url: string | null;
   materials_url: string | null;
   duration_minutes: number | null;
+  /** Members are asked ״היית איתנו בסשן?״ for a week after it (off = ״בלי משוב״). */
+  feedback_enabled: boolean;
   /** Distinct members who opened the session's material/recording. */
   views: number;
   feedback: {
@@ -98,6 +100,14 @@ function EditForm({ s, onClose }: { s: AdminSessionRow; onClose: () => void }) {
       <Field label="קישור Zoom" htmlFor={`z-${s.id}`}>
         <Input id={`z-${s.id}`} name="zoom_url" dir="ltr" defaultValue={s.zoom_url ?? ""} />
       </Field>
+      <Field label="משוב אחרי הסשן" htmlFor={`fb-${s.id}`}>
+        <Checkbox
+          id={`fb-${s.id}`}
+          name="feedback_enabled"
+          defaultChecked={s.feedback_enabled}
+          label="לשאול את החברות ״היית איתנו בסשן?״ בשבוע שאחריו"
+        />
+      </Field>
       <div className="flex items-end gap-2">
         <Button type="submit" size="sm" disabled={pending}>
           {pending ? "שומר…" : "שמירה"}
@@ -131,6 +141,15 @@ function Row({ s, past, panel }: { s: AdminSessionRow; past: boolean; panel?: Re
                 <Clock size={11} /> {s.duration_minutes} דק&#39;
               </span>
             ) : null}
+            {!s.feedback_enabled && (
+              <span
+                className="inline-flex items-center text-[11px] font-bold px-2 py-0.5 rounded-full bg-ink-100 text-ink-600"
+                title="החברות לא נשאלות ״היית איתנו בסשן?״ על הסשן הזה"
+                data-session-no-feedback
+              >
+                בלי משוב
+              </span>
+            )}
             {past && !s.canceled_at && (
               <span className="inline-flex items-center gap-1" title="חברות שנכנסו לתוכן הסשן">
                 <Users size={11} /> {s.views === 1 ? "משתתפת אחת" : `${s.views} משתתפות`}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Alert, Button, Field, Input } from "@/components/ui";
+import { Alert, Button, Checkbox, Field, Input } from "@/components/ui";
 import { createSession, type FormState } from "@/app/(admin)/admin/actions";
 import { fmtIsraelDateTime, israelLocalToIso } from "@/lib/utils";
 
@@ -51,6 +51,14 @@ export function AdminCreateSession() {
         </Field>
         <Field label="משך (דקות)" htmlFor="s-duration">
           <Input id="s-duration" name="duration_minutes" type="number" min={15} step={15} dir="ltr" placeholder="90" />
+        </Field>
+        <Field label="משוב אחרי הסשן" htmlFor="s-feedback">
+          <Checkbox
+            id="s-feedback"
+            name="feedback_enabled"
+            defaultChecked
+            label="לשאול את החברות ״היית איתנו בסשן?״ בשבוע שאחריו"
+          />
         </Field>
         <Field label="סילבוס להורדה (רשות)" htmlFor="s-syllabus">
           <Input id="s-syllabus" name="syllabus_url" dir="ltr" placeholder="https://… או /syllabus-2026.pdf" />

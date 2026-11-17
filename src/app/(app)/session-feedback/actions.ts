@@ -30,6 +30,18 @@ export async function submitSessionFeedback(
     return { error: "עוד רגע - סמני דירוג בכל אחת מארבע השורות 🙂" };
   }
 
+  // A session the team marked ״בלי משוב״ takes no answers - not even from a
+  // tab that still shows the ask.
+  const { data: session } = await supabase
+    .from("sessions")
+    .select("feedback_enabled")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (session && session.feedback_enabled === false) {
+    revalidatePath("/", "layout");
+    return {};
+  }
+
   const { error } = await supabase.from("session_feedback").insert({
     session_id: sessionId,
     profile_id: user.id,

@@ -1464,6 +1464,8 @@ export interface Database {
           materials_url: string | null;
           /** Planned length, minutes - shown in admin and on the events screen. */
           duration_minutes: number | null;
+          /** Ask ״היית איתנו בסשן?״ after it - off for a Q&A (the owner, 17/11). */
+          feedback_enabled: boolean;
         } & Timestamps;
         Insert: {
           id?: string;
@@ -1481,6 +1483,7 @@ export interface Database {
           pre_topics?: string | null;
           materials_url?: string | null;
           duration_minutes?: number | null;
+          feedback_enabled?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["sessions"]["Insert"]>;
         Relationships: [];
