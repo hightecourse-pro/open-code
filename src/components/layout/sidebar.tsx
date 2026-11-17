@@ -79,7 +79,10 @@ const SECTIONS: NavSection[] = [
 ];
 
 /** Destinations that carry a versioned "חדש" pill: the localStorage key that
- * remembers the version she has seen, and the current version. */
+ * remembers the version she has seen, and the current version. ״הקלטות סשנים״
+ * joins them at render time - its version is the newest finished session
+ * (`recordingsVersion`, from the server), so the pill returns by itself after
+ * every session that ends (the owner, 17/11). */
 const NEW_ITEMS: Record<string, { key: string; version: string }> = {
   "/hackathon": { key: "oc-hackathon-seen", version: HACKATHON_UPDATED },
   "/annual-course": { key: "oc-annual-course-seen", version: ANNUAL_COURSE_UPDATED },
@@ -103,6 +106,9 @@ export interface SidebarUser {
   arenaOpen?: number;
   /** Appointed hackathon judge (or the team) - sees ״שיפוט ההאקתון״. */
   judge?: boolean;
+  /** The newest finished session's id - ״חדש״ on ״הקלטות סשנים״ until she
+   * opens the page after each new recording (the owner, 17/11). null = no pill. */
+  recordingsVersion?: string | null;
 }
 
 /** Destinations that are not part of the mentor experience. Jobs ARE (senior
@@ -131,7 +137,13 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
     const t = setTimeout(() => {
       try {
         const next: Record<string, boolean> = {};
-        for (const [href, { key, version }] of Object.entries(NEW_ITEMS)) {
+        const items: Record<string, { key: string; version: string }> = {
+          ...NEW_ITEMS,
+          ...(user.recordingsVersion
+            ? { "/recordings": { key: "oc-recordings-seen", version: user.recordingsVersion } }
+            : {}),
+        };
+        for (const [href, { key, version }] of Object.entries(items)) {
           if (pathname === href || pathname.startsWith(href + "/")) {
             localStorage.setItem(key, version);
             next[href] = true;
@@ -143,7 +155,7 @@ export function Sidebar({ user = DEFAULT_USER }: { user?: SidebarUser }) {
       } catch {}
     }, 0);
     return () => clearTimeout(t);
-  }, [pathname]);
+  }, [pathname, user.recordingsVersion]);
 
   return (
     <nav className="bg-white border-e border-ink-200 p-3 pt-3 flex flex-col gap-1 sticky top-0 h-screen overflow-y-auto">
