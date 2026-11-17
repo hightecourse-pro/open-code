@@ -175,7 +175,7 @@ export function CoursePromoPopup({ show }: { show: boolean }) {
             מאסטרית בהייטק
           </h2>
           <div className="flex items-baseline justify-center gap-1.5 mt-0.5">
-            <span className="font-display font-black leading-none text-brand-pink-deep tabular-nums" style={{ fontSize: "clamp(42px, 12vw, 60px)" }}>
+            <span dir="ltr" className="font-display font-black leading-none text-brand-pink-deep tabular-nums" style={{ fontSize: "clamp(42px, 12vw, 60px)" }}>
               <span ref={numRef} className="inline-block" data-course-popup-number>
                 0
               </span>
