@@ -2606,6 +2606,8 @@ export async function createSession(_prev: FormState, formData: FormData): Promi
       const n = Number(formData.get("duration_minutes"));
       return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
     })(),
+    // The form's checkbox is on by default; unchecked = ״בלי משוב״.
+    feedback_enabled: formData.get("feedback_enabled") === "on",
   });
   if (error) return { error: error.message };
   revalidatePath("/admin/sessions");

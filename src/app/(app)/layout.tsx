@@ -155,6 +155,8 @@ export default async function AuthenticatedLayout({
         .is("canceled_at", null)
         // An admin-marked live session is still running - never ask about it.
         .neq("status", "live")
+        // A session the team marked ״בלי משוב״ (a Q&A, the owner 17/11) never asks.
+        .eq("feedback_enabled", true)
         .gte("scheduled_at", weekAgo)
         .lt("scheduled_at", endedEdge)
         .order("scheduled_at", { ascending: false })

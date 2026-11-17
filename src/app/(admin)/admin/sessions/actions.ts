@@ -27,7 +27,8 @@ export async function updateSessionSchedule(sessionId: string, formData: FormDat
 
 /**
  * Full in-place edit of a session (PM round 2026-08-27): title, topic,
- * schedule, duration, zoom and the two handout links - one form, one save.
+ * schedule, duration, zoom, the two handout links and the feedback switch -
+ * one form, one save.
  */
 export async function updateSessionDetails(sessionId: string, formData: FormData): Promise<void> {
   await requireRole("admin");
@@ -48,6 +49,7 @@ export async function updateSessionDetails(sessionId: string, formData: FormData
       materials_url: String(formData.get("materials_url") ?? "").trim() || null,
       duration_minutes:
         Number.isFinite(durationRaw) && durationRaw > 0 ? Math.round(durationRaw) : null,
+      feedback_enabled: formData.get("feedback_enabled") === "on",
     })
     .eq("id", sessionId);
   revalidatePath("/admin/sessions");
