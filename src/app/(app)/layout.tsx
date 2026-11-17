@@ -6,7 +6,7 @@ import { HiredBanner, type HiredMember } from "@/components/patterns/hired-banne
 import { MemberRequestWidget } from "@/components/patterns/member-request-widget";
 import { ProfileOnboarding } from "@/components/patterns/profile-onboarding";
 import { SessionFeedbackBanner } from "@/components/patterns/session-feedback-banner";
-import { CoursePromoStrip } from "@/components/patterns/course-promo-popup";
+import { CoursePromoPopup } from "@/components/patterns/course-promo-popup";
 import { HackathonTicketsPopup } from "@/components/patterns/hackathon-tickets-popup";
 import { PresenceHeartbeat } from "@/components/patterns/presence-heartbeat";
 import { ViewerMarker } from "@/components/patterns/stale-while-revalidate";
@@ -142,7 +142,7 @@ export default async function AuthenticatedLayout({
   const arenaOpen = arenaRole && arenaRole !== "participant" ? await countOpenArenaQuestions() : 0;
   // שיפוט ההאקתון (16/10, 23/10): the team, and the judges it appointed per challenge.
   const judge = (await judgeAccessFor(profile)).judge;
-  // The floating course card (15/10): job-seeking members who have not
+  // The course popup (the floating card 15/10, the round popup 17/11): job-seeking members who have not
   // registered - and the team, so the owner sees what members see.
   let showCoursePromo = profile.role === "admin";
   if (profile.role === "junior") {
@@ -331,10 +331,10 @@ export default async function AuthenticatedLayout({
           <span className="font-display font-semibold whitespace-nowrap">לחידוש המנוי ←</span>
         </Link>
       )}
-      {/* The course strip (the owner, 15/10) - in the flow, hides nothing. */}
+      {/* The course popup (the owner, 17/11): round like the finals popup, every load, until registration closes. */}
       <ViewerMarker id={profile.id} />
       <PresenceHeartbeat />
-      <CoursePromoStrip show={showCoursePromo} />
+      <CoursePromoPopup show={showCoursePromo} />
       {/* The finals-tickets popup (the owner, 27/10): after sign-in, on every load, until the finals. */}
       <HackathonTicketsPopup subscriber={subscriber} />
       {gradesCount === 0 && <GradesNudge />}
