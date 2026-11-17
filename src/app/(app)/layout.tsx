@@ -16,6 +16,7 @@ import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
 import { judgeAccessFor } from "@/lib/judging";
 import { COURSE_KEY } from "@/lib/course-registration";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
+import { mayOpenSessions } from "@/lib/content-access";
 import { claimExternalApplications } from "@/lib/claim-external";
 import { getFeedbackAspects } from "@/lib/feedback-questions";
 import { createClient } from "@/lib/supabase/server";
@@ -44,6 +45,28 @@ const launchNudgeFlag = unstable_cache(
     return (data?.value as { on?: boolean } | null)?.on !== false;
   },
   ["launch-nudge"],
+  { revalidate: 60 }
+);
+
+// The newest finished session - the version behind the ״חדש״ pill on
+// ״הקלטות סשנים״ (the owner, 17/11): the pill shows until she opens the page
+// after each new recording, and comes back with the next one. One query a
+// minute for the whole community.
+const latestRecording = unstable_cache(
+  async (): Promise<{ id: string; open_to_all: boolean } | null> => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("sessions")
+      .select("id, open_to_all")
+      .eq("status", "done")
+      .eq("is_published", true)
+      .is("canceled_at", null)
+      .order("scheduled_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return data ? { id: data.id, open_to_all: data.open_to_all } : null;
+  },
+  ["latest-recording"],
   { revalidate: 60 }
 );
 
@@ -174,10 +197,11 @@ export default async function AuthenticatedLayout({
   // launch nudge is on - only fetched when someone will actually see them.
   // The external-applications claim rides in the same wave: an application
   // the team recorded by her email becomes hers on the first navigation.
-  const [feedbackAspects, hired, launchNudgeOn, hiresSeen, gradesCount] = await Promise.all([
+  const [feedbackAspects, hired, launchNudgeOn, latestRec, hiresSeen, gradesCount] = await Promise.all([
     feedbackSession ? getFeedbackAspects() : Promise.resolve([]),
     recentlyHired(),
     launchNudgeFlag(),
+    latestRecording(),
     // Which celebrations SHE already saw (the owner, 18/9) - per member.
     createAdminClient()
       .from("hire_banner_seen")
@@ -264,6 +288,10 @@ export default async function AuthenticatedLayout({
         arena: !!arenaRole,
         arenaOpen,
         judge,
+        // ״חדש״ on ״הקלטות סשנים״ only for a woman who can actually watch it
+        // (or when the newest session is open to the whole community).
+        recordingsVersion:
+          latestRec && (mayOpenSessions(profile) || latestRec.open_to_all) ? latestRec.id : null,
       }}
     >
       {feedbackSession && (
