@@ -241,11 +241,12 @@ export function Landing() {
             </svg>
           </div>
         </div>
-        <div className="hc-shape" style={{ left: "-18%", bottom: "-28%", width: "70%", maxWidth: 900 }} data-parallax="-0.12" aria-hidden>
-          <div className="hc-float2">
-            <svg viewBox="0 0 900 500" className="hc-wave">
-              <path d="M0 260C140 120 330 90 480 190s300 140 420 40v270H0z" fill={H.yellow} />
-              <path d="M0 330c150-110 300-120 450-30s290 110 450 20v180H0z" fill={H.navy} opacity=".92" />
+        {/* the brochure's bottom band - yellow over navy, edge to edge, so it never shows a cut */}
+        <div className="hc-shape" style={{ left: 0, right: 0, bottom: "-8%", height: "44%" }} data-parallax="-0.08" aria-hidden>
+          <div className="hc-float2" style={{ height: "100%" }}>
+            <svg viewBox="0 0 1440 500" preserveAspectRatio="none" style={{ width: "100%", height: "100%", display: "block" }}>
+              <path d="M0 250C200 110 420 80 640 180s480 190 800 60V500H0z" fill={H.yellow} />
+              <path d="M0 330c220-140 420-130 640-40s500 120 800 10V500H0z" fill={H.navy} opacity=".94" />
             </svg>
           </div>
         </div>
