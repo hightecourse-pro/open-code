@@ -210,10 +210,10 @@ export function Landing() {
             <Image src={LOGO.src} alt={LOGO.alt} width={LOGO.width} height={LOGO.height} priority className="hc-logo h-auto" />
           </Link>
           <nav className="hidden items-center gap-7 text-[15.5px] font-bold sm:flex" style={{ color: H.navy }}>
-            <a href="#schedule" className="hover:underline underline-offset-4">
+            <a href="#schedule" className="hover:underline underline-offset-4" style={{ color: H.navy }}>
               התוכנית
             </a>
-            <a href="#pricing" className="hover:underline underline-offset-4">
+            <a href="#pricing" className="hover:underline underline-offset-4" style={{ color: H.navy }}>
               מחירים
             </a>
           </nav>
@@ -250,9 +250,11 @@ export function Landing() {
               <span className="hc-reveal hc-from-right hc-word hc-word-navy text-[46px] sm:text-[70px]" style={{ ["--d" as string]: "120ms" }}>
                 כשחדשנות
               </span>
+              {" "}
               <span className="hc-reveal hc-from-left hc-word hc-word-outline mt-2 text-[46px] sm:text-[70px]" style={{ ["--d" as string]: "280ms" }}>
                 פוגשת
               </span>
+              {" "}
               <span className="hc-reveal hc-pop hc-word hc-word-yellow text-[96px] sm:text-[150px] lg:text-[170px]" style={{ ["--d" as string]: "440ms" }}>
                 אווירה
               </span>
@@ -458,7 +460,7 @@ export function Landing() {
           <span aria-hidden style={{ color: H.yellow }}>
             |
           </span>
-          <a href={`mailto:${CONTACT_EMAIL}`} className="hover:underline" dir="ltr">
+          <a href={`mailto:${CONTACT_EMAIL}`} className="hover:underline" dir="ltr" style={{ color: H.white }}>
             {CONTACT_EMAIL}
           </a>
         </div>
