@@ -192,7 +192,7 @@ export function Landing() {
         .hc-price-group { background: ${H.navy}; color: #fff; }
         .hc-badge { position: absolute; top: 34px; left: -48px; width: 200px; text-align: center; transform: rotate(-45deg); background: ${H.yellow}; color: ${H.navy}; font-weight: 800; font-size: 13px; padding: 7px 0; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
         .hc-strike { position: relative; display: inline-block; opacity: .85; line-height: 1; }
-        .hc-strike::after { content: ""; position: absolute; inset-inline: -5px; top: 46%; height: 3px; background: ${H.yellow}; transform: rotate(-6deg) scaleX(0); transform-origin: right; transition: transform .6s ease .6s; }
+        .hc-strike::after { content: ""; position: absolute; inset-inline: -5px; top: 44%; height: 3px; background: ${H.yellow}; transform: rotate(-6deg) scaleX(0); transform-origin: center; transition: transform .6s ease .6s; }
         .hc-in .hc-strike::after { transform: rotate(-8deg) scaleX(1); }
         .hc-wave { display: block; width: 100%; height: auto; }
         @media (max-width: 640px) {
@@ -264,9 +264,9 @@ export function Landing() {
               </span>
             </h1>
             <p className="hc-reveal mt-6 max-w-xl text-[17px] leading-relaxed sm:text-[19px]" style={{ color: H.ink, ["--d" as string]: "540ms" }} data-testid="hc-hero-text">
-              ה-AI מייעל את העבודה, מעלה את הקצב. <b style={{ color: H.navy }}>אבל איך הוא משפיע עלינו?</b>
+              ה-AI מייעל את העבודה, מעלה את הקצב. <b style={{ color: H.navy }}>אבל איך הוא משפיע עלינו?</b>{" "}
               <br className="hidden sm:inline" />
-              יום שלם של <b style={{ color: H.navy }}>דיון, שיקוף וידע מקצועי</b> על השפעת ה-AI עלינו <b style={{ color: H.navy }}>כבני אדם</b>,
+              יום שלם של <b style={{ color: H.navy }}>דיון, שיקוף וידע מקצועי</b> על השפעת ה-AI עלינו <b style={{ color: H.navy }}>כבני אדם</b>,{" "}
               <br className="hidden sm:inline" />
               והדרך <b style={{ color: H.navy }}>לשמור על שפיות</b> בעולם התזזיתי שלנו.
             </p>
