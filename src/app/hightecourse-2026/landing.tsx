@@ -30,7 +30,7 @@ function useScrollEffects(root: React.RefObject<HTMLDivElement | null>) {
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (e.isIntersecting) {
+          if (e.isIntersecting || e.boundingClientRect.bottom < 0) {
             e.target.classList.add("hc-in");
             io.unobserve(e.target);
           }
@@ -147,7 +147,8 @@ export function Landing() {
         .hc-word-yellow { color: ${H.yellow}; text-shadow: 7px 7px 0 ${GREY}; }
         .hc-word-navy { color: ${H.navy}; text-shadow: 6px 6px 0 ${GREY}; }
         .hc-word-outline { color: transparent; -webkit-text-stroke: 2px ${H.navy}; }
-        .hc-pill { display: inline-flex; align-items: center; gap: 10px; border: 2px solid ${H.navy}; color: ${H.navy}; border-radius: 999px; padding: 8px 18px; font-weight: 700; background: rgba(255,255,255,.8); }
+        .hc-pill { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 10px; border: 2px solid ${H.navy}; color: ${H.navy}; border-radius: 999px; padding: 8px 18px; font-weight: 700; background: rgba(255,255,255,.8); max-width: 100%; }
+        .hc-pill > span { white-space: nowrap; }
         .hc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; font-weight: 800; transition: transform .25s ease, box-shadow .25s ease, background .25s ease; text-decoration: none; }
         .hc-btn:hover { transform: translateY(-2px); }
         .hc-btn-primary { position: relative; background: ${H.navy}; color: #fff; padding: 16px 34px; font-size: 19px; box-shadow: 0 14px 30px rgba(0,72,120,.28); }
@@ -176,11 +177,11 @@ export function Landing() {
         .hc-time { font-weight: 900; color: ${H.navy}; font-size: 30px; line-height: 1; font-variant-numeric: tabular-nums; }
         .hc-hand { font-style: italic; color: ${H.navy}; opacity: .85; }
         .hc-timeline { position: relative; }
-        .hc-rail { position: absolute; inset-inline-start: 56px; top: 10px; bottom: 10px; width: 4px; background: ${GREY}; border-radius: 4px; }
+        .hc-rail { position: absolute; inset-inline-start: 83px; top: 10px; bottom: 10px; width: 4px; background: ${GREY}; border-radius: 4px; }
         .hc-rail-fill { position: absolute; inset-inline-start: 0; top: 0; width: 100%; height: 0; background: ${H.yellow}; border-radius: 4px; transition: height .15s linear; }
-        .hc-row { position: relative; display: grid; grid-template-columns: 112px 1fr; gap: 0 18px; padding: 14px 0; }
+        .hc-row { position: relative; display: grid; grid-template-columns: 60px 30px 1fr; gap: 0 10px; padding: 14px 0; }
         .hc-row .hc-row-time { font-weight: 900; color: ${H.navy}; font-size: 18px; font-variant-numeric: tabular-nums; padding-top: 2px; }
-        .hc-dot { position: absolute; inset-inline-start: 50px; top: 20px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid ${GREY}; transition: border-color .3s ease, transform .3s ease, background .3s ease; }
+        .hc-dot { position: absolute; inset-inline-start: 77px; top: 20px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 3px solid ${GREY}; transition: border-color .3s ease, transform .3s ease, background .3s ease; }
         .hc-dot.hc-dot-on { border-color: ${H.navy}; background: ${H.yellow}; transform: scale(1.25); }
         .hc-row-body { background: ${H.row}; border-radius: 18px; padding: 14px 18px; }
         .hc-row-title { font-weight: 800; color: ${H.ink}; font-size: 17.5px; }
@@ -195,9 +196,10 @@ export function Landing() {
         .hc-in .hc-strike::after { transform: rotate(-8deg) scaleX(1); }
         .hc-wave { display: block; width: 100%; height: auto; }
         @media (max-width: 640px) {
-          .hc-rail { inset-inline-start: 46px; }
-          .hc-dot { inset-inline-start: 40px; }
-          .hc-row { grid-template-columns: 92px 1fr; gap: 0 12px; }
+          .hc-rail { inset-inline-start: 70px; }
+          .hc-dot { inset-inline-start: 64px; }
+          .hc-row { grid-template-columns: 52px 24px 1fr; gap: 0 8px; }
+          .hc-pill { font-size: 14px; padding: 7px 14px; gap: 2px 8px; }
           .hc-row .hc-row-time { font-size: 16px; }
           .hc-word-yellow, .hc-word-navy { text-shadow: 4px 4px 0 ${GREY}; }
         }
@@ -231,7 +233,7 @@ export function Landing() {
       {/* hero */}
       <section className="hc-hero">
         {/* the brochure's shapes: a yellow wave low on the left, a navy curve high on the right */}
-        <div className="hc-shape" style={{ insetInlineEnd: "-12%", top: "-22%", width: "58%", maxWidth: 760 }} data-parallax="0.18" aria-hidden>
+        <div className="hc-shape" style={{ right: "-12%", top: "-22%", width: "58%", maxWidth: 760 }} data-parallax="0.18" aria-hidden>
           <div className="hc-float">
             <svg viewBox="0 0 600 600" className="hc-wave">
               <path d="M300 20c160 0 290 110 290 270S460 590 300 590 10 460 10 290 140 20 300 20z" fill={H.yellowSoft} />
@@ -239,7 +241,7 @@ export function Landing() {
             </svg>
           </div>
         </div>
-        <div className="hc-shape" style={{ insetInlineStart: "-18%", bottom: "-28%", width: "70%", maxWidth: 900 }} data-parallax="-0.12" aria-hidden>
+        <div className="hc-shape" style={{ left: "-18%", bottom: "-28%", width: "70%", maxWidth: 900 }} data-parallax="-0.12" aria-hidden>
           <div className="hc-float2">
             <svg viewBox="0 0 900 500" className="hc-wave">
               <path d="M0 260C140 120 330 90 480 190s300 140 420 40v270H0z" fill={H.yellow} />
@@ -369,7 +371,7 @@ export function Landing() {
 
       {/* the full program */}
       <section id="schedule" className="relative overflow-hidden py-20 sm:py-24" style={{ background: H.bg }}>
-        <div className="hc-shape" style={{ insetInlineEnd: "-10%", top: "6%", width: "36%", maxWidth: 420, opacity: 0.9 }} data-parallax="0.08" aria-hidden>
+        <div className="hc-shape" style={{ left: "-10%", top: "6%", width: "36%", maxWidth: 420, opacity: 0.9 }} data-parallax="0.08" aria-hidden>
           <svg viewBox="0 0 400 400" className="hc-wave">
             <circle cx="200" cy="200" r="190" fill="none" stroke={H.yellow} strokeWidth="8" strokeDasharray="18 14" />
           </svg>
@@ -393,6 +395,7 @@ export function Landing() {
                 <div className="hc-row-time" dir="ltr">
                   {s.time}
                 </div>
+                <div aria-hidden />
                 <div className="hc-row-body">
                   <div className="hc-row-title">{s.title}</div>
                   {s.sub && <div className="hc-row-sub">{s.names?.length ? highlightNames(s.sub, s.names) : s.sub}</div>}
@@ -472,7 +475,7 @@ export function Landing() {
 
       {/* closing call */}
       <section className="relative overflow-hidden" style={{ background: H.navy }}>
-        <div className="hc-shape" style={{ insetInlineStart: "-6%", bottom: "-50%", width: "40%", maxWidth: 520, opacity: 0.9 }} data-parallax="-0.06" aria-hidden>
+        <div className="hc-shape" style={{ right: "-6%", bottom: "-50%", width: "40%", maxWidth: 520, opacity: 0.9 }} data-parallax="-0.06" aria-hidden>
           <svg viewBox="0 0 400 400" className="hc-wave">
             <circle cx="200" cy="200" r="200" fill={H.yellow} />
           </svg>
