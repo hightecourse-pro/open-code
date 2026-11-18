@@ -213,9 +213,11 @@ export function buildConferencePaymentFields(order: OrderWithParticipants, origi
     Mail: payerEmail,
     Phone: p1?.phone ?? "",
     Zeout: order.kind === "single" ? (p1?.national_id ?? "") : "",
-    Street: "",
-    Adresse: "",
-    City: "",
+    // Nedarim refuses a charge without an address (״נא לציין כתובת״ - the owner hit it on 18.11).
+    // The conference form does not ask for one, so the receipt carries a dash.
+    Street: "-",
+    Adresse: "-",
+    City: "-",
     Groupe: CONFERENCE_GROUPE,
     Category: CONFERENCE_GROUPE,
     Comment: `${CONFERENCE_GROUPE} · ${order.short_code} · ${order.participant_count} משתתפות`,

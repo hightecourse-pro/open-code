@@ -30,21 +30,21 @@ import { submitConferenceOrder } from "../actions";
   the invoice is sent by mail.
 */
 const inputCls = "w-full rounded-xl border-2 bg-white px-3.5 py-2.5 text-[16px] outline-none transition-colors placeholder:text-[#9AAAB9] focus:border-[#004878]";
-const PARTICIPANT_FIELDS: { key: keyof ParticipantInput; label: string; type?: string; optional?: boolean; dir?: "ltr"; mode?: "numeric" | "tel" | "email"; placeholder?: string; single?: boolean }[] = [
-  { key: "firstName", label: "שם פרטי" },
-  { key: "lastName", label: "שם משפחה" },
+const PARTICIPANT_FIELDS: { key: keyof ParticipantInput; label: string; type?: string; optional?: boolean; dir?: "ltr"; mode?: "numeric" | "tel" | "email"; placeholder?: string; single?: boolean; ac?: string }[] = [
+  { key: "firstName", label: "שם פרטי", ac: "given-name" },
+  { key: "lastName", label: "שם משפחה", ac: "family-name" },
   { key: "nationalId", label: "ת.ז.", dir: "ltr", mode: "numeric", placeholder: "9 ספרות" },
-  { key: "phone", label: "נייד", type: "tel", dir: "ltr", mode: "tel", placeholder: "052-1234567" },
-  { key: "personalEmail", label: "מייל פרטי", type: "email", dir: "ltr", mode: "email" },
-  { key: "workEmail", label: "מייל עבודה", type: "email", dir: "ltr", mode: "email", optional: true },
-  { key: "roleTitle", label: "תפקיד" },
+  { key: "phone", label: "נייד", type: "tel", dir: "ltr", mode: "tel", placeholder: "052-1234567", ac: "tel" },
+  { key: "personalEmail", label: "מייל פרטי", type: "email", dir: "ltr", mode: "email", ac: "email" },
+  { key: "workEmail", label: "מייל עבודה", type: "email", dir: "ltr", mode: "email", optional: true, ac: "work email" },
+  { key: "roleTitle", label: "תפקיד", ac: "organization-title" },
   { key: "department", label: "משרד" },
-  { key: "company", label: "חברה", single: true },
+  { key: "company", label: "חברה", single: true, ac: "organization" },
 ];
-const CONTACT_FIELDS: { key: keyof ContactInput; label: string; type?: string; dir?: "ltr"; mode?: "numeric" | "email"; placeholder?: string }[] = [
-  { key: "company", label: "חברה" },
-  { key: "contactName", label: "איש קשר" },
-  { key: "contactEmail", label: "מייל איש קשר", type: "email", dir: "ltr", mode: "email" },
+const CONTACT_FIELDS: { key: keyof ContactInput; label: string; type?: string; dir?: "ltr"; mode?: "numeric" | "email"; placeholder?: string; ac?: string }[] = [
+  { key: "company", label: "חברה", ac: "organization" },
+  { key: "contactName", label: "איש קשר", ac: "name" },
+  { key: "contactEmail", label: "מייל איש קשר", type: "email", dir: "ltr", mode: "email", ac: "email" },
   { key: "invoiceName", label: "חשבונית על שם" },
   { key: "companyId", label: "ח.פ.", dir: "ltr", mode: "numeric" },
 ];
@@ -208,7 +208,8 @@ export function RegisterForm({ initialKind }: { initialKind: OrderKind }) {
                     }}
                     className={inputCls}
                     style={{ borderColor: err ? H.red : H.line }}
-                    autoComplete="off"
+                    name={id}
+                    autoComplete={f.ac ? `section-contact ${f.ac}` : "on"}
                   />
                   {err && (
                     <span className="text-[13px] font-semibold" style={{ color: H.red }}>
@@ -254,7 +255,8 @@ export function RegisterForm({ initialKind }: { initialKind: OrderKind }) {
                     onChange={(e) => setParticipant(i, f.key, e.target.value)}
                     className={inputCls}
                     style={{ borderColor: err ? H.red : H.line }}
-                    autoComplete="off"
+                    name={id}
+                    autoComplete={f.ac ? `section-p${i} ${f.ac}` : "on"}
                   />
                   {err && (
                     <span className="text-[13px] font-semibold" style={{ color: H.red }}>
