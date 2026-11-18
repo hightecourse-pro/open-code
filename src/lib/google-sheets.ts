@@ -37,10 +37,13 @@ function hintFor(status: number, text: string): SheetsHint {
   return "unknown";
 }
 
-async function sheetsFetch(path: string, init: RequestInit = {}): Promise<Response> {
+/** A token that can only read - the Hightecourse management screens never write to the owner's sheet. */
+const READONLY_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
+
+async function sheetsFetch(path: string, init: RequestInit = {}, scope: string = SCOPE): Promise<Response> {
   let token: string;
   try {
-    token = await serviceAccountToken(SCOPE);
+    token = await serviceAccountToken(scope);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     throw new SheetsError(msg, 0, msg === "drive_not_configured" ? "no_credentials" : "unknown");
@@ -78,6 +81,44 @@ export async function readSheet(spreadsheetId: string, tab: string): Promise<str
     await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(quoteTab(tab))}?majorDimension=ROWS`)
   );
   return (j.values ?? []).map((row) => row.map((v) => (v === null || v === undefined ? "" : String(v))));
+}
+
+export interface SheetTabMeta {
+  gid: number;
+  title: string;
+  hidden: boolean;
+  rows: number;
+  cols: number;
+}
+
+/** Every tab with its gid and grid size, through a read-only token. */
+export async function sheetTabsMeta(spreadsheetId: string): Promise<{ title: string; tabs: SheetTabMeta[] }> {
+  const j = await body<{ properties?: { title?: string }; sheets?: { properties: { sheetId: number; title: string; hidden?: boolean; gridProperties?: { rowCount?: number; columnCount?: number } } }[] }>(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=properties.title,sheets.properties(sheetId,title,hidden,gridProperties)`, {}, READONLY_SCOPE)
+  );
+  return {
+    title: j.properties?.title ?? "",
+    tabs: (j.sheets ?? []).map((s) => ({ gid: s.properties.sheetId, title: s.properties.title, hidden: !!s.properties.hidden, rows: s.properties.gridProperties?.rowCount ?? 0, cols: s.properties.gridProperties?.columnCount ?? 0 })),
+  };
+}
+
+/**
+ * Several tabs in ONE request (values:batchGet), through a read-only token - the
+ * Hightecourse dashboard reads its five tabs this way, once per cache window.
+ * A tab that does not exist comes back empty rather than failing the others.
+ */
+export async function readSheetsReadonly(spreadsheetId: string, tabs: string[]): Promise<Record<string, string[][]>> {
+  if (tabs.length === 0) return {};
+  const qs = tabs.map((t) => `ranges=${encodeURIComponent(quoteTab(t))}`).join("&");
+  const j = await body<{ valueRanges?: { range?: string; values?: unknown[][] }[] }>(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values:batchGet?majorDimension=ROWS&${qs}`, {}, READONLY_SCOPE)
+  );
+  const out: Record<string, string[][]> = {};
+  (j.valueRanges ?? []).forEach((vr, i) => {
+    out[tabs[i]] = (vr.values ?? []).map((row) => row.map((v) => (v === null || v === undefined ? "" : String(v))));
+  });
+  for (const t of tabs) out[t] ??= [];
+  return out;
 }
 
 /** 0 -> A, 25 -> Z, 26 -> AA. */
