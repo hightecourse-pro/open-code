@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowLeft, Users, User } from "lucide-react";
 import { H, LOGO, TAGLINE } from "@/app/ai-course/theme";
 import { CONTACT_EMAIL, DAY, PATHS, PRICE, nis } from "@/lib/conference-shared";
-import { MARQUEE, SCHEDULE } from "./content";
+import { MARQUEE, NAMES, SCHEDULE } from "./content";
 
 /*
   The conference's marketing page. Everything that moves, moves with the
@@ -147,7 +147,7 @@ export function Landing() {
         .hc-word { font-weight: 900; line-height: .9; letter-spacing: -0.02em; }
         .hc-word-yellow { color: ${H.yellow}; text-shadow: 7px 7px 0 ${GREY}; }
         .hc-word-navy { color: ${H.navy}; text-shadow: 6px 6px 0 ${GREY}; }
-        .hc-word-outline { color: transparent; -webkit-text-stroke: 2px ${H.navy}; }
+        .hc-word-outline { color: #fff; -webkit-text-stroke: 3px ${H.navy}; paint-order: stroke fill; }
         .hc-pill { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 14px; color: #fff; background: ${H.navy}; border-radius: 999px; padding: 12px 30px; font-weight: 800; box-shadow: 0 16px 34px rgba(0,72,120,.24); max-width: 100%; }
         .hc-pill > span { white-space: nowrap; }
         .hc-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border-radius: 999px; font-weight: 800; transition: transform .25s ease, box-shadow .25s ease, background .25s ease; text-decoration: none; }
@@ -182,13 +182,17 @@ export function Landing() {
         .hc-row-body { background: #fff; border-radius: 18px; padding: 14px 18px; box-shadow: 0 8px 22px rgba(0,72,120,.08); }
         .hc-row-title { font-weight: 800; color: ${H.ink}; font-size: 17.5px; }
         .hc-row-sub { color: ${H.muted}; font-size: 15.5px; margin-top: 2px; }
-        .hc-name { color: ${H.navy}; font-weight: 700; }
+        .hc-name { color: ${H.navy}; font-weight: 900; padding: 0 3px; box-shadow: inset 0 -0.42em ${H.yellowSoft}; }
+        .hc-track .hc-name { background: ${H.navy}; color: ${H.yellow}; padding: 2px 12px; border-radius: 999px; box-shadow: none; }
+        .hc-big { font-size: 1.5em; font-weight: 900; color: ${H.navy}; line-height: 1; }
+        .hc-row-flex { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+        .hc-row-logo { height: 46px; width: auto; flex: none; }
         .hc-price { border-radius: 30px; padding: 30px 28px; position: relative; overflow: hidden; }
         .hc-price-single { background: ${TINT}; }
         .hc-price-group { background: ${H.navy}; color: #fff; }
-        .hc-badge { position: absolute; top: 18px; inset-inline-start: -34px; transform: rotate(45deg); background: ${H.yellow}; color: ${H.navy}; font-weight: 800; font-size: 13px; padding: 6px 44px; }
-        .hc-strike { position: relative; display: inline-block; opacity: .75; }
-        .hc-strike::after { content: ""; position: absolute; inset-inline: -4px; top: 52%; height: 3px; background: ${H.yellow}; transform: rotate(-8deg) scaleX(0); transform-origin: right; transition: transform .6s ease .6s; }
+        .hc-badge { position: absolute; top: 34px; left: -48px; width: 200px; text-align: center; transform: rotate(-45deg); background: ${H.yellow}; color: ${H.navy}; font-weight: 800; font-size: 13px; padding: 7px 0; box-shadow: 0 6px 16px rgba(0,0,0,.18); }
+        .hc-strike { position: relative; display: inline-block; opacity: .85; line-height: 1; }
+        .hc-strike::after { content: ""; position: absolute; inset-inline: -5px; top: 46%; height: 3px; background: ${H.yellow}; transform: rotate(-6deg) scaleX(0); transform-origin: right; transition: transform .6s ease .6s; }
         .hc-in .hc-strike::after { transform: rotate(-8deg) scaleX(1); }
         .hc-wave { display: block; width: 100%; height: auto; }
         @media (max-width: 640px) {
@@ -259,7 +263,14 @@ export function Landing() {
                 אווירה
               </span>
             </h1>
-            <div className="hc-reveal mt-8" style={{ ["--d" as string]: "600ms" }}>
+            <p className="hc-reveal mt-6 max-w-xl text-[17px] leading-relaxed sm:text-[19px]" style={{ color: H.ink, ["--d" as string]: "540ms" }} data-testid="hc-hero-text">
+              ה-AI מייעל את העבודה, מעלה את הקצב. <b style={{ color: H.navy }}>אבל איך הוא משפיע עלינו?</b>
+              <br className="hidden sm:inline" />
+              יום שלם של <b style={{ color: H.navy }}>דיון, שיקוף וידע מקצועי</b> על השפעת ה-AI עלינו <b style={{ color: H.navy }}>כבני אדם</b>,
+              <br className="hidden sm:inline" />
+              והדרך <b style={{ color: H.navy }}>לשמור על שפיות</b> בעולם התזזיתי שלנו.
+            </p>
+            <div className="hc-reveal mt-7" style={{ ["--d" as string]: "640ms" }}>
               <span className="hc-pill text-[20px] sm:text-[26px]" data-testid="hc-date">
                 <span>{DAY.label}</span>
                 <span aria-hidden style={{ color: H.yellow }}>
@@ -272,7 +283,7 @@ export function Landing() {
                 <span>{DAY.hebrew}</span>
               </span>
             </div>
-            <div className="hc-reveal mt-9 flex flex-wrap items-center gap-4" style={{ ["--d" as string]: "720ms" }}>
+            <div className="hc-reveal mt-8 flex flex-wrap items-center gap-4" style={{ ["--d" as string]: "760ms" }}>
               <Link href={REGISTER} className="hc-btn hc-btn-primary" data-testid="hc-hero-cta">
                 הרשמי עכשיו
                 <ArrowLeft size={20} strokeWidth={2.6} />
@@ -318,7 +329,7 @@ export function Landing() {
             <span key={copy} dir="rtl">
               {MARQUEE.map((m) => (
                 <span key={m}>
-                  {m}
+                  {markup(m, marks(NAMES))}
                   <i />
                 </span>
               ))}
@@ -354,10 +365,13 @@ export function Landing() {
                   {s.time}
                 </div>
                 <div aria-hidden />
-                <div className="hc-row-body">
-                  <div className="hc-row-title">{s.title}</div>
-                  {s.sub && <div className="hc-row-sub">{s.names?.length ? highlightNames(s.sub, s.names) : s.sub}</div>}
-                  {s.hand && <div className="hc-hand mt-1 text-[15px]">{s.hand}</div>}
+                <div className={`hc-row-body${s.logo ? " hc-row-flex" : ""}`}>
+                  <div>
+                    <div className="hc-row-title">{markup(s.title, marks(s.names, s.big))}</div>
+                    {s.sub && <div className="hc-row-sub">{markup(s.sub, marks(s.names))}</div>}
+                    {s.hand && <div className="hc-hand mt-1 text-[15px]">{s.hand}</div>}
+                  </div>
+                  {s.logo && <Image src={s.logo.src} alt={s.logo.alt} width={s.logo.width} height={s.logo.height} className="hc-row-logo" />}
                 </div>
               </div>
             ))}
@@ -367,15 +381,7 @@ export function Landing() {
 
       {/* pricing */}
       <section id="pricing" className="mx-auto max-w-6xl px-5 py-20 sm:py-24">
-        <div className="hc-reveal max-w-2xl">
-          <h2 className="text-[34px] font-black leading-tight sm:text-[46px]" style={{ color: H.navy }}>
-            ההרשמה ליום חמישי
-          </h2>
-          <p className="mt-3 text-[17px] leading-relaxed" style={{ color: H.muted }}>
-            לבד או עם הצוות - בוחרות, ממלאות פרטים, ומשלמות בכרטיס אשראי או בהעברה בנקאית מול חשבונית.
-          </p>
-        </div>
-        <div className="mt-10 grid gap-6 md:grid-cols-2" data-testid="hc-pricing">
+        <div className="grid gap-6 md:grid-cols-2" data-testid="hc-pricing">
           <div className="hc-price hc-price-single hc-reveal hc-from-right">
             <div className="flex items-center gap-3">
               <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: H.white, color: H.navy }}>
@@ -404,7 +410,7 @@ export function Landing() {
           <div className="hc-price hc-price-group hc-reveal hc-from-left" style={{ ["--d" as string]: "140ms" }}>
             <div className="hc-badge">מחיר מיוחד לקבוצות</div>
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(255,255,255,.14)", color: H.yellow }}>
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl" style={{ background: "rgba(255,255,255,.14)", color: H.yellow }} data-testid="hc-group-icon">
                 <Users size={24} strokeWidth={2.4} />
               </span>
               <h3 className="text-[24px] font-black text-white">קבוצה - מעל {PRICE.groupMin - 1} משתתפות</h3>
@@ -416,7 +422,7 @@ export function Landing() {
               <span className="pb-2 text-[22px] font-black" style={{ color: H.yellow }}>
                 ₪
               </span>
-              <span className="hc-strike pb-2 text-[26px] font-bold text-white" dir="ltr" data-testid="hc-price-strike">
+              <span className="hc-strike mb-2 text-[26px] font-bold text-white" data-testid="hc-price-strike">
                 {nis(PRICE.single)} ₪
               </span>
             </div>
@@ -440,7 +446,7 @@ export function Landing() {
         </div>
         <div className="relative mx-auto flex max-w-4xl flex-col items-center px-5 py-20 text-center sm:py-24">
           <h2 className="hc-reveal text-[36px] font-black leading-tight text-white sm:text-[52px]">
-            שומרות לך <span style={{ color: H.yellow }}>מקום?</span>
+            לשמור לך <span style={{ color: H.yellow }}>מקום?</span>
           </h2>
           <p className="hc-reveal mt-4 max-w-xl text-[17px] leading-relaxed" style={{ color: "#C9D9E6", ["--d" as string]: "120ms" }}>
             {DAY.label}, <span dir="ltr">{DAY.date}</span>, {DAY.hebrew}. ההרשמה לוקחת שתי דקות.
@@ -469,16 +475,25 @@ export function Landing() {
   );
 }
 
-/** The brochure sets the speakers' names in navy - same here. */
-function highlightNames(text: string, names: string[]): React.ReactNode {
+type Mark = { text: string; cls: string };
+
+function marks(names?: string[], big?: string): Mark[] {
+  const out: Mark[] = (names ?? []).map((n) => ({ text: n, cls: "hc-name" }));
+  if (big) out.push({ text: big, cls: "hc-big" });
+  return out;
+}
+
+/** The brochure sets the speakers' names in navy - here they get a marker too (the owner: ״תדגיש את השמות בכל מקום״); `big` enlarges one word. */
+function markup(text: string, ms: Mark[]): React.ReactNode {
+  if (!ms.length) return text;
   const parts: React.ReactNode[] = [];
   let rest = text;
   let key = 0;
   while (rest.length) {
-    let found: { i: number; name: string } | null = null;
-    for (const n of names) {
-      const i = rest.indexOf(n);
-      if (i >= 0 && (!found || i < found.i)) found = { i, name: n };
+    let found: { i: number; m: Mark } | null = null;
+    for (const m of ms) {
+      const i = rest.indexOf(m.text);
+      if (i >= 0 && (!found || i < found.i)) found = { i, m };
     }
     if (!found) {
       parts.push(rest);
@@ -486,11 +501,11 @@ function highlightNames(text: string, names: string[]): React.ReactNode {
     }
     if (found.i > 0) parts.push(rest.slice(0, found.i));
     parts.push(
-      <span key={key++} className="hc-name">
-        {found.name}
+      <span key={key++} className={found.m.cls}>
+        {found.m.text}
       </span>
     );
-    rest = rest.slice(found.i + found.name.length);
+    rest = rest.slice(found.i + found.m.text.length);
   }
   return parts;
 }
