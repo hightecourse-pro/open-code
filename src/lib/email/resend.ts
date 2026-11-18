@@ -8,6 +8,12 @@ import { emailBlockedByOptOut, withUnsubscribe } from "@/lib/unsubscribe";
 const FROM = process.env.EMAIL_FROM || "קוד פתוח <noreply@opencode.org.il>";
 // Replies to app mail land in the team's inbox, not in the noreply box (the owner, 25/10: ״האם כל התשובות מגיעות ל-office?״).
 const REPLY_TO = process.env.EMAIL_REPLY_TO || "office@opencode.org.il";
+/** The configured address under another display name - or the configured sender as is. */
+function fromWith(name?: string): string {
+  if (!name) return FROM;
+  const m = FROM.match(/<([^>]+)>/);
+  return `${name} <${m ? m[1] : FROM}>`;
+}
 
 export function isResendConfigured(): boolean {
   return !!process.env.RESEND_API_KEY;
@@ -39,6 +45,8 @@ export async function sendResendEmail(args: {
   html: string;
   /** Account mail (a confirmation she asked for, her subscription) goes out even to an address that opted out of our mails. */
   essential?: boolean;
+  /** A different display name on the same address (the Hightecourse conference mail). */
+  fromName?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: "resend_not_configured" };
@@ -51,7 +59,7 @@ export async function sendResendEmail(args: {
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify({ from: FROM, to: [args.to], reply_to: REPLY_TO, subject: args.subject, html: args.html }),
+        body: JSON.stringify({ from: fromWith(args.fromName), to: [args.to], reply_to: REPLY_TO, subject: args.subject, html: args.html }),
       });
     let res = await post();
     // Resend allows 2 requests/second - a 429 is a pace problem, not a bad

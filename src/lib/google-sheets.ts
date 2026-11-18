@@ -102,6 +102,32 @@ export async function appendRow(spreadsheetId: string, tab: string, values: stri
   );
 }
 
+/**
+ * Appends several rows at once (the conference registration: a group's participants
+ * in one call). Returns the 1-based sheet row the first appended row landed on.
+ */
+export async function appendRows(spreadsheetId: string, tab: string, rows: (string | number)[][]): Promise<{ startRow: number | null }> {
+  const j = await body<{ updates?: { updatedRange?: string } }>(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(quoteTab(tab))}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`, {
+      method: "POST",
+      body: JSON.stringify({ majorDimension: "ROWS", values: rows }),
+    })
+  );
+  const m = (j.updates?.updatedRange ?? "").match(/![A-Z]+(\d+)/);
+  return { startRow: m ? parseInt(m[1], 10) : null };
+}
+
+/** Writes one whole row (the header row, when a column has to be added). `row1` is the 1-based sheet row. */
+export async function writeRowAt(spreadsheetId: string, tab: string, row1: number, values: string[]): Promise<void> {
+  const a1 = `${quoteTab(tab)}!A${row1}`;
+  await body(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(a1)}?valueInputOption=RAW`, {
+      method: "PUT",
+      body: JSON.stringify({ range: a1, majorDimension: "ROWS", values: [values] }),
+    })
+  );
+}
+
 /** Writes one cell. `row1` is the 1-based sheet row, `col0` the 0-based column. */
 export async function writeCell(spreadsheetId: string, tab: string, row1: number, col0: number, value: string): Promise<void> {
   const a1 = `${quoteTab(tab)}!${columnLetter(col0)}${row1}`;
