@@ -3,7 +3,7 @@
 import { useDeferredValue, useMemo, useState } from "react";
 import { H } from "../../ai-course/theme";
 import { TRACKS } from "../config";
-import type { Participant, Snapshot } from "../data";
+import type { Participant } from "../data";
 import { Freshness } from "../gate";
 import { Card, ExtLink, fmtNum } from "../ui";
 
@@ -44,28 +44,31 @@ function TrackDot({ p }: { p: Participant }) {
   );
 }
 
-export function ParticipantsTable({ rows, courses, companies, tracks, fetchedAt, sheetUrl, initial }: { rows: Participant[]; courses: string[]; companies: string[]; tracks: Snapshot["tracks"]; fetchedAt: string; sheetUrl: string; initial: { course: string; track: string; company: string; q: string } }) {
+/** The dashboard's names panel links here with ?rows=2,5,9 (sheet rows) - ״N מתוך M״ with the usual ״לנקות סינון״. */
+export function ParticipantsTable({ rows, courses, companies, fetchedAt, sheetUrl, initial }: { rows: Participant[]; courses: string[]; companies: string[]; fetchedAt: string; sheetUrl: string; initial: { course: string; track: string; company: string; q: string; rows: number[] } }) {
   const [q, setQ] = useState(initial.q);
   const dq = useDeferredValue(q);
   const [course, setCourse] = useState(initial.course);
   const [track, setTrack] = useState(initial.track);
   const [company, setCompany] = useState(initial.company);
   const [lodging, setLodging] = useState("");
+  const [picked, setPicked] = useState<Set<number> | null>(initial.rows.length ? new Set(initial.rows) : null);
   const [limit, setLimit] = useState(PAGE);
   const [open, setOpen] = useState<number | null>(null);
 
   const filtered = useMemo(() => {
     const needle = dq.trim().toLowerCase();
     return rows.filter((p) => {
+      if (picked && !picked.has(p.row)) return false;
       if (course && p.course !== course) return false;
       if (track && p.track !== track) return false;
       if (company && p.company !== company) return false;
-      if (lodging === "yes" && !p.lodging) return false;
-      if (lodging === "no" && p.lodging) return false;
+      if (lodging === "yes" && !("lodging" in p.items)) return false;
+      if (lodging === "no" && "lodging" in p.items) return false;
       if (needle && !p.fields.some((f) => f.v.toLowerCase().includes(needle))) return false;
       return true;
     });
-  }, [rows, dq, course, track, company, lodging]);
+  }, [rows, dq, course, track, company, lodging, picked]);
 
   const shown = filtered.slice(0, limit);
   const th = "px-3 py-2 text-start text-[12.5px] font-bold whitespace-nowrap";
@@ -76,9 +79,10 @@ export function ParticipantsTable({ rows, courses, companies, tracks, fetchedAt,
     setTrack("");
     setCompany("");
     setLodging("");
+    setPicked(null);
     setLimit(PAGE);
   };
-  const anyFilter = q || course || track || company || lodging;
+  const anyFilter = q || course || track || company || lodging || picked;
 
   return (
     <div className="space-y-4" data-testid="hc-participants">
@@ -112,12 +116,17 @@ export function ParticipantsTable({ rows, courses, companies, tracks, fetchedAt,
             />
           </label>
           <Select label="קורס" value={course} onChange={(v) => { setCourse(v); setLimit(PAGE); }} options={courses.map((c) => ({ v: c, label: c }))} testId="hc-filter-course" />
-          <Select label="מסלול" value={track} onChange={(v) => { setTrack(v); setLimit(PAGE); }} options={tracks.map((t) => ({ v: t.key, label: t.label }))} testId="hc-filter-track" />
+          <Select label="מסלול" value={track} onChange={(v) => { setTrack(v); setLimit(PAGE); }} options={TRACKS.filter((t) => t.key !== "other").map((t) => ({ v: t.key, label: t.label }))} testId="hc-filter-track" />
           <Select label="חברה" value={company} onChange={(v) => { setCompany(v); setLimit(PAGE); }} options={companies.map((c) => ({ v: c, label: c }))} testId="hc-filter-company" />
           <Select label="לינה" value={lodging} onChange={(v) => { setLodging(v); setLimit(PAGE); }} options={[{ v: "yes", label: "עם לינה" }, { v: "no", label: "בלי לינה" }]} testId="hc-filter-lodging" />
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px]" style={{ color: H.muted }}>
           <span data-testid="hc-count">{filtered.length === rows.length ? `${fmtNum.format(rows.length)} משתתפות` : `${fmtNum.format(filtered.length)} מתוך ${fmtNum.format(rows.length)}`}</span>
+          {picked && (
+            <span className="px-2 py-0.5 text-[12px] font-bold" style={{ background: H.yellowSoft, color: H.navyDeep, borderRadius: 999 }} data-testid="hc-picked">
+              רשימה מהדשבורד
+            </span>
+          )}
           {anyFilter && (
             <button type="button" onClick={clearAll} className="font-bold underline underline-offset-2" style={{ color: H.navy }} data-testid="hc-clear">
               לנקות סינון
@@ -162,8 +171,8 @@ export function ParticipantsTable({ rows, courses, companies, tracks, fetchedAt,
                     <td className={td} style={{ color: H.ink }}>
                       <TrackDot p={p} />
                     </td>
-                    <td className={td} style={{ color: p.lodging ? H.green : H.muted }}>
-                      {p.lodging ? "כן" : "לא"}
+                    <td className={td} style={{ color: "lodging" in p.items ? H.green : H.muted }}>
+                      {"lodging" in p.items ? "כן" : "לא"}
                     </td>
                     <td className={`${td} max-w-[180px] truncate`} style={{ color: H.muted }} title={p.role}>
                       {p.role}

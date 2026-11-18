@@ -88,12 +88,17 @@ export const P = {
   lodging: "לינה",
   lodgingPaid: "שולם לינה",
   privateRoom: "חדר פרטי",
+  privateRoomPaid: "שולם חדר פרטי",
   baby: "תינוק",
   babyLodging: "לינת תינוק",
+  babyLodgingPaid: "שולם תינוק לינה",
   sitterEvening: "ערב שמרטפיה",
+  sitterEveningPaid: "שולם תינוק ערב",
   sitterMorning: "בוקר שמרטפיה",
-  laptop: "מחשב נייד",
+  sitterMorningPaid: "שולם תינוק בוקר",
+  laptopOwn: "מחשב נייד",
   laptopRental: "מחשב נייד השכרה",
+  laptopRentalPaid: "מחשב נייד שולם",
   graduate: "בוגרת",
   city: "עיר",
   office: "משרד",
@@ -121,4 +126,49 @@ export function trackKeyOf(value: string): TrackKey {
   return hit ? hit.key : "other";
 }
 
+/** Frontal = both frontal tracks; the owner wants the digital and frontal lists apart. */
+export const isFrontal = (t: TrackKey) => t === "frontal" || t === "frontalLodging";
+
 export const yes = (v: string | undefined): boolean => (v ?? "").trim() === "כן";
+
+/*
+  The paid items (the owner, 18/11: ״תסמן לי כמה בחרו לינה ולא כתוב ששולם - כך
+  בכל סעיפי התשלום: מחשב, תינוק (בוקר, ערב)״): a ״chosen״ column and its ״paid״
+  column. Lodging also comes with the track ״פרונטלי כולל לינה״, where the
+  company paid for it - those are counted apart from the ones who paid themselves.
+*/
+export const PAID_ITEMS = [
+  { key: "lodging", label: "לינה", chosen: P.lodging, paid: P.lodgingPaid },
+  { key: "privateRoom", label: "חדר פרטי", chosen: P.privateRoom, paid: P.privateRoomPaid },
+  { key: "laptopRental", label: "השכרת מחשב נייד", chosen: P.laptopRental, paid: P.laptopRentalPaid },
+  { key: "babyLodging", label: "לינת תינוק", chosen: P.babyLodging, paid: P.babyLodgingPaid },
+  { key: "sitterEvening", label: "שמרטפיה בערב", chosen: P.sitterEvening, paid: P.sitterEveningPaid },
+  { key: "sitterMorning", label: "שמרטפיה בבוקר", chosen: P.sitterMorning, paid: P.sitterMorningPaid },
+] as const;
+export type PaidKey = (typeof PAID_ITEMS)[number]["key"];
+
+/** One participant as the dashboard needs her - small enough to send all of them to the browser. */
+export interface DashRow {
+  /** the sheet row, 1-based (row 1 is the header) */
+  row: number;
+  num: string;
+  name: string;
+  company: string;
+  course: string;
+  track: TrackKey;
+  trackLabel: string;
+  role: string;
+  phone: string;
+  mail: string;
+  baby: boolean;
+  laptopOwn: boolean;
+  /** a key present = she chose the item; the value = the sheet says it was paid */
+  items: Partial<Record<PaidKey, boolean>>;
+}
+
+/** A name from one of the smaller tabs (cancellations, day 3, staff) - for the drawer behind those counts. */
+export interface NameRow {
+  row: number;
+  name: string;
+  sub: string;
+}

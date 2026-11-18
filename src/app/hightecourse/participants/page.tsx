@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
   filters by course, track, company and lodging; a row opens to every filled
   cell of the sheet row. The dashboard's course and company names link here.
 */
-export default async function HcParticipantsPage({ searchParams }: { searchParams: Promise<{ course?: string; track?: string; company?: string; q?: string }> }) {
+export default async function HcParticipantsPage({ searchParams }: { searchParams: Promise<{ course?: string; track?: string; company?: string; q?: string; rows?: string }> }) {
   const { profile, isAdmin } = await hcGate();
   if (!isAdmin) return <GateView profile={profile} />;
   const sp = await searchParams;
@@ -40,12 +40,11 @@ export default async function HcParticipantsPage({ searchParams }: { searchParam
   return (
     <ParticipantsTable
       rows={snap.participants}
-      courses={snap.courses.map((c) => c.course)}
-      companies={snap.companies.map((c) => c.company)}
-      tracks={snap.tracks}
+      courses={snap.courseNames}
+      companies={snap.companyNames}
       fetchedAt={snap.fetchedAt}
       sheetUrl={hcSheetUrl(snap.participantsGid ?? undefined)}
-      initial={{ course: sp.course ?? "", track: sp.track ?? "", company: sp.company ?? "", q: sp.q ?? "" }}
+      initial={{ course: sp.course ?? "", track: sp.track ?? "", company: sp.company ?? "", q: sp.q ?? "", rows: (sp.rows ?? "").split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n) && n > 1) }}
     />
   );
 }

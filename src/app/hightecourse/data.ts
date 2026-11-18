@@ -1,7 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { readSheetsReadonly, sheetTabsMeta, SheetsError, type SheetTabMeta } from "@/lib/google-sheets";
-import { DEFAULT_HC_SHEET_ID, P, SECRET_COLUMNS, SHEET_CACHE_SECONDS, TABS, TRACKS, trackKeyOf, yes, type TabDef, type TrackKey } from "./config";
+import { DEFAULT_HC_SHEET_ID, P, PAID_ITEMS, SECRET_COLUMNS, SHEET_CACHE_SECONDS, TABS, TRACKS, trackKeyOf, yes, type DashRow, type NameRow, type PaidKey, type TabDef, type TrackKey } from "./config";
 
 /*
   Reads of the owner's sheet, cached for SHEET_CACHE_SECONDS under the tag
@@ -96,27 +96,12 @@ export async function hcTable(tab: TabDef): Promise<SheetTable> {
   return { title: tab.title, header, rows, fetchedAt: new Date().toISOString() };
 }
 
-/* ---- the dashboard ---- */
+/* ---- the participants and the dashboard ---- */
 
-export interface Participant {
-  /** the sheet row, 1-based (row 1 is the header) */
-  row: number;
-  num: string;
-  name: string;
+export interface Participant extends DashRow {
   tag: string;
-  mail: string;
-  phone: string;
-  role: string;
-  course: string;
   digitalCourse: string;
   certCourse: string;
-  track: TrackKey;
-  trackLabel: string;
-  lodging: boolean;
-  privateRoom: boolean;
-  baby: boolean;
-  laptopRental: boolean;
-  company: string;
   office: string;
   city: string;
   price: string;
@@ -126,35 +111,17 @@ export interface Participant {
   fields: { k: string; v: string }[];
 }
 
-export interface CourseCount {
-  course: string;
-  total: number;
-  byTrack: Record<TrackKey, number>;
-  /** from the ״קורסים״ tab, when the name matches */
-  category: string;
-}
-
 export interface Snapshot {
   sheetTitle: string;
   fetchedAt: string;
   participants: Participant[];
-  courses: CourseCount[];
-  tracks: { key: TrackKey; label: string; color: string; count: number }[];
-  companies: { company: string; count: number }[];
-  digitalCourses: { course: string; count: number }[];
-  certCourses: { course: string; count: number }[];
-  counts: {
-    participants: number;
-    lodging: number;
-    privateRoom: number;
-    babies: number;
-    laptopRentals: number;
-    cancellations: number;
-    day3: number;
-    staff: number;
-    companies: number;
-    coursesInCatalog: number;
-  };
+  /** course name → category from the ״קורסים״ tab, when the names match */
+  categoryByCourse: Record<string, string>;
+  /** the distinct course names and companies, largest first - the table's filters */
+  courseNames: string[];
+  companyNames: string[];
+  /** names behind the counts of the smaller tabs */
+  extras: { cancellations: NameRow[]; day3: NameRow[]; staff: NameRow[] };
   /** tabs the dashboard expected and the sheet no longer has */
   missingTabs: string[];
   /** the gid of ״משתתפות״ - the links into Google Sheets open on that tab */
@@ -180,6 +147,22 @@ function countBy(values: string[]): { key: string; count: number }[] {
   return [...m.entries()].map(([key, count]) => ({ key, count })).sort((a, b) => b.count - a.count || a.key.localeCompare(b.key, "he"));
 }
 
+/** Names out of one of the smaller tabs: ״פרטי״ + ״משפחה״, with a line of context. */
+function namesOf(values: string[][], subColumns: string[]): NameRow[] {
+  const { header, rows } = split(values);
+  const first = header.indexOf("פרטי");
+  const last = header.indexOf("משפחה");
+  const subs = subColumns.map((c) => header.indexOf(c)).filter((i) => i >= 0);
+  return rows.map((r, i) => ({
+    row: i + 2,
+    name: `${first >= 0 ? r[first] : ""} ${last >= 0 ? r[last] : ""}`.trim() || `שורה ${i + 2}`,
+    sub: subs
+      .map((j) => r[j])
+      .filter(Boolean)
+      .join(" · "),
+  }));
+}
+
 export async function hcSnapshot(): Promise<Snapshot> {
   const sheetId = hcSheetId();
   const [meta, raw] = await Promise.all([readMetaCached(sheetId), readTabsCached(sheetId, DASHBOARD_TABS)]);
@@ -191,27 +174,29 @@ export async function hcSnapshot(): Promise<Snapshot> {
   const col = (name: string) => p.header.indexOf(name);
   const c = Object.fromEntries(Object.entries(P).map(([k, name]) => [k, col(name)])) as Record<keyof typeof P, number>;
   const cell = (r: string[], i: number) => (i >= 0 ? (r[i] ?? "") : "");
+  const itemCols = PAID_ITEMS.map((it) => ({ key: it.key as PaidKey, chosen: col(it.chosen), paid: col(it.paid) }));
 
   const participants: Participant[] = p.rows.map((r, i) => {
     const trackLabel = cell(r, c.track);
+    const items: Partial<Record<PaidKey, boolean>> = {};
+    for (const it of itemCols) if (yes(cell(r, it.chosen))) items[it.key] = yes(cell(r, it.paid));
     return {
       row: i + 2,
       num: cell(r, c.num),
       name: `${cell(r, c.first)} ${cell(r, c.last)}`.trim(),
-      tag: cell(r, c.tag),
-      mail: cell(r, c.mail) || cell(r, c.workMail),
-      phone: cell(r, c.phone),
-      role: cell(r, c.role),
+      company: cell(r, c.company),
       course: cell(r, c.course),
-      digitalCourse: cell(r, c.digitalCourse),
-      certCourse: cell(r, c.certCourse),
       track: trackKeyOf(trackLabel),
       trackLabel,
-      lodging: yes(cell(r, c.lodging)),
-      privateRoom: yes(cell(r, c.privateRoom)),
+      role: cell(r, c.role),
+      phone: cell(r, c.phone),
+      mail: cell(r, c.mail) || cell(r, c.workMail),
       baby: yes(cell(r, c.baby)),
-      laptopRental: yes(cell(r, c.laptopRental)),
-      company: cell(r, c.company),
+      laptopOwn: yes(cell(r, c.laptopOwn)),
+      items,
+      tag: cell(r, c.tag),
+      digitalCourse: cell(r, c.digitalCourse),
+      certCourse: cell(r, c.certCourse),
       office: cell(r, c.office),
       city: cell(r, c.city),
       price: cell(r, c.price),
@@ -227,49 +212,37 @@ export async function hcSnapshot(): Promise<Snapshot> {
   const catCategory = cat.header.indexOf("קטגוריה");
   const categoryOf = new Map<string, string>();
   if (catName >= 0) for (const r of cat.rows) categoryOf.set(norm(r[catName] ?? ""), catCategory >= 0 ? (r[catCategory] ?? "") : "");
-
-  const courseMap = new Map<string, CourseCount>();
-  for (const x of participants) {
-    const name = x.course.trim() || "בלי קורס";
-    let cc = courseMap.get(name);
-    if (!cc) {
-      cc = { course: name, total: 0, byTrack: { frontal: 0, frontalLodging: 0, digital: 0, other: 0 }, category: categoryOf.get(norm(name)) ?? "" };
-      courseMap.set(name, cc);
-    }
-    cc.total++;
-    cc.byTrack[x.track]++;
+  const courseNames = countBy(participants.map((x) => x.course)).map((x) => x.key);
+  const categoryByCourse: Record<string, string> = {};
+  for (const name of courseNames) {
+    const cg = categoryOf.get(norm(name));
+    if (cg) categoryByCourse[name] = cg;
   }
-  const courses = [...courseMap.values()].sort((a, b) => b.total - a.total || a.course.localeCompare(b.course, "he"));
 
-  const tracks = TRACKS.map((t) => ({ key: t.key, label: t.label, color: t.color, count: participants.filter((x) => x.track === t.key).length })).filter((t) => t.key !== "other" || t.count > 0);
-
-  const companies = countBy(participants.map((x) => x.company));
-  const rowsOf = (title: string) => split(raw[title] ?? []).rows.length;
   return {
     sheetTitle: meta.title,
     fetchedAt,
     participants,
-    courses,
-    tracks,
-    companies: companies.map((x) => ({ company: x.key, count: x.count })),
-    digitalCourses: countBy(participants.map((x) => x.digitalCourse)).map((x) => ({ course: x.key, count: x.count })),
-    certCourses: countBy(participants.map((x) => x.certCourse)).map((x) => ({ course: x.key, count: x.count })),
-    counts: {
-      participants: participants.length,
-      lodging: participants.filter((x) => x.lodging).length,
-      privateRoom: participants.filter((x) => x.privateRoom).length,
-      babies: participants.filter((x) => x.baby).length,
-      laptopRentals: participants.filter((x) => x.laptopRental).length,
-      cancellations: rowsOf("ביטולים"),
-      day3: rowsOf("יום שלישי"),
-      staff: rowsOf("צוות ומרצים"),
-      companies: companies.length,
-      coursesInCatalog: cat.rows.length,
+    categoryByCourse,
+    courseNames,
+    companyNames: countBy(participants.map((x) => x.company)).map((x) => x.key),
+    extras: {
+      cancellations: namesOf(raw["ביטולים"] ?? [], ["חברה", "קורס"]),
+      day3: namesOf(raw["יום שלישי"] ?? [], ["חברה", "משרד"]),
+      staff: namesOf(raw["צוות ומרצים"] ?? [], ["תפקיד", "קורס"]),
     },
     missingTabs,
     participantsGid: meta.tabs.find((t) => t.title === "משתתפות")?.gid ?? null,
   };
 }
+
+/** The participants stripped to what the dashboard draws and lists. */
+export function dashRowsOf(participants: Participant[]): DashRow[] {
+  return participants.map(({ row, num, name, company, course, track, trackLabel, role, phone, mail, baby, laptopOwn, items }) => ({ row, num, name, company, course, track, trackLabel, role, phone, mail, baby, laptopOwn, items }));
+}
+
+/** The track colours, for anything server-side that needs them (the client imports TRACKS itself). */
+export const trackColor = (key: TrackKey) => TRACKS.find((t) => t.key === key)?.color ?? "#B8C4CF";
 
 /** The configured tabs joined with what the sheet has - the navigation and the index page. */
 export async function hcTabIndex(): Promise<{ tab: TabDef; meta: SheetTabMeta | null }[]> {
