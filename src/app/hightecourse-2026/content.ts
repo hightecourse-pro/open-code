@@ -40,3 +40,30 @@ export const SCHEDULE: ScheduleItem[] = [
 
 /** The yellow band's loop. */
 export const MARQUEE = ["בופה בוקר עשיר", "משחק קבוצתי אתגרי", "נירית כהן", "מונודרמה סטירית", "הגרלות 2026", "מופע עונג שבת", "ארוחת צהריים בשרית"];
+
+/** A sponsor's mark: the file's pixels (2x) and the height it is shown at. */
+export interface Sponsor {
+  src: string;
+  alt: string;
+  width: number;
+  height: number;
+  h: number;
+  /** The mark lives on its own dark ground - shown as a rounded tile. */
+  tile?: boolean;
+}
+
+/**
+ * The sponsors across the top of the page, right to left as the owner ordered them
+ * (18.11: ״ג׳ון ברייס הראשון מימין ואחריו קוד פתוח, ובצד שמאל את הרל״י וירושלים, באמצע את השאר״).
+ * John Bryce's mark is the one their own site shows; the rest came as her PDF/PNG files.
+ */
+export const SPONSORS: Sponsor[] = [
+  { src: "/hightecourse-2026/sponsors/john-bryce.png", alt: "ג׳ון ברייס", width: 287, height: 118, h: 52 },
+  { src: "/hightecourse-2026/sponsors/opencode.png", alt: "קוד פתוח", width: 224, height: 112, h: 52 },
+  { src: "/hightecourse-2026/sponsors/avigail-ivgi.png", alt: "אביגיל איבגי - יועצת מס", width: 160, height: 144, h: 66 },
+  { src: "/hightecourse-2026/sponsors/nissan-levy.png", alt: "ניסן לוי - חסכון חכם ביטוח מדויק", width: 205, height: 120, h: 56, tile: true },
+  { src: "/hightecourse-2026/sponsors/esther-perkal.png", alt: "אסתר פרקל - ייעוץ מס, שכר, הנהלת חשבונות", width: 362, height: 92, h: 42 },
+  { src: "/hightecourse-2026/sponsors/jerusalem-ministry.png", alt: "משרד ירושלים ומסורת ישראל", width: 127, height: 184, h: 86 },
+  { src: "/hightecourse-2026/sponsors/harli.png", alt: "הרשות לפיתוח ירושלים", width: 213, height: 116, h: 54 },
+  { src: "/hightecourse-2026/sponsors/jerusalem-municipality.png", alt: "עיריית ירושלים", width: 239, height: 120, h: 56 },
+];
