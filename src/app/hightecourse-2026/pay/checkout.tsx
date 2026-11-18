@@ -95,7 +95,7 @@ export function ConferenceCheckout({ fields, token, amountNis }: { fields: Recor
   return (
     <div className="flex flex-col gap-3" data-testid="hc-checkout">
       {error && (
-        <p className="rounded-xl px-4 py-3 text-[14.5px] font-bold" style={{ background: "#FDECEA", color: H.red }}>
+        <p data-testid="hc-pay-error" className="rounded-xl px-4 py-3 text-[14.5px] font-bold" style={{ background: "#FDECEA", color: H.red }}>
           {error}
         </p>
       )}
