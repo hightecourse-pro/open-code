@@ -10,7 +10,7 @@ export const CONFERENCE_KEY = "hightecourse-2026-day3";
 export const CONFERENCE_PARAM2 = CONFERENCE_KEY;
 export const CONFERENCE_GROUPE = "הייטקורס 2026 - יום חמישי";
 export const CONFERENCE_TITLE = "הייטקורס 2026";
-export const CONFERENCE_SUBTITLE = "פוגשת אווירה חדשה";
+export const CONFERENCE_SUBTITLE = "כשחדשנות פוגשת אווירה";
 
 export const DAY = {
   label: "יום חמישי",
