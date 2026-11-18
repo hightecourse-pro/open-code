@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowLeft, Users, User } from "lucide-react";
 import { H, LOGO, TAGLINE } from "@/app/ai-course/theme";
 import { CONTACT_EMAIL, DAY, PATHS, PRICE, nis } from "@/lib/conference-shared";
-import { MARQUEE, NAMES, SCHEDULE } from "./content";
+import { MARQUEE, NAMES, SCHEDULE, SPONSORS } from "./content";
 
 /*
   The conference's marketing page. Everything that moves, moves with the
@@ -138,8 +138,12 @@ export function Landing() {
         .hc-reveal.hc-from-right { transform: translateX(36px); }
         .hc-reveal.hc-pop { transform: scale(.86); }
         .hc-reveal.hc-in { opacity: 1; transform: none; }
-        .hc-hero { position: relative; min-height: 100svh; display: flex; align-items: center; overflow: hidden; background: linear-gradient(180deg, #D8E7F3 0%, ${TINT} 45%, #fff 100%); }
+        .hc-hero { position: relative; min-height: 100svh; display: flex; flex-direction: column; overflow: hidden; background: linear-gradient(180deg, #D8E7F3 0%, ${TINT} 45%, #fff 100%); }
         .hc-shape { position: absolute; pointer-events: none; }
+        .hc-sponsors { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px 26px; list-style: none; width: fit-content; max-width: 100%; margin: 0 auto; padding: 14px 26px; background: rgba(255,255,255,.74); border-radius: 22px; box-shadow: 0 10px 30px rgba(0,72,120,.08); }
+        .hc-sponsors li { display: flex; align-items: center; }
+        .hc-sponsor { display: block; width: auto; height: var(--h); }
+        .hc-sponsor-tile { border-radius: 9px; }
         @keyframes hc-float { 0%,100% { transform: translate(0,0) rotate(0deg) } 50% { transform: translate(0,-18px) rotate(1.5deg) } }
         @keyframes hc-float2 { 0%,100% { transform: translate(0,0) } 50% { transform: translate(10px,14px) } }
         .hc-float { animation: hc-float 9s ease-in-out infinite; }
@@ -200,6 +204,8 @@ export function Landing() {
           .hc-dot { inset-inline-start: 64px; }
           .hc-row { grid-template-columns: 52px 24px 1fr; gap: 0 8px; }
           .hc-pill { font-size: 17px; padding: 9px 18px; gap: 2px 10px; }
+          .hc-sponsors { gap: 10px 16px; padding: 12px 12px; border-radius: 18px; }
+          .hc-sponsor { height: calc(var(--h) * .56); }
           .hc-row .hc-row-time { font-size: 16px; }
           .hc-word-yellow, .hc-word-navy { text-shadow: 4px 4px 0 ${GREY}; }
         }
@@ -248,7 +254,18 @@ export function Landing() {
           </div>
         </div>
 
-        <div className="relative mx-auto grid w-full max-w-6xl gap-10 px-5 pb-24 pt-32 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:pt-36">
+        {/* the sponsors' marks, right to left in the owner's order - the first sits on the right */}
+        <div className="relative mx-auto w-full max-w-6xl px-5 pt-24 sm:pt-28">
+          <ul className="hc-sponsors" aria-label="בחסות" data-testid="hc-sponsors">
+            {SPONSORS.map((s, i) => (
+              <li key={s.src} className="hc-reveal" style={{ ["--d" as string]: `${60 + i * 60}ms` }}>
+                <Image src={s.src} alt={s.alt} width={s.width} height={s.height} className={s.tile ? "hc-sponsor hc-sponsor-tile" : "hc-sponsor"} style={{ ["--h" as string]: `${s.h}px` }} />
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="relative mx-auto grid w-full max-w-6xl flex-1 gap-10 px-5 pb-24 pt-8 lg:grid-cols-[1.1fr_.9fr] lg:items-center lg:pt-10">
           <div>
             <h1 className="flex flex-col items-start leading-none">
               <span className="hc-reveal hc-from-right hc-word hc-word-navy text-[46px] sm:text-[70px]" style={{ ["--d" as string]: "120ms" }}>
