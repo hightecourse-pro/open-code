@@ -15,9 +15,11 @@ import { Card, ExtLink, Notice, fmtNum } from "./ui";
 
   Every count on the page is a button that opens the names behind it in a
   side panel; the panel links to the full table (filtered to those rows) and
-  copies the list. Charts are HTML: thin bars stacked by a fixed colour per
-  track, a 2px gap between segments, the total at the bar's end, a table view
-  of the same numbers. Colours follow the track, never the rank.
+  copies the list. Charts are HTML: thin bars, the total at the bar's end, a
+  table view of the same numbers. The course lists carry NO lodging (the
+  owner: ״הלינה והקורסים אל תערבב״) - frontal is one navy bar, digital one
+  yellow bar; lodging lives only in its own section. The companies chart is
+  stacked frontal/digital, a 2px gap between the segments.
 */
 
 export interface DashboardData {
@@ -29,7 +31,9 @@ export interface DashboardData {
   missingTabs: string[];
 }
 
-const trackOf = (key: TrackKey) => TRACKS.find((t) => t.key === key) ?? TRACKS[3];
+/** The two groups the dashboard shows - lodging is never read off a course or a company (the owner: ״הלינה והקורסים אל תערבב״). */
+const GROUPS = { frontalAll: { label: "פרונטלי", color: TRACKS[0].color }, digital: { label: "דיגיטלי", color: TRACKS[2].color }, other: { label: "אחר", color: TRACKS[3].color } } as const;
+const groupOf = (key: TrackKey) => (key === "digital" ? GROUPS.digital : key === "other" ? GROUPS.other : GROUPS.frontalAll);
 const AMBER = { ink: "#9A5B00", bg: "#FFF1D6", line: "#F2C66D" };
 
 /* ---- the names panel ---- */
@@ -113,7 +117,7 @@ function NamesPanel({ panel, onClose }: { panel: Panel; onClose: () => void }) {
         </div>
         <ol className="min-h-0 flex-1 overflow-y-auto px-2 py-2" data-testid="hc-panel-list">
           {panel.people.map((p, i) => {
-            const t = p.track ? trackOf(p.track) : null;
+            const t = p.track ? groupOf(p.track) : null;
             return (
               <li key={`${p.row}-${i}`} className="flex items-start gap-3 px-3 py-2" style={{ borderBottom: `1px solid ${H.row}` }} data-testid="hc-panel-person">
                 <span className="w-6 shrink-0 pt-0.5 text-end text-[12px] tabular-nums" style={{ color: H.muted }}>
@@ -354,9 +358,11 @@ function ChartCard({ title, count, legend, items, columns, onPick, testId, empty
         </h3>
         <ViewToggle view={view} setView={setView} />
       </div>
-      <div className="px-5 pb-3">
-        <Legend items={legend} />
-      </div>
+      {legend.length > 0 && (
+        <div className="px-5 pb-3">
+          <Legend items={legend} />
+        </div>
+      )}
       {items.length === 0 ? (
         <p className="px-5 pb-5 text-[13.5px]" style={{ color: H.muted }}>
           {empty}
@@ -400,15 +406,15 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
   const digital = useMemo(() => rows.filter((r) => r.track === "digital"), [rows]);
   const other = useMemo(() => rows.filter((r) => r.track === "other"), [rows]);
 
-  const courseItems = (list: DashRow[], segKeys: TrackKey[]): BarItem[] =>
+  const courseItems = (list: DashRow[], group: keyof typeof GROUPS): BarItem[] =>
     countBy(list, (r) => r.course || "בלי קורס").map(({ key, n }) => ({
       label: key,
       chip: data?.categoryByCourse[key],
       total: n,
-      segments: segKeys.map((k) => ({ key: k, label: trackOf(k).label, color: trackOf(k).color, n: list.filter((r) => (r.course || "בלי קורס") === key && r.track === k).length })),
+      segments: [{ key: group, label: GROUPS[group].label, color: GROUPS[group].color, n }],
     }));
-  const frontalItems = useMemo(() => courseItems(frontal, ["frontal", "frontalLodging"]), [frontal]); // eslint-disable-line react-hooks/exhaustive-deps
-  const digitalItems = useMemo(() => courseItems(digital, ["digital"]), [digital]); // eslint-disable-line react-hooks/exhaustive-deps
+  const frontalItems = useMemo(() => courseItems(frontal, "frontalAll"), [frontal]); // eslint-disable-line react-hooks/exhaustive-deps
+  const digitalItems = useMemo(() => courseItems(digital, "digital"), [digital]); // eslint-disable-line react-hooks/exhaustive-deps
   const companyItems = useMemo<BarItem[]>(
     () =>
       countBy(rows, (r) => r.company || "בלי חברה").map(({ key, n }) => {
@@ -417,9 +423,9 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
           label: key,
           total: n,
           segments: [
-            { key: "frontalAll", label: "פרונטלי", color: TRACKS[0].color, n: of.filter((r) => isFrontal(r.track)).length },
-            { key: "digital", label: "דיגיטלי", color: TRACKS[2].color, n: of.filter((r) => r.track === "digital").length },
-            { key: "other", label: "אחר", color: TRACKS[3].color, n: of.filter((r) => r.track === "other").length },
+            { key: "frontalAll", label: GROUPS.frontalAll.label, color: GROUPS.frontalAll.color, n: of.filter((r) => isFrontal(r.track)).length },
+            { key: "digital", label: GROUPS.digital.label, color: GROUPS.digital.color, n: of.filter((r) => r.track === "digital").length },
+            { key: "other", label: GROUPS.other.label, color: GROUPS.other.color, n: of.filter((r) => r.track === "other").length },
           ],
         };
       }),
@@ -451,16 +457,21 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
   const babies = rows.filter((r) => r.baby);
   const laptopOwn = rows.filter((r) => r.laptopOwn);
 
-  const openCourse = (list: DashRow[], label: string, segKey: string | null, listName: string) => {
-    const of = list.filter((r) => (r.course || "בלי קורס") === label && (!segKey || r.track === segKey));
-    setPanel(panelOf(label, of, segKey ? `${trackOf(segKey as TrackKey).label} · ${listName}` : listName));
+  const openCourse = (list: DashRow[], label: string, listName: string) => {
+    const of = list.filter((r) => (r.course || "בלי קורס") === label);
+    setPanel(panelOf(label, of, listName));
   };
   const openCompany = (label: string, segKey: string | null) => {
     const of = rows.filter((r) => (r.company || "בלי חברה") === label && (!segKey || (segKey === "frontalAll" ? isFrontal(r.track) : r.track === segKey)));
     setPanel(panelOf(label, of, segKey === "frontalAll" ? "פרונטלי" : segKey === "digital" ? "דיגיטלי" : segKey === "other" ? "מסלול אחר" : "כל המשתתפות מהחברה"));
   };
   const openNames = (title: string, list: NameRow[]) => setPanel({ title, people: list.map((n) => ({ row: n.row, name: n.name, line: n.sub })) });
-  const tracksWithCount = TRACKS.map((t) => ({ ...t, count: rows.filter((r) => r.track === t.key).length })).filter((t) => t.key !== "other" || t.count > 0);
+  // the overview splits the participants frontal / digital only - the three sheet tracks stay in the participants table and the lodging card
+  const groups = [
+    { key: "frontalAll", ...GROUPS.frontalAll, list: frontal, sub: "מסלול רישום פרונטלי" },
+    { key: "digital", ...GROUPS.digital, list: digital, sub: "מסלול רישום דיגיטלי" },
+    { key: "other", ...GROUPS.other, list: other, sub: "ערך ב״מסלול רישום״ שאינו פרונטלי ולא דיגיטלי" },
+  ].filter((g) => g.key !== "other" || g.list.length > 0);
   const total = rows.length;
 
   return (
@@ -506,29 +517,29 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
               </div>
             </div>
             <div className="min-w-0">
-              <div className="flex h-[26px] w-full gap-[2px]" role="img" aria-label={tracksWithCount.map((t) => `${t.label}: ${t.count}`).join(", ")}>
-                {tracksWithCount
-                  .filter((t) => t.count > 0)
-                  .map((t, i, arr) => (
+              <div className="flex h-[26px] w-full gap-[2px]" role="img" aria-label={groups.map((g) => `${g.label}: ${g.list.length}`).join(", ")}>
+                {groups
+                  .filter((g) => g.list.length > 0)
+                  .map((g, i, arr) => (
                     <button
-                      key={t.key}
+                      key={g.key}
                       type="button"
-                      onClick={() => setPanel(panelOf(t.label, rows.filter((r) => r.track === t.key), "לפי ״מסלול רישום״"))}
+                      onClick={() => setPanel(panelOf(g.label, g.list, g.sub))}
                       className="flex items-center justify-center overflow-hidden text-[12px] font-black transition-opacity hover:opacity-85"
-                      style={{ width: `${(t.count / total) * 100}%`, minWidth: 6, background: t.color, color: t.key === "digital" ? H.navyDeep : H.white, borderRadius: `${i === 0 ? 6 : 0}px ${i === arr.length - 1 ? 6 : 0}px ${i === arr.length - 1 ? 6 : 0}px ${i === 0 ? 6 : 0}px` }}
-                      title={`${t.label}: ${t.count}`}
-                      data-testid={`hc-track-seg-${t.key}`}
+                      style={{ width: `${(g.list.length / total) * 100}%`, minWidth: 6, background: g.color, color: g.key === "digital" ? H.navyDeep : H.white, borderRadius: `${i === 0 ? 6 : 0}px ${i === arr.length - 1 ? 6 : 0}px ${i === arr.length - 1 ? 6 : 0}px ${i === 0 ? 6 : 0}px` }}
+                      title={`${g.label}: ${g.list.length}`}
+                      data-testid={`hc-track-seg-${g.key}`}
                     >
-                      {t.count / total >= 0.12 ? `${Math.round((t.count / total) * 100)}%` : ""}
+                      {g.list.length / total >= 0.12 ? `${Math.round((g.list.length / total) * 100)}%` : ""}
                     </button>
                   ))}
               </div>
               <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2" data-testid="hc-tracks">
-                {tracksWithCount.map((t) => (
-                  <li key={t.key} className="flex items-center gap-2 text-[13.5px]">
-                    <span aria-hidden className="inline-block h-3 w-3" style={{ background: t.color, borderRadius: 3 }} />
-                    <span style={{ color: H.ink }}>{t.label}</span>
-                    <Num n={t.count} onClick={() => setPanel(panelOf(t.label, rows.filter((r) => r.track === t.key), "לפי ״מסלול רישום״"))} size={15} testId={`hc-track-${t.key}`} />
+                {groups.map((g) => (
+                  <li key={g.key} className="flex items-center gap-2 text-[13.5px]">
+                    <span aria-hidden className="inline-block h-3 w-3" style={{ background: g.color, borderRadius: 3 }} />
+                    <span style={{ color: H.ink }}>{g.label}</span>
+                    <Num n={g.list.length} onClick={() => setPanel(panelOf(g.label, g.list, g.sub))} size={15} testId={`hc-track-${g.key}`} />
                   </li>
                 ))}
               </ul>
@@ -565,16 +576,10 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
         <ChartCard
           title="משתתפות בכל קורס פרונטלי"
           count={frontal.length}
-          legend={[
-            { key: "frontal", label: TRACKS[0].label, color: TRACKS[0].color, count: tracksWithCount.find((t) => t.key === "frontal")?.count ?? 0, onClick: () => setPanel(panelOf(TRACKS[0].label, rows.filter((r) => r.track === "frontal"))) },
-            { key: "frontalLodging", label: TRACKS[1].label, color: TRACKS[1].color, count: tracksWithCount.find((t) => t.key === "frontalLodging")?.count ?? 0, onClick: () => setPanel(panelOf(TRACKS[1].label, rows.filter((r) => r.track === "frontalLodging"))) },
-          ]}
+          legend={[]}
           items={frontalItems}
-          columns={[
-            { key: "frontal", label: TRACKS[0].label },
-            { key: "frontalLodging", label: TRACKS[1].label },
-          ]}
-          onPick={(label, seg) => openCourse(frontal, label, seg, "פרונטלי")}
+          columns={[]}
+          onPick={(label) => openCourse(frontal, label, "פרונטלי")}
           testId="hc-frontal"
           empty="אין משתתפות במסלול פרונטלי."
         />
@@ -588,10 +593,10 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
         <ChartCard
           title="משתתפות בכל קורס דיגיטלי"
           count={digital.length}
-          legend={[{ key: "digital", label: TRACKS[2].label, color: TRACKS[2].color, count: digital.length, onClick: () => setPanel(panelOf(TRACKS[2].label, digital)) }]}
+          legend={[]}
           items={digitalItems}
-          columns={[{ key: "digital", label: TRACKS[2].label }]}
-          onPick={(label, seg) => openCourse(digital, label, seg, "דיגיטלי")}
+          columns={[]}
+          onPick={(label) => openCourse(digital, label, "דיגיטלי")}
           testId="hc-digital"
           empty="אין משתתפות במסלול דיגיטלי."
         />
@@ -735,9 +740,9 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
           title="משתתפות מכל חברה"
           count={total}
           legend={[
-            { key: "frontalAll", label: "פרונטלי", color: TRACKS[0].color, count: frontal.length, onClick: () => setPanel(panelOf("פרונטלי", frontal, "שני המסלולים הפרונטליים")) },
-            { key: "digital", label: "דיגיטלי", color: TRACKS[2].color, count: digital.length, onClick: () => setPanel(panelOf("דיגיטלי", digital)) },
-            ...(other.length ? [{ key: "other", label: "אחר", color: TRACKS[3].color, count: other.length }] : []),
+            { key: "frontalAll", label: GROUPS.frontalAll.label, color: GROUPS.frontalAll.color, count: frontal.length, onClick: () => setPanel(panelOf("פרונטלי", frontal, "מסלול רישום פרונטלי")) },
+            { key: "digital", label: GROUPS.digital.label, color: GROUPS.digital.color, count: digital.length, onClick: () => setPanel(panelOf("דיגיטלי", digital, "מסלול רישום דיגיטלי")) },
+            ...(other.length ? [{ key: "other", label: GROUPS.other.label, color: GROUPS.other.color, count: other.length }] : []),
           ]}
           items={companyItems}
           columns={[
