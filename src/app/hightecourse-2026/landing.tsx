@@ -107,7 +107,7 @@ function Countdown() {
     [left.s, "שניות"],
   ];
   return (
-    <div className="hc-countdown" data-testid="hc-countdown" aria-label="הזמן שנותר עד פתיחת היום">
+    <div className="hc-countdown" data-testid="hc-countdown" aria-label="הזמן שנותר עד פתיחת היום" dir="ltr">
       {cells.map(([n, label]) => (
         <div key={label} className="hc-cd-cell">
           <span className="hc-cd-num" dir="ltr">
