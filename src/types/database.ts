@@ -2248,6 +2248,104 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["course_registrations"]["Insert"]>;
         Relationships: [];
       };
+      /** Hightecourse 2026, the third day - one public registration (single or group) with its payment (17/11). */
+      conference_orders: {
+        Row: {
+          id: string;
+          event_key: string;
+          short_code: string;
+          pay_token: string;
+          kind: string;
+          company: string | null;
+          contact_name: string | null;
+          contact_email: string | null;
+          invoice_name: string | null;
+          company_id: string | null;
+          payment_method: string;
+          note: string | null;
+          participant_count: number;
+          unit_price_nis: number;
+          amount_nis: number;
+          status: string;
+          paid_at: string | null;
+          payment_reported_at: string | null;
+          nedarim_transaction_id: string | null;
+          payment_amount_agorot: number | null;
+          confirmation_email_sent_at: string | null;
+          sheet_synced_at: string | null;
+          sheet_error: string | null;
+          admin_note: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          event_key?: string;
+          short_code: string;
+          pay_token: string;
+          kind: string;
+          company?: string | null;
+          contact_name?: string | null;
+          contact_email?: string | null;
+          invoice_name?: string | null;
+          company_id?: string | null;
+          payment_method: string;
+          note?: string | null;
+          participant_count?: number;
+          unit_price_nis: number;
+          amount_nis: number;
+          status?: string;
+          paid_at?: string | null;
+          payment_reported_at?: string | null;
+          nedarim_transaction_id?: string | null;
+          payment_amount_agorot?: number | null;
+          confirmation_email_sent_at?: string | null;
+          sheet_synced_at?: string | null;
+          sheet_error?: string | null;
+          admin_note?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["conference_orders"]["Insert"]>;
+        Relationships: [];
+      };
+      /** One participant of a conference order (17/11). */
+      conference_participants: {
+        Row: {
+          id: string;
+          order_id: string;
+          seq: number;
+          national_id: string;
+          first_name: string;
+          last_name: string;
+          personal_email: string;
+          work_email: string | null;
+          phone: string;
+          role_title: string | null;
+          department: string | null;
+          company: string | null;
+          sheet_row: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          seq?: number;
+          national_id: string;
+          first_name: string;
+          last_name: string;
+          personal_email: string;
+          work_email?: string | null;
+          phone: string;
+          role_title?: string | null;
+          department?: string | null;
+          company?: string | null;
+          sheet_row?: number | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["conference_participants"]["Insert"]>;
+        Relationships: [];
+      };
       /** The public Hightecourse AI-course quiz (/ai-course): one row per email, updated as she answers (20/10). */
       ai_course_quiz_submissions: {
         Row: {

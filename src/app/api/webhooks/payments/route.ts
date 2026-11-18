@@ -8,6 +8,7 @@ import { buildPlans } from "@/lib/payments/plans";
 import { getPricingAdmin } from "@/lib/payments/pricing";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResendEmail } from "@/lib/email/resend";
+import { isConferenceCallback, recordConferencePayment } from "@/lib/conference";
 import type { Json } from "@/types/database";
 
 /**
@@ -256,6 +257,18 @@ async function handleCallback(req: Request) {
     const mosadHere = params.MosadNumber ?? params.Mosad ?? "";
     const cbHere = parseNedarimCallback(params);
     if (mosadHere && mosadHere === cfg.mosadId && cbHere.ok && cbHere.transactionId) {
+      // A conference charge (Hightecourse 2026, 17/11) from an address we do not
+      // know: the order only moves to "לאימות" - the admin confirms it by hand.
+      if (isConferenceCallback(params)) {
+        try {
+          record.outcome = await recordConferencePayment(params, { transactionId: cbHere.transactionId, amountAgorot: cbHere.amountAgorot }, { verified: false });
+        } catch (e) {
+          record.outcome = "conference_error";
+          record.error = String(e);
+        }
+        await logEvent(record);
+        return NextResponse.json({ ok: true, conference: true, outcome: record.outcome });
+      }
       try {
         record.outcome = await handleExternalPayment(
           params,
@@ -303,6 +316,19 @@ async function handleCallback(req: Request) {
   }
   if (!cb.transactionId) {
     return reject("missing_transaction_id", 400, "missing transaction id");
+  }
+  // A conference registration's charge (Hightecourse 2026, 17/11): Param2
+  // names the event and Param1 the order - never membership money. It marks
+  // the order paid, writes the sheet, mails her and the team.
+  if (isConferenceCallback(params)) {
+    try {
+      record.outcome = await recordConferencePayment(params, { transactionId: cb.transactionId, amountAgorot: cb.amountAgorot }, { verified: true });
+    } catch (e) {
+      record.outcome = "conference_error";
+      record.error = String(e);
+    }
+    await logEvent(record);
+    return NextResponse.json({ ok: record.outcome !== "conference_error", conference: true, outcome: record.outcome });
   }
   // A successful, authenticated payment with no Param1 - money taken OUTSIDE
   // the app (a direct Nedarim link, a manual charge). Match it to a member by
