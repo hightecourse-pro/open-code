@@ -2,7 +2,6 @@
 
 import { useDeferredValue, useMemo, useState } from "react";
 import { H } from "../../../ai-course/theme";
-import type { TabDef } from "../../config";
 import { Freshness } from "../../gate";
 import { Card, ExtLink, fmtNum } from "../../ui";
 
@@ -30,7 +29,8 @@ function Cell({ v }: { v: string }) {
   );
 }
 
-export function SheetTable({ tab, header, rows, fetchedAt, sheetUrl }: { tab: TabDef; header: string[]; rows: string[][]; fetchedAt: string; sheetUrl: string }) {
+/** Only the title and the note come down - the tab definition itself (hidden column names included) stays on the server. */
+export function SheetTable({ title, note, header, rows, fetchedAt, sheetUrl }: { title: string; note?: string; header: string[]; rows: string[][]; fetchedAt: string; sheetUrl: string }) {
   const [q, setQ] = useState("");
   const dq = useDeferredValue(q);
   const [limit, setLimit] = useState(PAGE);
@@ -47,10 +47,10 @@ export function SheetTable({ tab, header, rows, fetchedAt, sheetUrl }: { tab: Ta
       <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
           <h1 className="text-[24px] font-black leading-tight" style={{ color: H.navy }} data-testid="hc-sheet-title">
-            {tab.title}
+            {title}
           </h1>
           <p className="mt-1 text-[13.5px]" style={{ color: H.muted }}>
-            {tab.note ? `${tab.note} · ` : ""}
+            {note ? `${note} · ` : ""}
             <ExtLink href={sheetUrl}>לפתיחה בגוגל שיטס</ExtLink>
           </p>
         </div>

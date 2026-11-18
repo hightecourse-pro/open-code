@@ -8,7 +8,8 @@ import { PATHS } from "./config";
 import { Nav, UserMenu } from "./gate";
 
 export const metadata: Metadata = {
-  title: { default: "מערכת ניהול הייטקורס", template: "%s | ניהול הייטקורס" },
+  // every screen sets an absolute title - the community root template would add ״· קהילת קוד פתוח״ otherwise
+  title: { absolute: "מערכת ניהול הייטקורס" },
   robots: { index: false, follow: false },
   icons: { icon: "/ai-course/icon.png" },
 };

@@ -6,7 +6,7 @@ import { hcSheetUrl, hcTabIndex, sheetErrorText } from "../data";
 import { GateView, hcGate } from "../shell";
 import { Card, ExtLink, Notice } from "../ui";
 
-export const metadata: Metadata = { title: "גליונות" };
+export const metadata: Metadata = { title: { absolute: "גליונות | ניהול הייטקורס" } };
 export const dynamic = "force-dynamic";
 
 /*

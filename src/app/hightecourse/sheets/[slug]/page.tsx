@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const tab = tabBySlug((await params).slug);
-  return { title: tab?.title ?? "גליון" };
+  return { title: { absolute: `${tab?.title ?? "גליון"} | ניהול הייטקורס` } };
 }
 
 /** One tab of the sheet as a searchable table - exactly the sheet's columns, minus the ones that must never render. */
@@ -46,5 +46,5 @@ export default async function HcSheetPage({ params }: { params: Promise<{ slug: 
       </div>
     );
   }
-  return <SheetTable tab={tab} header={table.header} rows={table.rows} fetchedAt={table.fetchedAt} sheetUrl={hcSheetUrl(gid)} />;
+  return <SheetTable title={tab.title} note={tab.note} header={table.header} rows={table.rows} fetchedAt={table.fetchedAt} sheetUrl={hcSheetUrl(gid)} />;
 }

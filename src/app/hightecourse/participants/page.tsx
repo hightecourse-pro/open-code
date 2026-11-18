@@ -6,7 +6,7 @@ import { GateView, hcGate } from "../shell";
 import { Notice } from "../ui";
 import { ParticipantsTable } from "./participants-table";
 
-export const metadata: Metadata = { title: "משתתפות" };
+export const metadata: Metadata = { title: { absolute: "משתתפות | ניהול הייטקורס" } };
 export const dynamic = "force-dynamic";
 
 /*

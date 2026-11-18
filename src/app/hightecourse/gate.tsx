@@ -117,7 +117,7 @@ export function UserMenu({ name }: { name: string }) {
       <span className="font-bold" style={{ color: H.navy }} data-testid="hc-user">
         {name}
       </span>
-      <button type="button" onClick={() => start(signOutAnd(() => router.push(PATHS.home)))} disabled={pending} className="font-medium underline underline-offset-2 disabled:opacity-50" style={{ color: H.muted }} data-testid="hc-signout">
+      <button type="button" onClick={() => start(signOutAnd(() => router.refresh()))} disabled={pending} className="font-medium underline underline-offset-2 disabled:opacity-50" style={{ color: H.muted }} data-testid="hc-signout">
         {pending ? "רגע..." : "יציאה"}
       </button>
     </div>

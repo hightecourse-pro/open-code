@@ -3,7 +3,7 @@ import { hcSheetUrl, hcSnapshot, sheetErrorText, type Snapshot } from "./data";
 import { GateView, hcGate } from "./shell";
 import { Dashboard } from "./dashboard";
 
-export const metadata: Metadata = { title: "דשבורד" };
+export const metadata: Metadata = { title: { absolute: "דשבורד | ניהול הייטקורס" } };
 export const dynamic = "force-dynamic";
 
 /*
