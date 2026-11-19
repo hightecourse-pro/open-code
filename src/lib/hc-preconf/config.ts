@@ -17,7 +17,8 @@ export const CONF = {
   deadline: "מוצאי שבת, 21.11, בשעה 23:00",
   deadlineShort: "מוצאי שבת 21.11 בשעה 23:00",
   deadlineIso: "2026-11-21T23:00:00+02:00",
-  site: "https://hightecourse.com/",
+  /** The personal area (the owner, 19/11: ״זה הלינק לאזור האישי״). */
+  site: "https://hightecourse.com/personal-area",
   laptopRentalNis: 50,
   replyTo: "office@hightecourse.com",
   /** ״כל שאלה טכנית בענייני לינה/שמרטפיה וכו׳ לשלוח ליהודית״. */
