@@ -1,7 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { readSheetsReadonly, replaceTab } from "@/lib/google-sheets";
-import { sendResendBatch, sendResendEmail } from "@/lib/email/resend";
+import { sendResendEmail, type MailAttachment } from "@/lib/email/resend";
 import { isProductionEnv } from "@/lib/env";
 import { getSiteUrl } from "@/lib/site";
 import type { Database, Json } from "@/types/database";
@@ -30,8 +30,9 @@ export const MIRROR_TAB = "שאלון הכנה 2026";
 /** The earlier Google Form (״בחירת קורס פיתוח AI״) whose answers prefill ours. */
 const PREFILL_SHEET = () => process.env.HC_PRECONF_PREFILL_SHEET_ID || "1ucaaDcZP9a-_r3MpoazwUCj_xJqQjVkOLGW4OmTBEyE";
 const PREFILL_TAB = "תגובות לטופס 1";
-/** Mails per tick - Resend's batch takes 100 a request, 2 requests a second. */
-const SEND_LIMIT = 400;
+/** Mails per tick: single sends (the program is attached, which the batch endpoint cannot do) at Resend's 2 a second, inside the function's time limit; the rest waits for the next tick. */
+const SEND_LIMIT = 220;
+const SEND_BUDGET_MS = 125_000;
 
 export function mirrorSheetId(): string | null {
   const explicit = process.env.HC_PRECONF_SHEET_ID?.trim();
@@ -94,6 +95,7 @@ async function readSheetParticipants(): Promise<PrepInsert[]> {
     const courseRaw = cell(r, c.course);
     const resolved = resolveCourse(courseRaw);
     const hold = resolved.hold ?? (email ? null : "אין כתובת מייל בגיליון");
+    void resolved.note; // printed in the mail and the mirror from course_raw (mailInputOf / mirrorRowOf)
     out.push({
       source_key: id ? `tz:${id}` : email ? `mail:${email}` : `row:${sheetRow}`,
       is_sample: false,
@@ -270,6 +272,7 @@ export function mailInputOf(row: PrepRow): PrepMailInput {
     lastName: row.last_name,
     idNumber: row.id_number ?? "",
     course: row.course || row.course_raw,
+    courseNote: resolveCourse(row.course_raw).note ?? "",
     kind: row.course_kind as PrepKind,
     laptopRequired: row.laptop_required,
     lodging: row.lodging ?? "",
@@ -284,10 +287,27 @@ export function mailInputOf(row: PrepRow): PrepMailInput {
     updatedPersonal: row.updated_personal,
     formUrl: `${site()}${prepFormPath(row.token)}`,
     siteUrl: site(),
+    programUrl: `${site()}${CONF.programPath}`,
   };
 }
 
 export const mailOf = (row: PrepRow) => buildPrepMail(mailInputOf(row));
+
+/** Both her addresses (the owner: ״לשלוח יחד ל-2 המיילים של המשתתפת״). */
+const recipientsOf = (row: Pick<PrepRow, "email" | "cc_email">): string[] => [row.email, row.cc_email ?? ""].filter((a) => !!a);
+
+let programCache: { at: number; attachment: MailAttachment } | null = null;
+/** The program image from our own site, base64 for Resend - fetched once per run (the owner: ״התוכניה מצורפת כאן״). */
+export async function programAttachment(): Promise<MailAttachment> {
+  if (programCache && Date.now() - programCache.at < 10 * 60_000) return programCache.attachment;
+  const res = await fetch(`${site()}${CONF.programPath}`, { signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new Error(`program image ${res.status}`);
+  const content = Buffer.from(await res.arrayBuffer()).toString("base64");
+  programCache = { at: Date.now(), attachment: { filename: CONF.programFileName, content } };
+  return programCache.attachment;
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export interface SendResult {
   sent: number;
@@ -296,7 +316,7 @@ export interface SendResult {
   firstError?: string;
 }
 
-/** Everyone free to mail and not yet mailed (an error is retried twice), through Resend's batch endpoint. */
+/** Everyone free to mail and not yet mailed (an error is retried twice) - one send each, both her addresses, the program attached. */
 export async function sendPending(): Promise<SendResult> {
   const admin = createAdminClient();
   const { data: rows, error } = await admin
@@ -313,29 +333,25 @@ export async function sendPending(): Promise<SendResult> {
   const list = rows ?? [];
   const result: SendResult = { sent: 0, blocked: 0, errors: 0 };
   if (list.length === 0) return result;
-  const items = list.map((r) => {
+  const attachments = [await programAttachment()];
+  const started = Date.now();
+  for (const r of list) {
+    if (Date.now() - started > SEND_BUDGET_MS) break; // the next tick continues
     const m = mailOf(r);
-    return { to: r.email, cc: r.cc_email ?? undefined, subject: m.subject, html: m.html };
-  });
-  const outcomes = await sendResendBatch(items, { fromName: CONF.fromName, replyTo: CONF.replyTo });
-  const now = new Date().toISOString();
-  for (let i = 0; i < list.length; i += 20) {
-    await Promise.all(
-      list.slice(i, i + 20).map((r, j) => {
-        const o = outcomes[i + j];
-        const status = o.ok ? "sent" : o.error === "blocked_by_allowlist" ? "blocked" : "error";
-        if (status === "sent") result.sent++;
-        else if (status === "blocked") result.blocked++;
-        else {
-          result.errors++;
-          result.firstError ??= o.ok ? undefined : o.error;
-        }
-        return admin
-          .from(T)
-          .update({ mail_status: status, mail_sent_at: o.ok ? now : r.mail_sent_at, mail_error: o.ok ? null : o.error, mail_attempts: r.mail_attempts + 1, updated_at: now })
-          .eq("id", r.id);
-      })
-    );
+    const o = await sendResendEmail({ to: recipientsOf(r), subject: m.subject, html: m.html, attachments, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+    const status = o.ok ? "sent" : o.error === "blocked_by_allowlist" ? "blocked" : "error";
+    if (status === "sent") result.sent++;
+    else if (status === "blocked") result.blocked++;
+    else {
+      result.errors++;
+      result.firstError ??= o.error;
+    }
+    const now = new Date().toISOString();
+    await admin
+      .from(T)
+      .update({ mail_status: status, mail_sent_at: o.ok ? now : r.mail_sent_at, mail_error: o.ok ? null : (o.error ?? null), mail_attempts: r.mail_attempts + 1, updated_at: now })
+      .eq("id", r.id);
+    await sleep(520); // Resend: 2 requests a second
   }
   return result;
 }
@@ -347,7 +363,7 @@ export async function resendPrepMail(id: string): Promise<{ ok: boolean; error?:
   if (!row) return { ok: false, error: "not_found" };
   if (!row.email) return { ok: false, error: "no_email" };
   const m = mailOf(row);
-  const r = await sendResendEmail({ to: row.email, subject: m.subject, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+  const r = await sendResendEmail({ to: recipientsOf(row), subject: m.subject, html: m.html, attachments: [await programAttachment()], essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
   const now = new Date().toISOString();
   await admin
     .from(T)
@@ -365,12 +381,20 @@ const SAMPLES: { n: number; label: string; row: Partial<PrepInsert> }[] = [
   { n: 4, label: "מיומנויות רכות, תעודה דיגיטלית, לא עדכנה", row: { course_raw: "מיומנויות רכות בעולם העבודה החדש", lodging: "לא", cert_course: "ניהול מוצר - דיגיטלי בלבד", updated_personal: false } },
   { n: 5, label: "מצוינות בניהול, לינה, עדכנה", row: { course_raw: "מצויינות בניהול", lodging: "כן", lodging_paid: "כן", updated_personal: true } },
   { n: 6, label: "Salesforce, מחשב מהשכרה לא שולם, לא עדכנה", row: { course_raw: "יישום ופיתוח Salesforce בעידן ה־AI", lodging: "לא", laptop_rental: "כן", laptop_rental_paid: "לא", updated_personal: false } },
+  { n: 7, label: "מצוינות בניהול - נדרש אישור חברה, עדכנה", row: { course_raw: "מצויינות בניהול - נדרש אישור חברה למעבר", lodging: "לא", updated_personal: true } },
+  { n: 8, label: "קורס עוד לא נבחר (בסיסי או מתקדם), לינה", row: { course_raw: "Advanced GenAI & Agentic AI for Developers - נדרש לבחור בסיסי או מתקדם", lodging: "כן", lodging_paid: "כן", updated_personal: false } },
 ];
 
-/** The six variations to one address, each a real row (is_sample) so the questionnaire links in them work. */
+/** The variations to one address, each a real row (is_sample) so the questionnaire links in them work. */
 export async function sendPrepSamples(to: string): Promise<{ n: number; label: string; ok: boolean; error?: string }[]> {
   const admin = createAdminClient();
   const out: { n: number; label: string; ok: boolean; error?: string }[] = [];
+  let attachments: MailAttachment[] = [];
+  try {
+    attachments = [await programAttachment()];
+  } catch (e) {
+    return SAMPLES.map((s) => ({ n: s.n, label: s.label, ok: false, error: `program: ${e instanceof Error ? e.message : String(e)}` }));
+  }
   for (const s of SAMPLES) {
     const resolved = resolveCourse(s.row.course_raw ?? "");
     const base: PrepInsert = {
@@ -395,7 +419,8 @@ export async function sendPrepSamples(to: string): Promise<{ n: number; label: s
       continue;
     }
     const m = mailOf(row);
-    const r = await sendResendEmail({ to: row.email, subject: `[דוגמה ${s.n}: ${s.label}] ${m.subject}`, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+    const r = await sendResendEmail({ to: row.email, subject: `[דוגמה ${s.n}: ${s.label}] ${m.subject}`, html: m.html, attachments, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+    await sleep(520);
     await admin
       .from(T)
       .update({ mail_status: r.ok ? "sent" : r.error === "blocked_by_allowlist" ? "blocked" : "error", mail_sent_at: r.ok ? new Date().toISOString() : null, mail_error: r.ok ? null : (r.error ?? null), mail_attempts: row.mail_attempts + 1 })
@@ -419,6 +444,7 @@ export const MIRROR_HEADER = [
   "מייל נוסף",
   "חברה",
   "קורס",
+  "הערה מהגיליון",
   "סוג שאלון",
   "נדרש מחשב",
   "מסלול",
@@ -479,6 +505,7 @@ export function mirrorRowOf(row: PrepRow): string[] {
     row.cc_email ?? "",
     row.company ?? "",
     row.course || row.course_raw,
+    resolveCourse(row.course_raw).note ?? "",
     KIND_LABEL[(row.course_kind as PrepKind) ?? "unknown"] ?? row.course_kind,
     yn(row.laptop_required),
     row.track ?? "",

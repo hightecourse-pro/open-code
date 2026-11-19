@@ -5,10 +5,11 @@ import { CONF, kindNeedsLaptop, type PrepKind } from "./config";
   participant from her row in the owner's sheet. The 2025 letter (the Apps
   Script's buildPreConferenceEmailHtml_) is the base; what the owner asked for
   on 19/11 is new: replies to the office, logistics questions to יהודית, the
-  Friday deadline for lodging and babysitting, the push to the personal area
-  for whoever has not updated it, the laptop + AI tools block with the rental
-  option and the questionnaire button, and a cleaner design in the
-  Hightecourse colours. Tables and inline styles only (mail clients).
+  deadline for lodging, babysitting and the laptop (״מוצאי שבת בשעה 23:00״),
+  the push to the personal area for whoever has not updated it, the laptop +
+  AI tools block with the rental option and the questionnaire button, the
+  program attached and shown, the sheet's notes (״נדרש אישור חברה״) printed
+  prominently, and bigger headings. Tables and inline styles only (mail clients).
 */
 const H = { navy: "#004878", yellow: "#F8C800", yellowSoft: "#FFF4C2", bg: "#E6EFF7", ink: "#1C2B3A", body: "#3B4C5E", muted: "#5E7183", line: "#D9E2EC", red: "#C0392B", redSoft: "#FDECEA", blueSoft: "#EEF4F9" };
 
@@ -18,6 +19,8 @@ export interface PrepMailInput {
   idNumber: string;
   /** the canonical course name */
   course: string;
+  /** the sheet's note after the course (״נדרש אישור חברה למעבר״, ״נדרש לבחור…״) - printed prominently */
+  courseNote: string;
   kind: PrepKind;
   laptopRequired: boolean;
   lodging: string;
@@ -33,8 +36,10 @@ export interface PrepMailInput {
   updatedPersonal: boolean;
   /** the questionnaire link for her token */
   formUrl: string;
-  /** the site that hosts the logo */
+  /** the site that hosts the logo and the program */
   siteUrl: string;
+  /** the program image (shown in the letter, attached to the mail) */
+  programUrl: string;
 }
 
 const esc = (t: string) => String(t ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -42,9 +47,10 @@ const yes = (v: string) => (v ?? "").trim() === "כן";
 const no = (v: string) => (v ?? "").trim() === "לא";
 
 const p = (html: string, extra = "") => `<p style="margin:0 0 12px; font-size:15.5px; line-height:1.75; color:${H.body};${extra}">${html}</p>`;
-const h2 = (text: string) => `<h2 style="margin:0 0 12px; font-size:19px; line-height:1.3; font-weight:800; color:${H.navy};">${text}</h2>`;
-const section = (inner: string) => `<tr><td style="padding:22px 28px 10px; border-top:1px solid ${H.line};">${inner}</td></tr>`;
-const payNote = (text: string) => `<p style="margin:0 0 12px; font-size:14.5px; line-height:1.6; font-weight:700; color:${H.red};">${text}</p>`;
+/** A section heading - big and clear (the owner: ״תדגיש ותגדיל את הכותרות של כל נושא״). */
+const h2 = (text: string) => `<h2 style="margin:0 0 4px; font-size:23px; line-height:1.3; font-weight:900; color:${H.navy};">${text}</h2><div style="width:56px; height:4px; background:${H.yellow}; border-radius:2px; margin:0 0 14px;"></div>`;
+const section = (inner: string) => `<tr><td style="padding:24px 28px 10px; border-top:1px solid ${H.line};">${inner}</td></tr>`;
+const redLine = (text: string) => `<p style="margin:0 0 12px; font-size:15.5px; line-height:1.7; font-weight:800; color:${H.red};">${text}</p>`;
 const button = (href: string, text: string, tone: "yellow" | "navy" = "navy") =>
   `<a href="${href}" style="display:inline-block; background:${tone === "yellow" ? H.yellow : H.navy}; color:${tone === "yellow" ? H.navy : "#ffffff"}; text-decoration:none; font-weight:800; font-size:16px; padding:14px 30px; border-radius:999px;">${text}</a>`;
 const box = (inner: string, tone: "yellow" | "red" | "blue" | "navy") => {
@@ -55,8 +61,8 @@ const box = (inner: string, tone: "yellow" | "red" | "blue" | "navy") => {
 
 function deadlineBox(laptop: boolean): string {
   return box(
-    `<div style="font-size:17px; font-weight:800; color:${H.navy}; margin-bottom:6px;">עד מחר, ${CONF.deadline} - נסגר הרישום ללינה ולשמרטפיה</div>
-     <div style="font-size:14.5px; line-height:1.65; color:${H.ink};">רוצה להוסיף לינה, חדר פרטי או שמרטפיה לבוקר ולערב? זה אפשרי רק עד יום שישי, באזור האישי באתר הייטקורס.${laptop ? ` גם הזמנת <b>מחשב נייד להשכרה</b> נסגרת ביום שישי.` : ""}</div>`,
+    `<div style="font-size:17px; font-weight:800; color:${H.navy}; margin-bottom:6px;">עד ${CONF.deadline} - נסגר הרישום ללינה ולשמרטפיה${laptop ? " ולהשכרת מחשב" : ""}</div>
+     <div style="font-size:14.5px; line-height:1.65; color:${H.ink};">רוצה להוסיף לינה, חדר פרטי או שמרטפיה לבוקר ולערב? זה אפשרי רק עד ${CONF.deadlineShort}, באזור האישי באתר הייטקורס.${laptop ? ` גם הזמנת <b>מחשב נייד להשכרה</b> נסגרת אז.` : ""}</div>`,
     "yellow"
   );
 }
@@ -87,7 +93,19 @@ function detailsCard(i: PrepMailInput): string {
     </table></td></tr></table>`;
 }
 
+/** The sheet's note after the course name, printed so it cannot be missed (the owner: ״תכתוב בצורה בולטת את ההערה הזו״). */
+function courseNoteBox(note: string): string {
+  if (!note) return "";
+  return box(`<div style="font-size:16px; font-weight:800; color:${H.red};">שימי לב: ${esc(note)}</div><div style="font-size:14px; line-height:1.6; color:${H.ink}; margin-top:4px;">כך רשום אצלנו ליד הקורס שלך. לשאלות - פשוט השיבי למייל הזה.</div>`, "red");
+}
+
 function laptopSection(i: PrepMailInput): string {
+  if (i.kind === "unknown") {
+    return `${h2("מה צריך עבור הקורס שלך?")}
+      ${p(`הקורס שלך עוד לא נקבע סופית${i.courseNote ? ` (<b>${esc(i.courseNote)}</b>)` : ""}. ברגע שייקבע נעדכן אותך מה צריך להביא.`)}
+      ${p(`בינתיים נשמח לכמה פרטים קצרים (דקה אחת):`)}
+      <div style="margin:4px 0 16px;">${button(i.formUrl, "כמה פרטים לקראת הקורס", "navy")}</div>`;
+  }
   const laptop = i.laptopRequired || kindNeedsLaptop(i.kind);
   if (!laptop) {
     return `${h2("מה צריך עבור הקורס שלך?")}
@@ -98,9 +116,9 @@ function laptopSection(i: PrepMailInput): string {
   let rental = "";
   if (yes(i.laptopRental)) {
     rental = p(`הזמנת מחשב מהשכרה - הוא ימתין לך בעמדת השכרת המחשבים.`);
-    if (no(i.laptopRentalPaid)) rental += payNote("יש להסדיר את התשלום עבור השכרת המחשב.");
+    if (no(i.laptopRentalPaid)) rental += redLine("יש להסדיר את התשלום עבור השכרת המחשב.");
   } else {
-    rental = p(`<b>אין לך מחשב נייד?</b> אפשר להשכיר מחשב ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אזור האישי</a> במחיר של <b>${CONF.laptopRentalNis} ש״ח</b> למחשב לשעות הקורס. ההזמנה עד מחר, <b>${CONF.deadline}</b>, כדי שנספיק להזמין.`);
+    rental = p(`<b>אין לך מחשב נייד?</b> אפשר להשכיר מחשב ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אזור האישי</a> במחיר של <b>${CONF.laptopRentalNis} ש״ח</b> למחשב לשעות הקורס. ההזמנה עד <b>${CONF.deadline}</b>, כדי שנספיק להזמין.`);
   }
   return `${h2("מה צריך עבור הקורס שלך?")}
     ${p(`נרשמת לקורס <b>${esc(i.course)}</b>.`)}
@@ -121,13 +139,14 @@ function babysitSection(i: PrepMailInput): string {
   if (m && e) dyn = p("<b>נרשמת לשירותי השמרטפיה בבוקר ובערב.</b>");
   else if (m) dyn = p("<b>נרשמת לשירותי השמרטפיה בבוקר.</b>");
   else if (e) dyn = p("<b>נרשמת לשירותי השמרטפיה בערב.</b>");
-  if ((m && no(i.sitterMorningPaid)) || (e && no(i.sitterEveningPaid))) dyn += payNote("יש להסדיר את התשלום עבור השמרטפיה.");
+  if ((m && no(i.sitterMorningPaid)) || (e && no(i.sitterEveningPaid))) dyn += redLine("יש להסדיר את התשלום עבור השמרטפיה.");
   if (m) {
     dyn += p("בשעות הבוקר המטפלות הן נשים מנוסות, כדי לאפשר לך מקסימום רוגע נפשי בשעות הקורס.");
     dyn += p("גם השמרטפיות צריכות לאכול ארוחת צהריים - שימי לב לקחת את התינוק לפני סוף הארוחה, כדי לאפשר להן לאכול ולחזור לשמור על התינוקות בזמן הקורס.");
   }
   return `${h2("שמרטפיה")}
-    ${p(`<b>לא ניתן להיכנס למתחם הקורסים ולאירועי הערב עם תינוק כלל.</b> מי שמגיעה עם תינוק נדרשת להשתמש בשירותי השמרטפיה, בתשלום סמלי מראש.`)}
+    ${redLine("לא ניתן להיכנס למתחם הקורסים ולאירועי הערב עם תינוק כלל.")}
+    ${p("מי שמגיעה עם תינוק נדרשת להשתמש בשירותי השמרטפיה, בתשלום סמלי מראש.")}
     ${dyn}
     ${p(`<b>לא ניתן להגיע עם תינוק אם לא נרשמת מראש</b> - כמות המטפלות מותאמת לכמות התינוקות, כדי לתת טיפול מיטבי. הרישום לשמרטפיה נסגר ב${CONF.deadline}.`)}
     ${p("בתוכניות הקלילות (סרט / סדנה) אפשר להיכנס בשמחה גם עם תינוקות.")}
@@ -137,24 +156,22 @@ function babysitSection(i: PrepMailInput): string {
 
 function kashrutSection(i: PrepMailInput): string {
   const breakfastNote = no(i.lodging) ? p("אם אינך ישנה במלון - יש לקחת שובר לארוחת הבוקר בכניסה לחדר האוכל, עד השעה 8:40.") : "";
-  const vibeNote = yes(i.lodging) ? p("אם את ישנה במלון - את יכולה לאכול בחדר האוכל של המלון.") : "";
   return `${h2("כשרות הכנס")}
     ${p(`<b>ארוחות צהריים וערב</b> - מקייטרינג חיצוני בכשרות <b>בד״ץ עד״ח</b>.`)}
     ${p(`<b>הפסקת קפה ועוגות</b> - בהשגחת <b>בד״ץ עד״ח</b>. עוגות השמרים בהשגחת בד״ץ עד״ח, וחלקן נאפו בתנור המלון שהוכשר על ידי המשגיח (הגביניות והרוגלך מגיעים אפויים מהמאפייה).`)}
-    <h3 style="margin:14px 0 8px; font-size:16px; font-weight:800; color:${H.navy};">ארוחת הבוקר</h3>
+    <h3 style="margin:14px 0 8px; font-size:17px; font-weight:800; color:${H.navy};">ארוחת הבוקר</h3>
     ${p(`ביום רביעי - ממטבח המלון:<br>כשרות המוצרים - עד״ח / רובין / לנדא / שארית<br>פירות וירקות - הרב אפרתי / עד״ח<br>ירקות עלים - עד״ח<br>התנורים יעברו הכשרה, אפייה בתבניות חד-פעמיות.`)}
     ${p(`משגיח נוסף מטעמנו במקום: <b>הרב עקיבא אוירבך</b> <span dir="ltr">052-7614823</span>`)}
     ${breakfastNote}
-    ${p(`ביום חמישי - <b>כנס Vibe &amp; Meet</b>: ארוחת הבוקר תוגש כבופה בלובי (פואיה) ליד האולם, בהשגחת <b>בד״ץ עד״ח</b>.`)}
-    ${vibeNote}`;
+    ${p("ביום חמישי ארוחת הבוקר תוגש כבופה בלובי (פואיה) ליד האולם.")}`;
 }
 
 /** The letter for one participant. */
 export function buildPrepMail(i: PrepMailInput): { subject: string; html: string } {
   const logo = `${i.siteUrl}/ai-course/hightecourse.png`;
   const first = esc(i.firstName || "");
-  const laptop = i.laptopRequired || kindNeedsLaptop(i.kind);
-  const lodgingNote = yes(i.lodging) && no(i.lodgingPaid) ? payNote("יש להסדיר את התשלום עבור הלינה במלון.") : "";
+  const laptop = i.kind !== "unknown" && (i.laptopRequired || kindNeedsLaptop(i.kind));
+  const lodgingNote = yes(i.lodging) && no(i.lodgingPaid) ? redLine("יש להסדיר את התשלום עבור הלינה במלון.") : "";
 
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(CONF.subject)}</title></head>
@@ -171,7 +188,8 @@ export function buildPrepMail(i: PrepMailInput): { subject: string; html: string
     </td></tr>
 
     <tr><td style="padding:26px 28px 6px;">
-      <h1 style="margin:0 0 12px; font-size:23px; line-height:1.3; font-weight:900; color:${H.navy};">שלום ${first},</h1>
+      <h1 style="margin:0 0 12px; font-size:24px; line-height:1.3; font-weight:900; color:${H.navy};">שלום ${first},</h1>
+      ${p(`<b>המייל ארוך... אבל חשוב ממש לקרוא עד הסוף.</b>`, ` font-size:16.5px; color:${H.ink};`)}
       ${p(`<b>הנה זה מגיע...</b> מתרגשות ממש לפגוש אותך ב${CONF.firstDay}, במלוא המרץ והאנרגיה, לשלושה ימים של <b>מקצועיות, פינוק וחוויה</b>.`)}
       ${deadlineBox(laptop)}
       ${personalAreaBlock(i.updatedPersonal)}
@@ -180,30 +198,31 @@ export function buildPrepMail(i: PrepMailInput): { subject: string; html: string
     ${section(`${h2("הפרטים שלך")}
       ${p("נשמח אם תעברי עליהם ותראי שאין טעויות:")}
       ${detailsCard(i)}
+      ${courseNoteBox(i.courseNote)}
       ${lodgingNote}
-      ${payNote("לא ניתן לעבור בין קורסים במהלך הכנס.")}`)}
+      ${redLine("לא ניתן לעבור בין קורסים במהלך הכנס.")}`)}
 
     ${section(laptopSection(i))}
 
     ${section(`${h2("לוח הזמנים של הייטקורס")}
-      ${p("יש לנו לו״ז צפוף ותוכניה עמוסה ומלאה (התוכניה המלאה תישלח אלייך בנפרד).")}
+      ${p("יש לנו לו״ז צפוף ותוכניה עמוסה ומלאה (התוכניה המלאה מצורפת למייל הזה, וגם כאן למטה).")}
       ${p("כדי שנהנה עד הסוף - <b>חשוב מאוד לעמוד בזמנים</b>, ו... יש גם <b>מבצע מיוחד</b> למי שמקפידה להיכנס בזמן!")}
       ${p("<b>איך זה הולך?</b><br>בכל קורס יונחו כרטיסי הגרלה. נכנסת בזמן? תוכלי למלא כרטיס ולשלשל לתיבה במתחם ההגרלות. <b>כל מושב</b> מקנה לך כרטיס הגרלה נוסף ומגדיל את סיכוייך לזכות.")}
       ${p("ביום האחרון תוגרל <b>מתנה מפנקת</b> על כל יום. <b>שווה...</b>")}
-      ${box(`<div style="font-size:14.5px; line-height:1.65; color:${H.ink};"><b>שימי לב:</b> במתחם מחכות לך <b>תיבות הגרלה שוות נוספות</b> (מי ביקשה טינקו, נינג׳ה גריל או שבת חופשה?) - מוזמנת למלא את פרטייך ולהיכנס להגרלות.</div>`, "yellow")}`)}
+      ${box(`<div style="font-size:14.5px; line-height:1.65; color:${H.ink};"><b>שימי לב:</b> במתחם מחכות לך <b>תיבות הגרלה שוות נוספות</b> (מי ביקשה מצלמה או שואב שוטף רובוטי?) - מוזמנת למלא את פרטייך ולהיכנס להגרלות.</div>`, "yellow")}`)}
+
+    ${section(`${h2("התוכניה")}
+      <a href="${i.programUrl}" style="display:block; text-decoration:none;"><img src="${i.programUrl}" alt="התוכניה של הייטקורס 2026" width="564" style="display:block; width:100%; max-width:564px; height:auto; border:1px solid ${H.line}; border-radius:12px;" /></a>
+      ${p(`<a href="${i.programUrl}" style="color:${H.navy}; font-weight:700;">לחיצה על התוכניה פותחת אותה בגודל מלא</a>. היא גם מצורפת למייל הזה כקובץ.`, " margin-top:10px;")}`)}
 
     ${section(`${h2("אירועי הערב")}
-      ${p("עם הפצת התוכניה המושקעת של הייטקורס קיבלנו עשרות פניות של נשים שמבקשות להגיע רק לתוכניות הערב. אנחנו <b>לא מאפשרות באופן גורף</b>, גם לא במקום מי שחזרה הביתה - המופעים המושקעים מיועדים למי שבחרה להירשם להייטקורס.")}
-      ${p("לכן - <b>הכניסה לאירועי הערב תהיה בהצגת התג האישי</b>, אותו תקבלי בכניסה לכנס.")}`)}
+      ${box(`<div style="font-size:15.5px; line-height:1.75; color:${H.ink};">עם הפצת התוכניה המושקעת של הייטקורס קיבלנו עשרות פניות של נשים שמבקשות להגיע רק לתוכניות הערב. אנחנו <b>לא מאפשרות באופן גורף</b>, גם לא במקום מי שחזרה הביתה - <b>המופעים המושקעים מיועדים למי שבחרה להירשם להייטקורס.</b></div>`, "yellow")}
+      ${p("לכן - <b>הכניסה לאירועי הערב תהיה בהצגת התג האישי</b>, אותו תקבלי בכניסה לכנס.")}
+      ${p(`<b>אם החלטת לא להגיע לערב</b> - נשמח אם תעדכני אותנו, אבל <b style="color:${H.red};">אל תזמיני אחרות במקומך!</b><br>הרישום להייטקורס הוא רישום לקורס - כל המעטפת בערב היא <b>מתנה למי שנרשמה להייטקורס</b>, ולא לאף אחת אחרת.`)}`)}
 
     ${section(babysitSection(i))}
 
     ${section(kashrutSection(i))}
-
-    ${section(`${h2("מופע הסיום ביום השלישי - כנס Vibe &amp; Meet")}
-      ${p("לאחר ארוחת הצהריים ניכנס למופע הסיום, עד <b>16:15</b>.")}
-      ${payNote("בתחילת המופע תהיה נעילת דלתות.")}
-      ${p("אם את חייבת לצאת קודם - <b>אל תיכנסי למופע כלל.</b>")}`)}
 
     ${section(`${h2("חניה")}
       ${p("מלון VERT נמצא במיקום מרכזי על תוואי הרכבת הקלה (צמוד לבנייני האומה).")}

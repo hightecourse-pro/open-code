@@ -17,6 +17,8 @@ export interface PrepAdminRow {
   company: string;
   course: string;
   courseRaw: string;
+  /** the sheet's note after the course name - printed in her mail */
+  courseNote: string;
   kind: PrepKind;
   kindLabel: string;
   laptopRequired: boolean;
@@ -198,7 +200,7 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
         </p>
         <div className="mt-4 flex flex-wrap items-center gap-2" style={{ borderTop: `1px solid ${H.line}`, paddingTop: 14 }}>
           <label htmlFor="hc-prep-sample-to" className="text-[14px] font-bold" style={{ color: H.navy }}>
-            דוגמאות (6 וריאציות) אל:
+            דוגמאות (8 וריאציות) אל:
           </label>
           <input id="hc-prep-sample-to" dir="ltr" value={sampleTo} onChange={(e) => setSampleTo(e.target.value)} className="min-w-[260px] bg-white px-3 py-1.5 text-[14px] outline-none" style={{ border: `1.5px solid ${H.line}`, borderRadius: 8 }} data-testid="hc-prep-sample-to" />
           <button
@@ -278,6 +280,11 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
                       {r.kindLabel}
                       {r.laptopRequired ? " · מחשב" : ""}
                     </div>
+                    {r.courseNote && (
+                      <div className="text-[12.5px] font-bold" style={{ color: H.red }} data-testid="hc-prep-note">
+                        {r.courseNote}
+                      </div>
+                    )}
                     {r.hold && (
                       <div className="text-[12.5px] font-bold" style={{ color: "#9A5B00" }} data-testid="hc-prep-hold">
                         {r.hold}

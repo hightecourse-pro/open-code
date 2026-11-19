@@ -13,9 +13,10 @@ export const CONF = {
   hebrewDates: "י״ד-ט״ז בכסלו תשפ״ז",
   firstDay: "יום שלישי, 24.11",
   venue: "מלון VERT ירושלים",
-  /** The owner, 19/11: ״הרישום ללינה, לשמרטפיה - מסתיים מחר - יום שישי״. */
-  deadline: "יום שישי, 20.11",
-  deadlineIso: "2026-11-20",
+  /** The owner, 19/11 (evening): ״תעשה את הרישום ללינה, שמרטפיה, מחשב עד מוצאי שבת בשעה 23:00 בלילה״. */
+  deadline: "מוצאי שבת, 21.11, בשעה 23:00",
+  deadlineShort: "מוצאי שבת 21.11 בשעה 23:00",
+  deadlineIso: "2026-11-21T23:00:00+02:00",
   site: "https://hightecourse.com/",
   laptopRentalNis: 50,
   replyTo: "office@hightecourse.com",
@@ -23,6 +24,9 @@ export const CONF = {
   logistics: { name: "יהודית", mail: "share@hightecourse.com" },
   subject: "הייטקורס 2026 - מידע חשוב לפני הכנס",
   fromName: "הייטקורס",
+  /** The program image: shown in the letter and attached to the mail (the owner: ״התוכניה מצורפת כאן״). */
+  programPath: "/hightecourse/program-2026.jpg",
+  programFileName: "hightecourse-2026-program.jpg",
 } as const;
 
 /** Which questionnaire a course gets. */
@@ -65,20 +69,27 @@ export const normCourse = (s: string): string =>
     .toLowerCase();
 
 /**
- * The sheet's course text → the canonical course and its questionnaire, or
- * why the mail must wait: a text that only says a course is still to be chosen
- * (״נדרש לבחור…״), a move awaiting the company (״נדרש אישור חברה״), no course.
+ * The sheet's course text → the canonical course, its questionnaire, the
+ * note the sheet put after the name (״נדרש אישור חברה למעבר״, ״נדרש לבחור
+ * בסיסי או מתקדם״ - printed prominently in the mail, the owner, 19/11) and,
+ * rarely, why the mail must wait (no course at all, a name not on the list).
  */
-export function resolveCourse(raw: string): { course: string; kind: PrepKind; hold: string | null } {
-  const n = normCourse(raw);
-  if (!n) return { course: "", kind: "unknown", hold: "אין קורס בגיליון" };
-  if (/נדרש אישור חברה/.test(raw)) return { course: raw.trim(), kind: "unknown", hold: "נדרש אישור חברה - לעדכן את הקורס בגיליון" };
-  if (/נדרש לבחור/.test(raw)) return { course: raw.trim(), kind: "unknown", hold: "הקורס עוד לא נבחר" };
+export function resolveCourse(raw: string): { course: string; kind: PrepKind; note: string | null; hold: string | null } {
+  const text = raw.replace(/\s+/g, " ").trim();
+  if (!text) return { course: "", kind: "unknown", note: null, hold: "אין קורס בגיליון" };
+  if (normCourse(text) === "נופש") return { course: "קורס נופש", kind: "role", note: null, hold: null };
+  // ״<course> - נדרש …״: the note after the dash
+  const split = text.match(/^(.*?)\s*[-־–—]\s*(נדרש .*)$/);
+  const base = split ? split[1].trim() : text;
+  const note = split ? split[2].trim() : null;
+  const n = normCourse(base);
   const exact = COURSES.find((c) => normCourse(c.name) === n);
-  if (exact) return { course: exact.name, kind: exact.kind, hold: null };
+  if (exact) return { course: exact.name, kind: exact.kind, note, hold: null };
   const prefix = COURSES.find((c) => n.startsWith(normCourse(c.name)));
-  if (prefix) return { course: prefix.name, kind: prefix.kind, hold: null };
-  return { course: raw.trim(), kind: "unknown", hold: "קורס לא מזוהה ברשימה" };
+  if (prefix) return { course: prefix.name, kind: prefix.kind, note, hold: null };
+  // a note without a decided course (״נדרש לבחור בסיסי או מתקדם״, ״נדרש לבחור קורס פרונטלי אחר״)
+  if (note) return { course: base, kind: "unknown", note, hold: null };
+  return { course: text, kind: "unknown", note: null, hold: "קורס לא מזוהה ברשימה" };
 }
 
 /** The laptop courses, when the sheet's ״קורסים״ tab does not say (״מחשב״ = כן). */

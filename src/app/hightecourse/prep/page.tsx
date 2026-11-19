@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { answersOf, loadPrepAdmin, mirrorSheetUrl, MIRROR_TAB, type PrepRow } from "@/lib/hc-preconf/data";
-import { CONF, KIND_LABEL, prepFormPath, type PrepKind } from "@/lib/hc-preconf/config";
+import { CONF, KIND_LABEL, prepFormPath, resolveCourse, type PrepKind } from "@/lib/hc-preconf/config";
 import { GateView, hcGate } from "../shell";
 import { PrepAdmin, type PrepAdminRow } from "./prep-admin";
 
@@ -21,6 +21,7 @@ function rowOf(r: PrepRow): PrepAdminRow {
     company: r.company ?? "",
     course: r.course || r.course_raw,
     courseRaw: r.course_raw,
+    courseNote: resolveCourse(r.course_raw).note ?? "",
     kind: r.course_kind as PrepKind,
     kindLabel: KIND_LABEL[(r.course_kind as PrepKind) ?? "unknown"] ?? r.course_kind,
     laptopRequired: r.laptop_required,
