@@ -396,7 +396,10 @@ export async function sendPrepSamples(to: string): Promise<{ n: number; label: s
     }
     const m = mailOf(row);
     const r = await sendResendEmail({ to: row.email, subject: `[דוגמה ${s.n}: ${s.label}] ${m.subject}`, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
-    await admin.from(T).update({ mail_status: r.ok ? "sent" : "error", mail_sent_at: r.ok ? new Date().toISOString() : null, mail_error: r.ok ? null : (r.error ?? null), mail_attempts: row.mail_attempts + 1 }).eq("id", row.id);
+    await admin
+      .from(T)
+      .update({ mail_status: r.ok ? "sent" : r.error === "blocked_by_allowlist" ? "blocked" : "error", mail_sent_at: r.ok ? new Date().toISOString() : null, mail_error: r.ok ? null : (r.error ?? null), mail_attempts: row.mail_attempts + 1 })
+      .eq("id", row.id);
     out.push({ n: s.n, label: s.label, ok: r.ok, error: r.error });
   }
   return out;
@@ -559,7 +562,7 @@ export async function runPrepTick(opts: { send: boolean; trigger: string }): Pro
       result.prefilled = -1;
       result.error = `prefill: ${e instanceof Error ? e.message : String(e)}`;
     }
-    result.mail = opts.send && lock.enabled ? await sendPending() : { skipped: !lock.enabled ? "disabled" : "dry" };
+    result.mail = !opts.send ? { skipped: "dry" } : lock.enabled ? await sendPending() : { skipped: "disabled" };
     try {
       result.mirror = await mirrorToSheet();
     } catch (e) {

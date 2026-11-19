@@ -207,7 +207,7 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
             onClick={() =>
               run(async () => {
                 const r = await hcPrepSamplesAction(sampleTo);
-                if (!r.ok) return { ok: false, error: r.error };
+                if (r.results.length === 0) return { ok: false, error: r.error ?? "לא נשלח" };
                 const okN = r.results.filter((x) => x.ok).length;
                 const bad = r.results.filter((x) => !x.ok);
                 return { ok: bad.length === 0, text: `נשלחו ${okN} דוגמאות אל ${sampleTo}.`, error: bad.length ? `נשלחו ${okN}; לא נשלחו: ${bad.map((x) => `${x.n} (${x.error})`).join(", ")}` : undefined };
