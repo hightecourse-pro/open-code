@@ -25,7 +25,13 @@ export interface MyApplicationItem {
   stageLabel: string | null;
   /** Still editable - the team hasn't locked it (the owner, 2/9). */
   editable?: boolean;
+  /** The job went on to the client without her - her own status never said so (Miriam Salomon, 15.11). */
+  passedOver?: boolean;
 }
+
+/** The pill of a passed-over application - plain words, because ״הוגשה לקוד פתוח״ beside ״המשרה בשלב הבא״ read as ״הגישו אותי״. */
+const PASSED_OVER_PILL = { label: "לא הוגשת למעסיק במשרה הזו 💜", cls: "bg-ink-100 text-ink-700" };
+const pillOf = (a: MyApplicationItem) => (a.passedOver ? PASSED_OVER_PILL : STATUS_PILL[a.status]);
 
 export interface MySubmittedItem {
   jobId: string;
@@ -159,7 +165,7 @@ export function MyApplications({
 
   // A closed job ends the story no matter what the application's own status
   // froze at - leaving it under "בבדיקה" reads as a promise nobody will keep.
-  const ended = (a: MyApplicationItem) => DONE.includes(a.status) || !!a.closedLabel;
+  const ended = (a: MyApplicationItem) => DONE.includes(a.status) || !!a.closedLabel || !!a.passedOver;
   const forwarded = visible.filter((a) => a.forwarded && !ended(a));
   const inProgress = visible.filter((a) => !a.forwarded && !ended(a));
   const done = visible.filter(ended);
@@ -176,7 +182,7 @@ export function MyApplications({
           hint="הצוות עובר על כל הגשה אישית ובוחר את המתאימות ביותר לכל משרה - לא כל הגשה מועברת ללקוח, וברגע שהמועמדות שלך עוברת תראי את זה כאן."
         >
           {inProgress.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} detailsHref={`/jobs/${a.jobId}/application`} />
+            <Row key={a.jobId} title={a.title} pill={pillOf(a)} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} editHref={a.editable ? `/jobs/${a.jobId}/apply` : null} detailsHref={`/jobs/${a.jobId}/application`} />
           ))}
         </Group>
       )}
@@ -199,7 +205,7 @@ export function MyApplications({
       {(done.length > 0 || submittedClosed.length > 0) && (
         <Group icon={HeartHandshake} title={`הסתיימו (${done.length + submittedClosed.length})`}>
           {done.map((a) => (
-            <Row key={a.jobId} title={a.title} pill={STATUS_PILL[a.status]} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} detailsHref={`/jobs/${a.jobId}/application`} />
+            <Row key={a.jobId} title={a.title} pill={pillOf(a)} appliedAt={a.appliedAt} closedLabel={a.closedLabel} stageLabel={a.stageLabel} detailsHref={`/jobs/${a.jobId}/application`} />
           ))}
           {submittedClosed.map((s) => (
             <Row key={s.jobId} title={s.title} pill={proactivePill} closedLabel={s.closedLabel} stageLabel={s.stageLabel} />

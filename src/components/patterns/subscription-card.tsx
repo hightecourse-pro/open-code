@@ -29,6 +29,7 @@ export function SubscriptionCard({
   canceledAt,
   limitedKeva = false,
   priceShekels,
+  awaitingFirstCharge = false,
 }: {
   status: string;
   periodEnd: string | null;
@@ -41,6 +42,8 @@ export function SubscriptionCard({
    */
   limitedKeva?: boolean;
   priceShekels: number;
+  /** The standing order was just set up and Nedarim's first charge has not arrived yet - no renewal date to show. */
+  awaitingFirstCharge?: boolean;
 }) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
@@ -85,12 +88,18 @@ export function SubscriptionCard({
         <>
           <p className="text-[14px] text-ink-700 flex items-center gap-2">
             <CalendarClock size={15} className="text-ink-400 shrink-0" />
-            <span>
+            <span data-testid="subscription-line">
               המנוי פעיל · ₪{priceShekels} לחודש
-              {endDate && (
+              {awaitingFirstCharge ? (
                 <>
-                  {" · "}מתחדש אוטומטית ב-<b>{endDate}</b>
+                  {" · "}הוראת הקבע הוקמה - <b>החיוב הראשון מתבצע בדקות הקרובות</b>, ואז יופיע כאן תאריך החידוש (בעוד חודש)
                 </>
+              ) : (
+                endDate && (
+                  <>
+                    {" · "}מתחדש אוטומטית ב-<b>{endDate}</b>
+                  </>
+                )
               )}
             </span>
           </p>
@@ -108,7 +117,7 @@ export function SubscriptionCard({
                 <HeartCrack size={16} className="text-brand-pink-deep" /> רגע לפני שנפרדות 💜
               </div>
               <p className="text-[13px] text-ink-700">
-                המנוי יישאר פעיל עד <b>{endDate ?? "סוף התקופה ששולמה"}</b>, ואחרי זה ייסגרו:
+                המנוי יישאר פעיל עד <b>{awaitingFirstCharge ? "סוף החודש הראשון" : (endDate ?? "סוף התקופה ששולמה")}</b>, ואחרי זה ייסגרו:
               </p>
               <ul className="text-[13px] text-ink-700 flex flex-col gap-1 ps-1">
                 {LOSSES.map((l) => (

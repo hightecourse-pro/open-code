@@ -179,3 +179,49 @@ export async function writeCell(spreadsheetId: string, tab: string, row1: number
     })
   );
 }
+
+/** The tab's gid, creating the tab (right-to-left, one frozen header row) when the spreadsheet lacks it. */
+export async function ensureTab(spreadsheetId: string, title: string): Promise<number> {
+  const meta = await sheetTabsMeta(spreadsheetId);
+  const have = meta.tabs.find((t) => t.title === title);
+  if (have) return have.gid;
+  const j = await body<{ replies?: { addSheet?: { properties?: { sheetId?: number } } }[] }>(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`, {
+      method: "POST",
+      body: JSON.stringify({ requests: [{ addSheet: { properties: { title, rightToLeft: true, gridProperties: { frozenRowCount: 1 } } } }] }),
+    })
+  );
+  const gid = j.replies?.[0]?.addSheet?.properties?.sheetId;
+  if (gid === undefined) throw new SheetsError("addSheet returned no sheetId", 0, "unknown");
+  return gid;
+}
+
+/**
+ * Replaces the whole tab with these rows (the header first): a clear, then one
+ * write - the mirror of a table we own, never a tab the owner's site writes.
+ */
+export async function replaceTab(spreadsheetId: string, title: string, rows: (string | number)[][]): Promise<void> {
+  const gid = await ensureTab(spreadsheetId, title);
+  await body(await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(quoteTab(title))}:clear`, { method: "POST", body: "{}" }));
+  if (rows.length === 0) return;
+  const a1 = `${quoteTab(title)}!A1`;
+  await body(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${encodeURIComponent(a1)}?valueInputOption=RAW`, {
+      method: "PUT",
+      body: JSON.stringify({ range: a1, majorDimension: "ROWS", values: rows }),
+    })
+  );
+  // the header in bold, every column sized to its text
+  const width = Math.max(...rows.map((r) => r.length));
+  await body(
+    await sheetsFetch(`/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`, {
+      method: "POST",
+      body: JSON.stringify({
+        requests: [
+          { repeatCell: { range: { sheetId: gid, startRowIndex: 0, endRowIndex: 1 }, cell: { userEnteredFormat: { textFormat: { bold: true }, backgroundColor: { red: 0.9, green: 0.94, blue: 0.97 } } }, fields: "userEnteredFormat(textFormat,backgroundColor)" } },
+          { autoResizeDimensions: { dimensions: { sheetId: gid, dimension: "COLUMNS", startIndex: 0, endIndex: width } } },
+        ],
+      }),
+    })
+  );
+}

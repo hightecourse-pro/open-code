@@ -39,27 +39,50 @@ export function emailGate(to: string): { ok: true; subjectPrefix: string } | { o
   return { ok: true, subjectPrefix: "[STAGING] " };
 }
 
+export interface MailAttachment {
+  filename: string;
+  /** base64 */
+  content: string;
+}
+
 export async function sendResendEmail(args: {
-  to: string;
+  /** one address, or several (the Hightecourse letter goes to the private and the work mail together) */
+  to: string | string[];
   subject: string;
   html: string;
+  /** Files on the mail (Resend's single endpoint only - the batch endpoint takes none). */
+  attachments?: MailAttachment[];
   /** Account mail (a confirmation she asked for, her subscription) goes out even to an address that opted out of our mails. */
   essential?: boolean;
   /** A different display name on the same address (the Hightecourse conference mail). */
   fromName?: string;
+  /** Where a reply lands when not the team's inbox (the Hightecourse office). */
+  replyTo?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: "resend_not_configured" };
-  const gate = emailGate(args.to);
-  if (!gate.ok) return { ok: false, error: gate.error };
-  if (!args.essential && (await emailBlockedByOptOut(args.to))) return { ok: false, error: "opted_out" };
-  args = { ...args, subject: gate.subjectPrefix + args.subject, html: withUnsubscribe(args.html, args.to) };
+  // every recipient passes the gate on her own; outside production the blocked ones are simply left off
+  const wanted = (Array.isArray(args.to) ? args.to : [args.to]).map((a) => a.trim()).filter(Boolean);
+  const gates = wanted.map((a) => ({ a, gate: emailGate(a) }));
+  const recipients = gates.filter((g) => g.gate.ok).map((g) => g.a);
+  if (recipients.length === 0) return { ok: false, error: gates[0]?.gate.ok === false ? gates[0].gate.error : "no_recipient" };
+  const primary = recipients[0];
+  const subjectPrefix = gates.find((g) => g.gate.ok)?.gate.ok ? (gates.find((g) => g.gate.ok)!.gate as { subjectPrefix: string }).subjectPrefix : "";
+  if (!args.essential && (await emailBlockedByOptOut(primary))) return { ok: false, error: "opted_out" };
+  args = { ...args, subject: subjectPrefix + args.subject, html: withUnsubscribe(args.html, primary) };
   try {
     const post = () =>
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify({ from: fromWith(args.fromName), to: [args.to], reply_to: REPLY_TO, subject: args.subject, html: args.html }),
+        body: JSON.stringify({
+          from: fromWith(args.fromName),
+          to: recipients,
+          reply_to: args.replyTo || REPLY_TO,
+          subject: args.subject,
+          html: args.html,
+          ...(args.attachments?.length ? { attachments: args.attachments } : {}),
+        }),
       });
     let res = await post();
     // Resend allows 2 requests/second - a 429 is a pace problem, not a bad
@@ -83,6 +106,13 @@ export interface BatchItem {
   to: string;
   subject: string;
   html: string;
+  /** A copy to a second address (the Hightecourse pre-conference mail: the work mail beside the private one). */
+  cc?: string;
+}
+/** A batch under another display name / reply address (the Hightecourse mails: ״הייטקורס״, replies to its office). */
+export interface BatchOptions {
+  fromName?: string;
+  replyTo?: string;
 }
 export type BatchOutcome = { ok: true } | { ok: false; error: string };
 
@@ -101,7 +131,7 @@ export function batchItemHtml(item: Pick<BatchItem, "to" | "html">): string {
   return withUnsubscribe(item.html, item.to);
 }
 
-export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[]> {
+export async function sendResendBatch(items: BatchItem[], opts: BatchOptions = {}): Promise<BatchOutcome[]> {
   const key = process.env.RESEND_API_KEY;
   const outcomes: BatchOutcome[] = items.map(() => ({ ok: false, error: "resend_not_configured" }));
   if (!key) return outcomes;
@@ -120,7 +150,9 @@ export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[
       fetch("https://api.resend.com/emails/batch", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify(chunk.map(({ item }) => ({ from: FROM, to: [item.to], reply_to: REPLY_TO, subject: item.subject, html: item.html }))),
+        body: JSON.stringify(
+          chunk.map(({ item }) => ({ from: fromWith(opts.fromName), to: [item.to], ...(item.cc ? { cc: [item.cc] } : {}), reply_to: opts.replyTo || REPLY_TO, subject: item.subject, html: item.html }))
+        ),
       });
     try {
       let res = await post();

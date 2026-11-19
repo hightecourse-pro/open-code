@@ -53,6 +53,8 @@ export interface JobCardProps {
   applied: boolean;
   /** The member's application status for this job (null if she hasn't applied). */
   applicationStatus?: ApplicationStatus | null;
+  /** The job moved on to the client without her CV (see the jobs page) - the pill says so instead of ״הוגשה לקוד פתוח״. */
+  passedOver?: boolean;
   /** When she applied - the PM asked for the date to be visible. */
   appliedAt?: string | null;
   /** Member's tech stack, lowercase, for match highlighting. */
@@ -91,6 +93,7 @@ export function JobCard({
   saved,
   applied,
   applicationStatus = null,
+  passedOver = false,
   appliedAt = null,
   myTech = [],
   matchedTags = [],
@@ -169,7 +172,7 @@ export function JobCard({
               {job.source !== "ours" && <span className="truncate">{job.company}</span>}
               {hasApplied && (
                 <span className="inline-flex items-center shrink-0 rounded-full bg-tint-mint text-success px-2 py-px text-[10.5px] font-bold">
-                  {applicationStatus ? APP_STATUS_SHORT[applicationStatus] : "הוגשה לקוד פתוח ✓"}
+                  {passedOver ? "לא הוגשה למעסיק" : applicationStatus ? APP_STATUS_SHORT[applicationStatus] : "הוגשה לקוד פתוח ✓"}
                 </span>
               )}
             </div>

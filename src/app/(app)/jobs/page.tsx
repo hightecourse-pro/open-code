@@ -148,6 +148,7 @@ export default async function JobsPage({
   // with the service role - strictly filtered to her own profile_id.
   let myAppItems: MyApplicationItem[] = [];
   let submittedForHer: MySubmittedItem[] = [];
+  let forwardedJobIds = new Set<string>();
   if (user) {
     const adminClient = createAdminClient();
     const { data: candRows } = await adminClient
@@ -155,6 +156,7 @@ export default async function JobsPage({
       .select("job_id")
       .eq("profile_id", user.id);
     const candSet = new Set((candRows ?? []).map((c) => c.job_id));
+    forwardedJobIds = candSet;
     const appRows = (myApplications ?? []).filter((a) => a.status !== "draft");
     const appliedJobIds = new Set((myApplications ?? []).map((a) => a.job_id));
     const candJobIds = [...candSet].filter((id) => !appliedJobIds.has(id));
@@ -185,13 +187,18 @@ export default async function JobsPage({
       myAppItems = appRows.flatMap((a) => {
         const j = jobOf.get(a.job_id);
         if (!j) return [];
+        const forwarded = candSet.has(a.job_id) || FORWARDED.includes(a.status);
         return [{
           jobId: a.job_id,
           title: j.title,
           company: j.company,
           status: a.status,
           appliedAt: a.created_at ?? null,
-          forwarded: candSet.has(a.job_id) || FORWARDED.includes(a.status),
+          forwarded,
+          // The job went on to the client WITHOUT her CV and nobody updated her
+          // status (the job was moved by hand, not through ״הגשה ללקוח״) - the
+          // honest answer to ״הגישו אותי או לא?״ is no (Miriam Salomon, 15.11).
+          passedOver: !forwarded && !!stageLabelOf(j) && (a.status === "submitted" || a.status === "in_review"),
           closedLabel: closedLabelOf(j),
           stageLabel: stageLabelOf(j),
           // Editable until the team locks it (the owner, 2/9) - submitted,
@@ -355,6 +362,12 @@ export default async function JobsPage({
     saved: savedIds.has(job.id),
     applied: appStatusByJob.has(job.id),
     applicationStatus: appStatusByJob.get(job.id) ?? null,
+    // the job is past submissions and her CV did not go with it (see passedOver above)
+    passedOver:
+      job.status === "open" &&
+      (job.pipeline_status === "candidates_sent" || job.pipeline_status === "interviews") &&
+      !forwardedJobIds.has(job.id) &&
+      (appStatusByJob.get(job.id) === "submitted" || appStatusByJob.get(job.id) === "in_review"),
     appliedAt: appliedAtByJob.get(job.id) ?? null,
     myTech: [...myTech],
     matchedTags: matchedTags(job),
