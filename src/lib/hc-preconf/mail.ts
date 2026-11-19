@@ -1,4 +1,4 @@
-import { CONF, kindNeedsLaptop, type PrepKind } from "./config";
+import { CONF, INSTALL_TITLE, installListFor, kindNeedsLaptop, type PrepKind } from "./config";
 
 /*
   ״הייטקורס 2026 - מידע חשוב לפני הכנס״ - the pre-conference letter, built per
@@ -120,6 +120,15 @@ function laptopSection(i: PrepMailInput): string {
   } else {
     rental = p(`<b>אין לך מחשב נייד?</b> אפשר להשכיר מחשב ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אזור האישי</a> במחיר של <b>${CONF.laptopRentalNis} ש״ח</b> למחשב לשעות הקורס. ההזמנה עד <b>${CONF.deadline}</b>, כדי שנספיק להזמין.`);
   }
+  // the installations the course needs on the laptop (the owner, 19/11 night) - only the courses that have a list
+  const install = installListFor(i.course);
+  const installBox = install
+    ? box(
+        `<div style="font-size:16px; font-weight:800; color:${H.navy}; margin-bottom:4px;">${INSTALL_TITLE}</div>
+         <ul style="margin:0; padding:0 22px 0 0; font-size:15.5px; line-height:1.8; font-weight:700; color:${H.ink};">${install.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`,
+        "yellow"
+      )
+    : "";
   return `${h2("מה צריך עבור הקורס שלך?")}
     ${p(`נרשמת לקורס <b>${esc(i.course)}</b>.`)}
     ${box(
@@ -127,6 +136,7 @@ function laptopSection(i: PrepMailInput): string {
        <div style="font-size:14.5px; line-height:1.65; color:#DCE8F2;">התרגול בקורס נעשה עם <b style="color:${H.yellow};">כלי AI</b>, ולכן חשוב להגיע עם מחשב שאפשר להתקין ולעבוד עליו במהלך הקורס.</div>`,
       "navy"
     )}
+    ${installBox}
     ${rental}
     ${p(`<b>מגיעה עם מחשב או בלי?</b> ספרי לנו בשאלון קצר (דקה אחת): תפקיד, מחשב נייד וכלי ה-AI שיש לך.`)}
     <div style="margin:4px 0 16px;">${button(i.formUrl, "לשאלון - מגיעה עם מחשב?", "yellow")}</div>`;

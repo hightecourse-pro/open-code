@@ -96,6 +96,20 @@ export function resolveCourse(raw: string): { course: string; kind: PrepKind; no
 /** The laptop courses, when the sheet's ״קורסים״ tab does not say (״מחשב״ = כן). */
 export const kindNeedsLaptop = (kind: PrepKind): boolean => kind === "dev" || kind === "ai";
 
+/**
+ * What must be installed on the laptop, per course (the owner, 19/11 night, for
+ * ״Advanced GenAI… מהבסיס כולל תרגול״: ״רשימת התקנה נדרשת על המחשב: nodejs, npm,
+ * Docker Desktop, Vscode״). Printed in the mail's laptop block and in the questionnaire.
+ */
+export const INSTALL_TITLE = "רשימת התקנה נדרשת על המחשב:";
+export const INSTALL_LISTS: { course: string; items: string[] }[] = [
+  { course: "Advanced GenAI & Agentic AI for Developers - מהבסיס כולל תרגול", items: ["Node.js", "npm", "Docker Desktop", "VS Code"] },
+];
+export const installListFor = (course: string): string[] | null => {
+  const n = normCourse(course);
+  return INSTALL_LISTS.find((l) => normCourse(l.course) === n)?.items ?? null;
+};
+
 /* ---- the questionnaire ---- */
 
 export const DEV_TOOLS = ["Claude Code", "Kiro", "Amazon Q", "GitHub Copilot", "Cursor"] as const;
