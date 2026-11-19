@@ -128,6 +128,7 @@ const NAV = [
   { href: PATHS.home, label: "דשבורד", exact: true },
   { href: PATHS.participants, label: "משתתפות", exact: false },
   { href: "/hightecourse/sheets", label: "גליונות", exact: false },
+  { href: "/hightecourse/prep", label: "מייל לפני הכנס", exact: false },
 ] as const;
 
 export function Nav() {

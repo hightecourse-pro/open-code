@@ -47,6 +47,8 @@ export async function sendResendEmail(args: {
   essential?: boolean;
   /** A different display name on the same address (the Hightecourse conference mail). */
   fromName?: string;
+  /** Where a reply lands when not the team's inbox (the Hightecourse office). */
+  replyTo?: string;
 }): Promise<{ ok: boolean; error?: string }> {
   const key = process.env.RESEND_API_KEY;
   if (!key) return { ok: false, error: "resend_not_configured" };
@@ -59,7 +61,7 @@ export async function sendResendEmail(args: {
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify({ from: fromWith(args.fromName), to: [args.to], reply_to: REPLY_TO, subject: args.subject, html: args.html }),
+        body: JSON.stringify({ from: fromWith(args.fromName), to: [args.to], reply_to: args.replyTo || REPLY_TO, subject: args.subject, html: args.html }),
       });
     let res = await post();
     // Resend allows 2 requests/second - a 429 is a pace problem, not a bad
@@ -83,6 +85,13 @@ export interface BatchItem {
   to: string;
   subject: string;
   html: string;
+  /** A copy to a second address (the Hightecourse pre-conference mail: the work mail beside the private one). */
+  cc?: string;
+}
+/** A batch under another display name / reply address (the Hightecourse mails: ״הייטקורס״, replies to its office). */
+export interface BatchOptions {
+  fromName?: string;
+  replyTo?: string;
 }
 export type BatchOutcome = { ok: true } | { ok: false; error: string };
 
@@ -101,7 +110,7 @@ export function batchItemHtml(item: Pick<BatchItem, "to" | "html">): string {
   return withUnsubscribe(item.html, item.to);
 }
 
-export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[]> {
+export async function sendResendBatch(items: BatchItem[], opts: BatchOptions = {}): Promise<BatchOutcome[]> {
   const key = process.env.RESEND_API_KEY;
   const outcomes: BatchOutcome[] = items.map(() => ({ ok: false, error: "resend_not_configured" }));
   if (!key) return outcomes;
@@ -120,7 +129,9 @@ export async function sendResendBatch(items: BatchItem[]): Promise<BatchOutcome[
       fetch("https://api.resend.com/emails/batch", {
         method: "POST",
         headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-        body: JSON.stringify(chunk.map(({ item }) => ({ from: FROM, to: [item.to], reply_to: REPLY_TO, subject: item.subject, html: item.html }))),
+        body: JSON.stringify(
+          chunk.map(({ item }) => ({ from: fromWith(opts.fromName), to: [item.to], ...(item.cc ? { cc: [item.cc] } : {}), reply_to: opts.replyTo || REPLY_TO, subject: item.subject, html: item.html }))
+        ),
       });
     try {
       let res = await post();
