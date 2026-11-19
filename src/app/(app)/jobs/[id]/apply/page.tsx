@@ -9,6 +9,7 @@ import { ApplyForm, type ApplyCvDoc } from "./apply-form";
 import { withdrawApplication } from "./actions";
 import { ConfirmActionButton } from "@/components/patterns/confirm-action-button";
 import { AskTeamAboutJob } from "@/components/patterns/ask-team-about-job";
+import { fileAnswerId, fileAnswerIds } from "@/lib/application-files";
 
 export const metadata: Metadata = { title: "הגשת מועמדות" };
 // The job's questions and open/closed state must always be fresh.
@@ -90,6 +91,17 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
   const currentCv = existing?.cv_document_id
     ? (cvDocs.find((d) => d.id === existing.cv_document_id)?.label ?? null)
     : null;
+  // Documents she attached to "file" questions (19/11) - names for the edit form (her own rows, RLS).
+  const fileIds = fileAnswerIds(existingAnswers);
+  const { data: fileRows } = fileIds.length
+    ? await supabase.from("attachments").select("id, file_name").in("id", fileIds)
+    : { data: [] as { id: string; file_name: string }[] };
+  const fileNameOf = new Map((fileRows ?? []).map((r) => [r.id, r.file_name]));
+  const existingFiles: Record<string, { name: string; viewHref: string }> = {};
+  for (const [qid, v] of Object.entries(existingAnswers)) {
+    const fid = fileAnswerId(v);
+    if (fid) existingFiles[qid] = { name: fileNameOf.get(fid) ?? "קובץ", viewHref: `/attachments/${fid}` };
+  }
 
   return (
     <div className="flex flex-col gap-5 max-w-[640px]">
@@ -166,6 +178,7 @@ export default async function ApplyPage({ params }: { params: Promise<{ id: stri
               answers: existingAnswers,
               fit: typeof existingAnswers.fit === "string" ? existingAnswers.fit : "",
               currentCvLabel: currentCv,
+              files: existingFiles,
             }}
           />
           <ConfirmActionButton

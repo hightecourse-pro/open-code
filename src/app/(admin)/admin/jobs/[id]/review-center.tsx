@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, useTransition } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Download,
   ExternalLink,
   FileText,
   List,
@@ -30,6 +31,7 @@ import { askCoordinatorQuestion } from "@/app/(admin)/admin/coordinators/actions
 import { MEMBER_INTERNAL_TAGS } from "./internal-tags";
 import type { AudienceCatalogueField } from "@/lib/admin/audience";
 import { CvPreviewButton } from "@/components/patterns/cv-preview";
+import { fileAnswerId } from "@/lib/application-files";
 import type { MemberHackathonReview } from "@/lib/member-overview";
 import { HackathonStrip } from "./hackathon-strip";
 
@@ -40,7 +42,12 @@ export interface ReviewQuestion {
   question: string;
   /** Choice options - the fuel for the filter-by-answer control (3/9). */
   options?: string[];
+  /** "file" (19/11): the answer is a document - shown by name with a preview, never as text. */
+  answerType?: string;
 }
+
+/** attachment id → what the pane needs to name and preview a "file" answer. */
+export type ReviewFiles = Record<string, { name: string; mime: string }>;
 
 export interface ReviewProfileSummary {
   fullName: string;
@@ -179,6 +186,20 @@ function fmtDate(iso: string): string {
 /** jsonb answer → display text: arrays join with a middot, numbers stringify. */
 function answerText(v: string | number | string[]): string {
   return Array.isArray(v) ? v.join(" · ") : String(v);
+}
+
+/** A "file" answer (19/11) resolved to the document it points at - null for every other answer. */
+function fileOf(v: unknown, files: ReviewFiles): { id: string; name: string; exists: boolean } | null {
+  const id = fileAnswerId(v);
+  if (!id) return null;
+  const f = files[id];
+  return { id, name: f?.name ?? "הקובץ כבר לא קיים", exists: !!f };
+}
+
+/** answerText, with a file answer shown by its name (table column, CSV, previous versions). */
+function showAnswer(v: string | number | string[], files: ReviewFiles): string {
+  const f = fileOf(v, files);
+  return f ? `קובץ מצורף: ${f.name}` : answerText(v);
 }
 
 // --------------------------------------------------------------------- tiles
@@ -337,6 +358,7 @@ export function ReviewCenter({
   teamNote,
   applications,
   questions,
+  files: filesProp,
   criteriaCatalogue,
   criteriaPools,
 }: {
@@ -346,6 +368,8 @@ export function ReviewCenter({
   teamNote: string | null;
   applications: ReviewApplication[];
   questions: ReviewQuestion[];
+  /** attachment id → name/mime for "file" answers (19/11). */
+  files?: ReviewFiles;
   /** Profile-parameter palette scoped to the applicants (no dead chips). */
   criteriaCatalogue: AudienceCatalogueField[];
   /** profile id → question key → her values, label-resolved + lowercased. */
@@ -402,6 +426,7 @@ export function ReviewCenter({
   );
 
   // Per-column filters for the table (the owner: "אופציה לסנן לפי כל עמודה").
+  const files: ReviewFiles = useMemo(() => filesProp ?? {}, [filesProp]);
   const [colFilters, setColFilters] = useState({
     name: "",
     spec: "",
@@ -416,11 +441,16 @@ export function ReviewCenter({
   });
   // The answer to ONE chosen job question, as text (the owner, 19/9:
   // "לראות תשובה של שאלה מסוימת ששאלתי למשרה" in the table).
-  const answerOfQ = (a: ReviewApplication, qId: string): string => {
-    const v = a.answers?.[qId];
-    if (v == null || v === "") return "";
-    return Array.isArray(v) ? v.join(", ") : String(v);
-  };
+  const answerOfQ = useCallback(
+    (a: ReviewApplication, qId: string): string => {
+      const v = a.answers?.[qId];
+      if (v == null || v === "") return "";
+      const f = fileOf(v, files);
+      if (f) return f.name;
+      return Array.isArray(v) ? v.join(", ") : String(v);
+    },
+    [files]
+  );
   const setCol = (key: keyof typeof colFilters) => (value: string) =>
     setColFilters((prev) => ({ ...prev, [key]: value }));
 
@@ -594,7 +624,7 @@ export function ReviewCenter({
       if (noteQ && !(noteValOf(a) ?? "").toLowerCase().includes(noteQ)) return false;
       return true;
     });
-  }, [filtered, colFilters, statusOf, markOf, noteValOf]);
+  }, [filtered, colFilters, statusOf, markOf, noteValOf, answerOfQ]);
 
   const anyColFilter = Object.entries(colFilters).some(([k, v]) => k !== "qId" && v !== "");
 
@@ -1106,7 +1136,7 @@ export function ReviewCenter({
         />
         <button
           type="button"
-          onClick={() => exportCsv(filtered, questions, statusOf, markOf, jobTitle)}
+          onClick={() => exportCsv(filtered, questions, statusOf, markOf, jobTitle, files)}
           className="inline-flex items-center gap-1 rounded-full border border-ink-200 bg-ink-0 px-2.5 py-1 text-[12px] font-semibold text-ink-600 hover:text-brand-purple hover:border-brand-purple cursor-pointer"
           title="ייצוא הרשימה המסוננת לאקסל"
         >
@@ -2068,18 +2098,17 @@ export function ReviewCenter({
             <div className="flex flex-col gap-2">
               <div className="text-[12px] font-bold text-ink-700">התשובות שלה</div>
               {(() => {
-                const qa: { label: string; answer: string }[] = [];
-                if (selected.answers.fit !== undefined) {
-                  qa.push({ label: FIT_QUESTION, answer: answerText(selected.answers.fit) });
-                }
+                const qa: { label: string; answer: string; file: ReturnType<typeof fileOf> }[] = [];
+                const add = (label: string, v: string | number | string[]) =>
+                  qa.push({ label, answer: showAnswer(v, files), file: fileOf(v, files) });
+                if (selected.answers.fit !== undefined) add(FIT_QUESTION, selected.answers.fit);
                 for (const q of questions) {
                   const ans = selected.answers[q.id];
-                  if (ans !== undefined) qa.push({ label: q.question, answer: answerText(ans) });
+                  if (ans !== undefined) add(q.question, ans);
                 }
                 const known = new Set(["fit", ...questions.map((q) => q.id)]);
                 for (const [k, v] of Object.entries(selected.answers)) {
-                  if (!known.has(k))
-                    qa.push({ label: "שאלה נוספת (הוסרה מהמשרה)", answer: answerText(v) });
+                  if (!known.has(k)) add("שאלה נוספת (הוסרה מהמשרה)", v);
                 }
                 if (qa.length === 0) {
                   return (
@@ -2087,11 +2116,46 @@ export function ReviewCenter({
                   );
                 }
                 return qa.map((item, i) => (
-                  <div key={i} className="rounded-md bg-ink-50 border border-ink-100 px-3.5 py-3">
+                  <div
+                    key={i}
+                    className="rounded-md bg-ink-50 border border-ink-100 px-3.5 py-3"
+                    data-testid={item.file ? "review-answer-file" : undefined}
+                  >
                     <div className="text-[12px] font-bold text-brand-purple mb-1">{item.label}</div>
-                    <div className="text-[13.5px] text-ink-900 whitespace-pre-wrap leading-relaxed">
-                      {item.answer}
-                    </div>
+                    {item.file ? (
+                      <div className="flex flex-wrap items-center gap-3 text-[13.5px] text-ink-900">
+                        {/* A document (19/11): its name, the floating preview like the CV, a download. */}
+                        <span className="inline-flex items-center gap-1.5 min-w-0">
+                          <FileText size={15} className="text-brand-purple shrink-0" />
+                          <span className="truncate" dir="ltr">
+                            {item.file.name}
+                          </span>
+                        </span>
+                        {item.file.exists ? (
+                          <>
+                            <CvPreviewButton
+                              url={`/admin/attachments/sign?id=${item.file.id}`}
+                              fileName={item.file.name}
+                              title={`${item.label} - ${selected.profile?.fullName ?? "מועמדת"}`}
+                              label="תצוגה מקדימה"
+                            />
+                            <a
+                              href={`/admin/attachments/sign?id=${item.file.id}&download=1`}
+                              className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-brand-purple hover:underline"
+                              data-testid="review-answer-file-download"
+                            >
+                              <Download size={13} /> הורדה
+                            </a>
+                          </>
+                        ) : (
+                          <span className="text-[12.5px] text-ink-500">הקובץ נמחק.</span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-[13.5px] text-ink-900 whitespace-pre-wrap leading-relaxed">
+                        {item.answer}
+                      </div>
+                    )}
                   </div>
                 ));
               })()}
@@ -2118,7 +2182,7 @@ export function ReviewCenter({
                           return (
                             <div key={ai} className="text-[12.5px]">
                               <span className="font-semibold text-ink-700">{label}: </span>
-                              <span className="text-ink-900 whitespace-pre-wrap">{answerText(val)}</span>
+                              <span className="text-ink-900 whitespace-pre-wrap">{showAnswer(val, files)}</span>
                             </div>
                           );
                         })}
@@ -2196,7 +2260,8 @@ function exportCsv(
   questions: ReviewQuestion[],
   statusOf: (a: ReviewApplication) => string,
   markOf: (a: ReviewApplication) => AdminMark | null,
-  jobTitle: string
+  jobTitle: string,
+  files: ReviewFiles
 ) {
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const header = [
@@ -2225,7 +2290,7 @@ function exportCsv(
     markOf(a) ? MARK_LABEL[markOf(a)!] : "",
     fmtDate(a.submittedAt),
     answerText(a.answers["fit"] ?? ""),
-    ...questions.map((q) => answerText(a.answers[q.id] ?? "")),
+    ...questions.map((q) => showAnswer(a.answers[q.id] ?? "", files)),
   ]);
   const csv =
     "\uFEFF" + [header, ...rows].map((r) => r.map(esc).join(",")).join("\r\n");
