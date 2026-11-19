@@ -42,7 +42,7 @@ export default async function PrepPage({ params }: { params: Promise<{ token: st
         ) : (
           <>
             <p className="text-[14px] font-bold" style={{ color: H.muted }}>
-              {CONF.title} · {CONF.dates}
+              {CONF.title} · {CONF.hebrewDates} · {CONF.dates}
             </p>
             <h1 className="mt-1 text-[30px] font-black leading-tight sm:text-[36px]" style={{ color: H.navy }}>
               שאלון הכנה לקורס
