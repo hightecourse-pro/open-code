@@ -383,6 +383,7 @@ const SAMPLES: { n: number; label: string; row: Partial<PrepInsert> }[] = [
   { n: 6, label: "Salesforce, מחשב מהשכרה לא שולם, לא עדכנה", row: { course_raw: "יישום ופיתוח Salesforce בעידן ה־AI", lodging: "לא", laptop_rental: "כן", laptop_rental_paid: "לא", updated_personal: false } },
   { n: 7, label: "מצוינות בניהול - נדרש אישור חברה, עדכנה", row: { course_raw: "מצויינות בניהול - נדרש אישור חברה למעבר", lodging: "לא", updated_personal: true } },
   { n: 8, label: "קורס עוד לא נבחר (בסיסי או מתקדם), לינה", row: { course_raw: "Advanced GenAI & Agentic AI for Developers - נדרש לבחור בסיסי או מתקדם", lodging: "כן", lodging_paid: "כן", updated_personal: false } },
+  { n: 9, label: "Advanced GenAI מהבסיס - רשימת התקנה, מחשב משלה, עדכנה", row: { course_raw: "Advanced GenAI & Agentic AI for Developers - מהבסיס כולל תרגול", lodging: "לא", laptop_own: "כן", updated_personal: true } },
 ];
 
 /** The variations to one address, each a real row (is_sample) so the questionnaire links in them work. */

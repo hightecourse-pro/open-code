@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { H } from "@/app/ai-course/theme";
-import { AI_TOOLS, CONF, DEV_TOOLS, LICENSE_LABEL, TEXT, TOOL_NONE, TOOL_OTHER, type LicenseSource, type PrepAnswers, type PrepKind } from "@/lib/hc-preconf/config";
+import { AI_TOOLS, CONF, DEV_TOOLS, INSTALL_TITLE, LICENSE_LABEL, TEXT, TOOL_NONE, TOOL_OTHER, type LicenseSource, type PrepAnswers, type PrepKind } from "@/lib/hc-preconf/config";
 import { submitPrepAnswers } from "./actions";
 
 /*
@@ -42,7 +42,23 @@ function Choice({ name, value, label, checked, onChange, type = "radio", testId 
   );
 }
 
-export function PrepForm({ token, kind, laptopRequired, questions, initial, answeredAt }: { token: string; kind: PrepKind; laptopRequired: boolean; questions: Questions; initial: PrepAnswers; answeredAt: string | null }) {
+/** What her course needs installed on the laptop (the owner, 19/11 night) - shown with the laptop question and again after saving. */
+function InstallList({ items }: { items: string[] }) {
+  return (
+    <div className="rounded-xl px-4 py-3 text-[14.5px] leading-relaxed" style={{ background: H.yellowSoft, borderRight: `4px solid ${H.yellow}` }} data-testid="prep-install-list">
+      <div className="font-black" style={{ color: H.navy }}>
+        {INSTALL_TITLE}
+      </div>
+      <ul className="mt-1 list-disc pr-5 font-bold">
+        {items.map((x) => (
+          <li key={x}>{x}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+export function PrepForm({ token, kind, laptopRequired, questions, initial, answeredAt, installList }: { token: string; kind: PrepKind; laptopRequired: boolean; questions: Questions; initial: PrepAnswers; answeredAt: string | null; installList: string[] | null }) {
   const [a, setA] = useState<PrepAnswers>({ ...initial, tools: initial.tools ?? [] });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -119,6 +135,11 @@ export function PrepForm({ token, kind, laptopRequired, questions, initial, answ
             </a>
           </div>
         )}
+        {questions.laptop && installList && (
+          <div className="mt-4">
+            <InstallList items={installList} />
+          </div>
+        )}
         <button type="button" onClick={() => setDone(null)} className="mt-5 rounded-full px-5 py-2 text-[14.5px] font-bold" style={{ border: `1.5px solid ${H.navy}`, color: H.navy }} data-testid="prep-edit">
           לעריכת התשובות
         </button>
@@ -160,6 +181,7 @@ export function PrepForm({ token, kind, laptopRequired, questions, initial, answ
             <Choice name="laptop" value="yes" label="כן, מגיעה עם מחשב" checked={a.laptop === "yes"} onChange={() => set("laptop", "yes")} testId="prep-laptop-yes" />
             <Choice name="laptop" value="no" label="לא" checked={a.laptop === "no"} onChange={() => set("laptop", "no")} testId="prep-laptop-no" />
           </div>
+          {installList && <InstallList items={installList} />}
           {a.laptop === "no" && (
             <div className="rounded-xl px-4 py-3 text-[14.5px] leading-relaxed" style={{ background: H.yellowSoft, borderRight: `4px solid ${H.yellow}` }} data-testid="prep-rental-note">
               {TEXT.noLaptopOption}{" "}

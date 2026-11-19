@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { rubik } from "@/app/ai-course/font";
-import { CONF, KIND_LABEL, questionsFor, type PrepKind } from "@/lib/hc-preconf/config";
+import { CONF, installListFor, KIND_LABEL, questionsFor, type PrepKind } from "@/lib/hc-preconf/config";
 import { initialAnswersOf, loadPrepByToken } from "@/lib/hc-preconf/data";
 import { ConferenceFooter, ConferenceHeader, H } from "../../chrome";
 import { PrepForm } from "../prep-form";
@@ -52,7 +52,7 @@ export default async function PrepPage({ params }: { params: Promise<{ token: st
               {row.is_sample ? ` (דוגמה - ${KIND_LABEL[kind]})` : ""}. השאלון לוקח דקה, והתשובות נשמרות לכתובת <span dir="ltr">{row.email}</span>.
             </p>
             <div className="mt-6">
-              <PrepForm token={row.token} kind={kind} laptopRequired={row.laptop_required} questions={questionsFor(kind, row.laptop_required)} initial={initialAnswersOf(row)} answeredAt={row.answered_at} />
+              <PrepForm token={row.token} kind={kind} laptopRequired={row.laptop_required} questions={questionsFor(kind, row.laptop_required)} initial={initialAnswersOf(row)} answeredAt={row.answered_at} installList={installListFor(row.course)} />
             </div>
           </>
         )}
