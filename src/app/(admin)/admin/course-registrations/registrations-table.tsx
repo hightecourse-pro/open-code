@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Search, Trash2 } from "lucide-react";
 import { splitPrevSurname } from "@/lib/names";
+import { isWolfSeminary } from "@/lib/course-links";
 import { Alert, Badge, Button, Input } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { deleteCourseRegistration, updateCourseRegistration, type CourseRegistrationStatus } from "./actions";
@@ -28,6 +29,8 @@ export interface RegistrationRow {
   nedarim_transaction_id?: string | null;
   /** Membership right now (the page computes it); the snapshot is is_subscriber. */
   subscriber_now?: boolean;
+  /** Her ״סמינר״ answer (study_place) - splits ״שולם״ into וולף / the rest (the owner, 19/11). */
+  seminary?: string | null;
 }
 
 const nis = (agorot: number) => new Intl.NumberFormat("he-IL").format(agorot / 100);
@@ -43,7 +46,7 @@ const fmt = new Intl.DateTimeFormat("he-IL", { day: "2-digit", month: "2-digit",
 
 function csvOf(rows: RegistrationRow[]): string {
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const head = ["שם", "שם משפחה קודם", "מייל", "טלפון", "קוד הרשמה", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "סכום ששולם", "תשלומים", "אסמכתא נדרים", "חזרה מדף התשלום", "שולם ב", "הערה", "נרשמה ב"];
+  const head = ["שם", "שם משפחה קודם", "מייל", "טלפון", "קוד הרשמה", "סמינר", "מנויה בהרשמה", "מנויה עכשיו", "סטטוס", "סכום ששולם", "תשלומים", "אסמכתא נדרים", "חזרה מדף התשלום", "שולם ב", "הערה", "נרשמה ב"];
   const lines = rows.map((r) =>
     [
       splitPrevSurname(r.full_name).name,
@@ -51,6 +54,7 @@ function csvOf(rows: RegistrationRow[]): string {
       r.email,
       r.phone ?? "",
       r.reg_code ?? "",
+      r.seminary ?? "",
       r.is_subscriber ? "כן" : "לא",
       r.subscriber_now ? "כן" : "לא",
       STATUS[r.status]?.label ?? r.status,
@@ -71,7 +75,7 @@ function csvOf(rows: RegistrationRow[]): string {
 export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] }) {
   const [rows, setRows] = useState(initial);
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "subscribers" | "paid" | "open" | "verify">("all");
+  const [filter, setFilter] = useState<"all" | "subscribers" | "paid" | "paid_wolf" | "paid_other" | "open" | "verify">("all");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -80,6 +84,8 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
     return rows.filter((r) => {
       if (filter === "subscribers" && !(r.is_subscriber || r.subscriber_now)) return false;
       if (filter === "paid" && r.status !== "paid") return false;
+      if (filter === "paid_wolf" && !(r.status === "paid" && isWolfSeminary(r.seminary))) return false;
+      if (filter === "paid_other" && !(r.status === "paid" && !isWolfSeminary(r.seminary))) return false;
       if (filter === "open" && r.status !== "registered") return false;
       if (filter === "verify" && r.status !== "paid_reported") return false;
       if (!needle) return true;
@@ -91,6 +97,8 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
     total: rows.length,
     subscribers: rows.filter((r) => r.is_subscriber || r.subscriber_now).length,
     paid: rows.filter((r) => r.status === "paid").length,
+    paidWolf: rows.filter((r) => r.status === "paid" && isWolfSeminary(r.seminary)).length,
+    paidOther: rows.filter((r) => r.status === "paid" && !isWolfSeminary(r.seminary)).length,
   };
 
   function patch(id: string, p: { status?: CourseRegistrationStatus; notes?: string }) {
@@ -141,11 +149,14 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
             ["open", `התעניינו - לא שילמו (${rows.filter((r) => r.status === "registered").length})`],
             ["verify", `לאימות (${rows.filter((r) => r.status === "paid_reported").length})`],
             ["paid", `שולם (${counts.paid})`],
+            ["paid_wolf", `שולם - וולף (${counts.paidWolf})`],
+            ["paid_other", `שולם - שאר הסמינרים (${counts.paidOther})`],
           ] as const
         ).map(([k, label]) => (
           <button
             key={k}
             type="button"
+            data-testid={`cr-tab-${k}`}
             onClick={() => setFilter(k)}
             className={cn(
               "rounded-full px-3 py-1 text-[12.5px] font-semibold border transition-colors",
@@ -185,7 +196,7 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
             </thead>
             <tbody>
               {shown.map((r) => (
-                <tr key={r.id} className="border-t border-ink-100 align-top">
+                <tr key={r.id} className="border-t border-ink-100 align-top" data-testid="cr-row" data-status={r.status} data-wolf={r.status === "paid" ? String(isWolfSeminary(r.seminary)) : undefined}>
                   <td className="px-3 py-2 font-semibold text-ink-1000 whitespace-nowrap">
                     {r.profile_id ? (
                       <Link href={`/admin/members/${r.profile_id}`} target="_blank" rel="noopener" className="text-brand-purple hover:underline">
@@ -193,6 +204,11 @@ export function RegistrationsTable({ rows: initial }: { rows: RegistrationRow[] 
                       </Link>
                     ) : (
                       r.full_name
+                    )}
+                    {r.seminary && (
+                      <div className="text-[11px] font-normal text-ink-500 mt-0.5 max-w-[220px] whitespace-normal" data-testid="cr-seminary">
+                        {r.seminary}
+                      </div>
                     )}
                   </td>
                   <td className="px-3 py-2 text-ink-700">
