@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireCommunityAccess } from "@/lib/auth";
 import { currentSubscription } from "@/lib/payments/subscription";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { renderStamp } from "@/lib/request-stamp";
 import { getPricing } from "@/lib/payments/pricing";
 import { SubscriptionCard } from "@/components/patterns/subscription-card";
 
@@ -47,6 +49,19 @@ export default async function SubscriptionPage() {
     limitedKeva = await renewalOffFromLimitedKeva(subscription);
   }
 
+  // The minutes between the standing order's setup and Nedarim's first charge:
+  // the row holds the 3-day safety window, and ״מתחדש אוטומטית ב-<בעוד 3 ימים>״
+  // read as a mistake (ברכה ה., 16.11: ״אם היום עשיתי מנוי איך החיוב הבא יהיה
+  // ב-19.11?״). Nothing was charged yet → the card says the charge is on its way.
+  let awaitingFirstCharge = false;
+  if (subscription && subscription.status === "active" && !subscription.canceled_at) {
+    const setupAgeMs = renderStamp() - new Date(subscription.created_at).getTime();
+    if (setupAgeMs < 4 * 24 * 3600 * 1000) {
+      const { data: charged } = await createAdminClient().from("payments").select("id").eq("subscription_id", subscription.id).eq("status", "succeeded").gt("amount_agorot", 0).limit(1);
+      awaitingFirstCharge = (charged ?? []).length === 0;
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5 max-w-2xl">
       <div>
@@ -63,6 +78,7 @@ export default async function SubscriptionPage() {
           periodEnd={subscription.current_period_end}
           canceledAt={subscription.canceled_at}
           limitedKeva={limitedKeva}
+          awaitingFirstCharge={awaitingFirstCharge}
           priceShekels={Math.round(pricing.monthlyAgorot / 100)}
         />
       ) : (

@@ -83,7 +83,7 @@ export function ApplyForm({
       {/* Half-filled answers survive a hop to another page (members, 2/9). */}
       {/* A successful submit REDIRECTS (the form is gone for good), so the
           stale draft just ages out on its 7-day TTL. */}
-      {!edit && <FormDraft storageKey={`draft:apply:${jobId}`} />}
+      {!edit && <FormDraft storageKey={`draft:apply:${jobId}`} remote />}
       {/* Friendly nudge - never blocking */}
       <div className="flex gap-2.5 items-start bg-tint-indigo border border-[#C9D2F0] rounded-md p-3 px-4 text-[13.5px] text-ink-700">
         <Sparkles size={18} className="text-brand-indigo shrink-0 mt-0.5" />

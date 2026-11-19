@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { deleteFormDraft, loadFormDraft, saveFormDraft } from "./form-draft-actions";
 
 /**
  * Google-Forms-style auto-save for a form (the members' ask, 2/9: "עדיף
@@ -27,9 +28,15 @@ export function FormDraft({
   storageKey,
   clear = false,
   staleAfter,
+  remote = false,
 }: {
   storageKey: string;
   clear?: boolean;
+  /**
+   * Also keep the draft on the server, under her account (Shoshana Ben-Haim,
+   * 14.11: the draft stayed on one computer). The newer copy wins on open.
+   */
+  remote?: boolean;
   /**
    * The record's last successful save time (ISO). A draft OLDER than it
    * predates a save that already happened - restoring it would resurrect
@@ -50,6 +57,7 @@ export function FormDraft({
       } catch {
         /* private mode */
       }
+      if (remote) deleteFormDraft(storageKey).catch(() => undefined);
       return;
     }
 
@@ -68,16 +76,10 @@ export function FormDraft({
         .filter((p): p is { editable: HTMLElement; input: HTMLInputElement } => !!p.input);
 
     // ---------------------------------------------------------- restore once
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) {
-        const draft = JSON.parse(raw) as DraftShape;
-        const staleMs = staleAfter ? Date.parse(staleAfter) : 0;
-        if (staleMs && draft.t < staleMs) {
-          // The form was saved AFTER this draft was written - the server is
-          // the newer truth; the leftover draft must not overwrite it.
-          localStorage.removeItem(storageKey);
-        } else if (Date.now() - draft.t < TTL_MS) {
+    const staleMs = staleAfter ? Date.parse(staleAfter) : 0;
+    let localT = 0;
+    let touched = false;
+    const applyDraft = (draft: DraftShape) => {
           for (const el of form.elements) {
             if (!isSafeField(el)) continue;
             if (el instanceof HTMLInputElement && (el.type === "checkbox" || el.type === "radio")) {
@@ -101,10 +103,41 @@ export function FormDraft({
           }
           const at = draft.t;
           setTimeout(() => setRestoredAt(at), 0);
+    };
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (raw) {
+        const draft = JSON.parse(raw) as DraftShape;
+        if (staleMs && draft.t < staleMs) {
+          // The form was saved AFTER this draft was written - the server is
+          // the newer truth; the leftover draft must not overwrite it.
+          localStorage.removeItem(storageKey);
+        } else if (Date.now() - draft.t < TTL_MS) {
+          applyDraft(draft);
+          localT = draft.t;
         }
       }
     } catch {
       /* corrupt/blocked storage - start clean */
+    }
+    // the server copy (another device): applied only when newer than this browser's, and only
+    // while she has not started typing here - a late answer must never overwrite live input
+    let cancelled = false;
+    if (remote) {
+      loadFormDraft(storageKey)
+        .then((r) => {
+          if (cancelled || !r || touched) return;
+          const draft = r.data as unknown as DraftShape;
+          if (!draft || typeof draft.t !== "number" || !draft.fields) return;
+          if (draft.t <= localT || (staleMs && draft.t < staleMs) || Date.now() - draft.t >= TTL_MS) return;
+          applyDraft(draft);
+          try {
+            localStorage.setItem(storageKey, JSON.stringify(draft));
+          } catch {
+            /* fine */
+          }
+        })
+        .catch(() => undefined);
     }
 
     // ------------------------------------------------------------- capture
@@ -125,8 +158,16 @@ export function FormDraft({
       } catch {
         /* storage full/blocked - autosave just doesn't stick */
       }
+      if (remote) {
+        if (remoteTimer) clearTimeout(remoteTimer);
+        remoteTimer = setTimeout(() => {
+          saveFormDraft(storageKey, draft as unknown as Record<string, unknown>).catch(() => undefined);
+        }, 2500);
+      }
     };
+    let remoteTimer: ReturnType<typeof setTimeout> | null = null;
     const onInput = () => {
+      touched = true;
       if (timer) clearTimeout(timer);
       timer = setTimeout(snapshot, 800);
     };
@@ -181,14 +222,16 @@ export function FormDraft({
       form.removeEventListener("click", onClick, true);
       form.removeEventListener("reset", onReset);
       if (timer) clearTimeout(timer);
+      if (remoteTimer) clearTimeout(remoteTimer);
+      cancelled = true;
     };
-  }, [storageKey, clear, staleAfter]);
+  }, [storageKey, clear, staleAfter, remote]);
 
   return (
     <span ref={anchorRef} className="contents">
       {restoredAt !== null && (
         <span className="block text-[11.5px] text-ink-400 -mt-1">
-          ✓ שחזרנו את מה שמילאת קודם - הטופס נשמר אוטומטית תוך כדי כתיבה
+          ✓ שחזרנו את מה שמילאת קודם - הטופס נשמר אוטומטית תוך כדי כתיבה{remote ? ", גם אם תמשיכי ממחשב אחר" : ""}
         </span>
       )}
     </span>

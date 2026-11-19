@@ -2521,6 +2521,28 @@ export interface Database {
         };
         Relationships: [];
       };
+      /** A form draft kept on the server under her account (19/11) - the same snapshot the browser keeps. */
+      form_drafts: {
+        Row: {
+          profile_id: string;
+          key: string;
+          data: Json;
+          updated_at: string;
+        };
+        Insert: {
+          profile_id: string;
+          key: string;
+          data: Json;
+          updated_at?: string;
+        };
+        Update: {
+          profile_id?: string;
+          key?: string;
+          data?: Json;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       /** The public Hightecourse AI-course quiz (/ai-course): one row per email, updated as she answers (20/10). */
       ai_course_quiz_submissions: {
         Row: {

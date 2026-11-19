@@ -295,6 +295,8 @@ export async function submitApplication(
   }
   // The documents she attached now belong to this application (19/11).
   if (created?.id) await linkApplicationFiles(user.id, created.id, newFileIds);
+  // The server-side draft of this form is done with (the browser clears its own copy).
+  await supabase.from("form_drafts").delete().eq("profile_id", user.id).eq("key", `draft:apply:${jobId}`);
 
   await fireTaskTrigger("new_application", {
     title: `הגשה חדשה למשרת ${job.title}`,
