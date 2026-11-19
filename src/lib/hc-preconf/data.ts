@@ -607,7 +607,7 @@ export async function savePrepAnswers(token: string, answers: PrepAnswers): Prom
 
 export async function loadPrepAdmin(): Promise<{ rows: PrepRow[]; settings: PrepSettings }> {
   const admin = createAdminClient();
-  const [{ data: rows }, settings] = await Promise.all([admin.from(T).select("*").order("is_sample", { ascending: true }).order("sheet_row", { ascending: true, nullsFirst: false }), loadPrepSettings()]);
+  const [{ data: rows }, settings] = await Promise.all([admin.from(T).select("*").order("is_sample", { ascending: true }).order("sheet_row", { ascending: true, nullsFirst: false }).order("source_key", { ascending: true }), loadPrepSettings()]);
   return { rows: rows ?? [], settings };
 }
 
