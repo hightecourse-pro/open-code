@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { FIT_QUESTION } from "@/lib/member-overview";
+import { fileAnswerId, fileAnswerIds } from "@/lib/application-files";
 
 export const metadata: Metadata = { title: "פרטי המשרה ומה הגשתי" };
 
@@ -55,14 +56,25 @@ export default async function MyApplicationPage({ params }: { params: Promise<{ 
   const editable = app.status === "submitted" && !app.sent_to_client_at && job?.status === "open" && !["candidates_sent", "interviews"].includes(job?.pipeline_status ?? "");
 
   const raw = (app.answers && typeof app.answers === "object" && !Array.isArray(app.answers) ? (app.answers as Record<string, unknown>) : {}) as Record<string, unknown>;
-  const answers: { label: string; answer: string }[] = [];
-  if (answerText(raw.fit)) answers.push({ label: FIT_QUESTION, answer: answerText(raw.fit) });
+  // Documents she attached to "file" questions (19/11) - by name, opened in the attachment viewer (her own rows, RLS).
+  const fileIds = fileAnswerIds(raw);
+  const { data: fileRows } = fileIds.length
+    ? await supabase.from("attachments").select("id, file_name").in("id", fileIds)
+    : { data: [] as { id: string; file_name: string }[] };
+  const fileNameOf = new Map((fileRows ?? []).map((r) => [r.id, r.file_name]));
+  const answers: { label: string; answer: string; file?: { href: string } }[] = [];
+  const push = (label: string, v: unknown) => {
+    const fid = fileAnswerId(v);
+    if (fid) answers.push({ label, answer: fileNameOf.get(fid) ?? "הקובץ כבר לא קיים", file: { href: `/attachments/${fid}` } });
+    else if (answerText(v)) answers.push({ label, answer: answerText(v) });
+  };
+  push(FIT_QUESTION, raw.fit);
   const known = new Set(["fit"]);
   for (const q of questions ?? []) {
     known.add(q.id);
-    if (answerText(raw[q.id])) answers.push({ label: q.question, answer: answerText(raw[q.id]) });
+    push(q.question, raw[q.id]);
   }
-  for (const [k, v] of Object.entries(raw)) if (!known.has(k) && answerText(v)) answers.push({ label: k, answer: answerText(v) });
+  for (const [k, v] of Object.entries(raw)) if (!known.has(k)) push(k, v);
 
   let cvUrl: string | null = null;
   if (cv?.file_path) {
@@ -121,7 +133,19 @@ export default async function MyApplicationPage({ params }: { params: Promise<{ 
         {answers.map((qa, i) => (
           <div key={i} data-testid="my-application-answer">
             <div className="text-[12.5px] font-bold text-brand-purple">{qa.label}</div>
-            <p className="mt-1 text-[14px] leading-relaxed text-ink-900 whitespace-pre-line break-words">{qa.answer}</p>
+            {qa.file ? (
+              <p className="mt-1 text-[14px] leading-relaxed text-ink-900 flex items-center gap-2 flex-wrap" data-testid="my-application-file">
+                <FileText size={15} className="text-brand-pink-deep shrink-0" />
+                <span>
+                  קובץ מצורף: <b dir="ltr">{qa.answer}</b>
+                </span>
+                <Link href={qa.file.href} target="_blank" rel="noopener" className="font-semibold text-brand-purple hover:underline">
+                  לצפייה ↗
+                </Link>
+              </p>
+            ) : (
+              <p className="mt-1 text-[14px] leading-relaxed text-ink-900 whitespace-pre-line break-words">{qa.answer}</p>
+            )}
           </div>
         ))}
         {app.note && (

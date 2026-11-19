@@ -8,10 +8,17 @@ import { sendResendEmail } from "@/lib/email/resend";
 import { fireTaskTrigger } from "@/lib/admin/tasks";
 import { applyConfirmationEmail } from "@/lib/email/templates";
 import type { Json, QuestionAnswerType } from "@/types/database";
+import {
+  APPLICATION_FILE_MAX_BYTES,
+  APPLICATION_FILE_MIMES,
+  fileAnswer,
+  fileAnswerId,
+  fileAnswerIds,
+} from "@/lib/application-files";
 
 export type ApplyState = { error?: string };
 
-const ANSWER_TYPES: QuestionAnswerType[] = ["paragraph", "number", "select", "multiselect"];
+const ANSWER_TYPES: QuestionAnswerType[] = ["paragraph", "number", "select", "multiselect", "file"];
 
 // Same CV rules as the CV screen (src/app/(app)/cv/actions.ts).
 const MAX_BYTES = 10 * 1024 * 1024; // 10MB
@@ -20,6 +27,66 @@ const CV_TYPES = [
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ];
+
+type Db = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * One document answering a "file" question (the owner, 19/11: ״שאלה עם העלאת
+ * מסמך״) → the private attachments bucket, in her own folder, plus an
+ * attachments row of hers - UNLINKED until the application row exists (the
+ * nightly sweep clears a row that never got linked). Returns the answer
+ * string to store, or the sentence to show her.
+ */
+async function storeApplicationFile(
+  supabase: Db,
+  userId: string,
+  file: File,
+  question: string
+): Promise<{ answer: string; id: string } | { error: string }> {
+  if (file.size > APPLICATION_FILE_MAX_BYTES) return { error: `הקובץ לשאלה ״${question}״ גדול מדי - עד 10MB.` };
+  const ext = /\.[A-Za-z0-9]{1,8}$/.exec(file.name)?.[0].toLowerCase() ?? "";
+  const mime = file.type || (ext === ".pdf" ? "application/pdf" : "");
+  if (!APPLICATION_FILE_MIMES.includes(mime)) {
+    return { error: `לשאלה ״${question}״ אפשר לצרף PDF, Word (doc/docx) או תמונה (PNG/JPG/WebP).` };
+  }
+  // The storage KEY stays ASCII (Supabase rejects Hebrew keys); the real name lives on the row.
+  const safeName = file.name.replace(/[^\p{L}\p{N}.\-_ ]/gu, "").slice(-80) || "מסמך";
+  const path = `${userId}/${crypto.randomUUID()}${ext}`;
+  // storage-js takes the part's type from the Blob itself - re-wrap when the browser sent none.
+  const body = mime === file.type ? file : new Blob([await file.arrayBuffer()], { type: mime });
+  const { error: upErr } = await supabase.storage.from("attachments").upload(path, body, { contentType: mime });
+  if (upErr) return { error: "העלאת הקובץ נכשלה. נסי שוב." };
+  const { data: row, error: rowErr } = await supabase
+    .from("attachments")
+    .insert({ profile_id: userId, file_path: path, file_name: safeName, mime, size_bytes: file.size })
+    .select("id")
+    .single();
+  if (rowErr || !row) {
+    await supabase.storage.from("attachments").remove([path]);
+    return { error: "הקובץ הועלה אבל לא נשמר. נסי שוב." };
+  }
+  return { answer: fileAnswer(row.id), id: row.id };
+}
+
+/** Stamp the application on the documents she just uploaded for it (members have no update policy on attachments). */
+async function linkApplicationFiles(userId: string, applicationId: string, ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  await createAdminClient()
+    .from("attachments")
+    .update({ context: "application", context_id: applicationId })
+    .in("id", ids)
+    .eq("profile_id", userId);
+}
+
+/** Remove documents of hers - the files and the rows (a failed submit, a withdrawn application). */
+async function removeApplicationFiles(userId: string, ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const admin = createAdminClient();
+  const { data: rows } = await admin.from("attachments").select("id, file_path").in("id", ids).eq("profile_id", userId);
+  if (!rows?.length) return;
+  await admin.storage.from("attachments").remove(rows.map((r) => r.file_path));
+  await admin.from("attachments").delete().in("id", rows.map((r) => r.id));
+}
 
 /**
  * Submit an application to one of OUR jobs through the wizard: required
@@ -65,6 +132,7 @@ export async function submitApplication(
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   const answers: Record<string, string | number | string[]> = {};
+  const newFileIds: string[] = [];
   for (const q of questions ?? []) {
     const required = q.required !== false;
     const type: QuestionAnswerType = ANSWER_TYPES.includes(q.answer_type)
@@ -90,6 +158,19 @@ export async function submitApplication(
       continue;
     }
 
+    if (type === "file") {
+      // A document as the answer (19/11) - uploaded now, linked to the application once it exists.
+      const f = formData.get(`q_${q.id}`);
+      if (f instanceof File && f.size > 0) {
+        const stored = await storeApplicationFile(supabase, user.id, f, q.question);
+        if ("error" in stored) return { error: stored.error };
+        answers[q.id] = stored.answer;
+        newFileIds.push(stored.id);
+      } else if (required) {
+        return { error: `צרפי קובץ לשאלה: ${q.question}` };
+      }
+      continue;
+    }
     const v = String(formData.get(`q_${q.id}`) ?? "").trim();
     if (!v) {
       if (required) return { error: `חסרה תשובה לשאלה: ${q.question}` };
@@ -185,21 +266,35 @@ export async function submitApplication(
   }
 
   const base = { job_id: jobId, applicant_id: user.id, status: "submitted" as const };
-  let { error } = await supabase.from("applications").insert({
-    ...base,
-    cv_document_id: cvId,
-    answers: answers as unknown as Json,
-  });
-  if (error?.code === "23505") return { error: "כבר הגשת למשרה הזו 💜" };
+  let { data: created, error } = await supabase
+    .from("applications")
+    .insert({ ...base, cv_document_id: cvId, answers: answers as unknown as Json })
+    .select("id")
+    .maybeSingle();
+  if (error?.code === "23505") {
+    await removeApplicationFiles(user.id, newFileIds);
+    return { error: "כבר הגשת למשרה הזו 💜" };
+  }
   if (error) {
     // Backward-safe: retry without newer-migration columns only when a column
     // is what's missing.
     const missing = error.code === "42703" || /answers|cv_document_id|column/i.test(error.message ?? "");
-    if (!missing) return { error: "ההגשה נכשלה. נסי שוב." };
-    ({ error } = await supabase.from("applications").insert(base));
-    if (error?.code === "23505") return { error: "כבר הגשת למשרה הזו 💜" };
-    if (error) return { error: "ההגשה נכשלה. נסי שוב." };
+    if (!missing) {
+      await removeApplicationFiles(user.id, newFileIds);
+      return { error: "ההגשה נכשלה. נסי שוב." };
+    }
+    ({ data: created, error } = await supabase.from("applications").insert(base).select("id").maybeSingle());
+    if (error?.code === "23505") {
+      await removeApplicationFiles(user.id, newFileIds);
+      return { error: "כבר הגשת למשרה הזו 💜" };
+    }
+    if (error) {
+      await removeApplicationFiles(user.id, newFileIds);
+      return { error: "ההגשה נכשלה. נסי שוב." };
+    }
   }
+  // The documents she attached now belong to this application (19/11).
+  if (created?.id) await linkApplicationFiles(user.id, created.id, newFileIds);
 
   await fireTaskTrigger("new_application", {
     title: `הגשה חדשה למשרת ${job.title}`,
@@ -277,6 +372,8 @@ export async function updateApplication(
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
   const answers: Record<string, string | number | string[]> = {};
+  const newFileIds: string[] = [];
+  const prevAnswers = (app.answers && typeof app.answers === "object" && !Array.isArray(app.answers) ? app.answers : {}) as Record<string, unknown>;
   for (const q of questions ?? []) {
     const required = q.required !== false;
     const type: QuestionAnswerType = ANSWER_TYPES.includes(q.answer_type) ? q.answer_type : "paragraph";
@@ -289,6 +386,22 @@ export async function updateApplication(
       }
       if (!values.every((v) => options.includes(v))) return { error: `תשובה לא תקינה לשאלה: ${q.question}` };
       answers[q.id] = values;
+      continue;
+    }
+    if (type === "file") {
+      // A document as the answer (19/11): a new file replaces, no file keeps what she attached.
+      const f = formData.get(`q_${q.id}`);
+      const kept = fileAnswerId(prevAnswers[q.id]);
+      if (f instanceof File && f.size > 0) {
+        const stored = await storeApplicationFile(supabase, user.id, f, q.question);
+        if ("error" in stored) return { error: stored.error };
+        answers[q.id] = stored.answer;
+        newFileIds.push(stored.id);
+      } else if (kept) {
+        answers[q.id] = fileAnswer(kept);
+      } else if (required) {
+        return { error: `צרפי קובץ לשאלה: ${q.question}` };
+      }
       continue;
     }
     const v = String(formData.get(`q_${q.id}`) ?? "").trim();
@@ -376,7 +489,11 @@ export async function updateApplication(
       previous_versions: nextHistory as unknown as Json,
     })
     .eq("id", app.id);
-  if (error) return { error: "העדכון נכשל. נסי שוב." };
+  if (error) {
+    await removeApplicationFiles(user.id, newFileIds);
+    return { error: "העדכון נכשל. נסי שוב." };
+  }
+  await linkApplicationFiles(user.id, app.id, newFileIds);
 
   revalidatePath("/jobs");
   redirect("/jobs?edited=1");
@@ -392,7 +509,7 @@ export async function withdrawApplication(jobId: string): Promise<ApplyState> {
 
   const { data: app } = await supabase
     .from("applications")
-    .select("id, status, sent_to_client_at")
+    .select("id, status, sent_to_client_at, answers, previous_versions")
     .eq("job_id", jobId)
     .eq("applicant_id", user.id)
     .maybeSingle();
@@ -402,6 +519,9 @@ export async function withdrawApplication(jobId: string): Promise<ApplyState> {
   }
   const { error } = await createAdminClient().from("applications").delete().eq("id", app.id);
   if (error) return { error: "ההסרה נכשלה. נסי שוב." };
+  // Her documents go with the application (19/11) - the current ones and those an edit replaced.
+  const history = Array.isArray(app.previous_versions) ? app.previous_versions : [];
+  await removeApplicationFiles(user.id, fileAnswerIds(app.answers, history));
   revalidatePath("/jobs");
   redirect("/jobs?withdrawn=1");
 }

@@ -3,6 +3,7 @@
 // the employer in the end; the coordinator's opinion of her; and her hackathon
 // submission with the links the judges use. Server-only (service role).
 import { createAdminClient } from "@/lib/supabase/admin";
+import { fileAnswerId, fileAnswerIds } from "@/lib/application-files";
 import { netfreeSafeUrl } from "@/lib/netfree";
 import { teamKeyOf } from "@/lib/hackathon-submission";
 import { totalOf, ZERO_SCORES, type AutoReport } from "@/lib/judging-shared";
@@ -42,7 +43,8 @@ export interface MemberApplication {
   clientNote: string | null;
   /** The team's note on HER × THIS job (application_notes). */
   note: string | null;
-  answers: { label: string; answer: string }[];
+  /** href (19/11): a "file" answer opens the document through the admin sign route. */
+  answers: { label: string; answer: string; href?: string }[];
   editedAt: string | null;
 }
 
@@ -72,20 +74,33 @@ export async function loadMemberApplications(profileId: string): Promise<MemberA
   const jobOf = new Map((jobs ?? []).map((j) => [j.id, j]));
   const candOf = new Map((candidates ?? []).map((c) => [c.job_id, c]));
   const noteOf = new Map((notes ?? []).map((n) => [n.application_id, n.note]));
+  // Documents attached to "file" questions (19/11), by name.
+  const fileIds = fileAnswerIds(apps.map((a) => a.answers));
+  const { data: fileRows } = fileIds.length
+    ? await admin.from("attachments").select("id, file_name").in("id", fileIds)
+    : { data: [] as { id: string; file_name: string }[] };
+  const fileNameOf = new Map((fileRows ?? []).map((r) => [r.id, r.file_name]));
   const questionsOf = new Map<string, { id: string; question: string }[]>();
   for (const q of questions ?? []) questionsOf.set(q.job_id, [...(questionsOf.get(q.job_id) ?? []), { id: q.id, question: q.question }]);
   return apps.map((a) => {
     const job = jobOf.get(a.job_id);
     const cand = candOf.get(a.job_id);
     const raw = (a.answers && typeof a.answers === "object" && !Array.isArray(a.answers) ? (a.answers as Record<string, unknown>) : {}) as Record<string, unknown>;
-    const answers: { label: string; answer: string }[] = [];
-    if (raw.fit !== undefined && answerText(raw.fit)) answers.push({ label: FIT_QUESTION, answer: answerText(raw.fit) });
+    const answers: { label: string; answer: string; href?: string }[] = [];
+    const push = (label: string, v: unknown) => {
+      const fid = fileAnswerId(v);
+      if (fid) {
+        const name = fileNameOf.get(fid);
+        answers.push({ label, answer: `קובץ מצורף: ${name ?? "הקובץ כבר לא קיים"}`, href: name ? `/admin/attachments/sign?id=${fid}` : undefined });
+      } else if (v !== undefined && answerText(v)) answers.push({ label, answer: answerText(v) });
+    };
+    push(FIT_QUESTION, raw.fit);
     const known = new Set(["fit"]);
     for (const q of questionsOf.get(a.job_id) ?? []) {
       known.add(q.id);
-      if (raw[q.id] !== undefined && answerText(raw[q.id])) answers.push({ label: q.question, answer: answerText(raw[q.id]) });
+      push(q.question, raw[q.id]);
     }
-    for (const [k, v] of Object.entries(raw)) if (!known.has(k) && answerText(v)) answers.push({ label: k, answer: answerText(v) });
+    for (const [k, v] of Object.entries(raw)) if (!known.has(k)) push(k, v);
     return {
       id: a.id,
       jobId: a.job_id,

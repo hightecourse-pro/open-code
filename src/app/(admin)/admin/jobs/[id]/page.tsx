@@ -33,9 +33,10 @@ import { JobCandidatesMail, type MailCandidate } from "./job-candidates-mail";
 import { decryptPassword } from "@/lib/portal/auth";
 import { JobDetailsForm, type JobDetailsData } from "./job-details-form";
 import { JobQuestionsManager } from "./job-questions";
+import { fileAnswerIds } from "@/lib/application-files";
 import { JobTabs, type JobTabDef } from "./job-tabs";
 import { PublishPanel } from "./publish-panel";
-import { ReviewCenter, type ReviewApplication } from "./review-center";
+import { ReviewCenter, type ReviewApplication, type ReviewFiles } from "./review-center";
 import { CandidateFinder, type FinderCandidate } from "./candidate-finder";
 import { matchCandidates, studyInfoOf } from "@/lib/admin/candidate-match";
 import { SendCandidatesButton } from "./send-candidates-button";
@@ -521,6 +522,12 @@ export default async function AdminJobPage({
       }
     }
   }
+  // Documents uploaded as "file" answers (19/11): id → name/mime, for the review pane (preview like a CV).
+  const reviewFileIds = fileAnswerIds(appList.map((a) => [a.answers, a.previous_versions]));
+  const { data: reviewFileRows } = reviewFileIds.length
+    ? await admin.from("attachments").select("id, file_name, mime").in("id", reviewFileIds)
+    : { data: [] as { id: string; file_name: string; mime: string }[] };
+  const reviewFiles: ReviewFiles = Object.fromEntries((reviewFileRows ?? []).map((r) => [r.id, { name: r.file_name, mime: r.mime }]));
   const reviewApplications: ReviewApplication[] = appList.map((a) => {
     const p = profileOf.get(a.applicant_id);
     const study = reviewStudy.get(a.applicant_id);
@@ -891,7 +898,8 @@ export default async function AdminJobPage({
         jobTitle={job.title}
         teamNote={job.team_note ?? null}
         applications={reviewApplications}
-        questions={questionItems.map((q) => ({ id: q.id, question: q.question, options: q.options }))}
+        questions={questionItems.map((q) => ({ id: q.id, question: q.question, options: q.options, answerType: q.answer_type }))}
+        files={reviewFiles}
         criteriaCatalogue={applicantCatalogue}
         criteriaPools={applicantPools}
       />

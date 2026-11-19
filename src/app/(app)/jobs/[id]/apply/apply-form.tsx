@@ -7,6 +7,7 @@ import { FileText, Sparkles, Upload } from "lucide-react";
 import { Alert, Button, Checkbox, Field, Input, Select, Textarea } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import type { QuestionAnswerType } from "@/types/database";
+import { APPLICATION_FILE_ACCEPT, APPLICATION_FILE_HINT } from "@/lib/application-files";
 import { submitApplication, updateApplication, type ApplyState } from "./actions";
 
 export interface ApplyQuestion {
@@ -44,7 +45,13 @@ export function ApplyForm({
   cvDocs: ApplyCvDoc[];
   /** Edit mode (the owner, 2/9): prefilled from her live application; the
       form UPDATES instead of creating, until the team locks it. */
-  edit?: { answers: Record<string, string | number | string[]>; fit: string; currentCvLabel: string | null } | null;
+  edit?: {
+    answers: Record<string, string | number | string[]>;
+    fit: string;
+    currentCvLabel: string | null;
+    /** Documents she attached to "file" questions (19/11): question id → name + where to view it. */
+    files?: Record<string, { name: string; viewHref: string }>;
+  } | null;
 }) {
   const [state, action, pending] = useActionState<ApplyState, FormData>(
     (edit ? updateApplication : submitApplication).bind(null, jobId),
@@ -95,7 +102,38 @@ export function ApplyForm({
           label={`${i + 1}. ${q.question}${q.required !== false ? "" : " (רשות)"}`}
           htmlFor={q.answer_type === "multiselect" ? undefined : `q_${q.id}`}
         >
-          {q.answer_type === "number" ? (
+          {q.answer_type === "file" ? (
+            // A document as the answer (the owner, 19/11). In edit mode the file she
+            // attached stays unless she picks a new one - so it is not required then.
+            <div className="flex flex-col gap-2 rounded-sm border border-ink-300 bg-ink-0 px-3.5 py-3" data-testid="apply-file-question">
+              {edit?.files?.[q.id] && (
+                <span className="flex items-center gap-1.5 text-[13px] text-ink-900 min-w-0" data-testid="apply-file-current">
+                  <FileText size={14} className="text-brand-purple shrink-0" />
+                  <span className="shrink-0">הקובץ שצירפת:</span>
+                  <b className="truncate" dir="ltr">{edit.files[q.id].name}</b>
+                  <a
+                    href={edit.files[q.id].viewHref}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-brand-purple font-semibold underline shrink-0"
+                  >
+                    לצפייה
+                  </a>
+                </span>
+              )}
+              <input
+                id={`q_${q.id}`}
+                name={`q_${q.id}`}
+                type="file"
+                accept={APPLICATION_FILE_ACCEPT}
+                required={q.required !== false && !edit?.files?.[q.id]}
+                className="block text-sm text-ink-700 file:me-3 file:rounded-sm file:border-0 file:bg-brand-gradient file:text-white file:font-semibold file:text-[13px] file:px-3.5 file:py-2 file:cursor-pointer"
+              />
+              <span className="text-xs text-ink-500">
+                {edit?.files?.[q.id] ? `בחרי קובץ רק אם רוצות להחליף · ${APPLICATION_FILE_HINT}` : APPLICATION_FILE_HINT}
+              </span>
+            </div>
+          ) : q.answer_type === "number" ? (
             // step="any": the browser's default step=1 rejects 3.5 שנות ניסיון
             // (same fix as the profile wizard, 1/9; the owner hit it here 6/9)
             <Input

@@ -15,21 +15,25 @@ import { NO_PM_PROPS } from "@/lib/pm-guard";
 
 // Google-Forms-style answer types - labels and badge colors are shared with
 // the create-job builder so the two screens always speak the same language.
+// "העלאת מסמך" (the owner, 19/11): the candidate uploads a document as her
+// answer; the review center previews it like a CV.
 export const ANSWER_TYPE_LABEL: Record<QuestionAnswerType, string> = {
   paragraph: "פסקה",
   number: "מספר",
   select: "בחירת תשובה אחת",
   multiselect: "סימון כמה תשובות",
+  file: "העלאת מסמך",
 };
 
 export const ANSWER_TYPE_BADGE: Record<
   QuestionAnswerType,
-  "tech" | "indigo" | "purple" | "pink"
+  "tech" | "indigo" | "purple" | "pink" | "mint"
 > = {
   paragraph: "tech",
   number: "indigo",
   select: "purple",
   multiselect: "pink",
+  file: "mint",
 };
 
 export const ANSWER_TYPE_OPTIONS = (

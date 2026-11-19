@@ -60,7 +60,7 @@ export type ShareStatus = "pending" | "shared" | "revoked";
 export type JobKind = "immediate" | "practicum_placement" | "practicum_percent" | "practicum_free" | "other";
 export type JobPipelineStatus = "draft" | "published" | "candidates_sent" | "interviews" | "hired" | "hired_direct" | "closed_no_hire";
 /** How a required job question is answered - like Google Forms field types. */
-export type QuestionAnswerType = "paragraph" | "number" | "select" | "multiselect";
+export type QuestionAnswerType = "paragraph" | "number" | "select" | "multiselect" | "file";
 export type ClientCrmStatus = "initial_call" | "materials_sent" | "job_active" | "hired";
 
 type Timestamps = { created_at: string; updated_at: string };
@@ -892,7 +892,7 @@ export interface Database {
         Row: {
           id: string;
           profile_id: string;
-          context: "post" | "comment" | "message" | "request" | null;
+          context: "post" | "comment" | "message" | "request" | "application" | null;
           context_id: string | null;
           file_path: string;
           file_name: string;
@@ -903,7 +903,7 @@ export interface Database {
         Insert: {
           id?: string;
           profile_id: string;
-          context?: "post" | "comment" | "message" | "request" | null;
+          context?: "post" | "comment" | "message" | "request" | "application" | null;
           context_id?: string | null;
           file_path: string;
           file_name: string;

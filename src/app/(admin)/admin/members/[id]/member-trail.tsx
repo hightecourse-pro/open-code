@@ -97,7 +97,15 @@ export function MemberApplications({ rows, note }: { rows: MemberApplication[]; 
                     {a.answers.map((qa, i) => (
                       <div key={i}>
                         <dt className="text-[12px] font-semibold text-ink-600">{qa.label}</dt>
-                        <dd className="text-[13px] text-ink-900 whitespace-pre-wrap leading-relaxed">{qa.answer}</dd>
+                        <dd className="text-[13px] text-ink-900 whitespace-pre-wrap leading-relaxed">
+                          {qa.href ? (
+                            <a href={qa.href} target="_blank" rel="noreferrer" className="font-semibold text-brand-purple hover:underline">
+                              {qa.answer} ↗
+                            </a>
+                          ) : (
+                            qa.answer
+                          )}
+                        </dd>
                       </div>
                     ))}
                   </dl>

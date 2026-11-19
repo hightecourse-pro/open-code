@@ -1019,7 +1019,7 @@ function isMissingColumn(error: { code?: string; message?: string } | null): boo
   );
 }
 
-const ANSWER_TYPES: QuestionAnswerType[] = ["paragraph", "number", "select", "multiselect"];
+const ANSWER_TYPES: QuestionAnswerType[] = ["paragraph", "number", "select", "multiselect", "file"];
 
 interface CleanJobQuestion {
   question: string;
