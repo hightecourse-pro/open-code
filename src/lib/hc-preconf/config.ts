@@ -12,11 +12,11 @@ export const CONF = {
   /** The owner, 19/11 night: ״בכל מקום תוסיף גם תאריך עברי לפני הלועזי״ - the Hebrew date always comes first. */
   dates: "24-26 בנובמבר 2026",
   hebrewDates: "י״ד-ט״ז בכסלו תשפ״ז",
-  firstDay: "יום שלישי, י״ד בכסלו, 24.11",
+  /** The greeting (the owner, 20/11: ״מתרגשות ממש לפגוש אותך ביום שלישי י״ד בכסלו, במלוא המרץ״ - Hebrew only). */
+  firstDay: "יום שלישי י״ד בכסלו",
   venue: "מלון VERT ירושלים",
-  /** The owner, 19/11 (evening): ״תעשה את הרישום ללינה, שמרטפיה, מחשב עד מוצאי שבת בשעה 23:00 בלילה״. */
-  deadline: "מוצאי שבת, י״א בכסלו, 21.11, בשעה 23:00",
-  deadlineShort: "מוצאי שבת י״א בכסלו 21.11 בשעה 23:00",
+  /** The owner, 19/11 (evening): ״תעשה את הרישום ללינה, שמרטפיה, מחשב עד מוצאי שבת בשעה 23:00 בלילה״; 20/11: ״הרישום ללינה ולשמרטפיה נסגר במוצאי שבת הקרובה בשעה 23:00״ - this wording everywhere. */
+  deadline: "מוצאי שבת הקרובה בשעה 23:00",
   deadlineIso: "2026-11-21T23:00:00+02:00",
   /** The personal area (the owner, 19/11: ״זה הלינק לאזור האישי״). */
   site: "https://hightecourse.com/personal-area",
