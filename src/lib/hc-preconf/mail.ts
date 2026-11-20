@@ -11,8 +11,14 @@ import { CONF, INSTALL_TITLE, installListFor, kindNeedsLaptop, type PrepKind } f
   program attached and shown, the sheet's notes (״נדרש אישור חברה״) printed
   prominently, and bigger headings. 20/11: the owner's wording round - the
   deadline as ״מוצאי שבת הקרובה בשעה 23:00״, the ״קורס דיגיטלי נוסף״ section,
-  the kashrut and parking texts. Tables and inline styles only (mail clients).
+  the kashrut and parking texts; later that morning: the deadline Sunday
+  10:00, one font everywhere (״שכל הפונט יהיה זהה - אריאל״), the caterer's
+  logo, no deadline in the personal-area block. Tables and inline styles only
+  (mail clients).
 */
+const F = "font-family:Arial, Helvetica, sans-serif;";
+/** Every element that carries a style gets the font too - mail clients do not reliably inherit it (the owner: ״שכל הפונט יהיה זהה - אריאל״). */
+const withFont = (html: string) => html.replace(/style="/g, `style="${F} `);
 const H = { navy: "#004878", yellow: "#F8C800", yellowSoft: "#FFF4C2", bg: "#E6EFF7", ink: "#1C2B3A", body: "#3B4C5E", muted: "#5E7183", line: "#D9E2EC", red: "#C0392B", redSoft: "#FDECEA", blueSoft: "#EEF4F9" };
 
 export interface PrepMailInput {
@@ -73,12 +79,12 @@ function personalAreaBlock(updated: boolean): string {
   if (!updated) {
     return box(
       `<div style="font-size:16px; font-weight:800; color:${H.red}; margin-bottom:6px;">עוד לא עדכנת את הפרטים שלך באזור האישי</div>
-       <div style="font-size:14.5px; line-height:1.65; color:${H.ink}; margin-bottom:12px;">לפי הרישום אצלנו, הפרטים באזור האישי עדיין לא עודכנו. כדי שנדע מה להכין לך - לינה, שמרטפיה, מחשב - היכנסי לאזור האישי ואשרי או עדכני את הפרטים, עד ${CONF.deadline}.</div>
+       <div style="font-size:14.5px; line-height:1.65; color:${H.ink}; margin-bottom:12px;">לפי הרישום אצלנו, הפרטים באזור האישי עדיין לא עודכנו. כדי שנדע מה להכין לך - לינה, שמרטפיה, מחשב - היכנסי לאזור האישי ואשרי או עדכני את הפרטים.</div>
        ${button(CONF.site, "לאזור האישי באתר הייטקורס", "navy")}`,
       "red"
     );
   }
-  return p(`הפרטים שלך באזור האישי מעודכנים - תודה. רוצה לשנות משהו? אפשר עד ${CONF.deadline} ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אתר הייטקורס</a>.`);
+  return p(`הפרטים שלך באזור האישי מעודכנים - תודה. רוצה לשנות משהו? אפשר ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אתר הייטקורס</a>.`);
 }
 
 function detailsCard(i: PrepMailInput): string {
@@ -167,18 +173,23 @@ function babysitSection(i: PrepMailInput): string {
 }
 
 function kashrutSection(i: PrepMailInput): string {
-  const breakfastNote = no(i.lodging) ? p("אם אינך ישנה במלון - יש לקחת שובר לארוחת הבוקר בכניסה לחדר האוכל, עד השעה 8:40.") : "";
+  const breakfastNote = no(i.lodging) ? p("<b>אם אינך ישנה במלון</b> - יש לקחת שובר לארוחת הבוקר בכניסה לחדר האוכל, עד השעה 8:40.") : "";
+  // the caterer's logo beside the meals line (the owner, 20/11: ״צרפתי לוגו של הקייטרינג״)
+  const meals = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;"><tr>
+      <td style="vertical-align:middle; padding:0 0 0 12px;">${p(`<b>ארוחות צהריים וערב</b> - מקייטרינג חיצוני בכשרות <b>בד״ץ עד״ח</b>.`, " margin:0;")}</td>
+      <td style="width:150px; vertical-align:middle;"><img src="${i.siteUrl}${CONF.cateringLogoPath}" alt="יאמי - גורמה ויוקרה" width="150" style="display:block; width:150px; height:auto; border:0; border-radius:8px;" /></td>
+    </tr></table>`;
   return `${h2("כשרות הכנס")}
-    ${p(`<b>ארוחות צהריים וערב</b> - מקייטרינג חיצוני בכשרות <b>בד״ץ עד״ח</b>.`)}
+    ${meals}
     ${p(`<b>הפסקת קפה ועוגות</b> - כל המוצרים בהשגחת <b>בד״ץ עד״ח</b>.`)}
     <h3 style="margin:14px 0 8px; font-size:17px; font-weight:800; color:${H.navy};">ארוחת הבוקר</h3>
-    ${p("ארוחות הבוקר ממטבח המלון.")}
-    ${p(`ביום רביעי - ממטבח המלון:<br>המשגיח מטעמנו שאחראי על הכשרת המטבח וכשרות המוצרים:<br><b>הרב עקיבא אוירבך</b> <span dir="ltr" style="white-space:nowrap;">052-7614823</span>`)}
-    ${p(`כשרות המוצרים - עד״ח / הרב רובין / הרב לנדא / שארית<br>מוצרי חלב - עד״ח / ועדת מהדרין<br>פירות וירקות - הרב אפרתי / עד״ח<br>ירקות עלים - עד״ח`)}
-    ${p("המטבח החלבי עבר הכשרה - למעוניינות הכנו גם כלים וסכו״ם חד פעמי.")}
+    ${p("ארוחות הבוקר <b>ממטבח המלון</b>.")}
+    ${p(`<b>המשגיח מטעמנו</b> שאחראי על הכשרת המטבח וכשרות המוצרים:<br><b>הרב עקיבא אוירבך</b> <span dir="ltr" style="white-space:nowrap;">052-7614823</span>`)}
+    ${p(`<b>כשרות המוצרים</b> - עד״ח / הרב רובין / הרב לנדא / שארית<br><b>מוצרי חלב</b> - עד״ח / ועדת מהדרין<br><b>פירות וירקות</b> - הרב אפרתי / עד״ח<br><b>ירקות עלים</b> - עד״ח`)}
+    ${p("<b>המטבח החלבי עבר הכשרה</b> - למעוניינות הכנו גם כלים וסכו״ם חד פעמי.")}
     ${breakfastNote}
-    ${p("ביום חמישי ארוחת הבוקר תוגש כבופה בלובי (פואיה) ליד האולם.")}
-    ${p("רגישות לגלוטן יכולות לגשת אלינו כדי לקבל מידע על מוצרים ללא גלוטן (המטבח לא נקי מגלוטן).")}`;
+    ${p("<b>ביום חמישי</b> ארוחת הבוקר תוגש כבופה בלובי (פואיה) ליד האולם.")}
+    ${p("<b>רגישות לגלוטן</b> יכולות לגשת אלינו כדי לקבל מידע על מוצרים ללא גלוטן (המטבח לא נקי מגלוטן).")}`;
 }
 
 /** The letter for one participant. */
@@ -191,7 +202,7 @@ export function buildPrepMail(i: PrepMailInput): { subject: string; html: string
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(CONF.subject)}</title></head>
 <body style="margin:0; padding:0; background:${H.bg};">
-<div dir="rtl" style="font-family: Arial, 'Segoe UI', Helvetica, sans-serif; background:${H.bg}; padding:28px 12px; color:${H.ink}; text-align:right;">
+<div dir="rtl" style="background:${H.bg}; padding:28px 12px; color:${H.ink}; text-align:right;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px; margin:0 auto; background:#ffffff; border-radius:20px; overflow:hidden; border:1px solid ${H.line};">
     <tr><td style="padding:22px 24px 16px; text-align:center;"><img src="${logo}" alt="הייטקורס - לחשוב בגדול" width="190" style="display:inline-block; width:190px; height:auto; border:0;" /></td></tr>
     <tr><td style="height:4px; background:${H.yellow}; font-size:0; line-height:0;">&nbsp;</td></tr>
@@ -264,5 +275,5 @@ export function buildPrepMail(i: PrepMailInput): { subject: string; html: string
   <div style="text-align:center; color:${H.muted}; font-size:12px; margin-top:16px;">${CONF.title} · ${CONF.hebrewDates} · ${CONF.dates} · ${CONF.venue}</div>
 </div>
 </body></html>`;
-  return { subject: CONF.subject, html };
+  return { subject: CONF.subject, html: withFont(html) };
 }

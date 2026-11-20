@@ -15,9 +15,9 @@ export const CONF = {
   /** The greeting (the owner, 20/11: ״מתרגשות ממש לפגוש אותך ביום שלישי י״ד בכסלו, במלוא המרץ״ - Hebrew only). */
   firstDay: "יום שלישי י״ד בכסלו",
   venue: "מלון VERT ירושלים",
-  /** The owner, 19/11 (evening): ״תעשה את הרישום ללינה, שמרטפיה, מחשב עד מוצאי שבת בשעה 23:00 בלילה״; 20/11: ״הרישום ללינה ולשמרטפיה נסגר במוצאי שבת הקרובה בשעה 23:00״ - this wording everywhere. */
-  deadline: "מוצאי שבת הקרובה בשעה 23:00",
-  deadlineIso: "2026-11-21T23:00:00+02:00",
+  /** The owner, 19/11 (evening): ״תעשה את הרישום ללינה, שמרטפיה, מחשב עד מוצאי שבת בשעה 23:00 בלילה״; 20/11 morning: ״לשנות את הדדליין לראשון הקרוב ב-10 בבוקר בכל המקומות״ - this wording everywhere. */
+  deadline: "יום ראשון הקרוב בשעה 10:00 בבוקר",
+  deadlineIso: "2026-11-22T10:00:00+02:00",
   /** The personal area (the owner, 19/11: ״זה הלינק לאזור האישי״). */
   site: "https://hightecourse.com/personal-area",
   laptopRentalNis: 50,
@@ -26,9 +26,11 @@ export const CONF = {
   logistics: { name: "יהודית", mail: "share@hightecourse.com" },
   subject: "הייטקורס 2026 - מידע חשוב לפני הכנס",
   fromName: "הייטקורס",
-  /** The program image: shown in the letter and attached to the mail (the owner: ״התוכניה מצורפת כאן״). */
-  programPath: "/hightecourse/program-2026.jpg",
+  /** The program image: shown in the letter and attached to the mail (the owner: ״התוכניה מצורפת כאן״); v2 = the updated program of 20/11 - a new name so mail image proxies never serve the old one. */
+  programPath: "/hightecourse/program-2026-v2.jpg",
   programFileName: "hightecourse-2026-program.jpg",
+  /** The caterer's logo beside ״ארוחות צהריים וערב״ (the owner, 20/11: ״צרפתי לוגו של הקייטרינג״). */
+  cateringLogoPath: "/hightecourse/catering-logo.png",
 } as const;
 
 /** Which questionnaire a course gets. */
