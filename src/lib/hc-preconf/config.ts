@@ -9,13 +9,14 @@
 /** The conference as the mail states it (the sheet's ״הגדרות״ tab, read 19/11). */
 export const CONF = {
   title: "הייטקורס 2026",
+  /** The owner, 19/11 night: ״בכל מקום תוסיף גם תאריך עברי לפני הלועזי״ - the Hebrew date always comes first. */
   dates: "24-26 בנובמבר 2026",
   hebrewDates: "י״ד-ט״ז בכסלו תשפ״ז",
-  firstDay: "יום שלישי, 24.11",
+  firstDay: "יום שלישי, י״ד בכסלו, 24.11",
   venue: "מלון VERT ירושלים",
   /** The owner, 19/11 (evening): ״תעשה את הרישום ללינה, שמרטפיה, מחשב עד מוצאי שבת בשעה 23:00 בלילה״. */
-  deadline: "מוצאי שבת, 21.11, בשעה 23:00",
-  deadlineShort: "מוצאי שבת 21.11 בשעה 23:00",
+  deadline: "מוצאי שבת, י״א בכסלו, 21.11, בשעה 23:00",
+  deadlineShort: "מוצאי שבת י״א בכסלו 21.11 בשעה 23:00",
   deadlineIso: "2026-11-21T23:00:00+02:00",
   /** The personal area (the owner, 19/11: ״זה הלינק לאזור האישי״). */
   site: "https://hightecourse.com/personal-area",

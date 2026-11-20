@@ -53,7 +53,26 @@ export default async function CourseRegistrationsPage() {
     );
     for (const p of profs) liveSub.set(p.id, p.status === "active" && p.member_tier === "paid");
   }
-  const withLive = rows.map((r) => ({ ...r, subscriber_now: r.profile_id ? (liveSub.get(r.profile_id) ?? false) : false }));
+  // Her seminary (the ״סמינר״ answer, study_place) - the two ״שולם״ chips split by it (the owner, 19/11).
+  const seminaryOf = new Map<string, string>();
+  if (ids.length) {
+    const { data: q } = await admin.from("config_questions").select("id").eq("key", "study_place").maybeSingle();
+    if (q?.id) {
+      const { inChunks } = await import("@/lib/chunk");
+      const answers = await inChunks<{ profile_id: string; value: unknown }>(ids, (chunk) =>
+        admin.from("profile_answers").select("profile_id, value").eq("question_id", q.id).in("profile_id", chunk)
+      );
+      for (const a of answers) {
+        const v = typeof a.value === "string" ? a.value : a.value == null ? "" : String(a.value);
+        if (v.trim()) seminaryOf.set(a.profile_id, v.trim());
+      }
+    }
+  }
+  const withLive = rows.map((r) => ({
+    ...r,
+    subscriber_now: r.profile_id ? (liveSub.get(r.profile_id) ?? false) : false,
+    seminary: r.profile_id ? (seminaryOf.get(r.profile_id) ?? null) : null,
+  }));
 
   // Course-looking payments the callback could not hang on a registration.
   const { data: unmatchedRows } = await admin

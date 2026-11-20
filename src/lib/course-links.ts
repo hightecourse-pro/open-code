@@ -5,6 +5,14 @@
  */
 export const SHUFRA_MOSAD_ID = "7009686";
 
+/**
+ * The owner, 19/11: ״שולם - וולף (אלה מאהל אברהם וולף או משופרא) / שולם - שאר
+ * הסמינרים (כל השאר)״. The seminary is her ״סמינר״ answer (study_place): the
+ * two Wolf options are ״הרב וולף - אהל אברהם - בני ברק״ and ״הרב וולף - שופרא -
+ * בני ברק״; a free-text ״אחר״ that names them counts too.
+ */
+export const isWolfSeminary = (seminary: string | null | undefined): boolean => /וולף|שופרא|אהל אברהם/.test(seminary ?? "");
+
 /** The price ladder the ad shows, in whole shekels. */
 export const COURSE_PRICE = {
   full: 12000,

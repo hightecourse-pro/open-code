@@ -193,7 +193,7 @@ export function buildPrepMail(i: PrepMailInput): { subject: string; html: string
     <tr><td style="background:${H.navy}; padding:22px 24px 24px; text-align:center;">
       <div style="font-size:13px; font-weight:700; color:${H.yellow}; margin-bottom:6px;">מידע חשוב לפני הכנס</div>
       <div style="font-size:30px; line-height:1.15; font-weight:900; color:#ffffff;">${CONF.title}</div>
-      <div style="display:inline-block; margin-top:14px; background:${H.yellow}; color:${H.navy}; font-weight:800; font-size:14.5px; padding:8px 18px; border-radius:999px;">${CONF.dates} &nbsp;|&nbsp; ${CONF.hebrewDates}</div>
+      <div style="display:inline-block; margin-top:14px; background:${H.yellow}; color:${H.navy}; font-weight:800; font-size:14.5px; padding:8px 18px; border-radius:999px;">${CONF.hebrewDates} &nbsp;|&nbsp; ${CONF.dates}</div>
       <div style="margin-top:10px; font-size:13.5px; color:#C9D9E6;">${CONF.venue}</div>
     </td></tr>
 
@@ -252,7 +252,7 @@ export function buildPrepMail(i: PrepMailInput): { subject: string; html: string
     )}
       <p style="margin:6px 0 16px; font-size:16px; line-height:1.7; color:${H.ink};"><b>מחכות לך!</b><br>שרה, תמר, תהילה, יהודית<br>וכל צוות הייטקורס</p>`)}
   </table>
-  <div style="text-align:center; color:${H.muted}; font-size:12px; margin-top:16px;">${CONF.title} · ${CONF.dates} · ${CONF.venue}</div>
+  <div style="text-align:center; color:${H.muted}; font-size:12px; margin-top:16px;">${CONF.title} · ${CONF.hebrewDates} · ${CONF.dates} · ${CONF.venue}</div>
 </div>
 </body></html>`;
   return { subject: CONF.subject, html };
