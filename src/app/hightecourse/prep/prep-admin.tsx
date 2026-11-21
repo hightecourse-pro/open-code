@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { H } from "@/app/ai-course/theme";
-import { LICENSE_LABEL, type PrepAnswers, type PrepKind } from "@/lib/hc-preconf/config";
+import { LICENSE_LABEL, TOOL_NONE, TOOL_OTHER, questionsFor, type PrepAnswers, type PrepKind } from "@/lib/hc-preconf/config";
 import { hcPrepResendAction, hcPrepRunAction, hcPrepSamplesAction, hcPrepToggleAction } from "../actions";
 import { Card, CardTitle, ExtLink, Notice, Stat, fmtDateTime } from "../ui";
 
@@ -22,6 +22,9 @@ export interface PrepAdminRow {
   kind: PrepKind;
   kindLabel: string;
   laptopRequired: boolean;
+  /** the sheet's ״מחשב נייד השכרה״ and ״מחשב נייד״ columns (כן / לא / empty) */
+  laptopRental: string;
+  laptopOwn: string;
   lodging: string;
   updatedPersonal: boolean;
   hold: string;
@@ -35,7 +38,7 @@ export interface PrepAdminRow {
   formPath: string;
 }
 
-type Filter = "all" | "pending" | "sent" | "held" | "answered" | "unanswered" | "laptop" | "noLaptop" | "notUpdated" | "samples";
+type Filter = "all" | "pending" | "sent" | "held" | "answered" | "unanswered" | "laptop" | "noLaptop" | "noLaptopNoRental" | "noTools" | "notUpdated" | "samples";
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "הכול" },
@@ -46,9 +49,14 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "unanswered", label: "לא מילאו" },
   { key: "laptop", label: "קורסי מחשב" },
   { key: "noLaptop", label: "ענו: בלי מחשב" },
+  { key: "noLaptopNoRental", label: "בלי מחשב ולא השכירו" },
+  { key: "noTools", label: "ענו: בלי כלי AI" },
   { key: "notUpdated", label: "לא עדכנו אזור אישי" },
   { key: "samples", label: "דוגמאות" },
 ];
+
+/** She answered ״בלי מחשב״ and the sheet has no rental for her (the owner, 22/11: ״מי סימנה שאין לה מחשב ולא השכירה״). */
+const noLaptopNoRental = (r: PrepAdminRow) => r.answers.laptop === "no" && r.laptopRental !== "כן";
 
 /** One predicate for the chips: the table filters by it and every chip shows how many rows it holds (the owner, 22/11: ״תוסיף מספרים לכל אחד״). */
 function matchesFilter(r: PrepAdminRow, filter: Filter): boolean {
@@ -69,6 +77,10 @@ function matchesFilter(r: PrepAdminRow, filter: Filter): boolean {
       return r.laptopRequired;
     case "noLaptop":
       return r.answers.laptop === "no";
+    case "noLaptopNoRental":
+      return noLaptopNoRental(r);
+    case "noTools":
+      return (r.answers.tools ?? []).includes(TOOL_NONE);
     case "notUpdated":
       return !r.updatedPersonal;
     default:
@@ -80,11 +92,11 @@ const MAIL_HE: Record<string, string> = { sent: "נשלח", blocked: "נחסם (
 
 const btn = (primary = false) => ({ background: primary ? H.navy : H.white, color: primary ? H.white : H.navy, border: `1.5px solid ${H.navy}`, borderRadius: 999 });
 
-function answerSummary(a: PrepAnswers): string {
+function answerSummary(a: PrepAnswers, laptopRental: string): string {
   const parts: string[] = [];
   if (a.role) parts.push(a.role);
   if (a.office) parts.push(a.office);
-  if (a.laptop) parts.push(a.laptop === "yes" ? "עם מחשב" : "בלי מחשב");
+  if (a.laptop) parts.push(a.laptop === "yes" ? "עם מחשב" : laptopRental === "כן" ? "בלי מחשב - השכירה" : "בלי מחשב - לא השכירה");
   if (a.tools?.length) parts.push(a.tools.join(", ") + (a.toolsOther ? ` (${a.toolsOther})` : ""));
   if (a.license) parts.push(LICENSE_LABEL[a.license]);
   if (a.mgmtRole) parts.push(`ניהול: ${a.mgmtRole}`);
@@ -92,6 +104,145 @@ function answerSummary(a: PrepAnswers): string {
   if (a.years) parts.push(`${a.years} שנות ניסיון`);
   if (a.note) parts.push(`״${a.note}״`);
   return parts.join(" · ");
+}
+
+/* ---- per course: which AI tools were named, how many come without a laptop (and did not rent one), how many without a
+   licensed tool (the owner, 22/11: ״איזה כלי AI נכתבו לכל קורס, כמה בלי מחשב וכמה בלי כלי AI פר קורס שצריך״) ---- */
+interface CourseStat {
+  course: string;
+  kindLabel: string;
+  asksLaptop: boolean;
+  asksTools: boolean;
+  registered: number;
+  answered: number;
+  noLaptop: number;
+  noLaptopNoRental: number;
+  noTools: number;
+  /** tool → how many named it; ״אחר״ is counted by the text she typed */
+  tools: [string, number][];
+}
+
+function courseStats(real: PrepAdminRow[]): CourseStat[] {
+  const acc = new Map<string, { c: CourseStat; counts: Map<string, number>; order: number }>();
+  for (const r of real) {
+    const asks = questionsFor(r.kind, r.laptopRequired);
+    if (!asks.laptop && !asks.tools) continue;
+    const key = r.course || "בלי קורס";
+    let e = acc.get(key);
+    if (!e) {
+      e = { c: { course: key, kindLabel: r.kindLabel, asksLaptop: asks.laptop, asksTools: !!asks.tools, registered: 0, answered: 0, noLaptop: 0, noLaptopNoRental: 0, noTools: 0, tools: [] }, counts: new Map(), order: r.kind === "dev" ? 0 : r.kind === "ai" ? 1 : 2 };
+      acc.set(key, e);
+    }
+    e.c.registered++;
+    if (!r.answeredAt) continue;
+    e.c.answered++;
+    const a = r.answers;
+    if (a.laptop === "no") e.c.noLaptop++;
+    if (noLaptopNoRental(r)) e.c.noLaptopNoRental++;
+    const tools = a.tools ?? [];
+    if (tools.includes(TOOL_NONE)) e.c.noTools++;
+    for (const t of tools) {
+      if (t === TOOL_NONE) continue;
+      const name = t === TOOL_OTHER ? `אחר: ${(a.toolsOther ?? "").trim() || "?"}` : t;
+      e.counts.set(name, (e.counts.get(name) ?? 0) + 1);
+    }
+  }
+  return [...acc.values()]
+    .sort((x, y) => x.order - y.order || y.c.registered - x.c.registered || x.c.course.localeCompare(y.c.course, "he"))
+    .map((e) => ({ ...e.c, tools: [...e.counts.entries()].sort((p, q) => q[1] - p[1] || p[0].localeCompare(q[0])) }));
+}
+
+/** A count in the per-course card - a click narrows the participants table; grey and inert at 0. */
+function Num({ n, red, onClick, testId }: { n: number; red?: boolean; onClick: () => void; testId?: string }) {
+  return (
+    <button type="button" onClick={onClick} disabled={n === 0} className="text-[15px] font-black tabular-nums disabled:cursor-default" style={{ color: red && n > 0 ? H.red : n === 0 ? H.muted : H.navy }} data-testid={testId}>
+      {n}
+    </button>
+  );
+}
+
+function CoursesCard({ courses, onPick }: { courses: CourseStat[]; onPick: (course: string, filter: Filter) => void }) {
+  const sum = courses.reduce((s, c) => ({ registered: s.registered + c.registered, answered: s.answered + c.answered, noLaptop: s.noLaptop + c.noLaptop, noLaptopNoRental: s.noLaptopNoRental + c.noLaptopNoRental, noTools: s.noTools + c.noTools }), { registered: 0, answered: 0, noLaptop: 0, noLaptopNoRental: 0, noTools: 0 });
+  const th = "px-2 py-2 text-right text-[12.5px] font-bold whitespace-nowrap";
+  const td = "px-2 py-2 align-top tabular-nums";
+  return (
+    <Card testId="hc-prep-courses">
+      <CardTitle aside={<span className="text-[13px]" style={{ color: H.muted }}>לפי השאלון · לחיצה על מספר מסננת את טבלת המשתתפות</span>}>לפי קורס: מחשב וכלי AI</CardTitle>
+      <div className="overflow-x-auto px-3 pb-3">
+        <table className="w-full text-[13.5px]" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: `1.5px solid ${H.line}`, color: H.muted }}>
+              {["קורס", "נרשמו", "מילאו שאלון", "בלי מחשב", "בלי מחשב ולא השכירו", "בלי כלי AI", "כלי AI שנכתבו"].map((h) => (
+                <th key={h} className={th}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {courses.map((c) => (
+              <tr key={c.course} style={{ borderBottom: `1px solid ${H.line}` }} data-testid="hc-prep-course-row" data-course={c.course} data-registered={c.registered} data-answered={c.answered} data-no-rental={c.noLaptopNoRental}>
+                <td className="px-2 py-2 align-top" style={{ minWidth: 220 }}>
+                  <button type="button" onClick={() => onPick(c.course, "all")} className="text-right font-bold" style={{ color: H.navy }} data-testid="hc-prep-course-name">
+                    {c.course}
+                  </button>
+                  <div className="text-[12px]" style={{ color: H.muted }}>
+                    {c.kindLabel}
+                    {c.asksLaptop ? " · נדרש מחשב" : ""}
+                  </div>
+                </td>
+                <td className={td}>
+                  <Num n={c.registered} onClick={() => onPick(c.course, "all")} />
+                </td>
+                <td className={td}>
+                  <Num n={c.answered} onClick={() => onPick(c.course, "answered")} />
+                  {c.registered - c.answered > 0 && (
+                    <span className="text-[12px]" style={{ color: H.muted }}>
+                      {" "}
+                      · לא מילאו {c.registered - c.answered}
+                    </span>
+                  )}
+                </td>
+                <td className={td}>{c.asksLaptop ? <Num n={c.noLaptop} red onClick={() => onPick(c.course, "noLaptop")} /> : <span style={{ color: H.muted }}>-</span>}</td>
+                <td className={td}>{c.asksLaptop ? <Num n={c.noLaptopNoRental} red onClick={() => onPick(c.course, "noLaptopNoRental")} testId="hc-prep-course-no-rental" /> : <span style={{ color: H.muted }}>-</span>}</td>
+                <td className={td}>{c.asksTools ? <Num n={c.noTools} red onClick={() => onPick(c.course, "noTools")} /> : <span style={{ color: H.muted }}>-</span>}</td>
+                <td className="px-2 py-2 align-top" style={{ minWidth: 220 }}>
+                  {c.tools.length === 0 ? (
+                    <span style={{ color: H.muted }}>-</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.tools.map(([name, n]) => (
+                        <span key={name} className="px-2 py-0.5 text-[12.5px] font-bold whitespace-nowrap" style={{ borderRadius: 999, background: H.row, color: H.navy }} data-testid="hc-prep-course-tool">
+                          {name} <span className="font-normal tabular-nums">{n}</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="font-black" style={{ color: H.navy }} data-testid="hc-prep-courses-total">
+              <td className="px-2 py-2">סה״כ</td>
+              <td className={td}>{sum.registered}</td>
+              <td className={td}>{sum.answered}</td>
+              <td className={td} style={{ color: sum.noLaptop ? H.red : H.navy }}>
+                {sum.noLaptop}
+              </td>
+              <td className={td} style={{ color: sum.noLaptopNoRental ? H.red : H.navy }}>
+                {sum.noLaptopNoRental}
+              </td>
+              <td className={td} style={{ color: sum.noTools ? H.red : H.navy }}>
+                {sum.noTools}
+              </td>
+              <td />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </Card>
+  );
 }
 
 export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTab, defaultSampleTo, subject }: { rows: PrepAdminRow[]; enabled: boolean; lastRunAt: string | null; lastRun: Record<string, unknown> | null; sheetUrl: string | null; sheetTab: string; defaultSampleTo: string; subject: string }) {
@@ -116,11 +267,13 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
       laptop: laptopRows.length,
       laptopAnswered: laptopRows.filter((r) => !!r.answeredAt).length,
       noLaptop: laptopRows.filter((r) => r.answers.laptop === "no").length,
+      noLaptopNoRental: real.filter(noLaptopNoRental).length,
       notUpdated: real.filter((r) => !r.updatedPersonal).length,
       removed: rows.filter((r) => r.removed).length,
     };
   }, [rows, real]);
 
+  const courses = useMemo(() => courseStats(real), [real]);
   const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.key, rows.filter((r) => matchesFilter(r, f.key)).length])) as Record<Filter, number>, [rows]);
 
   const shown = useMemo(() => {
@@ -180,8 +333,16 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
         <Stat label="טרם נשלח" value={stats.pending} highlight={stats.pending > 0} testId="hc-prep-pending" />
         <Stat label="ממתינות (בלי קורס)" value={stats.held} highlight={stats.held > 0} testId="hc-prep-held" />
         <Stat label="מילאו שאלון" value={stats.answered} sub={`מתוך ${stats.laptop} בקורסי מחשב: ${stats.laptopAnswered}`} testId="hc-prep-answered" />
-        <Stat label="ענו: בלי מחשב" value={stats.noLaptop} highlight={stats.noLaptop > 0} sub={`לא עדכנו אזור אישי: ${stats.notUpdated}`} testId="hc-prep-nolaptop" />
+        <Stat label="ענו: בלי מחשב" value={stats.noLaptop} highlight={stats.noLaptopNoRental > 0} sub={`מתוכן לא השכירו: ${stats.noLaptopNoRental} · לא עדכנו אזור אישי: ${stats.notUpdated}`} testId="hc-prep-nolaptop" />
       </div>
+
+      <CoursesCard
+        courses={courses}
+        onPick={(course, f) => {
+          setFilter(f);
+          setQ(course);
+        }}
+      />
 
       <Card testId="hc-prep-controls">
         <CardTitle aside={lastRunAt ? <span className="text-[13px]" style={{ color: H.muted }}>ריצה אחרונה: {fmtDateTime.format(new Date(lastRunAt))}</span> : null}>שליחה</CardTitle>
@@ -260,7 +421,7 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
             </thead>
             <tbody>
               {shown.map((r) => (
-                <tr key={r.id} style={{ borderBottom: `1px solid ${H.line}`, background: r.hold ? "#FFF7E6" : r.answers.laptop === "no" ? "#FFF4C2" : undefined }} data-testid="hc-prep-row" data-kind={r.kind} data-status={r.mailStatus || (r.hold ? "held" : "pending")}>
+                <tr key={r.id} style={{ borderBottom: `1px solid ${H.line}`, background: r.hold ? "#FFF7E6" : noLaptopNoRental(r) ? "#FDF1EF" : r.answers.laptop === "no" ? "#FFF4C2" : undefined }} data-testid="hc-prep-row" data-kind={r.kind} data-status={r.mailStatus || (r.hold ? "held" : "pending")}>
                   <td className="px-2 py-2 align-top" dir="ltr">
                     {r.sheetNum}
                   </td>
@@ -310,7 +471,12 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
                     {r.mailError && <div className="max-w-[220px] text-[12px]" style={{ color: H.red }}>{r.mailError}</div>}
                   </td>
                   <td className="px-2 py-2 align-top" style={{ minWidth: 200 }}>
-                    {answerSummary(r.answers) || <span style={{ color: H.muted }}>-</span>}
+                    {noLaptopNoRental(r) && (
+                      <div className="mb-0.5 text-[12.5px] font-black" style={{ color: H.red }} data-testid="hc-prep-no-rental">
+                        בלי מחשב ולא השכירה
+                      </div>
+                    )}
+                    {answerSummary(r.answers, r.laptopRental) || <span style={{ color: H.muted }}>-</span>}
                   </td>
                   <td className="px-2 py-2 align-top whitespace-nowrap">
                     <div className="flex flex-col gap-1">
