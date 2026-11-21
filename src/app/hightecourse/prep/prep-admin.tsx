@@ -50,6 +50,32 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "samples", label: "דוגמאות" },
 ];
 
+/** One predicate for the chips: the table filters by it and every chip shows how many rows it holds (the owner, 22/11: ״תוסיף מספרים לכל אחד״). */
+function matchesFilter(r: PrepAdminRow, filter: Filter): boolean {
+  if (filter === "samples") return r.isSample;
+  if (r.isSample || r.removed) return false;
+  switch (filter) {
+    case "pending":
+      return !r.mailStatus && !r.hold;
+    case "sent":
+      return r.mailStatus === "sent";
+    case "held":
+      return !!r.hold;
+    case "answered":
+      return !!r.answeredAt;
+    case "unanswered":
+      return !r.answeredAt;
+    case "laptop":
+      return r.laptopRequired;
+    case "noLaptop":
+      return r.answers.laptop === "no";
+    case "notUpdated":
+      return !r.updatedPersonal;
+    default:
+      return true;
+  }
+}
+
 const MAIL_HE: Record<string, string> = { sent: "נשלח", blocked: "נחסם (בדיקה)", error: "שגיאה" };
 
 const btn = (primary = false) => ({ background: primary ? H.navy : H.white, color: primary ? H.white : H.navy, border: `1.5px solid ${H.navy}`, borderRadius: 999 });
@@ -95,37 +121,12 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
     };
   }, [rows, real]);
 
+  const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.key, rows.filter((r) => matchesFilter(r, f.key)).length])) as Record<Filter, number>, [rows]);
+
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
-      if (filter === "samples") return r.isSample;
-      if (r.isSample || r.removed) return false;
-      switch (filter) {
-        case "pending":
-          if (r.mailStatus || r.hold) return false;
-          break;
-        case "sent":
-          if (r.mailStatus !== "sent") return false;
-          break;
-        case "held":
-          if (!r.hold) return false;
-          break;
-        case "answered":
-          if (!r.answeredAt) return false;
-          break;
-        case "unanswered":
-          if (r.answeredAt) return false;
-          break;
-        case "laptop":
-          if (!r.laptopRequired) return false;
-          break;
-        case "noLaptop":
-          if (r.answers.laptop !== "no") return false;
-          break;
-        case "notUpdated":
-          if (r.updatedPersonal) return false;
-          break;
-      }
+      if (!matchesFilter(r, filter)) return false;
       if (!needle) return true;
       return [r.name, r.email, r.cc, r.company, r.course, r.courseRaw, r.answers.role ?? "", r.answers.office ?? ""].some((v) => v.toLowerCase().includes(needle));
     });
@@ -241,7 +242,7 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((f) => (
             <button key={f.key} type="button" onClick={() => setFilter(f.key)} className="px-3 py-1 text-[13.5px] font-bold" style={{ borderRadius: 999, border: `1.5px solid ${filter === f.key ? H.navy : H.line}`, background: filter === f.key ? H.navy : H.white, color: filter === f.key ? H.white : H.navy }} data-testid={`hc-prep-filter-${f.key}`}>
-              {f.label}
+              {f.label} <span className="font-normal" style={{ opacity: 0.85 }} data-testid={`hc-prep-filter-count-${f.key}`}>{counts[f.key]}</span>
             </button>
           ))}
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="חיפוש: שם, מייל, חברה, קורס" className="ms-auto min-w-[220px] bg-white px-3 py-1.5 text-[14px] outline-none" style={{ border: `1.5px solid ${H.line}`, borderRadius: 8 }} data-testid="hc-prep-search" />
