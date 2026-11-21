@@ -25,6 +25,8 @@ function rowOf(r: PrepRow): PrepAdminRow {
     kind: r.course_kind as PrepKind,
     kindLabel: KIND_LABEL[(r.course_kind as PrepKind) ?? "unknown"] ?? r.course_kind,
     laptopRequired: r.laptop_required,
+    laptopRental: r.laptop_rental ?? "",
+    laptopOwn: r.laptop_own ?? "",
     lodging: r.lodging ?? "",
     updatedPersonal: r.updated_personal,
     hold: r.hold_reason ?? "",
