@@ -141,6 +141,8 @@ export interface CourseUpdate {
   after?: string[];
   /** an extra numbered step with a document: linked from the mail (served from /public) and attached to it */
   doc?: { title: string; text: string[]; path: string; fileName: string; linkText: string };
+  /** the form step's red line, when the course wants its own (default: UPDATE_TEXT.fillForm) */
+  formText?: string;
 }
 
 /**
@@ -216,6 +218,12 @@ export const COURSE_UPDATES: CourseUpdate[] = [
       ],
       note: "במידה ויש בעיה - ניתן לתרגל גם בזוגות.",
     },
+  },
+  {
+    // the owner, 22/11 ~16:40 (״במיומנויות רכות תזכיר למלא את הטופס וכל השאר, אין התקנות. הטופס חשוב״)
+    course: "מיומנויות רכות בעולם העבודה החדש",
+    lines: ["לקורס זה לא נדרש מחשב נייד ואין התקנות."],
+    formText: "הטופס חשוב לנו לקראת הקורס - נא למלא אותו בהקדם (דקה אחת):",
   },
 ];
 export const courseUpdateFor = (course: string): CourseUpdate | null => {

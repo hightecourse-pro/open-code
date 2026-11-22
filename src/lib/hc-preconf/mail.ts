@@ -295,6 +295,8 @@ export interface CourseUpdateInput {
   after: string[];
   /** an extra step with a document linked and attached */
   doc: { title: string; text: string[]; url: string; linkText: string } | null;
+  /** the form step's red line, when the course wants its own */
+  formText: string | null;
   laptopOwn: string;
   laptopRental: string;
   laptopRentalPaid: string;
@@ -376,7 +378,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
 
   /* 2. the questionnaire - only for whoever has not filled it */
   const form = !i.answered
-    ? `${p(`<b style="color:${H.red};">${esc(UPDATE_TEXT.fillForm)}</b>`, " margin-bottom:10px;")}
+    ? `${p(`<b style="color:${H.red};">${esc(i.formText || UPDATE_TEXT.fillForm)}</b>`, " margin-bottom:10px;")}
        <div style="margin:0 0 10px;">${button(i.formUrl, "למילוי הטופס - דקה אחת", "navy")}</div>
        ${laptop ? small(esc(UPDATE_TEXT.pairs)) : ""}`
     : "";
