@@ -353,7 +353,8 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
         "yellow"
       );
     if (yes(i.laptopRental)) {
-      need += p(`הזמנת מחשב מהשכרה - הוא ימתין לך בעמדת השכרת המחשבים. <b>${esc(UPDATE_TEXT.rentalNoInstalls)}</b>`, " margin-bottom:8px;");
+      need += p(`הזמנת מחשב מהשכרה - הוא ימתין לך בעמדת השכרת המחשבים.`, " margin-bottom:6px;");
+      need += redLine(esc(UPDATE_TEXT.rentalNoInstalls));
       if (no(i.laptopRentalPaid)) need += redLine("יש להסדיר את התשלום עבור השכרת המחשב.");
     } else if (i.answerLaptop === "no") {
       need += open
