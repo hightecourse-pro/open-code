@@ -320,6 +320,9 @@ export function courseUpdateInputOf(row: PrepRow): CourseUpdateInput | null {
     kind: row.course_kind as PrepKind,
     laptopRequired: row.laptop_required,
     lines: text.lines,
+    installs: text.installs ?? null,
+    after: text.after ?? [],
+    doc: text.doc ? { title: text.doc.title, text: text.doc.text, url: `${site()}${text.doc.path}`, linkText: text.doc.linkText } : null,
     laptopOwn: row.laptop_own ?? "",
     laptopRental: row.laptop_rental ?? "",
     laptopRentalPaid: row.laptop_rental_paid ?? "",
@@ -341,15 +344,24 @@ export const courseUpdateMailOf = (row: PrepRow): { subject: string; html: strin
 /** Both her addresses (the owner: ״לשלוח יחד ל-2 המיילים של המשתתפת״). */
 const recipientsOf = (row: Pick<PrepRow, "email" | "cc_email">): string[] => [row.email, row.cc_email ?? ""].filter((a) => !!a);
 
-let programCache: { at: number; attachment: MailAttachment } | null = null;
-/** The program image from our own site, base64 for Resend - fetched once per run (the owner: ״התוכניה מצורפת כאן״). */
-export async function programAttachment(): Promise<MailAttachment> {
-  if (programCache && Date.now() - programCache.at < 10 * 60_000) return programCache.attachment;
-  const res = await fetch(`${site()}${CONF.programPath}`, { signal: AbortSignal.timeout(20_000) });
-  if (!res.ok) throw new Error(`program image ${res.status}`);
+const attachmentCache = new Map<string, { at: number; attachment: MailAttachment }>();
+/** A file from our own site (/public), base64 for Resend - fetched once per ten minutes. */
+async function siteAttachment(path: string, filename: string): Promise<MailAttachment> {
+  const hit = attachmentCache.get(path);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.attachment;
+  const res = await fetch(`${site()}${path}`, { signal: AbortSignal.timeout(20_000) });
+  if (!res.ok) throw new Error(`attachment ${path} ${res.status}`);
   const content = Buffer.from(await res.arrayBuffer()).toString("base64");
-  programCache = { at: Date.now(), attachment: { filename: CONF.programFileName, content } };
-  return programCache.attachment;
+  const attachment = { filename, content };
+  attachmentCache.set(path, { at: Date.now(), attachment });
+  return attachment;
+}
+/** The program image (the owner: ״התוכניה מצורפת כאן״). */
+export const programAttachment = (): Promise<MailAttachment> => siteAttachment(CONF.programPath, CONF.programFileName);
+/** The course's document on its update mail (Vibe Coding: the product document), when it has one. */
+async function courseUpdateAttachments(course: string): Promise<MailAttachment[]> {
+  const doc = courseUpdateFor(course)?.doc;
+  return doc ? [await siteAttachment(doc.path, doc.fileName)] : [];
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -432,7 +444,15 @@ export async function sendCourseUpdatesPending(deadline: number = Date.now() + S
     if (Date.now() > deadline) break; // the next tick continues
     const m = courseUpdateMailOf(r);
     if (!m) continue;
-    const o = await sendResendEmail({ to: recipientsOf(r), subject: m.subject, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+    let attachments: MailAttachment[];
+    try {
+      attachments = await courseUpdateAttachments(r.course);
+    } catch (e) {
+      result.errors++;
+      result.firstError ??= e instanceof Error ? e.message : String(e);
+      continue; // the file is missing on the site - nobody in that course is marked, the next tick retries
+    }
+    const o = await sendResendEmail({ to: recipientsOf(r), subject: m.subject, html: m.html, attachments, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
     const status = updateOutcome(o.ok, o.error);
     if (status === "sent") result.sent++;
     else if (status === "blocked") result.blocked++;
@@ -475,7 +495,13 @@ export async function resendCourseUpdate(id: string): Promise<{ ok: boolean; err
   if (!row.email) return { ok: false, error: "no_email" };
   const m = courseUpdateMailOf(row);
   if (!m) return { ok: false, error: "no_text" };
-  const r = await sendResendEmail({ to: recipientsOf(row), subject: m.subject, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+  let attachments: MailAttachment[];
+  try {
+    attachments = await courseUpdateAttachments(row.course);
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  const r = await sendResendEmail({ to: recipientsOf(row), subject: m.subject, html: m.html, attachments, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
   const now = new Date().toISOString();
   await admin
     .from(T)
@@ -497,6 +523,12 @@ export async function sendCourseUpdateSamples(to: string, course: string): Promi
   const admin = createAdminClient();
   const resolved = resolveCourse(text.course);
   const out: { n: string; label: string; ok: boolean; error?: string }[] = [];
+  let attachments: MailAttachment[] = [];
+  try {
+    attachments = await courseUpdateAttachments(text.course);
+  } catch (e) {
+    return UPDATE_SAMPLES.map((x) => ({ n: x.n, label: x.label, ok: false, error: `attachment: ${e instanceof Error ? e.message : String(e)}` }));
+  }
   for (const [idx, x] of UPDATE_SAMPLES.entries()) {
     const now = new Date().toISOString();
     const base: PrepInsert = {
@@ -528,7 +560,7 @@ export async function sendCourseUpdateSamples(to: string, course: string): Promi
       out.push({ n: x.n, label: x.label, ok: false, error: "no_text" });
       continue;
     }
-    const r = await sendResendEmail({ to: row.email, subject: `[דוגמה ${x.n}: ${x.label}] ${m.subject}`, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+    const r = await sendResendEmail({ to: row.email, subject: `[דוגמה ${x.n}: ${x.label}] ${m.subject}`, html: m.html, attachments, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
     await sleep(520);
     await admin
       .from(T)
