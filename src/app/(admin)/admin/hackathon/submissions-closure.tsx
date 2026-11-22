@@ -10,7 +10,8 @@ const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric"
 /**
  * סגירת ההגשות (the owner, 20/10): the teams may edit their submission until
  * the team presses this; from then on every write is refused and the page
- * turns read-only for them. Reopening is one press away.
+ * turns read-only for them. Reopening is one press away. Since 22.11 the
+ * same press closes זירת המנטוריות (no digest mails, read-only board).
  */
 export function SubmissionsClosure({ closedAt }: { closedAt: string | null }) {
   const [error, setError] = useState<string | null>(null);
@@ -18,8 +19,8 @@ export function SubmissionsClosure({ closedAt }: { closedAt: string | null }) {
   const closed = !!closedAt;
   const toggle = () => {
     const q = closed
-      ? "לפתוח את ההגשות מחדש? הצוותים יוכלו שוב לערוך ולהגיש."
-      : "לסגור את ההגשות? מרגע זה אף צוות לא יוכל לערוך או להגיש - הן יראו את ההגשה שלהן לקריאה בלבד. אפשר לפתוח מחדש בכל רגע.";
+      ? "לפתוח את ההגשות מחדש? הצוותים יוכלו שוב לערוך ולהגיש, וזירת המנטוריות תיפתח שוב - כולל המיילים למנטוריות."
+      : "לסגור את ההגשות? מרגע זה אף צוות לא יוכל לערוך או להגיש - הן יראו את ההגשה שלהן לקריאה בלבד. גם זירת המנטוריות נסגרת: בלי מייל יומי ושבועי, הלוח לקריאה בלבד. אפשר לפתוח מחדש בכל רגע.";
     if (!confirm(q)) return;
     setError(null);
     start(async () => {
@@ -37,7 +38,9 @@ export function SubmissionsClosure({ closedAt }: { closedAt: string | null }) {
       <div className="flex-1 min-w-[220px] text-[13.5px]">
         <div className="font-bold text-ink-900">{closed ? `ההגשות סגורות מאז ${WHEN.format(new Date(closedAt as string))}` : "ההגשות פתוחות לעריכה"}</div>
         <div className="text-[12.5px] text-ink-600">
-          {closed ? "הצוותים רואים את ההגשה שלהן לקריאה בלבד; כל ניסיון שמירה נדחה." : "כל צוות יכול לערוך ולהגיש מחדש עד שתלחצי ״סגירת ההגשות״."}
+          {closed
+            ? "הצוותים רואים את ההגשה שלהן לקריאה בלבד; כל ניסיון שמירה נדחה. גם זירת המנטוריות סגורה - בלי מיילים למנטוריות."
+            : "כל צוות יכול לערוך ולהגיש מחדש עד שתלחצי ״סגירת ההגשות״. הסגירה סוגרת גם את זירת המנטוריות ואת המיילים שלה."}
         </div>
       </div>
       <Button type="button" size="sm" variant={closed ? "secondary" : "primary"} disabled={pending} onClick={toggle} data-testid="closure-toggle">

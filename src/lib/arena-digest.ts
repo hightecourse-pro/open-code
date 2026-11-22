@@ -2,7 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendResendEmail } from "@/lib/email/resend";
 import { arenaDigestEmail } from "@/lib/email/templates";
-import { arenaLeaderboard, loadArenaMentors } from "@/lib/arena";
+import { arenaClosure, arenaLeaderboard, loadArenaMentors } from "@/lib/arena";
 import { mentorScores } from "@/lib/mentor-score";
 import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS, NUDGE_AFTER_HOURS } from "@/lib/arena-shared";
 import { getSiteUrl } from "@/lib/site";
@@ -16,6 +16,8 @@ export interface DigestResult {
   sent: number;
   skipped: number;
   failed: number;
+  /** The arena is closed with the submissions (22.11): nothing was sent, nothing is stamped. */
+  closed?: boolean;
   preview?: { name: string; ai: boolean; targeted: boolean; hasEmail: boolean }[];
   titles?: string[];
 }
@@ -25,8 +27,11 @@ export interface DigestResult {
  * who know AI (and to any mentor a question was addressed to), with their
  * points; on the weekly day, the leaderboard to EVERY active mentor, open
  * questions or not. Shared by the cron route and the team's "push now".
+ * Closed arena (the submissions closed, 22.11): no daily, no weekly, no push.
  */
 export async function runArenaDigest(opts: { dry?: boolean; weekly?: boolean; everyone?: boolean }): Promise<DigestResult> {
+  const closure = await arenaClosure();
+  if (closure.closed) return { ok: true, open: 0, stale: 0, weekly: !!opts.weekly, recipients: 0, sent: 0, skipped: 0, failed: 0, closed: true };
   const admin = createAdminClient();
   const { data: open } = await admin
     .from("arena_questions")

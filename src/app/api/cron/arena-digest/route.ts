@@ -30,6 +30,7 @@ function israelWeekday(): string {
  * know AI, with their points. On Sundays (16/10): the weekly leaderboard to
  * every active mentor. Manual: ?secret=…&dry=1 · &all=1 (ignore the stamp) ·
  * &force=1 (also on a rest day) · &weekly=1 (the weekly mail now).
+ * Once ״סגירת ההגשות״ was pressed (22.11) the arena is closed: skipped=arena_closed, nothing sent, no stamp.
  */
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -56,6 +57,7 @@ export async function GET(req: Request) {
     }
   }
   const result = await runArenaDigest({ dry, weekly });
+  if (result.closed) return NextResponse.json({ ...result, dry, skipped: "arena_closed" });
   if (!dry && (result.open > 0 || weekly)) {
     await admin.from("app_settings").upsert({ key: STAMP_KEY, value: { date: today, open: result.open, sent: result.sent, weekly } as never }, { onConflict: "key" });
   }

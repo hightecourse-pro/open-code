@@ -16,10 +16,12 @@ const EDITOR_TOOLS = ["bold", "ul", "ol", "link", "code", "image"] as const;
 type Filter = "open" | "mine" | "ai" | "answered" | "all";
 
 /** The board every one in the arena sees - filters differ by side. */
-export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: ArenaQuestion[]; viewerId: string; role: ArenaRole; focusId: string | null }) {
+/** `closed` (22.11): the arena closed with the submissions - everything reads, nothing writes (the team may still delete). */
+export function ArenaBoard({ questions, viewerId, role, focusId, closed = false }: { questions: ArenaQuestion[]; viewerId: string; role: ArenaRole; focusId: string | null; closed?: boolean }) {
   const mentorSide = role !== "participant";
-  // A focused question (from an email link) must be visible whatever the default filter.
-  const [filter, setFilter] = useState<Filter>(() => (focusId ? "all" : mentorSide ? "open" : "mine"));
+  // A focused question (from an email link) must be visible whatever the default filter;
+  // a closed arena opens on ״הכל״ for the mentors (nothing is open any more).
+  const [filter, setFilter] = useState<Filter>(() => (focusId || (closed && mentorSide) ? "all" : mentorSide ? "open" : "mine"));
   const [topic, setTopic] = useState("");
   const [challenge, setChallenge] = useState("");
   // A question she just answered stays in place with its confirmation.
@@ -140,17 +142,17 @@ export function ArenaBoard({ questions, viewerId, role, focusId }: { questions: 
       )}
       {shown.length === 0 && (
         <p className="bg-white border border-ink-200 rounded-[18px] p-5 text-ink-500 text-sm shadow-sm">
-          {mentorSide ? "אין שאלות בסינון הזה. 🎉" : "עדיין אין שאלות כאן - השאלה הראשונה שלך תופיע למעלה."}
+          {mentorSide ? "אין שאלות בסינון הזה. 🎉" : closed ? "אין שאלות בסינון הזה." : "עדיין אין שאלות כאן - השאלה הראשונה שלך תופיע למעלה."}
         </p>
       )}
       {shown.map((q) => (
-        <QuestionCard key={q.id} q={q} viewerId={viewerId} role={role} focused={q.id === focusId} onAnswered={pin} />
+        <QuestionCard key={q.id} q={q} viewerId={viewerId} role={role} focused={q.id === focusId} onAnswered={pin} closed={closed} />
       ))}
     </section>
   );
 }
 
-function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQuestion; viewerId: string; role: ArenaRole; focused: boolean; onAnswered: (id: string) => void }) {
+function QuestionCard({ q, viewerId, role, focused, onAnswered, closed }: { q: ArenaQuestion; viewerId: string; role: ArenaRole; focused: boolean; onAnswered: (id: string) => void; closed: boolean }) {
   const mentorSide = role !== "participant";
   const mine = q.authorId === viewerId;
   const alreadyAnswered = q.answers.some((a) => a.authorId === viewerId && a.authorRole === "mentor");
@@ -265,7 +267,7 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
                     <span className="text-ink-300">·</span>
                     <span dir="ltr">{WHEN.format(new Date(a.createdAt))}</span>
                     {a.helpfulAt && <span className="ms-auto text-success font-bold">עזר לי ✓ (+{ARENA_HELPFUL_POINTS})</span>}
-                    {mine && !a.helpfulAt && !helped && (
+                    {mine && !closed && !a.helpfulAt && !helped && (
                       <button type="button" disabled={busy} onClick={() => run(() => markHelpful(a.id))} className="ms-auto rounded-full bg-white border border-success/50 text-success text-[11.5px] font-bold px-2.5 py-0.5 hover:bg-tint-mint">
                         עזר לי ✓
                       </button>
@@ -280,7 +282,7 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
       )}
 
       {/* the mentor's answer */}
-      {mentorSide && q.status !== "closed" && !mine && (
+      {mentorSide && !closed && q.status !== "closed" && !mine && (
         <div className="border-t border-ink-100 pt-3">
           {!open && !state.ok ? (
             <div className="flex items-center gap-3 flex-wrap">
@@ -309,7 +311,7 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
       )}
 
       {/* the asker's follow-up */}
-      {mine && q.status !== "closed" && q.answers.some((a) => a.authorRole === "mentor") && (
+      {mine && !closed && q.status !== "closed" && q.answers.some((a) => a.authorRole === "mentor") && (
         <div className="border-t border-ink-100 pt-3">
           {!fuOpen && !fuState.ok ? (
             <Button type="button" size="sm" variant="secondary" onClick={() => setFuOpen(true)}>
@@ -338,12 +340,12 @@ function QuestionCard({ q, viewerId, role, focused, onAnswered }: { q: ArenaQues
       {note?.ok && note.info && <Alert variant="success">{note.info}</Alert>}
 
       <div className="flex items-center gap-3 text-[12px] flex-wrap">
-        {mine && q.status === "open" && q.stale && (
+        {mine && !closed && q.status === "open" && q.stale && (
           <button type="button" disabled={busy} onClick={() => run(() => nudgeQuestion(q.id))} className="inline-flex items-center gap-1 font-bold text-brand-pink-deep hover:underline">
             <Megaphone size={12} /> לדחוף לכל המנטוריות
           </button>
         )}
-        {mine && q.status !== "closed" && (
+        {mine && !closed && q.status !== "closed" && (
           <button type="button" disabled={busy} onClick={() => run(() => closeArenaQuestion(q.id))} className="text-ink-500 hover:text-ink-800 hover:underline">
             סגירת השאלה (קיבלתי מה שצריך)
           </button>
