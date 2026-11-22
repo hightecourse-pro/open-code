@@ -14,8 +14,8 @@ export const dynamic = "force-dynamic";
   the slim rows and counts everything itself.
 */
 export default async function HcDashboardPage() {
-  const { profile, isAdmin } = await hcGate();
-  if (!isAdmin) return <GateView profile={profile} />;
+  const { profile, allowed } = await hcGate();
+  if (!allowed) return <GateView profile={profile} />;
 
   let snap: Snapshot | null = null;
   let error = "";

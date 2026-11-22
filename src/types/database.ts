@@ -109,6 +109,8 @@ export interface Database {
           mentor_available: boolean;
           /** Digest fairness stamp - the morning window serves oldest first. */
           digest_last_sent_at: string | null;
+          /** May enter מערכת ניהול הייטקורס (/hightecourse) without the admin role (22/11) - a team flag, never self-set. */
+          hc_access: boolean;
         } & Timestamps;
         Insert: {
           id: string;
@@ -140,6 +142,7 @@ export interface Database {
           hired_at?: string | null;
           mentor_available?: boolean;
           digest_last_sent_at?: string | null;
+          hc_access?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
         Relationships: [];

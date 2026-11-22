@@ -1,19 +1,25 @@
 import "server-only";
-import { getProfile } from "@/lib/auth";
+import { getProfile, hasHcAccess } from "@/lib/auth";
 import type { Profile } from "@/types/database";
-import { HcLogin, HcNotAdmin } from "./gate";
+import { HcAdminOnly, HcLogin, HcNotAdmin } from "./gate";
 
 /*
   The gate every management screen passes: signed out → the sign-in; a
-  signed-in non-admin → told so; an admin → the screen. Same Supabase auth and
-  the same admin role as Open Code (the owner, 18/11: ״עם אותו שם ומשתמש
-  וסיסמא של האדמינים בקוד פתוח״).
+  signed-in account without access → told so; an admin → every screen. Same
+  Supabase auth and the same admin role as Open Code (the owner, 18/11: ״עם
+  אותו שם ומשתמש וסיסמא של האדמינים בקוד פתוח״). Since 22/11 an account may
+  carry the hc_access flag instead of the admin role (the owner: ״תן לי ליהודית
+  משתמש וסיסמה רק לדשבורד, לא לאדמין של קוד פתוח״): it gets the dashboard and
+  the participants; the sheets and the pre-conference mail stay with admins.
 */
-export async function hcGate(): Promise<{ profile: Profile | null; isAdmin: boolean }> {
+export async function hcGate(): Promise<{ profile: Profile | null; allowed: boolean; isAdmin: boolean }> {
   const profile = await getProfile().catch(() => null);
-  return { profile, isAdmin: profile?.role === "admin" };
+  return { profile, allowed: hasHcAccess(profile), isAdmin: profile?.role === "admin" };
 }
 
-export function GateView({ profile }: { profile: Profile | null }) {
-  return profile ? <HcNotAdmin name={profile.first_name || profile.full_name || ""} /> : <HcLogin />;
+/** What a screen shows instead of itself: the sign-in, ״בלי הרשאה״, or - on an admins-only screen - ״למנהלות קוד פתוח בלבד״. */
+export function GateView({ profile, adminOnly = false }: { profile: Profile | null; adminOnly?: boolean }) {
+  if (!profile) return <HcLogin />;
+  if (adminOnly && hasHcAccess(profile)) return <HcAdminOnly />;
+  return <HcNotAdmin name={profile.first_name || profile.full_name || ""} />;
 }

@@ -1,19 +1,19 @@
 "use server";
 
 import { revalidateTag } from "next/cache";
-import { getProfile } from "@/lib/auth";
+import { getProfile, hasHcAccess } from "@/lib/auth";
 import { HC_CACHE_TAG } from "./data";
 import { resendPrepMail, runPrepTick, sendPrepSamples, setPrepEnabled, type TickResult } from "@/lib/hc-preconf/data";
 
-/** ״רענון מהגיליון״ - drops the cached reads so the next render reads the sheet again. Admins only. */
+/** ״רענון מהגיליון״ - drops the cached reads so the next render reads the sheet again. Anyone the system lets in. */
 export async function refreshHcAction(): Promise<{ ok: boolean }> {
   const profile = await getProfile();
-  if (profile?.role !== "admin") return { ok: false };
+  if (!hasHcAccess(profile)) return { ok: false };
   revalidateTag(HC_CACHE_TAG, "max");
   return { ok: true };
 }
 
-/* ---- the pre-conference mail (the owner, 19/11) ---- */
+/* ---- the pre-conference mail (the owner, 19/11) - the admin role, never the hc_access flag alone (22/11) ---- */
 
 async function isAdmin(): Promise<boolean> {
   const profile = await getProfile().catch(() => null);
