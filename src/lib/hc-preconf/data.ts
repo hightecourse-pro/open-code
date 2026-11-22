@@ -515,6 +515,7 @@ const UPDATE_SAMPLES: { n: string; label: string; row: Partial<PrepInsert>; answ
   { n: "א", label: "לא מילאה את הטופס, לא עדכנה אזור אישי, הלינה לא שולמה", row: { lodging: "כן", lodging_paid: "לא", updated_personal: false }, answers: null },
   { n: "ב", label: "מילאה: עם מחשב, Gemini מהעבודה; עדכנה, הכול שולם", row: { lodging: "כן", lodging_paid: "כן", laptop_own: "כן", updated_personal: true }, answers: { role: "מנתחת מערכות", laptop: "yes", tools: ["Gemini"], license: "work" } },
   { n: "ג", label: "מילאה: בלי מחשב ולא השכירה, בלי כלי AI; עדכנה", row: { lodging: "לא", updated_personal: true }, answers: { role: "מנהלת פרויקטים", laptop: "no", tools: [TOOL_NONE] } },
+  { n: "ד", label: "מילאה: הזמינה מחשב מהשכרה (שולם); עדכנה", row: { lodging: "לא", laptop_rental: "כן", laptop_rental_paid: "כן", updated_personal: true }, answers: { role: "מפתחת", laptop: "no", tools: ["Cursor"], license: "private" } },
 ];
 
 export async function sendCourseUpdateSamples(to: string, course: string): Promise<{ n: string; label: string; ok: boolean; error?: string }[]> {

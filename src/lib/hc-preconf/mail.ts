@@ -344,7 +344,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
   if (laptop) {
     const fallback = installListFor(i.course);
     const install = i.installs ?? (fallback ? { title: INSTALL_TITLE, items: fallback } : null);
-    need += p(`<b>בקורס הזה נדרש להביא מחשב נייד.</b>`, " margin-bottom:8px;");
+    need += p(`<b>בקורס הזה נדרש להביא מחשב נייד.</b> ${esc(UPDATE_TEXT.network)}`, " margin-bottom:8px;");
     if (install)
       need += box(
         `<div style="font-size:15px; font-weight:700; color:${H.navy}; margin-bottom:4px;">${esc(install.title)}</div>
@@ -353,14 +353,14 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
         "yellow"
       );
     if (yes(i.laptopRental)) {
-      need += p(`הזמנת מחשב מהשכרה - הוא ימתין לך בעמדת השכרת המחשבים.`, " margin-bottom:8px;");
+      need += p(`הזמנת מחשב מהשכרה - הוא ימתין לך בעמדת השכרת המחשבים. <b>${esc(UPDATE_TEXT.rentalNoInstalls)}</b>`, " margin-bottom:8px;");
       if (no(i.laptopRentalPaid)) need += redLine("יש להסדיר את התשלום עבור השכרת המחשב.");
     } else if (i.answerLaptop === "no") {
       need += open
-        ? redLine(`סימנת בשאלון שאת מגיעה בלי מחשב, ולא הזמנת מחשב להשכרה - אפשר להזמין ב<a href="${CONF.site}" style="color:${H.red};">אזור האישי</a> (${CONF.laptopRentalNis} ש״ח) עד ${CONF.personalAreaCloseShort}.`)
+        ? redLine(`סימנת בשאלון שאת מגיעה בלי מחשב, ולא הזמנת מחשב להשכרה - אפשר להזמין ב<a href="${CONF.site}" style="color:${H.red};">אזור האישי</a> (${CONF.laptopRentalNis} ש״ח; ${esc(UPDATE_TEXT.rentalNoInstallsShort)}) עד ${CONF.personalAreaCloseShort}.`)
         : redLine(`סימנת בשאלון שאת מגיעה בלי מחשב, ולא הזמנת מחשב להשכרה. ההשכרה נסגרה - לשאלות פני ל${CONF.logistics.name}: <a href="mailto:${CONF.logistics.mail}" style="color:${H.red};" dir="ltr">${CONF.logistics.mail}</a>.`);
     } else if (!yes(i.laptopOwn) && !i.answered && open) {
-      need += p(`אין לך מחשב נייד? השכרה ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אזור האישי</a> (${CONF.laptopRentalNis} ש״ח) עד <b>${CONF.personalAreaCloseShort}</b>.`, " margin-bottom:8px;");
+      need += p(`אין לך מחשב נייד? השכרה ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אזור האישי</a> (${CONF.laptopRentalNis} ש״ח; ${esc(UPDATE_TEXT.rentalNoInstallsShort)}) עד <b>${CONF.personalAreaCloseShort}</b>.`, " margin-bottom:8px;");
     }
   }
   need += i.after.map((l) => p(esc(l), " margin-bottom:8px;")).join("");
