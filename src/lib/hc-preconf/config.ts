@@ -225,6 +225,19 @@ export const COURSE_UPDATES: CourseUpdate[] = [
     lines: ["לקורס זה לא נדרש מחשב נייד ואין התקנות."],
     formText: "הטופס חשוב לנו לקראת הקורס - נא למלא אותו בהקדם (דקה אחת):",
   },
+  {
+    // the owner, 22/11 ~16:55 (״בקורס זה נפתחות 2 קבוצות, לצורך חלוקת הקבוצות בצורה מיטבית - יש למלא בהקדם את התפקיד ושנות הניסיון בטופס. בנוסף, מצורף מסמך הכנה לקורס - מומלץ לקרוא לפני הכנס״)
+    course: "מצוינות בניהול",
+    lines: ["בקורס זה נפתחות שתי קבוצות."],
+    formText: "לצורך חלוקת הקבוצות בצורה מיטבית - יש למלא בהקדם את התפקיד ושנות הניסיון בטופס:",
+    doc: {
+      title: "מסמך הכנה לקורס",
+      text: ["מצורף מסמך הכנה לקורס מצוות הסדנה - מומלץ לקרוא לפני הכנס."],
+      path: "/hightecourse/management-2026-prep.pdf",
+      fileName: "management-2026-prep.pdf",
+      linkText: "למסמך ההכנה (PDF)",
+    },
+  },
 ];
 export const courseUpdateFor = (course: string): CourseUpdate | null => {
   const n = normCourse(course);
