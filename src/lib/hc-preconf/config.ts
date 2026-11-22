@@ -258,16 +258,22 @@ export const COURSE_UPDATES: CourseUpdate[] = [
     lines: ["לקראת הקורס, שבו נעסוק ב-Vibe Coding ובבניית סוכנים באמצעות Agentforce - נא להשלים את ההכנות הבאות לפני תחילת הקורס."],
     before: {
       title: "חשבונות וסביבת תרגול:",
+      // the links are the lecturer's (her PDF ״סיילספורס״, 22/11 ~17:20)
       items: [
         { label: "הירשמי או התחברי ל-Trailhead", href: "https://trailhead.salesforce.com/" },
-        "פתחי סביבת תרגול חינמית של Salesforce Developer Edition עם Agentforce ו-Data 360.",
+        { label: "פתחי סביבת תרגול חינמית של Salesforce Developer Edition עם Agentforce ו-Data 360", href: "https://developer.salesforce.com/free-trials" },
         "ודאי שאת מצליחה להתחבר לסביבה. אם קיבלת פרטי גישה לארגון תרגול אחר - השתמשי בהם במקום לפתוח סביבה חדשה.",
       ],
     },
     installs: {
       title: "התקנות למחשב, לתרגול מקומי:",
-      items: ["Visual Studio Code", "Salesforce CLI", "Salesforce Extension Pack", "Git"],
-      note: "אם נעבוד בכיתה ב-Agentforce Vibes IDE בדפדפן - לא תידרש התקנה מקומית, אלא גישה לארגון שבו סביבת ה-IDE הופעלה. נעדכן לפני הקורס באיזה מסלול נעבוד.",
+      items: [
+        { label: "Visual Studio Code", href: "https://code.visualstudio.com/download" },
+        { label: "Salesforce CLI", href: "https://developer.salesforce.com/tools/salesforcecli" },
+        { label: "Salesforce Extension Pack", href: "https://marketplace.visualstudio.com/items?itemName=salesforce.salesforcedx-vscode" },
+        { label: "Git", href: "https://git-scm.com/downloads" },
+      ],
+      note: "אם נעבוד בכיתה ב-[[Agentforce Vibes IDE בדפדפן|https://developer.salesforce.com/docs/platform/code-builder/guide/codebuilder-overview.html]] - לא תידרש התקנה מקומית, אלא גישה לארגון שבו סביבת ה-IDE הופעלה. נעדכן לפני הקורס באיזה מסלול נעבוד.",
     },
     after: ["אין צורך בכלי AI בתשלום.", "נא להשלים את ההכנות מראש, כדי שנוכל להקדיש את זמן הקורס לתרגול עצמו. נתקלת בבעיה בהתקנה או בהתחברות? כתבי לנו לפני הקורס - פשוט השיבי למייל הזה."],
     noAiTools: true,
@@ -287,7 +293,9 @@ export const UPDATE_TEXT = {
   fillForm: "כדי שנוכל להתארגן על הנדרש לקורס נא למלא בהקדם את הטופס הזה:",
   pairs: "במידה ואין לך כלי AI ברישיון והתרגיל לא יהיה ניתן לביצוע בכלים חינמיים - ניתן לבצע את התרגיל גם בזוגות.",
   hotelToday: "אנחנו מעבירות היום את שיבוץ החדרים למלון, ולכן לאחר מכן לא ניתן יהיה לבצע שינויים.",
-  hotelDone: "שיבוץ החדרים הועבר למלון, ולכן לא ניתן לבצע שינויים.",
+  /** after the closing (the owner, 22/11 ~17:25: ״עדכון מחשב/שמרטפיה/לינה סגור לרישום, ניתן לעדכן את שאר הפרטים״) */
+  hotelDone: "הרישום ללינה, לשמרטפיה ולהשכרת מחשב סגור - שיבוץ החדרים הועבר למלון.",
+  closedRest: "את שאר הפרטים באזור האישי אפשר לעדכן.",
   /** from 22/11 ~14:55 on, every laptop course (the owner: ״תוסיף מעכשיו והלאה שאנחנו מספקים רשת במלון״) */
   network: "אנחנו מספקות רשת במלון.",
   /** (״מי שמשכירה מחשב הוא מחשב ללא התקנות ותצטרך לדאוג להתקין הכל בעצמה״; ~16:10: ״תדגיש שבמחשב מושכר אין התקנות - יש צורך להתקין בעצמך את כל הנדרש״) */

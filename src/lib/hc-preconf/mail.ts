@@ -345,12 +345,21 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
   const linesSayPairs = [...i.lines, ...i.after].some((l) => l.includes("בזוגות"));
   const small = (html: string) => `<div style="font-size:14.5px; line-height:1.65; color:${H.ink};">${html}</div>`;
 
+  /** a note may carry one link as [[label|href]] */
+  const noteHtml = (note: string) =>
+    note
+      .split(/(\[\[[^\]]+\]\])/)
+      .map((part) => {
+        const m = part.match(/^\[\[([^|\]]+)\|([^\]]+)\]\]$/);
+        return m ? `<a href="${esc(m[2])}" style="color:${H.navy}; font-weight:700;">${esc(m[1])}</a>` : esc(part);
+      })
+      .join("");
   /* a titled list in a yellow box; a linked item shows ״(הורדה)״ when it is a download, a plain link otherwise */
   const listBox = (list: { title: string; items: InstallItem[]; note?: string }, download: boolean) =>
     box(
       `<div style="font-size:15px; font-weight:700; color:${H.navy}; margin-bottom:4px;">${esc(list.title)}</div>
        <ul style="margin:0; padding:0 20px 0 0; font-size:15px; line-height:1.75; font-weight:700; color:${H.ink};">${list.items.map((x) => `<li>${typeof x === "string" ? esc(x) : `<a href="${esc(x.href)}" style="color:${H.navy}; font-weight:700;">${esc(x.label)}</a>${download ? ` <span style="font-weight:400; font-size:13px; color:${H.muted};">(הורדה)</span>` : ""}`}</li>`).join("")}</ul>
-       ${list.note ? `<div style="font-size:14px; line-height:1.6; color:${H.ink}; margin-top:6px;">${esc(list.note)}</div>` : ""}`,
+       ${list.note ? `<div style="font-size:14px; line-height:1.6; color:${H.ink}; margin-top:6px;">${noteHtml(list.note)}</div>` : ""}`,
       "yellow"
     );
 
@@ -395,7 +404,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
 
   /* 3. the personal area */
   const needsPersonal = !i.updatedPersonal || i.unpaid.length > 0;
-  let personal = p(open ? `<b>${esc(UPDATE_TEXT.hotelToday)}</b>` : `<b>${esc(UPDATE_TEXT.hotelDone)}</b> האזור האישי באתר סגור לעדכון לינה, שמרטפיה והשכרת מחשב.`, " margin-bottom:10px;");
+  let personal = p(open ? `<b>${esc(UPDATE_TEXT.hotelToday)}</b>` : `<b>${esc(UPDATE_TEXT.hotelDone)}</b> ${esc(UPDATE_TEXT.closedRest)}`, " margin-bottom:10px;");
   if (needsPersonal) {
     personal += box(
       `<div style="font-size:15.5px; font-weight:700; color:${H.red}; margin-bottom:4px;">לפי הרישום אצלנו:</div>
@@ -403,7 +412,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
          ${!i.updatedPersonal ? `<li>הפרטים שלך <b>באזור האישי עדיין לא עודכנו</b>.</li>` : ""}
          ${i.unpaid.length ? `<li>התשלום עבור <b>${esc(joinHe(i.unpaid))}</b> עדיין לא הוסדר.</li>` : ""}
        </ul>
-       ${open ? "" : `<div style="font-size:14.5px; line-height:1.65; color:${H.ink}; margin-bottom:10px;">לתשלום - האזור האישי. שינוי בלינה או בשמרטפיה כבר לא אפשרי; לשאלות - ${CONF.logistics.name}: <a href="mailto:${CONF.logistics.mail}" style="color:${H.navy}; font-weight:700;" dir="ltr">${CONF.logistics.mail}</a>.</div>`}
+       ${open ? "" : `<div style="font-size:14.5px; line-height:1.65; color:${H.ink}; margin-bottom:10px;">לתשלום ולעדכון שאר הפרטים - האזור האישי. שינוי בלינה, בשמרטפיה או במחשב כבר לא אפשרי; לשאלות - ${CONF.logistics.name}: <a href="mailto:${CONF.logistics.mail}" style="color:${H.navy}; font-weight:700;" dir="ltr">${CONF.logistics.mail}</a>.</div>`}
        ${button(CONF.site, open ? `לאזור האישי - עד ${CONF.personalAreaCloseShort}` : "לאזור האישי באתר הייטקורס", "navy")}`,
       "red"
     );
@@ -415,7 +424,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
   const steps: [string, string][] = need.trim() ? [["מה צריך לקורס", need]] : [];
   if (form) steps.push(["הטופס הקצר", form]);
   if (i.doc) steps.push([i.doc.title, docStep]);
-  steps.push([open ? `האזור האישי נסגר ${CONF.personalAreaCloseShort}` : "האזור האישי סגור", personal]);
+  steps.push([open ? `האזור האישי נסגר ${CONF.personalAreaCloseShort}` : "לינה, שמרטפיה ומחשב: הרישום סגור", personal]);
   const COUNT: Record<number, string> = { 2: "שני דברים", 3: "שלושה דברים", 4: "ארבעה דברים", 5: "חמישה דברים" };
   const count = COUNT[steps.length] ?? `${steps.length} דברים`;
   const preheader = `${count} לפני הקורס: ${steps.map(([title]) => title).join(", ")}.`;
