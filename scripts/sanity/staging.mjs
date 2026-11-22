@@ -24,7 +24,7 @@ async function login(page, who) {
 
 try {
   // ── public
-  for (const [path, needle] of [["/", "קוד פתוח"], ["/login", "כניסה"], ["/coordinator/login", "שליחת קוד כניסה"], ["/hackathon-2026", "האקתון"]]) {
+  for (const [path, needle] of [["/", "קוד פתוח"], ["/login", "כניסה"], ["/coordinator/login", "שליחת קוד כניסה"], ["/hackathon-2026", "האקתון"], ["/sanity/hall", "המסע לאי השפיות"], ["/sanity/studio", "המסע לאי השפיות"]]) {
     const r = await fetch(`${BASE}${path}`);
     ok(`public ${path}`, r.status === 200 && (await r.text()).includes(needle), `status=${r.status}`);
   }
