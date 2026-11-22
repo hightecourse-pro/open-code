@@ -143,7 +143,7 @@ interface CourseStat {
 function courseStats(real: PrepAdminRow[]): CourseStat[] {
   const acc = new Map<string, { c: CourseStat; counts: Map<string, number>; order: number }>();
   for (const r of real) {
-    const asks = questionsFor(r.kind, r.laptopRequired);
+    const asks = questionsFor(r.kind, r.laptopRequired, r.course);
     if (!asks.laptop && !asks.tools) continue;
     const key = r.course || "בלי קורס";
     let e = acc.get(key);

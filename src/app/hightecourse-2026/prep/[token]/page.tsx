@@ -52,7 +52,7 @@ export default async function PrepPage({ params }: { params: Promise<{ token: st
               {row.is_sample ? ` (דוגמה - ${KIND_LABEL[kind]})` : ""}. השאלון לוקח דקה, והתשובות נשמרות לכתובת <span dir="ltr">{row.email}</span>.
             </p>
             <div className="mt-6">
-              <PrepForm token={row.token} kind={kind} laptopRequired={row.laptop_required} questions={questionsFor(kind, row.laptop_required)} initial={initialAnswersOf(row)} answeredAt={row.answered_at} installList={installListFor(row.course)} />
+              <PrepForm token={row.token} kind={kind} laptopRequired={row.laptop_required} questions={questionsFor(kind, row.laptop_required, row.course)} initial={initialAnswersOf(row)} answeredAt={row.answered_at} installList={installListFor(row.course)} />
             </div>
           </>
         )}
