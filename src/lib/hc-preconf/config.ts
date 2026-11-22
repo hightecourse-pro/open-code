@@ -143,6 +143,8 @@ export interface CourseUpdate {
   doc?: { title: string; text: string[]; path: string; fileName: string; linkText: string };
   /** the form step's red line, when the course wants its own (default: UPDATE_TEXT.fillForm) */
   formText?: string;
+  /** the course needs no AI tool (the lecturer provides): no tools question in the questionnaire, no pairs note in the mail */
+  noAiTools?: boolean;
 }
 
 /**
@@ -239,7 +241,18 @@ export const COURSE_UPDATES: CourseUpdate[] = [
       linkText: "למסמך ההכנה (PDF)",
     },
   },
+  {
+    // the owner, 22/11 ~17:05 (״לקורס של ה-BI זה ההתקנות: Git, Docker Desktop. בקורס זה אין צורך בכלי AI המרצה מספק מה שצריך (תסיר מהטופס את הקטע של כלי AI ובמלל במייל). השאר כרגיל״)
+    course: "Cloud Data & AI Agents for BI Developers",
+    lines: [],
+    installs: { title: "רשימת ההתקנות הנדרשת על המחשב:", items: ["Git", "Docker Desktop"] },
+    after: ["בקורס זה אין צורך בכלי AI - המרצה מספק מה שצריך."],
+    noAiTools: true,
+  },
 ];
+
+/** Does the course ask about AI tools at all? (a course with noAiTools in COURSE_UPDATES does not) */
+export const courseAsksTools = (course: string): boolean => !courseUpdateFor(course)?.noAiTools;
 export const courseUpdateFor = (course: string): CourseUpdate | null => {
   const n = normCourse(course);
   return COURSE_UPDATES.find((c) => normCourse(c.course) === n) ?? null;
@@ -285,8 +298,12 @@ export interface PrepAnswers {
   note?: string;
 }
 
-/** The form's sections per questionnaire. */
-export function questionsFor(kind: PrepKind, laptopRequired: boolean): { role: boolean; office: boolean; laptop: boolean; tools: "dev" | "ai" | null; mgmt: boolean } {
+/** The form's sections per questionnaire (and per course: a course that needs no AI tool drops that question). */
+export function questionsFor(kind: PrepKind, laptopRequired: boolean, course?: string): { role: boolean; office: boolean; laptop: boolean; tools: "dev" | "ai" | null; mgmt: boolean } {
+  const base = questionsForKind(kind, laptopRequired);
+  return course && base.tools && !courseAsksTools(course) ? { ...base, tools: null } : base;
+}
+function questionsForKind(kind: PrepKind, laptopRequired: boolean): { role: boolean; office: boolean; laptop: boolean; tools: "dev" | "ai" | null; mgmt: boolean } {
   switch (kind) {
     case "dev":
       return { role: true, office: false, laptop: true, tools: "dev", mgmt: false };

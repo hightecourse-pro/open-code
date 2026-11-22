@@ -297,6 +297,8 @@ export interface CourseUpdateInput {
   doc: { title: string; text: string[]; url: string; linkText: string } | null;
   /** the form step's red line, when the course wants its own */
   formText: string | null;
+  /** the course needs no AI tool - no pairs note anywhere */
+  noAiTools: boolean;
   laptopOwn: string;
   laptopRental: string;
   laptopRentalPaid: string;
@@ -367,7 +369,9 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
     }
   }
   need += i.after.map((l) => p(esc(l), " margin-bottom:8px;")).join("");
-  if (i.answered && i.noTools && !linesSayPairs) need += small(esc(UPDATE_TEXT.pairs));
+  // the pairs note is about AI tools: laptop courses that ask about them only (the owner's screenshot, 22/11 ~17:05: it showed up in מצוינות בניהול)
+  const asksTools = laptop && !i.noAiTools;
+  if (asksTools && i.answered && i.noTools && !linesSayPairs) need += small(esc(UPDATE_TEXT.pairs));
 
   /* the course's document (Vibe Coding: the product document, attached and linked) */
   const docStep = i.doc
@@ -380,7 +384,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
   const form = !i.answered
     ? `${p(`<b style="color:${H.red};">${esc(i.formText || UPDATE_TEXT.fillForm)}</b>`, " margin-bottom:10px;")}
        <div style="margin:0 0 10px;">${button(i.formUrl, "למילוי הטופס - דקה אחת", "navy")}</div>
-       ${laptop ? small(esc(UPDATE_TEXT.pairs)) : ""}`
+       ${asksTools ? small(esc(UPDATE_TEXT.pairs)) : ""}`
     : "";
 
   /* 3. the personal area */
