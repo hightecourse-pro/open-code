@@ -34,12 +34,12 @@ export const CONF = {
   /**
    * The personal area closes for lodging / babysitting / laptop rental (the owner, 22/11: ״אנחנו מעבירים את שיבוץ
    * החדרים למלון היום… האזור האישי באתר ייסגר לעדכון לינה/שמרטפיה/השכרת מחשב״; ~13:20: ״תשנה את הסגירה ל-15:00
-   * באופן סופי״). The course update mail says ״נסגר היום בשעה 15:00״ until then and ״סגור״ afterwards (the same
-   * mail reaches later registrants).
+   * באופן סופי״; ~14:55: ״תעביר את הדדליין ל-16:00 בגלל השעה״). The course update mail says ״נסגר היום בשעה 16:00״
+   * until then and ״סגור״ afterwards (the same mail reaches later registrants).
    */
-  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 15:00",
-  personalAreaCloseShort: "היום בשעה 15:00",
-  personalAreaCloseIso: "2026-11-22T15:00:00+02:00",
+  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 16:00",
+  personalAreaCloseShort: "היום בשעה 16:00",
+  personalAreaCloseIso: "2026-11-22T16:00:00+02:00",
 } as const;
 
 /** Is the personal area still open for lodging / babysitting / rental changes at `now`? */
@@ -118,7 +118,8 @@ export const kindNeedsLaptop = (kind: PrepKind): boolean => kind === "dev" || ki
  */
 export const INSTALL_TITLE = "רשימת התקנה נדרשת על המחשב:";
 export const INSTALL_LISTS: { course: string; items: string[] }[] = [
-  { course: "Advanced GenAI & Agentic AI for Developers - מהבסיס כולל תרגול", items: ["Node.js", "npm", "Docker Desktop", "VS Code"] },
+  // 22/11 ~14:55, the owner's list for the course update (״רשימה להתקין: Docker, Node.js, Cursor, Claude code - למי שיש חשבון״) - the questionnaire shows the same one
+  { course: "Advanced GenAI & Agentic AI for Developers - מהבסיס כולל תרגול", items: ["Docker", "Node.js", "Cursor", "Claude Code - למי שיש חשבון"] },
 ];
 export const installListFor = (course: string): string[] | null => {
   const n = normCourse(course);
@@ -169,6 +170,17 @@ export const COURSE_UPDATES: CourseUpdate[] = [
       linkText: "למסמך ההכנה (PDF)",
     },
   },
+  {
+    // the owner, 22/11 ~14:55 (״רשימה להתקין: Docker, Node.js, Cursor, Claude code - למי שיש חשבון. מי שלא יכול להתקין - ניתן להסתדר גם ללא התקנות מקומיות. שאר ההנחיות… כמו בראשון״)
+    course: "Advanced GenAI & Agentic AI for Developers - מהבסיס כולל תרגול",
+    lines: [],
+    installs: {
+      title: "רשימת התקנות על המחשב:",
+      items: ["Docker", "Node.js", "Cursor", "Claude Code - למי שיש חשבון"],
+      note: "מי שלא יכולה להתקין - ניתן להסתדר גם ללא התקנות מקומיות.",
+    },
+    after: ["רוב התרגול יכול להתבצע בכלי AI חינמיים. במידה ונדרש כלי AI עם רישיון ואין לך - ניתן לבצע את החלק הזה בזוגות."],
+  },
 ];
 export const courseUpdateFor = (course: string): CourseUpdate | null => {
   const n = normCourse(course);
@@ -182,6 +194,11 @@ export const UPDATE_TEXT = {
   pairs: "במידה ואין לך כלי AI ברישיון והתרגיל לא יהיה ניתן לביצוע בכלים חינמיים - ניתן לבצע את התרגיל גם בזוגות.",
   hotelToday: "אנחנו מעבירות היום את שיבוץ החדרים למלון, ולכן לאחר מכן לא ניתן יהיה לבצע שינויים.",
   hotelDone: "שיבוץ החדרים הועבר למלון, ולכן לא ניתן לבצע שינויים.",
+  /** from 22/11 ~14:55 on, every laptop course (the owner: ״תוסיף מעכשיו והלאה שאנחנו מספקים רשת במלון״) */
+  network: "אנחנו מספקות רשת במלון.",
+  /** (״מי שמשכירה מחשב הוא מחשב ללא התקנות ותצטרך לדאוג להתקין הכל בעצמה״) */
+  rentalNoInstalls: "המחשב המושכר מגיע ללא התקנות - תצטרכי לדאוג להתקין הכל בעצמך.",
+  rentalNoInstallsShort: "המחשב מגיע ללא התקנות",
 } as const;
 
 /* ---- the questionnaire ---- */
