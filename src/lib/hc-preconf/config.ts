@@ -34,12 +34,12 @@ export const CONF = {
   /**
    * The personal area closes for lodging / babysitting / laptop rental (the owner, 22/11: ״אנחנו מעבירים את שיבוץ
    * החדרים למלון היום… האזור האישי באתר ייסגר לעדכון לינה/שמרטפיה/השכרת מחשב״; ~13:20: ״תשנה את הסגירה ל-15:00
-   * באופן סופי״; ~14:55: ״תעביר את הדדליין ל-16:00 בגלל השעה״). The course update mail says ״נסגר היום בשעה 16:00״
-   * until then and ״סגור״ afterwards (the same mail reaches later registrants).
+   * באופן סופי״; ~14:55: ״תעביר את הדדליין ל-16:00 בגלל השעה״; ~16:05: ״תשנה את השעה ל-16:30 ותשלח״). The course
+   * update mail says ״נסגר היום בשעה 16:30״ until then and ״סגור״ afterwards (the same mail reaches later registrants).
    */
-  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 16:00",
-  personalAreaCloseShort: "היום בשעה 16:00",
-  personalAreaCloseIso: "2026-11-22T16:00:00+02:00",
+  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 16:30",
+  personalAreaCloseShort: "היום בשעה 16:30",
+  personalAreaCloseIso: "2026-11-22T16:30:00+02:00",
 } as const;
 
 /** Is the personal area still open for lodging / babysitting / rental changes at `now`? */
