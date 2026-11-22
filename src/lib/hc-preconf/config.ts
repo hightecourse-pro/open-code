@@ -141,6 +141,8 @@ export interface CourseUpdate {
   after?: string[];
   /** an extra numbered step with a document: linked from the mail (served from /public) and attached to it */
   doc?: { title: string; text: string[]; path: string; fileName: string; linkText: string };
+  /** the form step's red line, when the course wants its own (default: UPDATE_TEXT.fillForm) */
+  formText?: string;
 }
 
 /**
@@ -215,6 +217,25 @@ export const COURSE_UPDATES: CourseUpdate[] = [
         { label: "Google Antigravity IDE", href: "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.7.0-4507555968450560/windows-x64/Antigravity%20IDE.exe" },
       ],
       note: "במידה ויש בעיה - ניתן לתרגל גם בזוגות.",
+    },
+  },
+  {
+    // the owner, 22/11 ~16:40 (״במיומנויות רכות תזכיר למלא את הטופס וכל השאר, אין התקנות. הטופס חשוב״)
+    course: "מיומנויות רכות בעולם העבודה החדש",
+    lines: ["לקורס זה לא נדרש מחשב נייד ואין התקנות."],
+    formText: "הטופס חשוב לנו לקראת הקורס - נא למלא אותו בהקדם (דקה אחת):",
+  },
+  {
+    // the owner, 22/11 ~16:55 (״בקורס זה נפתחות 2 קבוצות, לצורך חלוקת הקבוצות בצורה מיטבית - יש למלא בהקדם את התפקיד ושנות הניסיון בטופס. בנוסף, מצורף מסמך הכנה לקורס - מומלץ לקרוא לפני הכנס״)
+    course: "מצוינות בניהול",
+    lines: ["בקורס זה נפתחות שתי קבוצות."],
+    formText: "לצורך חלוקת הקבוצות בצורה מיטבית - יש למלא בהקדם את התפקיד ושנות הניסיון בטופס:",
+    doc: {
+      title: "מסמך הכנה לקורס",
+      text: ["מצורף מסמך הכנה לקורס מצוות הסדנה - מומלץ לקרוא לפני הכנס."],
+      path: "/hightecourse/management-2026-prep.pdf",
+      fileName: "management-2026-prep.pdf",
+      linkText: "למסמך ההכנה (PDF)",
     },
   },
 ];

@@ -345,6 +345,7 @@ export function courseUpdateInputOf(row: PrepRow): CourseUpdateInput | null {
     installs: text.installs ?? null,
     after: text.after ?? [],
     doc: text.doc ? { title: text.doc.title, text: text.doc.text, url: `${site()}${text.doc.path}`, linkText: text.doc.linkText } : null,
+    formText: text.formText ?? null,
     laptopOwn: row.laptop_own ?? "",
     laptopRental: row.laptop_rental ?? "",
     laptopRentalPaid: row.laptop_rental_paid ?? "",
