@@ -377,7 +377,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
   const form = !i.answered
     ? `${p(`<b style="color:${H.red};">${esc(UPDATE_TEXT.fillForm)}</b>`, " margin-bottom:10px;")}
        <div style="margin:0 0 10px;">${button(i.formUrl, "למילוי הטופס - דקה אחת", "navy")}</div>
-       ${small(esc(UPDATE_TEXT.pairs))}`
+       ${laptop ? small(esc(UPDATE_TEXT.pairs)) : ""}`
     : "";
 
   /* 3. the personal area */

@@ -265,9 +265,20 @@ function CoursesCard({ courses, onPick }: { courses: CourseStat[]; onPick: (cour
 
 /* ---- the per-course update mail (the owner, 22/11: ״צריך לשלוח לכל קורס עדכון על הכלים הנדרשים לקורס… נתחיל קורס קורס.
    תשלח לי דוגמא וכשאאשר תשלח לכל הקבוצה… כל מייל שכבר נשלח יישלח לכל הרישומים לקורס זה מאוחר יותר״) ---- */
-function CourseUpdatesCard({ courses, real, switches, sampleTo, pending, onToggle, onSamples }: { courses: CourseStat[]; real: PrepAdminRow[]; switches: CourseUpdateSwitch[]; sampleTo: string; pending: boolean; onToggle: (course: string, enabled: boolean) => void; onSamples: (course: string) => void }) {
+function CourseUpdatesCard({ real, switches, sampleTo, pending, onToggle, onSamples }: { real: PrepAdminRow[]; switches: CourseUpdateSwitch[]; sampleTo: string; pending: boolean; onToggle: (course: string, enabled: boolean) => void; onSamples: (course: string) => void }) {
   const th = "px-2 py-2 text-right text-[12.5px] font-bold whitespace-nowrap";
   const td = "px-2 py-2 align-top tabular-nums";
+  // every course with participants (a no-laptop course gets its update too - ״מתקדם מאוד״, 22/11): the ones with a text first, then by size
+  const courses = (() => {
+    const acc = new Map<string, { course: string; registered: number }>();
+    for (const r of real) {
+      const key = r.course || "בלי קורס";
+      const e = acc.get(key) ?? { course: key, registered: 0 };
+      e.registered++;
+      acc.set(key, e);
+    }
+    return [...acc.values()].sort((a, b) => Number(!!courseUpdateFor(b.course)) - Number(!!courseUpdateFor(a.course)) || b.registered - a.registered || a.course.localeCompare(b.course, "he"));
+  })();
   return (
     <Card testId="hc-prep-updates">
       <CardTitle aside={<span className="text-[13px]" style={{ color: H.muted }}>״הייטקורס 2026 - הכלים הנדרשים לקורס …״ · הנוסח לכל קורס נכתב בקוד</span>}>עדכון הכלים לקורס</CardTitle>
@@ -464,7 +475,6 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
       />
 
       <CourseUpdatesCard
-        courses={courses}
         real={real}
         switches={courseUpdates}
         sampleTo={sampleTo}

@@ -149,18 +149,40 @@ export interface SyncResult {
   updated: number;
   removed: number;
   held: number;
+  /** rows whose key changed in the sheet (a ת.ז. typed or corrected) and were carried over instead of re-added */
+  rekeyed?: number;
 }
 
-/** The sheet's frontal participants into the table: newcomers added, snapshots refreshed, the gone marked. Never touches a token, a mail outcome or an answer. */
+/**
+ * The sheet's frontal participants into the table: newcomers added, snapshots refreshed, the gone marked. Never
+ * touches a token, a mail outcome or an answer. A key that changed (22/11 15:43: six ת.ז. corrected in the sheet
+ * made six ״new״ rows that were mailed again) carries the existing row over - matched by her address - so she keeps
+ * her token, her answers and her mail outcomes.
+ */
 export async function syncFromSheet(): Promise<SyncResult> {
   const admin = createAdminClient();
   const fresh = await readSheetParticipants();
-  const { data: existing, error } = await admin.from(T).select("source_key").eq("is_sample", false);
+  const { data: existing, error } = await admin.from(T).select("id, source_key, email").eq("is_sample", false);
   if (error) throw new Error(`select: ${error.message}`);
   const have = new Set((existing ?? []).map((r) => r.source_key));
   const keys = new Set(fresh.map((r) => r.source_key));
   let added = 0;
   let updated = 0;
+  let rekeyed = 0;
+  // the same address under a key the sheet no longer has → the row takes the new key
+  const goneByMail = new Map<string, { id: string; source_key: string }>();
+  for (const r of existing ?? []) if (r.email && !keys.has(r.source_key)) goneByMail.set(r.email, { id: r.id, source_key: r.source_key });
+  for (const f of fresh) {
+    if (have.has(f.source_key) || !f.email) continue;
+    const old = goneByMail.get(f.email);
+    if (!old) continue;
+    const { error: rkErr } = await admin.from(T).update({ source_key: f.source_key, removed_at: null, updated_at: new Date().toISOString() }).eq("id", old.id);
+    if (rkErr) throw new Error(`rekey: ${rkErr.message}`);
+    goneByMail.delete(f.email);
+    have.delete(old.source_key);
+    have.add(f.source_key);
+    rekeyed++;
+  }
   for (let i = 0; i < fresh.length; i += 100) {
     const chunk = fresh.slice(i, i + 100);
     const { error: upErr } = await admin.from(T).upsert(chunk, { onConflict: "source_key" });
@@ -177,7 +199,7 @@ export async function syncFromSheet(): Promise<SyncResult> {
     if (rmErr) throw new Error(`remove: ${rmErr.message}`);
     removed += data?.length ?? 0;
   }
-  return { total: fresh.length, added, updated, removed, held: fresh.filter((r) => r.hold_reason).length };
+  return { total: fresh.length, added: added - rekeyed, updated: updated + rekeyed, removed, held: fresh.filter((r) => r.hold_reason).length, rekeyed };
 }
 
 /* ---- the prefill from the earlier Google Form ---- */
@@ -835,7 +857,13 @@ export async function loadPrepByToken(token: string): Promise<PrepRow | null> {
   if (!/^[a-f0-9]{24}$/i.test(token)) return null;
   const admin = createAdminClient();
   const { data } = await admin.from(T).select("*").eq("token", token).maybeSingle();
-  return data ?? null;
+  if (!data) return null;
+  // a link from a mail sent before her row was re-keyed (22/11: five ת.ז. corrected in the sheet) opens her active row
+  if (data.removed_at && data.email && !data.is_sample) {
+    const { data: active } = await admin.from(T).select("*").eq("email", data.email).eq("is_sample", false).is("removed_at", null).order("first_seen_at", { ascending: false }).limit(1).maybeSingle();
+    if (active) return active;
+  }
+  return data;
 }
 
 export async function savePrepAnswers(token: string, answers: PrepAnswers): Promise<{ ok: boolean; error?: string }> {

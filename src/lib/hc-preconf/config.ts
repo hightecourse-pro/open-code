@@ -181,6 +181,11 @@ export const COURSE_UPDATES: CourseUpdate[] = [
     },
     after: ["רוב התרגול יכול להתבצע בכלי AI חינמיים. במידה ונדרש כלי AI עם רישיון ואין לך - ניתן לבצע את החלק הזה בזוגות."],
   },
+  {
+    // the owner, 22/11 ~15:50 (״תכתוב שלא נדרש מחשב נייד כי הקורס ללא תרגול כי הוא ממוקד בהספקים רבים ככל האפשר ויכיל את החומרים הכי מתקדמים בתחום. השאר כרגיל״)
+    course: "Advanced GenAI & Agentic AI for Developers - מתקדם מאוד",
+    lines: ["לקורס זה לא נדרש מחשב נייד.", "הקורס ללא תרגול, כי הוא ממוקד בהספקים רבים ככל האפשר ויכיל את החומרים הכי מתקדמים בתחום."],
+  },
 ];
 export const courseUpdateFor = (course: string): CourseUpdate | null => {
   const n = normCourse(course);
