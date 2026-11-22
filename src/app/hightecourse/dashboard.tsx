@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { H } from "../ai-course/theme";
-import { PAID_ITEMS, PATHS, TRACKS, isFrontal, type DashRow, type NameRow, type PaidKey, type TrackKey } from "./config";
+import { PAID_ITEMS, PATHS, TRACKS, isFrontal, type DashRow, type DuplicateId, type NameRow, type PaidKey, type TrackKey } from "./config";
 import { Freshness } from "./gate";
 import { Card, ExtLink, Notice, fmtNum } from "./ui";
 
@@ -29,6 +29,8 @@ export interface DashboardData {
   categoryByCourse: Record<string, string>;
   extras: { cancellations: NameRow[]; day3: NameRow[]; staff: NameRow[] };
   missingTabs: string[];
+  /** the same ת.ז. in two or more rows (the owner, 22/11: ״אזהרה אם יש רישום כפול עם אותה ת.ז.״) */
+  duplicateIds: DuplicateId[];
 }
 
 /** The two groups the dashboard shows - lodging is never read off a course or a company (the owner: ״הלינה והקורסים אל תערבב״). */
@@ -499,6 +501,36 @@ export function Dashboard({ data, error, sheetUrl }: { data: DashboardData | nul
       {data.missingTabs.length > 0 && (
         <Notice testId="hc-missing-tabs">
           גליונות שהדשבורד מצפה להם ולא נמצאו בגיליון: {data.missingTabs.map((t) => `״${t}״`).join(", ")}. אם שינית להם שם - תגידי לי ואעדכן.
+        </Notice>
+      )}
+
+      {data.duplicateIds.length > 0 && (
+        <Notice tone="error" testId="hc-duplicate-ids">
+          <div className="font-black">
+            רישום כפול: {data.duplicateIds.length === 1 ? "ת.ז. אחת מופיעה" : `${data.duplicateIds.length} תעודות זהות מופיעות`} ביותר משורה אחת ב״משתתפות״
+          </div>
+          <ul className="mt-1 space-y-0.5">
+            {data.duplicateIds.map((d) => {
+              const people = rows.filter((r) => d.rows.includes(r.row));
+              return (
+                <li key={d.id} className="flex flex-wrap items-center gap-x-2" data-testid="hc-duplicate-id" data-rows={d.rows.join(",")}>
+                  <span dir="ltr" className="font-bold tabular-nums">
+                    {d.id}
+                  </span>
+                  <span>
+                    שורות {d.rows.join(", ")}: {d.names.join(" / ")}
+                  </span>
+                  <button type="button" onClick={() => setPanel(panelOf(`ת.ז. ${d.id} - רישום כפול`, people, `שורות ${d.rows.join(", ")}`))} className="font-bold underline underline-offset-2" style={{ color: H.red }} data-testid="hc-duplicate-names">
+                    לשמות
+                  </button>
+                  <Link href={`${PATHS.participants}?rows=${d.rows.join(",")}`} className="font-bold underline underline-offset-2" style={{ color: H.red }}>
+                    לטבלה
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="mt-1 text-[13px]">המיילים נשלחים לפי ת.ז., כך ששורה כפולה לא מקבלת פעמיים - אבל כדאי למחוק את המיותרת בגיליון.</div>
         </Notice>
       )}
 
