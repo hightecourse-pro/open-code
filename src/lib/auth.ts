@@ -48,6 +48,21 @@ export function isSubscriber(profile: Pick<Profile, "status" | "role">): boolean
 }
 
 /**
+ * May she use מערכת ניהול הייטקורס (/hightecourse)? Every admin, plus an
+ * account given the hc_access flag alone (the owner, 22/11: ״תן לי ליהודית
+ * משתמש וסיסמה רק לדשבורד, לא לאדמין של קוד פתוח״) - that account is never an
+ * admin here and never a member of the community.
+ */
+export function hasHcAccess(profile: Pick<Profile, "role" | "hc_access"> | null | undefined): boolean {
+  return !!profile && (profile.role === "admin" || profile.hc_access === true);
+}
+
+/** A Hightecourse-only account: the flag without membership - the community is not hers. */
+export function isHcOnly(profile: Pick<Profile, "role" | "hc_access" | "status">): boolean {
+  return profile.hc_access === true && profile.role !== "admin" && profile.status === "pending";
+}
+
+/**
  * Gate the community: anyone signed in may come in and look around. Paying
  * is what unlocks taking part - enforced per feature, not at the door.
  * Only a rejected member is turned away.
@@ -56,6 +71,8 @@ export function isSubscriber(profile: Pick<Profile, "status" | "role">): boolean
 export async function requireCommunityAccess(): Promise<Profile> {
   const profile = await requireProfile();
   if (profile.status === "left") redirect("/left");
+  // A Hightecourse-only account (22/11) has no community - its screens are /hightecourse.
+  if (isHcOnly(profile)) redirect("/hightecourse");
   if (profile.status === "rejected") {
     redirect(`/join?status=${profile.status}`);
   }

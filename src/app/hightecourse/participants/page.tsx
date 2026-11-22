@@ -15,8 +15,8 @@ export const dynamic = "force-dynamic";
   cell of the sheet row. The dashboard's course and company names link here.
 */
 export default async function HcParticipantsPage({ searchParams }: { searchParams: Promise<{ course?: string; track?: string; company?: string; q?: string; rows?: string }> }) {
-  const { profile, isAdmin } = await hcGate();
-  if (!isAdmin) return <GateView profile={profile} />;
+  const { profile, allowed } = await hcGate();
+  if (!allowed) return <GateView profile={profile} />;
   const sp = await searchParams;
 
   let snap: Snapshot | null = null;

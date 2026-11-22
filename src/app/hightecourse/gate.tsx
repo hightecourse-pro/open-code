@@ -11,8 +11,8 @@ import { fmtTime } from "./ui";
 
 /*
   The client pieces of the Hightecourse management screens: the sign-in (the
-  same Supabase auth as Open Code - an admin account gets past the server-side
-  role check), the not-an-admin notice, the admin's name + sign-out, the
+  same Supabase auth as Open Code - an admin, or an account with the hc_access
+  flag, gets past the server-side check), the no-access notices, the admin's name + sign-out, the
   navigation, and the ״רענון״ button that drops the sheet cache.
 */
 const fieldCls = "w-full bg-white px-4 py-3 text-[16px] outline-none";
@@ -51,7 +51,7 @@ export function HcLogin() {
           </h1>
           <span className="block h-[4px] w-16" style={{ background: H.yellow, borderRadius: 2 }} />
           <p className="text-[14px]" style={{ color: H.muted }}>
-            נכנסים עם אותם מייל וסיסמה של מנהלות קוד פתוח.
+            נכנסים עם המייל והסיסמה שלך למערכת. מנהלות קוד פתוח - עם הפרטים שלהן בקהילה.
           </p>
         </div>
         <div className="space-y-1.5">
@@ -96,15 +96,33 @@ export function HcNotAdmin({ name }: { name: string }) {
   return (
     <div className="mx-auto mt-6 w-full max-w-md bg-white p-7 text-center sm:p-9" style={{ border: `1px solid ${H.line}`, borderRadius: 14 }} data-testid="hc-not-admin">
       <h1 className="text-[22px] font-black" style={{ color: H.navy }}>
-        המערכת הזו למנהלות בלבד
+        המערכת הזו למנהלות הייטקורס בלבד
       </h1>
       <span className="mx-auto mt-2 block h-[4px] w-16" style={{ background: H.yellow, borderRadius: 2 }} />
       <p className="mt-4 text-[15px] leading-relaxed" style={{ color: H.ink }}>
-        {name ? `${name}, את` : "את"} מחוברת עם חשבון שאינו מנהלת בקוד פתוח. צאי והתחברי עם חשבון מנהלת.
+        {name ? `${name}, את` : "את"} מחוברת עם חשבון שאין לו הרשאה למערכת הזו. צאי והתחברי עם חשבון מורשה.
       </p>
       <button type="button" onClick={() => start(signOutAnd(() => router.refresh()))} disabled={pending} className="mt-6 w-full px-6 py-3.5 text-[16px] font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50" style={{ background: H.navy, borderRadius: 10 }}>
         {pending ? "רגע..." : "יציאה והתחברות מחדש"}
       </button>
+    </div>
+  );
+}
+
+/** An account with the hc_access flag on an admins-only screen (the sheets, the pre-conference mail). */
+export function HcAdminOnly() {
+  return (
+    <div className="mx-auto mt-6 w-full max-w-md bg-white p-7 text-center sm:p-9" style={{ border: `1px solid ${H.line}`, borderRadius: 14 }} data-testid="hc-admin-only">
+      <h1 className="text-[22px] font-black" style={{ color: H.navy }}>
+        המסך הזה למנהלות קוד פתוח בלבד
+      </h1>
+      <span className="mx-auto mt-2 block h-[4px] w-16" style={{ background: H.yellow, borderRadius: 2 }} />
+      <p className="mt-4 text-[15px] leading-relaxed" style={{ color: H.ink }}>
+        החשבון שלך פתוח לדשבורד ולמשתתפות.
+      </p>
+      <Link href={PATHS.home} className="mt-6 inline-block px-6 py-3 text-[15px] font-bold hover:opacity-90" style={{ background: H.navy, borderRadius: 10, color: H.white }} data-testid="hc-admin-only-home">
+        לדשבורד
+      </Link>
     </div>
   );
 }
@@ -124,18 +142,19 @@ export function UserMenu({ name }: { name: string }) {
   );
 }
 
+/** The screens; the `adminOnly` ones are not offered to an hc_access-only account (22/11). */
 const NAV = [
-  { href: PATHS.home, label: "דשבורד", exact: true },
-  { href: PATHS.participants, label: "משתתפות", exact: false },
-  { href: "/hightecourse/sheets", label: "גליונות", exact: false },
-  { href: "/hightecourse/prep", label: "מייל לפני הכנס", exact: false },
+  { href: PATHS.home, label: "דשבורד", exact: true, adminOnly: false },
+  { href: PATHS.participants, label: "משתתפות", exact: false, adminOnly: false },
+  { href: "/hightecourse/sheets", label: "גליונות", exact: false, adminOnly: true },
+  { href: "/hightecourse/prep", label: "מייל לפני הכנס", exact: false, adminOnly: true },
 ] as const;
 
-export function Nav() {
+export function Nav({ admin }: { admin: boolean }) {
   const path = usePathname();
   return (
     <nav className="mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-3" aria-label="ניווט" data-testid="hc-nav">
-      {NAV.map((n) => {
+      {NAV.filter((n) => admin || !n.adminOnly).map((n) => {
         const active = n.exact ? path === n.href : path.startsWith(n.href);
         return (
           <Link key={n.href} href={n.href} className="whitespace-nowrap px-3 py-2.5 text-[14.5px] font-bold" style={{ color: active ? H.navy : H.muted, borderBottom: `3px solid ${active ? H.navy : "transparent"}`, marginBottom: -3 }} aria-current={active ? "page" : undefined}>

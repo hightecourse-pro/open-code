@@ -22,7 +22,7 @@ export default async function HcSheetPage({ params }: { params: Promise<{ slug: 
   if (tab.slug === "participants") redirect(PATHS.participants);
 
   const { profile, isAdmin } = await hcGate();
-  if (!isAdmin) return <GateView profile={profile} />;
+  if (!isAdmin) return <GateView profile={profile} adminOnly />;
 
   let table: SheetTableData | null = null;
   let gid: number | undefined;

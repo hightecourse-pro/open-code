@@ -48,7 +48,7 @@ function rowOf(r: PrepRow): PrepAdminRow {
  */
 export default async function HcPrepPage() {
   const { profile, isAdmin } = await hcGate();
-  if (!isAdmin) return <GateView profile={profile} />;
+  if (!isAdmin) return <GateView profile={profile} adminOnly />;
   const [{ rows, settings }, supabase] = await Promise.all([loadPrepAdmin(), createClient()]);
   const {
     data: { user },
