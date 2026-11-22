@@ -1,7 +1,7 @@
 import "server-only";
 import crypto from "crypto";
 import { cookies } from "next/headers";
-import { getProfile } from "@/lib/auth";
+import { getProfile, hasHcAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { serviceAccountEmail } from "@/lib/drive-api";
 import { appendRow, readSheet, sheetTabs, SheetsError, writeCell } from "@/lib/google-sheets";
@@ -95,7 +95,8 @@ function cookieValueFor(s: TagsSettings & { spreadsheetId: string; code: string 
 
 /**
  * The browser entered the code (a cookie bound to the current code and sheet),
- * or an admin is signed in - she gets in as soon as a sheet is set, even before
+ * or an admin / a Hightecourse (hc_access) account is signed in - she gets in
+ * as soon as a sheet is set, even before
  * a code exists (the owner, 27/10: she connected the sheet, left the code empty
  * and found the desk closed).
  */
@@ -107,7 +108,7 @@ export async function hasTagsAccess(settings?: TagsSettings): Promise<boolean> {
     if (c && c === cookieValueFor(s)) return true;
   }
   const profile = await getProfile().catch(() => null);
-  return profile?.role === "admin";
+  return hasHcAccess(profile);
 }
 
 /** Route handlers only (a server component cannot set cookies). */

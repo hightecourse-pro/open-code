@@ -48,10 +48,12 @@ export function isSubscriber(profile: Pick<Profile, "status" | "role">): boolean
 }
 
 /**
- * May she use מערכת ניהול הייטקורס (/hightecourse)? Every admin, plus an
- * account given the hc_access flag alone (the owner, 22/11: ״תן לי ליהודית
- * משתמש וסיסמה רק לדשבורד, לא לאדמין של קוד פתוח״) - that account is never an
- * admin here and never a member of the community.
+ * May she use what belongs to Hightecourse - מערכת ניהול הייטקורס
+ * (/hightecourse, every screen), the tags desk, the AI-course admin? Every
+ * admin, plus an account given the hc_access flag alone (the owner, 22/11: ״תן
+ * לי ליהודית משתמש וסיסמה רק לדשבורד, לא לאדמין של קוד פתוח״, then ״תפתח לה
+ * כל מה שקשור להייטקורס״) - that account is never an admin here and never a
+ * member of the community.
  */
 export function hasHcAccess(profile: Pick<Profile, "role" | "hc_access"> | null | undefined): boolean {
   return !!profile && (profile.role === "admin" || profile.hc_access === true);
@@ -88,6 +90,13 @@ export async function requireSubscription(feature: string): Promise<Profile> {
   if (!isSubscriber(profile)) {
     redirect(`/join?locked=${encodeURIComponent(feature)}`);
   }
+  return profile;
+}
+
+/** Require Hightecourse access (an admin or an hc_access account); others are sent back to the feed. */
+export async function requireHcAccess(): Promise<Profile> {
+  const profile = await requireProfile();
+  if (!hasHcAccess(profile)) redirect("/forum");
   return profile;
 }
 

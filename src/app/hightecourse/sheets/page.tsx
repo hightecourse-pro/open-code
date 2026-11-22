@@ -14,8 +14,8 @@ export const dynamic = "force-dynamic";
   appear is decided in config.ts (the owner strikes and adds in words).
 */
 export default async function HcSheetsIndexPage() {
-  const { profile, isAdmin } = await hcGate();
-  if (!isAdmin) return <GateView profile={profile} adminOnly />;
+  const { profile, allowed } = await hcGate();
+  if (!allowed) return <GateView profile={profile} />;
 
   let index: Awaited<ReturnType<typeof hcTabIndex>> = [];
   let error = "";

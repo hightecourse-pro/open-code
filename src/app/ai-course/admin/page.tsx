@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getProfile } from "@/lib/auth";
+import { getProfile, hasHcAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Brand, PageFooter } from "../chrome";
 import { rubik } from "../font";
@@ -32,7 +32,8 @@ function twoWeeksAgo(): string {
 
 export default async function AiCourseAdminPage() {
   const profile = await getProfile();
-  const isAdmin = profile?.role === "admin";
+  // an admin, or a Hightecourse (hc_access) account (the owner, 22/11: ״תפתח לה כל מה שקשור להייטקורס״)
+  const isAdmin = hasHcAccess(profile);
 
   let rows: QuizRow[] = [];
   let events: QuizEvent[] = [];

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getProfile } from "@/lib/auth";
+import { getProfile, hasHcAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DEFAULT_TAB, saveTagsSettings, spreadsheetIdFrom, testConnection, type ConnectionReport } from "@/app/tags/server";
 
@@ -12,7 +12,7 @@ export type DeleteResult = { ok: true } | { ok: false; error: string };
 /** Remove a row - a test entry, a typo, a duplicate she asked to forget. */
 export async function deleteSubmission(id: string): Promise<DeleteResult> {
   const profile = await getProfile();
-  if (profile?.role !== "admin") return { ok: false, error: "אין לך הרשאה לפעולה הזו." };
+  if (!hasHcAccess(profile)) return { ok: false, error: "אין לך הרשאה לפעולה הזו." };
   if (!id) return { ok: false, error: "לא נמצאה שורה למחיקה." };
   const admin = createAdminClient();
   const { error } = await admin.from("ai_course_quiz_submissions").delete().eq("id", id);
@@ -28,7 +28,7 @@ export type TagsConnectionResult = ConnectionReport;
 
 export async function saveTagsSettingsAction(input: { sheet: string; tab: string; code: string }): Promise<TagsSaveResult> {
   const profile = await getProfile();
-  if (profile?.role !== "admin") return { ok: false, error: "אין לך הרשאה לפעולה הזו." };
+  if (!hasHcAccess(profile)) return { ok: false, error: "אין לך הרשאה לפעולה הזו." };
   const sheet = (input.sheet ?? "").trim();
   const spreadsheetId = sheet ? spreadsheetIdFrom(sheet) : null;
   if (sheet && !spreadsheetId) return { ok: false, error: "זה לא נראה כמו קישור לגיליון גוגל - הדביקי את הכתובת מהדפדפן." };
@@ -47,7 +47,7 @@ export async function saveTagsSettingsAction(input: { sheet: string; tab: string
 
 export async function testTagsConnectionAction(): Promise<TagsConnectionResult> {
   const profile = await getProfile();
-  if (profile?.role !== "admin") return { ok: false, error: "אין לך הרשאה לפעולה הזו.", hint: "forbidden" };
+  if (!hasHcAccess(profile)) return { ok: false, error: "אין לך הרשאה לפעולה הזו.", hint: "forbidden" };
   // tests the SAVED settings, not the form - "save, then test" is the order the card asks for
   return testConnection();
 }

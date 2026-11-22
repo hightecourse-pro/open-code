@@ -18,13 +18,12 @@ export const dynamic = "force-dynamic";
 /*
   /hightecourse - מערכת ניהול הייטקורס: its own chrome in the Hightecourse
   language (logo, yellow rule, navy footer), outside the Open Code shell. The
-  navigation shows for admins and for hc_access accounts (their admins-only
-  screens hidden); every screen gates on its own.
+  navigation shows for every account the system lets in (admins and hc_access
+  accounts alike); every screen gates on its own.
 */
 export default async function HcLayout({ children }: { children: React.ReactNode }) {
   const profile = await getProfile().catch(() => null);
   const allowed = hasHcAccess(profile);
-  const isAdmin = profile?.role === "admin";
   const build = (process.env.VERCEL_GIT_COMMIT_SHA ?? "").slice(0, 7) || "dev";
   return (
     <div dir="rtl" className={`${rubik.className} flex min-h-screen flex-col`} style={{ background: H.bg, color: H.ink }}>
@@ -38,7 +37,7 @@ export default async function HcLayout({ children }: { children: React.ReactNode
           </Link>
           {allowed && <UserMenu name={profile?.first_name || profile?.full_name || "מנהלת"} />}
         </div>
-        {allowed && <Nav admin={isAdmin} />}
+        {allowed && <Nav />}
       </header>
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>

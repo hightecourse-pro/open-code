@@ -1,12 +1,12 @@
-import { getProfile } from "@/lib/auth";
+import { getProfile, hasHcAccess } from "@/lib/auth";
 import { loadPrepById, mailOf } from "@/lib/hc-preconf/data";
 
 export const dynamic = "force-dynamic";
 
-/** The letter of one participant, exactly as it goes out - admins only (?id=). */
+/** The letter of one participant, exactly as it goes out - for everyone the system lets in (?id=). */
 export async function GET(req: Request) {
   const profile = await getProfile().catch(() => null);
-  if (profile?.role !== "admin") return new Response("forbidden", { status: 403 });
+  if (!hasHcAccess(profile)) return new Response("forbidden", { status: 403 });
   const id = new URL(req.url).searchParams.get("id") ?? "";
   const row = await loadPrepById(id);
   if (!row) return new Response("not found", { status: 404 });
