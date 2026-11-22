@@ -289,6 +289,12 @@ export interface CourseUpdateInput {
   laptopRequired: boolean;
   /** the course text the owner dictated - paragraphs, the first one bold */
   lines: string[];
+  /** the course's installation list (its own, or the INSTALL_LISTS fallback) */
+  installs: { title: string; items: string[]; note?: string } | null;
+  /** paragraphs after the laptop / installation / rental block */
+  after: string[];
+  /** an extra step with a document linked and attached */
+  doc: { title: string; text: string[]; url: string; linkText: string } | null;
   laptopOwn: string;
   laptopRental: string;
   laptopRentalPaid: string;
@@ -330,15 +336,22 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
   const logo = `${i.siteUrl}/ai-course/hightecourse.png`;
   const first = esc(i.firstName || "");
   const laptop = i.kind !== "unknown" && (i.laptopRequired || kindNeedsLaptop(i.kind));
-  const linesSayPairs = i.lines.some((l) => l.includes("בזוגות"));
+  const linesSayPairs = [...i.lines, ...i.after].some((l) => l.includes("בזוגות"));
   const small = (html: string) => `<div style="font-size:14.5px; line-height:1.65; color:${H.ink};">${html}</div>`;
 
   /* 1. what the course needs */
   let need = i.lines.map((l, idx) => p(idx === 0 ? `<b>${esc(l)}</b>` : esc(l), " margin-bottom:8px;")).join("");
   if (laptop) {
-    const install = installListFor(i.course);
+    const fallback = installListFor(i.course);
+    const install = i.installs ?? (fallback ? { title: INSTALL_TITLE, items: fallback } : null);
     need += p(`<b>בקורס הזה נדרש להביא מחשב נייד.</b>`, " margin-bottom:8px;");
-    if (install) need += box(`<div style="font-size:15px; font-weight:700; color:${H.navy}; margin-bottom:2px;">${INSTALL_TITLE}</div><div style="font-size:15px; line-height:1.7; font-weight:700; color:${H.ink};">${install.map(esc).join(" · ")}</div>`, "yellow");
+    if (install)
+      need += box(
+        `<div style="font-size:15px; font-weight:700; color:${H.navy}; margin-bottom:4px;">${esc(install.title)}</div>
+         <ul style="margin:0; padding:0 20px 0 0; font-size:15px; line-height:1.75; font-weight:700; color:${H.ink};">${install.items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+         ${install.note ? `<div style="font-size:14px; line-height:1.6; color:${H.ink}; margin-top:6px;">${esc(install.note)}</div>` : ""}`,
+        "yellow"
+      );
     if (yes(i.laptopRental)) {
       need += p(`הזמנת מחשב מהשכרה - הוא ימתין לך בעמדת השכרת המחשבים.`, " margin-bottom:8px;");
       if (no(i.laptopRentalPaid)) need += redLine("יש להסדיר את התשלום עבור השכרת המחשב.");
@@ -350,7 +363,15 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
       need += p(`אין לך מחשב נייד? השכרה ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אזור האישי</a> (${CONF.laptopRentalNis} ש״ח) עד <b>${CONF.personalAreaCloseShort}</b>.`, " margin-bottom:8px;");
     }
   }
+  need += i.after.map((l) => p(esc(l), " margin-bottom:8px;")).join("");
   if (i.answered && i.noTools && !linesSayPairs) need += small(esc(UPDATE_TEXT.pairs));
+
+  /* the course's document (Vibe Coding: the product document, attached and linked) */
+  const docStep = i.doc
+    ? `${i.doc.text.map((l, idx) => p(idx === 0 ? esc(l) : `<b>${esc(l)}</b>`, " margin-bottom:8px;")).join("")}
+       <div style="margin:4px 0 8px;">${button(i.doc.url, i.doc.linkText, "navy")}</div>
+       ${small("המסמך מצורף גם למייל הזה.")}`
+    : "";
 
   /* 2. the questionnaire - only for whoever has not filled it */
   const form = !i.answered
@@ -379,19 +400,23 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
 
   const steps: [string, string][] = [["מה צריך לקורס", need]];
   if (form) steps.push(["הטופס הקצר", form]);
+  if (i.doc) steps.push([i.doc.title, docStep]);
   steps.push([open ? `האזור האישי נסגר ${CONF.personalAreaCloseShort}` : "האזור האישי סגור", personal]);
+  const COUNT: Record<number, string> = { 2: "שני דברים", 3: "שלושה דברים", 4: "ארבעה דברים", 5: "חמישה דברים" };
+  const count = COUNT[steps.length] ?? `${steps.length} דברים`;
+  const preheader = `${count} לפני הקורס: ${steps.map(([title]) => title).join(", ")}.`;
 
   const subject = courseUpdateSubject(i.course);
   const html = `<!DOCTYPE html>
 <html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(subject)}</title></head>
 <body style="margin:0; padding:0; background:${H.bg};">
-<div style="display:none; max-height:0; overflow:hidden; font-size:1px; line-height:1px; color:${H.bg};">${esc(UPDATE_TEXT.preheader)}</div>
+<div style="display:none; max-height:0; overflow:hidden; font-size:1px; line-height:1px; color:${H.bg};">${esc(preheader)}</div>
 <div dir="rtl" style="background:${H.bg}; padding:28px 12px; color:${H.ink}; text-align:right;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px; margin:0 auto; background:#ffffff; border-radius:20px; overflow:hidden; border:1px solid ${H.line};">
     <tr><td style="background:${H.yellow}; padding:24px 28px 22px;">
       <div style="font-size:13.5px; font-weight:700; color:${H.navy}; margin-bottom:6px;">${CONF.title} · ${esc(i.course)}</div>
       <div style="font-size:30px; line-height:1.2; font-weight:700; color:${H.navy};">עדכון קצר לפני הקורס שלך</div>
-      <div style="font-size:15.5px; font-weight:700; color:${H.navy}; margin-top:8px;">${steps.length === 3 ? "שלושה דברים" : "שני דברים"}, דקה אחת.</div>
+      <div style="font-size:15.5px; font-weight:700; color:${H.navy}; margin-top:8px;">${count}, דקה אחת.</div>
     </td></tr>
     <tr><td style="height:4px; background:${H.navy}; font-size:0; line-height:0;">&nbsp;</td></tr>
 

@@ -127,17 +127,50 @@ export const installListFor = (course: string): string[] | null => {
 
 /* ---- the per-course update mail (the owner, 22/11) ---- */
 
+export interface CourseUpdate {
+  course: string;
+  /** paragraphs at the top of ״מה צריך לקורס״ - the first one bold */
+  lines: string[];
+  /** a list in a yellow box under the laptop line (a course without one falls back to INSTALL_LISTS, if it has an entry there) */
+  installs?: { title: string; items: string[]; note?: string };
+  /** paragraphs after the laptop / installation / rental block */
+  after?: string[];
+  /** an extra numbered step with a document: linked from the mail (served from /public) and attached to it */
+  doc?: { title: string; text: string[]; path: string; fileName: string; linkText: string };
+}
+
 /**
  * ״צריך לשלוח לכל קורס עדכון על הכלים הנדרשים לקורס״ - the course text the owner dictates, course by course; a course
- * without an entry has no update mail yet (the admin card says so). The first line is printed bold.
+ * without an entry has no update mail yet (the admin card says so).
  */
-export const COURSE_UPDATES: { course: string; lines: string[] }[] = [
+export const COURSE_UPDATES: CourseUpdate[] = [
   {
     course: "AI מתקדם למנהלים ומנתחי מערכות",
     lines: ["לקורס זה אין התקנות נדרשות על המחשבים.", "רוב התרגול ניתן לבצע גם בכלי AI חינמיים. במקרים בהם נדרש רישיון - ניתן לבצע תרגול בזוגות."],
   },
+  {
+    // the owner, 22/11 ~14:05 (״בקורס הזה תכתוב רשימת התקנות מומלצת… במידה ויש לך בעיה להתקין… רוב התרגול… בקורס זה יוצאים עם מוצר מקצה לקצה…״)
+    course: "Vibe Coding - פיתוח מקצה לקצה באמצעות כלי AI",
+    lines: [],
+    installs: {
+      title: "רשימת התקנות מומלצת על המחשב:",
+      items: ["Node.js - גרסת LTS", "Visual Studio Code", "Claude Desktop", "Git for Windows"],
+      note: "במידה ויש לך בעיה להתקין על המחשב - המרצה ייתן דרכים חלופיות.",
+    },
+    after: ["רוב התרגול יכול להתבצע בכלי AI חינמיים. במידה ונדרש כלי AI עם רישיון ואין לך - ניתן לבצע את החלק הזה בזוגות."],
+    doc: {
+      title: "רוצה לצאת עם מוצר משלך?",
+      text: [
+        "בקורס זה יוצאים עם מוצר מקצה לקצה. אם את רוצה לבוא עם מוצר משלך שאת רוצה לפתח - מוזמנת לבנות מסמך מוצר לפי ההוראות במסמך המצורף (כמובן שגם אותו את יכולה להכין עם כל צ׳אט AI: מעלים לו את המסמך ומספרים לו על הרעיון).",
+        "אם תבואי בלי רעיון למוצר - תקבלי את הרעיון מהמרצה :)",
+      ],
+      path: "/hightecourse/vibe-coding-2026-prep.pdf",
+      fileName: "vibe-coding-2026-prep.pdf",
+      linkText: "למסמך ההכנה (PDF)",
+    },
+  },
 ];
-export const courseUpdateFor = (course: string): { course: string; lines: string[] } | null => {
+export const courseUpdateFor = (course: string): CourseUpdate | null => {
   const n = normCourse(course);
   return COURSE_UPDATES.find((c) => normCourse(c.course) === n) ?? null;
 };
@@ -146,8 +179,6 @@ export const courseUpdateSubject = (course: string) => `${CONF.title} - הכלי
 /** The texts of the update mail the owner dictated (22/11), word for word. */
 export const UPDATE_TEXT = {
   fillForm: "כדי שנוכל להתארגן על הנדרש לקורס נא למלא בהקדם את הטופס הזה:",
-  /** the hidden preview line under the subject in the inbox */
-  preheader: "שלושה דברים לפני הקורס: מה צריך, הטופס, והאזור האישי נסגר היום בשעה 15:00.",
   pairs: "במידה ואין לך כלי AI ברישיון והתרגיל לא יהיה ניתן לביצוע בכלים חינמיים - ניתן לבצע את התרגיל גם בזוגות.",
   hotelToday: "אנחנו מעבירות היום את שיבוץ החדרים למלון, ולכן לאחר מכן לא ניתן יהיה לבצע שינויים.",
   hotelDone: "שיבוץ החדרים הועבר למלון, ולכן לא ניתן לבצע שינויים.",
