@@ -32,13 +32,14 @@ export const CONF = {
   /** The caterer's logo beside ״ארוחות צהריים וערב״ (the owner, 20/11: ״צרפתי לוגו של הקייטרינג״). */
   cateringLogoPath: "/hightecourse/catering-logo.png",
   /**
-   * The personal area closes for lodging / babysitting / laptop rental (the owner, 22/11 ~12:30: ״בעוד שעה האזור
-   * האישי באתר ייסגר לעדכון לינה/שמרטפיה/השכרת מחשב… אנחנו מעבירים את שיבוץ החדרים למלון היום״). The course
-   * update mail says ״נסגר היום בשעה 13:30״ until then and ״סגור״ afterwards (the same mail reaches later registrants).
+   * The personal area closes for lodging / babysitting / laptop rental (the owner, 22/11: ״אנחנו מעבירים את שיבוץ
+   * החדרים למלון היום… האזור האישי באתר ייסגר לעדכון לינה/שמרטפיה/השכרת מחשב״; ~13:20: ״תשנה את הסגירה ל-15:00
+   * באופן סופי״). The course update mail says ״נסגר היום בשעה 15:00״ until then and ״סגור״ afterwards (the same
+   * mail reaches later registrants).
    */
-  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 13:30",
-  personalAreaCloseShort: "היום בשעה 13:30",
-  personalAreaCloseIso: "2026-11-22T13:30:00+02:00",
+  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 15:00",
+  personalAreaCloseShort: "היום בשעה 15:00",
+  personalAreaCloseIso: "2026-11-22T15:00:00+02:00",
 } as const;
 
 /** Is the personal area still open for lodging / babysitting / rental changes at `now`? */
@@ -145,6 +146,8 @@ export const courseUpdateSubject = (course: string) => `${CONF.title} - הכלי
 /** The texts of the update mail the owner dictated (22/11), word for word. */
 export const UPDATE_TEXT = {
   fillForm: "כדי שנוכל להתארגן על הנדרש לקורס נא למלא בהקדם את הטופס הזה:",
+  /** the hidden preview line under the subject in the inbox */
+  preheader: "שלושה דברים לפני הקורס: מה צריך, הטופס, והאזור האישי נסגר היום בשעה 15:00.",
   pairs: "במידה ואין לך כלי AI ברישיון והתרגיל לא יהיה ניתן לביצוע בכלים חינמיים - ניתן לבצע את התרגיל גם בזוגות.",
   hotelToday: "אנחנו מעבירות היום את שיבוץ החדרים למלון, ולכן לאחר מכן לא ניתן יהיה לבצע שינויים.",
   hotelDone: "שיבוץ החדרים הועבר למלון, ולכן לא ניתן לבצע שינויים.",
