@@ -1,4 +1,4 @@
-import { CONF, INSTALL_TITLE, UPDATE_TEXT, courseUpdateSubject, installListFor, kindNeedsLaptop, personalAreaOpenAt, type PrepKind } from "./config";
+import { CONF, INSTALL_TITLE, UPDATE_TEXT, courseUpdateSubject, installListFor, kindNeedsLaptop, personalAreaOpenAt, type InstallItem, type PrepKind } from "./config";
 
 /*
   ״הייטקורס 2026 - מידע חשוב לפני הכנס״ - the pre-conference letter, built per
@@ -289,8 +289,8 @@ export interface CourseUpdateInput {
   laptopRequired: boolean;
   /** the course text the owner dictated - paragraphs, the first one bold */
   lines: string[];
-  /** the course's installation list (its own, or the INSTALL_LISTS fallback) */
-  installs: { title: string; items: string[]; note?: string } | null;
+  /** the course's installation list (its own, or the INSTALL_LISTS fallback); an item may link to its download */
+  installs: { title: string; items: InstallItem[]; note?: string } | null;
   /** paragraphs after the laptop / installation / rental block */
   after: string[];
   /** an extra step with a document linked and attached */
@@ -348,7 +348,7 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
     if (install)
       need += box(
         `<div style="font-size:15px; font-weight:700; color:${H.navy}; margin-bottom:4px;">${esc(install.title)}</div>
-         <ul style="margin:0; padding:0 20px 0 0; font-size:15px; line-height:1.75; font-weight:700; color:${H.ink};">${install.items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>
+         <ul style="margin:0; padding:0 20px 0 0; font-size:15px; line-height:1.75; font-weight:700; color:${H.ink};">${install.items.map((x) => `<li>${typeof x === "string" ? esc(x) : `<a href="${esc(x.href)}" style="color:${H.navy}; font-weight:700;">${esc(x.label)}</a> <span style="font-weight:400; font-size:13px; color:${H.muted};">(הורדה)</span>`}</li>`).join("")}</ul>
          ${install.note ? `<div style="font-size:14px; line-height:1.6; color:${H.ink}; margin-top:6px;">${esc(install.note)}</div>` : ""}`,
         "yellow"
       );
