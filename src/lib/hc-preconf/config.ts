@@ -37,9 +37,9 @@ export const CONF = {
    * באופן סופי״; ~14:55: ״תעביר את הדדליין ל-16:00 בגלל השעה״; ~16:05: ״תשנה את השעה ל-16:30 ותשלח״). The course
    * update mail says ״נסגר היום בשעה 16:30״ until then and ״סגור״ afterwards (the same mail reaches later registrants).
    */
-  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 16:30",
-  personalAreaCloseShort: "היום בשעה 16:30",
-  personalAreaCloseIso: "2026-11-22T16:30:00+02:00",
+  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 16:50",
+  personalAreaCloseShort: "היום בשעה 16:50",
+  personalAreaCloseIso: "2026-11-22T16:50:00+02:00",
 } as const;
 
 /** Is the personal area still open for lodging / babysitting / rental changes at `now`? */
@@ -227,9 +227,10 @@ export const COURSE_UPDATES: CourseUpdate[] = [
   },
   {
     // the owner, 22/11 ~16:55 (״בקורס זה נפתחות 2 קבוצות, לצורך חלוקת הקבוצות בצורה מיטבית - יש למלא בהקדם את התפקיד ושנות הניסיון בטופס. בנוסף, מצורף מסמך הכנה לקורס - מומלץ לקרוא לפני הכנס״)
+    // ~16:40: ״בקורס זה נפתחות שתי קבוצות - לא קשור למה צריך לקורס, אפשר לצרף לשלב הבא״ → the sentence opens the form step; no ״מה צריך״ step at all
     course: "מצוינות בניהול",
-    lines: ["בקורס זה נפתחות שתי קבוצות."],
-    formText: "לצורך חלוקת הקבוצות בצורה מיטבית - יש למלא בהקדם את התפקיד ושנות הניסיון בטופס:",
+    lines: [],
+    formText: "בקורס זה נפתחות שתי קבוצות. לצורך חלוקת הקבוצות בצורה מיטבית - יש למלא בהקדם את התפקיד ושנות הניסיון בטופס:",
     doc: {
       title: "מסמך הכנה לקורס",
       text: ["מצורף מסמך הכנה לקורס מצוות הסדנה - מומלץ לקרוא לפני הכנס."],

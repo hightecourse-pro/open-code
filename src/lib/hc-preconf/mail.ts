@@ -401,7 +401,8 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
     personal += p(`הפרטים שלך באזור האישי מעודכנים והתשלומים הוסדרו - תודה.`, " margin-bottom:0;");
   }
 
-  const steps: [string, string][] = [["מה צריך לקורס", need]];
+  // ״מה צריך לקורס״ only when there is something to say (a no-laptop course with no text skips it - the owner, 22/11 ~16:40)
+  const steps: [string, string][] = need.trim() ? [["מה צריך לקורס", need]] : [];
   if (form) steps.push(["הטופס הקצר", form]);
   if (i.doc) steps.push([i.doc.title, docStep]);
   steps.push([open ? `האזור האישי נסגר ${CONF.personalAreaCloseShort}` : "האזור האישי סגור", personal]);
