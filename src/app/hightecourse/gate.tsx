@@ -109,24 +109,6 @@ export function HcNotAdmin({ name }: { name: string }) {
   );
 }
 
-/** An account with the hc_access flag on an admins-only screen (the sheets, the pre-conference mail). */
-export function HcAdminOnly() {
-  return (
-    <div className="mx-auto mt-6 w-full max-w-md bg-white p-7 text-center sm:p-9" style={{ border: `1px solid ${H.line}`, borderRadius: 14 }} data-testid="hc-admin-only">
-      <h1 className="text-[22px] font-black" style={{ color: H.navy }}>
-        המסך הזה למנהלות קוד פתוח בלבד
-      </h1>
-      <span className="mx-auto mt-2 block h-[4px] w-16" style={{ background: H.yellow, borderRadius: 2 }} />
-      <p className="mt-4 text-[15px] leading-relaxed" style={{ color: H.ink }}>
-        החשבון שלך פתוח לדשבורד ולמשתתפות.
-      </p>
-      <Link href={PATHS.home} className="mt-6 inline-block px-6 py-3 text-[15px] font-bold hover:opacity-90" style={{ background: H.navy, borderRadius: 10, color: H.white }} data-testid="hc-admin-only-home">
-        לדשבורד
-      </Link>
-    </div>
-  );
-}
-
 export function UserMenu({ name }: { name: string }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -142,19 +124,20 @@ export function UserMenu({ name }: { name: string }) {
   );
 }
 
-/** The screens; the `adminOnly` ones are not offered to an hc_access-only account (22/11). */
+/** The screens - every account the system lets in sees all of them (the owner, 22/11: ״תפתח לה כל מה שקשור להייטקורס״). */
 const NAV = [
-  { href: PATHS.home, label: "דשבורד", exact: true, adminOnly: false },
-  { href: PATHS.participants, label: "משתתפות", exact: false, adminOnly: false },
-  { href: "/hightecourse/sheets", label: "גליונות", exact: false, adminOnly: true },
-  { href: "/hightecourse/prep", label: "מייל לפני הכנס", exact: false, adminOnly: true },
+  { href: PATHS.home, label: "דשבורד", exact: true },
+  { href: PATHS.participants, label: "משתתפות", exact: false },
+  { href: "/hightecourse/sheets", label: "גליונות", exact: false },
+  { href: "/hightecourse/prep", label: "מייל לפני הכנס", exact: false },
+  { href: PATHS.day3, label: "רישום ליום חמישי", exact: false },
 ] as const;
 
-export function Nav({ admin }: { admin: boolean }) {
+export function Nav() {
   const path = usePathname();
   return (
     <nav className="mx-auto flex w-full max-w-6xl gap-1 overflow-x-auto px-3" aria-label="ניווט" data-testid="hc-nav">
-      {NAV.filter((n) => admin || !n.adminOnly).map((n) => {
+      {NAV.map((n) => {
         const active = n.exact ? path === n.href : path.startsWith(n.href);
         return (
           <Link key={n.href} href={n.href} className="whitespace-nowrap px-3 py-2.5 text-[14.5px] font-bold" style={{ color: active ? H.navy : H.muted, borderBottom: `3px solid ${active ? H.navy : "transparent"}`, marginBottom: -3 }} aria-current={active ? "page" : undefined}>

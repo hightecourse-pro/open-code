@@ -47,8 +47,8 @@ function rowOf(r: PrepRow): PrepAdminRow {
  * run-now buttons, the samples to her own inbox, the link to the mirror tab.
  */
 export default async function HcPrepPage() {
-  const { profile, isAdmin } = await hcGate();
-  if (!isAdmin) return <GateView profile={profile} adminOnly />;
+  const { profile, allowed } = await hcGate();
+  if (!allowed) return <GateView profile={profile} />;
   const [{ rows, settings }, supabase] = await Promise.all([loadPrepAdmin(), createClient()]);
   const {
     data: { user },

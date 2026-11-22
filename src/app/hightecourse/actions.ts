@@ -13,29 +13,29 @@ export async function refreshHcAction(): Promise<{ ok: boolean }> {
   return { ok: true };
 }
 
-/* ---- the pre-conference mail (the owner, 19/11) - the admin role, never the hc_access flag alone (22/11) ---- */
+/* ---- the pre-conference mail (the owner, 19/11) - for everyone the system lets in (22/11: ״תפתח לה כל מה שקשור להייטקורס״) ---- */
 
-async function isAdmin(): Promise<boolean> {
+async function mayManage(): Promise<boolean> {
   const profile = await getProfile().catch(() => null);
-  return profile?.role === "admin";
+  return hasHcAccess(profile);
 }
 
 /** ״להריץ עכשיו״: the sheet in, the mails out (with the switch on and `send`), the mirror tab. */
 export async function hcPrepRunAction(send: boolean): Promise<TickResult> {
-  if (!(await isAdmin())) return { ok: false, at: new Date().toISOString(), trigger: "admin", error: "forbidden" };
+  if (!(await mayManage())) return { ok: false, at: new Date().toISOString(), trigger: "admin", error: "forbidden" };
   return runPrepTick({ send: !!send, trigger: send ? "admin" : "admin-dry" });
 }
 
 /** The owner's switch - nothing goes out while it is off. */
 export async function hcPrepToggleAction(enabled: boolean): Promise<{ ok: boolean }> {
-  if (!(await isAdmin())) return { ok: false };
+  if (!(await mayManage())) return { ok: false };
   await setPrepEnabled(!!enabled);
   return { ok: true };
 }
 
 /** The six variations to one address (hers), as real sample rows so the links in them work. */
 export async function hcPrepSamplesAction(to: string): Promise<{ ok: boolean; error?: string; results: { n: number; label: string; ok: boolean; error?: string }[] }> {
-  if (!(await isAdmin())) return { ok: false, error: "forbidden", results: [] };
+  if (!(await mayManage())) return { ok: false, error: "forbidden", results: [] };
   const addr = (to ?? "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) return { ok: false, error: "כתובת לא תקינה", results: [] };
   const results = await sendPrepSamples(addr);
@@ -44,7 +44,7 @@ export async function hcPrepSamplesAction(to: string): Promise<{ ok: boolean; er
 
 /** One participant again. */
 export async function hcPrepResendAction(id: string): Promise<{ ok: boolean; error?: string }> {
-  if (!(await isAdmin())) return { ok: false, error: "forbidden" };
+  if (!(await mayManage())) return { ok: false, error: "forbidden" };
   if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, error: "bad_id" };
   return resendPrepMail(id);
 }

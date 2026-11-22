@@ -13,7 +13,7 @@
 /** The owner's sheet; HIGHTECOURSE_SHEET_ID overrides it (a test copy on a preview, if ever). */
 export const DEFAULT_HC_SHEET_ID = "1BDT6FKQuY5SqdudEjW3w6lbtb8AFI919QkKusAKBtyE";
 
-export const PATHS = { home: "/hightecourse", participants: "/hightecourse/participants", sheet: (slug: string) => `/hightecourse/sheets/${slug}` } as const;
+export const PATHS = { home: "/hightecourse", participants: "/hightecourse/participants", day3: "/hightecourse/day3", sheet: (slug: string) => `/hightecourse/sheets/${slug}` } as const;
 
 /** How long a read from the sheet is reused before the next one (seconds). ״רענון״ bypasses it. */
 export const SHEET_CACHE_SECONDS = 300;
