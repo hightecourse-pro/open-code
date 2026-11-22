@@ -32,6 +32,7 @@ export default async function HcDashboardPage() {
         categoryByCourse: snap.categoryByCourse,
         extras: snap.extras,
         missingTabs: snap.missingTabs,
+        duplicateIds: snap.duplicateIds,
       }
     : null;
   return <Dashboard data={data} error={error} sheetUrl={hcSheetUrl(snap?.participantsGid ?? undefined)} />;

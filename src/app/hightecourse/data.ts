@@ -1,7 +1,7 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { readSheetsReadonly, sheetTabsMeta, SheetsError, type SheetTabMeta } from "@/lib/google-sheets";
-import { DEFAULT_HC_SHEET_ID, P, PAID_ITEMS, SECRET_COLUMNS, SHEET_CACHE_SECONDS, TABS, TRACKS, trackKeyOf, yes, type DashRow, type NameRow, type PaidKey, type TabDef, type TrackKey } from "./config";
+import { DEFAULT_HC_SHEET_ID, P, PAID_ITEMS, SECRET_COLUMNS, SHEET_CACHE_SECONDS, TABS, TRACKS, trackKeyOf, yes, type DashRow, type NameRow, type PaidKey, type TabDef, type TrackKey, duplicateIdsOf, type DuplicateId } from "./config";
 
 /*
   Reads of the owner's sheet, cached for SHEET_CACHE_SECONDS under the tag
@@ -99,6 +99,8 @@ export async function hcTable(tab: TabDef): Promise<SheetTable> {
 /* ---- the participants and the dashboard ---- */
 
 export interface Participant extends DashRow {
+  /** the sheet's ת.ז. as typed */
+  idNumber: string;
   tag: string;
   digitalCourse: string;
   certCourse: string;
@@ -124,6 +126,8 @@ export interface Snapshot {
   extras: { cancellations: NameRow[]; day3: NameRow[]; staff: NameRow[] };
   /** tabs the dashboard expected and the sheet no longer has */
   missingTabs: string[];
+  /** the same ת.ז. in two or more rows of ״משתתפות״ (the owner, 22/11) */
+  duplicateIds: DuplicateId[];
   /** the gid of ״משתתפות״ - the links into Google Sheets open on that tab */
   participantsGid: number | null;
 }
@@ -194,6 +198,7 @@ export async function hcSnapshot(): Promise<Snapshot> {
       baby: yes(cell(r, c.baby)),
       laptopOwn: yes(cell(r, c.laptopOwn)),
       items,
+      idNumber: cell(r, c.id),
       tag: cell(r, c.tag),
       digitalCourse: cell(r, c.digitalCourse),
       certCourse: cell(r, c.certCourse),
@@ -232,6 +237,7 @@ export async function hcSnapshot(): Promise<Snapshot> {
       staff: namesOf(raw["צוות ומרצים"] ?? [], ["תפקיד", "קורס"]),
     },
     missingTabs,
+    duplicateIds: duplicateIdsOf(participants),
     participantsGid: meta.tabs.find((t) => t.title === "משתתפות")?.gid ?? null,
   };
 }

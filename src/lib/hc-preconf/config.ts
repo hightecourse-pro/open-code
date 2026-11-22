@@ -128,12 +128,15 @@ export const installListFor = (course: string): string[] | null => {
 
 /* ---- the per-course update mail (the owner, 22/11) ---- */
 
+/** An installation item: a plain text, or a label that links to the download. */
+export type InstallItem = string | { label: string; href: string };
+
 export interface CourseUpdate {
   course: string;
   /** paragraphs at the top of ״מה צריך לקורס״ - the first one bold */
   lines: string[];
   /** a list in a yellow box under the laptop line (a course without one falls back to INSTALL_LISTS, if it has an entry there) */
-  installs?: { title: string; items: string[]; note?: string };
+  installs?: { title: string; items: InstallItem[]; note?: string };
   /** paragraphs after the laptop / installation / rental block */
   after?: string[];
   /** an extra numbered step with a document: linked from the mail (served from /public) and attached to it */
@@ -186,6 +189,34 @@ export const COURSE_UPDATES: CourseUpdate[] = [
     course: "Advanced GenAI & Agentic AI for Developers - מתקדם מאוד",
     lines: ["לקורס זה לא נדרש מחשב נייד.", "הקורס ללא תרגול, כי הוא ממוקד בהספקים רבים ככל האפשר ויכיל את החומרים הכי מתקדמים בתחום."],
   },
+  {
+    // the owner, 22/11 ~16:10 (״Figma הורדה, מותקנת, אפליקציית דסקטופ וחשבון מחובר. מנוי בתשלום עדיף, חינמי בסדר. מנוי לכלי AI. מומלץ Claude Pro, $20 לחודש: עליו נלמד…״)
+    course: "UX מתקדם למעצבים מנוסים בעידן ה-AI",
+    lines: [],
+    installs: {
+      title: "מה להכין על המחשב לפני הסדנה:",
+      items: [
+        "Figma - להוריד ולהתקין את אפליקציית הדסקטופ, עם חשבון מחובר. מנוי בתשלום עדיף, חינמי בסדר.",
+        "מנוי לכלי AI - מומלץ Claude Pro ($20 לחודש): עליו נלמד. אפשר גם ChatGPT Plus או Gemini במנוי בתשלום.",
+      ],
+      note: "במידה ואין לך מנוי בתשלום - תשתמשי בגרסה החינמית, שבה מספר ההודעות מוגבל; היא יכולה להיגמר באמצע התרגיל, ואז תצטרפי לתרגול בזוגות.",
+    },
+    after: ["שווה להיכנס לשני הכלים פעם אחת לפני הסדנה, כדי להתחיל לעבוד מהדקה הראשונה."],
+  },
+  {
+    // the owner, 22/11 ~16:25 (״זו רשימת ההתקנות הנדרשת: NodeJS…, Python…, Google Antigravity IDE…; במידה ויש בעיה - ניתן לתרגל גם בזוגות; במחשב נייד מושכר אין התקנות; השאר כרגיל״)
+    course: "AI מתקדם לבדיקות ואוטומציה",
+    lines: [],
+    installs: {
+      title: "רשימת ההתקנות הנדרשת על המחשב (לחיצה מורידה):",
+      items: [
+        { label: "Node.js", href: "https://nodejs.org/dist/v26.13.1/node-v26.13.1-x64.msi" },
+        { label: "Python", href: "https://www.python.org/ftp/python/3.13.5/python-3.13.5-amd64.exe" },
+        { label: "Google Antigravity IDE", href: "https://edgedl.me.gvt1.com/edgedl/release2/j0qc3/antigravity/stable/2.7.0-4507555968450560/windows-x64/Antigravity%20IDE.exe" },
+      ],
+      note: "במידה ויש בעיה - ניתן לתרגל גם בזוגות.",
+    },
+  },
 ];
 export const courseUpdateFor = (course: string): CourseUpdate | null => {
   const n = normCourse(course);
@@ -201,8 +232,8 @@ export const UPDATE_TEXT = {
   hotelDone: "שיבוץ החדרים הועבר למלון, ולכן לא ניתן לבצע שינויים.",
   /** from 22/11 ~14:55 on, every laptop course (the owner: ״תוסיף מעכשיו והלאה שאנחנו מספקים רשת במלון״) */
   network: "אנחנו מספקות רשת במלון.",
-  /** (״מי שמשכירה מחשב הוא מחשב ללא התקנות ותצטרך לדאוג להתקין הכל בעצמה״) */
-  rentalNoInstalls: "המחשב המושכר מגיע ללא התקנות - תצטרכי לדאוג להתקין הכל בעצמך.",
+  /** (״מי שמשכירה מחשב הוא מחשב ללא התקנות ותצטרך לדאוג להתקין הכל בעצמה״; ~16:10: ״תדגיש שבמחשב מושכר אין התקנות - יש צורך להתקין בעצמך את כל הנדרש״) */
+  rentalNoInstalls: "במחשב מושכר אין התקנות - יש צורך להתקין בעצמך את כל הנדרש.",
   rentalNoInstallsShort: "המחשב מגיע ללא התקנות",
 } as const;
 

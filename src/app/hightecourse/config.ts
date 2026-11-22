@@ -166,6 +166,35 @@ export interface DashRow {
   items: Partial<Record<PaidKey, boolean>>;
 }
 
+/** The same ת.ז. in two or more rows of ״משתתפות״ (the owner, 22/11: ״אזהרה אם יש רישום כפול עם אותה ת.ז.״). */
+export interface DuplicateId {
+  /** the ת.ז. as it reads in the sheet (the first row's spelling) */
+  id: string;
+  /** the sheet rows that carry it, in sheet order */
+  rows: number[];
+  names: string[];
+}
+
+/** A ת.ז. for matching: digits only, a dropped leading zero restored (9 digits). */
+export const normalizeId = (s: string): string => {
+  const d = (s ?? "").replace(/\D/g, "");
+  return d && d.length < 9 ? d.padStart(9, "0") : d;
+};
+
+/** The rows that share a ת.ז. - the dashboard's duplicate-registration warning. */
+export function duplicateIdsOf(list: { row: number; idNumber: string; name: string }[]): DuplicateId[] {
+  const byId = new Map<string, DuplicateId>();
+  for (const p of list) {
+    const key = normalizeId(p.idNumber);
+    if (!key) continue;
+    const e = byId.get(key) ?? { id: p.idNumber.trim(), rows: [], names: [] };
+    e.rows.push(p.row);
+    e.names.push(p.name || `שורה ${p.row}`);
+    byId.set(key, e);
+  }
+  return [...byId.values()].filter((e) => e.rows.length > 1).sort((a, b) => a.rows[0] - b.rows[0]);
+}
+
 /** A name from one of the smaller tabs (cancellations, day 3, staff) - for the drawer behind those counts. */
 export interface NameRow {
   row: number;
