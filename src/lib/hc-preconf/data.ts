@@ -342,6 +342,7 @@ export function courseUpdateInputOf(row: PrepRow): CourseUpdateInput | null {
     kind: row.course_kind as PrepKind,
     laptopRequired: row.laptop_required,
     lines: text.lines,
+    before: text.before ?? null,
     installs: text.installs ?? null,
     after: text.after ?? [],
     doc: text.doc ? { title: text.doc.title, text: text.doc.text, url: `${site()}${text.doc.path}`, linkText: text.doc.linkText } : null,
