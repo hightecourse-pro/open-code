@@ -5,7 +5,12 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
 import { pushArenaToMentors } from "./actions";
 
+const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+
 export interface ArenaOverviewData {
+  /** The arena follows ״סגירת ההגשות״ (22.11): closed = no digest, read-only board. */
+  arenaClosed: boolean;
+  arenaClosedAt: string | null;
   open: number;
   stale: number;
   answered: number;
@@ -17,7 +22,7 @@ export interface ArenaOverviewData {
   helpfulTotal: number;
 }
 
-/** The team's view of the arena (the owner, 16/10): numbers, who never answered, and a push button. */
+/** The team's view of the arena (the owner, 16/10): numbers, who never answered, and a push button - disabled once the arena closed with the submissions (22.11). */
 export function ArenaOverview({ data }: { data: ArenaOverviewData }) {
   const [pending, start] = useTransition();
   const [result, setResult] = useState<string | null>(null);
@@ -28,6 +33,11 @@ export function ArenaOverview({ data }: { data: ArenaOverviewData }) {
         <Link href="/arena" className="text-[12.5px] font-bold text-brand-purple hover:underline">
           לזירה ←
         </Link>
+        {data.arenaClosed && (
+          <span className="rounded-full bg-ink-100 text-ink-700 px-2.5 py-0.5 text-[12px] font-bold" data-testid="arena-closed-badge">
+            סגורה
+          </span>
+        )}
       </div>
       <dl className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2 text-center">
         <Stat label="פתוחות" value={data.open} tone={data.open > 0 ? "pink" : "gray"} />
@@ -47,7 +57,7 @@ export function ArenaOverview({ data }: { data: ArenaOverviewData }) {
           type="button"
           size="sm"
           variant="secondary"
-          disabled={pending}
+          disabled={pending || data.arenaClosed}
           onClick={() => {
             if (!confirm("לשלוח עכשיו את מייל השאלות הפתוחות לכל המנטוריות הזמינות?")) return;
             setResult(null);
@@ -60,7 +70,13 @@ export function ArenaOverview({ data }: { data: ArenaOverviewData }) {
           {pending ? "שולחת…" : "לדחוף עכשיו לכל המנטוריות"}
         </Button>
         {result && <span className="text-[12.5px] font-semibold text-ink-700">{result}</span>}
-        <span className="text-[12px] text-ink-500">המייל היומי רץ לבד בבוקר; ביום ראשון עם המובילות של השבוע לכולן.</span>
+        {data.arenaClosed ? (
+          <span className="text-[12px] text-ink-700" data-testid="arena-closed-note">
+            הזירה סגורה מאז {data.arenaClosedAt ? WHEN.format(new Date(data.arenaClosedAt)) : ""} (עם סגירת ההגשות): בלי מייל יומי ושבועי למנטוריות, הלוח לקריאה בלבד. פתיחת ההגשות מחדש פותחת גם אותה.
+          </span>
+        ) : (
+          <span className="text-[12px] text-ink-500">המייל היומי רץ לבד בבוקר; ביום ראשון עם המובילות של השבוע לכולן.</span>
+        )}
       </div>
     </section>
   );

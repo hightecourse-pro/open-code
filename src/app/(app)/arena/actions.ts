@@ -3,12 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { requireCommunityAccess } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { arenaRoleFor, loadArenaMentors } from "@/lib/arena";
+import { arenaClosure, arenaRoleFor, loadArenaMentors } from "@/lib/arena";
 import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS, ARENA_TOPICS, NUDGE_AFTER_HOURS, PRESENCE_HOURS } from "@/lib/arena-shared";
 import { sendResendEmail } from "@/lib/email/resend";
 import { arenaAnsweredEmail, arenaFollowUpEmail, arenaHelpfulEmail, arenaNudgeEmail, arenaQuestionEmail } from "@/lib/email/templates";
 import { sanitizeArenaHtml } from "@/lib/rich-text";
 import { getSiteUrl } from "@/lib/site";
+
+/** The arena closed with ״סגירת ההגשות״ (22.11): no question, answer, follow-up, ״עזר לי״, nudge or presence. */
+async function closedError(): Promise<ArenaFormState | null> {
+  return (await arenaClosure()).closed ? { error: "הזירה נסגרה עם סיום ההאקתון." } : null;
+}
 
 export interface ArenaFormState {
   ok?: boolean;
@@ -52,6 +57,8 @@ export async function askArenaQuestion(_prev: ArenaFormState, formData: FormData
   const me = await requireCommunityAccess();
   const role = await arenaRoleFor(me);
   if (!role) return { error: "הזירה פתוחה לרשומות להאקתון ולמנטוריות." };
+  const closed = await closedError();
+  if (closed) return closed;
   const title = String(formData.get("title") ?? "").trim().slice(0, 160);
   const body = sanitizeArenaHtml(String(formData.get("body") ?? "").slice(0, 400000));
   const topic = String(formData.get("topic") ?? "").trim();
@@ -88,6 +95,8 @@ export async function answerArenaQuestion(questionId: string, _prev: ArenaFormSt
   const me = await requireCommunityAccess();
   const role = await arenaRoleFor(me);
   if (role !== "mentor" && role !== "admin") return { error: "רק מנטוריות עונות בזירה." };
+  const closed = await closedError();
+  if (closed) return closed;
   const body = sanitizeArenaHtml(String(formData.get("body") ?? "").slice(0, 400000));
   if (!body) return { error: "כתבי תשובה." };
 
@@ -117,6 +126,8 @@ export async function replyFollowUp(questionId: string, _prev: ArenaFormState, f
   const me = await requireCommunityAccess();
   const body = sanitizeArenaHtml(String(formData.get("body") ?? "").slice(0, 400000));
   if (!body) return { error: "כתבי את שאלת ההמשך." };
+  const closed = await closedError();
+  if (closed) return closed;
   const admin = createAdminClient();
   const { data: q } = await admin.from("arena_questions").select("id, author_id, title, status").eq("id", questionId).maybeSingle();
   if (!q) return { error: "השאלה לא נמצאה." };
@@ -139,6 +150,8 @@ export async function replyFollowUp(questionId: string, _prev: ArenaFormState, f
 /** "עזר לי ✓" (the owner, 16/10): the mentor earns the bonus, the question closes. */
 export async function markHelpful(answerId: string): Promise<ArenaFormState> {
   const me = await requireCommunityAccess();
+  const closed = await closedError();
+  if (closed) return closed;
   const admin = createAdminClient();
   const { data: a } = await admin.from("arena_answers").select("id, question_id, mentor_id, author_role, helpful_at").eq("id", answerId).maybeSingle();
   if (!a || a.author_role !== "mentor") return { error: "התשובה לא נמצאה." };
@@ -165,6 +178,8 @@ export async function nudgeQuestion(questionId: string): Promise<ArenaFormState>
   if (!q) return { error: "השאלה לא נמצאה." };
   if (q.author_id !== me.id && me.role !== "admin") return { error: "רק מי ששאלה יכולה לדחוף." };
   if (q.status !== "open") return { error: "השאלה כבר נענתה." };
+  const closed = await closedError();
+  if (closed) return closed;
   const dayMs = NUDGE_AFTER_HOURS * 3600 * 1000;
   if (Date.now() - new Date(q.created_at).getTime() < dayMs) return { error: `אפשר לדחוף אחרי ${NUDGE_AFTER_HOURS} שעות בלי תשובה.` };
   if (q.nudged_at && Date.now() - new Date(q.nudged_at).getTime() < dayMs) return { error: "כבר דחפת היום - המנטוריות קיבלו." };
@@ -202,6 +217,8 @@ export async function setPresence(on: boolean): Promise<ArenaFormState> {
   const me = await requireCommunityAccess();
   const role = await arenaRoleFor(me);
   if (role !== "mentor" && role !== "admin") return { error: "רק מנטוריות מסמנות נוכחות." };
+  const closed = await closedError();
+  if (closed) return closed;
   const admin = createAdminClient();
   if (on) {
     const until = new Date(Date.now() + PRESENCE_HOURS * 3600 * 1000).toISOString();

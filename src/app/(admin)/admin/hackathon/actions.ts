@@ -236,6 +236,7 @@ export async function setFeedbackPublished(on: boolean): Promise<{ error?: strin
 export async function pushArenaToMentors(): Promise<{ error?: string; info?: string }> {
   await requireRole("admin");
   const r = await runArenaDigest({ everyone: true });
+  if (r.closed) return { info: "הזירה סגורה עם ההגשות - לא נשלח כלום. פתיחת ההגשות מחדש פותחת גם את הזירה." };
   if (r.open === 0) return { info: "אין שאלות פתוחות לדחוף." };
   return { info: `נשלח ל-${r.sent} מנטוריות${r.skipped ? ` · ${r.skipped} נחסמו (מגן סטייג'ינג)` : ""}${r.failed ? ` · ${r.failed} נכשלו` : ""}` };
 }

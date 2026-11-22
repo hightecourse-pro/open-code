@@ -12,7 +12,7 @@ import { PresenceHeartbeat } from "@/components/patterns/presence-heartbeat";
 import { ViewerMarker } from "@/components/patterns/stale-while-revalidate";
 import { RouteFallback } from "@/components/patterns/route-fallback";
 import { Suspense } from "react";
-import { arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
+import { arenaClosure, arenaRoleFor, countOpenArenaQuestions } from "@/lib/arena";
 import { judgeAccessFor } from "@/lib/judging";
 import { COURSE_KEY } from "@/lib/course-registration";
 import { isSubscriber, requireCommunityAccess } from "@/lib/auth";
@@ -139,7 +139,8 @@ export default async function AuthenticatedLayout({
   // זירת המנטוריות (the owner, 15/10): the item shows only to those who may
   // enter; mentors and the team see how many questions are open.
   const arenaRole = await arenaRoleFor(profile);
-  const arenaOpen = arenaRole && arenaRole !== "participant" ? await countOpenArenaQuestions() : 0;
+  // Once the submissions are closed the arena is read-only (22.11) - no badge.
+  const arenaOpen = arenaRole && arenaRole !== "participant" && !(await arenaClosure()).closed ? await countOpenArenaQuestions() : 0;
   // שיפוט ההאקתון (16/10, 23/10): the team, and the judges it appointed per challenge.
   const judge = (await judgeAccessFor(profile)).judge;
   // The course popup (the floating card 15/10, the round popup 17/11): job-seeking members who have not

@@ -4,6 +4,7 @@ import { inChunks } from "@/lib/chunk";
 import { loadHackathonRegistrantIds } from "@/lib/hackathon";
 import { CHALLENGES } from "@/app/hackathon-2026/shared";
 import { mentorScores } from "@/lib/mentor-score";
+import { getSubmissionsClosure } from "@/lib/hackathon-submission";
 import { ARENA_AI_VALUES, ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS, NUDGE_AFTER_HOURS, type ArenaRole, type ArenaStatus } from "@/lib/arena-shared";
 
 /**
@@ -265,7 +266,21 @@ export async function arenaLeaderboard(limit = 5): Promise<ArenaLeader[]> {
     .slice(0, limit);
 }
 
+/**
+ * The arena lives as long as the hackathon does (the owner, 22.11: ״למה
+ * המנטוריות עדיין מקבלות את המייל הזה אם ההאקתון נגמר״): once the team
+ * presses ״סגירת ההגשות״ the board turns read-only and no digest goes out.
+ * Reopening the submissions reopens the arena.
+ */
+export async function arenaClosure(): Promise<{ closed: boolean; closedAt: string | null }> {
+  const { closedAt } = await getSubmissionsClosure();
+  return { closed: !!closedAt, closedAt };
+}
+
 export interface ArenaOverview {
+  /** The arena follows ״סגירת ההגשות״ (22.11). */
+  arenaClosed: boolean;
+  arenaClosedAt: string | null;
   open: number;
   stale: number;
   answered: number;
@@ -281,11 +296,12 @@ export interface ArenaOverview {
 /** The team's view of how the arena is doing (admin section). */
 export async function arenaOverview(): Promise<ArenaOverview> {
   const admin = createAdminClient();
-  const [{ data: qs }, { data: firsts }, mentors, { data: helpfulRows }] = await Promise.all([
+  const [{ data: qs }, { data: firsts }, mentors, { data: helpfulRows }, closure] = await Promise.all([
     admin.from("arena_questions").select("id, status, created_at").limit(5000),
     admin.from("arena_answers").select("question_id, mentor_id, created_at").eq("author_role", "mentor").order("created_at", { ascending: true }).limit(20000),
     loadArenaMentors(),
     admin.from("arena_answers").select("id", { count: "exact", head: true }).not("helpful_at", "is", null),
+    arenaClosure(),
   ]);
   const staleEdge = Date.now() - NUDGE_AFTER_HOURS * 3600 * 1000;
   const createdOf = new Map((qs ?? []).map((q) => [q.id, new Date(q.created_at).getTime()]));
@@ -308,6 +324,8 @@ export async function arenaOverview(): Promise<ArenaOverview> {
     presentNow: mentors.filter((m) => m.present).length,
     mentorsTotal: mentors.length,
     neverAnswered: mentors.filter((m) => !answeredBy.has(m.id)).map((m) => ({ id: m.id, name: m.name })),
+    arenaClosed: closure.closed,
+    arenaClosedAt: closure.closedAt,
     helpfulTotal: helpfulCount ?? 0,
   };
 }

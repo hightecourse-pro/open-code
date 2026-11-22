@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { CalendarDays, Trophy } from "lucide-react";
+import { CalendarDays, Lock, Trophy } from "lucide-react";
 import { Avatar } from "@/components/ui";
 import { requireCommunityAccess } from "@/lib/auth";
-import { arenaLeaderboard, arenaRoleFor, loadArenaMentors, loadArenaQuestions, mentorArenaStats } from "@/lib/arena";
+import { arenaClosure, arenaLeaderboard, arenaRoleFor, loadArenaMentors, loadArenaQuestions, mentorArenaStats } from "@/lib/arena";
 import { ARENA_ANSWER_POINTS, ARENA_HELPFUL_POINTS } from "@/lib/arena-shared";
 import { loadMyRegistration, registrableChallenges } from "@/lib/hackathon";
 import { CHALLENGES, H26Style, HackathonLogo, Squiggle } from "@/app/hackathon-2026/shared";
@@ -15,16 +15,20 @@ import { PresenceToggle } from "./presence-toggle";
 export const metadata: Metadata = { title: "זירת המנטוריות" };
 export const dynamic = "force-dynamic";
 
+const WHEN = new Intl.DateTimeFormat("he-IL", { day: "numeric", month: "numeric", timeZone: "Asia/Jerusalem" });
+
 /**
  * זירת המנטוריות (the owner, 15/10 + 16/10): hackathon registrants ask - a
  * random mentor (present ones first), a random mentor who knows AI, or a
  * chosen one; every mentor sees every question, answers, earns points - and
  * a bonus when the asker marks "עזר לי". Dressed in the hackathon's own
- * elements.
+ * elements. Once ״סגירת ההגשות״ was pressed (22.11) the arena is read-only:
+ * no new questions, answers, nudges, presence - and no digest mails.
  */
 export default async function ArenaPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   const profile = await requireCommunityAccess();
   const role = await arenaRoleFor(profile);
+  const closure = await arenaClosure();
   const { q: focusId } = await searchParams;
   const challenges = registrableChallenges();
 
@@ -63,11 +67,23 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
       <H26Style />
       <Header
         subtitle={
-          isMentorSide
-            ? "כל השאלות של כל הצוותים בהאקתון, במקום אחד. אף שאלה לא ממוענת - מי שיכולה, עונה. תשובה ראשונה = נקודות, ועוד בונוס כשהיא עזרה."
-            : "השאלה מגיעה לכל המנטוריות בזירה, ומי שיכולה עונה. התשובה מגיעה גם למייל."
+          closure.closed
+            ? "ההאקתון הסתיים והזירה נסגרה. השאלות והתשובות נשארות כאן לקריאה."
+            : isMentorSide
+              ? "כל השאלות של כל הצוותים בהאקתון, במקום אחד. אף שאלה לא ממוענת - מי שיכולה, עונה. תשובה ראשונה = נקודות, ועוד בונוס כשהיא עזרה."
+              : "השאלה מגיעה לכל המנטוריות בזירה, ומי שיכולה עונה. התשובה מגיעה גם למייל."
         }
       />
+
+      {closure.closed && (
+        <section className="rounded-[18px] border border-ink-300 bg-ink-50 px-5 py-3.5 flex items-center gap-3 flex-wrap text-[13.5px] text-ink-900" data-testid="arena-closed">
+          <Lock size={17} className="text-ink-700 shrink-0" />
+          <span>
+            <b>הזירה נסגרה עם סיום ההאקתון</b>
+            {closure.closedAt ? ` (${WHEN.format(new Date(closure.closedAt))})` : ""}. אין שאלות חדשות, תשובות או מיילים - הכל נשאר לקריאה.
+          </span>
+        </section>
+      )}
 
       {/* ── the hackathon strip ── */}
       <section className="bg-white border border-ink-200 rounded-[18px] px-5 py-3 shadow-sm flex items-center gap-x-5 gap-y-2 flex-wrap">
@@ -113,7 +129,7 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
           </div>
           <div className="relative mt-4 flex flex-wrap items-center gap-2 text-[13px]">
             <span className="rounded-full bg-white/20 px-3 py-1 font-semibold">{open} שאלות פתוחות</span>
-            {role === "mentor" && <PresenceToggle present={!!me?.present} until={me?.presentUntil ?? null} />}
+            {role === "mentor" && !closure.closed && <PresenceToggle present={!!me?.present} until={me?.presentUntil ?? null} />}
             {leaders.length > 0 && (
               <span className="ms-auto flex items-center gap-2 flex-wrap">
                 <Trophy size={14} className="text-white/90" />
@@ -144,16 +160,20 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
           <div className="relative font-display font-black text-[19px] leading-snug">
             {myChallenge ? (
               <>
-                את באתגר <span className="underline decoration-white/60 underline-offset-4">{myChallenge.short}</span> {myChallenge.emoji} · המנטוריות כאן בשבילך
+                את באתגר <span className="underline decoration-white/60 underline-offset-4">{myChallenge.short}</span> {myChallenge.emoji} · {closure.closed ? "השאלות והתשובות לקריאה" : "המנטוריות כאן בשבילך"}
               </>
             ) : (
-              <>האקתון AI קוד פתוח 2026 · המנטוריות כאן בשבילך 🏆</>
+              <>האקתון AI קוד פתוח 2026 · {closure.closed ? "השאלות והתשובות לקריאה" : "המנטוריות כאן בשבילך"} 🏆</>
             )}
           </div>
           <div className="relative flex items-center gap-2 flex-wrap ms-auto text-[13px]">
-            {presentNow > 0 && <span className="bg-white text-success px-3 py-1 rounded-full font-bold">🟢 {presentNow} כאן עכשיו</span>}
-            <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available).length} מנטוריות זמינות</span>
-            <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available && m.ai).length} מבינות ב-AI 🤖</span>
+            {!closure.closed && presentNow > 0 && <span className="bg-white text-success px-3 py-1 rounded-full font-bold">🟢 {presentNow} כאן עכשיו</span>}
+            {!closure.closed && (
+              <>
+                <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available).length} מנטוריות זמינות</span>
+                <span className="bg-white/15 border border-white/30 px-3 py-1 rounded-full font-bold">{mentors.filter((m) => m.available && m.ai).length} מבינות ב-AI 🤖</span>
+              </>
+            )}
             {myChallenge && (
               <Link href={`/hackathon/${myChallenge.key}`} className="bg-white text-brand-purple px-3 py-1 rounded-full font-display font-bold hover:bg-tint-purple">
                 לדף האתגר ←
@@ -163,9 +183,9 @@ export default async function ArenaPage({ searchParams }: { searchParams: Promis
         </section>
       )}
 
-      {!isMentorSide && <AskForm mentors={mentors.filter((m) => m.available)} />}
+      {!isMentorSide && !closure.closed && <AskForm mentors={mentors.filter((m) => m.available)} />}
 
-      <ArenaBoard questions={questions} viewerId={profile.id} role={role} focusId={focusId ?? null} />
+      <ArenaBoard questions={questions} viewerId={profile.id} role={role} focusId={focusId ?? null} closed={closure.closed} />
     </div>
   );
 }
