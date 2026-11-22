@@ -289,6 +289,8 @@ export interface CourseUpdateInput {
   laptopRequired: boolean;
   /** the course text the owner dictated - paragraphs, the first one bold */
   lines: string[];
+  /** a list box before the laptop line (Salesforce: accounts and the practice org) */
+  before: { title: string; items: InstallItem[]; note?: string } | null;
   /** the course's installation list (its own, or the INSTALL_LISTS fallback); an item may link to its download */
   installs: { title: string; items: InstallItem[]; note?: string } | null;
   /** paragraphs after the laptop / installation / rental block */
@@ -343,19 +345,23 @@ export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; 
   const linesSayPairs = [...i.lines, ...i.after].some((l) => l.includes("בזוגות"));
   const small = (html: string) => `<div style="font-size:14.5px; line-height:1.65; color:${H.ink};">${html}</div>`;
 
+  /* a titled list in a yellow box; a linked item shows ״(הורדה)״ when it is a download, a plain link otherwise */
+  const listBox = (list: { title: string; items: InstallItem[]; note?: string }, download: boolean) =>
+    box(
+      `<div style="font-size:15px; font-weight:700; color:${H.navy}; margin-bottom:4px;">${esc(list.title)}</div>
+       <ul style="margin:0; padding:0 20px 0 0; font-size:15px; line-height:1.75; font-weight:700; color:${H.ink};">${list.items.map((x) => `<li>${typeof x === "string" ? esc(x) : `<a href="${esc(x.href)}" style="color:${H.navy}; font-weight:700;">${esc(x.label)}</a>${download ? ` <span style="font-weight:400; font-size:13px; color:${H.muted};">(הורדה)</span>` : ""}`}</li>`).join("")}</ul>
+       ${list.note ? `<div style="font-size:14px; line-height:1.6; color:${H.ink}; margin-top:6px;">${esc(list.note)}</div>` : ""}`,
+      "yellow"
+    );
+
   /* 1. what the course needs */
   let need = i.lines.map((l, idx) => p(idx === 0 ? `<b>${esc(l)}</b>` : esc(l), " margin-bottom:8px;")).join("");
+  if (i.before) need += listBox(i.before, false);
   if (laptop) {
     const fallback = installListFor(i.course);
     const install = i.installs ?? (fallback ? { title: INSTALL_TITLE, items: fallback } : null);
     need += p(`<b>בקורס הזה נדרש להביא מחשב נייד.</b> ${esc(UPDATE_TEXT.network)}`, " margin-bottom:8px;");
-    if (install)
-      need += box(
-        `<div style="font-size:15px; font-weight:700; color:${H.navy}; margin-bottom:4px;">${esc(install.title)}</div>
-         <ul style="margin:0; padding:0 20px 0 0; font-size:15px; line-height:1.75; font-weight:700; color:${H.ink};">${install.items.map((x) => `<li>${typeof x === "string" ? esc(x) : `<a href="${esc(x.href)}" style="color:${H.navy}; font-weight:700;">${esc(x.label)}</a> <span style="font-weight:400; font-size:13px; color:${H.muted};">(הורדה)</span>`}</li>`).join("")}</ul>
-         ${install.note ? `<div style="font-size:14px; line-height:1.6; color:${H.ink}; margin-top:6px;">${esc(install.note)}</div>` : ""}`,
-        "yellow"
-      );
+    if (install) need += listBox(install, true);
     if (yes(i.laptopRental)) {
       need += p(`הזמנת מחשב מהשכרה - הוא ימתין לך בעמדת השכרת המחשבים.`, " margin-bottom:6px;");
       need += redLine(esc(UPDATE_TEXT.rentalNoInstalls));

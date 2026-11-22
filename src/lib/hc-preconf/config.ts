@@ -135,6 +135,8 @@ export interface CourseUpdate {
   course: string;
   /** paragraphs at the top of ״מה צריך לקורס״ - the first one bold */
   lines: string[];
+  /** a list in a yellow box BEFORE the laptop line (Salesforce: the accounts and the practice org) */
+  before?: { title: string; items: InstallItem[]; note?: string };
   /** a list in a yellow box under the laptop line (a course without one falls back to INSTALL_LISTS, if it has an entry there) */
   installs?: { title: string; items: InstallItem[]; note?: string };
   /** paragraphs after the laptop / installation / rental block */
@@ -247,6 +249,27 @@ export const COURSE_UPDATES: CourseUpdate[] = [
     lines: [],
     installs: { title: "רשימת ההתקנות הנדרשת על המחשב:", items: ["Git", "Docker Desktop"] },
     after: ["בקורס זה אין צורך בכלי AI - המרצה מספק מה שצריך."],
+    noAiTools: true,
+  },
+  {
+    // the owner, 22/11 ~17:15: the lecturer's preparation text (Trailhead, a Developer Edition org with Agentforce and Data 360,
+    // VS Code / Salesforce CLI / Extension Pack / Git, or the browser IDE), ״אין צורך בכלי AI בתשלום. תסיר גם מהטופס״
+    course: "יישום ופיתוח Salesforce בעידן ה־AI",
+    lines: ["לקראת הקורס, שבו נעסוק ב-Vibe Coding ובבניית סוכנים באמצעות Agentforce - נא להשלים את ההכנות הבאות לפני תחילת הקורס."],
+    before: {
+      title: "חשבונות וסביבת תרגול:",
+      items: [
+        { label: "הירשמי או התחברי ל-Trailhead", href: "https://trailhead.salesforce.com/" },
+        "פתחי סביבת תרגול חינמית של Salesforce Developer Edition עם Agentforce ו-Data 360.",
+        "ודאי שאת מצליחה להתחבר לסביבה. אם קיבלת פרטי גישה לארגון תרגול אחר - השתמשי בהם במקום לפתוח סביבה חדשה.",
+      ],
+    },
+    installs: {
+      title: "התקנות למחשב, לתרגול מקומי:",
+      items: ["Visual Studio Code", "Salesforce CLI", "Salesforce Extension Pack", "Git"],
+      note: "אם נעבוד בכיתה ב-Agentforce Vibes IDE בדפדפן - לא תידרש התקנה מקומית, אלא גישה לארגון שבו סביבת ה-IDE הופעלה. נעדכן לפני הקורס באיזה מסלול נעבוד.",
+    },
+    after: ["אין צורך בכלי AI בתשלום.", "נא להשלים את ההכנות מראש, כדי שנוכל להקדיש את זמן הקורס לתרגול עצמו. נתקלת בבעיה בהתקנה או בהתחברות? כתבי לנו לפני הקורס - פשוט השיבי למייל הזה."],
     noAiTools: true,
   },
 ];
