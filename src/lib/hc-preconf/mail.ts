@@ -1,4 +1,4 @@
-import { CONF, INSTALL_TITLE, installListFor, kindNeedsLaptop, type PrepKind } from "./config";
+import { CONF, INSTALL_TITLE, UPDATE_TEXT, courseUpdateSubject, installListFor, kindNeedsLaptop, personalAreaOpenAt, type PrepKind } from "./config";
 
 /*
   ״הייטקורס 2026 - מידע חשוב לפני הכנס״ - the pre-conference letter, built per
@@ -278,4 +278,157 @@ export function buildPrepMail(i: PrepMailInput): { subject: string; html: string
 </div>
 </body></html>`;
   return { subject: CONF.subject, html: withFont(html) };
+}
+
+/* ---- the per-course update (the owner, 22/11: ״צריך לשלוח לכל קורס עדכון על הכלים הנדרשים לקורס״) ---- */
+
+export interface CourseUpdateInput {
+  firstName: string;
+  course: string;
+  kind: PrepKind;
+  laptopRequired: boolean;
+  /** the course text the owner dictated - paragraphs, the first one bold */
+  lines: string[];
+  laptopOwn: string;
+  laptopRental: string;
+  laptopRentalPaid: string;
+  /** she filled our questionnaire */
+  answered: boolean;
+  answerLaptop: "yes" | "no" | undefined;
+  /** she ticked ״אין לי כלי AI עם רישיון״ */
+  noTools: boolean;
+  /** ״עדכון״ = כן in the sheet */
+  updatedPersonal: boolean;
+  /** what she chose in the sheet but has not paid for - labels (״הלינה במלון״, ״השמרטפיה בערב״…) */
+  unpaid: string[];
+  formUrl: string;
+  siteUrl: string;
+  /** when the mail is built - decides whether the personal area is still open */
+  now?: Date;
+}
+
+const joinHe = (xs: string[]) => (xs.length <= 1 ? xs.join("") : `${xs.slice(0, -1).join(", ")} ו${xs[xs.length - 1]}`);
+
+/**
+ * ״הכלים הנדרשים לקורס״: the course's text, the laptop block for laptop courses with her rental state, the
+ * questionnaire for whoever has not filled it (״כדי שנוכל להתארגן על הנדרש לקורס נא למלא בהקדם את הטופס הזה״),
+ * the pairs note, the hotel sentence (״אנחנו מעבירות היום את שיבוץ החדרים למלון״) and the closing of the personal
+ * area, with a clear referral for whoever has not updated or paid there. Arial, weight ≤ 700, tables and inline styles.
+ */
+export function buildCourseUpdateMail(i: CourseUpdateInput): { subject: string; html: string } {
+  const now = i.now ?? new Date();
+  const open = personalAreaOpenAt(now);
+  const logo = `${i.siteUrl}/ai-course/hightecourse.png`;
+  const first = esc(i.firstName || "");
+  const laptop = i.kind !== "unknown" && (i.laptopRequired || kindNeedsLaptop(i.kind));
+  const linesSayPairs = i.lines.some((l) => l.includes("בזוגות"));
+
+  const courseText = i.lines.map((l, idx) => p(idx === 0 ? `<b>${esc(l)}</b>` : esc(l), idx === 0 ? ` font-size:16.5px; color:${H.ink};` : "")).join("");
+
+  let laptopBlock = "";
+  if (laptop) {
+    const install = installListFor(i.course);
+    const installBox = install
+      ? box(
+          `<div style="font-size:16px; font-weight:700; color:${H.navy}; margin-bottom:4px;">${INSTALL_TITLE}</div>
+           <ul style="margin:0; padding:0 22px 0 0; font-size:15.5px; line-height:1.8; font-weight:700; color:${H.ink};">${install.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`,
+          "yellow"
+        )
+      : "";
+    let rental = "";
+    if (yes(i.laptopRental)) {
+      rental = p(`<b>הזמנת מחשב מהשכרה</b> - הוא ימתין לך בעמדת השכרת המחשבים.`);
+      if (no(i.laptopRentalPaid)) rental += redLine("יש להסדיר את התשלום עבור השכרת המחשב.");
+    } else if (i.answerLaptop === "no") {
+      rental = open
+        ? redLine(`סימנת בשאלון שאת מגיעה בלי מחשב, ולא הזמנת מחשב להשכרה. עדיין אפשר להזמין ב<a href="${CONF.site}" style="color:${H.red};">אזור האישי</a> (${CONF.laptopRentalNis} ש״ח לשעות הקורס) - עד ${CONF.personalAreaCloseShort}.`)
+        : redLine(`סימנת בשאלון שאת מגיעה בלי מחשב, ולא הזמנת מחשב להשכרה. ההשכרה נסגרה - לשאלות פני ל${CONF.logistics.name}: <a href="mailto:${CONF.logistics.mail}" style="color:${H.red};" dir="ltr">${CONF.logistics.mail}</a>.`);
+    } else if (!yes(i.laptopOwn) && !i.answered && open) {
+      rental = p(`<b>אין לך מחשב נייד?</b> אפשר להשכיר מחשב ב<a href="${CONF.site}" style="color:${H.navy}; font-weight:700;">אזור האישי</a> במחיר של <b>${CONF.laptopRentalNis} ש״ח</b> לשעות הקורס - עד <b>${CONF.personalAreaCloseShort}</b>.`);
+    }
+    laptopBlock = `${box(
+      `<div style="font-size:16.5px; font-weight:700; color:#ffffff;">בקורס הזה נדרש להביא מחשב נייד</div>`,
+      "navy"
+    )}${installBox}${rental}`;
+  }
+
+  const formBox = !i.answered
+    ? box(
+        `<div style="font-size:16px; font-weight:700; color:${H.red}; margin-bottom:10px;">${esc(UPDATE_TEXT.fillForm)}</div>
+         <div style="margin:0 0 12px;">${button(i.formUrl, "לטופס - דקה אחת", "navy")}</div>
+         <div style="font-size:14.5px; line-height:1.65; color:${H.ink};">${esc(UPDATE_TEXT.pairs)}</div>`,
+        "red"
+      )
+    : i.noTools && !linesSayPairs
+      ? box(`<div style="font-size:14.5px; line-height:1.65; color:${H.ink};">${esc(UPDATE_TEXT.pairs)}</div>`, "yellow")
+      : "";
+
+  const closingBox = box(
+    open
+      ? `<div style="font-size:16px; font-weight:700; color:${H.navy}; margin-bottom:6px;">${esc(UPDATE_TEXT.hotelToday)}</div>
+         <div style="font-size:15px; line-height:1.65; color:${H.ink};">האזור האישי באתר נסגר לעדכון לינה, שמרטפיה והשכרת מחשב <b>${CONF.personalAreaClose}</b>.</div>`
+      : `<div style="font-size:16px; font-weight:700; color:${H.navy}; margin-bottom:6px;">${esc(UPDATE_TEXT.hotelDone)}</div>
+         <div style="font-size:15px; line-height:1.65; color:${H.ink};">האזור האישי באתר סגור לעדכון לינה, שמרטפיה והשכרת מחשב.</div>`,
+    "yellow"
+  );
+
+  const needsPersonal = !i.updatedPersonal || i.unpaid.length > 0;
+  const personalBox = needsPersonal
+    ? box(
+        `<div style="font-size:16px; font-weight:700; color:${H.red}; margin-bottom:6px;">לפי הרישום אצלנו:</div>
+         <ul style="margin:0 0 12px; padding:0 20px 0 0; font-size:15px; line-height:1.7; color:${H.ink};">
+           ${!i.updatedPersonal ? `<li>הפרטים שלך <b>באזור האישי עדיין לא עודכנו</b>.</li>` : ""}
+           ${i.unpaid.length ? `<li>התשלום עבור <b>${esc(joinHe(i.unpaid))}</b> עדיין לא הוסדר.</li>` : ""}
+         </ul>
+         <div style="font-size:14.5px; line-height:1.65; color:${H.ink}; margin-bottom:12px;">${
+           open
+             ? `היכנסי עכשיו לאזור האישי ואשרי, עדכני והסדירי - <b>עד ${CONF.personalAreaCloseShort}</b>.`
+             : `לתשלום - האזור האישי. שינוי בלינה או בשמרטפיה כבר לא אפשרי; לשאלות - ${CONF.logistics.name}: <a href="mailto:${CONF.logistics.mail}" style="color:${H.navy}; font-weight:700;" dir="ltr">${CONF.logistics.mail}</a>.`
+         }</div>
+         ${button(CONF.site, "לאזור האישי באתר הייטקורס", "navy")}`,
+        "red"
+      )
+    : p(`הפרטים שלך באזור האישי מעודכנים והתשלומים הוסדרו - תודה.`);
+
+  const subject = courseUpdateSubject(i.course);
+  const html = `<!DOCTYPE html>
+<html dir="rtl" lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(subject)}</title></head>
+<body style="margin:0; padding:0; background:${H.bg};">
+<div dir="rtl" style="background:${H.bg}; padding:28px 12px; color:${H.ink}; text-align:right;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:620px; margin:0 auto; background:#ffffff; border-radius:20px; overflow:hidden; border:1px solid ${H.line};">
+    <tr><td style="padding:22px 24px 16px; text-align:center;"><img src="${logo}" alt="הייטקורס - לחשוב בגדול" width="190" style="display:inline-block; width:190px; height:auto; border:0;" /></td></tr>
+    <tr><td style="height:4px; background:${H.yellow}; font-size:0; line-height:0;">&nbsp;</td></tr>
+    <tr><td style="background:${H.navy}; padding:22px 24px 24px; text-align:center;">
+      <div style="font-size:13px; font-weight:700; color:${H.yellow}; margin-bottom:6px;">עדכון לקראת הקורס שלך</div>
+      <div style="font-size:30px; line-height:1.15; font-weight:700; color:#ffffff;">${CONF.title}</div>
+      <div style="display:inline-block; margin-top:14px; background:${H.yellow}; color:${H.navy}; font-weight:700; font-size:14.5px; padding:8px 18px; border-radius:999px;">${CONF.hebrewDates} &nbsp;|&nbsp; ${CONF.dates}</div>
+      <div style="margin-top:10px; font-size:13.5px; color:#C9D9E6;">${CONF.venue}</div>
+    </td></tr>
+
+    <tr><td style="padding:26px 28px 6px;">
+      <h1 style="margin:0 0 12px; font-size:24px; line-height:1.3; font-weight:700; color:${H.navy};">שלום ${first},</h1>
+      ${p(`עדכון קצר לפני שנפגשות: מה צריך לקורס שלך, <b>${esc(i.course)}</b>, וסגירת העדכונים באזור האישי.`)}
+    </td></tr>
+
+    ${section(`${h2("מה צריך לקורס")}
+      ${courseText}
+      ${laptopBlock}
+      ${formBox}`)}
+
+    ${section(`${h2("לינה, שמרטפיה והשכרת מחשב")}
+      ${closingBox}
+      ${personalBox}`)}
+
+    ${section(`${box(
+      `<div style="font-size:15.5px; font-weight:700; color:${H.navy}; margin-bottom:6px;">יש שאלה?</div>
+       <div style="font-size:14.5px; line-height:1.7; color:${H.ink};">אפשר פשוט להשיב למייל הזה - התשובות מגיעות ל-<a href="mailto:${CONF.replyTo}" style="color:${H.navy}; font-weight:700;" dir="ltr">${CONF.replyTo}</a>.<br>
+       <b>שאלות טכניות בענייני לינה, שמרטפיה וכדומה</b> - ל${CONF.logistics.name}: <a href="mailto:${CONF.logistics.mail}" style="color:${H.navy}; font-weight:700;" dir="ltr">${CONF.logistics.mail}</a></div>`,
+      "blue"
+    )}
+      <p style="margin:6px 0 16px; font-size:16px; line-height:1.7; color:${H.ink};"><b>מחכות לך!</b><br>שרה, תמר, תהילה, יהודית<br>וכל צוות הייטקורס</p>`)}
+  </table>
+  <div style="text-align:center; color:${H.muted}; font-size:12px; margin-top:16px;">${CONF.title} · ${CONF.hebrewDates} · ${CONF.dates} · ${CONF.venue}</div>
+</div>
+</body></html>`;
+  return { subject, html: withFont(html) };
 }

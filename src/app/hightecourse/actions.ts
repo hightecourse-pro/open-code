@@ -3,7 +3,7 @@
 import { revalidateTag } from "next/cache";
 import { getProfile, hasHcAccess } from "@/lib/auth";
 import { HC_CACHE_TAG } from "./data";
-import { resendPrepMail, runPrepTick, sendPrepSamples, setPrepEnabled, type TickResult } from "@/lib/hc-preconf/data";
+import { resendCourseUpdate, resendPrepMail, runPrepTick, sendCourseUpdateSamples, sendPrepSamples, setCourseUpdateEnabled, setPrepEnabled, type TickResult } from "@/lib/hc-preconf/data";
 
 /** ״רענון מהגיליון״ - drops the cached reads so the next render reads the sheet again. Anyone the system lets in. */
 export async function refreshHcAction(): Promise<{ ok: boolean }> {
@@ -47,4 +47,30 @@ export async function hcPrepResendAction(id: string): Promise<{ ok: boolean; err
   if (!(await mayManage())) return { ok: false, error: "forbidden" };
   if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, error: "bad_id" };
   return resendPrepMail(id);
+}
+
+/* ---- the per-course update mail (the owner, 22/11: ״נתחיל קורס קורס… תשלח לי דוגמא וכשאאשר תשלח לכל הקבוצה״) ---- */
+
+/** The course's switch: on = the tick mails everyone in the course who has not got it, now and later. */
+export async function hcCourseUpdateToggleAction(course: string, enabled: boolean): Promise<{ ok: boolean; error?: string }> {
+  if (!(await mayManage())) return { ok: false, error: "forbidden" };
+  if (typeof course !== "string" || !course.trim()) return { ok: false, error: "bad_course" };
+  return setCourseUpdateEnabled(course.trim(), !!enabled);
+}
+
+/** The course's three variations to one address (hers). */
+export async function hcCourseUpdateSamplesAction(to: string, course: string): Promise<{ ok: boolean; error?: string; results: { n: string; label: string; ok: boolean; error?: string }[] }> {
+  if (!(await mayManage())) return { ok: false, error: "forbidden", results: [] };
+  const addr = (to ?? "").trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(addr)) return { ok: false, error: "כתובת לא תקינה", results: [] };
+  if (typeof course !== "string" || !course.trim()) return { ok: false, error: "bad_course", results: [] };
+  const results = await sendCourseUpdateSamples(addr, course.trim());
+  return { ok: results.every((r) => r.ok), results };
+}
+
+/** One participant's update mail again. */
+export async function hcCourseUpdateResendAction(id: string): Promise<{ ok: boolean; error?: string }> {
+  if (!(await mayManage())) return { ok: false, error: "forbidden" };
+  if (typeof id !== "string" || !/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, error: "bad_id" };
+  return resendCourseUpdate(id);
 }

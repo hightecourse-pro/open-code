@@ -7,8 +7,8 @@ import { getSiteUrl } from "@/lib/site";
 import type { Database, Json } from "@/types/database";
 import { P } from "@/app/hightecourse/config";
 import { hcSheetId } from "@/app/hightecourse/data";
-import { AI_TOOLS, CONF, DEV_TOOLS, KIND_LABEL, LICENSE_LABEL, TOOL_NONE, kindNeedsLaptop, normCourse, prepFormPath, resolveCourse, type PrepAnswers, type PrepKind } from "./config";
-import { buildPrepMail, type PrepMailInput } from "./mail";
+import { AI_TOOLS, CONF, DEV_TOOLS, KIND_LABEL, LICENSE_LABEL, TOOL_NONE, courseUpdateFor, kindNeedsLaptop, normCourse, prepFormPath, resolveCourse, type PrepAnswers, type PrepKind } from "./config";
+import { buildCourseUpdateMail, buildPrepMail, type CourseUpdateInput, type PrepMailInput } from "./mail";
 
 /*
   The server side of the pre-conference mail (the owner, 19/11): the frontal
@@ -23,9 +23,12 @@ import { buildPrepMail, type PrepMailInput } from "./mail";
 export type PrepRow = Database["public"]["Tables"]["hc_preconf_participants"]["Row"];
 type PrepInsert = Database["public"]["Tables"]["hc_preconf_participants"]["Insert"];
 export type PrepSettings = Database["public"]["Tables"]["hc_preconf_settings"]["Row"];
+/** One switch per course for the update mail (the owner, 22/11). */
+export type CourseUpdateRow = Database["public"]["Tables"]["hc_preconf_course_updates"]["Row"];
 
 const T = "hc_preconf_participants";
 const S = "hc_preconf_settings";
+const CU = "hc_preconf_course_updates";
 export const MIRROR_TAB = "שאלון הכנה 2026";
 /** The earlier Google Form (״בחירת קורס פיתוח AI״) whose answers prefill ours. */
 const PREFILL_SHEET = () => process.env.HC_PRECONF_PREFILL_SHEET_ID || "1ucaaDcZP9a-_r3MpoazwUCj_xJqQjVkOLGW4OmTBEyE";
@@ -293,6 +296,48 @@ export function mailInputOf(row: PrepRow): PrepMailInput {
 
 export const mailOf = (row: PrepRow) => buildPrepMail(mailInputOf(row));
 
+/* ---- the per-course update mail (the owner, 22/11: ״צריך לשלוח לכל קורס עדכון על הכלים הנדרשים לקורס״) ---- */
+
+const UNPAID: [keyof PrepRow, keyof PrepRow, string][] = [
+  ["lodging", "lodging_paid", "הלינה במלון"],
+  ["private_room", "private_room_paid", "החדר הפרטי"],
+  ["baby_lodging", "baby_lodging_paid", "לינת התינוק"],
+  ["sitter_morning", "sitter_morning_paid", "השמרטפיה בבוקר"],
+  ["sitter_evening", "sitter_evening_paid", "השמרטפיה בערב"],
+  ["laptop_rental", "laptop_rental_paid", "השכרת המחשב"],
+];
+/** What she chose in the sheet (כן) and whose payment column says לא - as the mail names them. */
+export const unpaidOf = (row: PrepRow): string[] => UNPAID.filter(([a, b]) => yes(row[a] as string | null) && (String(row[b] ?? "")).trim() === "לא").map(([, , label]) => label);
+
+/** The update mail's input for her row - null when her course has no text yet. */
+export function courseUpdateInputOf(row: PrepRow): CourseUpdateInput | null {
+  const text = courseUpdateFor(row.course);
+  if (!text) return null;
+  const a = answersOf(row);
+  return {
+    firstName: row.first_name,
+    course: text.course,
+    kind: row.course_kind as PrepKind,
+    laptopRequired: row.laptop_required,
+    lines: text.lines,
+    laptopOwn: row.laptop_own ?? "",
+    laptopRental: row.laptop_rental ?? "",
+    laptopRentalPaid: row.laptop_rental_paid ?? "",
+    answered: !!row.answered_at,
+    answerLaptop: a.laptop,
+    noTools: (a.tools ?? []).includes(TOOL_NONE),
+    updatedPersonal: row.updated_personal,
+    unpaid: unpaidOf(row),
+    formUrl: `${site()}${prepFormPath(row.token)}`,
+    siteUrl: site(),
+  };
+}
+
+export const courseUpdateMailOf = (row: PrepRow): { subject: string; html: string } | null => {
+  const i = courseUpdateInputOf(row);
+  return i ? buildCourseUpdateMail(i) : null;
+};
+
 /** Both her addresses (the owner: ״לשלוח יחד ל-2 המיילים של המשתתפת״). */
 const recipientsOf = (row: Pick<PrepRow, "email" | "cc_email">): string[] => [row.email, row.cc_email ?? ""].filter((a) => !!a);
 
@@ -317,7 +362,7 @@ export interface SendResult {
 }
 
 /** Everyone free to mail and not yet mailed (an error is retried twice) - one send each, both her addresses, the program attached. */
-export async function sendPending(): Promise<SendResult> {
+export async function sendPending(deadline: number = Date.now() + SEND_BUDGET_MS): Promise<SendResult> {
   const admin = createAdminClient();
   const { data: rows, error } = await admin
     .from(T)
@@ -334,9 +379,8 @@ export async function sendPending(): Promise<SendResult> {
   const result: SendResult = { sent: 0, blocked: 0, errors: 0 };
   if (list.length === 0) return result;
   const attachments = [await programAttachment()];
-  const started = Date.now();
   for (const r of list) {
-    if (Date.now() - started > SEND_BUDGET_MS) break; // the next tick continues
+    if (Date.now() > deadline) break; // the next tick continues
     const m = mailOf(r);
     const o = await sendResendEmail({ to: recipientsOf(r), subject: m.subject, html: m.html, attachments, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
     const status = o.ok ? "sent" : o.error === "blocked_by_allowlist" ? "blocked" : "error";
@@ -354,6 +398,145 @@ export async function sendPending(): Promise<SendResult> {
     await sleep(520); // Resend: 2 requests a second
   }
   return result;
+}
+
+export type CourseSendResult = SendResult & { courses: number };
+
+const updateOutcome = (ok: boolean, error?: string) => (ok ? "sent" : error === "blocked_by_allowlist" ? "blocked" : "error");
+
+/**
+ * The update mail to everyone in a course the owner switched on who has not got it yet (an error is retried twice):
+ * whoever registers later gets it from a later tick (the owner, 22/11: ״כל מייל שכבר נשלח יישלח לכל הרישומים
+ * לקורס זה מאוחר יותר״). Single sends, both her addresses, no attachment.
+ */
+export async function sendCourseUpdatesPending(deadline: number = Date.now() + SEND_BUDGET_MS): Promise<CourseSendResult> {
+  const admin = createAdminClient();
+  const { data: on, error: cuErr } = await admin.from(CU).select("course").eq("enabled", true);
+  if (cuErr) throw new Error(`course updates: ${cuErr.message}`);
+  const courses = (on ?? []).map((c) => c.course).filter((c) => !!courseUpdateFor(c));
+  const result: CourseSendResult = { sent: 0, blocked: 0, errors: 0, courses: courses.length };
+  if (courses.length === 0) return result;
+  const { data: rows, error } = await admin
+    .from(T)
+    .select("*")
+    .eq("is_sample", false)
+    .is("hold_reason", null)
+    .is("removed_at", null)
+    .neq("email", "")
+    .in("course", courses)
+    .or("update_mail_status.is.null,and(update_mail_status.eq.error,update_mail_attempts.lt.3)")
+    .order("sheet_row", { ascending: true })
+    .limit(SEND_LIMIT);
+  if (error) throw new Error(`update send select: ${error.message}`);
+  for (const r of rows ?? []) {
+    if (Date.now() > deadline) break; // the next tick continues
+    const m = courseUpdateMailOf(r);
+    if (!m) continue;
+    const o = await sendResendEmail({ to: recipientsOf(r), subject: m.subject, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+    const status = updateOutcome(o.ok, o.error);
+    if (status === "sent") result.sent++;
+    else if (status === "blocked") result.blocked++;
+    else {
+      result.errors++;
+      result.firstError ??= o.error;
+    }
+    const now = new Date().toISOString();
+    await admin
+      .from(T)
+      .update({ update_mail_status: status, update_mail_sent_at: o.ok ? now : r.update_mail_sent_at, update_mail_error: o.ok ? null : (o.error ?? null), update_mail_attempts: r.update_mail_attempts + 1, updated_at: now })
+      .eq("id", r.id);
+    await sleep(520); // Resend: 2 requests a second
+  }
+  return result;
+}
+
+/** The per-course switches (every course that has a row). */
+export async function loadCourseUpdates(): Promise<CourseUpdateRow[]> {
+  const admin = createAdminClient();
+  const { data } = await admin.from(CU).select("*").order("course", { ascending: true });
+  return data ?? [];
+}
+
+/** The owner approved (or stopped) a course's update mail. Only a course with a text can be switched on. */
+export async function setCourseUpdateEnabled(course: string, enabled: boolean): Promise<{ ok: boolean; error?: string }> {
+  const text = courseUpdateFor(course);
+  if (!text) return { ok: false, error: "no_text" };
+  const admin = createAdminClient();
+  const now = new Date().toISOString();
+  const { error } = await admin.from(CU).upsert({ course: text.course, enabled, enabled_at: enabled ? now : null, updated_at: now }, { onConflict: "course" });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+/** One participant's update mail again (the admin's ״לשלוח שוב את העדכון״). */
+export async function resendCourseUpdate(id: string): Promise<{ ok: boolean; error?: string }> {
+  const admin = createAdminClient();
+  const { data: row } = await admin.from(T).select("*").eq("id", id).maybeSingle();
+  if (!row) return { ok: false, error: "not_found" };
+  if (!row.email) return { ok: false, error: "no_email" };
+  const m = courseUpdateMailOf(row);
+  if (!m) return { ok: false, error: "no_text" };
+  const r = await sendResendEmail({ to: recipientsOf(row), subject: m.subject, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+  const now = new Date().toISOString();
+  await admin
+    .from(T)
+    .update({ update_mail_status: updateOutcome(r.ok, r.error), update_mail_sent_at: r.ok ? now : row.update_mail_sent_at, update_mail_error: r.ok ? null : (r.error ?? "send_failed"), update_mail_attempts: row.update_mail_attempts + 1, updated_at: now })
+    .eq("id", id);
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
+}
+
+/** The update mail's variations for one course (the owner, 22/11: ״תשלח לי דוגמא וכשאאשר תשלח לכל הקבוצה״). */
+const UPDATE_SAMPLES: { n: string; label: string; row: Partial<PrepInsert>; answers: PrepAnswers | null }[] = [
+  { n: "א", label: "לא מילאה את הטופס, לא עדכנה אזור אישי, הלינה לא שולמה", row: { lodging: "כן", lodging_paid: "לא", updated_personal: false }, answers: null },
+  { n: "ב", label: "מילאה: עם מחשב, Gemini מהעבודה; עדכנה, הכול שולם", row: { lodging: "כן", lodging_paid: "כן", laptop_own: "כן", updated_personal: true }, answers: { role: "מנתחת מערכות", laptop: "yes", tools: ["Gemini"], license: "work" } },
+  { n: "ג", label: "מילאה: בלי מחשב ולא השכירה, בלי כלי AI; עדכנה", row: { lodging: "לא", updated_personal: true }, answers: { role: "מנהלת פרויקטים", laptop: "no", tools: [TOOL_NONE] } },
+];
+
+export async function sendCourseUpdateSamples(to: string, course: string): Promise<{ n: string; label: string; ok: boolean; error?: string }[]> {
+  const text = courseUpdateFor(course);
+  if (!text) return UPDATE_SAMPLES.map((x) => ({ n: x.n, label: x.label, ok: false, error: "no_text" }));
+  const admin = createAdminClient();
+  const resolved = resolveCourse(text.course);
+  const out: { n: string; label: string; ok: boolean; error?: string }[] = [];
+  for (const [idx, x] of UPDATE_SAMPLES.entries()) {
+    const now = new Date().toISOString();
+    const base: PrepInsert = {
+      source_key: `usample:${idx + 1}`,
+      is_sample: true,
+      email: to.trim().toLowerCase(),
+      first_name: "דוגמה",
+      last_name: x.n,
+      id_number: "123456789",
+      course_raw: text.course,
+      course: resolved.course,
+      course_kind: resolved.kind,
+      laptop_required: kindNeedsLaptop(resolved.kind),
+      track: x.row.lodging === "כן" ? "פרונטלי כולל לינה" : "פרונטלי ללא לינה",
+      role_sheet: "מנתחת מערכות",
+      office_sheet: "משרד לדוגמה",
+      answers: (x.answers as unknown as Json) ?? null,
+      answered_at: x.answers ? now : null,
+      updated_at: now,
+      ...x.row,
+    };
+    const { data: row, error } = await admin.from(T).upsert(base, { onConflict: "source_key" }).select("*").maybeSingle();
+    if (error || !row) {
+      out.push({ n: x.n, label: x.label, ok: false, error: error?.message ?? "upsert" });
+      continue;
+    }
+    const m = courseUpdateMailOf(row);
+    if (!m) {
+      out.push({ n: x.n, label: x.label, ok: false, error: "no_text" });
+      continue;
+    }
+    const r = await sendResendEmail({ to: row.email, subject: `[דוגמה ${x.n}: ${x.label}] ${m.subject}`, html: m.html, essential: true, fromName: CONF.fromName, replyTo: CONF.replyTo });
+    await sleep(520);
+    await admin
+      .from(T)
+      .update({ update_mail_status: updateOutcome(r.ok, r.error), update_mail_sent_at: r.ok ? new Date().toISOString() : null, update_mail_error: r.ok ? null : (r.error ?? null), update_mail_attempts: row.update_mail_attempts + 1 })
+      .eq("id", row.id);
+    out.push({ n: x.n, label: x.label, ok: r.ok, error: r.error });
+  }
+  return out;
 }
 
 /** One participant again (the admin's ״לשלוח שוב״) - a single send, whatever her status. */
@@ -467,6 +650,8 @@ export const MIRROR_HEADER = [
   "הערה",
   "מילוי מוקדם מהטופס הקודם",
   "סיבת המתנה",
+  "מייל עדכון לקורס",
+  "עדכון לקורס נשלח",
   "קישור לשאלון",
 ] as const;
 
@@ -528,6 +713,8 @@ export function mirrorRowOf(row: PrepRow): string[] {
     a.note ?? "",
     prefill ? `${prefill.source}${prefill.at ? ` (${prefill.at})` : ""}` : "",
     row.hold_reason ?? "",
+    row.update_mail_status ? (MAIL_STATUS_HE[row.update_mail_status] ?? row.update_mail_status) : courseUpdateFor(row.course) ? "טרם נשלח" : "",
+    when(row.update_mail_sent_at),
     `${site()}${prepFormPath(row.token)}`,
   ];
 }
@@ -555,6 +742,8 @@ export interface TickResult {
   sync?: SyncResult;
   prefilled?: number;
   mail?: SendResult | { skipped: string };
+  /** the per-course update mail (22/11) - only the courses the owner switched on */
+  courseMail?: CourseSendResult | { skipped: string };
   mirror?: { rows: number } | { skipped: string } | { error: string };
   error?: string;
 }
@@ -590,7 +779,9 @@ export async function runPrepTick(opts: { send: boolean; trigger: string }): Pro
       result.prefilled = -1;
       result.error = `prefill: ${e instanceof Error ? e.message : String(e)}`;
     }
-    result.mail = !opts.send ? { skipped: "dry" } : lock.enabled ? await sendPending() : { skipped: "disabled" };
+    const deadline = Date.now() + SEND_BUDGET_MS;
+    result.mail = !opts.send ? { skipped: "dry" } : lock.enabled ? await sendPending(deadline) : { skipped: "disabled" };
+    result.courseMail = !opts.send ? { skipped: "dry" } : await sendCourseUpdatesPending(deadline);
     try {
       result.mirror = await mirrorToSheet();
     } catch (e) {
@@ -633,10 +824,10 @@ export async function savePrepAnswers(token: string, answers: PrepAnswers): Prom
 
 /* ---- the admin ---- */
 
-export async function loadPrepAdmin(): Promise<{ rows: PrepRow[]; settings: PrepSettings }> {
+export async function loadPrepAdmin(): Promise<{ rows: PrepRow[]; settings: PrepSettings; courseUpdates: CourseUpdateRow[] }> {
   const admin = createAdminClient();
-  const [{ data: rows }, settings] = await Promise.all([admin.from(T).select("*").order("is_sample", { ascending: true }).order("sheet_row", { ascending: true, nullsFirst: false }).order("source_key", { ascending: true }), loadPrepSettings()]);
-  return { rows: rows ?? [], settings };
+  const [{ data: rows }, settings, courseUpdates] = await Promise.all([admin.from(T).select("*").order("is_sample", { ascending: true }).order("sheet_row", { ascending: true, nullsFirst: false }).order("source_key", { ascending: true }), loadPrepSettings(), loadCourseUpdates()]);
+  return { rows: rows ?? [], settings, courseUpdates };
 }
 
 export async function loadPrepById(id: string): Promise<PrepRow | null> {

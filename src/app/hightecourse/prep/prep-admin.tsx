@@ -3,8 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { H } from "@/app/ai-course/theme";
-import { LICENSE_LABEL, TOOL_NONE, TOOL_OTHER, questionsFor, type PrepAnswers, type PrepKind } from "@/lib/hc-preconf/config";
-import { hcPrepResendAction, hcPrepRunAction, hcPrepSamplesAction, hcPrepToggleAction } from "../actions";
+import { LICENSE_LABEL, TOOL_NONE, TOOL_OTHER, courseUpdateFor, questionsFor, type PrepAnswers, type PrepKind } from "@/lib/hc-preconf/config";
+import { hcCourseUpdateResendAction, hcCourseUpdateSamplesAction, hcCourseUpdateToggleAction, hcPrepResendAction, hcPrepRunAction, hcPrepSamplesAction, hcPrepToggleAction } from "../actions";
 import { Card, CardTitle, ExtLink, Notice, Stat, fmtDateTime } from "../ui";
 
 export interface PrepAdminRow {
@@ -36,9 +36,21 @@ export interface PrepAdminRow {
   prefilled: boolean;
   answers: PrepAnswers;
   formPath: string;
+  /** the per-course update mail (22/11): its outcome for her, and whether her course has a text at all */
+  updateMailStatus: string;
+  updateMailSentAt: string | null;
+  updateMailError: string;
+  hasUpdateText: boolean;
 }
 
-type Filter = "all" | "pending" | "sent" | "held" | "answered" | "unanswered" | "laptop" | "noLaptop" | "noLaptopNoRental" | "noTools" | "notUpdated" | "samples";
+/** One course's switch for the update mail (22/11). */
+export interface CourseUpdateSwitch {
+  course: string;
+  enabled: boolean;
+  enabledAt: string | null;
+}
+
+type Filter = "all" | "pending" | "sent" | "held" | "answered" | "unanswered" | "laptop" | "noLaptop" | "noLaptopNoRental" | "noTools" | "notUpdated" | "updateSent" | "updatePending" | "samples";
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "הכול" },
@@ -52,6 +64,8 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "noLaptopNoRental", label: "בלי מחשב ולא השכירו" },
   { key: "noTools", label: "ענו: בלי כלי AI" },
   { key: "notUpdated", label: "לא עדכנו אזור אישי" },
+  { key: "updateSent", label: "עדכון לקורס: נשלח" },
+  { key: "updatePending", label: "עדכון לקורס: טרם" },
   { key: "samples", label: "דוגמאות" },
 ];
 
@@ -83,6 +97,10 @@ function matchesFilter(r: PrepAdminRow, filter: Filter): boolean {
       return (r.answers.tools ?? []).includes(TOOL_NONE);
     case "notUpdated":
       return !r.updatedPersonal;
+    case "updateSent":
+      return r.updateMailStatus === "sent";
+    case "updatePending":
+      return r.hasUpdateText && !r.updateMailStatus && !r.hold;
     default:
       return true;
   }
@@ -245,7 +263,107 @@ function CoursesCard({ courses, onPick }: { courses: CourseStat[]; onPick: (cour
   );
 }
 
-export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTab, defaultSampleTo, subject }: { rows: PrepAdminRow[]; enabled: boolean; lastRunAt: string | null; lastRun: Record<string, unknown> | null; sheetUrl: string | null; sheetTab: string; defaultSampleTo: string; subject: string }) {
+/* ---- the per-course update mail (the owner, 22/11: ״צריך לשלוח לכל קורס עדכון על הכלים הנדרשים לקורס… נתחיל קורס קורס.
+   תשלח לי דוגמא וכשאאשר תשלח לכל הקבוצה… כל מייל שכבר נשלח יישלח לכל הרישומים לקורס זה מאוחר יותר״) ---- */
+function CourseUpdatesCard({ courses, real, switches, sampleTo, pending, onToggle, onSamples }: { courses: CourseStat[]; real: PrepAdminRow[]; switches: CourseUpdateSwitch[]; sampleTo: string; pending: boolean; onToggle: (course: string, enabled: boolean) => void; onSamples: (course: string) => void }) {
+  const th = "px-2 py-2 text-right text-[12.5px] font-bold whitespace-nowrap";
+  const td = "px-2 py-2 align-top tabular-nums";
+  return (
+    <Card testId="hc-prep-updates">
+      <CardTitle aside={<span className="text-[13px]" style={{ color: H.muted }}>״הייטקורס 2026 - הכלים הנדרשים לקורס …״ · הנוסח לכל קורס נכתב בקוד</span>}>עדכון הכלים לקורס</CardTitle>
+      <p className="px-3 pb-2 text-[13.5px] leading-relaxed" style={{ color: H.muted }}>
+        קורס קורס: ״דוגמאות אלי״ שולח שלוש וריאציות לכתובת הדוגמאות שלמטה; ״להפעיל שליחה לקורס״ - הטיימר שולח לכל הנרשמות לקורס שטרם קיבלו (בחצי השעה הקרובה או ב״להריץ עכשיו״), וגם לנרשמות חדשות בהמשך. מי שלא מילאה את הטופס, לא עדכנה או לא שילמה באזור האישי - רואה זאת במייל.
+      </p>
+      <div className="overflow-x-auto px-3 pb-3">
+        <table className="w-full text-[13.5px]" style={{ borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ borderBottom: `1.5px solid ${H.line}`, color: H.muted }}>
+              {["קורס", "נרשמו", "נשלח", "טרם", "נוסח", "שליחה", ""].map((h) => (
+                <th key={h} className={th}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {courses.map((c) => {
+              const mine = real.filter((r) => r.course === c.course);
+              const sent = mine.filter((r) => r.updateMailStatus === "sent").length;
+              const waiting = mine.filter((r) => !r.updateMailStatus && !r.hold).length;
+              const failed = mine.filter((r) => r.updateMailStatus === "error" || r.updateMailStatus === "blocked").length;
+              const text = courseUpdateFor(c.course);
+              const sw = switches.find((x) => x.course === c.course);
+              const on = !!sw?.enabled;
+              const previewId = mine[0]?.id;
+              return (
+                <tr key={c.course} style={{ borderBottom: `1px solid ${H.line}` }} data-testid="hc-prep-update-row" data-course={c.course} data-enabled={on ? "1" : "0"} data-has-text={text ? "1" : "0"} data-sent={sent} data-waiting={waiting}>
+                  <td className="px-2 py-2 align-top font-bold" style={{ minWidth: 220, color: H.navy }}>
+                    {c.course}
+                  </td>
+                  <td className={td}>{c.registered}</td>
+                  <td className={td} style={{ color: sent ? "#1E7F4F" : H.muted }}>
+                    {sent}
+                    {failed > 0 && (
+                      <span className="text-[12px] font-bold" style={{ color: H.red }}>
+                        {" "}
+                        · נכשלו {failed}
+                      </span>
+                    )}
+                  </td>
+                  <td className={td}>{waiting}</td>
+                  <td className="px-2 py-2 align-top whitespace-nowrap">
+                    {text ? (
+                      <span className="font-bold" style={{ color: "#1E7F4F" }}>
+                        יש
+                      </span>
+                    ) : (
+                      <span style={{ color: H.muted }}>אין עדיין</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-2 align-top whitespace-nowrap">
+                    <button
+                      type="button"
+                      disabled={pending || !text}
+                      onClick={() => {
+                        if (!on && !window.confirm(`לשלוח את ״הכלים הנדרשים לקורס״ ל-${waiting} הנרשמות ל״${c.course}״ שטרם קיבלו? הטיימר ישלח בחצי השעה הקרובה (או ב״להריץ עכשיו״), וגם לנרשמות חדשות בהמשך.`)) return;
+                        onToggle(c.course, !on);
+                      }}
+                      className="px-3 py-1 text-[13px] font-bold disabled:opacity-50"
+                      style={{ ...btn(on), background: on ? "#1E7F4F" : H.white, borderColor: on ? "#1E7F4F" : H.navy }}
+                      data-testid="hc-prep-update-toggle"
+                      aria-pressed={on}
+                    >
+                      {on ? "השליחה פעילה - לכבות" : "להפעיל שליחה לקורס"}
+                    </button>
+                    {sw?.enabledAt && on && (
+                      <div className="text-[12px]" style={{ color: H.muted }}>
+                        מאז {fmtDateTime.format(new Date(sw.enabledAt))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-2 py-2 align-top whitespace-nowrap">
+                    <div className="flex flex-col gap-1">
+                      <button type="button" disabled={pending || !text || !sampleTo.includes("@")} onClick={() => onSamples(c.course)} className="text-right font-bold hover:underline disabled:opacity-50" style={{ color: H.navy }} data-testid="hc-prep-update-samples">
+                        דוגמאות אלי
+                      </button>
+                      {text && previewId ? (
+                        <a href={`/hightecourse/prep/preview?id=${previewId}&mail=update`} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: H.navy }} data-testid="hc-prep-update-preview">
+                          תצוגת המייל
+                        </a>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
+export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTab, defaultSampleTo, subject, courseUpdates }: { rows: PrepAdminRow[]; enabled: boolean; lastRunAt: string | null; lastRun: Record<string, unknown> | null; sheetUrl: string | null; sheetTab: string; defaultSampleTo: string; subject: string; courseUpdates: CourseUpdateSwitch[] }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [q, setQ] = useState("");
@@ -306,7 +424,8 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
       const s = r.sync;
       const m = r.mail && "sent" in r.mail ? `נשלחו ${r.mail.sent}${r.mail.blocked ? `, נחסמו ${r.mail.blocked}` : ""}${r.mail.errors ? `, שגיאות ${r.mail.errors}` : ""}` : r.mail && "skipped" in r.mail ? (r.mail.skipped === "disabled" ? "השליחה כבויה - לא נשלח" : "בלי שליחה") : "";
       const mir = r.mirror && "rows" in r.mirror ? `הגיליון עודכן (${r.mirror.rows} שורות)` : r.mirror && "error" in r.mirror ? `הגיליון לא עודכן: ${r.mirror.error}` : "בלי גיליון בסביבה הזו";
-      return { ok: true, text: `נקרא מהגיליון: ${s?.total ?? 0} פרונטליות (חדשות ${s?.added ?? 0}, הוסרו ${s?.removed ?? 0}, ממתינות ${s?.held ?? 0}) · מילוי מוקדם: ${r.prefilled ?? 0} · ${m} · ${mir}${r.error ? ` · שגיאה: ${r.error}` : ""}` };
+      const cu = r.courseMail && "courses" in r.courseMail ? (r.courseMail.courses === 0 ? "עדכון לקורס: אין קורס פעיל" : `עדכון לקורס (${r.courseMail.courses} קורסים): נשלחו ${r.courseMail.sent}${r.courseMail.blocked ? `, נחסמו ${r.courseMail.blocked}` : ""}${r.courseMail.errors ? `, שגיאות ${r.courseMail.errors}` : ""}`) : "";
+      return { ok: true, text: `נקרא מהגיליון: ${s?.total ?? 0} פרונטליות (חדשות ${s?.added ?? 0}, הוסרו ${s?.removed ?? 0}, ממתינות ${s?.held ?? 0}) · מילוי מוקדם: ${r.prefilled ?? 0} · ${m}${cu ? ` · ${cu}` : ""} · ${mir}${r.error ? ` · שגיאה: ${r.error}` : ""}` };
     });
 
   return (
@@ -342,6 +461,29 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
           setFilter(f);
           setQ(course);
         }}
+      />
+
+      <CourseUpdatesCard
+        courses={courses}
+        real={real}
+        switches={courseUpdates}
+        sampleTo={sampleTo}
+        pending={pending}
+        onToggle={(course, on) =>
+          run(async () => {
+            const r = await hcCourseUpdateToggleAction(course, on);
+            return r.ok ? { ok: true, text: on ? `השליחה ל״${course}״ הופעלה - הטיימר ישלח למי שטרם קיבלה, או ״להריץ עכשיו״.` : `השליחה ל״${course}״ כבויה.` } : { ok: false, error: r.error === "no_text" ? "לקורס הזה אין עדיין נוסח" : (r.error ?? "לא הצליח") };
+          })
+        }
+        onSamples={(course) =>
+          run(async () => {
+            const r = await hcCourseUpdateSamplesAction(sampleTo, course);
+            if (r.results.length === 0) return { ok: false, error: r.error ?? "לא נשלח" };
+            const okN = r.results.filter((x) => x.ok).length;
+            const bad = r.results.filter((x) => !x.ok);
+            return { ok: bad.length === 0, text: `נשלחו ${okN} דוגמאות של העדכון ל״${course}״ אל ${sampleTo}.`, error: bad.length ? `נשלחו ${okN}; לא נשלחו: ${bad.map((x) => `${x.n} (${x.error})`).join(", ")}` : undefined };
+          })
+        }
       />
 
       <Card testId="hc-prep-controls">
@@ -469,6 +611,13 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
                     )}
                     {r.mailSentAt && <div className="text-[12px]" style={{ color: H.muted }}>{fmtDateTime.format(new Date(r.mailSentAt))}</div>}
                     {r.mailError && <div className="max-w-[220px] text-[12px]" style={{ color: H.red }}>{r.mailError}</div>}
+                    {r.hasUpdateText && (
+                      <div className="mt-1 text-[12px]" style={{ color: r.updateMailStatus === "sent" ? "#1E7F4F" : r.updateMailStatus ? H.red : H.muted }} data-testid="hc-prep-update-status" data-status={r.updateMailStatus || "pending"}>
+                        עדכון לקורס: {r.updateMailStatus ? (MAIL_HE[r.updateMailStatus] ?? r.updateMailStatus) : "טרם נשלח"}
+                        {r.updateMailSentAt ? ` ${fmtDateTime.format(new Date(r.updateMailSentAt))}` : ""}
+                        {r.updateMailError ? ` · ${r.updateMailError}` : ""}
+                      </div>
+                    )}
                   </td>
                   <td className="px-2 py-2 align-top" style={{ minWidth: 200 }}>
                     {noLaptopNoRental(r) && (
@@ -490,6 +639,16 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
                         <button type="button" disabled={pending} onClick={() => run(async () => ((await hcPrepResendAction(r.id)).ok ? { ok: true, text: `נשלח שוב אל ${r.email}.` } : { ok: false, error: "השליחה נכשלה" }))} className="text-right font-bold hover:underline disabled:opacity-60" style={{ color: H.muted }} data-testid="hc-prep-resend">
                           {r.mailStatus ? "לשלוח שוב" : "לשלוח עכשיו"}
                         </button>
+                      )}
+                      {!r.hold && r.hasUpdateText && (
+                        <>
+                          <a href={`/hightecourse/prep/preview?id=${r.id}&mail=update`} target="_blank" rel="noreferrer" className="hover:underline" style={{ color: H.navy }} data-testid="hc-prep-update-preview-row">
+                            תצוגת העדכון לקורס
+                          </a>
+                          <button type="button" disabled={pending} onClick={() => run(async () => ((await hcCourseUpdateResendAction(r.id)).ok ? { ok: true, text: `העדכון לקורס נשלח אל ${r.email}.` } : { ok: false, error: "השליחה נכשלה" }))} className="text-right font-bold hover:underline disabled:opacity-60" style={{ color: H.muted }} data-testid="hc-prep-update-resend">
+                            {r.updateMailStatus ? "לשלוח שוב את העדכון" : "לשלוח את העדכון עכשיו"}
+                          </button>
+                        </>
                       )}
                     </div>
                   </td>
