@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { answersOf, loadPrepAdmin, mirrorSheetUrl, MIRROR_TAB, type PrepRow } from "@/lib/hc-preconf/data";
-import { CONF, KIND_LABEL, prepFormPath, resolveCourse, type PrepKind } from "@/lib/hc-preconf/config";
+import { CONF, KIND_LABEL, courseUpdateFor, prepFormPath, resolveCourse, type PrepKind } from "@/lib/hc-preconf/config";
 import { GateView, hcGate } from "../shell";
 import { PrepAdmin, type PrepAdminRow } from "./prep-admin";
 
@@ -38,6 +38,10 @@ function rowOf(r: PrepRow): PrepAdminRow {
     prefilled: !!r.prefill,
     answers: a,
     formPath: prepFormPath(r.token),
+    updateMailStatus: r.update_mail_status ?? "",
+    updateMailSentAt: r.update_mail_sent_at,
+    updateMailError: r.update_mail_error ?? "",
+    hasUpdateText: !!courseUpdateFor(r.course),
   };
 }
 
@@ -49,7 +53,7 @@ function rowOf(r: PrepRow): PrepAdminRow {
 export default async function HcPrepPage() {
   const { profile, allowed } = await hcGate();
   if (!allowed) return <GateView profile={profile} />;
-  const [{ rows, settings }, supabase] = await Promise.all([loadPrepAdmin(), createClient()]);
+  const [{ rows, settings, courseUpdates }, supabase] = await Promise.all([loadPrepAdmin(), createClient()]);
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -63,6 +67,7 @@ export default async function HcPrepPage() {
       sheetTab={MIRROR_TAB}
       defaultSampleTo={user?.email ?? ""}
       subject={CONF.subject}
+      courseUpdates={courseUpdates.map((c) => ({ course: c.course, enabled: c.enabled, enabledAt: c.enabled_at }))}
     />
   );
 }

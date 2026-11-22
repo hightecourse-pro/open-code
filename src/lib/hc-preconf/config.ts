@@ -31,7 +31,19 @@ export const CONF = {
   programFileName: "hightecourse-2026-program.jpg",
   /** The caterer's logo beside ״ארוחות צהריים וערב״ (the owner, 20/11: ״צרפתי לוגו של הקייטרינג״). */
   cateringLogoPath: "/hightecourse/catering-logo.png",
+  /**
+   * The personal area closes for lodging / babysitting / laptop rental (the owner, 22/11: ״אנחנו מעבירים את שיבוץ
+   * החדרים למלון היום… האזור האישי באתר ייסגר לעדכון לינה/שמרטפיה/השכרת מחשב״; ~13:20: ״תשנה את הסגירה ל-15:00
+   * באופן סופי״). The course update mail says ״נסגר היום בשעה 15:00״ until then and ״סגור״ afterwards (the same
+   * mail reaches later registrants).
+   */
+  personalAreaClose: "היום (יום ראשון, י״ב בכסלו, 22.11) בשעה 15:00",
+  personalAreaCloseShort: "היום בשעה 15:00",
+  personalAreaCloseIso: "2026-11-22T15:00:00+02:00",
 } as const;
+
+/** Is the personal area still open for lodging / babysitting / rental changes at `now`? */
+export const personalAreaOpenAt = (now: Date = new Date()): boolean => now.getTime() < new Date(CONF.personalAreaCloseIso).getTime();
 
 /** Which questionnaire a course gets. */
 export type PrepKind = "dev" | "ai" | "role" | "soft" | "mgmt" | "unknown";
@@ -112,6 +124,34 @@ export const installListFor = (course: string): string[] | null => {
   const n = normCourse(course);
   return INSTALL_LISTS.find((l) => normCourse(l.course) === n)?.items ?? null;
 };
+
+/* ---- the per-course update mail (the owner, 22/11) ---- */
+
+/**
+ * ״צריך לשלוח לכל קורס עדכון על הכלים הנדרשים לקורס״ - the course text the owner dictates, course by course; a course
+ * without an entry has no update mail yet (the admin card says so). The first line is printed bold.
+ */
+export const COURSE_UPDATES: { course: string; lines: string[] }[] = [
+  {
+    course: "AI מתקדם למנהלים ומנתחי מערכות",
+    lines: ["לקורס זה אין התקנות נדרשות על המחשבים.", "רוב התרגול ניתן לבצע גם בכלי AI חינמיים. במקרים בהם נדרש רישיון - ניתן לבצע תרגול בזוגות."],
+  },
+];
+export const courseUpdateFor = (course: string): { course: string; lines: string[] } | null => {
+  const n = normCourse(course);
+  return COURSE_UPDATES.find((c) => normCourse(c.course) === n) ?? null;
+};
+export const courseUpdateSubject = (course: string) => `${CONF.title} - הכלים הנדרשים לקורס ${course}`;
+
+/** The texts of the update mail the owner dictated (22/11), word for word. */
+export const UPDATE_TEXT = {
+  fillForm: "כדי שנוכל להתארגן על הנדרש לקורס נא למלא בהקדם את הטופס הזה:",
+  /** the hidden preview line under the subject in the inbox */
+  preheader: "שלושה דברים לפני הקורס: מה צריך, הטופס, והאזור האישי נסגר היום בשעה 15:00.",
+  pairs: "במידה ואין לך כלי AI ברישיון והתרגיל לא יהיה ניתן לביצוע בכלים חינמיים - ניתן לבצע את התרגיל גם בזוגות.",
+  hotelToday: "אנחנו מעבירות היום את שיבוץ החדרים למלון, ולכן לאחר מכן לא ניתן יהיה לבצע שינויים.",
+  hotelDone: "שיבוץ החדרים הועבר למלון, ולכן לא ניתן לבצע שינויים.",
+} as const;
 
 /* ---- the questionnaire ---- */
 

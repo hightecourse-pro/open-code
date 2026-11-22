@@ -2398,6 +2398,10 @@ export interface Database {
           removed_at: string | null;
           first_seen_at: string;
           updated_at: string;
+          update_mail_status: string | null;
+          update_mail_sent_at: string | null;
+          update_mail_error: string | null;
+          update_mail_attempts: number;
         };
         Insert: {
           id?: string;
@@ -2446,6 +2450,10 @@ export interface Database {
           removed_at?: string | null;
           first_seen_at?: string;
           updated_at?: string;
+          update_mail_status?: string | null;
+          update_mail_sent_at?: string | null;
+          update_mail_error?: string | null;
+          update_mail_attempts?: number;
         };
         Update: {
           id?: string;
@@ -2494,6 +2502,10 @@ export interface Database {
           removed_at?: string | null;
           first_seen_at?: string;
           updated_at?: string;
+          update_mail_status?: string | null;
+          update_mail_sent_at?: string | null;
+          update_mail_error?: string | null;
+          update_mail_attempts?: number;
         };
         Relationships: [];
       };
@@ -2520,6 +2532,28 @@ export interface Database {
           running_since?: string | null;
           last_run_at?: string | null;
           last_run?: Json | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      /** The per-course update mail's switch (22/11): once on, every participant of the course gets it once. */
+      hc_preconf_course_updates: {
+        Row: {
+          course: string;
+          enabled: boolean;
+          enabled_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          course: string;
+          enabled?: boolean;
+          enabled_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          course?: string;
+          enabled?: boolean;
+          enabled_at?: string | null;
           updated_at?: string;
         };
         Relationships: [];

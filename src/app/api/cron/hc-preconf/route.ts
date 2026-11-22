@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { runPrepTick } from "@/lib/hc-preconf/data";
+import { runPrepTick, sendCourseUpdateSamples } from "@/lib/hc-preconf/data";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 150;
@@ -16,11 +16,26 @@ function authorized(req: Request): boolean {
  * Every 30 minutes (pg_cron; the owner, 19/11: ״כל חצי שעה תבדוק אם יש חדשות,
  * תשלח להם מייל ותעדכן את הפרטים בגיליון החדש״): the sheet's newcomers into
  * the table, their pre-conference mail (only while the admin switch is on),
- * the mirror tab refreshed. Manual: ?secret=… · &dry=1 (no mail).
+ * the mirror tab refreshed. Manual: ?secret=… · &dry=1 (no mail) ·
+ * &sample_to=<address>&course=<course> (22/11: the course update mail's
+ * variations to one address, no tick).
  */
 export async function GET(req: Request) {
   if (!authorized(req)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const dry = new URL(req.url).searchParams.get("dry") === "1";
+  const params = new URL(req.url).searchParams;
+  const dry = params.get("dry") === "1";
+  const sampleTo = (params.get("sample_to") ?? "").trim().toLowerCase();
+  if (sampleTo) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sampleTo)) return NextResponse.json({ error: "bad_address" }, { status: 400 });
+    const course = (params.get("course") ?? "").trim();
+    if (!course) return NextResponse.json({ error: "no_course" }, { status: 400 });
+    try {
+      const results = await sendCourseUpdateSamples(sampleTo, course);
+      return NextResponse.json({ ok: results.every((r) => r.ok), results });
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message.slice(0, 300) : "samples_failed" }, { status: 502 });
+    }
+  }
   try {
     return NextResponse.json(await runPrepTick({ send: !dry, trigger: dry ? "cron-dry" : "cron" }));
   } catch (e) {
