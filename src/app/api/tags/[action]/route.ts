@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { addParticipant, enterWithCode, hasTagsAccess, leaveTags, listParticipants, markPrinted } from "@/app/tags/server";
+import { addParticipant, enterWithCode, findParticipant, hasTagsAccess, leaveTags, listParticipants, markPrinted } from "@/app/tags/server";
 
 /*
   JSON endpoints of מערכת הדפסת תגים (/tags): `enter` takes the code and sets
-  the cookie, `list` returns the sheet's rows, `printed` writes הודפס = כן on
-  one ת.ז., `leave` drops the cookie. Everything but `enter` needs the cookie
+  the cookie, `list` returns the sheet's rows, `find` one row by ת.ז. (the
+  self-service screen), `printed` writes הודפס = כן on one ת.ז., `leave` drops
+  the cookie. Everything but `enter` needs the cookie
   (or a signed-in admin) - 401 otherwise, which sends the desk back to the gate.
 */
 export const dynamic = "force-dynamic";
@@ -20,11 +21,12 @@ async function readBody(req: Request): Promise<Record<string, unknown>> {
 
 const json = (data: unknown, status = 200) => NextResponse.json(data, { status, headers: { "cache-control": "no-store" } });
 
-export async function GET(_req: Request, ctx: { params: Promise<{ action: string }> }) {
+export async function GET(req: Request, ctx: { params: Promise<{ action: string }> }) {
   const { action } = await ctx.params;
-  if (action !== "list") return json({ ok: false, error: "unknown action" }, 404);
+  if (action !== "list" && action !== "find") return json({ ok: false, error: "unknown action" }, 404);
   if (!(await hasTagsAccess())) return json({ ok: false, error: "entry" }, 401);
   try {
+    if (action === "find") return json(await findParticipant(new URL(req.url).searchParams.get("tz") ?? ""));
     return json(await listParticipants());
   } catch (e) {
     console.error("[tags] list", e instanceof Error ? e.message : e);

@@ -196,6 +196,25 @@ export async function listParticipants(): Promise<{ ok: true; data: Participant[
   }
 }
 
+/** ״012345678״, ״12345678״, ״012-345-678״ and a number-formatted cell all mean the same person: digits only, no leading zeros. */
+export function normalizeTz(value: string): string {
+  return value.replace(/\D/g, "").replace(/^0+/, "");
+}
+
+/**
+ * One participant by her ת.ז. - for the self-service screen (the owner,
+ * 23/11: ״מקלידים עם מקלדת במסך תז מוצאים ומדפיסים מדבקה בשרות עצמי״). The
+ * sheet is read fresh on every lookup, so הודפס is current; the kiosk browser
+ * never holds the whole list. Same columns as the desk, mails and phones stay here.
+ */
+export async function findParticipant(tz: string): Promise<{ ok: true; data: Participant | null } | SheetFailure> {
+  const wanted = normalizeTz(tz);
+  if (!wanted) return fail("bad_request", "חסר מספר ת.ז.");
+  const list = await listParticipants();
+  if (!list.ok) return list;
+  return { ok: true, data: list.data.find((p) => normalizeTz(p.cols[TZ_COLUMN] ?? "") === wanted) ?? null };
+}
+
 export interface PrintedRef {
   tz?: string;
   /** Her 1-based sheet row as the list reported it. */
