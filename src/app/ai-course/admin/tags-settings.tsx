@@ -68,9 +68,14 @@ export function TagsSettings({ initial }: { initial: TagsSettingsView }) {
           </h2>
           <span className="mt-1.5 block h-[4px] w-16" style={{ background: H.yellow, borderRadius: 2 }} />
         </div>
-        <a href="/tags" target="_blank" rel="noreferrer" className="text-[13.5px] font-bold underline" style={{ color: H.navy }} data-testid="tags-open">
-          לפתוח את מסך ההדפסה
-        </a>
+        <span className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[13.5px] font-bold">
+          <a href="/tags" target="_blank" rel="noreferrer" className="underline" style={{ color: H.navy }} data-testid="tags-open">
+            לפתוח את מסך ההדפסה
+          </a>
+          <a href="/tags/self" target="_blank" rel="noreferrer" className="underline" style={{ color: H.navy }} data-testid="tags-open-self">
+            מסך שירות עצמי (טאצ׳)
+          </a>
+        </span>
       </div>
       <p className="mt-3 text-[14px] leading-relaxed" style={{ color: H.muted }}>
         המשתתפות נקראות מגיליון גוגל (לשונית עם העמודות ת.ז., פרטי, משפחה, שם לתג, תפקיד, קורס, משרד, הודפס); אחרי כל הדפסה נכתב ״כן״ בעמודת הודפס. כדי שזה יעבוד:
