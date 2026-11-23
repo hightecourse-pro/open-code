@@ -1,12 +1,25 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { buildContent } from "@/lib/sanity/content";
 import { SanityError, tabletBootstrap } from "@/lib/sanity/server";
 import type { TabletBootstrap } from "@/lib/sanity/shared";
 import { Tablet } from "../tablet";
 import "../tablet.css";
 
-export const metadata: Metadata = { title: { absolute: "המסע לאי השפיות · טאבלט" }, robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
+
+/** A game, not a web page: no pinch-zoom, no double-tap zoom, the stage under the notch, the dark bezel colour in the system bars. */
+export const viewport: Viewport = { width: "device-width", initialScale: 1, maximumScale: 1, userScalable: false, viewportFit: "cover", themeColor: "#0B1530" };
+
+export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
+  const { token } = await params;
+  return {
+    title: { absolute: "המסע לאי השפיות · טאבלט" },
+    robots: { index: false, follow: false },
+    // ״הוספה למסך הבית״ in Chrome installs this circle as its own app (full screen, landscape).
+    manifest: `/sanity/t/${token}/manifest.webmanifest`,
+    appleWebApp: { capable: true, title: "המסע לאי השפיות", statusBarStyle: "black-translucent" },
+  };
+}
 
 /*
   The tablet of one circle (1280×720, landscape). The token in the address is

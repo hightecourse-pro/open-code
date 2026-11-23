@@ -314,7 +314,7 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
         <>
           <section className="card" data-testid="studio-tablets">
             <h3>הטאבלטים</h3>
-            <p className="hint">כל טאבלט נפתח בכתובת משלו (הרשימה למטה). שומרים אותה במסך הבית של הטאבלט (Add to Home Screen) לפני האירוע.</p>
+            <p className="hint">כל טאבלט נפתח בכתובת משלו (הרשימה למטה). בטאבלט: פותחים את הכתובת ב-Chrome, תפריט ⋮ ← ״הוספה למסך הבית״ ← ״התקנה״, ומכאן פותחים מהאייקון: מסך מלא, לרוחב, בלי שורת כתובת, והמסך לא נכבה במהלך המשחק.</p>
             <div className="tabgrid">
               {[...Array(N)].map((_, i) => {
                 const [s, c] = status(i + 1);

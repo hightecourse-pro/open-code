@@ -20,6 +20,46 @@ export function Tablet({ boot, token }: { boot: TabletBootstrap; token: string }
     const app = createTabletApp(host, { boot, token, dev: qs.has("dev"), shot: qs.has("shot") });
     return () => app.destroy();
   }, [boot, token]);
+
+  // A real tablet, 90 minutes on the floor: the screen must not sleep, the
+  // picture stays landscape, and a long press on an island never opens the
+  // browser's save-image sheet. The wake lock is asked for on the first touch
+  // (browsers want a gesture) and again whenever the page comes back.
+  useEffect(() => {
+    const host = ref.current;
+    if (!host) return;
+    let lock: { release(): Promise<void> } | null = null;
+    const nav = navigator as Navigator & { wakeLock?: { request(type: "screen"): Promise<{ release(): Promise<void> }> } };
+    const grab = async () => {
+      try {
+        if (nav.wakeLock && document.visibilityState === "visible") lock = await nav.wakeLock.request("screen");
+      } catch {
+        /* an unsupported browser, or the page is hidden - nothing to hold */
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") grab();
+    };
+    const onFirstTouch = () => {
+      grab();
+      const orientation = screen.orientation as ScreenOrientation & { lock?: (o: string) => Promise<void> };
+      try {
+        orientation.lock?.("landscape").catch(() => {});
+      } catch {
+        /* not fullscreen / not supported */
+      }
+    };
+    const noMenu = (e: Event) => e.preventDefault();
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("pointerdown", onFirstTouch, { once: true });
+    host.addEventListener("contextmenu", noMenu);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("pointerdown", onFirstTouch);
+      host.removeEventListener("contextmenu", noMenu);
+      lock?.release().catch(() => {});
+    };
+  }, []);
   return (
     <div className="hk-tablet hk-page" ref={ref} data-testid="tablet" data-circle={boot.circle}>
       <div id="wrap">
