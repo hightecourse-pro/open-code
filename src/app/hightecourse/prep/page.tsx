@@ -40,6 +40,7 @@ function rowOf(r: PrepRow): PrepAdminRow {
     formPath: prepFormPath(r.token),
     updateMailStatus: r.update_mail_status ?? "",
     updateMailSentAt: r.update_mail_sent_at,
+    updateMailCourse: r.update_mail_course ?? "",
     updateMailError: r.update_mail_error ?? "",
     hasUpdateText: !!courseUpdateFor(r.course),
   };

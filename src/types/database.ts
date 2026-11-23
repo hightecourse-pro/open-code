@@ -2401,6 +2401,7 @@ export interface Database {
           update_mail_status: string | null;
           update_mail_sent_at: string | null;
           update_mail_error: string | null;
+          update_mail_course: string | null;
           update_mail_attempts: number;
         };
         Insert: {
@@ -2453,6 +2454,7 @@ export interface Database {
           update_mail_status?: string | null;
           update_mail_sent_at?: string | null;
           update_mail_error?: string | null;
+          update_mail_course?: string | null;
           update_mail_attempts?: number;
         };
         Update: {
@@ -2505,6 +2507,7 @@ export interface Database {
           update_mail_status?: string | null;
           update_mail_sent_at?: string | null;
           update_mail_error?: string | null;
+          update_mail_course?: string | null;
           update_mail_attempts?: number;
         };
         Relationships: [];
