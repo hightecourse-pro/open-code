@@ -2401,6 +2401,7 @@ export interface Database {
           update_mail_status: string | null;
           update_mail_sent_at: string | null;
           update_mail_error: string | null;
+          update_mail_course: string | null;
           update_mail_attempts: number;
         };
         Insert: {
@@ -2453,6 +2454,7 @@ export interface Database {
           update_mail_status?: string | null;
           update_mail_sent_at?: string | null;
           update_mail_error?: string | null;
+          update_mail_course?: string | null;
           update_mail_attempts?: number;
         };
         Update: {
@@ -2505,6 +2507,7 @@ export interface Database {
           update_mail_status?: string | null;
           update_mail_sent_at?: string | null;
           update_mail_error?: string | null;
+          update_mail_course?: string | null;
           update_mail_attempts?: number;
         };
         Relationships: [];
@@ -2739,6 +2742,97 @@ export interface Database {
           device?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["page_views"]["Insert"]>;
+        Relationships: [];
+      };
+      /** המסע לאי השפיות (23/11): one run of the conference game - the rehearsal, the day. */
+      sanity_events: {
+        Row: {
+          id: string;
+          slug: string;
+          name: string;
+          circles: number;
+          gender: "m" | "f";
+          active: boolean;
+          started_at: string | null;
+          reset_at: string | null;
+          hall_scene: "auto" | "map" | "focus" | "compare" | "race" | "stats" | "grand";
+          focus_circle: number | null;
+          compare: Json | null;
+          reveal: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          name: string;
+          circles?: number;
+          gender?: "m" | "f";
+          active?: boolean;
+          started_at?: string | null;
+          reset_at?: string | null;
+          hall_scene?: "auto" | "map" | "focus" | "compare" | "race" | "stats" | "grand";
+          focus_circle?: number | null;
+          compare?: Json | null;
+          reveal?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["sanity_events"]["Insert"]>;
+        Relationships: [];
+      };
+      /** A circle's tablet: its token (the address), its whole game, and the snapshot the hall shows. */
+      sanity_circles: {
+        Row: {
+          event_id: string;
+          circle: number;
+          token: string;
+          version: number;
+          state: Json | null;
+          snapshot: Json | null;
+          stage: number;
+          finished: boolean;
+          reset_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          event_id: string;
+          circle: number;
+          token?: string;
+          version?: number;
+          state?: Json | null;
+          snapshot?: Json | null;
+          stage?: number;
+          finished?: boolean;
+          reset_at?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["sanity_circles"]["Insert"]>;
+        Relationships: [];
+      };
+      /** The hidden creations of a circle: standing counts (the melody), the sentence (the song), the photo (the shape). */
+      sanity_creations: {
+        Row: {
+          event_id: string;
+          circle: number;
+          standing: Json;
+          sentence: string;
+          quad: Json | null;
+          photo_path: string | null;
+          photo_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          event_id: string;
+          circle: number;
+          standing?: Json;
+          sentence?: string;
+          quad?: Json | null;
+          photo_path?: string | null;
+          photo_at?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["sanity_creations"]["Insert"]>;
         Relationships: [];
       };
     };

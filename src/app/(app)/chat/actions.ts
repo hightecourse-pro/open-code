@@ -6,7 +6,53 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getProfile, isSubscriber } from "@/lib/auth";
 import { htmlToPlainText, settleComposerBody } from "@/lib/rich-text";
-import { attachmentIdsFrom, linkAttachments } from "@/lib/attachments";
+import { attachmentIdsFrom, attachmentsFor, linkAttachments } from "@/lib/attachments";
+import type { ThreadMessage } from "@/components/patterns/chat-thread";
+
+/** A page of history - mirrors the newest-first window the chat page opens with. */
+const HISTORY_PAGE = 200;
+
+/**
+ * The messages BEFORE a point in the thread, oldest page first (the owner,
+ * 23/11: "צריך אפשרות לראות בצ'אט את כל ההסטוריה" - the page opens on the
+ * newest 200 and a years-long thread had no way back). Her own client reads
+ * them: RLS lets her see only conversations she is in, so the select itself
+ * is the participation check. `more` says whether anything older remains.
+ */
+export async function loadOlderMessages(
+  conversationId: string,
+  before: string
+): Promise<{ messages: ThreadMessage[]; more: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { messages: [], more: false };
+  const { data } = await supabase
+    .from("messages")
+    .select("id, sender_id, body, created_at, reactions, reply_to_id, edited_at")
+    .eq("conversation_id", conversationId)
+    .lt("created_at", before)
+    .order("created_at", { ascending: false })
+    .limit(HISTORY_PAGE + 1);
+  const rows = data ?? [];
+  const page = rows.slice(0, HISTORY_PAGE);
+  // Files on these messages - signed URLs minted here, like the page does.
+  const att = await attachmentsFor("message", page.map((m) => m.id));
+  return {
+    messages: page.reverse().map((m) => ({
+      id: m.id,
+      sender_id: m.sender_id,
+      body: m.body,
+      created_at: m.created_at,
+      reactions: (m.reactions ?? null) as Record<string, string> | null,
+      reply_to_id: m.reply_to_id ?? null,
+      edited_at: m.edited_at ?? null,
+      attachments: att.get(m.id),
+    })),
+    more: rows.length > HISTORY_PAGE,
+  };
+}
 
 /** The reaction palette - WhatsApp-style, one emoji per person per message. */
 const REACTION_EMOJIS = new Set(["💜", "👍", "😂", "🎉", "🙏", "😮"]);

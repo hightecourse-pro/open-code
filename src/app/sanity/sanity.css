@@ -1,0 +1,13 @@
+/* המסע לאי השפיות · the face and the frame shared by the three screens.
+   Rag Sans is licensed (RAG Studio EULA) - the files live in the private
+   storage bucket and reach the browser through /api/sanity/font. */
+@font-face{font-family:"Rag Sans";font-weight:300;font-style:normal;font-display:block;src:url("/api/sanity/font/RagSans-Light.ttf") format("truetype")}
+@font-face{font-family:"Rag Sans";font-weight:400;font-style:normal;font-display:block;src:url("/api/sanity/font/RagSans-Regular.ttf") format("truetype")}
+@font-face{font-family:"Rag Sans";font-weight:500;font-style:normal;font-display:block;src:url("/api/sanity/font/RagSans-Medium.ttf") format("truetype")}
+@font-face{font-family:"Rag Sans";font-weight:700;font-style:normal;font-display:block;src:url("/api/sanity/font/RagSans-Bold.ttf") format("truetype")}
+@font-face{font-family:"Rag Sans";font-weight:900;font-style:normal;font-display:block;src:url("/api/sanity/font/RagSans-Bold.ttf") format("truetype")}
+
+.hk-root{font-family:"Rag Sans",var(--font-heebo),Heebo,Arial,sans-serif;direction:rtl}
+/* a full-screen stage: the tablet and the hall never scroll */
+.hk-page{position:fixed;inset:0;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:manipulation;overscroll-behavior:none;-webkit-touch-callout:none}
+.hk-page img{max-width:none}

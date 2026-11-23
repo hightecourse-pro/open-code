@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useOptimistic, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useOptimistic, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { MessageBody } from "@/components/patterns/rich-text";
 import { AttachmentList } from "@/components/patterns/attachment-list";
@@ -35,6 +35,9 @@ const REACTION_EMOJIS = ["💜", "👍", "😂", "🎉", "🙏", "😮"];
 
 /** A message on screen - either from the server, or hers still on its way. */
 type Bubble = ThreadMessage & { pending?: boolean };
+
+/** One page of history - the server action hands back at most this many. */
+const HISTORY_PAGE = 200;
 
 /**
  * The words of a body, markup and whitespace flattened. Delivery detection
@@ -83,6 +86,8 @@ export function ChatThread({
   footer,
   reactAction,
   editAction,
+  olderCount = 0,
+  loadOlder,
 }: {
   /** The thread had unread messages when it was opened: the server marked
    *  them read in the same render that computed the sidebar badge, so one
@@ -104,6 +109,10 @@ export function ChatThread({
   reactAction?: (messageId: string, emoji: string) => Promise<void>;
   /** Rewrites the caller's own message - absent on read-only threads. */
   editAction?: (messageId: string, formData: FormData) => Promise<void>;
+  /** How many messages lie before the window the page opened with. */
+  olderCount?: number;
+  /** Fetches the page of history before a timestamp (chronological). */
+  loadOlder?: (before: string) => Promise<{ messages: ThreadMessage[]; more: boolean }>;
 }) {
   const [bubbles, addBubble] = useOptimistic<Bubble[], string>(messages, (state, body) => [
     ...state,
@@ -143,7 +152,17 @@ export function ChatThread({
     };
   }, [pickerFor]);
   const [localReactions, setLocalReactions] = useState<Record<string, Record<string, string>>>({});
-  const byId = new Map(bubbles.map((b) => [b.id, b]));
+  // History she asked for, ahead of the window the page opened with (the
+  // owner, 23/11: "צריך אפשרות לראות בצ'אט את כל ההסטוריה"). Every load also
+  // folds the current window in, so a window that slides forward on a later
+  // refresh (new messages) never opens a gap between the two.
+  const [older, setOlder] = useState<ThreadMessage[]>([]);
+  const [olderLeft, setOlderLeft] = useState(olderCount);
+  const [loadingOlder, setLoadingOlder] = useState<"page" | "all" | null>(null);
+  const [olderFailed, setOlderFailed] = useState(false);
+  const olderIds = new Set(older.map((m) => m.id));
+  const all: Bubble[] = [...older, ...bubbles.filter((b) => !olderIds.has(b.id))];
+  const byId = new Map(all.map((b) => [b.id, b]));
   /** The quoted snippet a bubble shows - flattened words, capped. */
   const quotePreview = (id: string): { preview: string; name: string } | null => {
     const q = byId.get(id);
@@ -165,6 +184,17 @@ export function ChatThread({
   };
   const composerRef = useRef<RichEditorHandle | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  // Keeps the message she was looking at in place while history is prepended
+  // above it: the scroll height before the load, restored after the render.
+  const anchorRef = useRef<{ height: number; top: number } | null>(null);
+  const olderCountLoaded = older.length;
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    const anchor = anchorRef.current;
+    if (!el || !anchor) return;
+    anchorRef.current = null;
+    el.scrollTop = anchor.top + (el.scrollHeight - anchor.height);
+  }, [olderCountLoaded]);
   // The freshest thread the server handed us - the failure timer consults THIS
   // at fire time instead of trusting a closure from seconds ago.
   const messagesRef = useRef(messages);
@@ -174,6 +204,37 @@ export function ChatThread({
   // Whether she is reading the latest message or scrolled up into history.
   // Starts true so a freshly opened thread lands on the newest message.
   const atBottomRef = useRef(true);
+  const fetchOlder = async (mode: "page" | "all") => {
+    if (!loadOlder || loadingOlder) return;
+    setLoadingOlder(mode);
+    setOlderFailed(false);
+    try {
+      let history = older;
+      let left = olderLeft;
+      // The oldest message on screen is where the next page starts.
+      const shown = all.filter((b) => !b.pending);
+      do {
+        const first = history[0] ?? shown[0];
+        if (!first) break;
+        const res = await loadOlder(first.created_at);
+        const seen = new Set(history.map((m) => m.id));
+        history = [...res.messages.filter((m) => !seen.has(m.id)), ...history];
+        left = res.more && res.messages.length ? Math.max(1, left - res.messages.length) : 0;
+      } while (mode === "all" && left > 0);
+      const seen = new Set(history.map((m) => m.id));
+      // Everything on screen now is kept - see the note on `older`.
+      const folded = [...history, ...shown.filter((b) => !seen.has(b.id))];
+      const el = listRef.current;
+      if (el) anchorRef.current = { height: el.scrollHeight, top: el.scrollTop };
+      atBottomRef.current = false;
+      setOlder(folded);
+      setOlderLeft(left);
+    } catch {
+      setOlderFailed(true);
+    } finally {
+      setLoadingOlder(null);
+    }
+  };
   const inFlight = bubbles.some((b) => b.pending);
   // Delivered = the revalidated thread came back holding it. Read from the
   // messages we were just handed, never remembered - a remembered "sent" is
@@ -260,8 +321,8 @@ export function ChatThread({
     };
   }, [refreshOnMount, router]);
 
-  const last = bubbles[bubbles.length - 1];
-  const iWrote = bubbles.some((b) => b.sender_id === meId);
+  const last = all[all.length - 1];
+  const iWrote = all.some((b) => b.sender_id === meId);
   // A locked thread (no send action) never INVITES writing - that reads as a
   // contradiction next to the lock explanation below.
   const status = !last
@@ -292,11 +353,39 @@ export function ChatThread({
         className="flex-1 min-h-0 p-4 flex flex-col gap-1 overflow-y-auto bg-ink-50/40"
         data-testid="chat-messages"
       >
-        {bubbles.map((m, i) => {
+        {loadOlder && olderLeft > 0 && (
+          <div className="flex flex-wrap items-center justify-center gap-2 pb-2" data-testid="chat-older">
+            <button
+              type="button"
+              data-testid="chat-older-page"
+              disabled={!!loadingOlder}
+              onClick={() => void fetchOlder("page")}
+              className="text-[12.5px] text-brand-purple bg-white border border-ink-200 rounded-full px-3.5 py-1 hover:border-brand-purple disabled:opacity-60 cursor-pointer"
+            >
+              {loadingOlder
+                ? "טוענת…"
+                : olderLeft > HISTORY_PAGE
+                  ? `להצגת ${HISTORY_PAGE} ההודעות הקודמות (עוד ${olderLeft} בהיסטוריה)`
+                  : `להצגת ${olderLeft} ההודעות הקודמות`}
+            </button>
+            {olderLeft > HISTORY_PAGE && !loadingOlder && (
+              <button
+                type="button"
+                data-testid="chat-older-all"
+                onClick={() => void fetchOlder("all")}
+                className="text-[12.5px] text-ink-500 underline underline-offset-2 hover:text-brand-purple cursor-pointer"
+              >
+                כל ההיסטוריה
+              </button>
+            )}
+            {olderFailed && <span className="text-[12px] text-[#A8254B]">הטעינה נכשלה - אפשר לנסות שוב</span>}
+          </div>
+        )}
+        {all.map((m, i) => {
           const mine = m.sender_id === meId;
           // Every run of messages is HEADED by its sender's name, both sides
           // (the owner, 30/8: "לא ברור מי כתב מה... כותרת ברורה לכל צד").
-          const runStart = bubbles[i - 1]?.sender_id !== m.sender_id;
+          const runStart = all[i - 1]?.sender_id !== m.sender_id;
           return (
             <div
               key={m.id}
@@ -465,7 +554,7 @@ export function ChatThread({
             </div>
           );
         })}
-        {bubbles.length === 0 && (
+        {all.length === 0 && (
           <p className="text-sm text-ink-500 text-center my-auto">
             {action ? "התחילי את השיחה - כתבי לה הודעה ראשונה 💜" : "אין עדיין הודעות בשיחה הזו 💜"}
           </p>

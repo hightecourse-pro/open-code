@@ -39,6 +39,8 @@ export interface PrepAdminRow {
   /** the per-course update mail (22/11): its outcome for her, and whether her course has a text at all */
   updateMailStatus: string;
   updateMailSentAt: string | null;
+  /** The course the update mail was written for - differs from `course` after a move in the sheet. */
+  updateMailCourse: string;
   updateMailError: string;
   hasUpdateText: boolean;
 }
@@ -73,6 +75,9 @@ const FILTERS: { key: Filter; label: string }[] = [
 const noLaptopNoRental = (r: PrepAdminRow) => r.answers.laptop === "no" && r.laptopRental !== "כן";
 
 /** One predicate for the chips: the table filters by it and every chip shows how many rows it holds (the owner, 22/11: ״תוסיף מספרים לכל אחד״). */
+/** Her update mail was written for another course than the one she is in now (a move in the sheet, 23/11). */
+const movedCourse = (r: PrepAdminRow) => r.updateMailStatus === "sent" && !!r.updateMailCourse && r.updateMailCourse !== r.course;
+
 function matchesFilter(r: PrepAdminRow, filter: Filter): boolean {
   if (filter === "samples") return r.isSample;
   if (r.isSample || r.removed) return false;
@@ -98,9 +103,9 @@ function matchesFilter(r: PrepAdminRow, filter: Filter): boolean {
     case "notUpdated":
       return !r.updatedPersonal;
     case "updateSent":
-      return r.updateMailStatus === "sent";
+      return r.updateMailStatus === "sent" && !movedCourse(r);
     case "updatePending":
-      return r.hasUpdateText && !r.updateMailStatus && !r.hold;
+      return r.hasUpdateText && !r.hold && (!r.updateMailStatus || movedCourse(r));
     default:
       return true;
   }
@@ -299,8 +304,8 @@ function CourseUpdatesCard({ real, switches, sampleTo, pending, onToggle, onSamp
           <tbody>
             {courses.map((c) => {
               const mine = real.filter((r) => r.course === c.course);
-              const sent = mine.filter((r) => r.updateMailStatus === "sent").length;
-              const waiting = mine.filter((r) => !r.updateMailStatus && !r.hold).length;
+              const sent = mine.filter((r) => r.updateMailStatus === "sent" && !movedCourse(r)).length;
+              const waiting = mine.filter((r) => (!r.updateMailStatus || movedCourse(r)) && !r.hold).length;
               const failed = mine.filter((r) => r.updateMailStatus === "error" || r.updateMailStatus === "blocked").length;
               const text = courseUpdateFor(c.course);
               const sw = switches.find((x) => x.course === c.course);
@@ -435,7 +440,7 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
       const s = r.sync;
       const m = r.mail && "sent" in r.mail ? `נשלחו ${r.mail.sent}${r.mail.blocked ? `, נחסמו ${r.mail.blocked}` : ""}${r.mail.errors ? `, שגיאות ${r.mail.errors}` : ""}` : r.mail && "skipped" in r.mail ? (r.mail.skipped === "disabled" ? "השליחה כבויה - לא נשלח" : "בלי שליחה") : "";
       const mir = r.mirror && "rows" in r.mirror ? `הגיליון עודכן (${r.mirror.rows} שורות)` : r.mirror && "error" in r.mirror ? `הגיליון לא עודכן: ${r.mirror.error}` : "בלי גיליון בסביבה הזו";
-      const cu = r.courseMail && "courses" in r.courseMail ? (r.courseMail.courses === 0 ? "עדכון לקורס: אין קורס פעיל" : `עדכון לקורס (${r.courseMail.courses} קורסים): נשלחו ${r.courseMail.sent}${r.courseMail.blocked ? `, נחסמו ${r.courseMail.blocked}` : ""}${r.courseMail.errors ? `, שגיאות ${r.courseMail.errors}` : ""}`) : "";
+      const cu = r.courseMail && "courses" in r.courseMail ? (r.courseMail.courses === 0 ? "עדכון לקורס: אין קורס פעיל" : `עדכון לקורס (${r.courseMail.courses} קורסים): נשלחו ${r.courseMail.sent}${r.courseMail.moved ? ` (מהן ${r.courseMail.moved} שעברו קורס)` : ""}${r.courseMail.blocked ? `, נחסמו ${r.courseMail.blocked}` : ""}${r.courseMail.errors ? `, שגיאות ${r.courseMail.errors}` : ""}`) : "";
       return { ok: true, text: `נקרא מהגיליון: ${s?.total ?? 0} פרונטליות (חדשות ${s?.added ?? 0}, הוסרו ${s?.removed ?? 0}, ממתינות ${s?.held ?? 0}) · מילוי מוקדם: ${r.prefilled ?? 0} · ${m}${cu ? ` · ${cu}` : ""} · ${mir}${r.error ? ` · שגיאה: ${r.error}` : ""}` };
     });
 
@@ -622,8 +627,8 @@ export function PrepAdmin({ rows, enabled, lastRunAt, lastRun, sheetUrl, sheetTa
                     {r.mailSentAt && <div className="text-[12px]" style={{ color: H.muted }}>{fmtDateTime.format(new Date(r.mailSentAt))}</div>}
                     {r.mailError && <div className="max-w-[220px] text-[12px]" style={{ color: H.red }}>{r.mailError}</div>}
                     {r.hasUpdateText && (
-                      <div className="mt-1 text-[12px]" style={{ color: r.updateMailStatus === "sent" ? "#1E7F4F" : r.updateMailStatus ? H.red : H.muted }} data-testid="hc-prep-update-status" data-status={r.updateMailStatus || "pending"}>
-                        עדכון לקורס: {r.updateMailStatus ? (MAIL_HE[r.updateMailStatus] ?? r.updateMailStatus) : "טרם נשלח"}
+                      <div className="mt-1 text-[12px]" style={{ color: movedCourse(r) ? "#B45309" : r.updateMailStatus === "sent" ? "#1E7F4F" : r.updateMailStatus ? H.red : H.muted }} data-testid="hc-prep-update-status" data-status={movedCourse(r) ? "moved" : r.updateMailStatus || "pending"}>
+                        עדכון לקורס: {movedCourse(r) ? `נשלח לקורס קודם (${r.updateMailCourse}) - המייל של הקורס הנוכחי יישלח בטיק הבא` : r.updateMailStatus ? (MAIL_HE[r.updateMailStatus] ?? r.updateMailStatus) : "טרם נשלח"}
                         {r.updateMailSentAt ? ` ${fmtDateTime.format(new Date(r.updateMailSentAt))}` : ""}
                         {r.updateMailError ? ` · ${r.updateMailError}` : ""}
                       </div>

@@ -437,7 +437,7 @@ export async function sendPending(deadline: number = Date.now() + SEND_BUDGET_MS
   return result;
 }
 
-export type CourseSendResult = SendResult & { courses: number };
+export type CourseSendResult = SendResult & { courses: number; moved?: number };
 
 const updateOutcome = (ok: boolean, error?: string) => (ok ? "sent" : error === "blocked_by_allowlist" ? "blocked" : "error");
 
@@ -465,7 +465,28 @@ export async function sendCourseUpdatesPending(deadline: number = Date.now() + S
     .order("sheet_row", { ascending: true })
     .limit(SEND_LIMIT);
   if (error) throw new Error(`update send select: ${error.message}`);
-  for (const r of rows ?? []) {
+  // Moved course (the owner, 23/11: ״מי שעברה לקורס אחר ממה שנשלח לה - שלח לה את המייל של הקורס״): a row whose
+  // mail was written for another course gets the current course's mail too. PostgREST cannot compare two columns,
+  // so the light rows are filtered here and only the movers are fetched in full.
+  const { data: mailed, error: movedErr } = await admin
+    .from(T)
+    .select("id, course, update_mail_course")
+    .eq("is_sample", false)
+    .is("hold_reason", null)
+    .is("removed_at", null)
+    .neq("email", "")
+    .in("course", courses)
+    .eq("update_mail_status", "sent")
+    .not("update_mail_course", "is", null);
+  if (movedErr) throw new Error(`update moved select: ${movedErr.message}`);
+  const movedIds = (mailed ?? []).filter((r) => r.update_mail_course !== r.course).map((r) => r.id);
+  let moved: PrepRow[] = [];
+  if (movedIds.length) {
+    const { data } = await admin.from(T).select("*").in("id", movedIds).order("sheet_row", { ascending: true });
+    moved = data ?? [];
+    result.moved = moved.length;
+  }
+  for (const r of [...(rows ?? []), ...moved]) {
     if (Date.now() > deadline) break; // the next tick continues
     const m = courseUpdateMailOf(r);
     if (!m) continue;
@@ -488,7 +509,7 @@ export async function sendCourseUpdatesPending(deadline: number = Date.now() + S
     const now = new Date().toISOString();
     await admin
       .from(T)
-      .update({ update_mail_status: status, update_mail_sent_at: o.ok ? now : r.update_mail_sent_at, update_mail_error: o.ok ? null : (o.error ?? null), update_mail_attempts: r.update_mail_attempts + 1, updated_at: now })
+      .update({ update_mail_status: status, update_mail_sent_at: o.ok ? now : r.update_mail_sent_at, update_mail_error: o.ok ? null : (o.error ?? null), update_mail_attempts: r.update_mail_attempts + 1, update_mail_course: r.course, updated_at: now })
       .eq("id", r.id);
     await sleep(520); // Resend: 2 requests a second
   }
@@ -530,7 +551,7 @@ export async function resendCourseUpdate(id: string): Promise<{ ok: boolean; err
   const now = new Date().toISOString();
   await admin
     .from(T)
-    .update({ update_mail_status: updateOutcome(r.ok, r.error), update_mail_sent_at: r.ok ? now : row.update_mail_sent_at, update_mail_error: r.ok ? null : (r.error ?? "send_failed"), update_mail_attempts: row.update_mail_attempts + 1, updated_at: now })
+    .update({ update_mail_status: updateOutcome(r.ok, r.error), update_mail_sent_at: r.ok ? now : row.update_mail_sent_at, update_mail_error: r.ok ? null : (r.error ?? "send_failed"), update_mail_attempts: row.update_mail_attempts + 1, update_mail_course: row.course, updated_at: now })
     .eq("id", id);
   return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
@@ -590,7 +611,7 @@ export async function sendCourseUpdateSamples(to: string, course: string): Promi
     await sleep(520);
     await admin
       .from(T)
-      .update({ update_mail_status: updateOutcome(r.ok, r.error), update_mail_sent_at: r.ok ? new Date().toISOString() : null, update_mail_error: r.ok ? null : (r.error ?? null), update_mail_attempts: row.update_mail_attempts + 1 })
+      .update({ update_mail_status: updateOutcome(r.ok, r.error), update_mail_sent_at: r.ok ? new Date().toISOString() : null, update_mail_error: r.ok ? null : (r.error ?? null), update_mail_attempts: row.update_mail_attempts + 1, update_mail_course: row.course })
       .eq("id", row.id);
     out.push({ n: x.n, label: x.label, ok: r.ok, error: r.error });
   }
@@ -771,7 +792,13 @@ export function mirrorRowOf(row: PrepRow): string[] {
     a.note ?? "",
     prefill ? `${prefill.source}${prefill.at ? ` (${prefill.at})` : ""}` : "",
     row.hold_reason ?? "",
-    row.update_mail_status ? (MAIL_STATUS_HE[row.update_mail_status] ?? row.update_mail_status) : courseUpdateFor(row.course) ? "טרם נשלח" : "",
+    row.update_mail_status === "sent" && row.update_mail_course && row.update_mail_course !== row.course
+      ? `נשלח לקורס קודם (${row.update_mail_course}) - יישלח שוב`
+      : row.update_mail_status
+        ? (MAIL_STATUS_HE[row.update_mail_status] ?? row.update_mail_status)
+        : courseUpdateFor(row.course)
+          ? "טרם נשלח"
+          : "",
     when(row.update_mail_sent_at),
     `${site()}${prepFormPath(row.token)}`,
   ];
