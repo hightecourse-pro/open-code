@@ -176,7 +176,7 @@ export function Studio({ initial, userName }: { initial: StudioView; userName: s
             ))}
           </nav>
           <div className="links">
-            <a href="/sanity/hall" target="_blank" rel="noreferrer">
+            <a href="/sanity/hall?wide=1" target="_blank" rel="noreferrer">
               פתיחת מסך האולם ↗
             </a>
             {firstTablet ? (
@@ -545,7 +545,8 @@ function HallTab({ view, active, act }: { view: StudioView; active: EventInfo | 
   const [c1, setC1] = useState(active?.compare?.[0] ?? 1);
   const [c2, setC2] = useState(active?.compare?.[1] ?? 2);
   const cur = active?.hallScene ?? "auto";
-  const hallUrl = active ? `/sanity/hall?event=${encodeURIComponent(active.slug)}` : "/sanity/hall";
+  // the venue's wall is 8 m × 2 m (the owner, 23.11): the computer sends an ordinary 16:9 signal, the picture inside it must be 4:1, the wall's processor fits it
+  const hallUrl = active ? `/sanity/hall?event=${encodeURIComponent(active.slug)}&wide=1` : "/sanity/hall?wide=1";
   if (!active) return <header><h2>מסך האולם</h2><p>אין אירוע פעיל. יוצרים אירוע בלשונית ״האירוע״.</p></header>;
   return (
     <>
@@ -609,12 +610,13 @@ function HallTab({ view, active, act }: { view: StudioView; active: EventInfo | 
         <h3>תצוגה מקדימה</h3>
         <iframe src={hallUrl} className="preview" title="מסך האולם" />
         <p className="hint">
-          הכתובת למחשב של המקרן:{" "}
+          הכתובת למחשב של מסך האולם:{" "}
           <a href={hallUrl} target="_blank" rel="noreferrer">
             {hallUrl}
           </a>{" "}
           · מסך מלא במקש F.
         </p>
+        <p className="hint">התמונה ביחס 4:1 (מסך 8×2): על מסך 16:9 היא פס באמצע, עם שחור מעל ומתחת. הבקר של המסך לוקח את הפס ומתאים אותו לקיר. בלי ‎wide=1‎ בכתובת המסך מצייר פריסת 16:9 רגילה.</p>
       </section>
       <p className="hint">{view.hall.circles.length} מעגלים משדרים כרגע.</p>
     </>

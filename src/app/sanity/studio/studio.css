@@ -230,7 +230,7 @@
 .hk-studio .scn.on{border-color:var(--ink);background:#EAF4FC;box-shadow:inset 0 0 0 2px var(--ink)}
 .hk-studio .pick{display:flex;align-items:center;gap:10px}
 .hk-studio .pick select{height:48px;border-radius:12px;border:2px solid #CFE3F3;font:500 18px "Rag Sans";padding:0 10px;color:var(--ink)}
-.hk-studio .preview{width:100%;aspect-ratio:16/9;border:0;border-radius:16px;background:#0E1A33}
+.hk-studio .preview{width:100%;aspect-ratio:4/1;border:0;border-radius:16px;background:#0E1A33}
 .hk-studio .agree{display:grid;grid-template-columns:1fr 160px 40px;align-items:center;gap:10px;font-size:15px;height:30px}
 .hk-studio .agree i{display:block;height:10px;background:var(--reef);border-radius:6px}
 .hk-studio .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
