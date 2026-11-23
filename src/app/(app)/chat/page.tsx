@@ -16,7 +16,7 @@ import type { UserRole } from "@/types/database";
 import { AutoRefresh } from "@/components/patterns/auto-refresh";
 import { PresenceAvatar, PresenceText } from "@/components/patterns/presence-dot";
 import { ChatStar } from "@/components/patterns/chat-star";
-import { editMessage, sendMessage, setChatStar, startConversation, toggleReaction } from "./actions";
+import { editMessage, loadOlderMessages, sendMessage, setChatStar, startConversation, toggleReaction } from "./actions";
 
 export const metadata: Metadata = { title: "צ'אטים" };
 
@@ -79,6 +79,7 @@ export default async function ChatPage({
     ,
     { data: recentMessages },
     { data: unreadRows },
+    { count: activeCount },
   ] = await Promise.all([
     // Resolve the "other" participant for each conversation.
     otherIds.length
@@ -126,6 +127,11 @@ export default async function ChatPage({
           .neq("sender_id", me.id)
           .is("read_at", null)
       : Promise.resolve({ data: [] }),
+    // How much history the 200-window hides - the thread offers it on demand
+    // (the owner, 23/11: "צריך אפשרות לראות בצ'אט את כל ההסטוריה").
+    active
+      ? supabase.from("messages").select("id", { count: "exact", head: true }).eq("conversation_id", active.id)
+      : Promise.resolve({ count: 0 }),
   ]);
 
   // Mark the opened thread read AFTER the reads above, not inside the wave:
@@ -190,6 +196,7 @@ export default async function ChatPage({
 
   // Chronological again for display (fetched newest-first for the LIMIT).
   const messages = [...(newestMessages ?? [])].reverse();
+  const olderCount = Math.max(0, (activeCount ?? 0) - messages.length);
 
   // One row per conversation from the rpc - the preview under each name.
   const lastMessage = new Map<string, { body: string; mine: boolean }>();
@@ -544,6 +551,8 @@ export default async function ChatPage({
                 key={active.id}
                 refreshOnMount={openedUnread > 0}
                 messages={messagesWithFiles}
+                olderCount={olderCount}
+                loadOlder={loadOlderMessages.bind(null, active.id)}
                 reactAction={canSend ? toggleReaction : undefined}
                 editAction={canSend ? editMessage : undefined}
                 meId={me.id}
