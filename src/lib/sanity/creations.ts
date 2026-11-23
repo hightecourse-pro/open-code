@@ -457,6 +457,8 @@ export class Kaleido {
     const W = c.width,
       H = c.height,
       R = Math.hypot(W, H) / 2;
+    // the rings of logos: on a 4:1 wall (8×2 m) the diagonal would push most rings out of the strip - size them by the height there
+    const RR = W / H > 2.4 ? H * 0.95 : R;
     const N = 12; // 12 slices
     x.fillStyle = this.bg;
     x.fillRect(0, 0, W, H);
@@ -477,7 +479,7 @@ export class Kaleido {
         const age = Math.min(1, (ts - o.born) / 1500);
         const ring = (i % 6) + 1;
         const sz = 110 + (i % 3) * 36;
-        const dist = ring * 0.15 * R + Math.sin(t * 0.4 + i) * 30;
+        const dist = ring * 0.15 * RR + Math.sin(t * 0.4 + i) * 30;
         x.globalAlpha = age;
         x.save();
         x.translate(dist, ((i * 37) % 60) - 30);

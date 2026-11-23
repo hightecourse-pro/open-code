@@ -20,7 +20,21 @@ type Scene = { id: SceneId; name: string; dur: number; render: () => void; prep?
 const hexPts = (x: number, y: number, r: number, rot = 30) => [...Array(6)].map((_, i) => { const a = (Math.PI / 180) * (60 * i + rot); return `${(x + Math.cos(a) * r).toFixed(1)},${(y + Math.sin(a) * r).toFixed(1)}`; }).join(" ");
 // 22.11: the yellow boat of the opening illustration
 const boatG = (s = 1, flip = false) => `<g transform="scale(${flip ? -s : s} ${s})"><image href="${ASSETS}/scene/boat.png" x="-19" y="-34" width="40" height="52"/></g>`;
-const MAP = { w: 1920, h: 830, cx: 960, cy: 415, rx: 790, ry: 318, irx: 250, iry: 140 };
+type MapGeo = { w: number; h: number; cx: number; cy: number; rx: number; ry: number };
+export type StageGeo = { W: number; H: number; map: MapGeo; boardScale: number; laneW: number; raceCols: number; focusH: number; islandDy: number };
+/**
+ * The stage: the kit's 1920×1080 (16:9), or - 23.11, the owner: the venue's
+ * LED wall is 8 m × 2 m - a 3840×960 stage (4:1). The map fills the band
+ * between the header and the ticker; on the wide stage the 30 boards sit on
+ * a wide ring spaced by arc length (an ellipse's parametric angle would crowd
+ * them at the two ends), the side panels move inside the ring beside the
+ * island, the race runs in three columns.
+ */
+export const STAGES: Record<"classic" | "wide", StageGeo> = {
+  classic: { W: 1920, H: 1080, map: { w: 1920, h: 830, cx: 960, cy: 415, rx: 790, ry: 318 }, boardScale: 10.2, laneW: 600, raceCols: 2, focusH: 700, islandDy: 0 },
+  // the island sits 18px above the ring's centre so its label clears the bottom row of boards
+  wide: { W: 3840, H: 960, map: { w: 3840, h: 732, cx: 1920, cy: 366, rx: 1500, ry: 285 }, boardScale: 9.6, laneW: 1040, raceCols: 3, focusH: 680, islandDy: -18 },
+};
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const mix = (c1: string, c2: string, t: number) => { const p = (c: string) => [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16)); const A = p(c1), B = p(c2); return "#" + A.map((v, k) => Math.round(lerp(v, B[k], t)).toString(16).padStart(2, "0")).join(""); };
 // morning → noon → sunset → night
@@ -41,6 +55,10 @@ export class HallApp {
   private slug: string | null;
   private lockedScene: string | null;
   private N = 30;
+  private G: StageGeo = STAGES.classic;
+  private wide = false;
+  private stretch = false;
+  private anchorTs: number[] | null = null;
   private circles: Record<number, Snapshot> = {};
   private creations: Record<number, CreationMeta> = {};
   private event: EventInfo | null = null;
@@ -74,12 +92,17 @@ export class HallApp {
   private onKey: (e: KeyboardEvent) => void;
   private onResize: () => void;
 
-  constructor(root: HTMLElement, opts: { slug: string | null; lockedScene: string | null; gender: Gender }) {
+  constructor(root: HTMLElement, opts: { slug: string | null; lockedScene: string | null; gender: Gender; wide?: boolean; stretch?: boolean }) {
     this.root = root;
     this.slug = opts.slug;
     this.lockedScene = opts.lockedScene;
     this.gender = opts.gender;
     this.C = buildContent(opts.gender);
+    this.wide = !!opts.wide;
+    this.stretch = !!opts.stretch;
+    this.G = this.wide ? STAGES.wide : STAGES.classic;
+    root.classList.toggle("wide", this.wide);
+    root.classList.toggle("stretch", this.stretch);
     const H = this.C.HALL;
     this.SCENES = [
       { id: "map", name: H.scenes.map, dur: 45, render: () => this.renderMap() },
@@ -173,7 +196,7 @@ export class HallApp {
   <div class="sky"></div>
   <header class="h-head">
     <div style="display:flex;align-items:center;gap:22px">${logo(96)}<div><div class="h-title">${H.title}</div><div class="h-live"><i></i>${H.live} · <span id="elapsed">00:00</span></div></div></div>
-    <div class="h-scene" id="sceneName"></div>
+    ${this.wide ? `<div class="h-mid"><div class="h-scene" id="sceneName"></div><div class="daytime" id="daytime"></div></div>` : `<div class="h-scene" id="sceneName"></div>`}
     <div class="h-kpis"><div><b id="k-active">0</b><span>${H.active}</span></div><div><b id="k-tokens">0</b><span>${H.tokens}</span><div class="goal"><i id="k-goalbar"></i></div><span id="k-goal" class="goal-t"></span></div><div><b id="k-arrived">0</b><span>${H.arrived}</span></div></div>
   </header>
   <main class="scenes"><section class="scene" id="sc-map"></section><section class="scene" id="sc-focus"></section><section class="scene" id="sc-compare"></section><section class="scene" id="sc-race"></section><section class="scene" id="sc-stats"></section></main>
@@ -185,24 +208,40 @@ export class HallApp {
   // ============================================================
   //  scene 1: the drone's view
   // ============================================================
-  private anchorAng(i: number) { return ((-90 + ((i - 1) * 360) / this.N) * Math.PI) / 180; }
+  /** The ring's parametric angle of circle i, from the top clockwise - the kit's placement, and where every ship docks around the island. */
+  private ringAng(i: number) { return ((-90 + ((i - 1) * 360) / this.N) * Math.PI) / 180; }
+  /** Where circle i's board sits: the kit's angle on 16:9; on the wide ring, equal arc lengths starting half a step past the top (the island's label and the day keep the centre line). */
+  private anchorT(i: number): number {
+    if (!this.wide) return this.ringAng(i);
+    if (!this.anchorTs || this.anchorTs.length !== this.N) {
+      const { rx, ry } = this.G.map; const STEPS = 7200; const L = [0]; let prev: [number, number] = [rx * Math.cos(-Math.PI / 2), ry * Math.sin(-Math.PI / 2)];
+      for (let k = 1; k <= STEPS; k++) { const t = -Math.PI / 2 + (2 * Math.PI * k) / STEPS; const p: [number, number] = [rx * Math.cos(t), ry * Math.sin(t)]; L.push(L[k - 1] + Math.hypot(p[0] - prev[0], p[1] - prev[1])); prev = p; }
+      const total = L[STEPS]; const ts: number[] = [];
+      for (let i = 0; i < this.N; i++) { const target = (total * (i + 0.5)) / this.N; let k = 0; while (k < STEPS && L[k + 1] < target) k++; ts.push(-Math.PI / 2 + (2 * Math.PI * k) / STEPS); }
+      this.anchorTs = ts;
+    }
+    return this.anchorTs[i - 1];
+  }
   // every board turned so its goal faces אי השפיות and its start points out
   private boardXf(i: number, B: Board): Xf {
-    const key = i + ":" + B.seed + ":" + this.N;
+    const M = this.G.map;
+    const key = i + ":" + B.seed + ":" + this.N + ":" + this.G.W;
     const hit = this.xfCache.get(key);
     if (hit) return hit;
-    const a = this.anchorAng(i), ax = MAP.cx + Math.cos(a) * MAP.rx, ay = MAP.cy + Math.sin(a) * MAP.ry;
+    const t = this.anchorT(i), ax = M.cx + Math.cos(t) * M.rx, ay = M.cy + Math.sin(t) * M.ry;
+    // the direction out of the ring (the number badge): the ellipse's normal on the wide ring, the angle itself on the kit's
+    const a = this.wide ? Math.atan2(Math.sin(t) * M.rx, Math.cos(t) * M.ry) : t;
     const st = B.faces[B.start].c, gl = B.faces[B.goal].c;
     const cx = B.faces.reduce((s, f) => s + f.c[0], 0) / B.faces.length, cy = B.faces.reduce((s, f) => s + f.c[1], 0) / B.faces.length;
-    const toC = Math.atan2(MAP.cy - ay, MAP.cx - ax), v = Math.atan2(gl[1] - st[1], gl[0] - st[0]);
-    const th = toC - v, s = 10.2, co = Math.cos(th), si = Math.sin(th);
+    const toC = Math.atan2(M.cy - ay, M.cx - ax), v = Math.atan2(gl[1] - st[1], gl[0] - st[0]);
+    const th = toC - v, s = this.G.boardScale, co = Math.cos(th), si = Math.sin(th);
     const pt = ([x, y]: readonly [number, number] | number[]): [number, number] => [ax + ((x - cx) * co - (y - cy) * si) * s, ay + ((x - cx) * si + (y - cy) * co) * s];
     const X: Xf = { a, ax, ay, pt, s, th, cx, cy };
     this.xfCache.set(key, X);
     return X;
   }
   // 22.11: the ship stops at the shore of אי השפיות (the drawing is 560×373) and never climbs on it.
-  private dockPt(i: number): [number, number] { const a = this.anchorAng(i), sn = Math.sin(a); return [MAP.cx + Math.cos(a) * 314, MAP.cy + sn * 196 + (sn > 0 ? sn * 66 : 0)]; }
+  private dockPt(i: number): [number, number] { const M = this.G.map; const a = this.ringAng(i), sn = Math.sin(a); return [M.cx + Math.cos(a) * 314, M.cy + this.G.islandDy + sn * 196 + (sn > 0 ? sn * 66 : 0)]; }
   private dayFrac() {
     const L = this.list().filter((c) => (c.stage || 0) >= 1 || c.finished);
     const p = L.length ? L.reduce((s, c) => s + this.progress(c), 0) / L.length : 0;
@@ -211,23 +250,24 @@ export class HallApp {
     return Math.max(0, Math.min(1, Math.max(p, t)));
   }
   private initMap() {
+    const MAP = this.G.map;
     let stars = "";
-    for (let k = 0; k < 90; k++) { const x = ((k * 733) % 1900) + 10, y = ((k * 389) % 810) + 10; stars += `<circle cx="${x}" cy="${y}" r="${(k % 3) * 0.7 + 1}" fill="#fff" style="animation-delay:${(k % 7) * 0.4}s"/>`; }
+    for (let k = 0; k < (this.wide ? 180 : 90); k++) { const x = ((k * 733) % (MAP.w - 20)) + 10, y = ((k * 389) % (MAP.h - 20)) + 10; stars += `<circle cx="${x}" cy="${y}" r="${(k % 3) * 0.7 + 1}" fill="#fff" style="animation-delay:${(k % 7) * 0.4}s"/>`; }
     const el = this.$("#sc-map")!;
     el.innerHTML = `
     <svg id="mapsvg" viewBox="0 0 ${MAP.w} ${MAP.h}" width="${MAP.w}" height="${MAP.h}" font-family="Rag Sans" style="position:absolute;inset:0">
       <defs><radialGradient id="seaG" cx="50%" cy="50%" r="72%"><stop id="sg0" offset="0" stop-color="#CBEAFA"/><stop id="sg1" offset=".55" stop-color="#86C9EE"/><stop id="sg2" offset="1" stop-color="#4FA9DD"/></radialGradient>
       ${FACE_KINDS.map((k) => `<pattern id="pt-${k}" patternContentUnits="objectBoundingBox" width="1" height="1"><image href="${ASSETS}/islands/${k}_tile.jpg" width="1" height="1" preserveAspectRatio="xMidYMid slice"/></pattern>`).join("")}<pattern id="seaT" patternUnits="userSpaceOnUse" width="314" height="314"><image href="${ASSETS}/scene/sea_tile.png" width="314" height="314"/><animateTransform attributeName="patternTransform" type="translate" from="0 0" to="314 0" dur="90s" repeatCount="indefinite"/></pattern><radialGradient id="sunG" cx="12%" cy="0%" r="70%"><stop offset="0" stop-color="#FFF4D6" stop-opacity=".9"/><stop offset="1" stop-color="#FFF4D6" stop-opacity="0"/></radialGradient></defs>
       <rect width="${MAP.w}" height="${MAP.h}" fill="url(#seaG)"/><rect width="${MAP.w}" height="${MAP.h}" fill="url(#seaT)"/><rect id="sun" width="${MAP.w}" height="${MAP.h}" fill="url(#sunG)"/>
-      <g transform="translate(${MAP.cx} ${MAP.cy})">
+      <g transform="translate(${MAP.cx} ${MAP.cy + this.G.islandDy})">
         <defs><clipPath id="goalClip"><ellipse rx="252" ry="140"/></clipPath><radialGradient id="goalGlow"><stop offset="0" stop-color="#FFF3C8" stop-opacity=".9"/><stop offset="1" stop-color="#FFF3C8" stop-opacity="0"/></radialGradient></defs>
         <g id="islandGlow" opacity="0"><ellipse rx="330" ry="200" fill="#FFD66B" opacity=".25"/></g>
         <ellipse cy="10" rx="290" ry="186" fill="#1C4E72" opacity=".10"/>
-        <image href="${ASSETS}/scene/goal_top.png" x="-280" y="-187" width="560" height="373"/>
-        <g transform="translate(0 196)"><rect x="-108" y="-24" width="216" height="46" rx="23" fill="#15233F" stroke="#D9B46A" stroke-width="3"/><text y="11" text-anchor="middle" font-size="30" font-weight="700" fill="#F5EEE0">${nameOf("goal")}</text></g></g>
+        <image id="goalImg" href="${ASSETS}/scene/goal_top.png" x="-280" y="-187" width="560" height="373"/>
+        <g id="goalLabel" transform="translate(0 ${this.wide ? 190 : 196})"><rect x="-108" y="-24" width="216" height="46" rx="23" fill="#15233F" stroke="#D9B46A" stroke-width="3"/><text y="11" text-anchor="middle" font-size="30" font-weight="700" fill="#F5EEE0">${nameOf("goal")}</text></g></g>
       <g id="L-boards"></g><rect id="tint" width="${MAP.w}" height="${MAP.h}" fill="#000" opacity="0" style="pointer-events:none"/>
       <g id="L-stars" class="stars" opacity="0">${stars}</g><g id="L-ships"></g></svg>
-    <div class="ov ov-r" id="ovR"></div><div class="ov ov-l" id="ovL"></div><div class="daytime" id="daytime"></div>`;
+    <div class="ov ov-r" id="ovR"></div><div class="ov ov-l" id="ovL"></div>${this.wide ? "" : `<div class="daytime" id="daytime"></div>`}`;
     this.mapReady = true;
   }
   private renderMap() {
@@ -331,7 +371,7 @@ export class HallApp {
     const z = this.zoneById(c.zone); const rank = [...this.list()].sort((a, b) => (b.total || 0) - (a.total || 0)).findIndex((x) => x.circle === c.circle) + 1;
     const tier = this.tierFor(c.total || 0); const done = c.finished ? 6 : Math.max(0, (c.visited || []).length);
     el.innerHTML = `<div class="focus">
-    <div class="f-board">${this.boardSVG(c, 940, 700)}</div>
+    <div class="f-board">${this.boardSVG(c, 940, this.G.focusH)}</div>
     <div class="f-info">
       <span class="f-kick">${icon("star", 34, "#E0A800")}${H.scenes.focus}</span><h2>מעגל ${c.circle}</h2>
       <p class="f-where">${c.finished ? H.arrivedTitle : z ? `עכשיו <b style="color:${z.color}">${prep("ב", z.name)}</b> · ${z.task}` : H.leaving}</p>
@@ -362,7 +402,7 @@ export class HallApp {
   //  scene 4: the race
   // ============================================================
   private lane(c: Snapshot | undefined, i: number) {
-    const W = 600; const st = c ? c.stage : 0; const done = !!c && c.finished; const visited: string[] = (c && c.visited) || [];
+    const W = this.G.laneW; const st = c ? c.stage : 0; const done = !!c && c.finished; const visited: string[] = (c && c.visited) || [];
     const X = (p: number) => W - 24 - (p / 6.5) * (W - 48); const pos = done ? 6.5 : this.progress(c) * 6.5;
     const symbolPath = (z: ZoneId) => symbol(z, 100, "#fff").replace(/<svg[^>]*>|<\/svg>/g, "");
     const dots = [...Array(6)].map((_, k) => { const z = visited[k]; const cur = !z && k === st - 1 && !done && c ? c.zone : null; const cc = cur && isZoneId(cur) ? COLORS[cur] : null;
@@ -373,8 +413,9 @@ export class HallApp {
     ${c && !done && st >= 1 ? `<g transform="translate(${X(pos)} 30)">${boatG(0.62, true)}</g>` : ""}</svg><span class="lt num">${c ? c.total : ""}</span></div>`;
   }
   private renderRace() {
-    const arr = [...Array(this.N)].map((_, i) => this.circles[i + 1]); const h = Math.ceil(this.N / 2);
-    this.$("#sc-race")!.innerHTML = `<div class="race"><div class="cols"><div class="col">${arr.slice(0, h).map((c, i) => this.lane(c, i + 1)).join("")}</div><div class="col">${arr.slice(h).map((c, i) => this.lane(c, h + i + 1)).join("")}</div></div></div>`;
+    const arr = [...Array(this.N)].map((_, i) => this.circles[i + 1]); const cols = this.G.raceCols; const h = Math.ceil(this.N / cols);
+    const col = (k: number) => `<div class="col">${arr.slice(k * h, (k + 1) * h).map((c, i) => this.lane(c, k * h + i + 1)).join("")}</div>`;
+    this.$("#sc-race")!.innerHTML = `<div class="race"><div class="cols">${[...Array(cols)].map((_, k) => col(k)).join("")}</div></div>`;
   }
 
   // ============================================================
@@ -518,11 +559,11 @@ export class HallApp {
   private hallBirds() {
     const host = this.$("#sc-map");
     if (host && !this.grandOn) {
-      const n = Math.random() < 0.7 ? 1 : 2, dur = 26 + Math.random() * 12;
+      const n = Math.random() < 0.7 ? 1 : 2, dur = (this.wide ? 44 : 26) + Math.random() * 12; const W = this.G.W;
       for (let i = 0; i < n; i++) {
-        const sc = 0.26 + Math.random() * 0.16, y = 150 + Math.random() * 560; const f = document.createElement("div"); f.className = "flyer"; f.innerHTML = `<div class="bird" style="transform:scale(${sc.toFixed(2)});animation-delay:-${(Math.random() * 0.9).toFixed(2)}s;animation-duration:${(0.9 + Math.random() * 0.4).toFixed(2)}s"></div>`;
-        f.style.left = 1960 + i * (300 + Math.random() * 500) + "px"; f.style.top = y.toFixed(0) + "px"; f.style.transitionDuration = dur + i * 4 + "s"; host.appendChild(f);
-        requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transform = `translate(${-2600}px, ${-60 + Math.random() * 120}px)`; })); this.later(() => f.remove(), (dur + i * 4) * 1000 + 500);
+        const sc = 0.26 + Math.random() * 0.16, y = (this.wide ? 60 : 150) + Math.random() * (this.wide ? this.G.map.h - 200 : 560); const f = document.createElement("div"); f.className = "flyer"; f.innerHTML = `<div class="bird" style="transform:scale(${sc.toFixed(2)});animation-delay:-${(Math.random() * 0.9).toFixed(2)}s;animation-duration:${(0.9 + Math.random() * 0.4).toFixed(2)}s"></div>`;
+        f.style.left = W + 40 + i * (300 + Math.random() * 500) + "px"; f.style.top = y.toFixed(0) + "px"; f.style.transitionDuration = dur + i * 4 + "s"; host.appendChild(f);
+        requestAnimationFrame(() => requestAnimationFrame(() => { f.style.transform = `translate(${-(W + 680)}px, ${-60 + Math.random() * 120}px)`; })); this.later(() => f.remove(), (dur + i * 4) * 1000 + 500);
       }
     }
     this.later(() => this.hallBirds(), 9000 + Math.random() * 12000);
@@ -530,10 +571,10 @@ export class HallApp {
   private hallCloud(startX?: number) {
     const host = this.$("#sc-map");
     if (host && !this.grandOn) {
-      const k = Math.floor(Math.random() * 5), w = 170 + Math.random() * 150, dur = 80 + Math.random() * 40;
+      const k = Math.floor(Math.random() * 5), w = 170 + Math.random() * 150, dur = (this.wide ? 150 : 80) + Math.random() * 40; const W = this.G.W;
       const c = document.createElement("img"); c.src = `${ASSETS}/scene/cloud_${k}.png`; c.className = "hcloud"; c.alt = ""; c.style.width = w.toFixed(0) + "px";
-      const x0 = startX ?? -w - 20; c.style.left = x0 + "px"; c.style.top = (60 + Math.random() * 640).toFixed(0) + "px";
-      const dist = 1960 + w - x0, t = (dur * dist) / (1960 + w * 2); c.style.transitionDuration = t.toFixed(1) + "s"; host.appendChild(c);
+      const x0 = startX ?? -w - 20; c.style.left = x0 + "px"; c.style.top = (60 + Math.random() * (this.G.map.h - 190)).toFixed(0) + "px";
+      const dist = W + 40 + w - x0, t = (dur * dist) / (W + 40 + w * 2); c.style.transitionDuration = t.toFixed(1) + "s"; host.appendChild(c);
       requestAnimationFrame(() => requestAnimationFrame(() => { c.style.transform = `translateX(${dist}px)`; })); this.later(() => c.remove(), t * 1000 + 500);
     }
   }
@@ -552,7 +593,7 @@ export class HallApp {
     const R = this.C.REVEAL, T = this.C.TASKS;
     const el = this.$("#reveal"); if (!el) return;
     const L = Object.values(this.creations).sort((a, b) => a.circle - b.circle);
-    el.innerHTML = `<canvas id="kal" width="1920" height="1080"></canvas>
+    el.innerHTML = `<canvas id="kal" width="${this.G.W}" height="${this.G.H}"></canvas>
     <div class="rv-top">${logo(110)}</div>
     <div class="rv-legend"><span>${icon("wave", 40, "#fff")}${R.melody}</span><span>${icon("speech", 40, "#fff")}${R.song}</span><span>${icon("tiles", 40, "#fff")}${R.shape}</span></div>
     <div class="rv-line"><small id="rv-c"></small><span>${T.safari.sentenceStart},</span><b id="rv-s"></b></div>
@@ -573,7 +614,12 @@ export class HallApp {
   hideReveal() { this.revealOn = false; this.player?.stop(); this.player = null; this.kal?.stop(); this.kal = null; const el = this.$("#reveal"); if (el) { el.hidden = true; el.innerHTML = ""; } }
 
   // ---------- scale ----------
-  private fit() { const k = Math.min(innerWidth / 1920, innerHeight / 1080); this.root.style.transform = `scale(${k})`; }
+  /** The stage scaled to the screen; `stretch` = the wide stage squashed into a 16:9 signal, for an LED processor that stretches its input over the 4:1 wall. */
+  private fit() {
+    const { W, H } = this.G;
+    if (this.stretch) { this.root.style.transform = `scale(${innerWidth / W}, ${innerHeight / H})`; return; }
+    const k = Math.min(innerWidth / W, innerHeight / H); this.root.style.transform = `scale(${k})`;
+  }
 }
 
 export const resourceOf = RESOURCE_OF;
