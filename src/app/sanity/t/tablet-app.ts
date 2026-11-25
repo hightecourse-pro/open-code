@@ -78,7 +78,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
 
   // ---------- saving: localStorage now, the server soon ----------
   const sync = createSync(token, {
-    onStale: (state, version, resetAt) => adopt(state, version, resetAt, true),
+    onStale: (state, version, resetAt) => adopt(state, version, resetAt, version - (S.version ?? 0) >= 10 ? "undo" : true),
     onOnline: (on) => {
       const p = $("#syncpill") as HTMLElement | null;
       if (!p) return;
@@ -113,7 +113,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     sync.queue(payload(), photo ?? null);
   }
   /** The server's truth replaces ours: another device took over, or the studio reset the event. */
-  function adopt(state: GameState | null, version: number, resetAt: string | null, announce: boolean, hasPhoto = boot.hasPhoto) {
+  function adopt(state: GameState | null, version: number, resetAt: string | null, announce: boolean | "undo", hasPhoto = boot.hasPhoto) {
     const resetMs = resetAt ? new Date(resetAt).getTime() : 0;
     const wasReset = !state || (resetMs && (S.createdAt ?? 0) < resetMs);
     S = state ? { ...state, version } : fresh();
@@ -123,7 +123,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     persistLocal();
     buildBoard();
     render();
-    if (announce) toast(wasReset ? UI.sync.reset : UI.sync.taken);
+    if (announce) toast(wasReset ? UI.sync.reset : announce === "undo" ? UI.sync.undo : UI.sync.taken);
   }
   function toast(text: string) {
     const t = $("#toast") as HTMLElement | null;
@@ -134,15 +134,15 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       t.hidden = true;
     }, 4500);
   }
-  // every 30s: did the server move on without us (a takeover, a reset)?
+  // every 10s: did the server move on without us (a takeover, a reset, the studio's ״מסך אחורה״)?
   const poll = setInterval(async () => {
     if (!alive || document.hidden || sync.busy()) return;
     const b = await sync.fetchBoot();
     if (!b || !alive || sync.busy()) return;
     const resetMs = b.resetAt ? new Date(b.resetAt).getTime() : 0;
     if (resetMs && (S.createdAt ?? 0) < resetMs) adopt(null, 0, b.resetAt, true);
-    else if (b.state && b.version > (S.version ?? 0)) adopt(b.state, b.version, b.resetAt, true, b.hasPhoto);
-  }, 30_000);
+    else if (b.state && b.version > (S.version ?? 0)) adopt(b.state, b.version, b.resetAt, b.version - (S.version ?? 0) >= 10 ? "undo" : true, b.hasPhoto);
+  }, 10_000);
 
   // ---------- helpers ----------
   const ZB = Object.fromEntries(ZONES.map((z) => [z.id, z])) as Record<ZoneId, (typeof ZONES)[number]>;
