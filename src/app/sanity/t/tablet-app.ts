@@ -1758,7 +1758,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       const goEl = $("#go") as HTMLElement | null;
       const bottom = goEl && !goEl.hidden ? Math.max(r.bottom, goEl.getBoundingClientRect().bottom) : r.bottom;
       lift = Math.max(0, bottom + lift + 24 - avail);
-      stage.style.transform = `translate(-50%, calc(-50% - ${lift}px)) scale(${lastScale})`;
+      stage.style.transform = `translate(-50%, -50%) translateY(${-lift}px) scale(${lastScale})`;
       return;
     }
     lift = 0;
