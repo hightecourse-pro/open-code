@@ -220,6 +220,8 @@ export interface GameState {
   forestStep?: number;
   reefIdx?: number;
   obs?: number[];
+  /** the observatory's ״שולחים״ was tapped once with fewer than 8 cards counted - the next tap sends (the owner, 25.11) */
+  obsConfirm?: boolean;
   lastGain?: LastGain;
   lhChoice?: number;
   lhDried?: string;

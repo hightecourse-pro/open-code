@@ -73,13 +73,14 @@ export function Tablet({ boot, token }: { boot: TabletBootstrap; token: string }
       if (video && video.paused) video.play().catch(() => {});
     };
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("pointerdown", onFirstTouch, { once: true });
-    window.addEventListener("pointerdown", onTouch);
+    // pointerup: a touch's pointerdown carries no user activation in Chrome, and both the video and the wake lock need one
+    window.addEventListener("pointerup", onFirstTouch, { once: true });
+    window.addEventListener("pointerup", onTouch);
     host.addEventListener("contextmenu", noMenu);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("pointerdown", onFirstTouch);
-      window.removeEventListener("pointerdown", onTouch);
+      window.removeEventListener("pointerup", onFirstTouch);
+      window.removeEventListener("pointerup", onTouch);
       host.removeEventListener("contextmenu", noMenu);
       lock?.release().catch(() => {});
       if (video) {

@@ -932,13 +932,26 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
         const sum = () => q.reduce((a, b) => a + b, 0);
         copy.innerHTML = `<p class="kick in">${TU.kick}</p><h1 class="md in d1">${TU.title}</h1>
       <div class="in d2" style="margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:16px 26px;width:620px">${TU.q.map((t, i) => `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:#ffffff26;border-radius:16px;padding:10px 14px"><b style="font-size:24px">${t}</b>${stepper("q" + i, q[i], 8, true)}</div>`).join("")}</div><p class="lead in d3" id="sum" style="font-weight:700">${fill(TU.sum, { n: sum() })}</p>`;
+        // the owner (25.11): ״שולחים״ with fewer than 8 cards counted gave ״כל הכבוד״ and one token, and read like a bug.
+        // Now the first tap asks (״רק N מתוך 8. לשלוח בכל זאת?״) and only the second one sends; a change of the count resets that.
+        const cta = () => {
+          if (sum() === 8 || S.obsConfirm) button(TU.cta, () => ACT.obsDone());
+          else
+            button(fill(TU.notAll, { n: sum() }), () => {
+              S.obsConfirm = true;
+              save();
+              cta();
+            });
+        };
         wireSteppers((id, v) => {
           q[+id.slice(1)] = v;
           S.obs = q;
+          S.obsConfirm = false;
           save();
           $("#sum")!.textContent = fill(TU.sum, { n: sum() });
+          cta();
         });
-        button(TU.cta, () => ACT.obsDone());
+        cta();
       } else if (z === "reef") {
         const TU = TASK_UI.reef;
         const i = S.reefIdx || 0;
@@ -1152,6 +1165,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     S.forestStep = 0;
     S.reefIdx = 0;
     S.obs = [2, 2, 2, 2];
+    S.obsConfirm = false;
     go("gate");
   }
 
@@ -1717,18 +1731,46 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   }, 500);
 
   // ---------- scale ----------
+  // The soft keyboard (the owner's Lenovo, 25.11: ״המקלדת נפתחת והתצוגה מתקטנת״) shrinks the window; the stage must
+  // not shrink with it. While a text field has the focus the scale stays, and the stage is only lifted so the field
+  // sits above the keyboard; the next resize without a focused field fits the whole picture again.
+  let lastScale = 0, lift = 0;
+  const typing = () => {
+    const a = document.activeElement as HTMLElement | null;
+    return !!a && (a.tagName === "INPUT" || a.tagName === "TEXTAREA") && host.contains(a) ? a : null;
+  };
   function fit() {
-    const k = Math.min(innerWidth / 1280, innerHeight / 720);
-    stage.style.transform = `scale(${k})`;
+    const vv = window.visualViewport;
+    // the visual viewport can lag the window by a frame on resize - take the smaller of the two
+    const w = innerWidth, h = Math.min(innerHeight, vv ? vv.height : innerHeight);
+    const field = typing();
+    if (field && lastScale) {
+      // measured while already lifted: add the current lift back, or every second call would undo the first
+      const r = field.getBoundingClientRect();
+      lift = Math.max(0, r.bottom + lift + 24 - h);
+      stage.style.transform = `translateY(${-lift}px) scale(${lastScale})`;
+      return;
+    }
+    lift = 0;
+    lastScale = Math.min(w / 1280, h / 720);
+    stage.style.transform = `scale(${lastScale})`;
   }
-  addEventListener("resize", fit);
+  const onResize = () => {
+    fit();
+    later(fit, 150);
+  };
+  addEventListener("resize", onResize);
+  window.visualViewport?.addEventListener("resize", onResize);
+  host.addEventListener("focusin", () => later(fit, 350));
+  host.addEventListener("focusout", () => later(fit, 100));
   fit();
-  // full screen on the first touch (Android Chrome tablets); the class mirrors the kit's html.full
+  // full screen on the first touch (Android Chrome tablets); the class mirrors the kit's html.full.
+  // pointerup, not pointerdown: a touch's pointerdown is no user activation in Chrome, so the request was refused in silence.
   const onFirstGesture = () => {
-    host.removeEventListener("pointerdown", onFirstGesture);
+    host.removeEventListener("pointerup", onFirstGesture);
     if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
   };
-  host.addEventListener("pointerdown", onFirstGesture);
+  host.addEventListener("pointerup", onFirstGesture);
   const onFs = () => host.classList.toggle("full", !!document.fullscreenElement);
   document.addEventListener("fullscreenchange", onFs);
 
@@ -1794,8 +1836,9 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       timeouts.forEach(clearTimeout);
       timeouts.clear();
       sync.destroy();
-      removeEventListener("resize", fit);
-      host.removeEventListener("pointerdown", onFirstGesture);
+      removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      host.removeEventListener("pointerup", onFirstGesture);
       document.removeEventListener("fullscreenchange", onFs);
       devbar?.remove();
       if (window.HK && window.HK.go === go) delete window.HK;
