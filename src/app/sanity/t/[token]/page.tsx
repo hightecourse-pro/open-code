@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { buildContent } from "@/lib/sanity/content";
 import { SanityError, tabletBootstrap } from "@/lib/sanity/server";
+import { hcGate } from "@/app/hightecourse/shell";
 import type { TabletBootstrap } from "@/lib/sanity/shared";
 import { Tablet } from "../tablet";
 import "../tablet.css";
@@ -27,7 +28,10 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
   server and hands it to the tablet, which continues from there - on the same
   device after a refresh, or on any other device opening the same address.
 */
-export default async function TabletPage({ params }: { params: Promise<{ token: string }> }) {
+export default async function TabletPage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: Promise<{ edit?: string }> }) {
+  // the game's edit mode (the owner, 26.11): same door as the studio
+  const sp = await searchParams;
+  const edit = sp.edit === "1" ? (await hcGate()).allowed : false;
   const { token } = await params;
   let boot: TabletBootstrap | null = null;
   let problem: string | null = null;
@@ -47,5 +51,5 @@ export default async function TabletPage({ params }: { params: Promise<{ token: 
       </div>
     );
   }
-  return <Tablet boot={boot} token={token} />;
+  return <Tablet boot={boot} token={token} edit={edit} />;
 }

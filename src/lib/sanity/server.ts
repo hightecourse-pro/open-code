@@ -219,6 +219,24 @@ export async function undoCircle(slug: string, circle: number, to?: number): Pro
   if (error) fail(error.message, 500);
 }
 
+/** The owner's wording edits (the game's edit mode, 26.11): read by Claude, never by the game. */
+export type TextEditRow = { key: string; kind: "text" | "screen" | "note"; original: string | null; text: string | null; screen: string | null; updated_at: string };
+export async function listTextEdits(): Promise<TextEditRow[]> {
+  const { data, error } = await admin().from("sanity_text_edits").select("*").order("updated_at", { ascending: false }).limit(2000);
+  if (error) fail(error.message, 500);
+  return (data ?? []) as TextEditRow[];
+}
+export async function putTextEdit(e: { kind: "text" | "screen" | "note"; key: string; text: string | null; original: string | null; screen: string | null }): Promise<void> {
+  const db = admin();
+  if (e.text == null) {
+    const { error } = await db.from("sanity_text_edits").delete().eq("key", e.key);
+    if (error) fail(error.message, 500);
+    return;
+  }
+  const { error } = await db.from("sanity_text_edits").upsert({ key: e.key, kind: e.kind, text: e.text, original: e.original, screen: e.screen, updated_at: new Date().toISOString() }, { onConflict: "key" });
+  if (error) fail(error.message, 500);
+}
+
 /** The studio's remote for the hall screen. */
 export async function setControl(slug: string, c: { hallScene?: string; focusCircle?: number | null; compare?: [number, number] | null; reveal?: boolean }): Promise<EventInfo> {
   const r = await eventRow(slug);

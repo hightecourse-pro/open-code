@@ -10,6 +10,7 @@ import { buildContent, fill, type Content, type ZoneId } from "@/lib/sanity/cont
 import * as E from "@/lib/sanity/engine";
 import type { Face, GameState, Phase } from "@/lib/sanity/engine";
 import { photoPath, type TabletBootstrap, type TabletSave } from "@/lib/sanity/shared";
+import { createEditBar, decorate, loadStore, markDeep, putRow, readEditable, screenId, type EditStore } from "./edit-mode";
 import { createSync } from "./sync";
 
 export interface TabletOptions {
@@ -17,6 +18,8 @@ export interface TabletOptions {
   token: string;
   dev: boolean;
   shot: boolean;
+  /** the owner's wording editor inside the game (26.11): texts become editable, a bar on top walks the screens */
+  edit?: boolean;
 }
 export interface TabletHandle {
   readonly S: GameState;
@@ -38,7 +41,10 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   const { boot, token } = opts;
   const SHOT = opts.shot;
   const CIRCLE = boot.circle;
-  const C: Content = buildContent(boot.event.gender);
+  // edit mode: every Hebrew text carries its path (invisible marks) and an edit already made replaces it
+  const EDIT_STORE: EditStore = { edits: new Map(), screens: new Map(), note: "" };
+  const C0: Content = buildContent(boot.event.gender);
+  const C: Content = opts.edit ? markDeep(C0, EDIT_STORE.edits) : C0;
   const { GAME, ZONES, SPECIAL, UI, HOW, TASK_UI, FOG_CARDS, TASKS, gx } = C;
   const SAVE = `hk:game:${boot.event.slug}:${CIRCLE}:v3`;
   let alive = true;
@@ -538,6 +544,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     syncBoard();
     sky(S.phase === "finale" || S.phase === "finale2" || S.phase === "invite" ? 6 : Math.min(S.stage, 5));
     R[ph]();
+    if (opts.edit) editor?.afterRender();
   }
 
   // ================================================================
@@ -1744,7 +1751,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   function fit() {
     const vv = window.visualViewport;
     // the visual viewport can lag the window by a frame on resize - take the smaller of the two
-    const w = innerWidth, h = Math.min(innerHeight, vv ? vv.height : innerHeight);
+    const w = innerWidth, h = Math.min(innerHeight, vv ? vv.height : innerHeight) - (opts.edit ? 56 : 0);
     const field = typing();
     if (field && lastScale) {
       // measured while already lifted: add the current lift back, or every second call would undo the first.
@@ -1870,6 +1877,96 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     });
   }
 
+  // ---------- the owner's editor (26.11): marks → editable spans, saves, the bar on top ----------
+  let editor: { afterRender(): void; destroy(): void } | null = null;
+  if (opts.edit && !SHOT) {
+    host.classList.add("editing");
+    let bar: ReturnType<typeof createEditBar> | null = null;
+    const originalOf = (path: string): string => {
+      let v: unknown = C0;
+      for (const k of path.split(".")) v = v && typeof v === "object" ? (v as Record<string, unknown>)[k] : undefined;
+      return typeof v === "string" ? v : "";
+    };
+    const jump = (p: Phase, z: ZoneId) => {
+      try {
+        if (["gate", "howto", "task", "result", "flip"].includes(p)) {
+          S.zone = z;
+          S.pos = faceIdx(z);
+          S.stage = Math.max(1, S.stage);
+          S.flipKind = z;
+          if (!S.visited.includes(z)) S.visited = [...S.visited, z];
+        }
+        if (p === "task" && !S.timer) startTimer(10);
+        if (p === "result" && !S.lastGain) S.lastGain = { n: 4, ok: true, detail: "", timeup: false, flooded: false, first: false, fogAsk: null, fogDone: null, shown: false };
+        if (p === "sail") S.sail = null;
+        go(p);
+      } catch (e) {
+        console.error("edit jump", p, e);
+      }
+    };
+    let decorating = false;
+    const deco = () => {
+      if (decorating) return;
+      decorating = true;
+      try {
+        decorate(stage);
+        decorate(goBtn);
+      } finally {
+        decorating = false;
+      }
+    };
+    const mo = new MutationObserver(() => later(deco, 30));
+    mo.observe(host, { childList: true, subtree: true, characterData: true });
+    const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
+    host.addEventListener("input", (e) => {
+      const el = (e.target as HTMLElement).closest<HTMLElement>("[data-path]");
+      if (!el) return;
+      const path = el.dataset.path!;
+      const t = saveTimers.get(path);
+      if (t) clearTimeout(t);
+      saveTimers.set(
+        path,
+        setTimeout(() => {
+          const text = readEditable(el);
+          const original = originalOf(path);
+          const sid = screenId(S.phase, S.zone);
+          const was = EDIT_STORE.edits.has(path);
+          const now = text !== original;
+          if (now) EDIT_STORE.edits.set(path, text);
+          else EDIT_STORE.edits.delete(path);
+          const st = EDIT_STORE.screens.get(sid) ?? { visited: true, edited: 0 };
+          st.edited = Math.max(0, st.edited + (now && !was ? 1 : !now && was ? -1 : 0));
+          EDIT_STORE.screens.set(sid, st);
+          bar?.update(S.phase, S.zone);
+          void putRow({ kind: "text", key: path, text: now ? text : null, original, screen: sid });
+        }, 600),
+      );
+    });
+    editor = {
+      afterRender() {
+        deco();
+        const sid = screenId(S.phase, S.zone);
+        if (!EDIT_STORE.screens.has(sid)) {
+          EDIT_STORE.screens.set(sid, { visited: true, edited: 0 });
+          void putRow({ kind: "screen", key: sid, text: "visited", screen: sid });
+        }
+        bar?.update(S.phase, S.zone);
+      },
+      destroy() {
+        mo.disconnect();
+        bar?.destroy();
+      },
+    };
+    void loadStore().then((st) => {
+      if (!alive) return;
+      for (const [k, v] of st.edits) EDIT_STORE.edits.set(k, v);
+      for (const [k, v] of st.screens) EDIT_STORE.screens.set(k, v);
+      EDIT_STORE.note = st.note;
+      bar = createEditBar(host, EDIT_STORE, jump, (text) => void putRow({ kind: "note", key: "general", text }));
+      render();
+    });
+  }
+
   // ---------- start ----------
   buildBoard();
   // fonts.ready never settles while a network filter holds the font files (the owner's office tablet, 25.11: the map drawn, no words, no button).
@@ -1901,6 +1998,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       document.removeEventListener("fullscreenchange", onFs);
       document.removeEventListener("visibilitychange", onBack);
       devbar?.remove();
+      editor?.destroy();
       if (window.HK && window.HK.go === go) delete window.HK;
     },
   };

@@ -11,15 +11,15 @@ import { createTabletApp } from "./tablet-app";
 */
 const CLOUD = "M30 70 C10 70 6 44 26 40 C24 18 52 10 64 26 C72 4 112 4 118 30 C140 22 160 40 150 58 C166 62 162 80 146 80 L36 80 C28 80 26 72 30 70Z";
 
-export function Tablet({ boot, token }: { boot: TabletBootstrap; token: string }) {
+export function Tablet({ boot, token, edit = false }: { boot: TabletBootstrap; token: string; edit?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const host = ref.current;
     if (!host) return;
     const qs = new URLSearchParams(location.search);
-    const app = createTabletApp(host, { boot, token, dev: qs.has("dev"), shot: qs.has("shot") });
+    const app = createTabletApp(host, { boot, token, dev: qs.has("dev"), shot: qs.has("shot"), edit });
     return () => app.destroy();
-  }, [boot, token]);
+  }, [boot, token, edit]);
 
   // A real tablet, 90 minutes on the floor: the screen must not sleep, the
   // picture stays landscape, and a long press on an island never opens the
