@@ -453,16 +453,27 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   }
 
   // ---------- the frame of a screen ----------
+  // Chrome 81 on the conference's tablets (25.11) has no color-mix(): the tints tablet.css mixes from --c / --cd are
+  // computed here as well (--c10 ... --c40, --cd70) and the stylesheet names them as fallbacks before each color-mix.
+  const cssColor = (name: string) => getComputedStyle(host).getPropertyValue(name).trim();
+  const mixHex = (a: string, pct: number, b: string) => {
+    const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+    if (!hex.test(a) || !hex.test(b)) return b;
+    const p = (h: string) => {
+      h = h.slice(1);
+      if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+      return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16));
+    };
+    const A = p(a), B = p(b);
+    return "#" + A.map((v, i) => Math.round(v * pct + B[i] * (1 - pct)).toString(16).padStart(2, "0")).join("");
+  };
   function zoneMode(z: ZoneId | null) {
-    if (z) {
-      stage.classList.add("zone");
-      stage.style.setProperty("--c", `var(--${z})`);
-      stage.style.setProperty("--cd", `var(--${z}-deep)`);
-    } else {
-      stage.classList.remove("zone");
-      stage.style.setProperty("--c", "var(--ink)");
-      stage.style.setProperty("--cd", "var(--ink)");
-    }
+    stage.classList.toggle("zone", !!z);
+    stage.style.setProperty("--c", z ? `var(--${z})` : "var(--ink)");
+    stage.style.setProperty("--cd", z ? `var(--${z}-deep)` : "var(--ink)");
+    const c = cssColor(z ? `--${z}` : "--ink"), cd = cssColor(z ? `--${z}-deep` : "--ink");
+    for (const pct of [10, 12, 15, 26, 35, 40]) stage.style.setProperty(`--c${pct}`, mixHex(c, pct / 100, "#fff"));
+    stage.style.setProperty("--cd70", mixHex(cd, 0.7, "#000"));
   }
   function clear() {
     SCR++;

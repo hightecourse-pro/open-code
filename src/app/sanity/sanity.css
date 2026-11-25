@@ -9,5 +9,5 @@
 
 .hk-root{font-family:"Rag Sans",var(--font-heebo),Heebo,Arial,sans-serif;direction:rtl}
 /* a full-screen stage: the tablet and the hall never scroll */
-.hk-page{position:fixed;inset:0;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:manipulation;overscroll-behavior:none;-webkit-touch-callout:none}
+.hk-page{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;overflow:hidden;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;touch-action:manipulation;overscroll-behavior:none;-webkit-touch-callout:none}
 .hk-page img{max-width:none}
