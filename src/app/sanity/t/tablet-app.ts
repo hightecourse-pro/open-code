@@ -1760,7 +1760,9 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
 
   // ---------- start ----------
   buildBoard();
-  document.fonts.ready.then(() => {
+  // fonts.ready never settles while a network filter holds the font files (the owner's office tablet, 25.11: the map drawn, no words, no button).
+  // The words matter more than the typeface: draw after 1.5s whatever the fonts are doing (font-display: swap brings Rag Sans in when it lands).
+  Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]).then(() => {
     if (!alive) return;
     render();
   });
