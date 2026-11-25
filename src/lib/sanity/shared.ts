@@ -71,7 +71,8 @@ export interface StudioView {
   active: string | null;
   hall: HallView;
   /** The tablets' addresses of the active event - for whoever may manage the event only. */
-  tokens: { circle: number; token: string; undo: number }[];
+  /** undo = how many screens back are possible; steps = the screens the circle opened, oldest first (the last one is the current screen) */
+  tokens: { circle: number; token: string; undo: number; steps: { phase: string; zone: string | null; t: number }[] }[];
   sunoConfigured: boolean;
   now: number;
 }

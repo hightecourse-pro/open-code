@@ -327,6 +327,10 @@
 .hk-tablet .toast{position:absolute;left:50%;top:150px;transform:translateX(-50%);z-index:71;background:#15233F;color:#fff;font-size:22px;font-weight:500;padding:12px 24px;border-radius:14px;box-shadow:0 10px 30px #0006;animation:hkt-in .4s cubic-bezier(.2,.8,.3,1.05) both;pointer-events:none;max-width:900px;text-align:center}
 .hk-tablet .toast[hidden]{display:none}
 .hk-tablet .devbar{font:14px var(--font-heebo),Heebo,Arial}
+/* the corner button for full screen (the camera app of the forest drops it; the owner, 25.11) */
+.hk-tablet .fsbtn{position:fixed;top:10px;left:10px;z-index:70;width:46px;height:46px;border-radius:12px;border:0;background:#0E1A33b3;color:#fff;font-size:24px;line-height:46px;text-align:center;opacity:.55;padding:0}
+.hk-tablet .fsbtn[hidden]{display:none}
+.hk-tablet.full .fsbtn{opacity:.3}
 /* Chrome < 87 (the conference's Lenovo tablets, 25.11): no gap in flex boxes and no inset - margins stand in, only there */
 @supports not (inset:0){.hk-tablet .who>*+*{margin-inline-start:12px}.hk-tablet .dots>*+*{margin-inline-start:6px}.hk-tablet .bag>*+*{margin-inline-start:4px}.hk-tablet .goalbox>*+*{margin-inline-start:16px}.hk-tablet .go>*+*{margin-inline-start:14px}.hk-tablet .opts>*+*{margin-top:12px}.hk-tablet .opt>*+*{margin-inline-start:16px}.hk-tablet .opt .cost>*+*{margin-inline-start:6px}.hk-tablet .chips>*{margin:0 0 10px 10px}.hk-tablet .chip>*+*{margin-inline-start:10px}.hk-tablet .howto>*+*{margin-top:12px}.hk-tablet .howto li>*+*{margin-inline-start:14px}.hk-tablet .clock>*+*{margin-inline-start:10px}.hk-tablet .tool>*+*{margin-inline-start:10px}.hk-tablet .stepper>*+*{margin-inline-start:14px}.hk-tablet #ctl>*+*{margin-inline-start:10px}.hk-tablet .devbar>*+*{margin-inline-start:6px}.hk-tablet .gchips>*+*{margin-top:10px}}
 /* color-mix() only where the browser knows it: a value with var() that fails at computed time falls to `none`, not to the declaration before it (Chrome 81, 25.11) */
