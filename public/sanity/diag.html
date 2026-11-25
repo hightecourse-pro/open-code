@@ -117,7 +117,7 @@ iframe{width:100%;height:320px;border:2px solid #999;background:#ddd}
       try {
         var d = f.contentDocument;
         var st = d.getElementById('stage'), copy = d.getElementById('copy'), go = d.getElementById('go');
-        line('frame-' + tag, 'stage=' + !!st + ' hexes=' + d.querySelectorAll('.hex').length + ' copy=' + (copy ? copy.innerText.length : -1) + ' go-hidden=' + (go ? go.hidden : '-') + ' title=' + d.title.slice(0, 20) + ' body=' + d.body.innerText.length + ' ready=' + d.readyState, !!st && d.querySelectorAll('.hex').length > 0 && !!copy && copy.innerText.length > 0);
+        line('frame-' + tag, 'stage=' + !!st + ' hexes=' + d.querySelectorAll('.hex').length + ' copy=' + (copy ? copy.innerText.length : -1) + ' go-hidden=' + (go ? go.hidden : '-') + ' fsbtn=' + d.querySelectorAll('#bar .fsbtn').length + ' full=' + !!d.fullscreenElement + ' host=' + location.host + ' title=' + d.title.slice(0, 20) + ' body=' + d.body.innerText.length + ' ready=' + d.readyState, !!st && d.querySelectorAll('.hex').length > 0 && !!copy && copy.innerText.length > 0);
         if (last) { var good = !!st && d.querySelectorAll('.hex').length > 0 && !!copy && copy.innerText.length > 0 && errs.length === 0; var v = document.getElementById('verdict'); v.textContent = good ? 'המשחק רץ בטאבלט הזה' : 'המשחק לא רץ בטאבלט הזה'; v.className = good ? 'ok' : 'bad'; report.push('verdict=' + (good ? 'OK' : 'FAIL')); }
       } catch (e) { line('frame-' + tag, 'no access: ' + e, false); if (last) { var v2 = document.getElementById('verdict'); v2.textContent = 'המשחק לא רץ בטאבלט הזה'; v2.className = 'bad'; report.push('verdict=FAIL'); } }
       line('frame-errors-' + tag, errs.length ? errs.join(' || ').slice(0, 600) : 'none', errs.length === 0);
