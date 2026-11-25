@@ -30,12 +30,31 @@ export function Tablet({ boot, token }: { boot: TabletBootstrap; token: string }
     if (!host) return;
     let lock: { release(): Promise<void> } | null = null;
     const nav = navigator as Navigator & { wakeLock?: { request(type: "screen"): Promise<{ release(): Promise<void> }> } };
+    // The conference's tablets (Lenovo TB-X505L, Chrome 81 - 25.11) have no Wake Lock API. The old trick still holds
+    // the screen there: a small silent video playing in the page (Chrome keeps the screen on while a visible video
+    // plays). Started on the first touch (a gesture is required) and restarted whenever the page comes back or is
+    // touched again - the camera app of the forest photo pauses it.
+    let video: HTMLVideoElement | null = null;
+    const keepAwakeByVideo = () => {
+      if (nav.wakeLock) return;
+      if (!video) {
+        video = document.createElement("video");
+        video.src = "/sanity/keepawake.webm";
+        video.loop = true;
+        video.setAttribute("playsinline", "");
+        video.setAttribute("aria-hidden", "true");
+        video.style.cssText = "position:fixed;left:0;bottom:0;width:160px;height:90px;opacity:0.02;pointer-events:none;z-index:0";
+        host.appendChild(video);
+      }
+      if (video.paused) video.play().catch(() => {});
+    };
     const grab = async () => {
       try {
         if (nav.wakeLock && document.visibilityState === "visible") lock = await nav.wakeLock.request("screen");
       } catch {
         /* an unsupported browser, or the page is hidden - nothing to hold */
       }
+      if (document.visibilityState === "visible") keepAwakeByVideo();
     };
     const onVisible = () => {
       if (document.visibilityState === "visible") grab();
@@ -50,14 +69,23 @@ export function Tablet({ boot, token }: { boot: TabletBootstrap; token: string }
       }
     };
     const noMenu = (e: Event) => e.preventDefault();
+    const onTouch = () => {
+      if (video && video.paused) video.play().catch(() => {});
+    };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pointerdown", onFirstTouch, { once: true });
+    window.addEventListener("pointerdown", onTouch);
     host.addEventListener("contextmenu", noMenu);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pointerdown", onFirstTouch);
+      window.removeEventListener("pointerdown", onTouch);
       host.removeEventListener("contextmenu", noMenu);
       lock?.release().catch(() => {});
+      if (video) {
+        video.pause();
+        video.remove();
+      }
     };
   }, []);
   return (
