@@ -69,14 +69,14 @@
 .hk-tablet button,.hk-tablet input{font-family:inherit}
 .hk-tablet button{cursor:pointer}
 .hk-tablet .num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
-.hk-tablet #wrap{position:fixed;inset:0;display:grid;place-items:center}
+.hk-tablet #wrap{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;display:grid;place-items:center}
 .hk-tablet #stage{position:relative;width:1280px;height:720px;overflow:hidden;border-radius:20px;transform-origin:center;box-shadow:0 40px 100px #000a;background:var(--sky-1);--c:var(--ink);--cd:var(--ink)}
-.hk-tablet .sky{position:absolute;inset:0;background:linear-gradient(172deg,var(--s1,#E4F2FB),var(--s2,#D3EAF8));transition:--s1 2s,background 2s}
+.hk-tablet .sky{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;background:linear-gradient(172deg,var(--s1,#E4F2FB),var(--s2,#D3EAF8));transition:--s1 2s,background 2s}
 .hk-tablet #sun{position:absolute;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#FFF6C8 0,#FFE27A 55%,#FFE27A00 72%);transition:transform 3s cubic-bezier(.4,.1,.3,1),opacity 2s;opacity:.9}
-.hk-tablet #stars{position:absolute;inset:0 0 40% 0;opacity:0;transition:opacity 2s}
+.hk-tablet #stars{position:absolute;top:0;right:0;bottom:40%;left:0;inset:0 0 40% 0;opacity:0;transition:opacity 2s}
 .hk-tablet #stars i{position:absolute;width:3px;height:3px;border-radius:50%;background:#fff;animation:hkt-tw 2.4s ease-in-out infinite}
 @keyframes hkt-tw{50%{opacity:.25}}
-.hk-tablet .zbg{position:absolute;inset:0;opacity:0;transition:opacity .7s;background:linear-gradient(222deg,var(--cd) 0%,var(--c) 45%,color-mix(in srgb,var(--c) 40%,#fff) 100%)}
+.hk-tablet .zbg{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;opacity:0;transition:opacity .7s;background:linear-gradient(222deg,var(--cd) 0%,var(--c) 45%,var(--c40,#fff) 100%)}
 .hk-tablet #stage.zone .zbg{opacity:1}
 .hk-tablet .cloud{position:absolute;fill:#fff;animation:hkt-drift 28s ease-in-out infinite alternate;transition:opacity .5s}
 .hk-tablet #stage.zone .cloud{opacity:0!important}
@@ -85,11 +85,11 @@
 .hk-tablet #stage.zone .sea,.hk-tablet #stage.nosea .sea{transform:translateY(180px)}
 .hk-tablet .sea .mv{animation:hkt-slide 5s linear infinite}
 @keyframes hkt-slide{to{transform:translateX(-52px)}}
-.hk-tablet #motes{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .8s}
+.hk-tablet #motes{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;pointer-events:none;opacity:0;transition:opacity .8s}
 .hk-tablet #stage.zone #motes{opacity:1}
 .hk-tablet #motes i{position:absolute;bottom:-30px;border-radius:50%;background:#ffffff55;animation:hkt-rise linear infinite}
 @keyframes hkt-rise{to{transform:translateY(-800px)}}
-.hk-tablet .bar{position:absolute;top:0;inset-inline:0;height:84px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;z-index:20;transition:background .5s}
+.hk-tablet .bar{position:absolute;top:0;left:0;right:0;inset-inline:0;height:84px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;z-index:20;transition:background .5s}
 .hk-tablet #stage.zone .bar{background:#fff;box-shadow:0 1px 0 #0001}
 .hk-tablet .who{display:flex;align-items:center;gap:12px;font-size:28px;font-weight:900;color:var(--cd)}
 .hk-tablet #stage:not(.zone) .who{color:var(--ink)}
@@ -100,7 +100,7 @@
 .hk-tablet .dots i.on{background:var(--ink)}
 .hk-tablet .bag{display:flex;align-items:center;gap:4px;background:#ffffffe6;border-radius:999px;padding:5px 8px;direction:rtl;box-shadow:0 0 0 1.5px #1D5EB322}
 .hk-tablet .bag .r{position:relative;display:grid;place-items:center;width:40px;height:40px}
-.hk-tablet .bag .r b{position:absolute;top:-4px;inset-inline-end:-4px;min-width:21px;height:21px;padding:0 5px;border-radius:11px;background:var(--rc);color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2px #fff}
+.hk-tablet .bag .r b{position:absolute;top:-4px;left:-4px;inset-inline-end:-4px;min-width:21px;height:21px;padding:0 5px;border-radius:11px;background:var(--rc);color:#fff;font-size:13px;font-weight:900;display:grid;place-items:center;box-shadow:0 0 0 2px #fff}
 .hk-tablet .bag .tot{font-size:22px;font-weight:900;color:var(--ink);padding:0 10px 0 6px;border-inline-start:1.5px solid #1D5EB322;margin-inline-start:4px}
 .hk-tablet .pop{animation:hkt-pop .6s cubic-bezier(.2,.8,.3,1.4)}
 @keyframes hkt-pop{40%{transform:scale(1.35)}}
@@ -162,12 +162,12 @@
 .hk-tablet .trail{fill:none;stroke:var(--ink);stroke-width:3.5;stroke-dasharray:2 11;stroke-linecap:round;opacity:.5}
 .hk-tablet #tide{position:absolute;left:-40px;right:-40px;bottom:-460px;height:460px;z-index:25;pointer-events:none;transition:bottom 1.3s cubic-bezier(.4,.1,.3,1)}
 .hk-tablet #tide.up{bottom:-60px}
-.hk-tablet #fog{position:absolute;inset:0;z-index:24;pointer-events:none;opacity:0;transition:opacity 1.1s}
+.hk-tablet #fog{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;z-index:24;pointer-events:none;opacity:0;transition:opacity 1.1s}
 .hk-tablet #fog.on{opacity:1}
 .hk-tablet #fog .puff{position:absolute;border-radius:50%;background:radial-gradient(closest-side,#fff,#ffffffd0 40%,#ffffff00);animation:hkt-puff 6s ease-in-out infinite alternate}
 @keyframes hkt-puff{to{transform:translateX(70px) scale(1.18)}}
 .hk-tablet .card{position:absolute;z-index:26;background:#fff;border-radius:22px;padding:28px 32px;box-shadow:0 0 0 2.5px var(--ink),10px 9px 0 var(--sea-line);color:var(--ink)}
-.hk-tablet #stage.zone .card{box-shadow:0 0 0 2.5px #fff,10px 9px 0 color-mix(in srgb,var(--cd) 70%,#000)}
+.hk-tablet #stage.zone .card{box-shadow:0 0 0 2.5px #fff,10px 9px 0 var(--cd70,#000)}
 .hk-tablet .card h2{margin:0;font-size:40px;font-weight:900;line-height:1.05}
 .hk-tablet .card p{margin:10px 0 0;font-size:23px;font-weight:300;line-height:1.4}
 .hk-tablet .card p b{font-weight:700}
@@ -187,7 +187,7 @@
 .hk-tablet .tool.hint{animation:hkt-hint 1.4s ease-in-out 3}
 @keyframes hkt-hint{50%{box-shadow:0 0 0 2px var(--cd),0 0 0 10px #ffffff80}}
 .hk-tablet .stepper{direction:ltr;display:inline-flex;align-items:center;gap:14px;background:#fff;border-radius:18px;padding:10px;color:var(--cd)}
-.hk-tablet .stepper button{width:60px;height:60px;border-radius:12px;border:0;background:color-mix(in srgb,var(--c) 15%,#fff);color:var(--cd);font-size:36px;font-weight:500}
+.hk-tablet .stepper button{width:60px;height:60px;border-radius:12px;border:0;background:var(--c15,#fff);color:var(--cd);font-size:36px;font-weight:500}
 .hk-tablet .stepper output{min-width:86px;text-align:center;font-size:60px;font-weight:900}
 .hk-tablet .stepper.sm button{width:46px;height:46px;font-size:28px}
 .hk-tablet .stepper.sm output{min-width:60px;font-size:42px}
@@ -199,7 +199,7 @@
 .hk-tablet .p.up{transform:translateY(-36px)}
 .hk-tablet .p.up i,.hk-tablet .p.up b{background:var(--boat-fill)}
 .hk-tablet .mcard{position:absolute;width:86px;height:116px;transform-style:preserve-3d;transition:transform .8s cubic-bezier(.3,.7,.3,1),left .8s cubic-bezier(.3,.7,.3,1),top .8s cubic-bezier(.3,.7,.3,1)}
-.hk-tablet .mcard .f,.hk-tablet .mcard .k{position:absolute;inset:0;border-radius:12px;backface-visibility:hidden;display:grid;place-items:center;font-weight:900;text-align:center}
+.hk-tablet .mcard .f,.hk-tablet .mcard .k{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;border-radius:12px;backface-visibility:hidden;display:grid;place-items:center;font-weight:900;text-align:center}
 .hk-tablet .mcard .f{background:#fff;color:var(--cd);font-size:44px;box-shadow:0 0 0 3px #fff,0 8px 18px #0003}
 .hk-tablet .mcard .k{background:var(--cd);transform:rotateY(180deg);box-shadow:0 0 0 3px #fff,0 8px 18px #0003;background-image:repeating-linear-gradient(45deg,#ffffff22 0 8px,transparent 8px 16px)}
 .hk-tablet .mcard.down{transform:rotateY(180deg)}
@@ -208,18 +208,18 @@
 .hk-tablet .axis{position:absolute;background:#fff;border-radius:4px;transition:transform .7s cubic-bezier(.3,.7,.3,1)}
 .hk-tablet .axl{position:absolute;font-size:17px;font-weight:700;color:#fff;background:#ffffff33;padding:3px 10px;border-radius:999px;white-space:nowrap}
 .hk-tablet .flip3d{position:absolute;z-index:27;width:240px;height:240px;perspective:900px}
-.hk-tablet .flip3d .in3{position:absolute;inset:0;transform-style:preserve-3d;transition:transform 1.2s cubic-bezier(.5,0,.3,1)}
+.hk-tablet .flip3d .in3{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;transform-style:preserve-3d;transition:transform 1.2s cubic-bezier(.5,0,.3,1)}
 .hk-tablet .flip3d.go3 .in3{transform:rotateY(180deg)}
-.hk-tablet .flip3d svg{position:absolute;inset:0;backface-visibility:hidden}
+.hk-tablet .flip3d svg{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;backface-visibility:hidden}
 .hk-tablet .flip3d .back{transform:rotateY(180deg)}
 .hk-tablet .hand{position:absolute;z-index:28;font-size:0;transition:transform 1.2s cubic-bezier(.5,0,.3,1)}
 .hk-tablet .fly{position:absolute;z-index:40;pointer-events:none;transition:transform .9s cubic-bezier(.5,0,.3,1),opacity .3s}
-.hk-tablet #confetti{position:absolute;inset:0;z-index:45;pointer-events:none;overflow:hidden}
+.hk-tablet #confetti{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;z-index:45;pointer-events:none;overflow:hidden}
 .hk-tablet #confetti i{position:absolute;top:-30px;width:12px;height:18px;border-radius:3px;animation:hkt-fall linear forwards}
 @keyframes hkt-fall{to{transform:translate(var(--dx),800px) rotate(var(--rt))}}
 .hk-tablet .burst{position:absolute;z-index:44;pointer-events:none;border-radius:50%;border:4px solid var(--boat-line);animation:hkt-burst .9s ease-out forwards}
 @keyframes hkt-burst{from{transform:scale(.2);opacity:1}to{transform:scale(2.4);opacity:0}}
-.hk-tablet #wipe{position:absolute;inset:0;z-index:60;pointer-events:none;background:var(--ink);clip-path:circle(0% at 50% 50%);transition:clip-path .55s cubic-bezier(.6,0,.3,1)}
+.hk-tablet #wipe{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;z-index:60;pointer-events:none;background:var(--ink);clip-path:circle(0% at 50% 50%);transition:clip-path .55s cubic-bezier(.6,0,.3,1)}
 .hk-tablet #wipe.on{clip-path:circle(150% at 50% 50%)}
 .hk-tablet #wipe img{position:absolute;left:50%;top:50%;width:140px;transform:translate(-50%,-50%);opacity:0;transition:opacity .2s}
 .hk-tablet #wipe.on img{opacity:1}
@@ -240,12 +240,12 @@
 .hk-tablet .devbar{position:fixed;left:8px;bottom:8px;z-index:999;display:flex;gap:6px;align-items:center;background:#0E1A33e6;border-radius:12px;padding:6px 10px;font:14px Heebo,Arial;color:#fff}
 .hk-tablet .devbar button,.hk-tablet .devbar select{border:0;border-radius:8px;padding:6px 10px;background:#ffffff22;color:#fff;font:inherit}
 .hk-tablet .devbar select option{color:#000}
-.hk-tablet #stage.scene .zbg{background:linear-gradient(180deg,#fff 0%,color-mix(in srgb,var(--c) 10%,#fff) 45%,color-mix(in srgb,var(--c) 26%,#fff) 100%)}
+.hk-tablet #stage.scene .zbg{background:linear-gradient(180deg,#fff 0%,var(--c10,#fff) 45%,var(--c26,#fff) 100%)}
 .hk-tablet #stage.scene .copy{color:var(--cd)}
 .hk-tablet #stage.scene .go{background:var(--cd);color:#fff}
 .hk-tablet #stage.scene #motes{opacity:.5}
-.hk-tablet #stage.scene #motes i{background:color-mix(in srgb,var(--c) 35%,#fff)}
-.hk-tablet #stage.scene .chip{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 40%,#fff)}
+.hk-tablet #stage.scene #motes i{background:var(--c35,#fff)}
+.hk-tablet #stage.scene .chip{box-shadow:0 0 0 2px var(--c40,#fff)}
 .hk-tablet .scene-art{position:absolute;left:50%;bottom:-2px;transform:translateX(-50%);pointer-events:none;z-index:1;animation:hkt-sceneRise 1.3s cubic-bezier(.2,.8,.2,1) both}
 @keyframes hkt-sceneRise{from{opacity:0;transform:translate(-50%,70px)}to{opacity:1;transform:translate(-50%,0)}}
 .hk-tablet #stage.scene .copy,.hk-tablet #stage.scene .go{z-index:5}
@@ -276,9 +276,9 @@
 .hk-tablet #stage.deck #motes{opacity:0}
 .hk-tablet .deck-art{position:absolute;left:0;bottom:0;width:1280px;height:720px;pointer-events:none;z-index:1}
 .hk-tablet #stage.deck .copy{background:#fffffff2;border-radius:26px;padding:24px 32px 28px;color:var(--cd);box-shadow:0 10px 30px #0E1A3333}
-.hk-tablet #stage.deck .copy .stepper{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 40%,#fff)}
-.hk-tablet #stage.deck .copy [style*="ffffff26"]{background:color-mix(in srgb,var(--c) 12%,#fff)!important}
-.hk-tablet #stage.deck .copy .tline{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 40%,#fff)}
+.hk-tablet #stage.deck .copy .stepper{box-shadow:0 0 0 2px var(--c40,#fff)}
+.hk-tablet #stage.deck .copy [style*="ffffff26"]{background:var(--c12,#fff)!important}
+.hk-tablet #stage.deck .copy .tline{box-shadow:0 0 0 2px var(--c40,#fff)}
 .hk-tablet #stage.deck .copy svg rect[fill="#fff"]{fill:var(--c)}
 .hk-tablet #stage.deck .clock{background:#fff;color:var(--cd);box-shadow:0 4px 14px #0E1A3333}
 .hk-tablet #stage.deck .go{background:var(--cd);color:#fff}
@@ -287,7 +287,7 @@
 .hk-tablet #stage.gatebg .copy{color:#15233F}
 .hk-tablet #stage.gatebg #cu{color:#15233F;text-shadow:0 3px 0 #D9B46A}
 .hk-tablet .gate-wrap{position:absolute;left:50%;bottom:0;width:282px;height:432px;transform:translateX(-50%);z-index:2;perspective:900px}
-.hk-tablet .gate-wrap>img{position:absolute;inset:0;width:100%;height:100%}
+.hk-tablet .gate-wrap>img{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;width:100%;height:100%}
 .hk-tablet .gate-wrap .leaf{position:absolute;top:22.66%;height:74.79%;width:22.03%;transition:transform 1.6s cubic-bezier(.5,.05,.3,1)}
 .hk-tablet .gate-wrap .leaf img{width:100%;height:100%;display:block}
 .hk-tablet .gate-wrap .leaf.l{left:26.86%;transform-origin:left center}
@@ -327,3 +327,7 @@
 .hk-tablet .toast{position:absolute;left:50%;top:150px;transform:translateX(-50%);z-index:71;background:#15233F;color:#fff;font-size:22px;font-weight:500;padding:12px 24px;border-radius:14px;box-shadow:0 10px 30px #0006;animation:hkt-in .4s cubic-bezier(.2,.8,.3,1.05) both;pointer-events:none;max-width:900px;text-align:center}
 .hk-tablet .toast[hidden]{display:none}
 .hk-tablet .devbar{font:14px var(--font-heebo),Heebo,Arial}
+/* Chrome < 87 (the conference's Lenovo tablets, 25.11): no gap in flex boxes and no inset - margins stand in, only there */
+@supports not (inset:0){.hk-tablet .who>*+*{margin-inline-start:12px}.hk-tablet .dots>*+*{margin-inline-start:6px}.hk-tablet .bag>*+*{margin-inline-start:4px}.hk-tablet .goalbox>*+*{margin-inline-start:16px}.hk-tablet .go>*+*{margin-inline-start:14px}.hk-tablet .opts>*+*{margin-top:12px}.hk-tablet .opt>*+*{margin-inline-start:16px}.hk-tablet .opt .cost>*+*{margin-inline-start:6px}.hk-tablet .chips>*{margin:0 0 10px 10px}.hk-tablet .chip>*+*{margin-inline-start:10px}.hk-tablet .howto>*+*{margin-top:12px}.hk-tablet .howto li>*+*{margin-inline-start:14px}.hk-tablet .clock>*+*{margin-inline-start:10px}.hk-tablet .tool>*+*{margin-inline-start:10px}.hk-tablet .stepper>*+*{margin-inline-start:14px}.hk-tablet #ctl>*+*{margin-inline-start:10px}.hk-tablet .devbar>*+*{margin-inline-start:6px}.hk-tablet .gchips>*+*{margin-top:10px}}
+/* color-mix() only where the browser knows it: a value with var() that fails at computed time falls to `none`, not to the declaration before it (Chrome 81, 25.11) */
+@supports (color:color-mix(in srgb,red,blue)){.hk-tablet .zbg{background:linear-gradient(222deg,var(--cd) 0%,var(--c) 45%,color-mix(in srgb,var(--c) 40%,#fff) 100%)}.hk-tablet #stage.zone .card{box-shadow:0 0 0 2.5px #fff,10px 9px 0 color-mix(in srgb,var(--cd) 70%,#000)}.hk-tablet .stepper button{background:color-mix(in srgb,var(--c) 15%,#fff)}.hk-tablet #stage.scene .zbg{background:linear-gradient(180deg,#fff 0%,color-mix(in srgb,var(--c) 10%,#fff) 45%,color-mix(in srgb,var(--c) 26%,#fff) 100%)}.hk-tablet #stage.scene #motes i{background:color-mix(in srgb,var(--c) 35%,#fff)}.hk-tablet #stage.scene .chip{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 40%,#fff)}.hk-tablet #stage.deck .copy .stepper{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 40%,#fff)}.hk-tablet #stage.deck .copy [style*="ffffff26"]{background:color-mix(in srgb,var(--c) 12%,#fff)!important}.hk-tablet #stage.deck .copy .tline{box-shadow:0 0 0 2px color-mix(in srgb,var(--c) 40%,#fff)}}
