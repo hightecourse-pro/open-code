@@ -15,7 +15,9 @@ iframe{width:100%;height:320px;border:2px solid #999;background:#ddd}
 ב-Chrome: ⋮ ← הגדרות ← הגדרות אתרים ← JavaScript ← מופעל.<br>
 ב-Samsung Internet: ⋮ ← הגדרות ← אתרים ופריטים להורדה (או ״מתקדם״) ← JavaScript ← מופעל.<br>
 אם הקישור נפתח בתוך אפליקציית סורק ולא בדפדפן: להעתיק את הקישור ולפתוח אותו ב-Chrome.</div></noscript>
+<div id="verdict" style="font-size:26px;font-weight:bold;margin:8px 0">בודק... (עד 30 שניות)</div>
 <div>מספר האבחון (להגיד לקלוד): <span id="sid">...</span></div>
+<div class="k" style="font-size:15px">שורות אפורות = מידע על הדפדפן בלבד; האפליקציה מגשרת על מה שחסר בו. רק אדום נחשב.</div>
 <div id="out"></div>
 <h2>הדף האמיתי בתוך מסגרת</h2>
 <div id="frame"></div>
@@ -48,7 +50,7 @@ iframe{width:100%;height:320px;border:2px solid #999;background:#ddd}
   var syntax = { 'optional-chaining': 'var a={};a?.b', 'nullish': 'var a=null;a??1', 'logical-assign': 'var a=null;a??=1', 'class-fields': 'class A{x=1;static y=2}', 'private-fields': 'class B{#p=1;m(){return this.#p}}', 'static-block': 'class C{static{}}', 'async-gen': 'async function*g(){}', 'lookbehind': '/(?<=a)b/', 'numeric-sep': '1_000', 'spread-obj': 'var o={...{a:1}}', 'for-await': 'async function f(y){for await(var x of y){}}', 'bigint': '10n', 'regex-v': '/a/v' };
   var bad = [];
   for (var s in syntax) { try { new Function(syntax[s]); } catch (e) { bad.push(s); } }
-  line('syntax-missing', bad.length ? bad.join(',') : 'none', bad.length === 0);
+  line('syntax-missing (מידע)', bad.length ? bad.join(',') : 'none');
 
   var apis = {
     fetch: typeof window.fetch === 'function', Promise: typeof Promise !== 'undefined', allSettled: !!(window.Promise && Promise.allSettled),
@@ -58,7 +60,7 @@ iframe{width:100%;height:320px;border:2px solid #999;background:#ddd}
     'screen.orientation': !!screen.orientation, wakeLock: !!navigator.wakeLock, serviceWorker: !!navigator.serviceWorker, TextEncoder: typeof TextEncoder !== 'undefined', WeakRef: typeof WeakRef !== 'undefined'
   };
   var missing = []; for (var a in apis) if (!apis[a]) missing.push(a);
-  line('api-missing', missing.length ? missing.join(',') : 'none', missing.length === 0);
+  line('api-missing (מידע)', missing.length ? missing.join(',') : 'none');
   try { localStorage.setItem('hk-diag', '1'); localStorage.removeItem('hk-diag'); line('localStorage', 'ok', true); } catch (e) { line('localStorage', 'BLOCKED ' + e, false); }
   try { sessionStorage.setItem('hk-diag', '1'); line('sessionStorage', 'ok', true); } catch (e) { line('sessionStorage', 'BLOCKED ' + e, false); }
   var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
@@ -116,7 +118,8 @@ iframe{width:100%;height:320px;border:2px solid #999;background:#ddd}
         var d = f.contentDocument;
         var st = d.getElementById('stage'), copy = d.getElementById('copy'), go = d.getElementById('go');
         line('frame-' + tag, 'stage=' + !!st + ' hexes=' + d.querySelectorAll('.hex').length + ' copy=' + (copy ? copy.innerText.length : -1) + ' go-hidden=' + (go ? go.hidden : '-') + ' title=' + d.title.slice(0, 20) + ' body=' + d.body.innerText.length + ' ready=' + d.readyState, !!st && d.querySelectorAll('.hex').length > 0 && !!copy && copy.innerText.length > 0);
-      } catch (e) { line('frame-' + tag, 'no access: ' + e, false); }
+        if (last) { var good = !!st && d.querySelectorAll('.hex').length > 0 && !!copy && copy.innerText.length > 0 && errs.length === 0; var v = document.getElementById('verdict'); v.textContent = good ? 'המשחק רץ בטאבלט הזה' : 'המשחק לא רץ בטאבלט הזה'; v.className = good ? 'ok' : 'bad'; report.push('verdict=' + (good ? 'OK' : 'FAIL')); }
+      } catch (e) { line('frame-' + tag, 'no access: ' + e, false); if (last) { var v2 = document.getElementById('verdict'); v2.textContent = 'המשחק לא רץ בטאבלט הזה'; v2.className = 'bad'; report.push('verdict=FAIL'); } }
       line('frame-errors-' + tag, errs.length ? errs.join(' || ').slice(0, 600) : 'none', errs.length === 0);
       if (last) { clearInterval(hook); send(); }
     }
