@@ -338,7 +338,7 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                 העתקת כל הרשימה
               </button>
             </div>
-            <p className="hint">הכתובת היא המפתח של המעגל: מכשיר שפותח אותה ממשיך את המשחק של המעגל מאיפה שנעצר. ״איפוס״ מתחיל את המעגל הזה מההתחלה (מוחק את המשחק שלו).</p>
+            <p className="hint">הכתובת היא המפתח של המעגל: מכשיר שפותח אותה ממשיך את המשחק של המעגל מאיפה שנעצר. ״איפוס״ מתחיל את המעגל הזה מההתחלה (מוחק את המשחק שלו). ״מסך אחורה״ מחזיר את המעגל למסך שלפני המעבר האחרון (עד 8 מסכים אחורה), למקרה של לחיצה בטעות; הטאבלט מאמץ את זה לבד תוך עשר שניות.</p>
             <ol className="urllist">
               {[...Array(N)].map((_, i) => {
                 const u = urlOf(i + 1);
@@ -362,6 +362,18 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                       }}
                     >
                       איפוס
+                    </button>
+                    <button
+                      type="button"
+                      className="sbtn ghost small"
+                      disabled={busy || !(view.tokens.find((t) => t.circle === i + 1)?.undo ?? 0)}
+                      title="המעגל חוזר למסך שלפני המעבר האחרון; הטאבלט מאמץ אותו תוך עשר שניות"
+                      onClick={() => {
+                        if (window.confirm("להחזיר את מעגל " + (i + 1) + " מסך אחד אחורה? הטאבלט יחזור למסך הקודם תוך עשר שניות.")) void act({ action: "undo-circle", slug: active.slug, circle: i + 1 });
+                      }}
+                      data-testid={"studio-undo-" + (i + 1)}
+                    >
+                      מסך אחורה{(view.tokens.find((t) => t.circle === i + 1)?.undo ?? 0) > 0 ? " (" + (view.tokens.find((t) => t.circle === i + 1)?.undo ?? 0) + ")" : ""}
                     </button>
                   </li>
                 );

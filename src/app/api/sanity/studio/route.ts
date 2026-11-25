@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getProfile, hasHcAccess } from "@/lib/auth";
-import { SanityError, activateEvent, createEvent, deleteEvent, resetCircle, resetEvent, setControl, simWrite, startEvent, studioView, updateEvent } from "@/lib/sanity/server";
+import { SanityError, activateEvent, createEvent, deleteEvent, resetCircle, resetEvent, setControl, simWrite, startEvent, studioView, undoCircle, updateEvent } from "@/lib/sanity/server";
 import type { Gender } from "@/lib/sanity/content";
 import type { Snapshot } from "@/lib/sanity/engine";
 
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 /**
  * The studio's one door. `{action, ...}`:
  *   event-create {slug, name, circles?, gender?} · event-update {slug, name?, gender?, circles?}
- *   event-activate {slug} · event-delete {slug} · start {slug} · reset {slug} · reset-circle {slug, circle}
+ *   event-activate {slug} · event-delete {slug} · start {slug} · reset {slug} · reset-circle {slug, circle} · undo-circle {slug, circle}
  *   control {slug, hallScene?, focusCircle?, compare?, reveal?}
  *   sim {slug, rows: [{circle, snapshot, creations?}]}
  * Every answer carries the fresh studio view.
@@ -61,6 +61,9 @@ export async function POST(req: Request) {
         break;
       case "reset-circle":
         await resetCircle(slug, Math.round(Number(body.circle)));
+        break;
+      case "undo-circle":
+        await undoCircle(slug, Math.round(Number(body.circle)));
         break;
       case "control":
         extra.event = await setControl(slug, {

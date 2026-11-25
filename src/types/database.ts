@@ -2793,6 +2793,7 @@ export interface Database {
           stage: number;
           finished: boolean;
           reset_at: string | null;
+          history: Json;
           updated_at: string;
         };
         Insert: {
@@ -2805,6 +2806,7 @@ export interface Database {
           stage?: number;
           finished?: boolean;
           reset_at?: string | null;
+          history?: Json;
           updated_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["sanity_circles"]["Insert"]>;

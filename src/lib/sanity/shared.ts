@@ -71,7 +71,7 @@ export interface StudioView {
   active: string | null;
   hall: HallView;
   /** The tablets' addresses of the active event - for whoever may manage the event only. */
-  tokens: { circle: number; token: string }[];
+  tokens: { circle: number; token: string; undo: number }[];
   sunoConfigured: boolean;
   now: number;
 }

@@ -170,7 +170,7 @@ export async function resetEvent(slug: string): Promise<EventInfo> {
   const now = new Date().toISOString();
   await removePhotos(r);
   await db.from("sanity_creations").delete().eq("event_id", r.id);
-  await db.from("sanity_circles").update({ state: null, snapshot: null, version: 0, stage: 0, finished: false, reset_at: now, updated_at: now }).eq("event_id", r.id);
+  await db.from("sanity_circles").update({ state: null, snapshot: null, version: 0, stage: 0, finished: false, history: [], reset_at: now, updated_at: now }).eq("event_id", r.id);
   const { data, error } = await db
     .from("sanity_events")
     .update({ started_at: null, reset_at: now, hall_scene: "auto", focus_circle: null, compare: null, reveal: false, updated_at: now })
@@ -188,7 +188,30 @@ export async function resetCircle(slug: string, circle: number): Promise<void> {
   const now = new Date().toISOString();
   await removePhotos(r, circle);
   await db.from("sanity_creations").delete().eq("event_id", r.id).eq("circle", circle);
-  const { error } = await db.from("sanity_circles").update({ state: null, snapshot: null, version: 0, stage: 0, finished: false, reset_at: now, updated_at: now }).eq("event_id", r.id).eq("circle", circle);
+  const { error } = await db.from("sanity_circles").update({ state: null, snapshot: null, version: 0, stage: 0, finished: false, history: [], reset_at: now, updated_at: now }).eq("event_id", r.id).eq("circle", circle);
+  if (error) fail(error.message, 500);
+}
+
+/**
+ * ״מסך אחורה״ (the owner, 25.11: ״שבקונטרול יוכלו להחזיר פעולה אחת אחורה״): the circle goes back to the game it had
+ * before its last phase change. The version jumps by 10, not 1, so the tablet's own next save comes out stale and it
+ * adopts the restored game (its poll catches it within ten seconds anyway).
+ */
+export async function undoCircle(slug: string, circle: number): Promise<void> {
+  const r = await eventRow(slug);
+  const db = admin();
+  const { data: row } = await db.from("sanity_circles").select("version,history").eq("event_id", r.id).eq("circle", circle).maybeSingle();
+  if (!row) fail("אין מעגל כזה", 404);
+  const hist = Array.isArray(row!.history) ? (row!.history as unknown as { state: GameState; snapshot: Snapshot }[]) : [];
+  const last = hist[hist.length - 1];
+  if (!last || !last.state || !last.snapshot) fail("אין מסך אחורה למעגל הזה", 400);
+  const now = new Date().toISOString();
+  const snap: Snapshot = { ...last!.snapshot, circle, t: Date.now() };
+  const { error } = await db
+    .from("sanity_circles")
+    .update({ state: asJson(last!.state), snapshot: asJson(snap), version: row!.version + 10, stage: Math.round(Number(snap.stage) || 0), finished: !!snap.finished, history: asJson(hist.slice(0, -1)), updated_at: now })
+    .eq("event_id", r.id)
+    .eq("circle", circle);
   if (error) fail(error.message, 500);
 }
 
@@ -256,9 +279,13 @@ export async function saveTablet(token: string, body: TabletSave): Promise<Table
   const db = admin();
   const now = new Date().toISOString();
   const snap: Snapshot = { ...body.snapshot, circle: circle.circle, t: Date.now() };
+  // ״מסך אחורה״ (the owner, 25.11): the game as it was before this phase change is kept for the studio's undo (the last 8)
+  const prevSnap = circle.snapshot as unknown as Snapshot | null;
+  const kept = Array.isArray(circle.history) ? (circle.history as unknown as { state: GameState; snapshot: Snapshot }[]) : [];
+  const hist = circle.state && prevSnap && prevSnap.phase !== snap.phase ? [...kept, { state: circle.state as unknown as GameState, snapshot: prevSnap }].slice(-8) : kept;
   const { error } = await db
     .from("sanity_circles")
-    .update({ version, state: asJson(stripState(body.state)), snapshot: asJson(snap), stage: Math.round(Number(snap.stage) || 0), finished: !!snap.finished, updated_at: now })
+    .update({ version, state: asJson(stripState(body.state)), snapshot: asJson(snap), stage: Math.round(Number(snap.stage) || 0), finished: !!snap.finished, history: asJson(hist), updated_at: now })
     .eq("event_id", event.id)
     .eq("circle", circle.circle);
   if (error) return { ok: false, error: error.message };
@@ -307,11 +334,11 @@ export async function studioView(): Promise<StudioView> {
   const events = await listEvents();
   const active = events.find((e) => e.active) ?? null;
   const hall = await hallView(active?.slug);
-  let tokens: { circle: number; token: string }[] = [];
+  let tokens: { circle: number; token: string; undo: number }[] = [];
   if (active) {
     const { data: ev } = await admin().from("sanity_events").select("id").eq("slug", active.slug).maybeSingle();
-    const { data } = ev ? await admin().from("sanity_circles").select("circle,token").eq("event_id", ev.id).order("circle") : { data: [] };
-    tokens = (data ?? []).map((r) => ({ circle: r.circle, token: r.token }));
+    const { data } = ev ? await admin().from("sanity_circles").select("circle,token,history").eq("event_id", ev.id).order("circle") : { data: [] };
+    tokens = (data ?? []).map((r) => ({ circle: r.circle, token: r.token, undo: Array.isArray(r.history) ? r.history.length : 0 }));
   }
   return { events, active: active?.slug ?? null, hall, tokens, sunoConfigured: !!(process.env.SUNO_API_KEY && process.env.SUNO_BASE), now: Date.now() };
 }
