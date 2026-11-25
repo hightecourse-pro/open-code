@@ -13,6 +13,7 @@ import { buildContent, COLORS, ZONE_IDS, isZoneId, type Gender, type ZoneId } fr
 import { icon, logo, nameOf, token as tokenArt } from "@/lib/sanity/art";
 import { studioGet, studioPost } from "@/lib/sanity/client";
 import { photoPath, tabletPath, type CreationMeta, type EventInfo, type HallScene, type StudioView } from "@/lib/sanity/shared";
+import { loadQr, qrSvg as makeQrSvg } from "@/lib/sanity/qr";
 import { Kaleido, SUNO_STYLES, buildScore, logoFromNumbers, midiBlob, photoToLogo, playScore, renderWav, sunoPack, type Player } from "@/lib/sanity/creations";
 import type { Snapshot } from "@/lib/sanity/engine";
 import { Sim } from "./sim";
@@ -31,11 +32,6 @@ const SIM_MS = 1200;
 const SIM_SPEED = 3;
 
 type Act = (body: Record<string, unknown>) => Promise<boolean>;
-declare global {
-  interface Window {
-    qrcode?: (typeNumber: number, level: string) => { addData(s: string): void; make(): void; createSvgTag(o: { scalable?: boolean; margin?: number }): string };
-  }
-}
 const Html = ({ html, className, tag: Tag = "span" }: { html: string; className?: string; tag?: "span" | "div" }) => <Tag className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 const download = (blob: Blob, name: string) => {
   const a = document.createElement("a");
@@ -253,20 +249,11 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
     if (!token) return;
     const url = location.origin + tabletPath(token);
     let alive = true;
-    const make = () => {
-      if (!alive || !window.qrcode) return;
-      const q = window.qrcode(0, "M");
-      q.addData(url);
-      q.make();
-      setQrSvg(q.createSvgTag({ scalable: true, margin: 0 }));
-    };
-    if (window.qrcode) setTimeout(make, 0);
-    else {
-      const sc = document.createElement("script");
-      sc.src = "/sanity/qrcode.min.js";
-      sc.onload = make;
-      document.head.appendChild(sc);
-    }
+    loadQr()
+      .then((lib) => {
+        if (alive) setQrSvg(makeQrSvg(lib, url));
+      })
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -378,6 +365,9 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
               <button type="button" className="sbtn ghost small" onClick={(e) => copyText(allUrls(), e.currentTarget)} data-testid="studio-copy-all">
                 העתקת כל הרשימה
               </button>
+              <a className="sbtn ghost small" href="/sanity/studio/qr-sheet?print=1" target="_blank" rel="noopener" data-testid="studio-qr-sheet" title="30 כרטיסי QR לגזירה, שישה בעמוד; בחלון ההדפסה בוחרים ״שמירה כ-PDF״">
+                גיליון QR לכל הטאבלטים (PDF)
+              </a>
             </div>
             <p className="hint">הכתובת היא המפתח של המעגל: מכשיר שפותח אותה ממשיך את המשחק של המעגל מאיפה שנעצר. ״איפוס״ מתחיל את המעגל הזה מההתחלה (מוחק את המשחק שלו). ״מסך אחורה״ פותח את רשימת כל המסכים שהמעגל עבר: בוחרים לאן לחזור, והמסך נפתח מחדש בלי הבחירה שנעשתה בו (משימה מקבלת את כל הזמן מחדש); הטאבלט עובר לשם לבד תוך עשר שניות.</p>
             <ol className="urllist">
