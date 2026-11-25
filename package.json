@@ -1,6 +1,13 @@
 {
   "name": "open-code",
   "version": "0.1.0",
+  "browserslist": [
+    "chrome >= 80",
+    "android >= 80",
+    "edge >= 80",
+    "firefox >= 78",
+    "safari >= 13.1"
+  ],
   "private": true,
   "scripts": {
     "dev": "next dev",
