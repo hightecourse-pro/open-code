@@ -2812,6 +2812,27 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["sanity_circles"]["Insert"]>;
         Relationships: [];
       };
+      /** The owner's wording edits from the game's edit mode (26.11): text / screen / note rows, read by Claude. */
+      sanity_text_edits: {
+        Row: {
+          key: string;
+          kind: string;
+          original: string | null;
+          text: string | null;
+          screen: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          kind: string;
+          original?: string | null;
+          text?: string | null;
+          screen?: string | null;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["sanity_text_edits"]["Insert"]>;
+        Relationships: [];
+      };
       /** The hidden creations of a circle: standing counts (the melody), the sentence (the song), the photo (the shape). */
       sanity_creations: {
         Row: {
