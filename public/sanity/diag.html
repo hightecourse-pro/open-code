@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>אבחון טאבלט</title>
+<style>
+body{font-family:Arial,sans-serif;font-size:20px;background:#fff;color:#111;margin:14px;line-height:1.4}
+h1{font-size:26px;margin:0 0 8px}h2{font-size:22px;margin:18px 0 6px}
+.ok{color:#087a5a}.bad{color:#c0262d;font-weight:bold}.k{color:#555}
+.nojs{background:#fde8e8;border:3px solid #c0262d;border-radius:10px;padding:14px;font-size:24px;line-height:1.5}
+pre{direction:ltr;text-align:left;font-size:13px;white-space:pre-wrap;word-break:break-all;background:#f3f3f6;padding:8px;border-radius:6px}
+iframe{width:100%;height:320px;border:2px solid #999;background:#ddd}
+#sid{font-size:34px;font-weight:bold;letter-spacing:2px;direction:ltr}
+</style></head><body>
+<h1>אבחון טאבלט · המסע לאי השפיות</h1>
+<noscript><div class="nojs"><b>JavaScript כבוי בדפדפן הזה.</b> זו הסיבה שהמשחק מראה רק רקע: בלי JavaScript שום דבר לא מצטייר.<br>
+ב-Chrome: ⋮ ← הגדרות ← הגדרות אתרים ← JavaScript ← מופעל.<br>
+ב-Samsung Internet: ⋮ ← הגדרות ← אתרים ופריטים להורדה (או ״מתקדם״) ← JavaScript ← מופעל.<br>
+אם הקישור נפתח בתוך אפליקציית סורק ולא בדפדפן: להעתיק את הקישור ולפתוח אותו ב-Chrome.</div></noscript>
+<div>מספר האבחון (להגיד לקלוד): <span id="sid">...</span></div>
+<div id="out"></div>
+<h2>הדף האמיתי בתוך מסגרת</h2>
+<div id="frame"></div>
+<h2>דוח מלא</h2>
+<pre id="raw"></pre>
+<script>
+(function () {
+  var out = document.getElementById('out'), raw = document.getElementById('raw');
+  var report = [];
+  var sid = Math.random().toString(36).slice(2, 7).toUpperCase();
+  document.getElementById('sid').textContent = sid;
+  function line(k, v, ok) {
+    var d = document.createElement('div');
+    d.innerHTML = '<span class="k">' + k + ':</span> <span class="' + (ok === false ? 'bad' : ok === true ? 'ok' : '') + '"></span>';
+    d.lastChild.textContent = String(v);
+    out.appendChild(d);
+    report.push(k + '=' + String(v));
+    raw.textContent = report.join(' | ');
+  }
+  var q = {}; location.search.slice(1).split('&').forEach(function (p) { var kv = p.split('='); q[kv[0]] = decodeURIComponent(kv[1] || ''); });
+  var token = q.t || '5f1d3c9016c8';
+  var tabletUrl = '/sanity/t/' + token;
+
+  line('ua', navigator.userAgent);
+  line('screen', screen.width + 'x' + screen.height + ' inner ' + window.innerWidth + 'x' + window.innerHeight + ' dpr ' + (window.devicePixelRatio || 1));
+  line('online', navigator.onLine);
+  line('referrer', document.referrer || '-');
+  try { line('standalone', (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone || false); } catch (e) { line('standalone', 'err ' + e); }
+
+  var syntax = { 'optional-chaining': 'var a={};a?.b', 'nullish': 'var a=null;a??1', 'logical-assign': 'var a=null;a??=1', 'class-fields': 'class A{x=1;static y=2}', 'private-fields': 'class B{#p=1;m(){return this.#p}}', 'static-block': 'class C{static{}}', 'async-gen': 'async function*g(){}', 'lookbehind': '/(?<=a)b/', 'numeric-sep': '1_000', 'spread-obj': 'var o={...{a:1}}', 'for-await': 'async function f(y){for await(var x of y){}}', 'bigint': '10n', 'regex-v': '/a/v' };
+  var bad = [];
+  for (var s in syntax) { try { new Function(syntax[s]); } catch (e) { bad.push(s); } }
+  line('syntax-missing', bad.length ? bad.join(',') : 'none', bad.length === 0);
+
+  var apis = {
+    fetch: typeof window.fetch === 'function', Promise: typeof Promise !== 'undefined', allSettled: !!(window.Promise && Promise.allSettled),
+    'array.at': !!Array.prototype.at, toSorted: !!Array.prototype.toSorted, findLast: !!Array.prototype.findLast, structuredClone: typeof structuredClone === 'function',
+    hasOwn: !!Object.hasOwn, replaceAll: !!String.prototype.replaceAll, 'document.fonts': !!document.fonts, animate: !!Element.prototype.animate,
+    ResizeObserver: typeof ResizeObserver !== 'undefined', IntersectionObserver: typeof IntersectionObserver !== 'undefined', randomUUID: !!(window.crypto && crypto.randomUUID),
+    'screen.orientation': !!screen.orientation, wakeLock: !!navigator.wakeLock, serviceWorker: !!navigator.serviceWorker, TextEncoder: typeof TextEncoder !== 'undefined', WeakRef: typeof WeakRef !== 'undefined'
+  };
+  var missing = []; for (var a in apis) if (!apis[a]) missing.push(a);
+  line('api-missing', missing.length ? missing.join(',') : 'none', missing.length === 0);
+  try { localStorage.setItem('hk-diag', '1'); localStorage.removeItem('hk-diag'); line('localStorage', 'ok', true); } catch (e) { line('localStorage', 'BLOCKED ' + e, false); }
+  try { sessionStorage.setItem('hk-diag', '1'); line('sessionStorage', 'ok', true); } catch (e) { line('sessionStorage', 'BLOCKED ' + e, false); }
+  var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  line('connection', conn ? (conn.effectiveType || '?') + ' rtt ' + conn.rtt + ' down ' + conn.downlink : '-');
+
+  function get(url, cb) {
+    var t0 = Date.now(), x = new XMLHttpRequest(), done = false;
+    x.open('GET', url, true); x.timeout = 10000;
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4 || done) return; done = true;
+      cb({ status: x.status, type: x.getResponseHeader('content-type') || '', len: (x.responseText || '').length, ms: Date.now() - t0, head: (x.responseText || '').slice(0, 60).replace(/[^ -~]/g, '.'), text: x.responseText || '' });
+    };
+    x.ontimeout = function () { if (done) return; done = true; cb({ status: 'TIMEOUT', type: '', len: 0, ms: Date.now() - t0, head: '', text: '' }); };
+    x.onerror = function () { if (done) return; done = true; cb({ status: 'ERROR', type: '', len: 0, ms: Date.now() - t0, head: '', text: '' }); };
+    try { x.send(); } catch (e) { if (!done) { done = true; cb({ status: 'THROW ' + e, type: '', len: 0, ms: 0, head: '', text: '' }); } }
+  }
+  function fmt(r) { return r.status + ' ' + r.type.split(';')[0] + ' ' + r.len + 'b ' + r.ms + 'ms' + (r.head ? ' [' + r.head + ']' : ''); }
+  var scripts = [];
+  get(tabletUrl, function (r) {
+    line('page', fmt(r) + (r.text.indexOf('hk-tablet') >= 0 ? ' has-stage' : ' NO-STAGE'), r.status === 200 && r.text.indexOf('hk-tablet') >= 0);
+    var re = /<script[^>]+src="([^"]+)"/g, m; while ((m = re.exec(r.text)) && scripts.length < 40) scripts.push(m[1]);
+    line('scripts', scripts.length);
+    var i = 0, okCount = 0, n = Math.min(scripts.length, 6);
+    function next() {
+      if (i >= n) { line('scripts-ok', okCount + '/' + n, okCount === n); fonts(); return; }
+      var u = scripts[i++];
+      get(u, function (s) { var good = s.status === 200 && s.type.indexOf('javascript') >= 0; if (good) okCount++; line('js' + i, fmt(s) + ' ' + u.slice(-28), good); next(); });
+    }
+    next();
+  });
+  function fonts() {
+    get('/api/sanity/font/RagSans-Regular.ttf', function (r) {
+      line('font', fmt(r), r.status === 200 && r.type.indexOf('font') >= 0);
+      get('/sanity/scene/birds.png', function (p) { line('image', fmt(p), p.status === 200 && p.type.indexOf('image') >= 0); frame(); });
+    });
+  }
+
+  var errs = [];
+  function frame() {
+    var f = document.createElement('iframe'); f.src = tabletUrl;
+    document.getElementById('frame').appendChild(f);
+    var hooked = null;
+    var hook = setInterval(function () {
+      try {
+        var w = f.contentWindow; if (!w || w === hooked) return;
+        if (w.location.href === 'about:blank') return;
+        hooked = w;
+        w.addEventListener('error', function (e) { errs.push('E:' + (e.message || e) + ' @' + ((e.filename || '').slice(-30)) + ':' + e.lineno); });
+        w.addEventListener('unhandledrejection', function (e) { errs.push('R:' + (e.reason && (e.reason.message || e.reason))); });
+        if (w.console) { var ce = w.console.error; w.console.error = function () { errs.push('C:' + Array.prototype.slice.call(arguments).join(' ').slice(0, 120)); if (ce) ce.apply(w.console, arguments); }; }
+      } catch (e) { errs.push('hook-fail:' + e); clearInterval(hook); }
+    }, 15);
+    function look(tag, last) {
+      try {
+        var d = f.contentDocument;
+        var st = d.getElementById('stage'), copy = d.getElementById('copy'), go = d.getElementById('go');
+        line('frame-' + tag, 'stage=' + !!st + ' hexes=' + d.querySelectorAll('.hex').length + ' copy=' + (copy ? copy.innerText.length : -1) + ' go-hidden=' + (go ? go.hidden : '-') + ' title=' + d.title.slice(0, 20) + ' body=' + d.body.innerText.length + ' ready=' + d.readyState, !!st && d.querySelectorAll('.hex').length > 0 && !!copy && copy.innerText.length > 0);
+      } catch (e) { line('frame-' + tag, 'no access: ' + e, false); }
+      line('frame-errors-' + tag, errs.length ? errs.join(' || ').slice(0, 600) : 'none', errs.length === 0);
+      if (last) { clearInterval(hook); send(); }
+    }
+    setTimeout(function () { look('4s', false); }, 4000);
+    setTimeout(function () { look('10s', true); }, 10000);
+  }
+
+  function send() {
+    var text = report.join(' | '), n = 0;
+    for (var i = 0; i < text.length && n < 40; i += 470, n++) {
+      var c = text.slice(i, i + 470);
+      var body = JSON.stringify({ path: '/sanity/diag', referrer: 'diag://' + sid + '/' + n + '/' + c.slice(0, 280), search: '?utm_source=' + encodeURIComponent(c.slice(280, 375)) + '&utm_campaign=' + encodeURIComponent(c.slice(375, 470)) });
+      try { var x = new XMLHttpRequest(); x.open('POST', '/api/track', true); x.setRequestHeader('Content-Type', 'application/json'); x.send(body); } catch (e) {}
+    }
+    line('sent', n + ' parts, id ' + sid, true);
+  }
+  window.onerror = function (m, u, l) { line('diag-error', m + ' @' + l, false); };
+})();
+</script>
+</body></html>
