@@ -31,6 +31,11 @@ const SIM_MS = 1200;
 const SIM_SPEED = 3;
 
 type Act = (body: Record<string, unknown>) => Promise<boolean>;
+declare global {
+  interface Window {
+    qrcode?: (typeNumber: number, level: string) => { addData(s: string): void; make(): void; createSvgTag(o: { scalable?: boolean; margin?: number }): string };
+  }
+}
 const Html = ({ html, className, tag: Tag = "span" }: { html: string; className?: string; tag?: "span" | "div" }) => <Tag className={className} dangerouslySetInnerHTML={{ __html: html }} />;
 const download = (blob: Blob, name: string) => {
   const a = document.createElement("a");
@@ -235,6 +240,38 @@ function SignOut({ name }: { name: string }) {
 
 // ---------- האירוע ----------
 function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, tokenOf }: { view: StudioView; active: EventInfo | null; act: Act; busy: boolean; content: ReturnType<typeof buildContent>; simOn: boolean; startSim: (slug: string, circles: number) => void; stopSim: () => void; tokenOf: (circle: number) => string | null }) {
+  // ״QR״ per circle (the owner, 25.11): the tablet's address as a code, big, for a replacement device to scan off the studio's screen
+  const [qr, setQr] = useState<number | null>(null);
+  const [qrSvg, setQrSvg] = useState("");
+  const closeQr = () => {
+    setQr(null);
+    setQrSvg("");
+  };
+  useEffect(() => {
+    if (qr == null) return;
+    const token = tokenOf(qr);
+    if (!token) return;
+    const url = location.origin + tabletPath(token);
+    let alive = true;
+    const make = () => {
+      if (!alive || !window.qrcode) return;
+      const q = window.qrcode(0, "M");
+      q.addData(url);
+      q.make();
+      setQrSvg(q.createSvgTag({ scalable: true, margin: 0 }));
+    };
+    if (window.qrcode) setTimeout(make, 0);
+    else {
+      const sc = document.createElement("script");
+      sc.src = "/sanity/qrcode.min.js";
+      sc.onload = make;
+      document.head.appendChild(sc);
+    }
+    return () => {
+      alive = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qr, view.tokens]);
   const circles = circlesOf(view);
   const L = view.hall.circles;
   const by = (f: (c: Snapshot) => boolean) => L.filter(f).length;
@@ -342,7 +379,7 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                 העתקת כל הרשימה
               </button>
             </div>
-            <p className="hint">הכתובת היא המפתח של המעגל: מכשיר שפותח אותה ממשיך את המשחק של המעגל מאיפה שנעצר. ״איפוס״ מתחיל את המעגל הזה מההתחלה (מוחק את המשחק שלו). ״מסך אחורה״ פותח את רשימת המסכים שהמעגל עבר (עד 9 אחורה): בוחרים לאן לחזור, והמסך נפתח מחדש בלי הבחירה שנעשתה בו (משימה מקבלת את כל הזמן מחדש); הטאבלט עובר לשם לבד תוך עשר שניות.</p>
+            <p className="hint">הכתובת היא המפתח של המעגל: מכשיר שפותח אותה ממשיך את המשחק של המעגל מאיפה שנעצר. ״איפוס״ מתחיל את המעגל הזה מההתחלה (מוחק את המשחק שלו). ״מסך אחורה״ פותח את רשימת כל המסכים שהמעגל עבר: בוחרים לאן לחזור, והמסך נפתח מחדש בלי הבחירה שנעשתה בו (משימה מקבלת את כל הזמן מחדש); הטאבלט עובר לשם לבד תוך עשר שניות.</p>
             <ol className="urllist">
               {[...Array(N)].map((_, i) => {
                 const u = urlOf(i + 1);
@@ -356,6 +393,9 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                     </span>
                     <button type="button" className="sbtn ghost small" onClick={(e) => copyText(u, e.currentTarget)} data-testid={`studio-copy-${i + 1}`}>
                       העתקה
+                    </button>
+                    <button type="button" className="sbtn ghost small" onClick={() => setQr(i + 1)} data-testid={`studio-qr-${i + 1}`} title="הקוד של המעגל במסך גדול, לסריקה ממכשיר חלופי">
+                      QR
                     </button>
                     <button
                       type="button"
@@ -399,6 +439,19 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                 );
               })}
             </ol>
+            {qr != null && (
+              <div className="st-qr" role="dialog" aria-label={"QR של מעגל " + qr} onClick={closeQr} data-testid="studio-qr-dialog">
+                <div className="st-qr-card" onClick={(e) => e.stopPropagation()}>
+                  <h3>מעגל {qr}</h3>
+                  <div className="st-qr-svg" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+                  <code dir="ltr">{urlOf(qr)}</code>
+                  <p className="hint">סורקים במצלמת הטאבלט החלופי; הקישור נפתח בכרום והמשחק של המעגל ממשיך מאותו מסך.</p>
+                  <button type="button" className="sbtn" onClick={closeQr}>
+                    סגירה
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
 
           <section className="card row" data-testid="studio-controls">

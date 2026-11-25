@@ -289,3 +289,9 @@
 .hk-studio .track audio{min-width:240px}
 .hk-studio .ba .lg{display:inline-block}
 @media (max-width:900px){.hk-studio #app{flex-direction:column}.hk-studio .nav-side{position:static;height:auto;width:auto}.hk-studio .pane{padding:20px 16px 40px}.hk-studio .tabgrid{grid-template-columns:repeat(5,1fr)}}
+/* ״QR״ per circle (the owner, 25.11) */
+.hk-studio .st-qr{position:fixed;top:0;left:0;right:0;bottom:0;background:#0E1A33cc;display:grid;place-items:center;z-index:100}
+.hk-studio .st-qr-card{background:#fff;color:#15233F;border-radius:20px;padding:22px 28px 24px;text-align:center;max-width:540px;display:grid;gap:10px;justify-items:center}
+.hk-studio .st-qr-card h3{margin:0;font-size:28px}
+.hk-studio .st-qr-svg svg{width:380px;height:380px;display:block}
+.hk-studio .st-qr-card code{font-size:14px;direction:ltr}

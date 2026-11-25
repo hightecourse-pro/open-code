@@ -287,11 +287,11 @@ export async function saveTablet(token: string, body: TabletSave): Promise<Table
   const now = new Date().toISOString();
   const snap: Snapshot = { ...body.snapshot, circle: circle.circle, t: Date.now() };
   // ״מסך אחורה״ (the owner, 25.11): the game as it is at the BEGINNING of every screen (the first save of a new phase),
-  // the last 10 kept. Not the end of the previous screen: that already holds the choice made there, and a circle sent
+  // the last 60 kept (a whole game is ~50 screens, ~2KB each). Not the end of the previous screen: that already holds the choice made there, and a circle sent
   // back to it would sail off to the same island again (the owner's first test).
   const prevSnap = circle.snapshot as unknown as Snapshot | null;
   const kept = Array.isArray(circle.history) ? (circle.history as unknown as HistoryStep[]) : [];
-  const hist = !prevSnap || prevSnap.phase !== snap.phase ? [...kept, { state: stripState(body.state), snapshot: snap, t: Date.now() }].slice(-10) : kept;
+  const hist = !prevSnap || prevSnap.phase !== snap.phase ? [...kept, { state: stripState(body.state), snapshot: snap, t: Date.now() }].slice(-60) : kept;
   const { error } = await db
     .from("sanity_circles")
     .update({ version, state: asJson(stripState(body.state)), snapshot: asJson(snap), stage: Math.round(Number(snap.stage) || 0), finished: !!snap.finished, history: asJson(hist), updated_at: now })

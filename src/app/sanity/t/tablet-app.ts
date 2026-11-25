@@ -798,7 +798,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       copy.style.cssText = "right:60px;top:170px;width:480px";
       copy.innerHTML = `<p class="kick in">${fill(T.kick, { name: NAME(k) })}</p><h1 class="md in d1">${T.title}</h1><p class="lead in d2">${fill(T.lead, { name: NAME(k) })}</p>`;
       extra.innerHTML = `<div class="flip3d" id="f3" style="left:180px;top:200px"><div class="in3">
-    <svg viewBox="-130 -130 260 260" aria-hidden="true"><polygon points="${hexPts(8, 7, 118)}" fill="#0E1A33" opacity=".2"/><polygon points="${hexPts(0, 0, 118)}" fill="#fff"/>${TILED.has(k) ? `${hexArt(k, 118, "ff-" + k)}<polygon points="${hexPts(0, 0, 118)}" fill="none" stroke="var(--${c})" stroke-width="5"/><rect x="-62" y="62" width="124" height="38" rx="19" fill="#fff" opacity=".94"/>` : `<polygon points="${hexPts(0, 0, 118)}" fill="url(#g-${k})" stroke="var(--${c})" stroke-width="5"/><image href="${ICON(k)}" x="-80" y="-80" width="160" height="140"/>`}<text y="88" text-anchor="middle" font-size="26" font-weight="700" fill="${deepOf(k)}" font-family="var(--font-sans)">${NAME(k)}</text></svg>
+    <svg viewBox="-130 -130 260 260" aria-hidden="true"><polygon points="${hexPts(8, 7, 118)}" fill="#0E1A33" opacity=".2"/><polygon points="${hexPts(0, 0, 118)}" fill="#fff"/>${TILED.has(k) ? `${hexArt(k, 118, "ff-" + k)}<polygon points="${hexPts(0, 0, 118)}" fill="none" stroke="var(--${c})" stroke-width="5"/><rect x="-62" y="62" width="124" height="38" rx="19" fill="#fff" opacity=".94"/>` : `<polygon points="${hexPts(0, 0, 118)}" fill="url(#g-${k})" stroke="var(--${c})" stroke-width="5"/><image href="${ICON(k)}" x="-80" y="-80" width="160" height="140"/>`}<text y="88" text-anchor="middle" font-size="${NAME(k).length > 8 ? 20 : 26}"${NAME(k).length > 8 ? ' textLength="116" lengthAdjust="spacingAndGlyphs"' : ""} font-weight="700" fill="${deepOf(k)}" font-family="var(--font-sans)">${NAME(k)}</text></svg>
     <svg class="back" viewBox="-130 -130 260 260" aria-hidden="true"><polygon points="${hexPts(8, 7, 118)}" fill="#0E1A33" opacity=".2"/>${hexBack(k, 118, "fb-" + k)}</svg></div></div>
     <svg class="hand" id="hand" style="left:330px;top:400px" width="90" height="90" viewBox="0 0 60 60" aria-hidden="true"><path d="M22 52 C14 46 10 38 12 30 L14 22 C15 19 19 19 20 22 L21 28 L21 10 C21 6 26 6 26 10 L26 26 L27 8 C27 4 32 4 32 8 L32 26 L33 11 C33 7 38 7 38 11 L38 28 L40 18 C41 14 46 15 45 19 L43 36 C42 46 38 52 32 54Z" fill="#fff" stroke="var(--ink)" stroke-width="2.4" stroke-linejoin="round"/></svg>`;
       const my = SCR;
@@ -1749,10 +1749,15 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     if (field && lastScale) {
       // measured while already lifted: add the current lift back, or every second call would undo the first.
       // The big button under the field (״זה המשפט שלנו״) must stay above the keyboard too (the owner, 25.11).
+      // In full screen Chrome 81 keeps the window the same size while the keyboard covers it (no resize at all), so
+      // when the window has not shrunk the keyboard is assumed to take the lower 55%: the field and the button are
+      // lifted into the top 45% as soon as the field is touched.
+      const shrunk = h < innerHeight - 50 || h < 0.8 * (screen.height || innerHeight);
+      const avail = shrunk ? h : Math.round(h * 0.45);
       const r = field.getBoundingClientRect();
       const goEl = $("#go") as HTMLElement | null;
       const bottom = goEl && !goEl.hidden ? Math.max(r.bottom, goEl.getBoundingClientRect().bottom) : r.bottom;
-      lift = Math.max(0, bottom + lift + 24 - h);
+      lift = Math.max(0, bottom + lift + 24 - avail);
       stage.style.transform = `translate(-50%, calc(-50% - ${lift}px)) scale(${lastScale})`;
       return;
     }
@@ -1767,7 +1772,10 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   };
   addEventListener("resize", onResize);
   window.visualViewport?.addEventListener("resize", onResize);
-  host.addEventListener("focusin", () => later(fit, 350));
+  host.addEventListener("focusin", () => {
+    fit();
+    later(fit, 350);
+  });
   host.addEventListener("focusout", () => later(fit, 100));
   fit();
   // Full screen (Android Chrome tablets; the class mirrors the kit's html.full). Asked for on a touch's pointerup -

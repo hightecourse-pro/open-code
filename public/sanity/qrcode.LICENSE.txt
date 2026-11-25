@@ -1,0 +1,2 @@
+qrcode-generator 1.4.4 (qrcode.min.js) - Kazuhiko Arase, MIT License. https://github.com/kazuhikoarase/qrcode-generator
+Used by the studio's ״QR״ button (the owner, 25.11): the tablet address of a circle as a code to scan from a replacement device.
