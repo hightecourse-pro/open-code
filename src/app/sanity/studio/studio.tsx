@@ -249,6 +249,10 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
     () => window.location.origin,
     () => "",
   );
+  // ״מסך אחורה״: the screens of a circle in the studio's words
+  const PH_HE: Record<string, string> = { welcome: "פתיחה", setup: "בניית האי", ready: "יוצאים לדרך", tide: "גאות", sail: "בחירת אי", sailing: "הפלגה", fog: "ערפל", lighthouse: "מגדלור", lhDone: "מגדלור", market: "שוק החליפין", flip: "הפיכת כרטיס", gate: "שער האי", howto: "איך משחקים", task: "משימה", result: "תוצאה", finale: "אי השפיות", finale2: "סיכום", invite: "הזמנה" };
+  const ZONE_HE: Record<string, string> = { cave: "המערה", lake: "האגם", forest: "היער", observatory: "מצפה הכוכבים", reef: "ריף האלמוגים", safari: "הספארי", fog: "הערפל", lighthouse: "המגדלור", market: "שוק החליפין", sanity: "אי השפיות" };
+  const stepLabel = (st: { phase: string; zone: string | null }) => (PH_HE[st.phase] ?? st.phase) + (st.zone && ZONE_HE[st.zone] ? " · " + ZONE_HE[st.zone] : "");
   const status = (n: number): [string, string] => {
     const c = circles[n];
     if (!c) return ["ממתין", "#9CB3C9"];
@@ -338,7 +342,7 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                 העתקת כל הרשימה
               </button>
             </div>
-            <p className="hint">הכתובת היא המפתח של המעגל: מכשיר שפותח אותה ממשיך את המשחק של המעגל מאיפה שנעצר. ״איפוס״ מתחיל את המעגל הזה מההתחלה (מוחק את המשחק שלו). ״מסך אחורה״ מחזיר את המעגל למסך שלפני המעבר האחרון (עד 8 מסכים אחורה), למקרה של לחיצה בטעות; הטאבלט מאמץ את זה לבד תוך עשר שניות.</p>
+            <p className="hint">הכתובת היא המפתח של המעגל: מכשיר שפותח אותה ממשיך את המשחק של המעגל מאיפה שנעצר. ״איפוס״ מתחיל את המעגל הזה מההתחלה (מוחק את המשחק שלו). ״מסך אחורה״ פותח את רשימת המסכים שהמעגל עבר (עד 9 אחורה): בוחרים לאן לחזור, והמסך נפתח מחדש בלי הבחירה שנעשתה בו (משימה מקבלת את כל הזמן מחדש); הטאבלט עובר לשם לבד תוך עשר שניות.</p>
             <ol className="urllist">
               {[...Array(N)].map((_, i) => {
                 const u = urlOf(i + 1);
@@ -363,18 +367,34 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                     >
                       איפוס
                     </button>
-                    <button
-                      type="button"
-                      className="sbtn ghost small"
-                      disabled={busy || !(view.tokens.find((t) => t.circle === i + 1)?.undo ?? 0)}
-                      title="המעגל חוזר למסך שלפני המעבר האחרון; הטאבלט מאמץ אותו תוך עשר שניות"
-                      onClick={() => {
-                        if (window.confirm("להחזיר את מעגל " + (i + 1) + " מסך אחד אחורה? הטאבלט יחזור למסך הקודם תוך עשר שניות.")) void act({ action: "undo-circle", slug: active.slug, circle: i + 1 });
-                      }}
-                      data-testid={"studio-undo-" + (i + 1)}
-                    >
-                      מסך אחורה{(view.tokens.find((t) => t.circle === i + 1)?.undo ?? 0) > 0 ? " (" + (view.tokens.find((t) => t.circle === i + 1)?.undo ?? 0) + ")" : ""}
-                    </button>
+                    {(() => {
+                      const steps = view.tokens.find((t) => t.circle === i + 1)?.steps ?? [];
+                      const back = steps.length - 1; // the last step is the screen the circle is on now
+                      return (
+                        <select
+                          className="sbtn ghost small"
+                          value=""
+                          disabled={busy || back < 1}
+                          title="לאיזה מסך להחזיר את המעגל; הטאבלט עובר לשם תוך עשר שניות"
+                          data-testid={"studio-undo-" + (i + 1)}
+                          onChange={(e) => {
+                            const to = Number(e.target.value);
+                            if (!Number.isFinite(to) || !steps[to]) return;
+                            if (window.confirm("להחזיר את מעגל " + (i + 1) + " למסך ״" + stepLabel(steps[to]) + "״? הטאבלט יעבור לשם תוך עשר שניות.")) void act({ action: "undo-circle", slug: active.slug, circle: i + 1, to });
+                          }}
+                        >
+                          <option value="">{back > 0 ? "↩ מסך אחורה (" + back + ")" : "↩ מסך אחורה"}</option>
+                          {steps
+                            .slice(0, -1)
+                            .map((st, idx) => (
+                              <option key={idx} value={idx}>
+                                {stepLabel(st)} · {back - idx} אחורה
+                              </option>
+                            ))
+                            .reverse()}
+                        </select>
+                      );
+                    })()}
                   </li>
                 );
               })}

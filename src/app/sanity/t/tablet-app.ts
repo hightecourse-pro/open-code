@@ -1764,15 +1764,44 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   host.addEventListener("focusin", () => later(fit, 350));
   host.addEventListener("focusout", () => later(fit, 100));
   fit();
-  // full screen on the first touch (Android Chrome tablets); the class mirrors the kit's html.full.
-  // pointerup, not pointerdown: a touch's pointerdown is no user activation in Chrome, so the request was refused in silence.
-  const onFirstGesture = () => {
-    host.removeEventListener("pointerup", onFirstGesture);
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+  // Full screen (Android Chrome tablets; the class mirrors the kit's html.full). Asked for on a touch's pointerup -
+  // not pointerdown, which is no user activation in Chrome and was refused in silence. The camera app of the forest
+  // photo drops it (the owner, 25.11), so the next touch asks again, unless the operator left full screen on purpose
+  // with the corner button, which also brings it back.
+  // the installed app (display-mode: fullscreen WITHOUT a fullscreen element) needs none of this; a page the API put in full screen matches that media query too, so the element is checked
+  const pwa = () => !!window.matchMedia && window.matchMedia("(display-mode: fullscreen)").matches && !document.fullscreenElement;
+  const canFs = () => !!document.documentElement.requestFullscreen && !pwa();
+  let wantFs = true;
+  const enterFs = () => {
+    if (wantFs && canFs() && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
   };
-  host.addEventListener("pointerup", onFirstGesture);
-  const onFs = () => host.classList.toggle("full", !!document.fullscreenElement);
+  host.addEventListener("pointerup", enterFs);
+  const fsBtn = document.createElement("button");
+  fsBtn.type = "button";
+  fsBtn.className = "fsbtn";
+  fsBtn.setAttribute("aria-label", "מסך מלא");
+  const paintFs = () => {
+    const on = !!document.fullscreenElement;
+    host.classList.toggle("full", on);
+    fsBtn.textContent = on ? "⤡" : "⤢";
+    fsBtn.title = on ? "יציאה ממסך מלא" : "מסך מלא";
+    fsBtn.hidden = !canFs();
+  };
+  fsBtn.addEventListener("pointerup", (e) => e.stopPropagation());
+  fsBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (document.fullscreenElement) {
+      wantFs = false;
+      document.exitFullscreen?.().catch(() => {});
+    } else {
+      wantFs = true;
+      enterFs();
+    }
+  });
+  if (!SHOT) host.appendChild(fsBtn);
+  const onFs = () => paintFs();
   document.addEventListener("fullscreenchange", onFs);
+  paintFs();
 
   // ---------- the demo tools (outside the stage), ?dev=1 only ----------
   let devbar: HTMLElement | null = null;
@@ -1838,8 +1867,9 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       sync.destroy();
       removeEventListener("resize", onResize);
       window.visualViewport?.removeEventListener("resize", onResize);
-      host.removeEventListener("pointerup", onFirstGesture);
+      host.removeEventListener("pointerup", enterFs);
       document.removeEventListener("fullscreenchange", onFs);
+      fsBtn.remove();
       devbar?.remove();
       if (window.HK && window.HK.go === go) delete window.HK;
     },

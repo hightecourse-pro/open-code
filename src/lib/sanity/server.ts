@@ -193,23 +193,27 @@ export async function resetCircle(slug: string, circle: number): Promise<void> {
 }
 
 /**
- * ״מסך אחורה״ (the owner, 25.11: ״שבקונטרול יוכלו להחזיר פעולה אחת אחורה״): the circle goes back to the game it had
- * before its last phase change. The version jumps by 10, not 1, so the tablet's own next save comes out stale and it
- * adopts the restored game (its poll catches it within ten seconds anyway).
+ * ״מסך אחורה״ (the owner, 25.11: ״שבקונטרול יוכלו להחזיר פעולה אחת אחורה״ … ״ואני בוחר לאיפה להחזיר אותו״): the circle
+ * goes back to the beginning of an earlier screen - by default the one before the current, or `to` (an index into
+ * its history). A task gets its whole time again. The version jumps by 10, not 1, so the tablet's own next save
+ * comes out stale and it adopts the restored game (its poll catches it within ten seconds anyway).
  */
-export async function undoCircle(slug: string, circle: number): Promise<void> {
+export async function undoCircle(slug: string, circle: number, to?: number): Promise<void> {
   const r = await eventRow(slug);
   const db = admin();
   const { data: row } = await db.from("sanity_circles").select("version,history").eq("event_id", r.id).eq("circle", circle).maybeSingle();
   if (!row) fail("אין מעגל כזה", 404);
-  const hist = Array.isArray(row!.history) ? (row!.history as unknown as { state: GameState; snapshot: Snapshot }[]) : [];
-  const last = hist[hist.length - 1];
-  if (!last || !last.state || !last.snapshot) fail("אין מסך אחורה למעגל הזה", 400);
+  const hist = Array.isArray(row!.history) ? (row!.history as unknown as HistoryStep[]) : [];
+  const idx = to == null ? hist.length - 2 : Math.round(Number(to));
+  const step = idx >= 0 && idx <= hist.length - 2 ? hist[idx] : null;
+  if (!step || !step.state || !step.snapshot) fail("אין מסך אחורה למעגל הזה", 400);
+  const state: GameState = { ...step!.state };
+  if (state.phase === "task" && state.timer && typeof state.timer.total === "number") state.timer = { end: Date.now() + state.timer.total * 1000, total: state.timer.total };
   const now = new Date().toISOString();
-  const snap: Snapshot = { ...last!.snapshot, circle, t: Date.now() };
+  const snap: Snapshot = { ...step!.snapshot, circle, t: Date.now() };
   const { error } = await db
     .from("sanity_circles")
-    .update({ state: asJson(last!.state), snapshot: asJson(snap), version: row!.version + 10, stage: Math.round(Number(snap.stage) || 0), finished: !!snap.finished, history: asJson(hist.slice(0, -1)), updated_at: now })
+    .update({ state: asJson(state), snapshot: asJson(snap), version: row!.version + 10, stage: Math.round(Number(snap.stage) || 0), finished: !!snap.finished, history: asJson(hist.slice(0, idx + 1)), updated_at: now })
     .eq("event_id", r.id)
     .eq("circle", circle);
   if (error) fail(error.message, 500);
@@ -256,6 +260,9 @@ export async function tabletBootstrap(token: string): Promise<TabletBootstrap> {
   };
 }
 
+/** One entry of a circle's ״מסך אחורה״ list: the game as the screen opened. */
+type HistoryStep = { state: GameState; snapshot: Snapshot; t: number };
+
 function stripState(s: GameState): GameState {
   // the photo lives in storage, never in the saved game
   return { ...s, creations: { ...s.creations, photo: null } };
@@ -279,10 +286,12 @@ export async function saveTablet(token: string, body: TabletSave): Promise<Table
   const db = admin();
   const now = new Date().toISOString();
   const snap: Snapshot = { ...body.snapshot, circle: circle.circle, t: Date.now() };
-  // ״מסך אחורה״ (the owner, 25.11): the game as it was before this phase change is kept for the studio's undo (the last 8)
+  // ״מסך אחורה״ (the owner, 25.11): the game as it is at the BEGINNING of every screen (the first save of a new phase),
+  // the last 10 kept. Not the end of the previous screen: that already holds the choice made there, and a circle sent
+  // back to it would sail off to the same island again (the owner's first test).
   const prevSnap = circle.snapshot as unknown as Snapshot | null;
-  const kept = Array.isArray(circle.history) ? (circle.history as unknown as { state: GameState; snapshot: Snapshot }[]) : [];
-  const hist = circle.state && prevSnap && prevSnap.phase !== snap.phase ? [...kept, { state: circle.state as unknown as GameState, snapshot: prevSnap }].slice(-8) : kept;
+  const kept = Array.isArray(circle.history) ? (circle.history as unknown as HistoryStep[]) : [];
+  const hist = !prevSnap || prevSnap.phase !== snap.phase ? [...kept, { state: stripState(body.state), snapshot: snap, t: Date.now() }].slice(-10) : kept;
   const { error } = await db
     .from("sanity_circles")
     .update({ version, state: asJson(stripState(body.state)), snapshot: asJson(snap), stage: Math.round(Number(snap.stage) || 0), finished: !!snap.finished, history: asJson(hist), updated_at: now })
@@ -334,11 +343,14 @@ export async function studioView(): Promise<StudioView> {
   const events = await listEvents();
   const active = events.find((e) => e.active) ?? null;
   const hall = await hallView(active?.slug);
-  let tokens: { circle: number; token: string; undo: number }[] = [];
+  let tokens: StudioView["tokens"] = [];
   if (active) {
     const { data: ev } = await admin().from("sanity_events").select("id").eq("slug", active.slug).maybeSingle();
     const { data } = ev ? await admin().from("sanity_circles").select("circle,token,history").eq("event_id", ev.id).order("circle") : { data: [] };
-    tokens = (data ?? []).map((r) => ({ circle: r.circle, token: r.token, undo: Array.isArray(r.history) ? r.history.length : 0 }));
+    tokens = (data ?? []).map((r) => {
+      const hist = Array.isArray(r.history) ? (r.history as unknown as HistoryStep[]) : [];
+      return { circle: r.circle, token: r.token, undo: Math.max(0, hist.length - 1), steps: hist.map((h) => ({ phase: String(h.snapshot?.phase ?? ""), zone: (h.snapshot?.zone as string | undefined) ?? null, t: Number(h.t) || 0 })) };
+    });
   }
   return { events, active: active?.slug ?? null, hall, tokens, sunoConfigured: !!(process.env.SUNO_API_KEY && process.env.SUNO_BASE), now: Date.now() };
 }

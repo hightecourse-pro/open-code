@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 /**
  * The studio's one door. `{action, ...}`:
  *   event-create {slug, name, circles?, gender?} · event-update {slug, name?, gender?, circles?}
- *   event-activate {slug} · event-delete {slug} · start {slug} · reset {slug} · reset-circle {slug, circle} · undo-circle {slug, circle}
+ *   event-activate {slug} · event-delete {slug} · start {slug} · reset {slug} · reset-circle {slug, circle} · undo-circle {slug, circle, to?}
  *   control {slug, hallScene?, focusCircle?, compare?, reveal?}
  *   sim {slug, rows: [{circle, snapshot, creations?}]}
  * Every answer carries the fresh studio view.
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
         await resetCircle(slug, Math.round(Number(body.circle)));
         break;
       case "undo-circle":
-        await undoCircle(slug, Math.round(Number(body.circle)));
+        await undoCircle(slug, Math.round(Number(body.circle)), body.to == null ? undefined : Math.round(Number(body.to)));
         break;
       case "control":
         extra.event = await setControl(slug, {
