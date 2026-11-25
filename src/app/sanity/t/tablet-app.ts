@@ -392,12 +392,13 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
 
   // ---------- the top bar and the bag ----------
   const bagHTML = () => `<span class="bag" id="bag" aria-label="התרמיל: ${total()} אסימונים">${IDS.map((z) => `<span class="r" data-r="${z}" style="--rc:var(--${z}-deep)">${coin(z, 34)}<b class="num">${S.tokens[z]}</b></span>`).join("")}<span class="tot num">${total()}</span></span>`;
+  const fsHtml = () => (!SHOT && canFs() ? `<button type="button" class="fsbtn${document.fullscreenElement ? "" : " blink"}" title="${fsTitle()}" aria-label="מסך מלא">${fsLabel()}</button>` : "");
   function bar(z?: ZoneId | null) {
     const st = Math.min(S.stage, 6);
     const who = z
       ? `<span class="who"><svg width="54" height="62" viewBox="-31 -35 62 70" aria-hidden="true" style="overflow:visible">${hexArt(z, 31, "bh-" + z)}<polygon points="${hexPts(0, 0, 31)}" fill="none" stroke="var(--${z})" stroke-width="2.5" stroke-linejoin="round"/></svg>${NAME(z)}</span>`
       : `<span class="who"><img src="${ASSET}/logo.png" alt="" style="height:58px">${st ? `<small>שלב ${st} מתוך 6</small>` : ""}</span>`;
-    $("#bar")!.innerHTML = who + `<span style="display:flex;align-items:center;gap:16px">${st ? `<span class="dots" aria-label="שלב ${st} מתוך 6">${[1, 2, 3, 4, 5, 6].map((i) => `<i class="${i <= S.visited.length ? "on" : ""}"></i>`).join("")}</span>` : ""}${bagHTML()}</span>`;
+    $("#bar")!.innerHTML = who + `<span style="display:flex;align-items:center;gap:16px">${st ? `<span class="dots" aria-label="שלב ${st} מתוך 6">${[1, 2, 3, 4, 5, 6].map((i) => `<i class="${i <= S.visited.length ? "on" : ""}"></i>`).join("")}</span>` : ""}${bagHTML()}${fsHtml()}</span>`;
   }
   function stageXY(el: Element): [number, number] {
     const r = el.getBoundingClientRect(),
@@ -900,7 +901,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
         const i = S.forestStep || 0;
         const st = TASKS.forest.statements;
         if (i < 3) {
-          copy.innerHTML = `<p class="kick in">${fill(TU.kick, { i: i + 1 })}</p><p class="in d1" style="font-size:46px;font-weight:900;line-height:1.15;margin:0">״${st[i]}״</p>`;
+          copy.innerHTML = `<p class="kick in">${fill(TU.kick, { i: i + 1 })}</p><p class="in d1" style="font-size:46px;font-weight:900;line-height:1.15;margin:0">״${st[i]}״</p><div class="legend in d2">${TU.legend}</div>`;
           button(i < 2 ? TU.next : TU.last, () => go("task", { forestStep: i + 1 }));
         } else {
           const ph = S.creations.photo || (restoredHasPhoto ? photoPath(boot.event.slug, CIRCLE) : null);
@@ -915,6 +916,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
               restoredHasPhoto = false;
               pushCreations(photo);
               render();
+              enterFs();
             }
           });
           const rt = $("#retake");
@@ -1745,15 +1747,19 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     const w = innerWidth, h = Math.min(innerHeight, vv ? vv.height : innerHeight);
     const field = typing();
     if (field && lastScale) {
-      // measured while already lifted: add the current lift back, or every second call would undo the first
+      // measured while already lifted: add the current lift back, or every second call would undo the first.
+      // The big button under the field (״זה המשפט שלנו״) must stay above the keyboard too (the owner, 25.11).
       const r = field.getBoundingClientRect();
-      lift = Math.max(0, r.bottom + lift + 24 - h);
-      stage.style.transform = `translateY(${-lift}px) scale(${lastScale})`;
+      const goEl = $("#go") as HTMLElement | null;
+      const bottom = goEl && !goEl.hidden ? Math.max(r.bottom, goEl.getBoundingClientRect().bottom) : r.bottom;
+      lift = Math.max(0, bottom + lift + 24 - h);
+      stage.style.transform = `translate(-50%, calc(-50% - ${lift}px)) scale(${lastScale})`;
       return;
     }
     lift = 0;
     lastScale = Math.min(w / 1280, h / 720);
-    stage.style.transform = `scale(${lastScale})`;
+    // centred by its own middle (left/top 50%): a grid cell narrower than 1280 pushed the stage to one side (25.11)
+    stage.style.transform = `translate(-50%, -50%) scale(${lastScale})`;
   }
   const onResize = () => {
     fit();
@@ -1776,20 +1782,11 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     if (wantFs && canFs() && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
   };
   host.addEventListener("pointerup", enterFs);
-  const fsBtn = document.createElement("button");
-  fsBtn.type = "button";
-  fsBtn.className = "fsbtn";
-  fsBtn.setAttribute("aria-label", "מסך מלא");
-  const paintFs = () => {
-    const on = !!document.fullscreenElement;
-    host.classList.toggle("full", on);
-    fsBtn.textContent = on ? "⤡" : "⤢";
-    fsBtn.title = on ? "יציאה ממסך מלא" : "מסך מלא";
-    fsBtn.hidden = !canFs();
-  };
-  fsBtn.addEventListener("pointerup", (e) => e.stopPropagation());
-  fsBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
+  // the button lives in the top bar next to the bag (the owner, 25.11: ״באותה שורה של האסימונים ושיראו אותו״); the
+  // bar is re-rendered by bar(), so the markup comes from fsHtml() and the clicks are delegated
+  const fsLabel = () => (document.fullscreenElement ? "⤡" : "⤢");
+  const fsTitle = () => (document.fullscreenElement ? "יציאה ממסך מלא" : "מסך מלא");
+  const toggleFs = () => {
     if (document.fullscreenElement) {
       wantFs = false;
       document.exitFullscreen?.().catch(() => {});
@@ -1797,10 +1794,35 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       wantFs = true;
       enterFs();
     }
+  };
+  const barEl = $("#bar") as HTMLElement;
+  barEl.addEventListener("pointerup", (e) => {
+    if ((e.target as HTMLElement).closest(".fsbtn")) e.stopPropagation();
   });
-  if (!SHOT) host.appendChild(fsBtn);
+  barEl.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).closest(".fsbtn")) {
+      e.stopPropagation();
+      toggleFs();
+    }
+  });
+  const paintFs = () => {
+    host.classList.toggle("full", !!document.fullscreenElement);
+    const b = host.querySelector(".fsbtn") as HTMLElement | null;
+    if (b) {
+      b.textContent = fsLabel();
+      b.title = fsTitle();
+      // not in full screen: the button blinks until someone taps it (the owner, 25.11)
+      b.classList.toggle("blink", !document.fullscreenElement);
+    }
+  };
   const onFs = () => paintFs();
   document.addEventListener("fullscreenchange", onFs);
+  // back from the camera app (the forest photo): ask again at once - the browser may refuse without a touch, and then
+  // the blinking button and the next touch take care of it
+  const onBack = () => {
+    if (!document.hidden) later(enterFs, 300);
+  };
+  document.addEventListener("visibilitychange", onBack);
   paintFs();
 
   // ---------- the demo tools (outside the stage), ?dev=1 only ----------
@@ -1869,7 +1891,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       window.visualViewport?.removeEventListener("resize", onResize);
       host.removeEventListener("pointerup", enterFs);
       document.removeEventListener("fullscreenchange", onFs);
-      fsBtn.remove();
+      document.removeEventListener("visibilitychange", onBack);
       devbar?.remove();
       if (window.HK && window.HK.go === go) delete window.HK;
     },

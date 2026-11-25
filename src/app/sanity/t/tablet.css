@@ -70,7 +70,7 @@
 .hk-tablet button{cursor:pointer}
 .hk-tablet .num{font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
 .hk-tablet #wrap{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;display:grid;place-items:center}
-.hk-tablet #stage{position:relative;width:1280px;height:720px;overflow:hidden;border-radius:20px;transform-origin:center;box-shadow:0 40px 100px #000a;background:var(--sky-1);--c:var(--ink);--cd:var(--ink)}
+.hk-tablet #stage{position:absolute;left:50%;top:50%;width:1280px;height:720px;overflow:hidden;border-radius:20px;transform-origin:center;box-shadow:0 40px 100px #000a;background:var(--sky-1);--c:var(--ink);--cd:var(--ink)}
 .hk-tablet .sky{position:absolute;top:0;right:0;bottom:0;left:0;inset:0;background:linear-gradient(172deg,var(--s1,#E4F2FB),var(--s2,#D3EAF8));transition:--s1 2s,background 2s}
 .hk-tablet #sun{position:absolute;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,#FFF6C8 0,#FFE27A 55%,#FFE27A00 72%);transition:transform 3s cubic-bezier(.4,.1,.3,1),opacity 2s;opacity:.9}
 .hk-tablet #stars{position:absolute;top:0;right:0;bottom:40%;left:0;inset:0 0 40% 0;opacity:0;transition:opacity 2s}
@@ -327,10 +327,13 @@
 .hk-tablet .toast{position:absolute;left:50%;top:150px;transform:translateX(-50%);z-index:71;background:#15233F;color:#fff;font-size:22px;font-weight:500;padding:12px 24px;border-radius:14px;box-shadow:0 10px 30px #0006;animation:hkt-in .4s cubic-bezier(.2,.8,.3,1.05) both;pointer-events:none;max-width:900px;text-align:center}
 .hk-tablet .toast[hidden]{display:none}
 .hk-tablet .devbar{font:14px var(--font-heebo),Heebo,Arial}
+/* the forest's legend under every statement (the owner, 25.11) */
+.hk-tablet .legend{margin-top:24px;width:640px;background:#ffffffe6;color:var(--ink);border-radius:16px;padding:14px 18px;font-size:22px;line-height:1.45;box-shadow:0 0 0 2px var(--c40,#fff)}
 /* the corner button for full screen (the camera app of the forest drops it; the owner, 25.11) */
-.hk-tablet .fsbtn{position:fixed;top:10px;left:10px;z-index:70;width:46px;height:46px;border-radius:12px;border:0;background:#0E1A33b3;color:#fff;font-size:24px;line-height:46px;text-align:center;opacity:.55;padding:0}
-.hk-tablet .fsbtn[hidden]{display:none}
-.hk-tablet.full .fsbtn{opacity:.3}
+.hk-tablet .fsbtn{flex:none;width:48px;height:48px;border-radius:14px;border:0;background:var(--ink);color:#fff;font-size:26px;line-height:48px;text-align:center;padding:0;box-shadow:0 0 0 2px #ffffffe6}
+.hk-tablet .fsbtn:active{transform:scale(.94)}
+@keyframes hkt-fsblink{0%,100%{background:var(--ink);transform:none}50%{background:#E39B00;transform:scale(1.12)}}
+.hk-tablet .fsbtn.blink{animation:hkt-fsblink 1.1s ease-in-out infinite}
 /* Chrome < 87 (the conference's Lenovo tablets, 25.11): no gap in flex boxes and no inset - margins stand in, only there */
 @supports not (inset:0){.hk-tablet .who>*+*{margin-inline-start:12px}.hk-tablet .dots>*+*{margin-inline-start:6px}.hk-tablet .bag>*+*{margin-inline-start:4px}.hk-tablet .goalbox>*+*{margin-inline-start:16px}.hk-tablet .go>*+*{margin-inline-start:14px}.hk-tablet .opts>*+*{margin-top:12px}.hk-tablet .opt>*+*{margin-inline-start:16px}.hk-tablet .opt .cost>*+*{margin-inline-start:6px}.hk-tablet .chips>*{margin:0 0 10px 10px}.hk-tablet .chip>*+*{margin-inline-start:10px}.hk-tablet .howto>*+*{margin-top:12px}.hk-tablet .howto li>*+*{margin-inline-start:14px}.hk-tablet .clock>*+*{margin-inline-start:10px}.hk-tablet .tool>*+*{margin-inline-start:10px}.hk-tablet .stepper>*+*{margin-inline-start:14px}.hk-tablet #ctl>*+*{margin-inline-start:10px}.hk-tablet .devbar>*+*{margin-inline-start:6px}.hk-tablet .gchips>*+*{margin-top:10px}}
 /* color-mix() only where the browser knows it: a value with var() that fails at computed time falls to `none`, not to the declaration before it (Chrome 81, 25.11) */
