@@ -600,3 +600,36 @@
 .hk-hall .sh-cols > div{display:none;opacity:1;transform:none;transition:none}
 .hk-hall .sh-cols > div.in{display:block;animation:hkh-popin .8s var(--ease) both}
 .hk-hall .sh-cols > div.in.out{display:none}
+
+/* 26.11 12:55, the owner: ״אני רוצה שיהיה מונפש יפה״ - a living background, staged entrances, counting numbers, glows */
+.hk-hall #sh-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.hk-hall #sh-bg .orb{position:absolute;width:900px;height:900px;border-radius:50%;filter:blur(70px);opacity:.6;animation:hkh-orb 26s ease-in-out infinite alternate}
+.hk-hall #sh-bg .o1{left:-200px;top:-320px;background:radial-gradient(circle,#2F5AA8,transparent 62%)}
+.hk-hall #sh-bg .o2{right:-260px;bottom:-380px;background:radial-gradient(circle,#C9A14A77,transparent 62%);animation-duration:34s;animation-delay:-9s}
+.hk-hall #sh-bg .o3{left:36%;top:28%;width:700px;height:700px;background:radial-gradient(circle,#26AAE155,transparent 62%);animation-duration:40s;animation-delay:-20s}
+@keyframes hkh-orb{from{transform:translate(0,0) scale(1)}to{transform:translate(240px,150px) scale(1.25)}}
+.hk-hall #sh-bg .sh-stars{position:absolute;inset:0;width:100%;height:100%}
+.hk-hall #sh-bg .sh-stars circle{fill:#fff;opacity:.9;animation:hkh-twinkle 3s ease-in-out infinite}
+.hk-hall #sh-body{position:absolute;inset:0}
+.hk-hall #show .confetti{z-index:1}
+.hk-hall #show .sh-card{z-index:2}
+.hk-hall .sh-card .k{animation:hkh-dropin 1s var(--ease) both}
+.hk-hall .sh-card h1{position:relative;padding-bottom:22px;animation:hkh-titlein 1.2s var(--ease) both}
+.hk-hall .sh-card h1::after{content:"";position:absolute;left:18%;right:18%;bottom:0;height:7px;border-radius:4px;background:linear-gradient(90deg,transparent,#E0A800 30%,#E0A800 70%,transparent);transform:scaleX(0);animation:hkh-line 1.1s var(--ease) .7s both}
+.hk-hall .sh-card p{animation:hkh-risein 1.2s var(--ease) .4s both}
+.hk-hall .sh-logo{animation:hkh-dropin 1.2s var(--ease) both;margin-bottom:-6px}
+.hk-hall .sh-logo img{animation:hkh-floaty 4s ease-in-out infinite;filter:drop-shadow(0 12px 30px #0009)}
+@keyframes hkh-dropin{from{opacity:0;transform:translateY(-44px)}to{opacity:1;transform:none}}
+@keyframes hkh-titlein{from{opacity:0;transform:scale(.84);letter-spacing:.08em}to{opacity:1;transform:none;letter-spacing:0}}
+@keyframes hkh-risein{from{opacity:0;transform:translateY(44px)}to{opacity:1;transform:none}}
+@keyframes hkh-line{to{transform:scaleX(1)}}
+@keyframes hkh-slidein{from{opacity:0;transform:translateX(110px)}to{opacity:1;transform:none}}
+@keyframes hkh-glow{0%,100%{box-shadow:0 0 0 0 #E0A80000}50%{box-shadow:0 0 70px 8px #E0A80066}}
+.hk-hall .sh-top > div{animation:hkh-slidein .9s var(--ease) both}
+.hk-hall .sh-top .p1{border:2px solid #E0A80088;animation:hkh-slidein .9s var(--ease) both,hkh-glow 3s ease-in-out 1.4s infinite}
+.hk-hall .sh-made > div{animation:hkh-risein 1s var(--ease) both}
+.hk-hall .sh-cols > div.in{animation:hkh-slidein .9s var(--ease) both}
+.hk-hall .sh-cols .sh-chorus.in{animation:hkh-slidein .9s var(--ease) both,hkh-glow 3.6s ease-in-out 1s infinite}
+.hk-hall #sh-nav #sh-next{animation:hkh-glow 2.6s ease-in-out infinite}
+.hk-hall .sh-lyr h1{padding-bottom:16px}
+.hk-hall .wide .sh-logo img{width:130px}
