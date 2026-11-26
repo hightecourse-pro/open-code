@@ -596,3 +596,7 @@
 .hk-hall .wide .sh-made > div{padding:14px 34px;font-size:42px}
 .hk-hall .wide .sh-made b{font-size:140px}
 .hk-hall .wide #sh-nav .btn{height:76px;font-size:38px}
+/* the words: only the verses on screen are in the grid; the oldest leaves when a new one does not fit */
+.hk-hall .sh-cols > div{display:none;opacity:1;transform:none;transition:none}
+.hk-hall .sh-cols > div.in{display:block;animation:hkh-popin .8s var(--ease) both}
+.hk-hall .sh-cols > div.in.out{display:none}
