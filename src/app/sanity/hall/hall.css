@@ -497,7 +497,7 @@
 .hk-hall .sh-cols > div{background:#ffffff12;border-radius:20px;padding:16px 22px;font-size:32px;font-weight:300;line-height:1.45;animation:hkh-popin .9s var(--ease) both}
 .hk-hall .sh-cols .sh-chorus{background:#E0A80022;border:2px solid #E0A80088;font-weight:500}
 .hk-hall .sh-cols small{display:inline-block;min-width:46px;color:#E0A800;font-size:22px;font-weight:700}
-.hk-hall .sh-lyr .sh-hint{position:absolute;bottom:36px;inset-inline:0;font-size:34px;font-weight:500;color:#E0A800;opacity:1}
+.hk-hall .sh-lyr .sh-hint{position:absolute;bottom:96px;inset-inline:0;font-size:34px;font-weight:500;color:#E0A800;opacity:1}
 .hk-hall .wide .sh-card h1{font-size:110px}
 .hk-hall .wide .sh-lyr{padding-top:36px}
 .hk-hall .wide .sh-lyr h1{font-size:70px}
