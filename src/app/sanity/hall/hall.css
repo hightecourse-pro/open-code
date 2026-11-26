@@ -559,3 +559,40 @@
 .hk-hall .wide .sh-made b{font-size:100px}
 .hk-hall .wide #sh-nav{padding:10px 40px 14px}
 .hk-hall .wide #sh-nav .btn{height:64px;font-size:32px}
+
+/* 26.11 12:35, the owner: ״כתב יותר גדול!!״ */
+.hk-hall .sh-card{gap:28px;padding-bottom:110px}
+.hk-hall .sh-card .k{font-size:60px}
+.hk-hall .sh-card h1{font-size:200px;line-height:1.05}
+.hk-hall .sh-card p{font-size:84px}
+.hk-hall .sh-card .sh-keys{font-size:34px}
+.hk-hall .sh-lyr{padding-top:30px;gap:8px}
+.hk-hall .sh-lyr h1{font-size:120px}
+.hk-hall .sh-lyr .k{font-size:44px}
+.hk-hall .sh-cols{grid-template-columns:repeat(auto-fit,minmax(540px,1fr));gap:16px 22px;margin-top:14px}
+.hk-hall .sh-cols > div{font-size:44px;padding:12px 22px;line-height:1.35}
+.hk-hall .sh-cols small{min-width:60px;font-size:30px}
+.hk-hall .sh-lyr .sh-hint{bottom:150px;font-size:40px}
+.hk-hall .sh-top{min-width:1100px;gap:16px}
+.hk-hall .sh-top > div{font-size:76px;padding:14px 40px}
+.hk-hall .sh-top > div b{width:100px;height:100px;font-size:56px}
+.hk-hall .sh-made{gap:40px}
+.hk-hall .sh-made > div{font-size:48px;min-width:520px;padding:28px 40px}
+.hk-hall .sh-made b{font-size:170px}
+.hk-hall #sh-nav .btn{height:92px;font-size:46px;padding:0 48px}
+.hk-hall #sh-nav .btn.ghost{height:72px;font-size:32px}
+.hk-hall #sh-nav #sh-next{min-width:320px}
+.hk-hall #sh-nav #sh-next span{font-size:50px}
+.hk-hall .wide .sh-card h1{font-size:190px}
+.hk-hall .wide .sh-card p{font-size:78px}
+.hk-hall .wide .sh-lyr{padding-top:20px}
+.hk-hall .wide .sh-lyr h1{font-size:100px}
+.hk-hall .wide .sh-cols{grid-template-columns:repeat(auto-fit,minmax(640px,1fr));margin-top:10px;gap:12px 20px}
+.hk-hall .wide .sh-cols > div{font-size:50px;padding:10px 22px}
+.hk-hall .wide .sh-lyr .sh-hint{bottom:128px;font-size:36px}
+.hk-hall .wide .sh-top > div{font-size:64px;padding:8px 36px}
+.hk-hall .wide .sh-top > div b{width:84px;height:84px;font-size:48px}
+.hk-hall .wide .sh-made{margin-top:8px;gap:32px}
+.hk-hall .wide .sh-made > div{padding:14px 34px;font-size:42px}
+.hk-hall .wide .sh-made b{font-size:140px}
+.hk-hall .wide #sh-nav .btn{height:76px;font-size:38px}
