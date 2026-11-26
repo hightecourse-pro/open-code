@@ -593,9 +593,9 @@ export class HallApp {
   showNext() {
     if (!this.showOn) return;
     if (this.showSteps[this.showIdx]?.lyrics) {
-      // the next verse; with the big type only the chorus + the last verses fit, so the oldest verse leaves (wide 9, 16:9 5)
+      // the next verse; with the big type only the chorus + the last verses fit, so the oldest verse leaves (wide: one row = chorus + 4; 16:9: two rows = chorus + 5)
       const b = this.root.querySelector("#show .sh-cols > div:not(.in)");
-      if (b) { b.classList.add("in"); const vis = [...this.root.querySelectorAll("#show .sh-cols > div.in:not(.out):not(.sh-chorus)")]; if (vis.length > (this.wide ? 9 : 5)) vis[0].classList.add("out"); this.showNav(); }
+      if (b) { b.classList.add("in"); const vis = [...this.root.querySelectorAll("#show .sh-cols > div.in:not(.out):not(.sh-chorus)")]; if (vis.length > (this.wide ? 4 : 5)) vis[0].classList.add("out"); this.showNav(); }
       return;
     }
     this.showSteps[this.showIdx]?.leave?.(); this.showIdx++; this.showEnter();
