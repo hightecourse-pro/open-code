@@ -508,9 +508,9 @@
 /* the short show: the three leaders on one card, and what the hall made */
 .hk-hall .sh-top{display:flex;flex-direction:column;gap:14px;margin-top:22px;min-width:760px}
 .hk-hall .sh-top > div{display:flex;align-items:center;gap:26px;background:#ffffff14;border-radius:22px;padding:14px 30px;font-size:46px;animation:hkh-popin .8s var(--ease) both}
-.hk-hall .sh-top > div b{flex:none;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:36px;font-weight:700;color:#15233F;background:#E0A800}
-.hk-hall .sh-top .p2 b{background:#D8D8D8}
-.hk-hall .sh-top .p3 b{background:#D9A066}
+.hk-hall .sh-top > div > b{flex:none;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:36px;font-weight:700;color:#15233F;background:#E0A800}
+.hk-hall .sh-top .p2 > b{background:#D8D8D8}
+.hk-hall .sh-top .p3 > b{background:#D9A066}
 .hk-hall .sh-top > div span{flex:1;text-align:right;font-weight:700}
 .hk-hall .sh-top > div em{font-style:normal;font-weight:300;color:#FFD66B}
 .hk-hall .sh-made{display:flex;gap:36px;margin-top:28px}
@@ -543,7 +543,7 @@
 .hk-hall .sh-cols small{min-width:54px;font-size:26px}
 .hk-hall .sh-lyr .sh-hint{bottom:150px;font-size:36px}
 .hk-hall .sh-top > div{font-size:58px;padding:12px 34px}
-.hk-hall .sh-top > div b{width:80px;height:80px;font-size:44px}
+.hk-hall .sh-top > div > b{width:80px;height:80px;font-size:44px}
 .hk-hall .sh-made > div{font-size:36px;min-width:460px;padding:26px 36px}
 .hk-hall .sh-made b{font-size:124px}
 .hk-hall .wide .sh-card h1{font-size:140px}
@@ -575,7 +575,7 @@
 .hk-hall .sh-lyr .sh-hint{bottom:150px;font-size:40px}
 .hk-hall .sh-top{min-width:1100px;gap:16px}
 .hk-hall .sh-top > div{font-size:76px;padding:14px 40px}
-.hk-hall .sh-top > div b{width:100px;height:100px;font-size:56px}
+.hk-hall .sh-top > div > b{width:100px;height:100px;font-size:56px}
 .hk-hall .sh-made{gap:40px}
 .hk-hall .sh-made > div{font-size:48px;min-width:520px;padding:28px 40px}
 .hk-hall .sh-made b{font-size:170px}
@@ -591,7 +591,7 @@
 .hk-hall .wide .sh-cols > div{font-size:50px;padding:10px 22px}
 .hk-hall .wide .sh-lyr .sh-hint{bottom:128px;font-size:36px}
 .hk-hall .wide .sh-top > div{font-size:64px;padding:8px 36px}
-.hk-hall .wide .sh-top > div b{width:84px;height:84px;font-size:48px}
+.hk-hall .wide .sh-top > div > b{width:84px;height:84px;font-size:48px}
 .hk-hall .wide .sh-made{margin-top:8px;gap:32px}
 .hk-hall .wide .sh-made > div{padding:14px 34px;font-size:42px}
 .hk-hall .wide .sh-made b{font-size:140px}
@@ -633,3 +633,6 @@
 .hk-hall #sh-nav #sh-next{animation:hkh-glow 2.6s ease-in-out infinite}
 .hk-hall .sh-lyr h1{padding-bottom:16px}
 .hk-hall .wide .sh-logo img{width:130px}
+.hk-hall .sh-top > div em b.cu{font:inherit;color:inherit}
+.hk-hall .wide .sh-top > div{font-size:54px;padding:6px 30px}
+.hk-hall .wide .sh-top{gap:10px;margin-top:14px}
