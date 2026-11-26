@@ -18,7 +18,7 @@
 .hk-hall{font-family:"Rag Sans",var(--font-heebo),Assistant,Arial,sans-serif;color:var(--text);direction:rtl;user-select:none}
 .hk-hall button{font-family:inherit;cursor:pointer}
 .hk-hall input{font-family:inherit}
-.hk-hall .viewport{position:fixed;inset:0;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,#22325a,#121a30)}
+.hk-hall .viewport{position:fixed;top:0;right:0;bottom:0;left:0;inset:0;display:block;background:radial-gradient(ellipse at 50% 30%,#22325a,#121a30)}
 .hk-hall .stage{position:relative;width:1280px;height:720px;overflow:hidden;transform-origin:center;background:var(--sky-1);border-radius:6px;box-shadow:0 30px 80px #0006}
 .hk-hall .stage.full{border-radius:0;box-shadow:none}
 .hk-hall .sky{position:absolute;inset:0;background:linear-gradient(160deg,var(--sky-1) 0%,#DCEFFA 55%,var(--sky-2) 100%)}
@@ -183,7 +183,8 @@
 .hk-hall .flipper > svg{position:absolute;left:-14%;bottom:-18%;animation:hkh-flipHand 3.4s ease-in-out infinite}
 @keyframes hkh-flipHex{0%,22%{transform:rotateY(0)}48%,88%{transform:rotateY(180deg)}100%{transform:rotateY(180deg)}}
 @keyframes hkh-flipHand{0%,10%{transform:translate(0,0) rotate(0)}30%{transform:translate(30px,-26px) rotate(-14deg)}48%,100%{transform:translate(0,0) rotate(0);opacity:.0}}
-.hk-hall .stage.hall{width:1920px;height:1080px;border-radius:0}
+/* 26.11: pinned by its centre (left/top 50%, half the size back) - a grid track grew to the stage's width and pushed the wide strip half off a 16:9 window */
+.hk-hall .stage.hall{position:absolute;left:50%;top:50%;margin:-540px 0 0 -960px;width:1920px;height:1080px;border-radius:0}
 .hk-hall .h-head{position:absolute;top:0;inset-inline:0;height:130px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 50px;z-index:3}
 .hk-hall .h-head::after{content:"";position:absolute;inset-inline:0;bottom:-10px;height:10px;background:repeating-linear-gradient(90deg,var(--gold) 0 30px,transparent 30px 40px);opacity:.5}
 .hk-hall .h-title{font-size:52px;font-weight:700;line-height:1}
@@ -403,8 +404,8 @@
 .hk-hall .ovrow img{height:30px;width:auto;flex:none}
 /* --- 23.11: the venue's LED wall is 8 m × 2 m - the WIDE stage (3840×960, 4:1), .stage.hall.wide; the 16:9 rules above stay untouched.
    ?stretch=1 squashes the wide stage into a 16:9 signal (scaleX ≠ scaleY, from the top-left corner) that the wall's processor stretches back. --- */
-.hk-hall .stage.hall.wide{width:3840px;height:960px}
-.hk-hall .stage.hall.stretch{position:absolute;left:0;top:0;transform-origin:0 0}
+.hk-hall .stage.hall.wide{width:3840px;height:960px;margin:-480px 0 0 -1920px}
+.hk-hall .stage.hall.stretch{position:absolute;left:0;top:0;margin:0;transform-origin:0 0}
 .hk-hall .viewport:has(.stage.stretch){display:block}
 /* the header: a slimmer band, the KPIs as rows */
 .hk-hall .wide .h-head{height:110px;padding:0 44px}
