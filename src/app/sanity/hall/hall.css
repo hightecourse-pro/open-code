@@ -521,3 +521,41 @@
 .hk-hall .wide .sh-made{margin-top:18px}
 .hk-hall .wide .sh-made > div{padding:18px 30px}
 .hk-hall .wide .sh-made b{font-size:84px}
+
+/* 26.11 12:10: the owner drives the show by hand - the bar at the bottom, and bigger type */
+.hk-hall #sh-nav{position:absolute;left:0;right:0;bottom:0;z-index:80;display:flex;align-items:center;justify-content:center;gap:26px;padding:16px 40px 22px;background:linear-gradient(transparent,#0E1A33e6 40%)}
+.hk-hall #sh-nav .btn{height:76px;font-size:36px;padding:0 40px;gap:14px}
+.hk-hall #sh-nav .btn.ghost{color:#fff;border-color:#ffffff88;height:64px;font-size:28px;padding:0 26px}
+.hk-hall #sh-nav .btn:disabled{opacity:.35}
+.hk-hall #sh-nav #sh-next{background:#E0A800;color:#15233F;font-weight:700;min-width:260px}
+.hk-hall #sh-nav #sh-next span{font-size:40px;line-height:1}
+.hk-hall #sh-nav .sh-steps{position:static;gap:10px;margin:0 10px}
+.hk-hall .sh-card{gap:22px;padding-bottom:90px}
+.hk-hall .sh-card .k{font-size:46px}
+.hk-hall .sh-card h1{font-size:152px}
+.hk-hall .sh-card p{font-size:60px}
+.hk-hall .sh-card .sh-keys{font-size:30px}
+.hk-hall .sh-lyr{padding-top:40px;gap:10px}
+.hk-hall .sh-lyr h1{font-size:104px}
+.hk-hall .sh-lyr .k{font-size:38px}
+.hk-hall .sh-cols{grid-template-columns:repeat(auto-fit,minmax(520px,1fr));gap:20px 26px;margin-top:20px}
+.hk-hall .sh-cols > div{font-size:40px;padding:14px 24px;line-height:1.4}
+.hk-hall .sh-cols small{min-width:54px;font-size:26px}
+.hk-hall .sh-lyr .sh-hint{bottom:150px;font-size:36px}
+.hk-hall .sh-top > div{font-size:58px;padding:12px 34px}
+.hk-hall .sh-top > div b{width:80px;height:80px;font-size:44px}
+.hk-hall .sh-made > div{font-size:36px;min-width:460px;padding:26px 36px}
+.hk-hall .sh-made b{font-size:124px}
+.hk-hall .wide .sh-card h1{font-size:140px}
+.hk-hall .wide .sh-card p{font-size:56px}
+.hk-hall .wide .sh-lyr{padding-top:26px}
+.hk-hall .wide .sh-lyr h1{font-size:86px}
+.hk-hall .wide .sh-cols{grid-template-columns:repeat(auto-fit,minmax(540px,1fr));margin-top:12px;gap:14px 22px}
+.hk-hall .wide .sh-cols > div{font-size:36px;padding:10px 22px}
+.hk-hall .wide .sh-lyr .sh-hint{bottom:132px}
+.hk-hall .wide .sh-top > div{font-size:50px;padding:8px 30px}
+.hk-hall .wide .sh-made{margin-top:10px}
+.hk-hall .wide .sh-made > div{padding:14px 30px;font-size:32px}
+.hk-hall .wide .sh-made b{font-size:100px}
+.hk-hall .wide #sh-nav{padding:10px 40px 14px}
+.hk-hall .wide #sh-nav .btn{height:64px;font-size:32px}
