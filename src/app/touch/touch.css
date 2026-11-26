@@ -5,7 +5,7 @@
 .hct *{box-sizing:border-box}
 .hct button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
 
-.hct-bg{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,#0A5E98 0%,#004878 38%,#002C4A 100%)}
+.hct-bg{position:absolute;inset:0;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#0A5E98 0%,#004878 38%,#002C4A 100%)}
 .hct-bg i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
 .hct-bg .b1{width:60vmax;height:60vmax;left:-20vmax;top:-22vmax;background:#1D8BD6;animation:hct-drift 19s ease-in-out infinite alternate}
 .hct-bg .b2{width:46vmax;height:46vmax;right:-16vmax;bottom:-18vmax;background:#F8C800;opacity:.22;animation:hct-drift 23s ease-in-out infinite alternate-reverse}
@@ -16,7 +16,7 @@
 @keyframes hct-drift{to{transform:translate(6vmax,5vmax) scale(1.15)}}
 @keyframes hct-spin{to{transform:rotate(360deg)}}
 
-.hct main{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:4vmin 5vmin}
+.hct main{position:absolute;inset:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;padding:4vmin 5vmin}
 .hct-logo{width:min(17em,60vw);height:auto;pointer-events:none}
 .hct-logo.small{width:8.5em;opacity:.85;margin-top:auto;flex:none}
 

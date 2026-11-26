@@ -4,7 +4,7 @@
 .hcs-stage{position:absolute;left:50%;top:50%;width:3840px;height:960px;margin:-480px 0 0 -1920px;overflow:hidden;background:#002C4A}
 .hcs-stage.stretch{left:0;top:0;margin:0;transform-origin:0 0}
 
-.hcs-bg{position:absolute;inset:0;background:linear-gradient(100deg,#00213A 0%,#003A61 45%,#004878 100%)}
+.hcs-bg{position:absolute;inset:0;overflow:hidden;background:linear-gradient(100deg,#00213A 0%,#003A61 45%,#004878 100%)}
 .hcs-bg i{position:absolute;border-radius:50%;filter:blur(120px)}
 .hcs-bg .b1{width:1500px;height:1500px;left:-300px;top:-700px;background:#1D8BD6;opacity:.45;animation:hcs-drift 22s ease-in-out infinite alternate}
 .hcs-bg .b2{width:1200px;height:1200px;left:1500px;top:300px;background:#6A5BFF;opacity:.25;animation:hcs-drift 28s ease-in-out infinite alternate-reverse}
