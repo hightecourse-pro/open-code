@@ -539,36 +539,25 @@ export class HallApp {
     el.classList.add("on");
     const go = this.$("#sh-go"); if (go) go.onclick = () => this.startShow();
   }
+  private showHtml(inner: string) { const el = this.showEl(); el.innerHTML = `<div class="sh-card">${inner}</div>${this.showDotsHTML()}`; el.classList.add("on"); }
   private buildShow(): ShowStep[] {
+    // the owner (26.11 11:55): ״משהו קצר של סיכום ותוצאות״ - about a minute and a half, then the words stay
     const H = this.C.HALL, R = this.C.REVEAL, S = H.show;
-    const L = this.list(); const N = this.N; const arrived = L.filter((c) => c.finished).length;
-    const top = [...L].filter((c) => c.stage >= 1 || c.finished).sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 3).reverse(); // third, second, first
+    const L = this.list(); const N = this.N; const arrived = L.filter((c) => c.finished).length; const tot = L.reduce((s, c) => s + (c.total || 0), 0);
+    const top = [...L].filter((c) => c.stage >= 1 || c.finished).sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 3);
+    const cr = Object.values(this.creations);
+    const made = [[R.melody, cr.filter((c) => c.standing && c.standing.length >= 5).length], [R.song, cr.filter((c) => c.sentence).length], [R.shape, cr.filter((c) => c.hasPhoto).length]] as [string, number][];
     const card = (title: string, sub: string, kick: string, dur: number): ShowStep => ({ dur, enter: () => this.showCard(title, sub, kick) });
-    const scene = (id: SceneId, name: string, render: () => void, dur: number, before?: () => void): ShowStep => ({ dur, enter: () => { before?.(); this.showCover(false); this.show({ id, name, dur, render }); } });
+    const scene = (id: SceneId, name: string, render: () => void, dur: number): ShowStep => ({ dur, enter: () => { this.showCover(false); this.show({ id, name, dur, render }); } });
     const steps: ShowStep[] = [
-      // the owner (26.11): ״שיעבור לבד בהפרשים שקל לאדם לראות״ - every chapter long enough to read from the back row
-      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived}`, S.title, 8),
-      card(H.scenes.race, S.raceSub, S.part(1), 6),
-      scene("race", H.scenes.race, () => this.renderRace(), 28),
-      card(H.scenes.stats, S.statsSub, S.part(2), 6),
-      scene("stats", H.scenes.stats, () => this.renderStats(), 24),
+      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived} · ${tot} ${H.tokens}`, S.title, 7),
+      card(H.scenes.stats, S.statsSub, S.part(1), 5),
+      scene("stats", H.scenes.stats, () => this.renderStats(), 22),
     ];
-    if (top.length) {
-      steps.push(card(H.leaders, [...top].reverse().map((c) => `מעגל ${c.circle}`).join(" · "), S.part(3), 6));
-      top.forEach((c, i) => steps.push(scene("focus", `${H.leaders} · מקום ${top.length - i}`, () => this.renderFocus(), i === top.length - 1 ? 18 : 13, () => { this.focusId = c.circle; })));
-    }
-    steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(4), 6));
-    steps.push({ dur: 26, enter: () => { this.showCover(false); this.showGrand(); }, leave: () => this.closeGrand() });
-    steps.push(card(R.pre, R.pre2, S.revealKick, 10));
-    steps.push({
-      dur: null,
-      enter: () => {
-        const my = this.showIdx; this.showCover(false); this.revealOn = true;
-        const el = this.$("#reveal"); if (el) el.hidden = false;
-        void this.runReveal().then((len) => { if (this.showOn && this.showIdx === my && len != null) this.showAfter((len + 12) * 1000); });
-      },
-      leave: () => this.hideReveal(),
-    });
+    if (top.length) steps.push({ dur: 14, enter: () => this.showHtml(`<span class="k">${S.part(2)}</span><h1>${H.leaders}</h1><div class="sh-top">${top.map((c, i) => `<div class="p${i + 1}" style="animation-delay:${i * 0.35}s"><b>${i + 1}</b><span>מעגל ${c.circle}</span><em class="num">${c.total || 0} ${S.tokens}</em></div>`).join("")}</div>`) });
+    steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(3), 5));
+    steps.push({ dur: 22, enter: () => { this.showCover(false); this.showGrand(); }, leave: () => this.closeGrand() });
+    steps.push({ dur: 14, enter: () => this.showHtml(`<span class="k">${R.pre}</span><h1>${R.pre2}</h1><div class="sh-made">${made.map(([label, n], i) => `<div style="animation-delay:${0.3 + i * 0.35}s"><b class="num">${n}</b><span>${label}</span></div>`).join("")}</div>`) });
     steps.push({ dur: null, enter: () => this.showLyrics() });
     return steps;
   }
