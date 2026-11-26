@@ -504,3 +504,20 @@
 .hk-hall .wide .sh-lyr h1{font-size:70px}
 .hk-hall .wide .sh-cols{grid-template-columns:repeat(auto-fit,minmax(430px,1fr));margin-top:18px}
 .hk-hall .wide .sh-cols > div{font-size:30px;padding:12px 20px}
+
+/* the short show: the three leaders on one card, and what the hall made */
+.hk-hall .sh-top{display:flex;flex-direction:column;gap:14px;margin-top:22px;min-width:760px}
+.hk-hall .sh-top > div{display:flex;align-items:center;gap:26px;background:#ffffff14;border-radius:22px;padding:14px 30px;font-size:46px;animation:hkh-popin .8s var(--ease) both}
+.hk-hall .sh-top > div b{flex:none;width:66px;height:66px;border-radius:50%;display:grid;place-items:center;font-size:36px;font-weight:700;color:#15233F;background:#E0A800}
+.hk-hall .sh-top .p2 b{background:#D8D8D8}
+.hk-hall .sh-top .p3 b{background:#D9A066}
+.hk-hall .sh-top > div span{flex:1;text-align:right;font-weight:700}
+.hk-hall .sh-top > div em{font-style:normal;font-weight:300;color:#FFD66B}
+.hk-hall .sh-made{display:flex;gap:36px;margin-top:28px}
+.hk-hall .sh-made > div{display:flex;flex-direction:column;align-items:center;gap:10px;background:#ffffff14;border-radius:22px;padding:24px 34px;min-width:400px;font-size:28px;font-weight:300;line-height:1.3;animation:hkh-popin .8s var(--ease) both}
+.hk-hall .sh-made b{font-size:96px;line-height:1;font-weight:700;color:#E0A800}
+.hk-hall .wide .sh-top{min-width:900px}
+.hk-hall .wide .sh-top > div{font-size:42px;padding:10px 28px}
+.hk-hall .wide .sh-made{margin-top:18px}
+.hk-hall .wide .sh-made > div{padding:18px 30px}
+.hk-hall .wide .sh-made b{font-size:84px}
