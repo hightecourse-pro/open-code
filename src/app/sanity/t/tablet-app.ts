@@ -284,7 +284,18 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       const val = v == null ? "" : `<text x="${x + bw / 2}" y="${base - h - 8}" text-anchor="middle" font-size="22" font-weight="900" fill="currentColor">${v}</text>`;
       return `${bar}${val}<text x="${x + bw / 2}" y="${H - 4}" text-anchor="middle" font-size="18" font-weight="500" fill="currentColor" opacity=".7">${j + 1}</text>`;
     });
-    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" style="display:block;color:var(--ink)">${bars.join("")}</svg>`;
+    // the line through the points (the owner, 26.11: ״הגרף עם הקו הארוך שמשתמשים בו אח״כ לתוצאה״) - the five numbers become the circle's melody and shape
+    const pts = [0, 1, 2, 3, 4]
+      .map((j) => {
+        const v = j < cur ? (arr[j] ?? 0) : j === cur ? now : null;
+        if (v == null) return null;
+        const h = v > 0 ? Math.max(6, v * 7) : 0;
+        return [W - (j + 1) * step + step / 2, base - h] as [number, number];
+      })
+      .filter((p): p is [number, number] => !!p);
+    const line = pts.length > 1 ? `<polyline points="${pts.map((p) => p.join(",")).join(" ")}" fill="none" stroke="currentColor" stroke-width="4" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>` : "";
+    const dots = pts.map((p) => `<circle cx="${p[0]}" cy="${p[1]}" r="7" fill="#fff" stroke="currentColor" stroke-width="4"/>`).join("");
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" style="display:block;color:var(--ink)">${bars.join("")}${line}${dots}</svg>`;
   };
 
   // ---------- the board: the circle's own (one of 60), hexagons ----------
@@ -899,7 +910,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       placeBoard("hide");
       copy.style.cssText = "right:56px;top:108px;width:560px";
       copy.innerHTML = `<h1 class="md in">${UI.howto.title}</h1>${H.intro ? `<p class="small in d1" style="font-size:20px;opacity:1;background:#ffffff26;border-radius:14px;padding:12px 16px">${H.intro}</p>` : ""}
-    <ol class="howto">${H.steps.map((s, i) => `<li data-s="${i}"><span>${i + 1}</span><div>${s}</div></li>`).join("")}</ol>${z === "forest" ? legendHTML("in d4") : H.note ? `<p class="small in d4" style="opacity:.92">${H.note}</p>` : ""}`;
+    <ol class="howto">${H.steps.map((s, i) => `<li data-s="${i}"><span>${i + 1}</span><div>${s}</div></li>`).join("")}</ol>${z === "forest" ? legendHTML("in d4 small") : H.note ? `<p class="small in d4" style="opacity:.92">${H.note}</p>` : ""}`;
       const my = SCR;
       const lis = [...copy.querySelectorAll(".howto li")];
       const step = (i: number) => lis.forEach((l, j) => l.classList.toggle("on", j <= i));
@@ -1045,6 +1056,8 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
     ${g.fogAsk ? `<div class="card in d5" id="fogq" style="position:relative;margin-top:18px;padding:14px 20px"><p style="margin:0;font-size:21px">${fill(T.fog, { rule: g.fogAsk })}</p>${g.fogDone == null ? `<div style="display:flex;gap:10px;margin-top:10px"><button class="opt fr" type="button" style="min-height:52px;font-size:20px;font-weight:700">${T.fogYes}</button><button class="opt fr" type="button" style="min-height:52px;font-size:20px">${T.fogNo}</button></div>` : ""}</div>` : ""}`;
       stage.classList.add("scene");
       extra.innerHTML = sceneArt(z);
+      // the reef's result shows the graph the words talk about (the owner, 26.11)
+      if (z === "reef") extra.insertAdjacentHTML("beforeend", `<div class="card in d2" style="left:40px;top:150px;width:556px;padding:14px 18px 8px"><div style="font-size:20px;font-weight:700;margin-bottom:4px">${TASK_UI.reef.graph}</div>${reefGraph(S.creations.standing, 5, 0)}</div>`);
       const my = SCR;
       if (!g.shown) {
         g.shown = true;
