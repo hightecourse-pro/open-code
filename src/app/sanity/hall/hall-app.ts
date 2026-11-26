@@ -523,23 +523,40 @@ export class HallApp {
   private showDue = 0;
   private showLeft = 0;
   private showPaused = false;
-  private showEl(): HTMLElement { let el = this.$("#show"); if (!el) { el = document.createElement("div"); el.id = "show"; this.root.appendChild(el); } return el; }
+  private showEl(): HTMLElement {
+    let el = this.$("#show");
+    if (!el) {
+      el = document.createElement("div"); el.id = "show";
+      const W = this.G.W, Hh = this.G.H;
+      const stars = [...Array(this.wide ? 110 : 70)].map((_, k) => `<circle cx="${(k * 733) % W}" cy="${(k * 389) % Hh}" r="${(k % 3) * 0.8 + 1.2}" style="animation-delay:${(k % 9) * 0.35}s"/>`).join("");
+      el.innerHTML = `<div id="sh-bg"><i class="orb o1"></i><i class="orb o2"></i><i class="orb o3"></i><svg class="sh-stars" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none">${stars}</svg></div><div id="sh-body"></div>`;
+      this.root.appendChild(el);
+    }
+    return el;
+  }
+  private showBody(): HTMLElement { this.showEl(); return this.$("#sh-body")!; }
+  /** Numbers that count up (every .cu with data-n), 1.5 s, eased. */
+  private countUp() {
+    const els = [...this.root.querySelectorAll<HTMLElement>("#show .cu")]; if (!els.length) return;
+    const t0 = performance.now(), D = 1500;
+    const tick = (ts: number) => { const k = Math.min(1, (ts - t0) / D); const e = 1 - Math.pow(1 - k, 3); els.forEach((el) => { el.textContent = String(Math.round(Number(el.dataset.n || 0) * e)); }); if (k < 1 && this.alive) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  }
   private showCover(on: boolean) { this.showEl().classList.toggle("on", on); }
   private showDotsHTML() { return `<div class="sh-steps">${this.showSteps.map((_, i) => `<i class="${i < this.showIdx ? "done" : i === this.showIdx ? "on" : ""}"></i>`).join("")}</div>`; }
   private showCard(title: string, sub: string, kick: string) {
-    const el = this.showEl();
-    el.innerHTML = `<div class="sh-card"><span class="k">${kick}</span><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ""}</div>`;
-    el.classList.add("on");
+    this.showBody().innerHTML = `<div class="sh-card"><span class="k">${kick}</span><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ""}</div>`;
+    this.showEl().classList.add("on");
   }
   /** ?show=1: the start button (the melody needs a click on this computer first). */
   armShow() {
     if (this.showOn) return;
     const H = this.C.HALL; const el = this.showEl(); this.showArmed = true;
-    el.innerHTML = `<div class="sh-card"><span class="k">${H.title}</span><h1>${H.show.title}</h1><p>${H.show.parts}</p><button class="btn" id="sh-go" type="button">${H.show.start} ${icon("star", 40, "#fff")}</button><p class="sh-keys">${H.show.keys}</p></div>`;
+    this.showBody().innerHTML = `<div class="sh-card"><span class="k">${H.title}</span><h1>${H.show.title}</h1><p>${H.show.parts}</p><button class="btn" id="sh-go" type="button">${H.show.start} ${icon("star", 40, "#fff")}</button><p class="sh-keys">${H.show.keys}</p></div>`;
     el.classList.add("on");
     const go = this.$("#sh-go"); if (go) go.onclick = () => this.startShow();
   }
-  private showHtml(inner: string) { const el = this.showEl(); el.innerHTML = `<div class="sh-card">${inner}</div>`; el.classList.add("on"); }
+  private showHtml(inner: string, coins = 0) { this.showBody().innerHTML = `${coins ? `<div class="confetti">${this.coinBits(coins)}</div>` : ""}<div class="sh-card">${inner}</div>`; this.showEl().classList.add("on"); this.countUp(); }
   /** The bar at the bottom (the owner, 26.11: ״תוסיף לי לחצן הבא - ואני אעביר״): previous · the chapter dots · next · back to the live screen. Over every chapter. */
   private showNav() {
     const S = this.C.HALL.show;
@@ -562,15 +579,15 @@ export class HallApp {
     const scene = (id: SceneId, name: string, render: () => void, dur: number | null): ShowStep => ({ dur, enter: () => { this.showCover(false); this.show({ id, name, dur: dur ?? 60, render }); } });
     const steps: ShowStep[] = [
       // no timers (the owner, 26.11 12:10: ״אני לא רוצה שתעבור לבד״) - every chapter waits for ״הבא״
-      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived} · ${tot} ${H.tokens}`, S.title, null),
+      { dur: null, enter: () => this.showHtml(`<span class="k">${S.title}</span><div class="sh-logo">${logo(this.wide ? 150 : 170)}</div><h1>${H.title}</h1><p><b class="num cu" data-n="${N}">0</b> ${H.circles} · <b class="num cu" data-n="${arrived}">0</b> ${H.arrived} · <b class="num cu" data-n="${tot}">0</b> ${H.tokens}</p>`, 26) },
       card(H.scenes.stats, S.statsSub, S.part(1), null),
       scene("stats", H.scenes.stats, () => this.renderStats(), null),
     ];
-    if (top.length) steps.push({ dur: null, enter: () => this.showHtml(`<span class="k">${S.part(2)}</span><h1>${H.leaders}</h1><div class="sh-top">${top.map((c, i) => `<div class="p${i + 1}" style="animation-delay:${i * 0.35}s"><b>${i + 1}</b><span>מעגל ${c.circle}</span><em class="num">${c.total || 0} ${S.tokens}</em></div>`).join("")}</div>`) });
+    if (top.length) steps.push({ dur: null, enter: () => this.showHtml(`<span class="k">${S.part(2)}</span><h1>${H.leaders}</h1><div class="sh-top">${top.map((c, i) => `<div class="p${i + 1}" style="animation-delay:${i * 0.35}s"><b>${i + 1}</b><span>מעגל ${c.circle}</span><em class="num"><b class="cu" data-n="${c.total || 0}">0</b> ${S.tokens}</em></div>`).join("")}</div>`) });
     steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(3), null));
     // the gate first, the cover lifts once it is painted (otherwise the numbers scene flashes for 2 s underneath)
     steps.push({ dur: null, enter: () => { const my = this.showIdx; this.showGrand(); this.later(() => { if (this.showOn && this.showIdx === my) this.showCover(false); }, 1300); }, leave: () => this.closeGrand() });
-    steps.push({ dur: null, enter: () => this.showHtml(`<span class="k">${R.pre}</span><h1>${R.pre2}</h1><div class="sh-made">${made.map(([label, n], i) => `<div style="animation-delay:${0.3 + i * 0.35}s"><b class="num">${n}</b><span>${label}</span></div>`).join("")}</div>`) });
+    steps.push({ dur: null, enter: () => this.showHtml(`<span class="k">${R.pre}</span><h1>${R.pre2}</h1><div class="sh-made">${made.map(([label, n], i) => `<div style="animation-delay:${0.3 + i * 0.35}s"><b class="num cu" data-n="${n}">0</b><span>${label}</span></div>`).join("")}</div>`, 30) });
     steps.push({ dur: null, lyrics: true, enter: () => this.showLyrics() });
     return steps;
   }
@@ -623,9 +640,9 @@ export class HallApp {
     const L = Object.values(this.creations).sort((a, b) => a.circle - b.circle).map((c) => ({ circle: c.circle, sentence: c.sentence }));
     const song = buildSong(L);
     const blocks = [`<div class="sh-chorus">${song.chorus.map((l) => `<div>${escH(l)}</div>`).join("")}</div>`, ...song.verses.map((v) => `<div class="sh-verse">${v.map((l) => `<div><small class="num">${l.circle}</small>אנחנו ${escH(l.text)}</div>`).join("")}</div>`)];
-    const el = this.showEl();
+    const el = this.showBody();
     el.innerHTML = `<div class="sh-card sh-lyr"><span class="k">${R.song} · ${song.lines.length} ${this.C.HALL.circles}</span><h1>${R.songTitle}</h1><div class="sh-cols">${blocks.join("")}</div><p class="sh-hint">${S.songHint}</p></div>${this.showDotsHTML()}`;
-    el.classList.add("on");
+    this.showEl().classList.add("on");
     // the chorus at once; every ״הבא״ brings the next verse (the owner, 26.11 12:10)
     el.querySelector(".sh-cols > div")?.classList.add("in");
   }
