@@ -17,7 +17,7 @@ export type SceneId = "map" | "focus" | "compare" | "race" | "stats";
 type Xf = { a: number; ax: number; ay: number; pt: (p: readonly [number, number] | number[]) => [number, number]; s: number; th: number; cx: number; cy: number };
 type Scene = { id: SceneId; name: string; dur: number; render: () => void; prep?: () => boolean };
 /** One chapter of the show: a timed one (dur seconds) or one that ends itself (null). */
-type ShowStep = { dur: number | null; enter: () => void; leave?: () => void };
+type ShowStep = { dur: number | null; enter: () => void; leave?: () => void; lyrics?: boolean };
 const escH = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
 
 const hexPts = (x: number, y: number, r: number, rot = 30) => [...Array(6)].map((_, i) => { const a = (Math.PI / 180) * (60 * i + rot); return `${(x + Math.cos(a) * r).toFixed(1)},${(y + Math.sin(a) * r).toFixed(1)}`; }).join(" ");
@@ -528,7 +528,7 @@ export class HallApp {
   private showDotsHTML() { return `<div class="sh-steps">${this.showSteps.map((_, i) => `<i class="${i < this.showIdx ? "done" : i === this.showIdx ? "on" : ""}"></i>`).join("")}</div>`; }
   private showCard(title: string, sub: string, kick: string) {
     const el = this.showEl();
-    el.innerHTML = `<div class="sh-card"><span class="k">${kick}</span><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ""}</div>${this.showDotsHTML()}`;
+    el.innerHTML = `<div class="sh-card"><span class="k">${kick}</span><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ""}</div>`;
     el.classList.add("on");
   }
   /** ?show=1: the start button (the melody needs a click on this computer first). */
@@ -539,7 +539,18 @@ export class HallApp {
     el.classList.add("on");
     const go = this.$("#sh-go"); if (go) go.onclick = () => this.startShow();
   }
-  private showHtml(inner: string) { const el = this.showEl(); el.innerHTML = `<div class="sh-card">${inner}</div>${this.showDotsHTML()}`; el.classList.add("on"); }
+  private showHtml(inner: string) { const el = this.showEl(); el.innerHTML = `<div class="sh-card">${inner}</div>`; el.classList.add("on"); }
+  /** The bar at the bottom (the owner, 26.11: ״תוסיף לי לחצן הבא - ואני אעביר״): previous · the chapter dots · next · back to the live screen. Over every chapter. */
+  private showNav() {
+    const S = this.C.HALL.show;
+    let nav = this.$("#sh-nav");
+    if (!nav) { nav = document.createElement("div"); nav.id = "sh-nav"; this.root.appendChild(nav); }
+    const lyr = this.showSteps[this.showIdx]?.lyrics ? this.root.querySelectorAll("#show .sh-cols > div:not(.in)").length : 0;
+    const last = this.showIdx >= this.showSteps.length - 1 && !lyr;
+    nav.innerHTML = `<button type="button" class="btn ghost" id="sh-prev" ${this.showIdx <= 0 ? "disabled" : ""}>${S.prev}</button>${this.showDotsHTML()}<button type="button" class="btn" id="sh-next" ${last ? "disabled" : ""}>${lyr ? S.nextVerse : S.next} <span aria-hidden="true">&#8592;</span></button><button type="button" class="btn ghost" id="sh-exit">${S.exit}</button>`;
+    const b = (id: string, fn: () => void) => { const e = this.$("#" + id); if (e) e.onclick = fn; };
+    b("sh-prev", () => this.showBack()); b("sh-next", () => this.showNext()); b("sh-exit", () => this.endShow());
+  }
   private buildShow(): ShowStep[] {
     // the owner (26.11 11:55): ״משהו קצר של סיכום ותוצאות״ - about a minute and a half, then the words stay
     const H = this.C.HALL, R = this.C.REVEAL, S = H.show;
@@ -547,19 +558,20 @@ export class HallApp {
     const top = [...L].filter((c) => c.stage >= 1 || c.finished).sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 3);
     const cr = Object.values(this.creations);
     const made = [[R.melody, cr.filter((c) => c.standing && c.standing.length >= 5).length], [R.song, cr.filter((c) => c.sentence).length], [R.shape, cr.filter((c) => c.hasPhoto).length]] as [string, number][];
-    const card = (title: string, sub: string, kick: string, dur: number): ShowStep => ({ dur, enter: () => this.showCard(title, sub, kick) });
-    const scene = (id: SceneId, name: string, render: () => void, dur: number): ShowStep => ({ dur, enter: () => { this.showCover(false); this.show({ id, name, dur, render }); } });
+    const card = (title: string, sub: string, kick: string, dur: number | null): ShowStep => ({ dur, enter: () => this.showCard(title, sub, kick) });
+    const scene = (id: SceneId, name: string, render: () => void, dur: number | null): ShowStep => ({ dur, enter: () => { this.showCover(false); this.show({ id, name, dur: dur ?? 60, render }); } });
     const steps: ShowStep[] = [
-      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived} · ${tot} ${H.tokens}`, S.title, 7),
-      card(H.scenes.stats, S.statsSub, S.part(1), 5),
-      scene("stats", H.scenes.stats, () => this.renderStats(), 22),
+      // no timers (the owner, 26.11 12:10: ״אני לא רוצה שתעבור לבד״) - every chapter waits for ״הבא״
+      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived} · ${tot} ${H.tokens}`, S.title, null),
+      card(H.scenes.stats, S.statsSub, S.part(1), null),
+      scene("stats", H.scenes.stats, () => this.renderStats(), null),
     ];
-    if (top.length) steps.push({ dur: 14, enter: () => this.showHtml(`<span class="k">${S.part(2)}</span><h1>${H.leaders}</h1><div class="sh-top">${top.map((c, i) => `<div class="p${i + 1}" style="animation-delay:${i * 0.35}s"><b>${i + 1}</b><span>מעגל ${c.circle}</span><em class="num">${c.total || 0} ${S.tokens}</em></div>`).join("")}</div>`) });
-    steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(3), 5));
+    if (top.length) steps.push({ dur: null, enter: () => this.showHtml(`<span class="k">${S.part(2)}</span><h1>${H.leaders}</h1><div class="sh-top">${top.map((c, i) => `<div class="p${i + 1}" style="animation-delay:${i * 0.35}s"><b>${i + 1}</b><span>מעגל ${c.circle}</span><em class="num">${c.total || 0} ${S.tokens}</em></div>`).join("")}</div>`) });
+    steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(3), null));
     // the gate first, the cover lifts once it is painted (otherwise the numbers scene flashes for 2 s underneath)
-    steps.push({ dur: 22, enter: () => { const my = this.showIdx; this.showGrand(); this.later(() => { if (this.showOn && this.showIdx === my) this.showCover(false); }, 1300); }, leave: () => this.closeGrand() });
-    steps.push({ dur: 14, enter: () => this.showHtml(`<span class="k">${R.pre}</span><h1>${R.pre2}</h1><div class="sh-made">${made.map(([label, n], i) => `<div style="animation-delay:${0.3 + i * 0.35}s"><b class="num">${n}</b><span>${label}</span></div>`).join("")}</div>`) });
-    steps.push({ dur: null, enter: () => this.showLyrics() });
+    steps.push({ dur: null, enter: () => { const my = this.showIdx; this.showGrand(); this.later(() => { if (this.showOn && this.showIdx === my) this.showCover(false); }, 1300); }, leave: () => this.closeGrand() });
+    steps.push({ dur: null, enter: () => this.showHtml(`<span class="k">${R.pre}</span><h1>${R.pre2}</h1><div class="sh-made">${made.map(([label, n], i) => `<div style="animation-delay:${0.3 + i * 0.35}s"><b class="num">${n}</b><span>${label}</span></div>`).join("")}</div>`) });
+    steps.push({ dur: null, lyrics: true, enter: () => this.showLyrics() });
     return steps;
   }
   startShow() {
@@ -576,8 +588,13 @@ export class HallApp {
     if (!step) { this.endShow(); return; }
     step.enter();
     if (step.dur) this.showAfter(step.dur * 1000);
+    this.showNav();
   }
-  showNext() { if (!this.showOn) return; this.showSteps[this.showIdx]?.leave?.(); this.showIdx++; this.showEnter(); }
+  showNext() {
+    if (!this.showOn) return;
+    if (this.showSteps[this.showIdx]?.lyrics) { const b = this.root.querySelector("#show .sh-cols > div:not(.in)"); if (b) { b.classList.add("in"); this.showNav(); return; } return; }
+    this.showSteps[this.showIdx]?.leave?.(); this.showIdx++; this.showEnter();
+  }
   showBack() { if (!this.showOn) return; this.showSteps[this.showIdx]?.leave?.(); this.showIdx = Math.max(0, this.showIdx - 1); this.showEnter(); }
   showPause() {
     if (!this.showOn) return;
@@ -591,7 +608,7 @@ export class HallApp {
     if (!this.showOn) return;
     this.showSteps[this.showIdx]?.leave?.();
     this.showOn = false; if (this.showTimer) clearTimeout(this.showTimer); this.showTimer = null;
-    this.hideReveal(); this.closeGrand(); this.$("#show")?.remove();
+    this.hideReveal(); this.closeGrand(); this.$("#show")?.remove(); this.$("#sh-nav")?.remove();
     this.nextScene();
   }
   private closeGrand() { if (this.grandInt) clearInterval(this.grandInt); this.grandInt = null; this.$("#grand")?.remove(); this.grandOn = false; }
@@ -604,9 +621,8 @@ export class HallApp {
     const el = this.showEl();
     el.innerHTML = `<div class="sh-card sh-lyr"><span class="k">${R.song} · ${song.lines.length} ${this.C.HALL.circles}</span><h1>${R.songTitle}</h1><div class="sh-cols">${blocks.join("")}</div><p class="sh-hint">${S.songHint}</p></div>${this.showDotsHTML()}`;
     el.classList.add("on");
-    // the words build up by themselves: the chorus, then a verse every 6 seconds (the owner, 26.11)
-    const my = this.showIdx;
-    el.querySelectorAll(".sh-cols > div").forEach((b, i) => this.later(() => { if (this.showOn && this.showIdx === my) b.classList.add("in"); }, 1200 + i * 6000));
+    // the chorus at once; every ״הבא״ brings the next verse (the owner, 26.11 12:10)
+    el.querySelector(".sh-cols > div")?.classList.add("in");
   }
 
   // ---------- updates ----------
