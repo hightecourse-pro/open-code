@@ -494,7 +494,8 @@
 .hk-hall .sh-lyr{justify-content:flex-start;padding-top:48px;gap:8px}
 .hk-hall .sh-lyr h1{font-size:84px}
 .hk-hall .sh-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:22px 30px;width:100%;margin-top:26px;text-align:right}
-.hk-hall .sh-cols > div{background:#ffffff12;border-radius:20px;padding:16px 22px;font-size:32px;font-weight:300;line-height:1.45;animation:hkh-popin .9s var(--ease) both}
+.hk-hall .sh-cols > div{background:#ffffff12;border-radius:20px;padding:16px 22px;font-size:32px;font-weight:300;line-height:1.45;opacity:0;transform:translateY(18px) scale(.97);transition:opacity 1s ease,transform 1.2s var(--ease)}
+.hk-hall .sh-cols > div.in{opacity:1;transform:none}
 .hk-hall .sh-cols .sh-chorus{background:#E0A80022;border:2px solid #E0A80088;font-weight:500}
 .hk-hall .sh-cols small{display:inline-block;min-width:46px;color:#E0A800;font-size:22px;font-weight:700}
 .hk-hall .sh-lyr .sh-hint{position:absolute;bottom:96px;inset-inline:0;font-size:34px;font-weight:500;color:#E0A800;opacity:1}

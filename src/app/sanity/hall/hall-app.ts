@@ -546,25 +546,26 @@ export class HallApp {
     const card = (title: string, sub: string, kick: string, dur: number): ShowStep => ({ dur, enter: () => this.showCard(title, sub, kick) });
     const scene = (id: SceneId, name: string, render: () => void, dur: number, before?: () => void): ShowStep => ({ dur, enter: () => { before?.(); this.showCover(false); this.show({ id, name, dur, render }); } });
     const steps: ShowStep[] = [
-      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived}`, S.title, 6),
-      card(H.scenes.race, S.raceSub, S.part(1), 4),
-      scene("race", H.scenes.race, () => this.renderRace(), 18),
-      card(H.scenes.stats, S.statsSub, S.part(2), 4),
-      scene("stats", H.scenes.stats, () => this.renderStats(), 16),
+      // the owner (26.11): ״שיעבור לבד בהפרשים שקל לאדם לראות״ - every chapter long enough to read from the back row
+      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived}`, S.title, 8),
+      card(H.scenes.race, S.raceSub, S.part(1), 6),
+      scene("race", H.scenes.race, () => this.renderRace(), 28),
+      card(H.scenes.stats, S.statsSub, S.part(2), 6),
+      scene("stats", H.scenes.stats, () => this.renderStats(), 24),
     ];
     if (top.length) {
-      steps.push(card(H.leaders, [...top].reverse().map((c) => `מעגל ${c.circle}`).join(" · "), S.part(3), 4));
-      top.forEach((c, i) => steps.push(scene("focus", `${H.leaders} · מקום ${top.length - i}`, () => this.renderFocus(), i === top.length - 1 ? 12 : 9, () => { this.focusId = c.circle; })));
+      steps.push(card(H.leaders, [...top].reverse().map((c) => `מעגל ${c.circle}`).join(" · "), S.part(3), 6));
+      top.forEach((c, i) => steps.push(scene("focus", `${H.leaders} · מקום ${top.length - i}`, () => this.renderFocus(), i === top.length - 1 ? 18 : 13, () => { this.focusId = c.circle; })));
     }
-    steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(4), 4));
-    steps.push({ dur: 18, enter: () => { this.showCover(false); this.showGrand(); }, leave: () => this.closeGrand() });
-    steps.push(card(R.pre, R.pre2, S.revealKick, 7));
+    steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(4), 6));
+    steps.push({ dur: 26, enter: () => { this.showCover(false); this.showGrand(); }, leave: () => this.closeGrand() });
+    steps.push(card(R.pre, R.pre2, S.revealKick, 10));
     steps.push({
       dur: null,
       enter: () => {
         const my = this.showIdx; this.showCover(false); this.revealOn = true;
         const el = this.$("#reveal"); if (el) el.hidden = false;
-        void this.runReveal().then((len) => { if (this.showOn && this.showIdx === my && len != null) this.showAfter((len + 7) * 1000); });
+        void this.runReveal().then((len) => { if (this.showOn && this.showIdx === my && len != null) this.showAfter((len + 12) * 1000); });
       },
       leave: () => this.hideReveal(),
     });
@@ -609,10 +610,13 @@ export class HallApp {
     const R = this.C.REVEAL, S = this.C.HALL.show;
     const L = Object.values(this.creations).sort((a, b) => a.circle - b.circle).map((c) => ({ circle: c.circle, sentence: c.sentence }));
     const song = buildSong(L);
-    const blocks = [`<div class="sh-chorus">${song.chorus.map((l) => `<div>${escH(l)}</div>`).join("")}</div>`, ...song.verses.map((v, i) => `<div class="sh-verse" style="animation-delay:${(i + 1) * 0.14}s">${v.map((l) => `<div><small class="num">${l.circle}</small>אנחנו ${escH(l.text)}</div>`).join("")}</div>`)];
+    const blocks = [`<div class="sh-chorus">${song.chorus.map((l) => `<div>${escH(l)}</div>`).join("")}</div>`, ...song.verses.map((v) => `<div class="sh-verse">${v.map((l) => `<div><small class="num">${l.circle}</small>אנחנו ${escH(l.text)}</div>`).join("")}</div>`)];
     const el = this.showEl();
     el.innerHTML = `<div class="sh-card sh-lyr"><span class="k">${R.song} · ${song.lines.length} ${this.C.HALL.circles}</span><h1>${R.songTitle}</h1><div class="sh-cols">${blocks.join("")}</div><p class="sh-hint">${S.songHint}</p></div>${this.showDotsHTML()}`;
     el.classList.add("on");
+    // the words build up by themselves: the chorus, then a verse every 6 seconds (the owner, 26.11)
+    const my = this.showIdx;
+    el.querySelectorAll(".sh-cols > div").forEach((b, i) => this.later(() => { if (this.showOn && this.showIdx === my) b.classList.add("in"); }, 1200 + i * 6000));
   }
 
   // ---------- updates ----------
