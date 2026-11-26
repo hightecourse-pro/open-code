@@ -10,12 +10,15 @@
 import { COLORS, RESOURCE_OF, RULES, ZONE_IDS, buildContent, fill, isZoneId, type Content, type Gender, type ZoneId } from "@/lib/sanity/content";
 import { makeBoard, tierIdFor, type Board, type Snapshot } from "@/lib/sanity/engine";
 import { ASSETS, faceSVG, icon, logo, nameOf, prep, symbol, token } from "@/lib/sanity/art";
-import { Kaleido, buildScore, logoFromNumbers, photoToLogo, playScore, type Player } from "@/lib/sanity/creations";
+import { Kaleido, buildScore, buildSong, logoFromNumbers, photoToLogo, playScore, type Player } from "@/lib/sanity/creations";
 import { photoPath, type CreationMeta, type EventInfo, type HallView } from "@/lib/sanity/shared";
 
 export type SceneId = "map" | "focus" | "compare" | "race" | "stats";
 type Xf = { a: number; ax: number; ay: number; pt: (p: readonly [number, number] | number[]) => [number, number]; s: number; th: number; cx: number; cy: number };
 type Scene = { id: SceneId; name: string; dur: number; render: () => void; prep?: () => boolean };
+/** One chapter of the show: a timed one (dur seconds) or one that ends itself (null). */
+type ShowStep = { dur: number | null; enter: () => void; leave?: () => void };
+const escH = (s: string) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] as string);
 
 const hexPts = (x: number, y: number, r: number, rot = 30) => [...Array(6)].map((_, i) => { const a = (Math.PI / 180) * (60 * i + rot); return `${(x + Math.cos(a) * r).toFixed(1)},${(y + Math.sin(a) * r).toFixed(1)}`; }).join(" ");
 // 22.11: the yellow boat of the opening illustration
@@ -92,7 +95,7 @@ export class HallApp {
   private onKey: (e: KeyboardEvent) => void;
   private onResize: () => void;
 
-  constructor(root: HTMLElement, opts: { slug: string | null; lockedScene: string | null; gender: Gender; wide?: boolean; stretch?: boolean }) {
+  constructor(root: HTMLElement, opts: { slug: string | null; lockedScene: string | null; gender: Gender; wide?: boolean; stretch?: boolean; show?: boolean }) {
     this.root = root;
     this.slug = opts.slug;
     this.lockedScene = opts.lockedScene;
@@ -124,11 +127,23 @@ export class HallApp {
     this.later(() => this.hallBirds(), 3000);
     this.later(() => { this.hallCloud(300); this.hallCloud(1250); }, 1500);
     this.intervals.push(setInterval(() => this.hallCloud(), 26000));
-    this.onKey = (e: KeyboardEvent) => { if (e.key === "r") this.showReveal(); if (e.key === "Escape") this.hideReveal(); if (e.key === "f") document.documentElement.requestFullscreen?.().catch(() => {}); if (e.key === "ArrowLeft") this.nextScene(); };
+    this.onKey = (e: KeyboardEvent) => {
+      if (e.key === "f") document.documentElement.requestFullscreen?.().catch(() => {});
+      if (this.showOn || this.showArmed) { // the show has the keyboard
+        if (e.key === "Escape") this.endShow();
+        else if (e.key === "ArrowLeft") this.showNext();
+        else if (e.key === "ArrowRight") this.showBack();
+        else if (e.key === " ") { e.preventDefault(); this.showPause(); }
+        else if (e.key === "s" && this.showArmed) this.startShow();
+        return;
+      }
+      if (e.key === "r") this.showReveal(); if (e.key === "Escape") this.hideReveal(); if (e.key === "ArrowLeft") this.nextScene(); if (e.key === "s") this.startShow();
+    };
     this.onResize = () => this.fit();
     document.addEventListener("keydown", this.onKey);
     addEventListener("resize", this.onResize);
     this.fit();
+    if (opts.show) this.armShow();
   }
 
   destroy() {
@@ -140,6 +155,7 @@ export class HallApp {
     if (this.sceneTimer) clearTimeout(this.sceneTimer);
     if (this.celT) clearTimeout(this.celT);
     if (this.grandInt) clearInterval(this.grandInt);
+    if (this.showTimer) clearTimeout(this.showTimer);
     this.player?.stop();
     this.kal?.stop();
     this.root.innerHTML = "";
@@ -180,7 +196,8 @@ export class HallApp {
     view.creations.forEach((c) => { if (c && c.circle) this.creations[c.circle] = c; });
     this.onData();
     const reveal = !!view.event?.reveal;
-    if (reveal && !prevReveal) this.showReveal();
+    if (this.showOn) { /* the show runs its own reveal */ }
+    else if (reveal && !prevReveal) this.showReveal();
     else if (!reveal && prevReveal && this.revealOn) this.hideReveal();
     // the studio's remote changed, or the page opened already locked (?scene= / a locked hallScene): switch now, not in 45s
     const forced = !!this.lockedScene || (!!view.event?.hallScene && view.event.hallScene !== "auto");
@@ -443,7 +460,7 @@ export class HallApp {
     const dots = this.$("#sceneDots"); if (dots) dots.innerHTML = this.SCENES.map((s) => `<i class="${s === scene ? "on" : ""}"></i>`).join("");
   }
   nextScene() {
-    if (!this.alive) return;
+    if (!this.alive || this.showOn) return;
     const ctl = this.event?.hallScene;
     const forced = this.lockedScene || (ctl && ctl !== "auto" ? ctl : null);
     if (forced) {
@@ -463,7 +480,7 @@ export class HallApp {
   //  22.11: the great scene at the end: the gate of אי השפיות opens for the whole hall
   // ============================================================
   private checkGrand() {
-    const L = this.list(); if (this.grandOn || !L.length) return;
+    const L = this.list(); if (this.grandOn || this.showOn || !L.length) return;
     const all = L.filter((c) => c.stage >= 1 || c.finished);
     if ((all.length && all.every((c) => c.finished)) || this.lockedScene === "grand" || this.event?.hallScene === "grand") this.showGrand();
   }
@@ -490,6 +507,112 @@ export class HallApp {
       const bits = [...Array(160)].map((_, k) => `<i style="left:${(k * 37) % 100}%;background:${cols[k % cols.length]};animation-delay:${(k % 24) * 0.08}s;animation-duration:${3 + (k % 7) * 0.3}s;--dx:${((k * 53) % 200) - 100}px;--rt:${(k * 97) % 720}deg"></i>`).join("");
       const conf = this.$("#g-conf"); if (conf) conf.innerHTML = bits + this.coinBits(48);
     }, 3000);
+  }
+
+  // ============================================================
+  //  26.11: the show (״המופע״) - the whole ending as one screen, in order, with fades between chapters: the race,
+  //  the numbers, the three leaders, the gate, the reveal (melody + sentences + kaleidoscope), the song's words.
+  //  Started on the hall's computer (S, or ?show=1 → a start button) so the melody plays from there.
+  //  Keys while it runs: ← next chapter, → back, space pause/resume (timed chapters), Esc back to the live screen.
+  // ============================================================
+  private showOn = false;
+  private showArmed = false;
+  private showIdx = -1;
+  private showSteps: ShowStep[] = [];
+  private showTimer: ReturnType<typeof setTimeout> | null = null;
+  private showDue = 0;
+  private showLeft = 0;
+  private showPaused = false;
+  private showEl(): HTMLElement { let el = this.$("#show"); if (!el) { el = document.createElement("div"); el.id = "show"; this.root.appendChild(el); } return el; }
+  private showCover(on: boolean) { this.showEl().classList.toggle("on", on); }
+  private showDotsHTML() { return `<div class="sh-steps">${this.showSteps.map((_, i) => `<i class="${i < this.showIdx ? "done" : i === this.showIdx ? "on" : ""}"></i>`).join("")}</div>`; }
+  private showCard(title: string, sub: string, kick: string) {
+    const el = this.showEl();
+    el.innerHTML = `<div class="sh-card"><span class="k">${kick}</span><h1>${title}</h1>${sub ? `<p>${sub}</p>` : ""}</div>${this.showDotsHTML()}`;
+    el.classList.add("on");
+  }
+  /** ?show=1: the start button (the melody needs a click on this computer first). */
+  armShow() {
+    if (this.showOn) return;
+    const H = this.C.HALL; const el = this.showEl(); this.showArmed = true;
+    el.innerHTML = `<div class="sh-card"><span class="k">${H.title}</span><h1>${H.show.title}</h1><p>${H.show.parts}</p><button class="btn" id="sh-go" type="button">${H.show.start} ${icon("star", 40, "#fff")}</button><p class="sh-keys">${H.show.keys}</p></div>`;
+    el.classList.add("on");
+    const go = this.$("#sh-go"); if (go) go.onclick = () => this.startShow();
+  }
+  private buildShow(): ShowStep[] {
+    const H = this.C.HALL, R = this.C.REVEAL, S = H.show;
+    const L = this.list(); const N = this.N; const arrived = L.filter((c) => c.finished).length;
+    const top = [...L].filter((c) => c.stage >= 1 || c.finished).sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 3).reverse(); // third, second, first
+    const card = (title: string, sub: string, kick: string, dur: number): ShowStep => ({ dur, enter: () => this.showCard(title, sub, kick) });
+    const scene = (id: SceneId, name: string, render: () => void, dur: number, before?: () => void): ShowStep => ({ dur, enter: () => { before?.(); this.showCover(false); this.show({ id, name, dur, render }); } });
+    const steps: ShowStep[] = [
+      card(H.title, `${N} ${H.circles} · ${arrived} ${H.arrived}`, S.title, 6),
+      card(H.scenes.race, S.raceSub, S.part(1), 4),
+      scene("race", H.scenes.race, () => this.renderRace(), 18),
+      card(H.scenes.stats, S.statsSub, S.part(2), 4),
+      scene("stats", H.scenes.stats, () => this.renderStats(), 16),
+    ];
+    if (top.length) {
+      steps.push(card(H.leaders, [...top].reverse().map((c) => `מעגל ${c.circle}`).join(" · "), S.part(3), 4));
+      top.forEach((c, i) => steps.push(scene("focus", `${H.leaders} · מקום ${top.length - i}`, () => this.renderFocus(), i === top.length - 1 ? 12 : 9, () => { this.focusId = c.circle; })));
+    }
+    steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(4), 4));
+    steps.push({ dur: 18, enter: () => { this.showCover(false); this.showGrand(); }, leave: () => this.closeGrand() });
+    steps.push(card(R.pre, R.pre2, S.revealKick, 7));
+    steps.push({
+      dur: null,
+      enter: () => {
+        const my = this.showIdx; this.showCover(false); this.revealOn = true;
+        const el = this.$("#reveal"); if (el) el.hidden = false;
+        void this.runReveal().then((len) => { if (this.showOn && this.showIdx === my && len != null) this.showAfter((len + 7) * 1000); });
+      },
+      leave: () => this.hideReveal(),
+    });
+    steps.push({ dur: null, enter: () => this.showLyrics() });
+    return steps;
+  }
+  startShow() {
+    if (this.showOn) return;
+    this.showOn = true; this.showArmed = false;
+    if (this.sceneTimer) clearTimeout(this.sceneTimer);
+    this.hideReveal(); this.closeGrand();
+    this.showSteps = this.buildShow(); this.showIdx = -1; this.showNext();
+  }
+  private showAfter(ms: number) { if (this.showTimer) clearTimeout(this.showTimer); this.showDue = Date.now() + ms; this.showTimer = setTimeout(() => { this.showTimer = null; if (this.alive) this.showNext(); }, ms); }
+  private showEnter() {
+    if (this.showTimer) clearTimeout(this.showTimer); this.showTimer = null; this.showPaused = false;
+    const step = this.showSteps[this.showIdx];
+    if (!step) { this.endShow(); return; }
+    step.enter();
+    if (step.dur) this.showAfter(step.dur * 1000);
+  }
+  showNext() { if (!this.showOn) return; this.showSteps[this.showIdx]?.leave?.(); this.showIdx++; this.showEnter(); }
+  showBack() { if (!this.showOn) return; this.showSteps[this.showIdx]?.leave?.(); this.showIdx = Math.max(0, this.showIdx - 1); this.showEnter(); }
+  showPause() {
+    if (!this.showOn) return;
+    if (this.showPaused) { this.showPaused = false; if (this.showLeft > 0) this.showAfter(this.showLeft); }
+    else if (this.showTimer) { this.showPaused = true; this.showLeft = Math.max(500, this.showDue - Date.now()); clearTimeout(this.showTimer); this.showTimer = null; }
+    const el = this.showEl(); el.querySelector(".sh-pause")?.remove();
+    if (this.showPaused) { const b = document.createElement("div"); b.className = "sh-pause"; b.textContent = this.C.HALL.show.paused; el.appendChild(b); }
+  }
+  endShow() {
+    if (this.showArmed) { this.showArmed = false; this.$("#show")?.remove(); return; }
+    if (!this.showOn) return;
+    this.showSteps[this.showIdx]?.leave?.();
+    this.showOn = false; if (this.showTimer) clearTimeout(this.showTimer); this.showTimer = null;
+    this.hideReveal(); this.closeGrand(); this.$("#show")?.remove();
+    this.nextScene();
+  }
+  private closeGrand() { if (this.grandInt) clearInterval(this.grandInt); this.grandInt = null; this.$("#grand")?.remove(); this.grandOn = false; }
+  /** The last chapter: the song's words, as the studio arranges them (the Suno track plays from this computer). Stays until Esc. */
+  private showLyrics() {
+    const R = this.C.REVEAL, S = this.C.HALL.show;
+    const L = Object.values(this.creations).sort((a, b) => a.circle - b.circle).map((c) => ({ circle: c.circle, sentence: c.sentence }));
+    const song = buildSong(L);
+    const blocks = [`<div class="sh-chorus">${song.chorus.map((l) => `<div>${escH(l)}</div>`).join("")}</div>`, ...song.verses.map((v, i) => `<div class="sh-verse" style="animation-delay:${(i + 1) * 0.14}s">${v.map((l) => `<div><small class="num">${l.circle}</small>אנחנו ${escH(l.text)}</div>`).join("")}</div>`)];
+    const el = this.showEl();
+    el.innerHTML = `<div class="sh-card sh-lyr"><span class="k">${R.song} · ${song.lines.length} ${this.C.HALL.circles}</span><h1>${R.songTitle}</h1><div class="sh-cols">${blocks.join("")}</div><p class="sh-hint">${S.songHint}</p></div>${this.showDotsHTML()}`;
+    el.classList.add("on");
   }
 
   // ---------- updates ----------
@@ -610,6 +733,7 @@ export class HallApp {
       await this.kal?.add(logos[n]); if (lyr) { const li = document.createElement("div"); li.textContent = `אנחנו ${c?.sentence || ""}`; lyr.prepend(li); [...lyr.children].slice(9).forEach((x) => x.remove()); }
     } });
     this.later(() => { if (!this.revealOn) return; const f = document.createElement("div"); f.className = "rv-final"; f.innerHTML = `<p>${R.close}</p>`; el.appendChild(f); }, (score.length + 1) * 1000);
+    return score.length;
   }
   hideReveal() { this.revealOn = false; this.player?.stop(); this.player = null; this.kal?.stop(); this.kal = null; const el = this.$("#reveal"); if (el) { el.hidden = true; el.innerHTML = ""; } }
 
