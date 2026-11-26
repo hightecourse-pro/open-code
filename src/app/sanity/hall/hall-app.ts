@@ -556,7 +556,8 @@ export class HallApp {
     ];
     if (top.length) steps.push({ dur: 14, enter: () => this.showHtml(`<span class="k">${S.part(2)}</span><h1>${H.leaders}</h1><div class="sh-top">${top.map((c, i) => `<div class="p${i + 1}" style="animation-delay:${i * 0.35}s"><b>${i + 1}</b><span>מעגל ${c.circle}</span><em class="num">${c.total || 0} ${S.tokens}</em></div>`).join("")}</div>`) });
     steps.push(card(H.goalTitle, `${H.grandLine} ${prep("ל", nameOf("goal"))}`, S.part(3), 5));
-    steps.push({ dur: 22, enter: () => { this.showCover(false); this.showGrand(); }, leave: () => this.closeGrand() });
+    // the gate first, the cover lifts once it is painted (otherwise the numbers scene flashes for 2 s underneath)
+    steps.push({ dur: 22, enter: () => { const my = this.showIdx; this.showGrand(); this.later(() => { if (this.showOn && this.showIdx === my) this.showCover(false); }, 1300); }, leave: () => this.closeGrand() });
     steps.push({ dur: 14, enter: () => this.showHtml(`<span class="k">${R.pre}</span><h1>${R.pre2}</h1><div class="sh-made">${made.map(([label, n], i) => `<div style="animation-delay:${0.3 + i * 0.35}s"><b class="num">${n}</b><span>${label}</span></div>`).join("")}</div>`) });
     steps.push({ dur: null, enter: () => this.showLyrics() });
     return steps;
