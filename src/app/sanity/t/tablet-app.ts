@@ -258,6 +258,35 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   const CLOCK = '<svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><circle cx="15" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M15 16V10M12 2.5h6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>';
   const ARROW = '<svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><path d="M28 11H4M12 3L3 11l9 8" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+  // the forest's key as pictures (the owner, 26.11: ״מקראה ציורית טבלאית ולא מקראה מילולית״): a swatch per colour, a drawn tile per shape
+  const SHAPE_SVG: Record<string, string> = {
+    square: '<rect x="3" y="3" width="20" height="20" rx="2"/>',
+    tri: '<path d="M13 2.5 23.5 23.5H2.5Z"/>',
+    rtri: '<path d="M3 3v20.5h20.5Z"/>',
+  };
+  const legendHTML = (cls = "") => {
+    const K = TASKS.forest.key;
+    const sw = (c: string) => `<i class="sw" style="background:${c}"></i>`;
+    const sh = (s: string) => `<svg class="sw" width="26" height="26" viewBox="0 0 26 26" aria-hidden="true" fill="currentColor">${SHAPE_SVG[s] ?? SHAPE_SVG.square}</svg>`;
+    return `<div class="legend pic ${cls}"><div class="lrow"><b>${K.color.title}</b>${K.color.items.map((i) => `<span class="lk">${sw(i.c)}${i.label}</span>`).join("")}</div><div class="lrow"><b>${K.shape.title}</b>${K.shape.items.map((i) => `<span class="lk">${sh(i.s)}${i.label}</span>`).join("")}</div></div>`;
+  };
+  // the reef's graph (the owner, 26.11: ״לא רואים את הגרף הנוצר״): on a white card, in the island's colour, the current count grows live
+  const reefGraph = (arr: number[], cur: number, now: number) => {
+    const W = 520, H = 140, base = 112, bw = 72, step = 100;
+    const bars = [0, 1, 2, 3, 4].map((j) => {
+      const x = W - (j + 1) * step + (step - bw) / 2;
+      const v = j < cur ? (arr[j] ?? 0) : j === cur ? now : null;
+      const h = v == null ? 0 : v > 0 ? Math.max(6, v * 7) : 0;
+      const bar =
+        v == null
+          ? `<rect x="${x}" y="${base - 6}" width="${bw}" height="6" rx="3" fill="currentColor" opacity=".15"/>`
+          : `<rect x="${x}" y="${base - h}" width="${bw}" height="${h}" rx="8" fill="${j === cur ? "var(--c)" : "var(--cd)"}"${j === cur ? ' stroke="var(--cd)" stroke-width="3" stroke-dasharray="6 5"' : ""}/>`;
+      const val = v == null ? "" : `<text x="${x + bw / 2}" y="${base - h - 8}" text-anchor="middle" font-size="22" font-weight="900" fill="currentColor">${v}</text>`;
+      return `${bar}${val}<text x="${x + bw / 2}" y="${H - 4}" text-anchor="middle" font-size="18" font-weight="500" fill="currentColor" opacity=".7">${j + 1}</text>`;
+    });
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true" style="display:block;color:var(--ink)">${bars.join("")}</svg>`;
+  };
+
   // ---------- the board: the circle's own (one of 60), hexagons ----------
   let BW = 0,
     BH = 0;
@@ -397,14 +426,17 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
   };
 
   // ---------- the top bar and the bag ----------
-  const bagHTML = () => `<span class="bag" id="bag" aria-label="התרמיל: ${total()} אסימונים">${IDS.map((z) => `<span class="r" data-r="${z}" style="--rc:var(--${z}-deep)">${coin(z, 34)}<b class="num">${S.tokens[z]}</b></span>`).join("")}<span class="tot num">${total()}</span></span>`;
+  // the owner (26.11): ״התרמיל לא ברור שהוא תרמיל״ - a backpack with its name opens the row of coins
+  const BAGICON = '<svg width="24" height="26" viewBox="0 0 30 32" aria-hidden="true"><path d="M10 7V5.5a5 5 0 0 1 10 0V7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round"/><rect x="3.5" y="7" width="23" height="23.5" rx="6.5" fill="currentColor"/><path d="M3.5 15h23" stroke="#fff" stroke-width="2.2" opacity=".55"/><rect x="8.5" y="18.5" width="13" height="8" rx="3" fill="#fff" opacity=".92"/></svg>';
+  const bagHTML = () => `<span class="bag" id="bag" aria-label="התרמיל: ${total()} אסימונים"><span class="bagtag">${BAGICON}<small>${UI.bag}</small></span>${IDS.map((z) => `<span class="r" data-r="${z}" style="--rc:var(--${z}-deep)">${coin(z, 34)}<b class="num">${S.tokens[z]}</b></span>`).join("")}<span class="tot num">${total()}</span></span>`;
   const fsHtml = () => (!SHOT && canFs() ? `<button type="button" class="fsbtn${document.fullscreenElement ? "" : " blink"}" title="${fsTitle()}" aria-label="מסך מלא">${fsLabel()}</button>` : "");
   function bar(z?: ZoneId | null) {
     const st = Math.min(S.stage, 6);
     const who = z
       ? `<span class="who"><svg width="54" height="62" viewBox="-31 -35 62 70" aria-hidden="true" style="overflow:visible">${hexArt(z, 31, "bh-" + z)}<polygon points="${hexPts(0, 0, 31)}" fill="none" stroke="var(--${z})" stroke-width="2.5" stroke-linejoin="round"/></svg>${NAME(z)}</span>`
       : `<span class="who"><img src="${ASSET}/logo.png" alt="" style="height:58px">${st ? `<small>שלב ${st} מתוך 6</small>` : ""}</span>`;
-    $("#bar")!.innerHTML = who + `<span style="display:flex;align-items:center;gap:16px">${st ? `<span class="dots" aria-label="שלב ${st} מתוך 6">${[1, 2, 3, 4, 5, 6].map((i) => `<i class="${i <= S.visited.length ? "on" : ""}"></i>`).join("")}</span>` : ""}${bagHTML()}${fsHtml()}</span>`;
+    // the circle's number on every screen (the owner, 26.11: ״לראות לאורך כל המשחק איזה מעגל אנחנו״)
+    $("#bar")!.innerHTML = who + `<span style="display:flex;align-items:center;gap:16px"><span class="circ">${fill(UI.barCircle, { circle: CIRCLE })}</span>${st ? `<span class="dots" aria-label="שלב ${st} מתוך 6">${[1, 2, 3, 4, 5, 6].map((i) => `<i class="${i <= S.visited.length ? "on" : ""}"></i>`).join("")}</span>` : ""}${bagHTML()}${fsHtml()}</span>`;
   }
   function stageXY(el: Element): [number, number] {
     const r = el.getBoundingClientRect(),
@@ -763,7 +795,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       placeBoard("left");
       const fl = S.flooded.filter((i) => !S.visited.includes(B.faces[i].kind as ZoneId));
       const can = total() > 0;
-      const opt = (cost: number, title: string, sub: string, dis = false) => `<button class="opt" type="button" ${dis || !can ? "disabled" : ""}><span class="cost"><span class="num">${cost}</span>${GCOIN}</span><span class="gain"><b>${title}</b><small>${sub}</small></span></button>`;
+      const opt = (cost: number, title: string, sub: string, dis = false) => `<button class="opt" type="button" ${dis || !can ? "disabled" : ""}><span class="cost" aria-label="${cost === 1 ? "אסימון אחד" : cost + " אסימונים"}">${GCOIN}</span><span class="gain"><b>${title}</b><small>${sub}</small></span></button>`;
       extra.innerHTML = `<div class="card in" style="right:40px;top:104px;width:540px;padding:22px 26px"><div style="display:flex;align-items:center;gap:14px"><img src="${ICON("lighthouse")}" alt="" style="height:64px"><div><p style="margin:0;font-size:20px;font-weight:700;color:var(--lighthouse)">${T.kick}</p><h2>${T.title}</h2></div></div>
     <p>${T.line}</p>
     <div class="opts">
@@ -789,7 +821,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       placeBoard("left");
       extra.innerHTML = `<div class="card in" style="right:40px;top:104px;width:540px;padding:22px 26px"><div style="display:flex;align-items:center;gap:14px"><img src="${ICON("market")}" alt="" style="height:60px"><div><p style="margin:0;font-size:20px;font-weight:700;color:var(--market)">${T.kick}</p><h2>${T.title}</h2></div></div>
     <p>${T.why}</p><p>${T.how}</p>
-    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px">${IDS.map((z) => `<button class="opt mk" type="button" style="min-height:58px;padding:6px 14px;font-size:20px" ${S.tokens[z] >= 2 ? "" : "disabled"}>${coin(z, 30)}<span>2 ${ZB[z].resource}</span></button>`).join("")}
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px">${IDS.map((z) => `<button class="opt mk" type="button" style="min-height:58px;padding:6px 14px;font-size:20px" ${S.tokens[z] >= 2 ? "" : "disabled"}>${coin(z, 30)}<span>2 ${fill(UI.gate.tokensOf, { resource: ZB[z].resource })}</span></button>`).join("")}
     <button class="opt mk" type="button" style="min-height:58px;font-weight:700;font-size:20px">${T.skip}</button></div></div>`;
       onPick(".mk", (i) => ACT.market(i));
     },
@@ -842,8 +874,8 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       extra.innerHTML = sceneArt(z);
       copy.style.cssText = "right:64px;top:104px;width:820px";
       copy.innerHTML = `<p class="kick in" style="font-size:24px">${T.kick}</p><h1 class="xl in d1" style="font-size:92px;white-space:nowrap">${Z.name}</h1>
-    <p class="lead in d2" style="font-weight:700">${Z.task}</p>
-    <div class="chips in d3"><span class="chip">${coin(z, 34)}<b class="num">${fl ? 2 : 4}</b>${Z.resource}</span><span class="chip">${CLOCK}<b class="num">${rule && rule.id === "doubleClock" ? 5 : GAME.minutesPerZone}</b>${T.minutes}</span>${rule ? `<span class="chip" style="color:var(--fog)">${T.fogChip} <b style="font-size:20px">${rule.title}</b></span>` : ""}</div>
+    <p class="lead in d2" style="font-weight:700;font-size:26px;line-height:1.3">${T.brief[z]}</p>
+    <div class="chips in d3"><span class="chip">${coin(z, 34)}<b class="num">${fl ? 2 : 4}</b>${fill(T.tokensOf, { resource: Z.resource })}</span><span class="chip">${CLOCK}<b class="num">${rule && rule.id === "doubleClock" ? 5 : GAME.minutesPerZone}</b>${T.minutes}</span>${rule ? `<span class="chip" style="color:var(--fog)">${T.fogChip} <b style="font-size:20px">${rule.title}</b></span>` : ""}</div>
     ${
       fl || S.dry
         ? `<div class="card in d4" id="drycard" style="position:relative;margin-top:20px;padding:18px 22px">${
@@ -867,7 +899,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       placeBoard("hide");
       copy.style.cssText = "right:56px;top:108px;width:560px";
       copy.innerHTML = `<h1 class="md in">${UI.howto.title}</h1>${H.intro ? `<p class="small in d1" style="font-size:20px;opacity:1;background:#ffffff26;border-radius:14px;padding:12px 16px">${H.intro}</p>` : ""}
-    <ol class="howto">${H.steps.map((s, i) => `<li data-s="${i}"><span>${i + 1}</span><div>${s}</div></li>`).join("")}</ol>${H.note ? `<p class="small in d4" style="opacity:.92">${H.note}</p>` : ""}`;
+    <ol class="howto">${H.steps.map((s, i) => `<li data-s="${i}"><span>${i + 1}</span><div>${s}</div></li>`).join("")}</ol>${z === "forest" ? legendHTML("in d4") : H.note ? `<p class="small in d4" style="opacity:.92">${H.note}</p>` : ""}`;
       const my = SCR;
       const lis = [...copy.querySelectorAll(".howto li")];
       const step = (i: number) => lis.forEach((l, j) => l.classList.toggle("on", j <= i));
@@ -908,7 +940,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
         const i = S.forestStep || 0;
         const st = TASKS.forest.statements;
         if (i < 3) {
-          copy.innerHTML = `<p class="kick in">${fill(TU.kick, { i: i + 1 })}</p><p class="in d1" style="font-size:46px;font-weight:900;line-height:1.15;margin:0">״${st[i]}״</p><div class="legend in d2">${TU.legend}</div>`;
+          copy.innerHTML = `<p class="kick in">${fill(TU.kick, { i: i + 1 })}</p><p class="in d1" style="font-size:46px;font-weight:900;line-height:1.15;margin:0">״${st[i]}״</p>${legendHTML("in d2")}`;
           button(i < 2 ? TU.next : TU.last, () => go("task", { forestStep: i + 1 }));
         } else {
           const ph = S.creations.photo || (restoredHasPhoto ? photoPath(boot.event.slug, CIRCLE) : null);
@@ -968,17 +1000,19 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
         const arr = S.creations.standing;
         copy.innerHTML = `<p class="kick in">${fill(TU.kick, { i: i + 1 })}</p><p class="in d1" style="font-size:44px;font-weight:900;line-height:1.15;margin:0">״${st[i]}״</p>
       <div class="in d2" style="display:flex;align-items:center;gap:20px;margin-top:30px"><span style="font-size:28px;font-weight:500">${TU.count}</span>${stepper("ans", S.input ?? 0, 12)}</div>
-      <svg class="in d3" width="420" height="110" viewBox="0 0 420 110" style="margin-top:18px" aria-hidden="true">${arr.map((v, j) => `<rect x="${400 - j * 80 - 50}" y="${100 - v * 8}" width="50" height="${v * 8}" rx="8" fill="#fff" opacity=".9"/>`).join("")}</svg>`;
+      <div class="legend reefg in d3"><div class="gt">${TU.graph}</div><div id="rgraph">${reefGraph(arr, i, S.input ?? 0)}</div></div>`;
         wireSteppers((_id, v) => {
           S.input = v;
           save();
+          const g = $("#rgraph");
+          if (g) g.innerHTML = reefGraph(arr, i, v);
         });
         button(i < 4 ? TU.next : TU.last, () => ACT.reefNext());
       } else if (z === "safari") {
         const TU = TASK_UI.safari;
         copy.innerHTML = `<p class="kick in">${TU.kick}</p><p class="in d1" style="font-size:34px;font-weight:700;line-height:1.25;margin:0;background:#ffffff26;border-radius:18px;padding:16px 20px">${TASKS.safari.scenarios[S.safariIdx]}</p>
       <p class="lead in d2">${TU.lead}</p>
-      <div class="in d3" style="display:flex;align-items:center;gap:14px;margin-top:14px"><span style="font-size:30px;font-weight:300;white-space:nowrap">${TU.start}</span><input class="tline" id="sen" maxlength="60" placeholder="${TU.ph}" aria-label="${TU.ph}" value="${(S.sentence || "").replace(/"/g, "&quot;")}"></div>
+      <div class="in d3 senrow" style="margin-top:14px"><span class="senpre">${TU.start}</span><input class="tline" id="sen" maxlength="60" placeholder="${TU.ph}" aria-label="${TU.ph}" value="${(S.sentence || "").replace(/"/g, "&quot;")}"></div>
       <p class="small in d4" id="wc"></p>`;
         const inp = $<HTMLInputElement>("#sen")!;
         const upd = () => {
@@ -1006,7 +1040,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
       copy.style.cssText = "right:64px;top:104px;width:640px";
       copy.innerHTML = `<h1 class="xl in" style="font-size:84px">${g.timeup ? T.timeup : g.ok ? T.win : T.ok}</h1><p class="lead in d1" style="font-size:30px">${g.detail}</p>
     <div class="coinrow" aria-hidden="true">${Array.from({ length: Math.min(g.n, 6) }, (_, i) => `<span style="animation-delay:${0.35 + i * 0.14}s">${metal(z, 86)}</span>`).join("")}</div>
-    <p class="in d2" style="font-size:44px;font-weight:900;margin:8px 0 0"><span class="num">+${g.n}</span> ${ZB[z].resource}${g.flooded ? ` <span style="font-size:22px;font-weight:300">${T.flooded}</span>` : ""}</p>
+    <p class="in d2" style="font-size:44px;font-weight:900;margin:8px 0 0"><span class="num">+${g.n}</span> ${fill(UI.gate.tokensOf, { resource: ZB[z].resource })}${g.flooded ? ` <span style="font-size:22px;font-weight:300">${T.flooded}</span>` : ""}</p>
     ${g.first ? `<div class="card in d4" style="position:relative;margin-top:22px;padding:16px 20px"><p style="margin:0;font-size:20px">${T.first}</p></div>` : ""}
     ${g.fogAsk ? `<div class="card in d5" id="fogq" style="position:relative;margin-top:18px;padding:14px 20px"><p style="margin:0;font-size:21px">${fill(T.fog, { rule: g.fogAsk })}</p>${g.fogDone == null ? `<div style="display:flex;gap:10px;margin-top:10px"><button class="opt fr" type="button" style="min-height:52px;font-size:20px;font-weight:700">${T.fogYes}</button><button class="opt fr" type="button" style="min-height:52px;font-size:20px">${T.fogNo}</button></div>` : ""}</div>` : ""}`;
       stage.classList.add("scene");
@@ -1439,7 +1473,7 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
 
   // ---------- the task's controls ----------
   function stepper(id: string, v: number, max = 99, sm = false, big = 0) {
-    return `<div class="stepper${sm ? " sm" : ""}" data-id="${id}" data-max="${max}">${big ? `<button type="button" data-d="-${big}" aria-label="פחות ${big}" style="font-size:24px;font-weight:900">−${big}</button>` : ""}<button type="button" data-d="-1" aria-label="פחות">−</button><output class="num" id="${id}">${v}</output><button type="button" data-d="1" aria-label="יותר">+</button>${big ? `<button type="button" data-d="${big}" aria-label="יותר ${big}" style="font-size:24px;font-weight:900">+${big}</button>` : ""}</div>`;
+    return `<div class="stepper${sm ? " sm" : ""}" data-id="${id}" data-max="${max}">${big ? `<button type="button" data-d="-${big}" aria-label="פחות ${big}" style="font-size:24px;font-weight:900">−${big}</button>` : ""}<button type="button" data-d="-1" aria-label="פחות"${big ? ' style="font-size:30px;font-weight:700"' : ""}>${big ? "−1" : "−"}</button><output class="num" id="${id}">${v}</output><button type="button" data-d="1" aria-label="יותר"${big ? ' style="font-size:30px;font-weight:700"' : ""}>${big ? "+1" : "+"}</button>${big ? `<button type="button" data-d="${big}" aria-label="יותר ${big}" style="font-size:24px;font-weight:900">+${big}</button>` : ""}</div>`;
   }
   function wireSteppers(onChange: (id: string, v: number) => void) {
     copy.querySelectorAll<HTMLElement>(".stepper").forEach((s) =>
@@ -1897,7 +1931,10 @@ export function createTabletApp(host: HTMLElement, opts: TabletOptions): TabletH
           if (!S.visited.includes(z)) S.visited = [...S.visited, z];
         }
         if (p === "task" && !S.timer) startTimer(10);
-        if (p === "result" && !S.lastGain) S.lastGain = { n: 4, ok: true, detail: "", timeup: false, flooded: false, first: false, fogAsk: null, fogDone: null, shown: false };
+        if (p === "result") {
+          const TU = TASK_UI[z] as { right: string; wrong?: string };
+          if (!S.lastGain || (S.lastGain.detail !== TU.right && S.lastGain.detail !== TU.wrong)) S.lastGain = { n: 4, ok: true, detail: TU.right, timeup: false, flooded: false, first: false, fogAsk: null, fogDone: null, shown: false };
+        }
         if (p === "sail") S.sail = null;
         go(p);
       } catch (e) {

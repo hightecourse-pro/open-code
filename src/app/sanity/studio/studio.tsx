@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { buildContent, COLORS, ZONE_IDS, isZoneId, type Gender, type ZoneId } from "@/lib/sanity/content";
 import { icon, logo, nameOf, token as tokenArt } from "@/lib/sanity/art";
 import { studioGet, studioPost } from "@/lib/sanity/client";
-import { photoPath, tabletPath, type CreationMeta, type EventInfo, type HallScene, type StudioView } from "@/lib/sanity/shared";
+import { photoPath, shortPath, tabletPath, type CreationMeta, type EventInfo, type HallScene, type StudioView } from "@/lib/sanity/shared";
 import { loadQr, qrSvg as makeQrSvg } from "@/lib/sanity/qr";
 import { Kaleido, SUNO_STYLES, buildScore, logoFromNumbers, midiBlob, photoToLogo, playScore, renderWav, sunoPack, type Player } from "@/lib/sanity/creations";
 import type { Snapshot } from "@/lib/sanity/engine";
@@ -247,7 +247,8 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
     if (qr == null) return;
     const token = tokenOf(qr);
     if (!token) return;
-    const url = location.origin + tabletPath(token);
+    // the code carries the short address (26.11): what is printed is what is scanned, and both land on the token
+    const url = location.origin + shortPath(qr);
     let alive = true;
     loadQr()
       .then((lib) => {
@@ -288,6 +289,7 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
     const t = tokenOf(circle);
     return t ? `${origin}${tabletPath(t)}` : "";
   };
+  const shortOf = (circle: number) => `${origin}${shortPath(circle)}`;
   const allUrls = () => [...Array(N)].map((_, i) => `מעגל ${i + 1}: ${urlOf(i + 1)}`).join("\n");
   const [creating, setCreating] = useState(false);
 
@@ -377,6 +379,7 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                 return (
                   <li key={i}>
                     <b>{i + 1}</b>
+                    <code dir="ltr" className="short">{shortOf(i + 1)}</code>
                     <code dir="ltr">{u}</code>
                     <span className="st-badge" style={{ background: c }}>
                       {s}
@@ -434,8 +437,9 @@ function EventTab({ view, active, act, busy, content, simOn, startSim, stopSim, 
                 <div className="st-qr-card" onClick={(e) => e.stopPropagation()}>
                   <h3>מעגל {qr}</h3>
                   <div className="st-qr-svg" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+                  <code dir="ltr" className="short">{shortOf(qr)}</code>
                   <code dir="ltr">{urlOf(qr)}</code>
-                  <p className="hint">סורקים במצלמת הטאבלט החלופי; הקישור נפתח בכרום והמשחק של המעגל ממשיך מאותו מסך.</p>
+                  <p className="hint">סורקים במצלמת הטאבלט, או מקלידים בכרום את הכתובת הקצרה (טאבלט בלי סורק); המשחק של המעגל ממשיך מאותו מסך.</p>
                   <button type="button" className="sbtn" onClick={closeQr}>
                     סגירה
                   </button>

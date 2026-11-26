@@ -80,4 +80,6 @@ export interface StudioView {
 export const TOKEN_RE = /^[a-f0-9]{12}$/;
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{1,39}$/;
 export const tabletPath = (token: string) => `/sanity/t/${token}`;
+/** The short, typeable address of circle n of the ACTIVE event (the owner, 26.11: ״לא בכל טאבלט QR״); /m/7 redirects to its tablet. */
+export const shortPath = (circle: number) => `/m/${circle}`;
 export const photoPath = (slug: string, circle: number, v?: string | null) => `/api/sanity/photo/${slug}/${circle}${v ? `?v=${encodeURIComponent(v)}` : ""}`;
