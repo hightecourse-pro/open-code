@@ -353,3 +353,19 @@
 .hk-tablet .ted{outline:1.5px dashed #ffffff99;outline-offset:2px;border-radius:4px;cursor:text;min-width:1ch}
 .hk-tablet .ted:focus{outline:2.5px solid #FFD54A;background:#ffffff33}
 .hk-tablet.editing .go .ted{outline-color:#ffffff66}
+/* 26.11, the owner's notes: the bag as a backpack with its name, the circle's number in the bar, the forest's drawn key, the reef's graph card, the safari's sentence row */
+.hk-tablet .bagtag{display:flex;flex-direction:column;align-items:center;justify-content:center;height:40px;padding:0 4px 0 2px;color:var(--ink);line-height:1}
+.hk-tablet .bagtag small{font-size:11px;font-weight:900;margin-top:1px}
+.hk-tablet .circ{font-size:21px;font-weight:900;color:var(--ink);background:#ffffffe6;border-radius:999px;padding:0 16px;height:50px;display:inline-flex;align-items:center;white-space:nowrap;box-shadow:0 0 0 1.5px #1D5EB322}
+.hk-tablet .legend.pic{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:10px 14px;align-items:center;width:auto;max-width:720px;padding:12px 18px}
+.hk-tablet .legend.pic .lrow{display:contents}
+.hk-tablet .legend.pic b{font-size:18px;font-weight:500;opacity:.8;white-space:nowrap}
+.hk-tablet .lk{display:inline-flex;align-items:center;font-size:21px;font-weight:700;white-space:nowrap}
+.hk-tablet .lk .sw{flex:none;width:26px;height:26px;border-radius:5px;display:inline-block;margin-inline-end:8px;box-shadow:0 0 0 2px #0001}
+.hk-tablet .lk svg.sw{box-shadow:none;color:var(--ink)}
+.hk-tablet .legend.reefg{width:560px;padding:12px 18px 6px;margin-top:18px}
+.hk-tablet .legend.reefg .gt{font-size:20px;font-weight:700;margin-bottom:2px}
+.hk-tablet .senrow{display:flex;align-items:center;background:#fff;border-radius:16px;box-shadow:inset 0 -3px 0 var(--cd);padding:0 20px 0 6px}
+.hk-tablet .senrow:focus-within{box-shadow:inset 0 -3px 0 var(--cd),0 0 0 3px #ffffffaa}
+.hk-tablet .senpre{flex:none;font-size:30px;font-weight:900;color:var(--ink);white-space:nowrap;padding-inline-end:12px}
+.hk-tablet .senrow .tline,.hk-tablet .senrow .tline:focus,.hk-tablet #stage.deck .copy .senrow .tline{flex:1;min-width:0;width:auto;box-shadow:none;padding:0 6px}

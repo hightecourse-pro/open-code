@@ -295,3 +295,7 @@
 .hk-studio .st-qr-card h3{margin:0;font-size:28px}
 .hk-studio .st-qr-svg svg{width:380px;height:380px;display:block}
 .hk-studio .st-qr-card code{font-size:14px;direction:ltr}
+/* 26.11: the short, typeable address of a circle (/m/7) beside the token address */
+.hk-studio code.short{font-weight:700;color:#15233F}
+.hk-studio .st-qr-card code.short{font-size:24px}
+.hk-studio .urllist li code.short{flex:none;max-width:240px}

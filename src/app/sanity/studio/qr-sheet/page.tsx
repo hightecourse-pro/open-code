@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { GateView, hcGate } from "@/app/hightecourse/shell";
 import { studioView } from "@/lib/sanity/server";
-import { tabletPath } from "@/lib/sanity/shared";
+import { shortPath } from "@/lib/sanity/shared";
 import { QrSheet } from "./sheet";
 import "./qr-sheet.css";
 
@@ -26,6 +26,7 @@ export default async function QrSheetPage({ searchParams }: { searchParams: Prom
   const view = await studioView();
   const active = view.events.find((e) => e.slug === view.active) ?? null;
   const sp = await searchParams;
-  const cards = view.tokens.map((t) => ({ circle: t.circle, path: tabletPath(t.token) }));
+  // the short address (26.11, ״לא בכל טאבלט QR״): typed into Chrome where there is no scanner, and the same thing the code carries
+  const cards = view.tokens.map((t) => ({ circle: t.circle, path: shortPath(t.circle) }));
   return <QrSheet eventName={active?.name ?? ""} cards={cards} autoprint={sp.print === "1"} />;
 }

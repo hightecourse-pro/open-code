@@ -14,7 +14,8 @@
 .qr-sheet .num { font-size: 15pt; line-height: 1; margin-bottom: 2mm; }
 .qr-sheet .num b { font-size: 22pt; }
 .qr-sheet .qr svg { width: 43mm; height: 43mm; display: block; }
-.qr-sheet .url { font-family: Consolas, "Courier New", monospace; font-size: 8.5pt; direction: ltr; margin-top: 1.5mm; color: #3a3850; }
+.qr-sheet .url { font-family: Consolas, "Courier New", monospace; font-size: 14pt; font-weight: 700; direction: ltr; margin-top: 1.5mm; color: #15233F; }
+.qr-sheet .type { font-size: 8pt; color: #6b6880; margin-top: 0.5mm; }
 @media print {
   .qr-sheet .screen-only { display: none; }
   .qr-sheet .page { padding: 0; max-width: none; }

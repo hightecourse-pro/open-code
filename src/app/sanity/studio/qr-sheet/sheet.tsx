@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { loadQr, qrSvg } from "@/lib/sanity/qr";
 
-/* The cards: the circle's number big, its code, its address small (to type if a camera fails). The codes are drawn
-   in the browser (the generator is a browser global); the addresses carry this site's origin. */
+/* The cards: the circle's number big, its code, and its short address (/m/7) to type where there is no scanner (the owner,
+   26.11). The codes are drawn in the browser (the generator is a browser global); the addresses carry this site's origin. */
 export function QrSheet({ eventName, cards, autoprint }: { eventName: string; cards: { circle: number; path: string }[]; autoprint: boolean }) {
   const [svgs, setSvgs] = useState<Record<number, string>>({});
   const [origin, setOrigin] = useState("");
@@ -42,7 +42,7 @@ export function QrSheet({ eventName, cards, autoprint }: { eventName: string; ca
             <div className="intro">
               <div className="title">המסע לאי השפיות · {eventName} · כתובות {cards.length} הטאבלטים</div>
               <ol>
-                <li>בטאבלט: אפליקציית המצלמה ← מכוונים לקוד של המעגל ← לוחצים על הקישור שקופץ. הוא נפתח בכרום (אם נפתח דפדפן אחר: הגדרות ← אפליקציות ← אפליקציות ברירת מחדל ← דפדפן ← Chrome, וסורקים שוב).</li>
+                <li>בטאבלט: אפליקציית המצלמה ← מכוונים לקוד של המעגל ← לוחצים על הקישור שקופץ. הוא נפתח בכרום (אם נפתח דפדפן אחר: הגדרות ← אפליקציות ← אפליקציות ברירת מחדל ← דפדפן ← Chrome, וסורקים שוב). <b>אין סורק?</b> פותחים כרום ומקלידים את הכתובת הקצרה שמתחת לקוד.</li>
                 <li>בכרום: תפריט ⋮ ← ״הוספה למסך הבית״ / ״התקנת אפליקציה״ ← ״התקנה״. סוגרים את כרום ופותחים מהאייקון שנוצר.</li>
                 <li>בודקים שהמסך אומר ״מעגל N · ברוכים הבאים״ עם המספר שעל הכרטיס. גוזרים את הכרטיס ומדביקים על גב הטאבלט: טאבלט חלופי סורק אותו וממשיך את המשחק של אותו מעגל.</li>
               </ol>
@@ -59,6 +59,7 @@ export function QrSheet({ eventName, cards, autoprint }: { eventName: string; ca
                   {host}
                   {c.path}
                 </div>
+                <div className="type">להקלדה בכרום, אם אין סורק</div>
               </div>
             ))}
           </div>

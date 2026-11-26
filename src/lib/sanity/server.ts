@@ -264,6 +264,15 @@ async function circleByToken(token: string): Promise<{ circle: CircleRow; event:
   return { circle: c!, event: e! };
 }
 
+/** /m/<n>: the token of circle n of the active event, or null (no active event, no such circle). */
+export async function tokenForCircle(circle: number): Promise<string | null> {
+  if (!Number.isInteger(circle) || circle < 1 || circle > 999) return null;
+  const ev = await activeRow();
+  if (!ev) return null;
+  const { data } = await admin().from("sanity_circles").select("token").eq("event_id", ev.id).eq("circle", circle).maybeSingle();
+  return data?.token ?? null;
+}
+
 export async function tabletBootstrap(token: string): Promise<TabletBootstrap> {
   const { circle, event } = await circleByToken(token);
   const { data: cr } = await admin().from("sanity_creations").select("photo_path").eq("event_id", event.id).eq("circle", circle.circle).maybeSingle();
