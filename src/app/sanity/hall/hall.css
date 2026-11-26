@@ -476,3 +476,30 @@
 .hk-hall .wide .rv-line{padding:100px 0 70px}
 .hk-hall .wide .rv-final p{max-width:3000px;font-size:96px}
 .hk-hall .wide .cel{top:150px}
+
+/* 26.11: the show - one screen for the whole ending; chapter cards fade over the scenes */
+.hk-hall #show{position:absolute;inset:0;z-index:65;background:radial-gradient(ellipse at 50% 40%,#1E3561,#0E1A33 72%);color:#fff;opacity:0;transition:opacity 1.1s ease;pointer-events:none}
+.hk-hall #show.on{opacity:1;pointer-events:auto}
+.hk-hall .sh-card{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:16px;padding:0 120px}
+.hk-hall .sh-card .k{font-size:36px;font-weight:500;color:#E0A800;letter-spacing:.04em;animation:hkh-fadein 1.2s both}
+.hk-hall .sh-card h1{margin:0;font-size:124px;line-height:1.1;font-weight:700;animation:hkh-popin 1s var(--ease) both;text-shadow:0 6px 40px #0008}
+.hk-hall .sh-card p{margin:0;font-size:46px;font-weight:300;opacity:.92;animation:hkh-fadein 1.8s both}
+.hk-hall .sh-card .btn{margin-top:30px;background:#E0A800;animation:hkh-fadein 1.8s both}
+.hk-hall .sh-card .sh-keys{font-size:24px;opacity:.6;margin-top:30px}
+.hk-hall .sh-steps{position:absolute;bottom:40px;inset-inline:0;display:flex;justify-content:center;gap:12px}
+.hk-hall .sh-steps i{width:14px;height:14px;border-radius:50%;background:#ffffff33;transition:background .6s,transform .6s}
+.hk-hall .sh-steps i.done{background:#ffffff88}
+.hk-hall .sh-steps i.on{background:#E0A800;transform:scale(1.3)}
+.hk-hall .sh-pause{position:absolute;top:40px;left:60px;z-index:2;font-size:28px;font-weight:500;color:#E0A800;border:2px solid #E0A800;border-radius:999px;padding:6px 24px;animation:hkh-blink 1.6s infinite}
+.hk-hall .sh-lyr{justify-content:flex-start;padding-top:48px;gap:8px}
+.hk-hall .sh-lyr h1{font-size:84px}
+.hk-hall .sh-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:22px 30px;width:100%;margin-top:26px;text-align:right}
+.hk-hall .sh-cols > div{background:#ffffff12;border-radius:20px;padding:16px 22px;font-size:32px;font-weight:300;line-height:1.45;animation:hkh-popin .9s var(--ease) both}
+.hk-hall .sh-cols .sh-chorus{background:#E0A80022;border:2px solid #E0A80088;font-weight:500}
+.hk-hall .sh-cols small{display:inline-block;min-width:46px;color:#E0A800;font-size:22px;font-weight:700}
+.hk-hall .sh-lyr .sh-hint{position:absolute;bottom:36px;inset-inline:0;font-size:34px;font-weight:500;color:#E0A800;opacity:1}
+.hk-hall .wide .sh-card h1{font-size:110px}
+.hk-hall .wide .sh-lyr{padding-top:36px}
+.hk-hall .wide .sh-lyr h1{font-size:70px}
+.hk-hall .wide .sh-cols{grid-template-columns:repeat(auto-fit,minmax(430px,1fr));margin-top:18px}
+.hk-hall .wide .sh-cols > div{font-size:30px;padding:12px 20px}
