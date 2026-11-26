@@ -357,7 +357,11 @@
 .hk-tablet .bagtag{display:flex;flex-direction:column;align-items:center;justify-content:center;height:40px;padding:0 4px 0 2px;color:var(--ink);line-height:1}
 .hk-tablet .bagtag small{font-size:11px;font-weight:900;margin-top:1px}
 .hk-tablet .circ{font-size:21px;font-weight:900;color:var(--ink);background:#ffffffe6;border-radius:999px;padding:0 16px;height:50px;display:inline-flex;align-items:center;white-space:nowrap;box-shadow:0 0 0 1.5px #1D5EB322}
-.hk-tablet .legend.pic{display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:10px 14px;align-items:center;width:auto;max-width:720px;padding:12px 18px}
+.hk-tablet .legend.pic{display:grid;grid-template-columns:max-content max-content max-content max-content;gap:10px 14px;align-items:center;width:auto;max-width:720px;padding:12px 18px}
+.hk-tablet .legend.pic.small{gap:8px 10px;padding:10px 14px}
+.hk-tablet .legend.pic.small b{font-size:16px}
+.hk-tablet .legend.pic.small .lk{font-size:19px}
+.hk-tablet .legend.pic.small .lk .sw{width:22px;height:22px;margin-inline-end:6px}
 .hk-tablet .legend.pic .lrow{display:contents}
 .hk-tablet .legend.pic b{font-size:18px;font-weight:500;opacity:.8;white-space:nowrap}
 .hk-tablet .lk{display:inline-flex;align-items:center;font-size:21px;font-weight:700;white-space:nowrap}
