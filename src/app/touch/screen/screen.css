@@ -1,0 +1,91 @@
+/* The LED wall of ״תני לנו את הטאצ' שלך״: a 3840×960 stage (8 m × 2 m), dark navy for LED, yellow for the leader. */
+.hcs{position:fixed;inset:0;z-index:50;overflow:hidden;background:#001523;color:#fff;cursor:none}
+.hcs *{box-sizing:border-box}
+.hcs-stage{position:absolute;left:50%;top:50%;width:3840px;height:960px;margin:-480px 0 0 -1920px;overflow:hidden;background:#002C4A}
+.hcs-stage.stretch{left:0;top:0;margin:0;transform-origin:0 0}
+
+.hcs-bg{position:absolute;inset:0;background:linear-gradient(100deg,#00213A 0%,#003A61 45%,#004878 100%)}
+.hcs-bg i{position:absolute;border-radius:50%;filter:blur(120px)}
+.hcs-bg .b1{width:1500px;height:1500px;left:-300px;top:-700px;background:#1D8BD6;opacity:.45;animation:hcs-drift 22s ease-in-out infinite alternate}
+.hcs-bg .b2{width:1200px;height:1200px;left:1500px;top:300px;background:#6A5BFF;opacity:.25;animation:hcs-drift 28s ease-in-out infinite alternate-reverse}
+.hcs-bg .b3{width:1100px;height:1100px;right:-200px;top:-500px;background:#F8C800;opacity:.16;animation:hcs-drift 25s ease-in-out infinite alternate}
+.hcs-bg .grid{inset:0;border-radius:0;filter:none;opacity:.07;background-image:linear-gradient(#fff 2px,transparent 2px),linear-gradient(90deg,#fff 2px,transparent 2px);background-size:120px 120px;
+  mask-image:linear-gradient(90deg,#000,transparent 70%);-webkit-mask-image:linear-gradient(90deg,#000,transparent 70%);animation:hcs-slide 30s linear infinite}
+@keyframes hcs-drift{to{transform:translate(260px,120px) scale(1.2)}}
+@keyframes hcs-slide{to{background-position:120px 120px}}
+
+.hcs-scene{position:absolute;inset:0 0 34px 0;display:flex;gap:70px;padding:56px 80px 40px;animation:hcs-scene .8s cubic-bezier(.2,.8,.2,1) both}
+@keyframes hcs-scene{from{opacity:0;transform:scale(1.03)}to{opacity:1;transform:none}}
+
+/* --- the right side: logo, head count, the question --- */
+.hcs-side{flex:none;width:1180px;display:flex;flex-direction:column;gap:34px;padding-inline-end:70px;border-inline-end:4px solid rgba(255,255,255,.14)}
+.hcs-brand{display:flex;align-items:center;justify-content:space-between;gap:30px;flex:none}
+.hcs-brand img{width:440px;height:auto}
+.hcs-total{display:flex;align-items:center;gap:22px;padding:14px 34px 14px 30px;border-radius:999px;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2)}
+.hcs-total strong{font-size:92px;font-weight:900;line-height:1;color:#F8C800;font-variant-numeric:tabular-nums}
+.hcs-total span{font-size:34px;font-weight:500;line-height:1.12}
+.hcs-qwrap{flex:1;min-height:0;display:flex;flex-direction:column;justify-content:center;gap:26px}
+.hcs-chip{align-self:flex-start;font-size:40px;font-weight:700;padding:10px 34px;border-radius:999px;background:#F8C800;color:#003A61}
+.hcs-chip b{font-weight:900}
+.hcs-q{margin:0;font-size:96px;font-weight:900;line-height:1.1;text-wrap:balance;animation:hcs-rise .8s .1s cubic-bezier(.2,.8,.2,1) both}
+.hcs-q.long{font-size:76px}
+@keyframes hcs-rise{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+
+/* --- horizontal bars --- */
+.hcs-bars{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:26px}
+.hcs-bar{display:grid;grid-template-columns:880px 1fr 290px;align-items:center;gap:36px;height:186px;animation:hcs-rise .7s cubic-bezier(.2,.8,.2,1) both}
+.hcs-bar .label{font-size:56px;font-weight:700;line-height:1.12;text-wrap:balance}
+.hcs-bar .label.long{font-size:46px}
+.hcs-bar .track{height:104px;border-radius:52px;background:rgba(255,255,255,.1);overflow:hidden;box-shadow:inset 0 0 0 2px rgba(255,255,255,.08)}
+.hcs-bar .fill{height:100%;border-radius:52px;transition:width 1.2s cubic-bezier(.2,.8,.2,1)}
+.hcs-bar .fill i,.hcs-col .bar i{display:block;width:100%;height:100%;border-radius:inherit;background:linear-gradient(270deg,#8FD3FF,#2D9CEB);position:relative;overflow:hidden}
+.hcs-bar .fill i{transform-origin:100% 50%;animation:hcs-growx 1.3s cubic-bezier(.2,.8,.2,1) both}
+.hcs-bar .pct{font-size:124px;font-weight:900;line-height:1;text-align:left;font-variant-numeric:tabular-nums}
+.hcs-bar.lead .label,.hcs-col.lead .label{color:#F8C800}
+.hcs-bar.lead .pct,.hcs-col.lead .pct{color:#F8C800;text-shadow:0 0 60px rgba(248,200,0,.55)}
+.hcs-bar.lead .fill i,.hcs-col.lead .bar i{background:linear-gradient(270deg,#FFE873,#F8C800)}
+.hcs-bar.lead .fill,.hcs-col.lead .bar{filter:drop-shadow(0 0 34px rgba(248,200,0,.55))}
+.hcs-bar.lead .fill i::after,.hcs-col.lead .bar i::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.7) 50%,transparent 70%);transform:translateX(100%);animation:hcs-shine 2.8s 1.4s ease-in-out infinite}
+@keyframes hcs-growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes hcs-growy{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+@keyframes hcs-shine{0%{transform:translateX(100%)}60%,100%{transform:translateX(-100%)}}
+
+/* --- columns --- */
+.hcs-cols{flex:1;min-width:0;display:grid;grid-template-columns:repeat(4,1fr);gap:44px;align-items:stretch}
+.hcs-col{display:flex;flex-direction:column;gap:22px;min-width:0;animation:hcs-rise .7s cubic-bezier(.2,.8,.2,1) both}
+.hcs-col .plot{flex:1;min-height:0;display:flex;align-items:flex-end;justify-content:center;padding-top:150px}
+.hcs-col .bar{position:relative;width:62%;border-radius:40px 40px 12px 12px;transition:height 1.2s cubic-bezier(.2,.8,.2,1)}
+.hcs-col .bar i{transform-origin:50% 100%;animation:hcs-growy 1.3s cubic-bezier(.2,.8,.2,1) both}
+.hcs-col .pct{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);padding-bottom:14px;font-size:120px;font-weight:900;line-height:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.hcs-col .label{flex:none;height:176px;display:flex;align-items:flex-start;justify-content:center;text-align:center;font-size:50px;font-weight:700;line-height:1.14;text-wrap:balance;
+  padding-top:18px;border-top:4px solid rgba(255,255,255,.2)}
+.hcs-col .label.long{font-size:42px}
+.hcs-col.lead .label{border-top-color:#F8C800}
+
+.hcs-wait{position:absolute;left:80px;bottom:60px;font-size:44px;font-weight:500;opacity:.75;padding:10px 34px;border-radius:999px;background:rgba(255,255,255,.1)}
+
+/* --- the ten leading answers together --- */
+.hcs-scene.all{flex-direction:column;gap:30px;padding:40px 70px 34px}
+.hcs-allhead{flex:none;display:flex;align-items:center;justify-content:space-between;height:120px}
+.hcs-allhead img{width:400px;height:auto}
+.hcs-allhead h1{margin:0;font-size:88px;font-weight:900;line-height:1}
+.hcs-allhead h1 b{color:#F8C800}
+.hcs-total.row strong{font-size:80px}
+.hcs-total.row span{font-size:38px}
+.hcs-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:1fr 1fr;gap:26px}
+.hcs-tile{position:relative;min-width:0;display:flex;flex-direction:column;gap:10px;padding:20px 30px 26px;border-radius:30px;background:rgba(255,255,255,.09);border:2px solid rgba(255,255,255,.16);overflow:hidden;
+  animation:hcs-rise .7s cubic-bezier(.2,.8,.2,1) both}
+.hcs-tile .top{display:flex;align-items:center;justify-content:space-between;flex:none}
+.hcs-tile .n{display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:#fff;color:#003A61;font-size:38px;font-weight:900}
+.hcs-tile .p{font-size:76px;font-weight:900;line-height:1;color:#F8C800;font-variant-numeric:tabular-nums}
+.hcs-tile .q{margin:0;font-size:31px;font-weight:500;line-height:1.16;opacity:.85;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hcs-tile .a{margin:auto 0 0;font-size:41px;font-weight:900;line-height:1.12;color:#F8C800;text-wrap:balance;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.hcs-tile .mini{position:absolute;inset:auto 0 0 0;height:10px;background:rgba(255,255,255,.12)}
+.hcs-tile .mini i{display:block;height:100%;margin-inline-start:0;background:#F8C800;transition:width 1.2s}
+
+/* --- which scene, and how long it has left --- */
+.hcs-progress{position:absolute;inset:auto 80px 16px 80px;display:flex;gap:12px}
+.hcs-progress i{flex:1;height:8px;border-radius:8px;background:rgba(255,255,255,.16);overflow:hidden}
+.hcs-progress i.done{background:rgba(248,200,0,.55)}
+.hcs-progress i.now{background:rgba(255,255,255,.3)}
+.hcs-progress b{display:block;height:100%;background:#F8C800;transform-origin:100% 50%;animation:hcs-growx linear both}

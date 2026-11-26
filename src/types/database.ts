@@ -2812,6 +2812,13 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["sanity_circles"]["Insert"]>;
         Relationships: [];
       };
+      /** Anonymous answers of the conference touch-screen questionnaire (/touch, 26.11). */
+      hc_touch_answers: {
+        Row: { session_id: string; q: number; a: number; created_at: string };
+        Insert: { session_id: string; q: number; a: number; created_at?: string };
+        Update: Partial<Database["public"]["Tables"]["hc_touch_answers"]["Insert"]>;
+        Relationships: [];
+      };
       /** The owner's wording edits from the game's edit mode (26.11): text / screen / note rows, read by Claude. */
       sanity_text_edits: {
         Row: {
@@ -2883,6 +2890,8 @@ export interface Database {
     };
     Functions: {
       office_mail_link: { Args: Record<string, never>; Returns: number };
+      /** The touch questionnaire's counts per question and answer - service-role only. */
+      hc_touch_counts: { Args: Record<string, never>; Returns: { q: number; a: number; n: number }[] };
       /** Admin-only: payers on the external list with no auth account yet. */
       admin_unregistered_payers_count: { Args: Record<string, never>; Returns: number | null };
       is_admin: { Args: Record<string, never>; Returns: boolean };

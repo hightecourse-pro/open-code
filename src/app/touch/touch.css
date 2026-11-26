@@ -1,0 +1,86 @@
+/* ״תני לנו את הטאצ' שלך״ - the kiosk. Hightecourse navy + yellow, sized in em from one
+   vmin-based font size so a portrait totem, a landscape touch TV and a tablet all fit. */
+.hct{position:fixed;inset:0;z-index:50;overflow:hidden;background:#002C4A;color:#fff;font-size:clamp(14px,2.15vmin,46px);
+  user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.hct *{box-sizing:border-box}
+.hct button{font:inherit;color:inherit;border:0;background:none;cursor:pointer;touch-action:manipulation}
+
+.hct-bg{position:absolute;inset:0;background:radial-gradient(120% 90% at 50% 0%,#0A5E98 0%,#004878 38%,#002C4A 100%)}
+.hct-bg i{position:absolute;border-radius:50%;filter:blur(60px);opacity:.55}
+.hct-bg .b1{width:60vmax;height:60vmax;left:-20vmax;top:-22vmax;background:#1D8BD6;animation:hct-drift 19s ease-in-out infinite alternate}
+.hct-bg .b2{width:46vmax;height:46vmax;right:-16vmax;bottom:-18vmax;background:#F8C800;opacity:.22;animation:hct-drift 23s ease-in-out infinite alternate-reverse}
+.hct-bg .b3{width:36vmax;height:36vmax;right:8vmax;top:-14vmax;background:#6A5BFF;opacity:.28;animation:hct-drift 27s ease-in-out infinite alternate}
+.hct-bg .ring{filter:none;opacity:.16;border:.18em dashed #fff;background:none}
+.hct-bg .r1{width:70vmin;height:70vmin;left:-22vmin;bottom:-26vmin;animation:hct-spin 80s linear infinite}
+.hct-bg .r2{width:44vmin;height:44vmin;right:-12vmin;top:-14vmin;border-color:#F8C800;opacity:.3;animation:hct-spin 60s linear infinite reverse}
+@keyframes hct-drift{to{transform:translate(6vmax,5vmax) scale(1.15)}}
+@keyframes hct-spin{to{transform:rotate(360deg)}}
+
+.hct main{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;padding:4vmin 5vmin}
+.hct-logo{width:min(17em,60vw);height:auto;pointer-events:none}
+.hct-logo.small{width:8.5em;opacity:.85;margin-top:auto;flex:none}
+
+/* --- opening --- */
+.hct-start{justify-content:space-evenly;text-align:center;animation:hct-in .7s cubic-bezier(.2,.8,.2,1) both}
+.hct-title{margin:0;font-weight:900;line-height:1.02;letter-spacing:-.01em;display:flex;flex-direction:column;align-items:center;gap:.08em}
+.hct-title span{font-size:3.5em;font-weight:700}
+.hct-title b{font-size:6.2em;font-weight:900;color:#F8C800;text-shadow:0 .06em 0 #003A61,0 .12em .5em rgba(248,200,0,.35);animation:hct-pop 2.8s ease-in-out infinite}
+@keyframes hct-pop{0%,100%{transform:scale(1) rotate(-1.5deg)}50%{transform:scale(1.05) rotate(1.5deg)}}
+.hct-go-wrap{position:relative;display:grid;place-items:center;width:15em;height:15em;max-height:34vh}
+.hct-go-wrap .pulse{position:absolute;width:11em;height:11em;border-radius:50%;border:.16em solid #F8C800;opacity:0;animation:hct-pulse 2.7s ease-out infinite}
+.hct-go-wrap .p2{animation-delay:.9s}
+.hct-go-wrap .p3{animation-delay:1.8s}
+@keyframes hct-pulse{0%{transform:scale(.85);opacity:.9}100%{transform:scale(1.75);opacity:0}}
+.hct .hct-go{position:relative;width:5.4em;height:5.4em;border-radius:50%;font-size:2.1em;font-weight:900;color:#003A61;
+  background:radial-gradient(circle at 35% 28%,#FFE873,#F8C800 62%,#E0B000);box-shadow:0 .28em 0 #B58F00,0 .7em 1.6em rgba(0,0,0,.4);
+  animation:hct-beat 1.8s ease-in-out infinite;transition:transform .12s}
+.hct .hct-go:active{transform:translateY(.2em) scale(.96);box-shadow:0 .08em 0 #B58F00,0 .3em .8em rgba(0,0,0,.4);animation:none}
+@keyframes hct-beat{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.hct-anon{margin:0;font-size:1.25em;font-weight:500;letter-spacing:.04em;padding:.45em 1.3em;border-radius:99em;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25)}
+.hct .hct-full{position:absolute;left:.6em;bottom:.5em;font-size:1.3em;opacity:.35;padding:.5em}
+
+/* --- questions --- */
+.hct-quiz{gap:2.2vmin}
+.hct-head{width:100%;max-width:62em;display:flex;align-items:center;gap:1.2em;flex:none}
+.hct .hct-back{font-size:1.05em;font-weight:500;padding:.6em 1.2em;border-radius:99em;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
+.hct-steps{flex:1;display:flex;gap:.45em}
+.hct-steps i{flex:1;height:.6em;border-radius:99em;background:rgba(255,255,255,.18);transition:background .4s,transform .4s}
+.hct-steps i.done{background:#F8C800}
+.hct-steps i.now{background:#fff;transform:scaleY(1.5)}
+.hct-count{font-size:1.5em;font-weight:900;color:#F8C800;min-width:3.6em;text-align:left;font-variant-numeric:tabular-nums}
+.hct-card{flex:1;min-height:0;width:100%;max-width:62em;display:flex;flex-direction:column;justify-content:center;gap:4vmin}
+.hct-q{margin:0;font-size:2.55em;font-weight:900;line-height:1.18;text-align:center;text-wrap:balance;animation:hct-in .5s cubic-bezier(.2,.8,.2,1) both}
+.hct-answers{display:grid;grid-template-columns:1fr;gap:1em}
+.hct .hct-a{position:relative;display:flex;align-items:center;gap:.9em;min-height:4.3em;padding:.75em 1.1em;border-radius:1.2em;text-align:start;
+  background:#fff;color:#003A61;box-shadow:0 .28em 0 rgba(0,20,40,.5),0 .6em 1.4em rgba(0,0,0,.25);
+  animation:hct-up .5s cubic-bezier(.2,.8,.2,1) both;transition:transform .15s,background .2s,opacity .25s,box-shadow .15s}
+.hct-a .l{flex:none;display:grid;place-items:center;width:2.1em;height:2.1em;border-radius:50%;background:#004878;color:#fff;font-size:1.2em;font-weight:900;transition:background .2s,color .2s}
+.hct-a .t{font-size:1.5em;font-weight:700;line-height:1.2;text-wrap:balance}
+.hct .hct-a:active{transform:translateY(.16em);box-shadow:0 .1em 0 rgba(0,20,40,.5)}
+.hct .hct-a.was{outline:.22em solid #F8C800}
+.hct .hct-a.picked{background:#F8C800;transform:scale(1.03);box-shadow:0 0 0 .3em rgba(248,200,0,.35),0 .8em 2em rgba(248,200,0,.45)}
+.hct-a.picked .l{background:#003A61;color:#F8C800}
+.hct .hct-a.dim{opacity:.35;transform:scale(.98)}
+@keyframes hct-in{from{opacity:0;transform:translateY(1.2em)}to{opacity:1;transform:none}}
+@keyframes hct-up{from{opacity:0;transform:translateY(1.6em) scale(.97)}to{opacity:1;transform:none}}
+/* a wide screen: the four answers as two by two */
+@media (min-aspect-ratio:5/4){
+  .hct-answers{grid-template-columns:1fr 1fr}
+  .hct .hct-a{min-height:5.2em}
+  .hct-q{font-size:2.7em}
+}
+@media (max-aspect-ratio:3/4){
+  .hct-title span{font-size:3em}
+  .hct-title b{font-size:5.2em}
+}
+
+/* --- done --- */
+.hct-done{justify-content:space-evenly;text-align:center;animation:hct-in .6s cubic-bezier(.2,.8,.2,1) both}
+.hct-title.done b{animation:hct-pop 1.6s ease-in-out infinite}
+.hct-check{width:11em;height:11em;max-height:26vh}
+.hct-check svg{width:100%;height:100%;overflow:visible}
+.hct-check circle{fill:#F8C800;transform-origin:center;animation:hct-stamp .6s cubic-bezier(.3,1.6,.5,1) both;filter:drop-shadow(0 0 1.4em rgba(248,200,0,.6))}
+.hct-check path{fill:none;stroke:#003A61;stroke-width:11;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:90;stroke-dashoffset:90;animation:hct-draw .5s .45s ease-out forwards}
+@keyframes hct-stamp{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes hct-draw{to{stroke-dashoffset:0}}
+.hct-confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
